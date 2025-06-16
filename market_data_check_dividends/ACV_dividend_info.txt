@@ -1,0 +1,4 @@
+Ticker: ACV
+Dividend Ratio: 1.646191
+Detected: 2025-08-07 05:03:57
+CSV File: ACV_2025-01-02_to_2025-08-06.csv
