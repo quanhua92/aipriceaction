@@ -1,0 +1,4 @@
+Ticker: MBB
+Dividend Ratio: 1.332142
+Detected: 2025-08-13 04:56:20
+CSV File: MBB_2025-01-02_to_2025-08-12.csv
