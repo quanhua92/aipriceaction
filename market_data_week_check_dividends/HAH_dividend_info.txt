@@ -1,0 +1,4 @@
+Ticker: HAH
+Dividend Ratio: 1.317334
+Detected: 2025-08-08 09:13:27
+CSV File: HAH_2025-01-02_to_2025-08-01.csv

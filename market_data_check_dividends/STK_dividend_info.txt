@@ -1,0 +1,4 @@
+Ticker: STK
+Dividend Ratio: 1.449975
+Detected: 2025-10-30 04:48:52
+CSV File: STK_2025-01-02_to_2025-10-29.csv

@@ -1,0 +1,4 @@
+Ticker: BSR
+Dividend Ratio: 1.615545
+Detected: 2025-10-29 09:03:16
+CSV File: BSR_2025-01-02_to_2025-10-28.csv
