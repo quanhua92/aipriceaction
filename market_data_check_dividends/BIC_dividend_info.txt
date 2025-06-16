@@ -1,0 +1,4 @@
+Ticker: BIC
+Dividend Ratio: 1.775505
+Detected: 2025-09-09 04:44:06
+CSV File: BIC_2025-01-02_to_2025-09-08.csv
