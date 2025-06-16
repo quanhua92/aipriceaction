@@ -1,0 +1,4 @@
+Ticker: MSB
+Dividend Ratio: 1.200120
+Detected: 2025-09-12 20:27:23
+CSV File: MSB_2025-01-02_to_2025-09-05.csv
