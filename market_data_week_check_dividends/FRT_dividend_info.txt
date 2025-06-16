@@ -1,0 +1,4 @@
+Ticker: FRT
+Dividend Ratio: 1.250000
+Detected: 2025-07-18 09:16:51
+CSV File: FRT_2025-01-02_to_2025-07-11.csv

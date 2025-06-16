@@ -1,0 +1,4 @@
+Ticker: HVN
+Dividend Ratio: 1.268878
+Detected: 2025-07-19 04:56:30
+CSV File: HVN_2025-01-02_to_2025-07-18.csv
