@@ -1,0 +1,4 @@
+Ticker: DPM
+Dividend Ratio: 1.737601
+Detected: 2025-08-08 09:12:44
+CSV File: DPM_2025-01-02_to_2025-08-01.csv
