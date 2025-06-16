@@ -1,0 +1,4 @@
+Ticker: TCH
+Dividend Ratio: 1.160902
+Detected: 2025-08-20 04:50:32
+CSV File: TCH_2025-01-02_to_2025-08-19.csv

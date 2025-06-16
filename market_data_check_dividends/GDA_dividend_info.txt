@@ -1,0 +1,4 @@
+Ticker: GDA
+Dividend Ratio: 1.300050
+Detected: 2025-08-26 04:47:47
+CSV File: GDA_2025-01-02_to_2025-08-25.csv
