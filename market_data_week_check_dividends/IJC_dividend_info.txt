@@ -1,0 +1,4 @@
+Ticker: IJC
+Dividend Ratio: 1.216251
+Detected: 2025-09-19 20:26:16
+CSV File: IJC_2025-01-02_to_2025-09-12.csv
