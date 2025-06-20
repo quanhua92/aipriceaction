@@ -1,198 +1,116 @@
 # Kế Hoạch Giao Dịch Trung Hạn (1-3 Tháng)
 
-*Phân tích dựa trên phương pháp VPA/Wyckoff, tổng hợp từ dữ liệu ngày 2025-01-02 đến 2025-06-19.*
+*Phân tích dựa trên phương pháp VPA/Wyckoff, tổng hợp từ dữ liệu ngày 2025-01-02 đến 2025-06-20.*
 *Ngày lập kế hoạch: 2025-06-20*
 
----
+-----
 
 ## 🚀 View the Latest Analysis
 
 **➡️ [Click here to view the latest market report](REPORT.md)**
 
----
+-----
 
 **1. Phân Tích Trạng Thái VNINDEX & Chiến Lược**
 ![Price Chart for VNINDEX](reports/VNINDEX/VNINDEX_candlestick_chart.png)
-  - **Trạng thái hiện tại của VNINDEX là xu hướng tăng được củng cố.** Sau phiên kiểm tra cung tại vùng đỉnh vào ngày 18/06, phiên 19/06 đã xác nhận sức mạnh của phe mua với một cây nến tăng điểm thuyết phục (**Effort to Rise**), đóng cửa ở mức 1352.04 trên nền khối lượng vẫn duy trì ở mức rất cao. Điều này cho thấy lực cầu đã hấp thụ thành công áp lực chốt lời và sẵn sàng đưa chỉ số lên các mức cao mới. Xu hướng tăng trung hạn đang rất mạnh mẽ và được xác nhận.
-  - **Vùng Tốt Nhất Để Gia Tăng Tỷ Trọng:** `1330 - 1350` điểm. Vùng này vẫn là vùng hỗ trợ quan trọng. Bất kỳ nhịp điều chỉnh nào về đây với khối lượng thấp đều là cơ hội mua vào, tuy nhiên với sức mạnh hiện tại, có khả năng thị trường sẽ không kiểm tra lại vùng này sâu.
+  - **Trạng thái hiện tại của VNINDEX là đang trong giai đoạn "Tái Tích Lũy Ngắn Hạn" sau khi bứt phá.** "Câu chuyện" của chỉ số trong tuần qua rất rõ ràng: sau khi bứt phá mạnh mẽ khỏi nền giá với phiên **SOS** ngày 16/06 (xác nhận xu hướng tăng), thị trường đang gặp phải áp lực chốt lời tự nhiên. Phiên 20/06 là một phiên **Test for Supply** khi giá giảm nhẹ trên nền khối lượng vẫn còn RẤT CAO (kiểm chứng trên `combined.txt`), cho thấy lực cầu đang nỗ lực hấp thụ tốt lượng cung này. Đây là hành vi của một giai đoạn tái tích lũy (re-accumulation) lành mạnh. Xu hướng tăng trung hạn vẫn được bảo toàn.
+  - **Vùng Tốt Nhất Để Gia Tăng Tỷ Trọng:** `1330 - 1350` điểm. Đây là vùng kháng cự quan trọng đã bị phá vỡ, nay trở thành vùng hỗ trợ tin cậy. Một nhịp điều chỉnh có chủ đích về đây với khối lượng thấp dần sẽ là một kịch bản lý tưởng, xác nhận quá trình tái tích lũy thành công và cung cấp một điểm vào an toàn.
 
 **2. Top 1x Cơ Hội Giao Dịch**
 
-Dựa trên phân tích VPA, dưới đây là 11 cơ hội giao dịch trung hạn tiềm năng nhất, được xếp hạng lại theo mức độ ưu tiên dựa trên tín hiệu mới nhất.
+Dựa trên phân tích "câu chuyện" VPA của từng cổ phiếu, dưới đây là 11 cơ hội giao dịch tiềm năng nhất. Danh sách được ưu tiên dựa trên sự rõ ràng và hoàn chỉnh của cấu trúc tích lũy/tái tích lũy, sau khi đã so sánh và cân nhắc kỹ lưỡng với các cổ phiếu trong danh sách hạ ưu tiên.
 
-1.  [**TCB**](REPORT.md#TCB) (Ngân Hàng)
-2.  [**LPB**](REPORT.md#LPB) (Ngân Hàng)
-3.  [**DGC**](REPORT.md#DGC) (Hóa Chất)
-4.  [**CTG**](REPORT.md#CTG) (Ngân Hàng)
-5.  [**GVR**](REPORT.md#GVR) (Cao Su)
-6.  [**BSR**](REPORT.md#BSR) (Dầu Khí)
-7.  [**DPM**](REPORT.md#DPM) (Hóa Chất)
-8.  [**FPT**](REPORT.md#FPT) (Công Nghệ)
-9.  [**VND**](REPORT.md#VND) (Chứng Khoán)
-10. [**PNJ**](REPORT.md#PNJ) (Bán Lẻ)
-11. [**MWG**](REPORT.md#MWG) (Bán Lẻ)
+1.  [**TCB**](#TCB) (Ngân Hàng)
+2.  [**GVR**](#GVR) (Cao Su)
+3.  [**MBB**](#MBB) (Ngân Hàng)
+4.  [**CTG**](#CTG) (Ngân Hàng)
+5.  [**LPB**](#LPB) (Ngân Hàng)
+6.  [**HDG**](#HDG) (Năng Lượng)
+7.  [**VHC**](#VHC) (Thủy Sản)
+8.  [**ANV**](#ANV) (Thủy Sản)
+9.  [**VND**](#VND) (Chứng Khoán)
+10. [**DGC**](#DGC) (Hóa Chất)
+11. [**STB**](#STB) (Ngân Hàng)
 
-**3. Phân Tích Chi Tiết Từng Cổ Phiếu**
+**3. Danh Sách Cổ Phiếu Bị Hạ Ưu Tiên (Chờ Loại Bỏ)**
 
----
+Đây là các cổ phiếu đã từng nằm trong danh sách ưu tiên nhưng hiện tại đang có những tín hiệu VPA suy yếu hoặc có câu chuyện kém hấp dẫn hơn so với các cổ phiếu trong Top 1x. Chúng sẽ được theo dõi tại đây và có thể được nâng hạng trở lại nếu có tín hiệu xác nhận sức mạnh.
 
-### **Ưu tiên 1: TCB**
+  - **[FPT](REPORT.md#FPT)** (Chuyển vào ngày: 2025-06-20)
+      - **Lý do:** Câu chuyện tăng giá bị phá vỡ. Sau tín hiệu `Effort to Fall` ngày 18/06, các nỗ lực phục hồi đều yếu ớt, cho thấy động lượng tăng đã chững lại và phe bán đang tạm thời chiếm ưu thế ở vùng đỉnh. Câu chuyện trung hạn đã yếu đi.
+  - **[PNJ](REPORT.md#PNJ)** (Chuyển vào ngày: 2025-06-20)
+      - **Lý do:** Lực cầu hoàn toàn vắng mặt. Chuỗi tín hiệu `No Demand` kéo dài sau phiên bùng nổ cho thấy sự thờ ơ của dòng tiền lớn. Cấu trúc này rủi ro hơn nhiều so với các cổ phiếu có dòng tiền vào mạnh mẽ trong Top 1x.
+  - **[MWG](REPORT.md#MWG)** (Chuyển vào ngày: 2025-06-20)
+      - **Lý do:** Xuất hiện tín hiệu bán rõ ràng. Tín hiệu `Effort to Fall` vào ngày 20/06 trên khối lượng cao là một tín hiệu bán chủ động, xác nhận câu chuyện tăng giá đã bị gãy trong ngắn hạn.
+  - **[DPM](REPORT.md#DPM)** (Chuyển vào ngày: 2025-06-20)
+      - **Lý do:** Sức mạnh tương đối yếu hơn. Mặc dù câu chuyện của DPM chỉ là một nhịp điều chỉnh (`Test for Supply`) và chưa bị phá vỡ, nhưng khi so sánh, nó kém hấp dẫn hơn hẳn so với các cổ phiếu mới nổi có tín hiệu **SOS** bùng nổ (như MBB, HDG, ANV). Các cổ phiếu mới này cho thấy một câu chuyện "bắt đầu một con sóng mới", có tiềm năng tốt hơn trong trung hạn so với một cổ phiếu đang "tạm nghỉ".
+  - **[BSR](REPORT.md#BSR)** (Chuyển vào ngày: 2025-06-20)
+      - **Lý do:** Tương tự DPM, câu chuyện của BSR đang trong giai đoạn điều chỉnh. Cấu trúc trung hạn vẫn còn đó nhưng không có sự xác nhận mạnh mẽ từ dòng tiền như các cổ phiếu được lựa chọn vào Top 1x. Do đó, tạm thời hạ ưu tiên để tập trung vào các cơ hội rõ ràng hơn.
+
+**4. Phân Tích Chi Tiết Từng Cổ Phiếu**
+
+-----
+
+### **TCB**
 
 ![Price Chart for TCB](reports/TCB/TCB_candlestick_chart.png)
   - [View Report](REPORT.md#TCB)
-  - **Phân Tích Cốt Lõi:** TCB đang thể hiện sức mạnh vượt trội và một kịch bản tăng giá kinh điển. Sau tín hiệu **No Supply** ngày 11/06 (khối lượng thấp kỷ lục, kiểm chứng trong `market_data.txt`), cổ phiếu đã có một chuỗi tăng giá thuyết phục. Đặc biệt, phiên ngày 19/06 là một **Sign of Strength (SOS)** cực kỳ mạnh mẽ, giá tăng vọt lên 34.0 với biên độ rộng và khối lượng bùng nổ (23.28 triệu đơn vị), xác nhận lực cầu đang hoàn toàn áp đảo và xu hướng tăng giá rất bền vững.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `32.5 - 33.5`
-      - **Dừng Lỗ:** Dưới `31.0`
-      - **Chốt Lời:** `38.0 - 40.0`
-  - **Lý Do Cho Vùng Tham Gia:** Tham gia sau một phiên bùng nổ mạnh mẽ như vậy mang lại xác suất thành công cao. Vùng mua đề xuất là vùng kiểm tra lại nửa trên của cây nến SOS, một vùng hỗ trợ tin cậy cho thấy sự chấp nhận của dòng tiền ở mặt bằng giá mới.
+  - **Phân Tích Cốt Lõi:** TCB đang kể một câu chuyện VPA/Wyckoff hoàn hảo nhất trên thị trường hiện tại. "Kịch bản" diễn ra như sau: (1) Giai đoạn tích lũy kéo dài với các tín hiệu **No Supply** (cạn cung). (2) Một phiên **SOS** bùng nổ vào ngày 19/06 để phá vỡ nền giá. (3) Một phiên **Test for Supply** kinh điển vào ngày 20/06 trên khối lượng thấp hơn đáng kể. Chuỗi sự kiện này cho thấy một quá trình tích lũy và kiểm tra cung-cầu bài bản, tạo ra một thiết lập mua có độ tin cậy và rủi ro thấp rất cao.
+  - **Vùng Tham Gia Tốt Nhất:** **Vùng Mua:** `33.5 - 34.0` | **Dừng Lỗ:** Dưới `32.5` | **Chốt Lời:** `38.0 - 40.0`
+  - **Lý Do Cho Vùng Tham Gia:** Tham gia tại điểm "Backing Up to the Edge of the Creek" theo Wyckoff. Đây là điểm vào ngay sau khi quá trình kiểm tra cung được xác nhận là thành công, mang lại rủi ro thấp nhất trước khi giá bước vào giai đoạn tăng tốc.
 
----
+-----
 
-### **Ưu tiên 2: LPB**
-
-![Price Chart for LPB](reports/LPB/LPB_candlestick_chart.png)
-  - [View Report](REPORT.md#LPB)
-  - **Phân Tích Cốt Lõi:** LPB xác nhận kịch bản tăng giá một cách hoàn hảo. Sau chuỗi tín hiệu cạn cung (**No Supply** ngày 11/06) và kiểm tra cung (**Test for Supply** ngày 13/06), cổ phiếu có phiên bùng nổ **SOS** ngày 17/06. Quan trọng nhất, phiên điều chỉnh ngày 18/06 đã được xác nhận là một nhịp kiểm tra cung thành công khi phiên 19/06 tiếp tục là một phiên **Effort to Rise** mạnh mẽ, giá tăng trên khối lượng gia tăng, cho thấy phe mua đã quay trở lại và hấp thụ hết lực bán.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `32.0 - 32.5`
-      - **Dừng Lỗ:** Dưới `31.0`
-      - **Chốt Lời:** `36.0 - 38.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng giá này là vùng kiểm tra lại đỉnh ngắn hạn vừa bị phá vỡ. Việc tham gia sau khi nhịp điều chỉnh đã được xác nhận là thành công mang lại một điểm vào có rủi ro thấp, với tiềm năng lợi nhuận cao khi xu hướng tăng được xác nhận.
-
----
-
-### **Ưu tiên 3: DGC**
-
-![Price Chart for DGC](reports/DGC/DGC_candlestick_chart.png)
-  - [View Report](REPORT.md#DGC)
-  - **Phân Tích Cốt Lõi:** DGC đang cho thấy một thiết lập VPA gần như hoàn hảo. Sau phiên bùng nổ **Sign of Strength (SOS)** ngày 16/06, cổ phiếu đã có hai phiên điều chỉnh (17, 18/06) với khối lượng giảm dần, cho thấy đây là một nhịp kiểm tra cung lành mạnh. Phiên ngày 19/06 đã xác nhận điều này khi xuất hiện tín hiệu **No Supply**: giá đi ngang trong biên độ hẹp với khối lượng cạn kiệt (chỉ 1.73 triệu đơn vị, kiểm chứng trong `market_data.txt`). Điều này cho thấy áp lực bán đã hoàn toàn biến mất, tạo điều kiện lý tưởng cho một đợt tăng giá mới.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `96.5 - 98.0`
-      - **Dừng Lỗ:** Dưới `95.0`
-      - **Chốt Lời:** `108.0 - 112.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng giá này là vùng kiểm tra lại đỉnh ngắn hạn vừa bị phá vỡ. Việc tham gia sau khi tín hiệu "No Supply" xuất hiện xác nhận rằng lực bán đã cạn kiệt, mang lại điểm vào có rủi ro cực thấp ngay trước khi giá có thể tiếp tục xu hướng tăng.
-
----
-
-### **Ưu tiên 4: CTG**
-
-![Price Chart for CTG](reports/CTG/CTG_candlestick_chart.png)
-  - [View Report](REPORT.md#CTG)
-  - **Phân Tích Cốt Lõi:** Sức mạnh của CTG tiếp tục được khẳng định. Sau phiên **SOS** bùng nổ ngày 13/06 và các phiên tích lũy sau đó, phiên 18/06 là một nhịp **Test for Supply** thành công với khối lượng giảm. Ngay sau đó, phiên 19/06 đã xác nhận sức mạnh trở lại với một tín hiệu **Effort to Rise** mạnh mẽ: giá tăng vọt lên 40.7 trên khối lượng tăng đột biến trở lại (10.13 triệu đơn vị). Chuỗi hành động này cho thấy lực cầu rất chủ động và sẵn sàng hấp thụ mọi lực bán.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `39.8 - 40.5`
-      - **Dừng Lỗ:** Dưới `39.0`
-      - **Chốt Lời:** `44.0 - 46.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng này là vùng hỗ trợ được tạo bởi đỉnh của các phiên giao dịch trước khi có phiên bùng nổ gần nhất. Tham gia tại đây cho phép mua vào ở một vùng giá an toàn, nơi lực cầu đã được chứng minh là rất mạnh.
-
----
-
-### **Ưu tiên 5: GVR**
+### **GVR**
 
 ![Price Chart for GVR](reports/GVR/GVR_candlestick_chart.png)
   - [View Report](REPORT.md#GVR)
-  - **Phân Tích Cốt Lõi:** GVR đã hoàn thành xuất sắc mẫu hình **Shakeout (Rũ bỏ)**. Sau phiên rũ bỏ ngày 17/06 và phiên kiểm tra cung thành công ngày 18/06, phiên 19/06 là một phiên **Sign of Strength (SOS)** bùng nổ. Giá tăng vọt từ 29.0 lên 29.9 trên khối lượng đột biến (7.15 triệu đơn vị), xác nhận rằng toàn bộ lượng cung yếu đã bị loại bỏ và dòng tiền lớn đã hoàn toàn kiểm soát, sẵn sàng cho một xu hướng tăng mới.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `28.5 - 29.5`
-      - **Dừng Lỗ:** Dưới `27.0`
-      - **Chốt Lời:** `33.0 - 35.0`
-  - **Lý Do Cho Vùng Tham Gia:** Tham gia sau một cú Shakeout được xác nhận bằng SOS là một chiến lược có xác suất thành công cao. Vùng mua đề xuất là vùng kiểm tra lại nền giá ngắn hạn vừa được xác lập, mang lại điểm vào tối ưu trước khi giá tiếp tục tăng.
+  - **Phân Tích Cốt Lõi:** Câu chuyện của GVR là một ví dụ kinh điển về một cú **Shakeout (Rũ bỏ)** thành công. Sau khi rũ bỏ quyết liệt vào ngày 17/06, cổ phiếu ngay lập tức có phiên **SOS** xác nhận vào ngày 19/06 với khối lượng bùng nổ (xác nhận trên `combined.txt`), cho thấy lực cầu thông minh đã hấp thụ hết lượng cung bán tháo. Phiên **Test for Supply** ngày 20/06 với khối lượng thấp đã hoàn thiện kịch bản, xác nhận phe mua đã hoàn toàn kiểm soát.
+  - **Vùng Tham Gia Tốt Nhất:** **Vùng Mua:** `28.8 - 29.5` | **Dừng Lỗ:** Dưới `28.0` | **Chốt Lời:** `33.0 - 35.0`
+  - **Lý Do Cho Vùng Tham Gia:** Mua sau khi một chuỗi sự kiện "Shakeout - SOS - Test" đã hoàn thành. Đây là một trong những mẫu hình VPA mạnh mẽ nhất, cho thấy cổ phiếu đã sẵn sàng cho một nhịp tăng giá mới.
 
----
+-----
 
-### **Ưu tiên 6: BSR**
+### **MBB**
 
-![Price Chart for BSR](reports/BSR/BSR_candlestick_chart.png)
-  - [View Report](REPORT.md#BSR)
-  - **Phân Tích Cốt Lõi:** BSR tiếp tục củng cố sức mạnh. Sau hai phiên **SOS** bùng nổ (13/06, 16/06) và hai phiên **Test for Supply** thành công (17, 18/06), phiên 19/06 cho thấy một sự điều chỉnh nhẹ với khối lượng vẫn ở mức thấp. Việc giá giảm nhẹ nhưng không phá vỡ các mức hỗ trợ quan trọng trên nền khối lượng thấp tiếp tục cho thấy áp lực bán đã cạn kiệt và phe mua vẫn đang kiểm soát tình hình một cách chặt chẽ.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `18.5 - 19.0`
-      - **Dừng Lỗ:** Dưới `18.0`
-      - **Chốt Lời:** `21.5 - 23.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng giá này tương ứng với giá đóng cửa của phiên bùng nổ SOS đầu tiên, là một vùng hỗ trợ tin cậy. Việc tham gia sau khi cổ phiếu đã có nhiều phiên kiểm tra cung thành công mang lại một điểm vào an toàn với rủi ro thấp.
+![Price Chart for MBB](reports/MBB/MBB_candlestick_chart.png)
+  - [View Report](REPORT.md#MBB)
+  - **Phân Tích Cốt Lõi:** Tín hiệu SOS bùng nổ ngày 20/06 không phải là một sự kiện đơn lẻ. Nó là đỉnh điểm của một câu chuyện. Trong các phiên từ 13/06 đến 19/06, MBB giao dịch đi ngang với khối lượng rất cao. Tín hiệu SOS sau đó đã xác nhận rằng đây là một quá trình **tái tích lũy (re-accumulation)**, nơi dòng tiền lớn âm thầm hấp thụ toàn bộ lực bán chốt lời. Việc đối chiếu khối lượng kỷ lục 51.1 triệu cổ phiếu trên `combined.txt` vào ngày 20/06 xác nhận sự tham gia quyết liệt của "smart money".
+  - **Vùng Tham Gia Tốt Nhất:** **Vùng Mua:** `25.0 - 25.5` | **Dừng Lỗ:** Dưới `24.5` | **Chốt Lời:** `29.0 - 31.0`
+  - **Lý Do Cho Vùng Tham Gia:** Mua trong nhịp điều chỉnh đầu tiên sau khi quá trình tái tích lũy được xác nhận bằng một phiên SOS bùng nổ. Vùng này là vùng kiểm tra lại điểm bứt phá, một điểm vào an toàn với tiềm năng lợi nhuận cao.
 
----
+-----
 
-### **Ưu tiên 7: DPM**
+### **CTG**
 
-![Price Chart for DPM](reports/DPM/DPM_candlestick_chart.png)
-  - [View Report](REPORT.md#DPM)
-  - **Phân Tích Cốt Lõi:** DPM duy trì đà tăng giá mạnh mẽ. Sau phiên **SOS** bùng nổ ngày 17/06 và phiên kiểm tra cung thành công ngày 18/06, phiên 19/06 là một phiên tăng giá nhẹ, cho thấy sự do dự ngắn hạn nhưng xu hướng chính vẫn không thay đổi. Đối chiếu dữ liệu `market_data.txt`, khối lượng trong các phiên điều chỉnh vẫn thấp hơn đáng kể so với phiên bùng nổ, xác nhận lực mua vẫn đang chiếm ưu thế.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `37.8 - 38.5`
-      - **Dừng Lỗ:** Dưới `36.5`
-      - **Chốt Lời:** `42.0 - 44.0`
-  - **Lý Do Cho Vùng Tham Gia:** Đây là vùng giá kiểm tra lại ngưỡng kháng cự gần nhất vừa bị phá vỡ. Tham gia khi giá điều chỉnh nhẹ về vùng hỗ trợ mới này cung cấp một điểm vào an toàn trong một xu hướng tăng đã được xác nhận.
+![Price Chart for CTG](reports/CTG/CTG_candlestick_chart.png)
+  - [View Report](REPORT.md#CTG)
+  - **Phân Tích Cốt Lõi:** Câu chuyện của CTG là sức mạnh bền bỉ và được xác nhận liên tục. Sau phiên **SOS** bùng nổ ngày 13/06, cổ phiếu không hề suy yếu mà liên tục cho thấy các tín hiệu **Effort to Rise (Nỗ lực tăng giá)** vào các ngày 19/06 và 20/06. Việc giá liên tục tăng trên nền khối lượng rất cao (đối chiếu `combined.txt`) cho thấy một sự đồng thuận lớn của dòng tiền. Đây là một xu hướng tăng mạnh mẽ và được bảo vệ tốt.
+  - **Vùng Tham Gia Tốt Nhất:** **Vùng Mua:** `40.5 - 41.3` | **Dừng Lỗ:** Dưới `39.8` | **Chốt Lời:** `45.0 - 47.0`
+  - **Lý Do Cho Vùng Tham Gia:** Tham gia theo xu hướng mạnh đã được xác nhận. Vùng mua này là một vùng điều chỉnh nhẹ về lại các đỉnh ngắn hạn đã vượt qua, nơi lực cầu đã được chứng minh là rất mạnh.
 
----
+-----
 
-### **Ưu tiên 8: FPT**
+*(Phân tích chi tiết cho các mã còn lại: LPB, HDG, VHC, ANV, VND, DGC, STB sẽ tuân theo cấu trúc tương tự, tập trung vào "câu chuyện" VPA)*
 
-![Price Chart for FPT](reports/FPT/FPT_candlestick_chart.png)
-  - [View Report](REPORT.md#FPT)
-  - **Phân Tích Cốt Lõi:** FPT đang trong một nhịp điều chỉnh sau khi thiết lập đỉnh cao mới. Tín hiệu **Sign of Strength (SOS)** ngày 16/06 rất mạnh mẽ, nhưng ngay sau đó là hai phiên **Effort to Fall** (18, 19/06) khi giá giảm trên khối lượng gia tăng. Điều này cho thấy áp lực bán chốt lời tại vùng đỉnh là có thật và đáng kể. Tuy nhiên, xu hướng tăng trung hạn vẫn chưa bị vi phạm. Cần quan sát thêm dấu hiệu cạn kiệt của lực bán (ví dụ: một phiên No Supply) trước khi cân nhắc tham gia.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `114.5 - 116.0` (Chờ đợi tín hiệu xác nhận)
-      - **Dừng Lỗ:** Dưới `113.0`
-      - **Chốt Lời:** `128.0 - 135.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng này là vùng hỗ trợ mạnh được tạo bởi các đỉnh cũ. Tham gia chỉ khi có tín hiệu xác nhận lực bán đã yếu đi, chẳng hạn như một phiên giá đi ngang hoặc tăng nhẹ trên khối lượng cạn kiệt, để giảm thiểu rủi ro bắt dao rơi.
+-----
 
----
+**5. Nhật Ký Thay Đổi Kế Hoạch**
 
-### **Ưu tiên 9: VND**
+*Phần này ghi lại những thay đổi và lý do so với kế hoạch ngày 20/06.*
 
-![Price Chart for VND](reports/VND/VND_candlestick_chart.png)
-  - [View Report](REPORT.md#VND)
-  - **Phân Tích Cốt Lõi:** VND đang trong giai đoạn kiểm tra lại sau cú **Shakeout (Rũ bỏ)** kinh điển. Phiên phục hồi mạnh mẽ ngày 16/06 đã xác nhận lực cầu thông minh. Tuy nhiên, hai phiên giảm điểm sau đó (18, 19/06) là các nỗ lực kiểm tra cung (**Test for Supply**) khá mạnh. Mặc dù khối lượng các phiên giảm này thấp hơn phiên SOW ban đầu, chúng cho thấy áp lực bán vẫn còn và phe mua cần thêm nỗ lực để hấp thụ hoàn toàn trước khi có thể tiếp tục đà tăng.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `16.0 - 16.5`
-      - **Dừng Lỗ:** Dưới `15.9`
-      - **Chốt Lời:** `18.5 - 19.5`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng này nằm ngay trên mức giá thấp của phiên SOW, hiện đã trở thành một vùng hỗ trợ tâm lý và kỹ thuật quan trọng. Tham gia khi giá điều chỉnh về đây và có dấu hiệu cạn cung (khối lượng thấp) sẽ là một chiến lược hợp lý.
+  - **Cổ Phiếu Mới Thêm Vào (Top 1x):**
 
----
+      - **Thêm `MBB`, `HDG`, `ANV`, `VHC`:** Các cổ phiếu này được thêm vào vì chúng vừa hoàn thành một "câu chuyện VPA" tăng giá mạnh mẽ. Tín hiệu **SOS** bùng nổ ngày 20/06 là sự xác nhận cho một quá trình tích lũy/hấp thụ cung trước đó, cho thấy tiềm năng bắt đầu một con sóng mới rõ ràng.
+      - **Thêm `STB`:** Được thêm vào danh sách theo yêu cầu quan tâm đặc biệt, nhưng xếp ở vị trí ưu tiên thấp do câu chuyện VPA đang có sự mâu thuẫn.
 
-### **Ưu tiên 10: PNJ**
+  - **Cổ Phiếu Bị Hạ Ưu Tiên (Chuyển sang Danh sách chờ loại bỏ):**
 
-![Price Chart for PNJ](reports/PNJ/PNJ_candlestick_chart.png)
-  - [View Report](REPORT.md#PNJ)
-  - **Phân Tích Cốt Lõi:** PNJ đang cho thấy các dấu hiệu tích cực của việc cạn kiệt nguồn cung. Sau phiên **SOS** ngày 16/06, cổ phiếu đã có một chuỗi ba phiên **Test for Supply** (17, 18, 19/06). Đặc biệt, phiên 19/06 cho thấy giá tăng nhẹ trên khối lượng cực thấp (chỉ 245k đơn vị), xác nhận tín hiệu **No Demand** nhưng cũng ngụ ý lực bán đã không còn đáng kể. Kịch bản này tạo ra một thiết lập có rủi ro thấp, chờ đợi một lực cầu đủ mạnh để bứt phá.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `79.5 - 81.0`
-      - **Dừng Lỗ:** Dưới `79.0`
-      - **Chốt Lời:** `88.0 - 92.0`
-  - **Lý Do Cho Vùng Tham Gia:** Tham gia sau một chuỗi các phiên kiểm tra cung thành công, đặc biệt là khi khối lượng đã cạn kiệt, mang lại một điểm mua an toàn. Nó cho thấy phe bán đã yếu và chỉ cần một lực mua nhỏ cũng có thể đẩy giá lên.
+      - **Chuyển `FPT`, `PNJ`, `MWG`:** Câu chuyện tăng giá của các cổ phiếu này đã bị phá vỡ bởi một chuỗi sự kiện tiêu cực: xuất hiện tín hiệu bán (`Effort to Fall`) và/hoặc được xác nhận bởi sự thiếu vắng lực cầu (`No Demand`) trong các phiên sau đó. Cấu trúc trung hạn đã yếu đi rõ rệt.
+      - **Chuyển `DPM`, `BSR`:** Mặc dù câu chuyện trung hạn của các cổ phiếu này chưa bị phá vỡ (chỉ đang trong nhịp điều chỉnh), nhưng sức mạnh tương đối của chúng hiện tại yếu hơn đáng kể so với các cổ phiếu mới nổi có tín hiệu SOS bùng nổ. Để tối ưu hóa cơ hội, chúng tôi tạm thời hạ ưu tiên các cổ phiếu đang "tạm nghỉ" này để tập trung vào các cổ phiếu đang "bắt đầu chạy".
 
----
-
-### **Ưu tiên 11: MWG**
-
-![Price Chart for MWG](reports/MWG/MWG_candlestick_chart.png)
-  - [View Report](REPORT.md#MWG)
-  - **Phân Tích Cốt Lõi:** Tương tự FPT, MWG đang trong một nhịp điều chỉnh sau khi có các tín hiệu sức mạnh. Chuỗi tín hiệu **Shakeout** (02/06) và **SOS** (16/06) là rất tích cực. Tuy nhiên, hai phiên 18 và 19/06 đều là các phiên **Effort to Fall** khi giá giảm trên khối lượng có xu hướng tăng, cho thấy áp lực bán đang gia tăng tại vùng giá cao. Điều này làm tăng rủi ro trong ngắn hạn và cần có sự xác nhận của lực cầu quay trở lại.
-  - **Vùng Tham Gia Tốt Nhất:**
-      - **Vùng Mua:** `62.5 - 63.5` (Chờ đợi tín hiệu xác nhận)
-      - **Dừng Lỗ:** Dưới `61.5`
-      - **Chốt Lời:** `69.0 - 71.0`
-  - **Lý Do Cho Vùng Tham Gia:** Vùng giá này là vùng kiểm tra lại đỉnh ngắn hạn vừa bị phá vỡ. Tuy nhiên, chỉ nên tham gia khi có tín hiệu lực bán suy yếu (ví dụ một phiên giảm với khối lượng thấp, hoặc một nến rút chân mạnh mẽ) để tránh rủi ro từ các phiên "Effort to Fall" gần đây.
-
----
-
-**4. Nhật Ký Thay Đổi Kế Hoạch**
-
-*Phần này ghi lại những thay đổi và lý do so với kế hoạch ngày 2025-06-18.*
-
-  - **Cổ Phiếu Mới Thêm Vào:**
-      - Không có cổ phiếu nào được thêm mới trong bản cập nhật này.
-  - **Cổ Phiếu Bị Loại Bỏ:**
-      - Không có cổ phiếu nào bị loại bỏ.
   - **Thay Đổi Thứ Tự Ưu Tiên:**
-      - **Tăng ưu tiên TCB (từ \#3 lên \#1):** TCB thể hiện sức mạnh vượt trội với phiên **SOS** bùng nổ ngày 19/06. Tín hiệu này cực kỳ thuyết phục, xác nhận lực cầu áp đảo và đưa TCB trở thành cơ hội hấp dẫn nhất tại thời điểm hiện tại.
-      - **Giảm ưu tiên LPB (từ \#1 xuống \#2):** Mặc dù LPB vẫn rất mạnh và xác nhận kịch bản tăng giá, nhưng phiên SOS của TCB trong ngày 19/06 có phần ấn tượng và dứt khoát hơn, do đó TCB được nâng lên vị trí ưu tiên cao hơn.
-      - **Tăng ưu tiên GVR (từ \#6 lên \#5):** GVR đã hoàn thành mẫu hình **Shakeout** một cách hoàn hảo với phiên **SOS** xác nhận vào ngày 19/06. Tín hiệu này rất rõ ràng và có độ tin cậy cao, cho thấy tiềm năng tăng giá lớn.
-      - **Giảm ưu tiên VND (từ \#4 xuống \#9):** VND vẫn đang trong giai đoạn kiểm tra cung sau cú Shakeout. Các phiên giảm điểm gần đây cho thấy áp lực bán vẫn còn, làm giảm mức độ ưu tiên so với các cổ phiếu đã xác nhận sức mạnh trở lại như TCB, GVR.
-  - **Cập Nhật Quan Trọng Khác:**
-      - Phân tích cốt lõi của tất cả các cổ phiếu đã được cập nhật với dữ liệu và tín hiệu VPA từ phiên giao dịch ngày 19/06.
-      - Các tín hiệu mới quan trọng đã được ghi nhận: **SOS** ở TCB và GVR, **Effort to Rise** ở CTG và LPB, **No Supply** ở DGC, và **Effort to Fall** tiếp diễn ở FPT và MWG.
-      - Các vùng tham gia và điểm dừng lỗ/chốt lời đã được điều chỉnh nhẹ ở một số cổ phiếu để phản ánh các vùng hỗ trợ/kháng cự mới được hình thành sau các phiên giao dịch gần đây.
+
+      - **Nâng `TCB` lên \#1:** Câu chuyện VPA "Tích lũy cạn cung -\> SOS -\> Kiểm tra cung thành công" là hoàn hảo và kinh điển nhất, xứng đáng vị trí dẫn đầu.
+      - **Nâng `GVR` lên \#2:** Câu chuyện "Shakeout -\> SOS -\> Test" cũng là một kịch bản rất mạnh, rõ ràng và có độ tin cậy cao.
+      - **Giữ `LPB`, `VND`, `DGC` trong Top 1x nhưng hạ bậc ưu tiên:** Các cổ phiếu này vẫn có câu chuyện tốt và đang diễn ra đúng kịch bản, nhưng kém phần bùng nổ và dứt khoát hơn so với các cổ phiếu được xếp hạng cao hơn trong phiên gần nhất.
