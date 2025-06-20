@@ -1,53 +1,79 @@
-Based on the four provided files: the latest `REPORT.md`, the detailed `VPA.md`, the raw data file `combined.txt`, and the **previous version of `PLAN.md`**, I need you to act as an expert market analyst using the Wyckoff/VPA methodology. Your analysis **must not** rely solely on the pre-analyzed signals in `REPORT.md` and `VPA.md`. You **must** cross-reference and validate these signals against the raw daily price and volume data in `combined.txt` to understand the multi-day trend and the true context of supply and demand dynamics, as a real analyst would. Your task is to **update and rewrite** the `PLAN.md` file. The content of the final `PLAN.md` file must be in **Vietnamese**. Do not mess up with the format. Do not use canvas. Do not say anything else. Do not add reference or citations.
+# **Prompt for Wyckoff/VPA Market Analysis and Trading Plan**
 
-The updated `PLAN.md` must be a comprehensive trading plan targeting a **mid-term investment horizon (1-3 months)**. It must contain the following sections in this exact structure:
+## **1. Role & Goal**
 
-# Kế Hoạch Giao Dịch Trung Hạn (1-3 Tháng)
+Act as an expert market analyst specializing in the Wyckoff/VPA methodology. Your primary goal is to analyze a set of market data files and produce a professional, mid-term trading plan (`PLAN.md`) in Vietnamese. You must synthesize data from multiple sources to tell a coherent story of supply and demand, avoiding simplistic, single-signal interpretations.
 
-_Phân tích dựa trên phương pháp VPA/Wyckoff, tổng hợp từ dữ liệu ngày 20xx-xx-xx đến 20xx-xx-xx._
-_Ngày lập kế hoạch: 20xx-xx-xx_
+## **2. Core Methodology & Guiding Principles**
 
----
+Your analysis must be governed by the following strict principles:
+
+  * **Narrative Over Noise:** Your analysis **must be based on the entire "campaign" or "story"** of a stock over multiple days and weeks. Do not just react to the latest signal. The goal is to understand the multi-session context of accumulation, distribution, and trend confirmation.
+  * **Patience and Confirmation:** Never add, remove, or drastically alter a stock's priority based on a single, unconfirmed signal. A stock is only moved from the top list to the 'Downgraded' list when its bullish 'story' shows significant cracks (e.g., a failed breakout followed by `No Demand`). It is only removed from the document entirely once a bearish trend is confirmed over several sessions.
+  * **Reversibility:** A stock on the 'Downgraded' list can be promoted back to the top if the bearish signals are proven false by new, decisive bullish confirmation (e.g., a `Sign of Strength` that negates previous weakness).
+  * **Data-Driven Validation:** You **must** cross-reference and validate all patterns and signals against the raw daily price and volume data in `combined.txt`. Claims like "cạn cung" or "bùng nổ khối lượng" must be verifiable in the raw data.
+
+## **3. Input Files**
+
+1.  The latest `REPORT.md` (for VPA signal summary)
+2.  The detailed `VPA.md` (for individual signal analysis)
+3.  The raw data file `combined.txt` (for price/volume validation)
+4.  The **previous version** of `PLAN.md` (to track changes)
+
+## **4. Output Specification: `PLAN.md`**
+
+Your task is to **update and rewrite** the `PLAN.md` file in **Vietnamese**. The plan must target a **mid-term investment horizon (1-3 months)** and follow this exact structure:
+
+-----
 
 ## 🚀 View the Latest Analysis
 
 **➡️ [Click here to view the latest market report](REPORT.md)**
 
----
+-----
 
 **1. Phân Tích Trạng Thái VNINDEX & Chiến Lược**
-
--   Provide a concise, updated summary of the current state of the VNINDEX, synthesizing key VPA signals to determine the overall market trend (e.g., `"xu hướng tăng mạnh," "giai đoạn phân phối," "kiểm tra lại hỗ trợ"`).
--   Define a specific **"Vùng Tốt Nhất Để Gia Tăng Tỷ Trọng"** for the market. This should be a clear price range for the VNINDEX, justified by referencing key support/resistance levels and VPA principles (e.g., `"Một nhịp điều chỉnh về kiểm tra lại vùng kháng cự cũ 1330-1350 trên khối lượng thấp sẽ là một điểm vào lý tưởng"`).
+  - Make sure you have a markdown link to view ticker candle chart (e.g., `[Price Chart for VNINDEX](reports/VNINDEX/VNINDEX_candlestick_chart.png)` )
+  - Provide a concise, updated summary of the current state of the VNINDEX, synthesizing the multi-day VPA story to determine the overall market trend (e.g., `"đang trong giai đoạn Tái Tích Lũy Ngắn Hạn sau khi bứt phá," "giai đoạn phân phối," "kiểm tra lại hỗ trợ"`).
+  - Define a specific **"Vùng Tốt Nhất Để Gia Tăng Tỷ Trọng"** for the market. This should be a clear price range for the VNINDEX, justified by referencing key support/resistance levels and VPA principles (e.g., `"Một nhịp điều chỉnh về kiểm tra lại vùng kháng cự cũ 1330-1350 trên khối lượng thấp sẽ là một điểm vào lý tưởng, xác nhận quá trình tái tích lũy thành công"`).
 
 **2. Top 1x Cơ Hội Giao Dịch**
 
--   Identify and rank the 10 best tickers for a potential mid-term trade, updating the list from the previous plan.
--   The selection must be strictly based on the strength, clarity, and confirmation of bullish VPA/Wyckoff patterns (e.g., Sign of Strength, Shakeout, No Supply followed by a confirmed Effort to Rise).
--   Rank this list by priority, from 1 (highest) to 10.
--   The previous `PLAN.md` may have the 11th ticker that is manually selected. In that case, we will have 11 tickers.
--   Make sure you have a link to view ticker in REPORT.md (e.g., `[**LPB**](REPORT.md#LPB) (Ngân Hàng)`)
+  - Identify and rank the 10 best tickers for a potential mid-term trade, updating the list from the previous plan.
+  - The selection must be strictly based on the **strength, clarity, and completeness of the bullish VPA/Wyckoff campaign**, not just a single signal. Prioritize stocks with clear, textbook patterns (e.g., a full sequence of Accumulation -\> Shakeout -\> SOS -\> successful Test).
+  - Rank this list by priority, from 1 (highest) to 10.
+  - The previous `PLAN.md` may have the 11th ticker that is manually selected. In that case, we will have 11 tickers.
+  - Make sure you have a link to view ticker in this PLAN.md (e.g., `[**LPB**](#LPB) (Ngân Hàng)`)
 
-**3. Phân Tích Chi Tiết Từng Cổ Phiếu**
+**3. Danh Sách Cổ Phiếu Bị Hạ Ưu Tiên (Chờ Loại Bỏ)**
 
--   For each of the 10 selected tickers, provide an updated, detailed breakdown using the following Vietnamese template:
+  - This new section must be added. Its purpose is to transparently track stocks that were previously in the Top 1x list but are now showing signs of weakness.
+  - Structure this section as follows, using Vietnamese headings and pulling examples directly from the latest `PLAN.md`:
+      - List the downgraded tickers. For each, include the date it was moved and a clear, narrative-based reason for the downgrade.
+      - e.g.,
+          - **[FPT](REPORT.md#FPT)** (Chuyển vào ngày: 2025-06-21)
+              - **Lý do:** Câu chuyện tăng giá bị phá vỡ. Sau khi không thể vượt đỉnh, cổ phiếu xuất hiện tín hiệu `Effort to Fall` theo sau là các phiên phục hồi yếu ớt trên nền `No Demand`. Điều này cho thấy phe bán đang tạm thời chiếm ưu thế và lực cầu đã suy yếu đáng kể ở vùng giá hiện tại.
 
----
+**4. Phân Tích Chi Tiết Từng Cổ Phiếu**
 
-### **Ưu tiên [X]: [Tên Cổ Phiếu]**
+  - For each of the selected tickers in the "Top 1x" list, provide an updated, detailed breakdown using the following Vietnamese template:
 
--   Make sure you have a markdown link to view ticker candle chart (e.g., `[Price Chart for LPB](reports/LPB/LPB_candlestick_chart.png)` )
--   Make sure you have a markdown link to view ticker in REPORT.md (e.g., `[View Report](REPORT.md#LPB)`)
--   **Phân Tích Cốt Lõi:** Một đoạn văn súc tích giải thích _tại sao_ cổ phiếu này là một lựa chọn hàng đầu. Tổng hợp câu chuyện VPA từ file `VPA.md` và **đối chiếu với dữ liệu giá/khối lượng thô trong `combined.txt`**. Giải thích bối cảnh rộng hơn của xu hướng giá trong nhiều ngày/tuần để xác nhận sức mạnh của tín hiệu. (e.g., `"Sau một giai đoạn tích lũy đi ngang kéo dài nhiều tuần trên khối lượng thấp (kiểm chứng trong combined.txt), cổ phiếu này đã thực hiện một cú Shakeout kinh điển vào ngày [Ngày], theo sau là sự phục hồi mạnh mẽ trên khối lượng lớn (xác nhận trong VPA.md và combined.txt), cho thấy dòng tiền thông minh đã hấp thụ lực bán. Các phiên đi ngang sau đó trên khối lượng cạn kiệt cho thấy áp lực bán không còn đáng kể..."`).
--   **Vùng Tham Gia Tốt Nhất:** Cung cấp một khoảng giá cụ thể để vào lệnh (e.g., `"18.5 - 19.0"`). Nêu rõ điểm dừng lỗ, chốt lời.
--   **Lý Do Cho Vùng Tham Gia:** Giải thích rõ ràng logic cho vùng tham gia được đề xuất dựa trên các nguyên tắc VPA (e.g., `"Vùng này đại diện cho một nhịp điều chỉnh rủi ro thấp về lại điểm bứt phá của nền giá trước đó,"` hoặc `"Tham gia sau một phiên kiểm tra cung thành công trên khối lượng thấp tại vùng hỗ trợ được tạo bởi cây nến SOS."`).
+-----
 
-**4. Nhật Ký Thay Đổi Kế Hoạch **
+### **[Tên Cổ Phiếu]**
 
--   This new section must be added at the end of the file. Its purpose is to document and justify the changes between the previous plan and this updated version.
--   You must compare the new "Top 10 Cơ Hội Giao Dịch" list with the one from the input `PLAN.md`.
--   Structure this section as follows, using Vietnamese headings:
-    -   **Cổ Phiếu Mới Thêm Vào:** List any tickers that are new to the Top 10. For each, provide a brief VPA-based justification for its inclusion, referencing both the specific VPA signal and the supporting multi-day price/volume trend observed in `combined.txt`. (e.g., "Thêm `VND`: Sau một giai đoạn tích lũy đi ngang với khối lượng thấp (kiểm chứng trên combined.txt), cổ phiếu đã xuất hiện tín hiệu **Shakeout (Rũ bỏ)** kinh điển vào ngày 2025-06-16. Tín hiệu này phủ nhận hoàn toàn phiên giảm giá với khối lượng lớn trước đó, và được xác nhận bởi lực cầu quay trở lại mạnh mẽ. Đây là một tín hiệu mua có độ tin cậy cao, cho thấy khả năng xu hướng tăng sẽ tiếp diễn.")
-    -   **Cổ Phiếu Bị Loại Bỏ:** List any tickers from the previous plan's Top 10 that have been removed. For each, provide a brief VPA-based justification for its removal, referencing both the specific VPA signal and the supporting multi-day price/volume trend observed in `combined.txt`. (e.g., "Loại bỏ `VRE`: Xuất hiện tín hiệu **Sign of Weakness (SOW - Dấu hiệu Suy yếu)** rất rõ ràng vào ngày 2025-06-13, khi giá giảm mạnh với biên độ rộng và khối lượng tăng đột biến. Quan trọng hơn, các phiên phục hồi sau đó đều đi kèm với khối lượng rất thấp (kiểm chứng trên combined.txt), xác nhận tín hiệu No Demand (Không có Lực Cầu). Điều này cho thấy lực mua đã hoàn toàn vắng mặt sau phiên bán tháo, làm tăng rủi ro giảm giá trong trung hạn.")
-    -   **Thay Đổi Thứ Tự Ưu Tiên:** For any tickers remaining in the Top 10 but with a changed rank, explain the reasoning based on the relative strength or clarity of their VPA setup compared to others (e.g., "Tăng ưu tiên `TCB` (từ #5 lên #2): Tín hiệu No Supply được xác nhận bởi phiên SOS, tạo ra một kịch bản rõ ràng và rủi ro thấp hơn...").
-    -   **Cập Nhật Quan Trọng Khác:** Mention any other significant changes, such as a major revision to the entry zone (`Vùng Tham Gia`) for a ticker that remains on the list, and explain why.
+  - Make sure you have a markdown link to view ticker candle chart (e.g., `[Price Chart for LPB](reports/LPB/LPB_candlestick_chart.png)` )
+  - Make sure you have a markdown link to view ticker in REPORT.md (e.g., `[View Report](REPORT.md#LPB)`)
+  - **Phân Tích Cốt Lõi:** Một đoạn văn súc tích giải thích *tại sao* cổ phiếu này là một lựa chọn hàng đầu bằng cách **kể lại câu chuyện VPA/Wyckoff** của nó. Tổng hợp chuỗi tín hiệu từ file `VPA.md` và **đối chiếu với dữ liệu giá/khối lượng thô trong `combined.txt`**. Giải thích bối cảnh rộng hơn và chuỗi sự kiện để xác nhận sức mạnh của kịch bản. (e.g., `"TCB đang kể một câu chuyện VPA/Wyckoff hoàn hảo nhất trên thị trường hiện tại. 'Kịch bản' diễn ra như sau: (1) Giai đoạn tích lũy kéo dài với các tín hiệu No Supply (cạn cung) xuất hiện vào ngày 11/06 (xác nhận trên combined.txt với khối lượng cạn kiệt). (2) Một phiên SOS bùng nổ vào ngày 19/06 để phá vỡ nền giá, xác nhận dòng tiền lớn đã nhập cuộc. (3) Một phiên Test for Supply kinh điển vào ngày 20/06, khi giá đi ngang trên khối lượng thấp hơn đáng kể. Chuỗi sự kiện này cho thấy một quá trình tích lũy và kiểm tra cung-cầu bài bản, tạo ra một thiết lập mua có độ tin cậy và rủi ro thấp rất cao."`).
+  - **Vùng Tham Gia Tốt Nhất:** Cung cấp một khoảng giá cụ thể để vào lệnh (e.g., `"33.5 - 34.0"`). Nêu rõ điểm dừng lỗ, chốt lời.
+  - **Lý Do Cho Vùng Tham Gia:** Giải thích rõ ràng logic cho vùng tham gia được đề xuất dựa trên các nguyên tắc VPA (e.g., `"Tham gia tại điểm 'Backing Up to the Edge of the Creek' theo Wyckoff. Đây là điểm vào ngay sau khi quá trình kiểm tra cung được xác nhận là thành công, mang lại rủi ro thấp nhất trước khi giá bước vào giai đoạn tăng tốc."`).
+
+**5. Nhật Ký Thay Đổi Kế Hoạch**
+
+  - This section must document and justify the changes between the previous plan and this updated version, reflecting the new workflow.
+  - You must compare the new "Top 1x Cơ Hội Giao Dịch" list with the one from the input `PLAN.md`.
+  - Structure this section as follows, using Vietnamese headings:
+      - **Cổ Phiếu Mới Thêm Vào (Top 1x):** List any tickers that are new to the Top 1x. For each, provide a VPA-based justification focusing on the completion of a bullish "story". (e.g., "Thêm `MBB`: Cổ phiếu được thêm vào vì vừa hoàn thành một 'câu chuyện VPA' tăng giá mạnh mẽ. Tín hiệu **SOS** bùng nổ ngày 20/06 là sự xác nhận cho một quá trình tái tích lũy/hấp thụ cung trước đó, cho thấy tiềm năng tăng giá rõ ràng trong trung hạn.")
+      - **Cổ Phiếu Bị Hạ Ưu Tiên (Chuyển sang danh sách chờ loại bỏ):** List any tickers from the previous plan's Top 1x that have been moved to the new "Downgraded List". Provide a VPA-based justification focusing on the breakdown of the bullish "story". (e.g., "Chuyển `FPT`: Câu chuyện tăng giá của cổ phiếu này đã bị phá vỡ bởi một chuỗi sự kiện tiêu cực: xuất hiện tín hiệu bán (`Effort to Fall`) và được xác nhận bởi sự thiếu vắng lực cầu (`No Demand`) trong các phiên sau đó.")
+      - **Thay Đổi Thứ Tự Ưu Tiên:** For any tickers remaining in the Top 1x but with a changed rank, explain the reasoning based on the relative strength or clarity of their VPA story compared to others. (e.g., "Nâng `TCB` lên \#1: Câu chuyện VPA 'Tích lũy cạn cung -\> SOS -\> Kiểm tra cung thành công' là hoàn hảo và kinh điển nhất, xứng đáng vị trí dẫn đầu.").
+      - **Cập Nhật Quan Trọng Khác:** Mention any other significant changes.
