@@ -51,7 +51,29 @@ jobs:
       - name: Run data pipeline and generate report
         run: python main.py
 
-      # Step 6: Commit and push the updated report, data, and charts to the repository.
+      # Step 6: Combine all market data files into a single file.
+      - name: Combine market data
+        run: |
+          cd market_data
+          output_file="market_data.txt"
+
+          if [ -f "$output_file" ]; then
+              rm "$output_file"
+          fi
+
+          for file in *; do
+              # Ensure that we are only processing files and not the output file itself.
+              if [ -f "$file" ] && [ "$file" != "$output_file" ]; then
+                  full_path=$(pwd)/"$file"
+                  echo "// $full_path" >> "$output_file"
+                  cat "$file" >> "$output_file"
+                  echo "" >> "$output_file"
+              fi
+          done
+
+          echo "All market data files have been combined into $output_file"
+
+      # Step 7: Commit and push the updated report, data, and charts to the repository.
       - name: Commit and push changes
         run: |
           # Configure git with the details of the last commit's author to keep authorship consistent.

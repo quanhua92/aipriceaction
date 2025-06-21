@@ -11,13 +11,13 @@ Your analysis must be governed by the following strict principles:
   * **Narrative Over Noise:** Your analysis **must be based on the entire "campaign" or "story"** of a stock over multiple days and weeks. Do not just react to the latest signal. The goal is to understand the multi-session context of accumulation, distribution, and trend confirmation.
   * **Patience and Confirmation:** Never add, remove, or drastically alter a stock's priority based on a single, unconfirmed signal. A stock is only moved from the top list to the 'Downgraded' list when its bullish 'story' shows significant cracks (e.g., a failed breakout followed by `No Demand`). It is only removed from the document entirely once a bearish trend is confirmed over several sessions.
   * **Reversibility:** A stock on the 'Downgraded' list can be promoted back to the top if the bearish signals are proven false by new, decisive bullish confirmation (e.g., a `Sign of Strength` that negates previous weakness).
-  * **Data-Driven Validation:** You **must** cross-reference and validate all patterns and signals against the raw daily price and volume data in `combined.txt`. Claims like "cạn cung" or "bùng nổ khối lượng" must be verifiable in the raw data.
+  * **Data-Driven Validation:** You **must** cross-reference and validate all patterns and signals against the raw daily price and volume data in `market_data.txt`. Claims like "cạn cung" or "bùng nổ khối lượng" must be verifiable in the raw data.
 
 ## **3. Input Files**
 
 1.  The latest `REPORT.md` (for VPA signal summary)
 2.  The detailed `VPA.md` (for individual signal analysis)
-3.  The raw data file `combined.txt` (for price/volume validation)
+3.  The raw data file `market_data.txt` (for price/volume validation)
 4.  The **previous version** of `PLAN.md` (to track changes)
 
 ## **4. Output Specification: `PLAN.md`**
@@ -64,7 +64,7 @@ Your task is to **update and rewrite** the `PLAN.md` file in **Vietnamese**. The
 
   - Make sure you have a markdown link to view ticker candle chart (e.g., `[Price Chart for LPB](reports/LPB/LPB_candlestick_chart.png)` )
   - Make sure you have a markdown link to view ticker in REPORT.md (e.g., `[View Report](REPORT.md#LPB)`)
-  - **Phân Tích Cốt Lõi:** Một đoạn văn súc tích giải thích *tại sao* cổ phiếu này là một lựa chọn hàng đầu bằng cách **kể lại câu chuyện VPA/Wyckoff** của nó. Tổng hợp chuỗi tín hiệu từ file `VPA.md` và **đối chiếu với dữ liệu giá/khối lượng thô trong `combined.txt`**. Giải thích bối cảnh rộng hơn và chuỗi sự kiện để xác nhận sức mạnh của kịch bản. (e.g., `"TCB đang kể một câu chuyện VPA/Wyckoff hoàn hảo nhất trên thị trường hiện tại. 'Kịch bản' diễn ra như sau: (1) Giai đoạn tích lũy kéo dài với các tín hiệu No Supply (cạn cung) xuất hiện vào ngày 11/06 (xác nhận trên combined.txt với khối lượng cạn kiệt). (2) Một phiên SOS bùng nổ vào ngày 19/06 để phá vỡ nền giá, xác nhận dòng tiền lớn đã nhập cuộc. (3) Một phiên Test for Supply kinh điển vào ngày 20/06, khi giá đi ngang trên khối lượng thấp hơn đáng kể. Chuỗi sự kiện này cho thấy một quá trình tích lũy và kiểm tra cung-cầu bài bản, tạo ra một thiết lập mua có độ tin cậy và rủi ro thấp rất cao."`).
+  - **Phân Tích Cốt Lõi:** Một đoạn văn súc tích giải thích *tại sao* cổ phiếu này là một lựa chọn hàng đầu bằng cách **kể lại câu chuyện VPA/Wyckoff** của nó. Tổng hợp chuỗi tín hiệu từ file `VPA.md` và **đối chiếu với dữ liệu giá/khối lượng thô trong `market_data.txt`**. Giải thích bối cảnh rộng hơn và chuỗi sự kiện để xác nhận sức mạnh của kịch bản. (e.g., `"TCB đang kể một câu chuyện VPA/Wyckoff hoàn hảo nhất trên thị trường hiện tại. 'Kịch bản' diễn ra như sau: (1) Giai đoạn tích lũy kéo dài với các tín hiệu No Supply (cạn cung) xuất hiện vào ngày 11/06 (xác nhận trên market_data.txt với khối lượng cạn kiệt). (2) Một phiên SOS bùng nổ vào ngày 19/06 để phá vỡ nền giá, xác nhận dòng tiền lớn đã nhập cuộc. (3) Một phiên Test for Supply kinh điển vào ngày 20/06, khi giá đi ngang trên khối lượng thấp hơn đáng kể. Chuỗi sự kiện này cho thấy một quá trình tích lũy và kiểm tra cung-cầu bài bản, tạo ra một thiết lập mua có độ tin cậy và rủi ro thấp rất cao."`).
   - **Vùng Tham Gia Tốt Nhất:** Cung cấp một khoảng giá cụ thể để vào lệnh (e.g., `"33.5 - 34.0"`). Nêu rõ điểm dừng lỗ, chốt lời.
   - **Lý Do Cho Vùng Tham Gia:** Giải thích rõ ràng logic cho vùng tham gia được đề xuất dựa trên các nguyên tắc VPA (e.g., `"Tham gia tại điểm 'Backing Up to the Edge of the Creek' theo Wyckoff. Đây là điểm vào ngay sau khi quá trình kiểm tra cung được xác nhận là thành công, mang lại rủi ro thấp nhất trước khi giá bước vào giai đoạn tăng tốc."`).
 
