@@ -47,15 +47,20 @@ pub fn import_legacy(source_path: &Path) -> Result<(), Box<dyn std::error::Error
 
         match import_ticker(source_path, ticker) {
             Ok(stats) => {
-                if stats.skipped > 0 {
-                    println!("⏭️  Skipped {} files (data up to date)", stats.skipped);
-                    skipped_count += stats.skipped;
+                // Display what happened for this ticker
+                if stats.reimported > 0 && stats.skipped > 0 {
+                    println!("🔄 Reimported {}, ⏭️  Skipped {} files", stats.reimported, stats.skipped);
                 } else if stats.reimported > 0 {
                     println!("🔄 Reimported {} files (data changed)", stats.reimported);
-                    reimport_count += stats.reimported;
-                } else {
+                } else if stats.skipped > 0 {
+                    println!("⏭️  Skipped {} files (data up to date)", stats.skipped);
+                } else if stats.files_imported > 0 {
                     println!("✅ Imported {} files", stats.files_imported);
                 }
+
+                // Update counters
+                skipped_count += stats.skipped;
+                reimport_count += stats.reimported;
                 success_count += 1;
             }
             Err(e) => {
