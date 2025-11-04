@@ -1,0 +1,67 @@
+# Environment Files
+.env
+.env.*
+!.env.example
+!.env.test
+!.env.public-node-example
+.idx/.data
+*Zone.Identifier
+
+# Temporary Files
+/.sqlx/
+local/
+.fastembed_cache
+tmp
+combined*
+combined*
+temp*.sh
+worker.pid
+server.pid
+*.log
+
+# Compiled Files and Executables
+debug/
+target/
+
+# Rustfmt Backup Files
+**/*.rs.bk
+
+# MSVC Debug Files
+*.pdb
+
+# Aider-specific Files
+.aider*
+
+# Docker Configuration
+docker-compose.local.yml
+
+# Node.js & pnpm Files
+playwright-report
+test-results
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+count.txt
+.env
+
+# Build Output
+.output
+.vercel
+.netlify
+.wrangler
+.svelte-kit
+build/
+
+# OS-specific Files
+.DS_Store
+Thumbs.db
+
+# Vite Config Artifacts
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Editor
+.vscode/settings.json
+.tanstack
