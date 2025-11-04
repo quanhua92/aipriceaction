@@ -29,9 +29,10 @@ pub enum Commands {
         #[arg(long)]
         full: bool,
 
-        /// Number of recent days for resume mode
-        #[arg(long, default_value = "30")]
-        resume_days: u32,
+        /// Number of recent days for resume mode (overrides smart defaults)
+        /// Smart defaults: daily=3 days, hourly=5 days, minute=2 days
+        #[arg(long)]
+        resume_days: Option<u32>,
 
         /// Start date for historical data (YYYY-MM-DD)
         #[arg(long, default_value = "2015-01-05")]
@@ -66,6 +67,7 @@ pub fn run() {
             debug,
             batch_size,
         } => {
+            // resume_days is now Option<u32>, passed directly
             commands::pull::run(intervals, full, resume_days, start_date, debug, batch_size);
         }
         Commands::Serve => {

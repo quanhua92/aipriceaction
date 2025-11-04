@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::DataSync;
 
-pub fn run(intervals_arg: String, full: bool, resume_days: u32, start_date: String, debug: bool, batch_size: usize) {
+pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
     // Parse intervals
     let intervals = match Interval::parse_intervals(&intervals_arg) {
         Ok(intervals) => intervals,
@@ -15,6 +15,18 @@ pub fn run(intervals_arg: String, full: bool, resume_days: u32, start_date: Stri
 
     if debug {
         println!("🐛 DEBUG MODE: Using hardcoded test tickers (VNINDEX, VIC, VCB)");
+    }
+
+    // Show which resume days are being used
+    if !full {
+        if let Some(days) = resume_days {
+            println!("📅 Using custom resume days: {} days (overrides smart defaults)", days);
+        } else {
+            println!("📅 Using smart resume defaults:");
+            for interval in &intervals {
+                println!("   {} → {} days", interval.to_vci_format(), interval.default_resume_days());
+            }
+        }
     }
 
     // Create sync config

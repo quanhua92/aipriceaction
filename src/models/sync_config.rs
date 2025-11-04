@@ -32,6 +32,20 @@ impl Interval {
         }
     }
 
+    /// Get optimal resume days for this interval
+    ///
+    /// These values are optimized based on data volume per interval:
+    /// - Daily: 3 days = 3 records/ticker (very light)
+    /// - Hourly: 5 days = ~30 records/ticker (moderate, optimal for batch API)
+    /// - Minute: 2 days = ~720 records/ticker (heavy, prevents API overload)
+    pub fn default_resume_days(&self) -> u32 {
+        match self {
+            Interval::Daily => 3,
+            Interval::Hourly => 5,
+            Interval::Minute => 2,
+        }
+    }
+
     /// Parse from string (case-insensitive)
     pub fn from_str(s: &str) -> Result<Self, String> {
         match s.to_uppercase().as_str() {
@@ -66,8 +80,8 @@ pub struct SyncConfig {
     /// Batch size for API calls (10 for resume mode, 2 for full downloads)
     pub batch_size: usize,
 
-    /// Number of recent days to fetch in resume mode
-    pub resume_days: u32,
+    /// Number of recent days to fetch in resume mode (None = use interval-specific defaults)
+    pub resume_days: Option<u32>,
 
     /// Intervals to sync
     pub intervals: Vec<Interval>,
@@ -82,7 +96,7 @@ impl Default for SyncConfig {
             start_date: "2015-01-05".to_string(),
             end_date: Utc::now().format("%Y-%m-%d").to_string(),
             batch_size: 10,
-            resume_days: 30,
+            resume_days: None, // Use interval-specific defaults
             intervals: vec![Interval::Daily],
             force_full: false,
         }
@@ -95,7 +109,7 @@ impl SyncConfig {
         start_date: String,
         end_date: Option<String>,
         batch_size: usize,
-        resume_days: u32,
+        resume_days: Option<u32>,
         intervals: Vec<Interval>,
         force_full: bool,
     ) -> Self {
@@ -109,22 +123,35 @@ impl SyncConfig {
         }
     }
 
-    /// Get fetch start date based on resume mode
-    pub fn get_fetch_start_date(&self) -> String {
+    /// Get fetch start date based on resume mode and interval
+    ///
+    /// If resume_days is explicitly provided, uses that value.
+    /// Otherwise, uses interval-specific optimal defaults (3 days for daily, 5 for hourly, 2 for minute).
+    pub fn get_fetch_start_date(&self, interval: Interval) -> String {
         if self.force_full {
             self.start_date.clone()
         } else {
-            let resume_date = Utc::now() - chrono::Duration::days(self.resume_days as i64);
+            let days = self.resume_days.unwrap_or_else(|| interval.default_resume_days());
+            let resume_date = Utc::now() - chrono::Duration::days(days as i64);
             resume_date.format("%Y-%m-%d").to_string()
         }
     }
 
-    /// Get batch size (reduce for full downloads)
-    pub fn get_batch_size(&self) -> usize {
+    /// Get batch size based on interval and mode (reduce for full downloads or high-volume intervals)
+    ///
+    /// Optimized batch sizes based on data volume per interval:
+    /// - Daily: 30 tickers × 3 records = 90 records/batch (very light)
+    /// - Hourly: 10 tickers × 30 records = 300 records/batch (moderate)
+    /// - Minute: 3 tickers × 300 records = 900 records/batch (manageable)
+    pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
-            self.batch_size
+            match interval {
+                Interval::Daily => 30,               // 30 tickers × 3 records = 90 records/batch
+                Interval::Hourly => self.batch_size, // 10 tickers × 30 records = 300 records/batch
+                Interval::Minute => 3,               // 3 tickers × 300 records = 900 records/batch
+            }
         }
     }
 }
@@ -291,17 +318,24 @@ mod tests {
         let config = SyncConfig::default();
         assert_eq!(config.start_date, "2015-01-05");
         assert_eq!(config.batch_size, 10);
-        assert_eq!(config.resume_days, 30);
+        assert_eq!(config.resume_days, None); // Uses interval-specific defaults
         assert!(!config.force_full);
     }
 
     #[test]
     fn test_sync_config_batch_size() {
         let mut config = SyncConfig::default();
-        assert_eq!(config.get_batch_size(), 10);
 
+        // Resume mode: interval-specific batch sizes
+        assert_eq!(config.get_batch_size(Interval::Daily), 30); // Larger batches for light data
+        assert_eq!(config.get_batch_size(Interval::Hourly), 10);
+        assert_eq!(config.get_batch_size(Interval::Minute), 3); // Smaller for high-volume data
+
+        // Full mode: always use 2 regardless of interval
         config.force_full = true;
-        assert_eq!(config.get_batch_size(), 2);
+        assert_eq!(config.get_batch_size(Interval::Daily), 2);
+        assert_eq!(config.get_batch_size(Interval::Hourly), 2);
+        assert_eq!(config.get_batch_size(Interval::Minute), 2);
     }
 
     #[test]
@@ -314,5 +348,51 @@ mod tests {
 
         progress.update_timing(Duration::from_secs(2), Duration::from_secs(100));
         assert!(progress.eta.as_secs() > 0);
+    }
+
+    #[test]
+    fn test_interval_default_resume_days() {
+        // Test smart defaults for each interval
+        assert_eq!(Interval::Daily.default_resume_days(), 3);
+        assert_eq!(Interval::Hourly.default_resume_days(), 5);
+        assert_eq!(Interval::Minute.default_resume_days(), 2);
+    }
+
+    #[test]
+    fn test_get_fetch_start_date_with_smart_defaults() {
+        // Test that interval-specific defaults are used when resume_days is None
+        let config = SyncConfig::default();
+
+        // Each interval should use its own default
+        let daily_start = config.get_fetch_start_date(Interval::Daily);
+        let hourly_start = config.get_fetch_start_date(Interval::Hourly);
+        let minute_start = config.get_fetch_start_date(Interval::Minute);
+
+        // They should all be different dates
+        assert_ne!(daily_start, hourly_start);
+        assert_ne!(hourly_start, minute_start);
+        assert_ne!(daily_start, minute_start);
+    }
+
+    #[test]
+    fn test_get_fetch_start_date_with_custom_resume_days() {
+        // Test that custom resume_days overrides smart defaults
+        let config = SyncConfig::new(
+            "2015-01-05".to_string(),
+            None,
+            10,
+            Some(7), // Custom resume days
+            vec![Interval::Daily, Interval::Hourly],
+            false,
+        );
+
+        // All intervals should use the same custom value
+        let daily_start = config.get_fetch_start_date(Interval::Daily);
+        let hourly_start = config.get_fetch_start_date(Interval::Hourly);
+        let minute_start = config.get_fetch_start_date(Interval::Minute);
+
+        // They should all be the same (7 days ago)
+        assert_eq!(daily_start, hourly_start);
+        assert_eq!(hourly_start, minute_start);
     }
 }

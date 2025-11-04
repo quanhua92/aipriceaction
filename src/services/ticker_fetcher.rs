@@ -151,8 +151,8 @@ impl TickerFetcher {
             }
             let api_elapsed = api_start.elapsed();
 
-            // Sleep 1-2 seconds between batches (matching proxy pattern)
-            let sleep_ms = 1000 + (rand::random::<u64>() % 1000);
+            // Minimal sleep 10-30ms between batches (VCI client has internal rate limiter)
+            let sleep_ms = 10 + (rand::random::<u64>() % 20);
             println!("   ⏱️  API: {:.2}s | Sleep: {:.2}s", api_elapsed.as_secs_f64(), sleep_ms as f64 / 1000.0);
             tokio::time::sleep(StdDuration::from_millis(sleep_ms)).await;
         }
@@ -273,8 +273,8 @@ impl TickerFetcher {
                 }
             }
 
-            // Sleep between chunks to respect rate limits
-            tokio::time::sleep(StdDuration::from_millis(2000)).await;
+            // Minimal sleep between chunks (VCI client has internal rate limiter)
+            tokio::time::sleep(StdDuration::from_millis(50)).await;
         }
 
         if all_chunks.is_empty() {
@@ -378,8 +378,8 @@ impl TickerFetcher {
                 }
             }
 
-            // Sleep between chunks to respect rate limits (longer for minute data)
-            tokio::time::sleep(StdDuration::from_millis(3000)).await;
+            // Minimal sleep between chunks (VCI client has internal rate limiter)
+            tokio::time::sleep(StdDuration::from_millis(50)).await;
 
             // Move to next month
             current_dt = next_month;
@@ -408,44 +408,28 @@ impl TickerFetcher {
         Ok(all_chunks)
     }
 
-    /// Check if dividend was issued (price adjustment detected)
-    pub async fn check_dividend(
-        &mut self,
+    /// Check if dividend was issued using already-fetched data (no extra API call!)
+    pub fn check_dividend_from_data(
+        &self,
         ticker: &str,
+        recent_data: &[OhlcvData],
         interval: Interval,
     ) -> Result<bool, Error> {
+        // Skip dividend check for indices (they don't have dividends)
+        if ticker == "VNINDEX" || ticker == "VN30" || ticker == "HNX" || ticker == "UPCOM" {
+            return Ok(false);
+        }
+
         let file_path = self.get_ticker_file_path(ticker, interval);
 
         if !file_path.exists() {
             return Ok(false); // No existing data to compare
         }
 
-        println!("   - Checking for dividend adjustments...");
+        println!("   - Checking for dividend adjustments (using fetched data)...");
         let div_start = std::time::Instant::now();
 
-        // Download last 60 days
-        let end_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
-        let start_date = (chrono::Utc::now() - chrono::Duration::days(60))
-            .format("%Y-%m-%d")
-            .to_string();
-
-        let api_start = std::time::Instant::now();
-        let recent_data = match self
-            .vci_client
-            .get_history(ticker, &start_date, Some(&end_date), interval.to_vci_format())
-            .await
-        {
-            Ok(data) if !data.is_empty() => data,
-            _ => {
-                return Ok(false);
-            }
-        };
-        let api_elapsed = api_start.elapsed();
-
-        // Sleep after API call to respect rate limits
-        tokio::time::sleep(StdDuration::from_millis(1500)).await;
-
-        // Load existing data
+        // Load existing data from CSV
         let existing_data = self.read_ohlcv_from_csv(&file_path)?;
 
         // Compare overlapping dates (3 weeks ago to 1 week ago window)
@@ -463,6 +447,9 @@ impl TickerFetcher {
             .collect();
 
         if recent_window.len() < 2 || existing_window.len() < 2 {
+            let div_elapsed = div_start.elapsed();
+            println!("   - No dividend detected (insufficient data, check took {:.3}s)",
+                div_elapsed.as_secs_f64());
             return Ok(false);
         }
 
@@ -476,11 +463,13 @@ impl TickerFetcher {
 
                         // 2% threshold for dividend detection
                         if ratio > 1.02 {
+                            let div_elapsed = div_start.elapsed();
                             println!(
-                                "   - 💰 DIVIDEND DETECTED for {} on {}: ratio={:.4}",
+                                "   - 💰 DIVIDEND DETECTED for {} on {}: ratio={:.4} (check took {:.3}s)",
                                 ticker,
                                 recent_row.time.format("%Y-%m-%d"),
-                                ratio
+                                ratio,
+                                div_elapsed.as_secs_f64()
                             );
                             return Ok(true);
                         }
@@ -490,8 +479,8 @@ impl TickerFetcher {
         }
 
         let div_elapsed = div_start.elapsed();
-        println!("   - No dividend detected (check took {:.2}s: API {:.2}s + sleep 1.5s)",
-            div_elapsed.as_secs_f64(), api_elapsed.as_secs_f64());
+        println!("   - No dividend detected (check took {:.3}s - NO API CALL!)",
+            div_elapsed.as_secs_f64());
         Ok(false)
     }
 

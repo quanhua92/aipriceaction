@@ -75,11 +75,11 @@ impl DataSync {
         // Categorize tickers (resume vs full history)
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
 
-        let fetch_start_date = self.config.get_fetch_start_date();
-        let batch_size = self.config.get_batch_size();
+        let fetch_start_date = self.config.get_fetch_start_date(interval);
+        let batch_size = self.config.get_batch_size(interval);
 
-        // Batch fetch resume tickers (only for daily data, use individual for high-frequency)
-        let resume_results = if interval == Interval::Daily && !category.resume_tickers.is_empty() {
+        // Batch fetch resume tickers (all intervals support batch API with smart defaults)
+        let resume_results = if !category.resume_tickers.is_empty() {
             println!("\n⚡ Batch processing {} tickers using resume mode...", category.resume_tickers.len());
             self.fetcher
                 .batch_fetch(
@@ -91,18 +91,11 @@ impl DataSync {
                 )
                 .await?
         } else {
-            if !category.resume_tickers.is_empty() {
-                println!(
-                    "\n⚡ Resume mode: {} tickers (will fetch individually for {} interval)",
-                    category.resume_tickers.len(),
-                    interval.to_vci_format()
-                );
-            }
             HashMap::new()
         };
 
-        // Batch fetch full history tickers (only for daily)
-        let full_history_results = if interval == Interval::Daily && !category.full_history_tickers.is_empty() {
+        // Batch fetch full history tickers (all intervals support batch API, use smaller batch size)
+        let full_history_results = if !category.full_history_tickers.is_empty() {
             println!("\n🚀 Processing {} tickers needing full history...", category.full_history_tickers.len());
             self.fetcher
                 .batch_fetch(
@@ -215,7 +208,7 @@ impl DataSync {
 
         if is_resume {
             // Resume mode: fetch recent data and merge
-            let fetch_start = self.config.get_fetch_start_date();
+            let fetch_start = self.config.get_fetch_start_date(interval);
             let recent_data = self
                 .fetcher
                 .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)
@@ -231,15 +224,15 @@ impl DataSync {
         }
     }
 
-    /// Smart dividend detection and data merging
+    /// Smart dividend detection and data merging (OPTIMIZED - no extra API call!)
     async fn smart_dividend_check_and_merge(
         &mut self,
         ticker: &str,
         recent_data: &[OhlcvData],
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
-        // Check for dividend
-        let dividend_detected = self.fetcher.check_dividend(ticker, interval).await?;
+        // Check for dividend using the data we already have (NO API call!)
+        let dividend_detected = self.fetcher.check_dividend_from_data(ticker, recent_data, interval)?;
 
         if dividend_detected {
             println!("   💰 Dividend detected, re-downloading full history...");
