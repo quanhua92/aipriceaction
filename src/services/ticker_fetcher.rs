@@ -16,7 +16,8 @@ pub struct TickerFetcher {
 impl TickerFetcher {
     /// Create new ticker fetcher with VCI client
     pub fn new() -> Result<Self, Error> {
-        let vci_client = VciClient::new(true, 30)
+        // Use 60 calls/minute to match Python implementation
+        let vci_client = VciClient::new(true, 60)
             .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
 
         Ok(Self { vci_client })
@@ -425,11 +426,6 @@ impl TickerFetcher {
             .format("%Y-%m-%d")
             .to_string();
 
-        println!(
-            "   - DEBUG: Enhanced dividend check: downloading {} to {}",
-            start_date, end_date
-        );
-
         let recent_data = match self
             .vci_client
             .get_history(ticker, &start_date, Some(&end_date), interval.to_vci_format())
@@ -437,7 +433,6 @@ impl TickerFetcher {
         {
             Ok(data) if !data.is_empty() => data,
             _ => {
-                println!("   - DEBUG: No API data for dividend check");
                 return Ok(false);
             }
         };
@@ -462,12 +457,6 @@ impl TickerFetcher {
             .filter(|d| d.time >= three_weeks_ago && d.time <= one_week_ago)
             .collect();
 
-        println!(
-            "   - DEBUG: Recent window: {} rows, Existing window: {} rows",
-            recent_window.len(),
-            existing_window.len()
-        );
-
         if recent_window.len() < 2 || existing_window.len() < 2 {
             return Ok(false);
         }
@@ -479,13 +468,6 @@ impl TickerFetcher {
                 if recent_row.time.date_naive() == existing_row.time.date_naive() {
                     if existing_row.close > 0.0 && recent_row.close > 0.0 {
                         let ratio = existing_row.close / recent_row.close;
-                        println!(
-                            "   - DEBUG: Date {}: existing={}, recent={}, ratio={:.4}",
-                            recent_row.time.format("%Y-%m-%d"),
-                            existing_row.close,
-                            recent_row.close,
-                            ratio
-                        );
 
                         // 2% threshold for dividend detection
                         if ratio > 1.02 {

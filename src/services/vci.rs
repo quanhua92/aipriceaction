@@ -220,7 +220,7 @@ impl VciClient {
             match response {
                 Ok(resp) => {
                     let status = resp.status();
-                    
+
                     if status.is_success() {
                         match resp.json::<Value>().await {
                             Ok(data) => return Ok(data),

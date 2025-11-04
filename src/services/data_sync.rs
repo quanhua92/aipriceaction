@@ -273,15 +273,8 @@ impl DataSync {
             return existing;
         }
 
-        println!(
-            "   - DEBUG: Existing data has {} rows, new data has {} rows",
-            existing.len(),
-            new.len()
-        );
-
         // Find latest date in existing data
         let latest_existing_time = existing.iter().map(|d| d.time).max().unwrap();
-        println!("   - DEBUG: Latest existing date: {}", latest_existing_time.format("%Y-%m-%d"));
 
         // Filter existing data to remove any dates >= latest_existing_time
         // (we'll replace with fresh data from API)
@@ -296,14 +289,10 @@ impl DataSync {
             .filter(|d| d.time >= latest_existing_time)
             .collect();
 
-        println!("   - DEBUG: Adding {} new/updated rows", new_rows.len());
-
         merged.extend(new_rows);
 
         // Sort by time
         merged.sort_by(|a, b| a.time.cmp(&b.time));
-
-        println!("   - DEBUG: Final merged data has {} rows", merged.len());
 
         merged
     }
