@@ -110,6 +110,30 @@ impl TickerFetcher {
         // Show min/max dates for resume tickers
         if let Some(min_date) = category.get_min_resume_date() {
             println!("   Resume from: {} (earliest last date)", min_date);
+
+            // Show which tickers have the earliest date (are behind)
+            let behind_tickers: Vec<String> = category.resume_tickers
+                .iter()
+                .filter(|(_, date)| date == &min_date)
+                .map(|(ticker, _)| ticker.clone())
+                .take(5)
+                .collect();
+
+            if behind_tickers.len() > 0 {
+                if behind_tickers.len() < category.resume_tickers.len() {
+                    print!("   Behind tickers: ");
+                    if behind_tickers.len() <= 5 {
+                        println!("{}", behind_tickers.join(", "));
+                    } else {
+                        println!("{} and {} more", behind_tickers.join(", "),
+                            category.resume_tickers.iter()
+                                .filter(|(_, date)| date == &min_date)
+                                .count() - 5);
+                    }
+                } else {
+                    println!("   All tickers at same date ({})", min_date);
+                }
+            }
         }
 
         Ok(category)
