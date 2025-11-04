@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::DataSync;
 
-pub fn run(intervals_arg: String, full: bool, resume_days: u32, start_date: String, debug: bool) {
+pub fn run(intervals_arg: String, full: bool, resume_days: u32, start_date: String, debug: bool, batch_size: usize) {
     // Parse intervals
     let intervals = match Interval::parse_intervals(&intervals_arg) {
         Ok(intervals) => intervals,
@@ -21,7 +21,7 @@ pub fn run(intervals_arg: String, full: bool, resume_days: u32, start_date: Stri
     let config = SyncConfig::new(
         start_date,
         None, // Use default (today)
-        10,   // Default batch size
+        batch_size,
         resume_days,
         intervals,
         full,

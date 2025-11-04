@@ -40,6 +40,10 @@ pub enum Commands {
         /// Debug mode: use hardcoded test tickers (VNINDEX, VIC, VCB only)
         #[arg(long)]
         debug: bool,
+
+        /// Batch size for API calls (default: 10, try 20-50 for faster sync)
+        #[arg(long, default_value = "10")]
+        batch_size: usize,
     },
     /// Start the server
     Serve,
@@ -60,8 +64,9 @@ pub fn run() {
             resume_days,
             start_date,
             debug,
+            batch_size,
         } => {
-            commands::pull::run(intervals, full, resume_days, start_date, debug);
+            commands::pull::run(intervals, full, resume_days, start_date, debug, batch_size);
         }
         Commands::Serve => {
             commands::serve::run();

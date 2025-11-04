@@ -150,12 +150,16 @@ impl DataSync {
             match result {
                 Ok(data) => {
                     // Save to CSV
+                    let save_start = Instant::now();
                     self.save_ticker_data(ticker, &data, interval)?;
+                    let save_elapsed = save_start.elapsed();
+
                     self.stats.successful += 1;
                     self.stats.files_written += 1;
                     self.stats.total_records += data.len();
 
-                    println!("   ✅ SUCCESS: {} - {} records saved", ticker, data.len());
+                    println!("   ✅ SUCCESS: {} - {} records saved (file I/O: {:.3}s)",
+                        ticker, data.len(), save_elapsed.as_secs_f64());
                 }
                 Err(e) => {
                     self.stats.failed += 1;

@@ -114,6 +114,7 @@ impl TickerFetcher {
             );
             println!("Tickers: {}", ticker_batch.join(", "));
 
+            let api_start = std::time::Instant::now();
             match self
                 .vci_client
                 .get_batch_history(ticker_batch, start_date, Some(end_date), interval.to_vci_format())
@@ -148,10 +149,11 @@ impl TickerFetcher {
                     }
                 }
             }
+            let api_elapsed = api_start.elapsed();
 
             // Sleep 1-2 seconds between batches (matching proxy pattern)
             let sleep_ms = 1000 + (rand::random::<u64>() % 1000);
-            println!("   ⏸️ Rate limiting delay ({}ms)...", sleep_ms);
+            println!("   ⏱️  API: {:.2}s | Sleep: {:.2}s", api_elapsed.as_secs_f64(), sleep_ms as f64 / 1000.0);
             tokio::time::sleep(StdDuration::from_millis(sleep_ms)).await;
         }
 
@@ -419,6 +421,7 @@ impl TickerFetcher {
         }
 
         println!("   - Checking for dividend adjustments...");
+        let div_start = std::time::Instant::now();
 
         // Download last 60 days
         let end_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
@@ -426,6 +429,7 @@ impl TickerFetcher {
             .format("%Y-%m-%d")
             .to_string();
 
+        let api_start = std::time::Instant::now();
         let recent_data = match self
             .vci_client
             .get_history(ticker, &start_date, Some(&end_date), interval.to_vci_format())
@@ -436,6 +440,7 @@ impl TickerFetcher {
                 return Ok(false);
             }
         };
+        let api_elapsed = api_start.elapsed();
 
         // Sleep after API call to respect rate limits
         tokio::time::sleep(StdDuration::from_millis(1500)).await;
@@ -484,7 +489,9 @@ impl TickerFetcher {
             }
         }
 
-        println!("   - No dividend detected for {}", ticker);
+        let div_elapsed = div_start.elapsed();
+        println!("   - No dividend detected (check took {:.2}s: API {:.2}s + sleep 1.5s)",
+            div_elapsed.as_secs_f64(), api_elapsed.as_secs_f64());
         Ok(false)
     }
 
