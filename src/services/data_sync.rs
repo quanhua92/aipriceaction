@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
-use crate::services::market_stats::is_index;
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -139,15 +138,15 @@ impl DataSync {
             let ticker_start_time = Instant::now();
             let current = i + 1;
 
-            println!("\n{}", "=".repeat(70));
-            println!("[{:03}/{:03}] {}", current, total_tickers, ticker);
-            println!("{}", "=".repeat(70));
-
             let result = self
                 .process_ticker(ticker, interval, &batch_results, &category)
                 .await;
 
             let ticker_elapsed = ticker_start_time.elapsed();
+
+            // Build compact progress line
+            let mut progress = FetchProgress::new(current, total_tickers, ticker.clone(), interval);
+            progress.update_timing(ticker_elapsed, interval_start_time.elapsed());
 
             match result {
                 Ok(data) => {
@@ -160,21 +159,20 @@ impl DataSync {
                     self.stats.files_written += 1;
                     self.stats.total_records += data.len();
 
-                    // Success - only show timing if slow (> 0.1s)
+                    // Compact success line with progress
+                    print!("\r✅ {} | {} records", progress.format_compact(), data.len());
+
+                    // Only show timing if slow (> 0.1s)
                     if save_elapsed.as_secs_f64() > 0.1 {
-                        println!("   ✅ {} ({} records, {:.3}s)", ticker, data.len(), save_elapsed.as_secs_f64());
+                        print!(" | {:.2}s", save_elapsed.as_secs_f64());
                     }
+                    println!(); // New line after progress
                 }
                 Err(e) => {
                     self.stats.failed += 1;
-                    println!("   ❌ FAILED: {} - {}", ticker, e);
+                    println!("\r❌ {} | FAILED: {}", progress.format_compact(), e);
                 }
             }
-
-            // Print progress
-            let mut progress = FetchProgress::new(current, total_tickers, ticker.clone(), interval);
-            progress.update_timing(ticker_elapsed, interval_start_time.elapsed());
-            println!("\n{}", progress.format_display());
         }
 
         println!("⏱️  Individual processing took: {:.2}s", processing_start.elapsed().as_secs_f64());
@@ -265,22 +263,9 @@ impl DataSync {
             return Ok(recent_data.to_vec());
         }
 
-        // Profile file read
-        let read_start = Instant::now();
+        // Read and merge existing data
         let existing_data = self.read_existing_data(&file_path)?;
-        let read_time = read_start.elapsed().as_secs_f64();
-        // File read timing (only show if > 0.01s to reduce noise)
-        if read_time > 0.01 {
-            println!("   ⏱️  File read took: {:.3}s ({} rows)", read_time, existing_data.len());
-        }
-
-        // Profile merge operation
-        let merge_start = Instant::now();
         let merged_data = self.merge_data(existing_data, recent_data.to_vec());
-        let merge_time = merge_start.elapsed().as_secs_f64();
-        if merge_time > 0.001 {
-            println!("   ⏱️  Merge took: {:.3}s ({} rows)", merge_time, merged_data.len());
-        }
 
         self.stats.updated += 1;
         Ok(merged_data)

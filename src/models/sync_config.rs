@@ -35,12 +35,12 @@ impl Interval {
     /// Get optimal resume days for this interval
     ///
     /// These values are optimized based on data volume per interval:
-    /// - Daily: 1 day = 1 record/ticker (minimal processing overhead)
+    /// - Daily: 2 days = 2 records/ticker (minimal processing overhead, ensures no gaps)
     /// - Hourly: 5 days = ~30 records/ticker (moderate, optimal for batch API)
     /// - Minute: 2 days = ~720 records/ticker (heavy, prevents API overload)
     pub fn default_resume_days(&self) -> u32 {
         match self {
-            Interval::Daily => 1,
+            Interval::Daily => 2,
             Interval::Hourly => 5,
             Interval::Minute => 2,
         }
@@ -249,6 +249,21 @@ impl FetchProgress {
             self.eta.as_secs_f64() / 60.0,
         )
     }
+
+    /// Format compact progress (one line)
+    pub fn format_compact(&self) -> String {
+        let elapsed_min = self.total_elapsed.as_secs_f64() / 60.0;
+        let eta_min = self.eta.as_secs_f64() / 60.0;
+
+        format!(
+            "[{:3}/{:3}] {:8} | {:4.1}m elapsed | {:4.1}m ETA",
+            self.current,
+            self.total,
+            self.ticker,
+            elapsed_min,
+            eta_min,
+        )
+    }
 }
 
 /// Statistics for sync operation
@@ -353,7 +368,7 @@ mod tests {
     #[test]
     fn test_interval_default_resume_days() {
         // Test smart defaults for each interval
-        assert_eq!(Interval::Daily.default_resume_days(), 1);
+        assert_eq!(Interval::Daily.default_resume_days(), 2);
         assert_eq!(Interval::Hourly.default_resume_days(), 5);
         assert_eq!(Interval::Minute.default_resume_days(), 2);
     }
