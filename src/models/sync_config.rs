@@ -32,16 +32,17 @@ impl Interval {
         }
     }
 
-    /// Get optimal resume days for this interval
+    /// Get minimal resume days as fallback (only used when CSV read fails)
     ///
-    /// These values are optimized based on data volume per interval:
-    /// - Daily: 2 days = 2 records/ticker (minimal processing overhead, ensures no gaps)
-    /// - Hourly: 5 days = ~30 records/ticker (moderate, optimal for batch API)
-    /// - Minute: 2 days = ~720 records/ticker (heavy, prevents API overload)
+    /// With adaptive mode, these are rarely used - only as safety fallback when:
+    /// - CSV file is corrupted/unreadable
+    /// - First run with empty database
+    ///
+    /// All intervals use 2 days as minimal safe fallback
     pub fn default_resume_days(&self) -> u32 {
         match self {
             Interval::Daily => 2,
-            Interval::Hourly => 5,
+            Interval::Hourly => 2,  // Reduced from 5 - adaptive mode handles the rest
             Interval::Minute => 2,
         }
     }
@@ -137,20 +138,23 @@ impl SyncConfig {
         }
     }
 
-    /// Get batch size based on interval and mode (reduce for full downloads or high-volume intervals)
+    /// Get batch size based on interval and mode
     ///
-    /// Optimized batch sizes based on data volume per interval:
-    /// - Daily: 50 tickers × 1 record = 50 records/batch (fast and efficient)
-    /// - Hourly: 20 tickers × 30 records = 600 records/batch (balanced)
-    /// - Minute: 3 tickers × 400 records = 1200 records/batch (manageable)
+    /// Optimized batch sizes for adaptive resume mode:
+    /// - Daily: 50 tickers/batch (lightweight, ~1-2 records per ticker)
+    /// - Hourly: 20 tickers/batch (moderate, adapts to actual date range)
+    /// - Minute: 3 tickers/batch (heavy, adapts to actual date range)
+    ///
+    /// These sizes work well with adaptive mode since fetch range
+    /// automatically adjusts based on actual last dates in CSV files.
     pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
             match interval {
-                Interval::Daily => 50,               // Optimal for fast resume mode
-                Interval::Hourly => 20,              // Balanced speed and reliability
-                Interval::Minute => 3,               // Prevents API overload with high-volume data
+                Interval::Daily => 50,   // Adaptive: fetches only what's needed per ticker
+                Interval::Hourly => 20,  // Adaptive: scales with actual staleness
+                Interval::Minute => 3,   // Adaptive: handles varying date ranges
             }
         }
     }
@@ -385,26 +389,26 @@ mod tests {
 
     #[test]
     fn test_interval_default_resume_days() {
-        // Test smart defaults for each interval
+        // Test minimal fallback defaults (all use 2 days)
         assert_eq!(Interval::Daily.default_resume_days(), 2);
-        assert_eq!(Interval::Hourly.default_resume_days(), 5);
+        assert_eq!(Interval::Hourly.default_resume_days(), 2);
         assert_eq!(Interval::Minute.default_resume_days(), 2);
     }
 
     #[test]
     fn test_get_fetch_start_date_with_smart_defaults() {
-        // Test that interval-specific defaults are used when resume_days is None
+        // Test that all intervals use same minimal fallback (2 days)
         let config = SyncConfig::default();
 
-        // Each interval should use its own default
+        // All intervals use 2 days as fallback
         let daily_start = config.get_fetch_start_date(Interval::Daily);
         let hourly_start = config.get_fetch_start_date(Interval::Hourly);
         let minute_start = config.get_fetch_start_date(Interval::Minute);
 
-        // Daily and minute use 2 days (same), hourly uses 5 days (different)
-        assert_eq!(daily_start, minute_start); // Both use 2 days
-        assert_ne!(daily_start, hourly_start); // Daily 2 days vs Hourly 5 days
-        assert_ne!(hourly_start, minute_start); // Hourly 5 days vs Minute 2 days
+        // All use 2 days fallback (adaptive mode is the real logic)
+        assert_eq!(daily_start, hourly_start);
+        assert_eq!(hourly_start, minute_start);
+        assert_eq!(daily_start, minute_start);
     }
 
     #[test]

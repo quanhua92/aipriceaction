@@ -19,7 +19,7 @@ The `pull` command fetches the latest market data from the VCI (Vietcap) API and
 # Force full download from 2015-01-05
 ./target/release/aipriceaction pull --full
 
-# Customize resume period (last 7 days instead of 30)
+# Override adaptive resume (force specific days, rarely needed)
 ./target/release/aipriceaction pull --resume-days 7
 
 # Custom start date for full downloads
@@ -32,41 +32,66 @@ The `pull` command fetches the latest market data from the VCI (Vietcap) API and
 |--------|-------|---------|-------------|
 | `--intervals` | `-i` | `all` | Intervals to sync: `all`, `daily`, `hourly`, `minute`, or comma-separated (e.g., `daily,hourly`) |
 | `--full` | - | `false` | Force full download from start-date (disable resume mode) |
-| `--resume-days` | - | `30` | Number of recent days to fetch in resume mode |
+| `--resume-days` | - | `adaptive` | Optional override for resume days. By default, automatically uses last date from CSV files. Specify a number to force fixed days (rarely needed) |
 | `--start-date` | - | `2015-01-05` | Start date for historical data (YYYY-MM-DD) |
 
 ## How It Works
 
-### 1. Ticker Categorization
+### 1. Adaptive Ticker Categorization
 
-The command pre-scans all tickers to determine their data needs:
+The command pre-scans all tickers to determine their data needs and reads the **last date** from each CSV file:
 
-- **Resume Tickers**: Have sufficient existing data (>5 rows), only fetch recent updates
-- **Full History Tickers**: New or insufficient data, need complete download
+- **Resume Tickers**: Have existing CSV files with valid data. The last date in each file is read to determine where to resume from.
+- **Full History Tickers**: New tickers (no CSV file) or files with errors/no valid data, need complete download
+
+**Adaptive Resume Logic:**
+- Each ticker's last date is read from its CSV file
+- For batch API calls, the **minimum (earliest)** last date across all tickers is used as the fetch start date
+- This ensures no gaps for any ticker while minimizing over-fetching
+- Fixed `resume_days` (2 days for all intervals) only used as minimal fallback if CSV read fails
 
 ```
 🔍 Pre-scanning 290 tickers to categorize data needs for 1D...
-   ✅ VNINDEX: 2,707 rows - can use resume mode
-   ✅ VIC: 2,707 rows - can use resume mode
-   🆕 AAA: No existing file - needs full history
-   📉 BBB: Only 3 rows - needs full history
 
 📊 Categorization results:
    Resume mode tickers: 285
    Full history tickers: 5
+   Resume from: 2025-11-03 (earliest last date)
+```
+
+**Example: Adaptive Date Selection**
+```
+VCB last date: 2025-11-04  (ran yesterday, need 1 day)
+VIC last date: 2025-11-03  (missed 1 day, need 2 days)
+FPT last date: 2025-10-30  (missed a week, need 6 days)
+
+→ Batch fetch starts from: 2025-10-30 (minimum date)
+→ Covers all tickers with no gaps!
 ```
 
 ### 2. Batch Fetching Strategy
 
-**For Daily Data:**
-- Uses VCI batch API for efficiency (10 tickers per request)
-- Resume tickers: fetch last 30 days (configurable)
-- Full history tickers: fetch from start-date to today
+**For Resume Tickers (Adaptive Mode):**
+- Uses VCI batch API for efficiency (50 tickers/batch for daily, 20 for hourly, 3 for minute)
+- **Automatically fetches from earliest last date to today** (no fixed days needed!)
+- Run daily? Fetches ~1 day. Missed a week? Fetches ~7 days. Adaptive!
 
-**For Hourly/Minute Data:**
-- Uses individual requests with chunking
-- Hourly: Split by year (e.g., 2015, 2016, ..., 2025)
-- Minute: Split by month (e.g., 2015-01, 2015-02, ...)
+**For Full History Tickers:**
+- Uses VCI batch API with smaller batch size (2 tickers per request for reliability)
+- Fetches complete history from start-date (2015-01-05) to today
+
+**Batch API Output:**
+```
+⚡ Batch processing 283 tickers using adaptive resume mode...
+   📅 Fetching from 2025-11-03 (earliest last date in batch)
+
+→ Processing batch of 283 tickers using VCI batch history [1D]
+
+--- Batch 1/6: 50 tickers ---
+   ✅ Batch success: VNINDEX (2 records)
+   ✅ Batch success: VN30 (2 records)
+   ...
+```
 
 ### 3. Dividend Detection
 
@@ -331,11 +356,12 @@ $ ./target/release/aipriceaction pull --intervals all
 
 ## Performance
 
-### Resume Mode (Last 30 Days)
-- **Daily data**: ~1-2 minutes for 290 tickers
-- **Batch API**: 10 tickers per request
+### Resume Mode (Adaptive)
+- **Daily data**: ~1-2 minutes for 290 tickers (when running daily)
+- **Batch API**: 50 tickers per request (daily), 20 (hourly), 3 (minute)
 - **Rate limiting**: 2s between batches
 - **Average**: ~0.2-0.4s per ticker
+- **Scales automatically**: Missed a week? Still ~1-2 min (only fetches what's needed)
 
 ### Full Download
 - **Daily data**: ~6-8 minutes for 290 tickers
