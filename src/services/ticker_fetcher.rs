@@ -520,15 +520,6 @@ impl TickerFetcher {
             .join(interval.to_filename())
     }
 
-    /// Count rows in CSV file (excluding header)
-    fn count_csv_rows(&self, file_path: &Path) -> Result<usize, Error> {
-        let content = std::fs::read_to_string(file_path)
-            .map_err(|e| Error::Io(format!("Failed to read file: {}", e)))?;
-
-        let count = content.lines().count().saturating_sub(1); // Exclude header
-        Ok(count)
-    }
-
     /// Read OHLCV data from CSV file
     fn read_ohlcv_from_csv(&self, file_path: &Path) -> Result<Vec<OhlcvData>, Error> {
         let mut reader = csv::Reader::from_path(file_path)
