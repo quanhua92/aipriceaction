@@ -1,0 +1,500 @@
+use crate::error::Error;
+use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
+use crate::services::market_stats::is_index;
+use crate::services::ticker_fetcher::TickerFetcher;
+use crate::services::vci::OhlcvData;
+use chrono::{DateTime, NaiveDate, Utc};
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
+
+const MARKET_DATA_DIR: &str = "market_data";
+const TICKER_GROUP_FILE: &str = "ticker_group.json";
+
+/// High-level data synchronization orchestrator
+pub struct DataSync {
+    config: SyncConfig,
+    fetcher: TickerFetcher,
+    stats: SyncStats,
+}
+
+impl DataSync {
+    /// Create new data sync orchestrator
+    pub fn new(config: SyncConfig) -> Result<Self, Error> {
+        let fetcher = TickerFetcher::new()?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+        })
+    }
+
+    /// Synchronize all intervals for all tickers
+    pub async fn sync_all_intervals(&mut self) -> Result<(), Error> {
+        let start_time = Instant::now();
+
+        // Load tickers from ticker_group.json
+        let tickers = self.load_tickers()?;
+
+        println!("\n🚀 Starting data sync: {} tickers, {} intervals",
+            tickers.len(),
+            self.config.intervals.len()
+        );
+
+        println!("📅 Date range: {} to {}", self.config.start_date, self.config.end_date);
+        println!("📊 Mode: {}", if self.config.force_full { "FULL DOWNLOAD" } else { "RESUME (incremental)" });
+
+        // Process each interval
+        for interval in &self.config.intervals.clone() {
+            println!("\n{}", "=".repeat(70));
+            println!("📊 Interval: {} ({})", interval.to_vci_format(), self.interval_name(*interval));
+            println!("{}", "=".repeat(70));
+
+            self.sync_interval(&tickers, *interval).await?;
+        }
+
+        let total_time = start_time.elapsed();
+
+        // Print final summary
+        self.print_final_summary(total_time);
+
+        Ok(())
+    }
+
+    /// Synchronize a single interval for all tickers
+    async fn sync_interval(&mut self, tickers: &[String], interval: Interval) -> Result<(), Error> {
+        let interval_start_time = Instant::now();
+
+        // Categorize tickers (resume vs full history)
+        let category = self.fetcher.categorize_tickers(tickers, interval)?;
+
+        let fetch_start_date = self.config.get_fetch_start_date();
+        let batch_size = self.config.get_batch_size();
+
+        // Batch fetch resume tickers (only for daily data, use individual for high-frequency)
+        let resume_results = if interval == Interval::Daily && !category.resume_tickers.is_empty() {
+            println!("\n⚡ Batch processing {} tickers using resume mode...", category.resume_tickers.len());
+            self.fetcher
+                .batch_fetch(
+                    &category.resume_tickers,
+                    &fetch_start_date,
+                    &self.config.end_date,
+                    interval,
+                    batch_size,
+                )
+                .await?
+        } else {
+            if !category.resume_tickers.is_empty() {
+                println!(
+                    "\n⚡ Resume mode: {} tickers (will fetch individually for {} interval)",
+                    category.resume_tickers.len(),
+                    interval.to_vci_format()
+                );
+            }
+            HashMap::new()
+        };
+
+        // Batch fetch full history tickers (only for daily)
+        let full_history_results = if interval == Interval::Daily && !category.full_history_tickers.is_empty() {
+            println!("\n🚀 Processing {} tickers needing full history...", category.full_history_tickers.len());
+            self.fetcher
+                .batch_fetch(
+                    &category.full_history_tickers,
+                    &self.config.start_date,
+                    &self.config.end_date,
+                    interval,
+                    2, // Smaller batch size for full downloads
+                )
+                .await?
+        } else {
+            if !category.full_history_tickers.is_empty() {
+                println!(
+                    "\n🚀 Full history: {} tickers (will fetch individually for {} interval)",
+                    category.full_history_tickers.len(),
+                    interval.to_vci_format()
+                );
+            }
+            HashMap::new()
+        };
+
+        // Combine batch results
+        let mut batch_results = resume_results;
+        batch_results.extend(full_history_results);
+
+        // Process each ticker with fallback strategy
+        println!("\n🔄 Processing individual tickers with fallback strategy...");
+
+        let total_tickers = tickers.len();
+
+        for (i, ticker) in tickers.iter().enumerate() {
+            let ticker_start_time = Instant::now();
+            let current = i + 1;
+
+            println!("\n{}", "=".repeat(70));
+            println!("[{:03}/{:03}] {}", current, total_tickers, ticker);
+            println!("{}", "=".repeat(70));
+
+            let result = self
+                .process_ticker(ticker, interval, &batch_results, &category)
+                .await;
+
+            let ticker_elapsed = ticker_start_time.elapsed();
+
+            match result {
+                Ok(data) => {
+                    // Save to CSV
+                    self.save_ticker_data(ticker, &data, interval)?;
+                    self.stats.successful += 1;
+                    self.stats.files_written += 1;
+                    self.stats.total_records += data.len();
+
+                    println!("   ✅ SUCCESS: {} - {} records saved", ticker, data.len());
+                }
+                Err(e) => {
+                    self.stats.failed += 1;
+                    println!("   ❌ FAILED: {} - {}", ticker, e);
+                }
+            }
+
+            // Print progress
+            let mut progress = FetchProgress::new(current, total_tickers, ticker.clone(), interval);
+            progress.update_timing(ticker_elapsed, interval_start_time.elapsed());
+            println!("\n{}", progress.format_display());
+        }
+
+        let interval_time = interval_start_time.elapsed();
+        println!(
+            "\n✨ {} sync complete: {} tickers in {:.1}min",
+            self.interval_name(interval),
+            total_tickers,
+            interval_time.as_secs_f64() / 60.0
+        );
+
+        Ok(())
+    }
+
+    /// Process a single ticker with fallback strategy
+    async fn process_ticker(
+        &mut self,
+        ticker: &str,
+        interval: Interval,
+        batch_results: &HashMap<String, Option<Vec<OhlcvData>>>,
+        category: &crate::models::TickerCategory,
+    ) -> Result<Vec<OhlcvData>, Error> {
+        // Check if we have batch result
+        if let Some(Some(batch_data)) = batch_results.get(ticker) {
+            println!("   ✅ Using batch result for {}", ticker);
+
+            // For resume tickers, check dividend and merge
+            if category.resume_tickers.contains(&ticker.to_string()) {
+                return self
+                    .smart_dividend_check_and_merge(ticker, batch_data, interval)
+                    .await;
+            } else {
+                // Full history ticker - return batch data directly
+                return Ok(batch_data.clone());
+            }
+        }
+
+        // No batch result - fetch individually
+        println!("   🔄 Batch not available for {}, fetching individually...", ticker);
+
+        // Determine if this is a resume or full history ticker
+        let is_resume = category.resume_tickers.contains(&ticker.to_string());
+
+        if is_resume {
+            // Resume mode: fetch recent data and merge
+            let fetch_start = self.config.get_fetch_start_date();
+            let recent_data = self
+                .fetcher
+                .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)
+                .await?;
+
+            self.smart_dividend_check_and_merge(ticker, &recent_data, interval)
+                .await
+        } else {
+            // Full history mode: fetch complete data
+            self.fetcher
+                .fetch_full_history(ticker, &self.config.start_date, &self.config.end_date, interval)
+                .await
+        }
+    }
+
+    /// Smart dividend detection and data merging
+    async fn smart_dividend_check_and_merge(
+        &mut self,
+        ticker: &str,
+        recent_data: &[OhlcvData],
+        interval: Interval,
+    ) -> Result<Vec<OhlcvData>, Error> {
+        // Check for dividend
+        let dividend_detected = self.fetcher.check_dividend(ticker, interval).await?;
+
+        if dividend_detected {
+            println!("   💰 Dividend detected, re-downloading full history...");
+            self.stats.updated += 1;
+
+            return self
+                .fetcher
+                .fetch_full_history(ticker, &self.config.start_date, &self.config.end_date, interval)
+                .await;
+        }
+
+        // No dividend - merge with existing data
+        println!("   📝 No dividend, merging with existing data...");
+
+        let file_path = self.get_ticker_file_path(ticker, interval);
+
+        if !file_path.exists() {
+            // No existing file - return recent data as-is
+            return Ok(recent_data.to_vec());
+        }
+
+        let existing_data = self.read_existing_data(&file_path)?;
+
+        self.stats.updated += 1;
+        Ok(self.merge_data(existing_data, recent_data.to_vec()))
+    }
+
+    /// Merge existing data with new data (update last row + append new)
+    fn merge_data(&self, existing: Vec<OhlcvData>, new: Vec<OhlcvData>) -> Vec<OhlcvData> {
+        if existing.is_empty() {
+            return new;
+        }
+
+        if new.is_empty() {
+            return existing;
+        }
+
+        println!(
+            "   - DEBUG: Existing data has {} rows, new data has {} rows",
+            existing.len(),
+            new.len()
+        );
+
+        // Find latest date in existing data
+        let latest_existing_time = existing.iter().map(|d| d.time).max().unwrap();
+        println!("   - DEBUG: Latest existing date: {}", latest_existing_time.format("%Y-%m-%d"));
+
+        // Filter existing data to remove any dates >= latest_existing_time
+        // (we'll replace with fresh data from API)
+        let mut merged: Vec<OhlcvData> = existing
+            .into_iter()
+            .filter(|d| d.time < latest_existing_time)
+            .collect();
+
+        // Add all new data that is >= latest_existing_time (includes update to last row)
+        let new_rows: Vec<OhlcvData> = new
+            .into_iter()
+            .filter(|d| d.time >= latest_existing_time)
+            .collect();
+
+        println!("   - DEBUG: Adding {} new/updated rows", new_rows.len());
+
+        merged.extend(new_rows);
+
+        // Sort by time
+        merged.sort_by(|a, b| a.time.cmp(&b.time));
+
+        println!("   - DEBUG: Final merged data has {} rows", merged.len());
+
+        merged
+    }
+
+    /// Save ticker data to CSV file
+    fn save_ticker_data(
+        &self,
+        ticker: &str,
+        data: &[OhlcvData],
+        interval: Interval,
+    ) -> Result<(), Error> {
+        if data.is_empty() {
+            return Err(Error::InvalidInput("No data to save".to_string()));
+        }
+
+        // Create ticker directory
+        let ticker_dir = Path::new(MARKET_DATA_DIR).join(ticker);
+        fs::create_dir_all(&ticker_dir)
+            .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+
+        // Get file path
+        let file_path = ticker_dir.join(interval.to_filename());
+
+        // Write CSV
+        let mut wtr = csv::Writer::from_path(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to create CSV writer: {}", e)))?;
+
+        // Determine scaling factor
+        let scale_factor = if is_index(ticker) { 1.0 } else { 1000.0 };
+
+        // Write header
+        wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        // Write data rows
+        for row in data {
+            wtr.write_record(&[
+                ticker,
+                &row.time.format("%Y-%m-%d").to_string(),
+                &(row.open / scale_factor).to_string(),
+                &(row.high / scale_factor).to_string(),
+                &(row.low / scale_factor).to_string(),
+                &(row.close / scale_factor).to_string(),
+                &row.volume.to_string(),
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+
+        println!("   - Data saved to: {}", file_path.display());
+
+        Ok(())
+    }
+
+    /// Read existing data from CSV file
+    fn read_existing_data(&self, file_path: &Path) -> Result<Vec<OhlcvData>, Error> {
+        let mut reader = csv::Reader::from_path(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
+
+        let mut data = Vec::new();
+
+        for result in reader.records() {
+            let record = result.map_err(|e| Error::Parse(format!("Failed to parse CSV: {}", e)))?;
+
+            if record.len() < 7 {
+                continue;
+            }
+
+            // Parse time
+            let time_str = &record[1];
+            let time = self.parse_time(time_str)?;
+
+            let ohlcv = OhlcvData {
+                time,
+                open: record[2]
+                    .parse()
+                    .map_err(|e| Error::Parse(format!("Invalid open: {}", e)))?,
+                high: record[3]
+                    .parse()
+                    .map_err(|e| Error::Parse(format!("Invalid high: {}", e)))?,
+                low: record[4]
+                    .parse()
+                    .map_err(|e| Error::Parse(format!("Invalid low: {}", e)))?,
+                close: record[5]
+                    .parse()
+                    .map_err(|e| Error::Parse(format!("Invalid close: {}", e)))?,
+                volume: record[6]
+                    .parse()
+                    .map_err(|e| Error::Parse(format!("Invalid volume: {}", e)))?,
+                symbol: None,
+            };
+
+            data.push(ohlcv);
+        }
+
+        Ok(data)
+    }
+
+    /// Parse time from string (supports multiple formats)
+    fn parse_time(&self, time_str: &str) -> Result<DateTime<Utc>, Error> {
+        // Try RFC3339 first
+        if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
+            return Ok(dt.with_timezone(&Utc));
+        }
+
+        // Try date only format
+        let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+            .map_err(|e| Error::Parse(format!("Invalid date format: {}", e)))?;
+
+        Ok(date
+            .and_hms_opt(0, 0, 0)
+            .ok_or_else(|| Error::Parse("Failed to set time".to_string()))?
+            .and_utc())
+    }
+
+    /// Load tickers from ticker_group.json
+    fn load_tickers(&self) -> Result<Vec<String>, Error> {
+        let content = fs::read_to_string(TICKER_GROUP_FILE)
+            .map_err(|e| Error::Io(format!("Failed to read ticker_group.json: {}", e)))?;
+
+        let ticker_groups: TickerGroups = serde_json::from_str(&content)
+            .map_err(|e| Error::Parse(format!("Failed to parse ticker_group.json: {}", e)))?;
+
+        let mut tickers: Vec<String> = ticker_groups
+            .groups
+            .values()
+            .flat_map(|vec| vec.clone())
+            .collect();
+
+        // Add VNINDEX and VN30 if not already present
+        if !tickers.contains(&"VNINDEX".to_string()) {
+            tickers.insert(0, "VNINDEX".to_string());
+        }
+        if !tickers.contains(&"VN30".to_string()) {
+            tickers.insert(1, "VN30".to_string());
+        }
+
+        // Remove duplicates and sort (keep VNINDEX and VN30 first)
+        let vnindex = tickers.iter().position(|t| t == "VNINDEX");
+        let vn30 = tickers.iter().position(|t| t == "VN30");
+
+        let mut other_tickers: Vec<String> = tickers
+            .iter()
+            .filter(|t| *t != "VNINDEX" && *t != "VN30")
+            .cloned()
+            .collect();
+
+        other_tickers.sort();
+        other_tickers.dedup();
+
+        let mut sorted_tickers = Vec::new();
+        if vnindex.is_some() {
+            sorted_tickers.push("VNINDEX".to_string());
+        }
+        if vn30.is_some() {
+            sorted_tickers.push("VN30".to_string());
+        }
+        sorted_tickers.extend(other_tickers);
+
+        Ok(sorted_tickers)
+    }
+
+    /// Get file path for ticker data
+    fn get_ticker_file_path(&self, ticker: &str, interval: Interval) -> PathBuf {
+        Path::new(MARKET_DATA_DIR)
+            .join(ticker)
+            .join(interval.to_filename())
+    }
+
+    /// Get interval display name
+    fn interval_name(&self, interval: Interval) -> &'static str {
+        match interval {
+            Interval::Daily => "Daily",
+            Interval::Hourly => "Hourly",
+            Interval::Minute => "Minute",
+        }
+    }
+
+    /// Print final summary
+    fn print_final_summary(&self, total_time: std::time::Duration) {
+        println!("\n{}", "=".repeat(70));
+        println!("🎉 SYNC COMPLETE!");
+        println!("{}", "=".repeat(70));
+        println!("⏰ Finished at: {}", Utc::now().format("%Y-%m-%d %H:%M:%S"));
+        println!(
+            "⏱️  Total execution time: {:.2} minutes ({:.1} seconds)",
+            total_time.as_secs_f64() / 60.0,
+            total_time.as_secs_f64()
+        );
+        println!(
+            "📊 Results: ✅{} successful, ❌{} failed, 📝{} updated, ⏭️ {} skipped",
+            self.stats.successful, self.stats.failed, self.stats.updated, self.stats.skipped
+        );
+        println!("📁 Files written: {}", self.stats.files_written);
+        println!("📈 Total records: {}", self.stats.total_records);
+    }
+}

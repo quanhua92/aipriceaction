@@ -20,11 +20,13 @@ mod stock_data;
 mod timeframe;
 mod ticker_group;
 pub mod indicators;
+pub mod sync_config;
 
 pub use ohlcv::Ohlcv;
 pub use stock_data::StockData;
 pub use ticker_group::TickerGroups;
 pub use timeframe::Timeframe;
+pub use sync_config::{Interval, SyncConfig, TickerCategory, FetchProgress, SyncStats};
 
 use std::collections::HashMap;
 

@@ -19,8 +19,24 @@ pub enum Commands {
         #[arg(short, long)]
         source: Option<PathBuf>,
     },
-    /// Pull latest data
-    Pull,
+    /// Pull latest data from VCI API
+    Pull {
+        /// Intervals to sync: all, daily, hourly, minute (comma-separated)
+        #[arg(short, long, default_value = "all")]
+        intervals: String,
+
+        /// Force full download from start-date (disable resume mode)
+        #[arg(long)]
+        full: bool,
+
+        /// Number of recent days for resume mode
+        #[arg(long, default_value = "30")]
+        resume_days: u32,
+
+        /// Start date for historical data (YYYY-MM-DD)
+        #[arg(long, default_value = "2015-01-05")]
+        start_date: String,
+    },
     /// Start the server
     Serve,
     /// Show current status
@@ -34,8 +50,13 @@ pub fn run() {
         Commands::ImportLegacy { source } => {
             commands::import_legacy::run(source);
         }
-        Commands::Pull => {
-            commands::pull::run();
+        Commands::Pull {
+            intervals,
+            full,
+            resume_days,
+            start_date,
+        } => {
+            commands::pull::run(intervals, full, resume_days, start_date);
         }
         Commands::Serve => {
             commands::serve::run();
