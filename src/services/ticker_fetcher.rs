@@ -41,30 +41,10 @@ impl TickerFetcher {
             let file_path = self.get_ticker_file_path(ticker, interval);
 
             if !file_path.exists() {
-                println!("   🆕 {}: No existing file - needs full history", ticker);
                 category.full_history_tickers.push(ticker.clone());
             } else {
-                // Check if existing data is sufficient
-                match self.count_csv_rows(&file_path) {
-                    Ok(row_count) if row_count <= 5 => {
-                        println!(
-                            "   📉 {}: Only {} rows - needs full history",
-                            ticker, row_count
-                        );
-                        category.full_history_tickers.push(ticker.clone());
-                    }
-                    Ok(row_count) => {
-                        println!("   ✅ {}: {} rows - can use resume mode", ticker, row_count);
-                        category.resume_tickers.push(ticker.clone());
-                    }
-                    Err(e) => {
-                        println!(
-                            "   ❌ {}: Error reading file - needs full history ({})",
-                            ticker, e
-                        );
-                        category.full_history_tickers.push(ticker.clone());
-                    }
-                }
+                // File exists - use resume mode (skip expensive row counting)
+                category.resume_tickers.push(ticker.clone());
             }
         }
 

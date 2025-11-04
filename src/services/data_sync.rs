@@ -73,12 +73,15 @@ impl DataSync {
         let interval_start_time = Instant::now();
 
         // Categorize tickers (resume vs full history)
+        let categorize_start = Instant::now();
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
+        println!("⏱️  Categorization took: {:.2}s", categorize_start.elapsed().as_secs_f64());
 
         let fetch_start_date = self.config.get_fetch_start_date(interval);
         let batch_size = self.config.get_batch_size(interval);
 
         // Batch fetch resume tickers (all intervals support batch API with smart defaults)
+        let batch_start = Instant::now();
         let resume_results = if !category.resume_tickers.is_empty() {
             println!("\n⚡ Batch processing {} tickers using resume mode...", category.resume_tickers.len());
             self.fetcher
@@ -93,8 +96,10 @@ impl DataSync {
         } else {
             HashMap::new()
         };
+        println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
 
         // Batch fetch full history tickers (all intervals support batch API, use smaller batch size)
+        let full_history_start = Instant::now();
         let full_history_results = if !category.full_history_tickers.is_empty() {
             println!("\n🚀 Processing {} tickers needing full history...", category.full_history_tickers.len());
             self.fetcher
@@ -116,6 +121,9 @@ impl DataSync {
             }
             HashMap::new()
         };
+        if !category.full_history_tickers.is_empty() {
+            println!("⏱️  Full history batch fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
+        }
 
         // Combine batch results
         let mut batch_results = resume_results;
@@ -123,6 +131,7 @@ impl DataSync {
 
         // Process each ticker with fallback strategy
         println!("\n🔄 Processing individual tickers with fallback strategy...");
+        let processing_start = Instant::now();
 
         let total_tickers = tickers.len();
 
@@ -165,6 +174,8 @@ impl DataSync {
             progress.update_timing(ticker_elapsed, interval_start_time.elapsed());
             println!("\n{}", progress.format_display());
         }
+
+        println!("⏱️  Individual processing took: {:.2}s", processing_start.elapsed().as_secs_f64());
 
         let interval_time = interval_start_time.elapsed();
         println!(
@@ -254,10 +265,24 @@ impl DataSync {
             return Ok(recent_data.to_vec());
         }
 
+        // Profile file read
+        let read_start = Instant::now();
         let existing_data = self.read_existing_data(&file_path)?;
+        let read_time = read_start.elapsed().as_secs_f64();
+        if read_time > 0.001 {
+            println!("   ⏱️  File read took: {:.3}s ({} rows)", read_time, existing_data.len());
+        }
+
+        // Profile merge operation
+        let merge_start = Instant::now();
+        let merged_data = self.merge_data(existing_data, recent_data.to_vec());
+        let merge_time = merge_start.elapsed().as_secs_f64();
+        if merge_time > 0.001 {
+            println!("   ⏱️  Merge took: {:.3}s ({} rows)", merge_time, merged_data.len());
+        }
 
         self.stats.updated += 1;
-        Ok(self.merge_data(existing_data, recent_data.to_vec()))
+        Ok(merged_data)
     }
 
     /// Merge existing data with new data (update last row + append new)

@@ -35,12 +35,12 @@ impl Interval {
     /// Get optimal resume days for this interval
     ///
     /// These values are optimized based on data volume per interval:
-    /// - Daily: 3 days = 3 records/ticker (very light)
+    /// - Daily: 1 day = 1 record/ticker (minimal processing overhead)
     /// - Hourly: 5 days = ~30 records/ticker (moderate, optimal for batch API)
     /// - Minute: 2 days = ~720 records/ticker (heavy, prevents API overload)
     pub fn default_resume_days(&self) -> u32 {
         match self {
-            Interval::Daily => 3,
+            Interval::Daily => 1,
             Interval::Hourly => 5,
             Interval::Minute => 2,
         }
@@ -140,16 +140,16 @@ impl SyncConfig {
     /// Get batch size based on interval and mode (reduce for full downloads or high-volume intervals)
     ///
     /// Optimized batch sizes based on data volume per interval:
-    /// - Daily: 30 tickers × 3 records = 90 records/batch (very light)
-    /// - Hourly: 10 tickers × 30 records = 300 records/batch (moderate)
+    /// - Daily: 30 tickers × 3 records = 90 records/batch (sweet spot - fast and reliable)
+    /// - Hourly: 20 tickers × 30 records = 600 records/batch (moderate, safe batch size)
     /// - Minute: 3 tickers × 300 records = 900 records/batch (manageable)
     pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
             match interval {
-                Interval::Daily => 30,               // 30 tickers × 3 records = 90 records/batch
-                Interval::Hourly => self.batch_size, // 10 tickers × 30 records = 300 records/batch
+                Interval::Daily => 50,               // 50 tickers × 3 records = 150 records/batch (testing higher)
+                Interval::Hourly => 20,              // 20 tickers × 30 records = 600 records/batch
                 Interval::Minute => 3,               // 3 tickers × 300 records = 900 records/batch
             }
         }
@@ -327,8 +327,8 @@ mod tests {
         let mut config = SyncConfig::default();
 
         // Resume mode: interval-specific batch sizes
-        assert_eq!(config.get_batch_size(Interval::Daily), 30); // Larger batches for light data
-        assert_eq!(config.get_batch_size(Interval::Hourly), 10);
+        assert_eq!(config.get_batch_size(Interval::Daily), 50); // Testing higher batch size
+        assert_eq!(config.get_batch_size(Interval::Hourly), 20);
         assert_eq!(config.get_batch_size(Interval::Minute), 3); // Smaller for high-volume data
 
         // Full mode: always use 2 regardless of interval
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_interval_default_resume_days() {
         // Test smart defaults for each interval
-        assert_eq!(Interval::Daily.default_resume_days(), 3);
+        assert_eq!(Interval::Daily.default_resume_days(), 1);
         assert_eq!(Interval::Hourly.default_resume_days(), 5);
         assert_eq!(Interval::Minute.default_resume_days(), 2);
     }

@@ -9,7 +9,7 @@ Syncs daily data for all 290 tickers (last 3 days)
 ```bash
 ./scripts/pull_daily.sh
 ```
-**Expected time**: ~15 seconds
+**Expected time**: ~5-6 seconds (30-ticker batches)
 **Data volume**: 3 records/ticker = very light
 
 ### 📊 pull_hourly.sh
@@ -17,7 +17,7 @@ Syncs hourly data for all 290 tickers (last 5 days)
 ```bash
 ./scripts/pull_hourly.sh
 ```
-**Expected time**: ~20-30 seconds
+**Expected time**: ~15-20 seconds (20-ticker batches)
 **Data volume**: ~30 records/ticker = moderate
 
 ### 📊 pull_minute.sh
@@ -25,7 +25,7 @@ Syncs minute data for all 290 tickers (last 2 days)
 ```bash
 ./scripts/pull_minute.sh
 ```
-**Expected time**: ~1-2 minutes
+**Expected time**: ~5 minutes (3-ticker batches)
 **Data volume**: ~720 records/ticker = heavy (optimized to avoid API overload)
 
 ### 📊 pull_all.sh
@@ -33,8 +33,8 @@ Syncs all intervals (daily, hourly, minute) in sequence
 ```bash
 ./scripts/pull_all.sh
 ```
-**Expected time**: ~2-3 minutes total
-**Uses optimized resume days per interval**
+**Expected time**: ~6 minutes total
+**Uses smart interval-specific defaults (no parameters needed)**
 
 ## Usage
 
@@ -75,19 +75,19 @@ Example crontab entries:
 
 ## Smart Resume Days Strategy
 
-The scripts use interval-specific resume days to balance data freshness with API load:
+The scripts use interval-specific resume days and batch sizes, all configured automatically in the Rust code:
 
-| Interval | Resume Days | Records/Ticker | Rationale |
-|----------|-------------|----------------|-----------|
-| **Daily** | 3 | 3 | Very light data, safe buffer |
-| **Hourly** | 5 | ~30 | Moderate data, optimal for batch API |
-| **Minute** | 2 | ~720 | Heavy data, prevents API overload |
+| Interval | Resume Days | Batch Size | Records/Batch | Performance |
+|----------|-------------|------------|---------------|-------------|
+| **Daily** | 3 | 30 tickers | 90 records | ~5s for 290 tickers |
+| **Hourly** | 5 | 20 tickers | 600 records | ~15s for 290 tickers |
+| **Minute** | 2 | 3 tickers | 900 records | ~5min for 290 tickers |
 
-**Why different values?**
-- Minute data has ~360 records per day
-- 7 days of minute data = 2,520 records/ticker × 10 tickers/batch = 25,200 records
-- This can timeout or fail the API
-- 2 days = 720 records/ticker is much safer
+**Why different batch sizes?**
+- Daily data is very light (3 records/ticker), so we can batch 30 tickers together
+- Hourly data is moderate (~30 records/ticker), so 20 tickers/batch works well
+- Minute data is heavy (~360 records/ticker), so only 3 tickers/batch to avoid API overload
+- All intervals now use batch API for maximum performance!
 
 ## Notes
 
