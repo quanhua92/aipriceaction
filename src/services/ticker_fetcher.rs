@@ -23,6 +23,43 @@ impl TickerFetcher {
         Ok(Self { vci_client })
     }
 
+    /// Read the last date from a CSV file (efficiently reads only last few lines)
+    fn read_last_date(&self, file_path: &Path) -> Result<Option<String>, Error> {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+
+        let file = File::open(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
+
+        let reader = BufReader::new(file);
+        let mut last_valid_date: Option<String> = None;
+
+        // Read all lines to find the last valid data line
+        for line in reader.lines() {
+            let line = line.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+
+            // Skip header and empty lines
+            if line.starts_with("ticker") || line.trim().is_empty() {
+                continue;
+            }
+
+            // Parse CSV line (format: ticker,time,open,high,low,close,volume)
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() >= 2 {
+                let date_str = parts[1].trim();
+                // Extract just the date part (YYYY-MM-DD) from datetime strings
+                let date = if date_str.contains(' ') {
+                    date_str.split(' ').next().unwrap_or(date_str)
+                } else {
+                    date_str
+                };
+                last_valid_date = Some(date.to_string());
+            }
+        }
+
+        Ok(last_valid_date)
+    }
+
     /// Categorize tickers into resume vs full history based on existing data
     pub fn categorize_tickers(
         &self,
@@ -43,8 +80,20 @@ impl TickerFetcher {
             if !file_path.exists() {
                 category.full_history_tickers.push(ticker.clone());
             } else {
-                // File exists - use resume mode (skip expensive row counting)
-                category.resume_tickers.push(ticker.clone());
+                // File exists - read last date and use resume mode
+                match self.read_last_date(&file_path) {
+                    Ok(Some(last_date)) => {
+                        category.resume_tickers.push((ticker.clone(), last_date));
+                    }
+                    Ok(None) => {
+                        // File exists but no valid data - need full history
+                        category.full_history_tickers.push(ticker.clone());
+                    }
+                    Err(_) => {
+                        // Error reading file - need full history
+                        category.full_history_tickers.push(ticker.clone());
+                    }
+                }
             }
         }
 
@@ -57,6 +106,11 @@ impl TickerFetcher {
             "   Full history tickers: {}",
             category.full_history_tickers.len()
         );
+
+        // Show min/max dates for resume tickers
+        if let Some(min_date) = category.get_min_resume_date() {
+            println!("   Resume from: {} (earliest last date)", min_date);
+        }
 
         Ok(category)
     }

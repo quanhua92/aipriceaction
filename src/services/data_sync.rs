@@ -76,16 +76,21 @@ impl DataSync {
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
         println!("⏱️  Categorization took: {:.2}s", categorize_start.elapsed().as_secs_f64());
 
-        let fetch_start_date = self.config.get_fetch_start_date(interval);
         let batch_size = self.config.get_batch_size(interval);
 
-        // Batch fetch resume tickers (all intervals support batch API with smart defaults)
+        // Batch fetch resume tickers using adaptive date (min of all last dates)
         let batch_start = Instant::now();
         let resume_results = if !category.resume_tickers.is_empty() {
-            println!("\n⚡ Batch processing {} tickers using resume mode...", category.resume_tickers.len());
+            let resume_ticker_names = category.get_resume_ticker_names();
+            let fetch_start_date = category.get_min_resume_date()
+                .unwrap_or_else(|| self.config.get_fetch_start_date(interval));
+
+            println!("\n⚡ Batch processing {} tickers using adaptive resume mode...", resume_ticker_names.len());
+            println!("   📅 Fetching from {} (earliest last date in batch)", fetch_start_date);
+
             self.fetcher
                 .batch_fetch(
-                    &category.resume_tickers,
+                    &resume_ticker_names,
                     &fetch_start_date,
                     &self.config.end_date,
                     interval,
@@ -196,12 +201,20 @@ impl DataSync {
         batch_results: &HashMap<String, Option<Vec<OhlcvData>>>,
         category: &crate::models::TickerCategory,
     ) -> Result<Vec<OhlcvData>, Error> {
+        // Check if ticker is in resume mode (has last date)
+        let ticker_last_date = category.resume_tickers
+            .iter()
+            .find(|(t, _)| t == ticker)
+            .map(|(_, date)| date.clone());
+
+        let is_resume = ticker_last_date.is_some();
+
         // Check if we have batch result
         if let Some(Some(batch_data)) = batch_results.get(ticker) {
             // Using batch result for ticker
 
             // For resume tickers, check dividend and merge
-            if category.resume_tickers.contains(&ticker.to_string()) {
+            if is_resume {
                 return self
                     .smart_dividend_check_and_merge(ticker, batch_data, interval)
                     .await;
@@ -214,12 +227,9 @@ impl DataSync {
         // No batch result - fetch individually
         println!("   🔄 Batch not available for {}, fetching individually...", ticker);
 
-        // Determine if this is a resume or full history ticker
-        let is_resume = category.resume_tickers.contains(&ticker.to_string());
-
         if is_resume {
-            // Resume mode: fetch recent data and merge
-            let fetch_start = self.config.get_fetch_start_date(interval);
+            // Resume mode: fetch from last date in file
+            let fetch_start = ticker_last_date.unwrap();
             let recent_data = self
                 .fetcher
                 .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)

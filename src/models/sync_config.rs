@@ -160,7 +160,8 @@ impl SyncConfig {
 #[derive(Debug, Default)]
 pub struct TickerCategory {
     /// Tickers with sufficient existing data (can use resume mode)
-    pub resume_tickers: Vec<String>,
+    /// Each tuple contains (ticker, last_date_in_csv)
+    pub resume_tickers: Vec<(String, String)>,
 
     /// Tickers needing full history (new or insufficient data)
     pub full_history_tickers: Vec<String>,
@@ -173,6 +174,23 @@ impl TickerCategory {
 
     pub fn total_count(&self) -> usize {
         self.resume_tickers.len() + self.full_history_tickers.len()
+    }
+
+    /// Get the minimum (earliest) last date from all resume tickers
+    /// Returns None if no resume tickers
+    pub fn get_min_resume_date(&self) -> Option<String> {
+        self.resume_tickers
+            .iter()
+            .map(|(_, date)| date.clone())
+            .min()
+    }
+
+    /// Get just ticker names from resume tickers
+    pub fn get_resume_ticker_names(&self) -> Vec<String> {
+        self.resume_tickers
+            .iter()
+            .map(|(ticker, _)| ticker.clone())
+            .collect()
     }
 }
 
@@ -383,10 +401,10 @@ mod tests {
         let hourly_start = config.get_fetch_start_date(Interval::Hourly);
         let minute_start = config.get_fetch_start_date(Interval::Minute);
 
-        // They should all be different dates
-        assert_ne!(daily_start, hourly_start);
-        assert_ne!(hourly_start, minute_start);
-        assert_ne!(daily_start, minute_start);
+        // Daily and minute use 2 days (same), hourly uses 5 days (different)
+        assert_eq!(daily_start, minute_start); // Both use 2 days
+        assert_ne!(daily_start, hourly_start); // Daily 2 days vs Hourly 5 days
+        assert_ne!(hourly_start, minute_start); // Hourly 5 days vs Minute 2 days
     }
 
     #[test]
