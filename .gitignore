@@ -65,3 +65,7 @@ vite.config.ts.timestamp-*
 # Editor
 .vscode/settings.json
 .tanstack
+
+# Market Data (CSV files only, keep structure)
+market_data/**/*.csv
+market_data/**/*.parquet

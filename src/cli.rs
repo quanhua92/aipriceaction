@@ -1,4 +1,7 @@
 use clap::{Parser, Subcommand};
+use std::path::PathBuf;
+
+use crate::commands;
 
 #[derive(Parser)]
 #[command(name = "aipriceaction")]
@@ -10,8 +13,12 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Import legacy data
-    ImportLegacy,
+    /// Import legacy data from reference project
+    ImportLegacy {
+        /// Path to the aipriceaction-data directory
+        #[arg(short, long)]
+        source: Option<PathBuf>,
+    },
     /// Pull latest data
     Pull,
     /// Start the server
@@ -24,17 +31,17 @@ pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::ImportLegacy => {
-            println!("Running import-legacy command...");
+        Commands::ImportLegacy { source } => {
+            commands::import_legacy::run(source);
         }
         Commands::Pull => {
-            println!("Running pull command...");
+            commands::pull::run();
         }
         Commands::Serve => {
-            println!("Running serve command...");
+            commands::serve::run();
         }
         Commands::Status => {
-            println!("Running status command...");
+            commands::status::run();
         }
     }
 }

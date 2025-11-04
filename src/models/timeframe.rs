@@ -37,7 +37,7 @@ impl Timeframe {
         }
     }
 
-    /// Get the directory name for this timeframe
+    /// Get the directory name for this timeframe (legacy reference project structure)
     pub fn directory_name(&self) -> &'static str {
         match self {
             Timeframe::Minute1 | Timeframe::Minute5 | Timeframe::Minute15 | Timeframe::Minute30 => {
@@ -46,6 +46,42 @@ impl Timeframe {
             Timeframe::Hour1 => "market_data_hour",
             Timeframe::Day1 | Timeframe::Week1 | Timeframe::Month1 => "market_data",
         }
+    }
+
+    /// Get the filename for this timeframe in the new ticker-first structure
+    ///
+    /// # Returns
+    /// Filename like "daily.csv", "1h.csv", "5m.csv"
+    pub fn to_filename(&self) -> &'static str {
+        match self {
+            Timeframe::Minute1 => "1m.csv",
+            Timeframe::Minute5 => "5m.csv",
+            Timeframe::Minute15 => "15m.csv",
+            Timeframe::Minute30 => "30m.csv",
+            Timeframe::Hour1 => "1h.csv",
+            Timeframe::Day1 => "daily.csv",
+            Timeframe::Week1 => "weekly.csv",
+            Timeframe::Month1 => "monthly.csv",
+        }
+    }
+
+    /// Get the full data path for a ticker in the new structure
+    ///
+    /// # Arguments
+    /// * `ticker` - The ticker symbol (e.g., "VCB", "FPT", "VNINDEX")
+    ///
+    /// # Returns
+    /// Path like "market_data/VCB/daily.csv"
+    ///
+    /// # Example
+    /// ```
+    /// use aipriceaction::models::Timeframe;
+    ///
+    /// let path = Timeframe::Day1.get_data_path("VCB");
+    /// assert_eq!(path, "market_data/VCB/daily.csv");
+    /// ```
+    pub fn get_data_path(&self, ticker: &str) -> String {
+        format!("market_data/{}/{}", ticker, self.to_filename())
     }
 
     /// Get all available timeframes
