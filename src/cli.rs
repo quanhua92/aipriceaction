@@ -36,6 +36,10 @@ pub enum Commands {
         /// Start date for historical data (YYYY-MM-DD)
         #[arg(long, default_value = "2015-01-05")]
         start_date: String,
+
+        /// Debug mode: use hardcoded test tickers (VNINDEX, VIC, VCB only)
+        #[arg(long)]
+        debug: bool,
     },
     /// Start the server
     Serve,
@@ -55,8 +59,9 @@ pub fn run() {
             full,
             resume_days,
             start_date,
+            debug,
         } => {
-            commands::pull::run(intervals, full, resume_days, start_date);
+            commands::pull::run(intervals, full, resume_days, start_date, debug);
         }
         Commands::Serve => {
             commands::serve::run();

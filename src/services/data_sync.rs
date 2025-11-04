@@ -32,11 +32,16 @@ impl DataSync {
     }
 
     /// Synchronize all intervals for all tickers
-    pub async fn sync_all_intervals(&mut self) -> Result<(), Error> {
+    pub async fn sync_all_intervals(&mut self, debug: bool) -> Result<(), Error> {
         let start_time = Instant::now();
 
-        // Load tickers from ticker_group.json
-        let tickers = self.load_tickers()?;
+        // Load tickers from ticker_group.json or use debug list
+        let tickers = if debug {
+            println!("🐛 Using debug ticker list: VNINDEX, VIC, VCB");
+            vec!["VNINDEX".to_string(), "VIC".to_string(), "VCB".to_string()]
+        } else {
+            self.load_tickers()?
+        };
 
         println!("\n🚀 Starting data sync: {} tickers, {} intervals",
             tickers.len(),

@@ -148,11 +148,10 @@ impl TickerFetcher {
                 }
             }
 
-            // Rate limiting between batches
-            if batch_idx < ticker_batches.len() - 1 {
-                println!("   ⏸️ Rate limiting delay (2s)...");
-                tokio::time::sleep(StdDuration::from_secs(2)).await;
-            }
+            // Sleep 1-2 seconds between batches (matching proxy pattern)
+            let sleep_ms = 1000 + (rand::random::<u64>() % 1000);
+            println!("   ⏸️ Rate limiting delay ({}ms)...", sleep_ms);
+            tokio::time::sleep(StdDuration::from_millis(sleep_ms)).await;
         }
 
         Ok(all_results)
@@ -203,7 +202,8 @@ impl TickerFetcher {
             .await
             .map_err(|e| Error::Network(format!("VCI fetch failed: {:?}", e)))?;
 
-        tokio::time::sleep(StdDuration::from_secs(1)).await;
+        // Sleep after API call to respect rate limits
+        tokio::time::sleep(StdDuration::from_millis(1500)).await;
 
         if data.is_empty() {
             return Err(Error::NotFound(format!(
@@ -270,7 +270,8 @@ impl TickerFetcher {
                 }
             }
 
-            tokio::time::sleep(StdDuration::from_secs(2)).await;
+            // Sleep between chunks to respect rate limits
+            tokio::time::sleep(StdDuration::from_millis(2000)).await;
         }
 
         if all_chunks.is_empty() {
@@ -374,7 +375,8 @@ impl TickerFetcher {
                 }
             }
 
-            tokio::time::sleep(StdDuration::from_secs(3)).await;
+            // Sleep between chunks to respect rate limits (longer for minute data)
+            tokio::time::sleep(StdDuration::from_millis(3000)).await;
 
             // Move to next month
             current_dt = next_month;
@@ -440,7 +442,8 @@ impl TickerFetcher {
             }
         };
 
-        tokio::time::sleep(StdDuration::from_secs(1)).await;
+        // Sleep after API call to respect rate limits
+        tokio::time::sleep(StdDuration::from_millis(1500)).await;
 
         // Load existing data
         let existing_data = self.read_ohlcv_from_csv(&file_path)?;
