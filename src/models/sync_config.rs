@@ -89,6 +89,9 @@ pub struct SyncConfig {
 
     /// Force full download (disable resume mode)
     pub force_full: bool,
+
+    /// Number of concurrent batch requests (1 = sequential, 3 = default, higher = faster but more load)
+    pub concurrent_batches: usize,
 }
 
 impl Default for SyncConfig {
@@ -100,6 +103,7 @@ impl Default for SyncConfig {
             resume_days: None, // Use interval-specific defaults
             intervals: vec![Interval::Daily],
             force_full: false,
+            concurrent_batches: 3, // Default: 3 concurrent batch requests
         }
     }
 }
@@ -113,6 +117,7 @@ impl SyncConfig {
         resume_days: Option<u32>,
         intervals: Vec<Interval>,
         force_full: bool,
+        concurrent_batches: usize,
     ) -> Self {
         Self {
             start_date,
@@ -121,6 +126,7 @@ impl SyncConfig {
             resume_days,
             intervals,
             force_full,
+            concurrent_batches,
         }
     }
 
@@ -421,6 +427,7 @@ mod tests {
             Some(7), // Custom resume days
             vec![Interval::Daily, Interval::Hourly],
             false,
+            3, // concurrent_batches
         );
 
         // All intervals should use the same custom value

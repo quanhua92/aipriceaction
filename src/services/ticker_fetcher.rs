@@ -139,7 +139,7 @@ impl TickerFetcher {
         Ok(category)
     }
 
-    /// Batch fetch data for multiple tickers
+    /// Batch fetch data for multiple tickers with concurrent processing
     pub async fn batch_fetch(
         &mut self,
         tickers: &[String],
@@ -147,71 +147,117 @@ impl TickerFetcher {
         end_date: &str,
         interval: Interval,
         batch_size: usize,
+        concurrent_batches: usize,
     ) -> Result<HashMap<String, Option<Vec<OhlcvData>>>, Error> {
         if tickers.is_empty() {
             return Ok(HashMap::new());
         }
+
+        let concurrent_batches = concurrent_batches.max(1); // At least 1
 
         println!(
             "\n-> Processing batch of {} tickers using VCI batch history [{}]",
             tickers.len(),
             interval.to_vci_format()
         );
+        if concurrent_batches > 1 {
+            println!("   🚀 Using {} concurrent batch requests", concurrent_batches);
+        }
 
         let mut all_results = HashMap::new();
 
         // Split into smaller batches
-        let ticker_batches: Vec<&[String]> = tickers.chunks(batch_size).collect();
+        let ticker_batches: Vec<Vec<String>> = tickers
+            .chunks(batch_size)
+            .map(|chunk| chunk.to_vec())
+            .collect();
 
-        for (batch_idx, ticker_batch) in ticker_batches.iter().enumerate() {
-            println!(
-                "\n--- Batch {}/{}: {} tickers ---",
-                batch_idx + 1,
-                ticker_batches.len(),
-                ticker_batch.len()
-            );
+        // Process batches in groups of concurrent_batches
+        for (group_idx, batch_group) in ticker_batches.chunks(concurrent_batches).enumerate() {
+            let group_start = group_idx * concurrent_batches;
 
-            let api_start = std::time::Instant::now();
-            match self
-                .vci_client
-                .get_batch_history(ticker_batch, start_date, Some(end_date), interval.to_vci_format())
-                .await
-            {
-                Ok(batch_data) => {
-                    // Process successful batch results
-                    for ticker in ticker_batch.iter() {
-                        if let Some(data) = batch_data.get(ticker) {
-                            if let Some(ohlcv_vec) = data {
-                                if !ohlcv_vec.is_empty() {
-                                    // Success - store result silently
-                                    all_results.insert(ticker.clone(), Some(ohlcv_vec.clone()));
-                                } else {
-                                    println!("   ❌ Batch failed: {} (empty data)", ticker);
+            // Process this group of batches concurrently
+            let mut tasks = Vec::new();
+
+            for (i, ticker_batch) in batch_group.iter().enumerate() {
+                let batch_idx = group_start + i;
+                let ticker_batch = ticker_batch.clone();
+                let start_date = start_date.to_string();
+                let end_date = end_date.to_string();
+                let interval_str = interval.to_vci_format().to_string();
+
+                // Clone VCI client for concurrent use
+                let mut vci_client = self.vci_client.clone();
+
+                let task = tokio::spawn(async move {
+                    let api_start = std::time::Instant::now();
+                    let result = vci_client
+                        .get_batch_history(&ticker_batch, &start_date, Some(&end_date), &interval_str)
+                        .await;
+                    let api_elapsed = api_start.elapsed();
+
+                    (batch_idx, ticker_batch, result, api_elapsed)
+                });
+
+                tasks.push(task);
+            }
+
+            // Wait for all concurrent batches to complete
+            let results = futures::future::join_all(tasks).await;
+
+            // Process results
+            for task_result in results {
+                match task_result {
+                    Ok((batch_idx, ticker_batch, api_result, api_elapsed)) => {
+                        println!(
+                            "\n--- Batch {}/{}: {} tickers | {:.2}s ---",
+                            batch_idx + 1,
+                            ticker_batches.len(),
+                            ticker_batch.len(),
+                            api_elapsed.as_secs_f64()
+                        );
+
+                        match api_result {
+                            Ok(batch_data) => {
+                                // Process successful batch results
+                                for ticker in ticker_batch.iter() {
+                                    if let Some(data) = batch_data.get(ticker) {
+                                        if let Some(ohlcv_vec) = data {
+                                            if !ohlcv_vec.is_empty() {
+                                                // Success - store result silently
+                                                all_results.insert(ticker.clone(), Some(ohlcv_vec.clone()));
+                                            } else {
+                                                println!("   ❌ Batch failed: {} (empty data)", ticker);
+                                                all_results.insert(ticker.clone(), None);
+                                            }
+                                        } else {
+                                            println!("   ❌ Batch failed: {} (no data)", ticker);
+                                            all_results.insert(ticker.clone(), None);
+                                        }
+                                    } else {
+                                        println!("   ❌ Batch failed: {} (not in response)", ticker);
+                                        all_results.insert(ticker.clone(), None);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("   ❌ Batch request error: {:?}", e);
+                                for ticker in ticker_batch.iter() {
                                     all_results.insert(ticker.clone(), None);
                                 }
-                            } else {
-                                println!("   ❌ Batch failed: {} (no data)", ticker);
-                                all_results.insert(ticker.clone(), None);
                             }
-                        } else {
-                            println!("   ❌ Batch failed: {} (not in response)", ticker);
-                            all_results.insert(ticker.clone(), None);
                         }
                     }
-                }
-                Err(e) => {
-                    println!("   ❌ Batch request error: {:?}", e);
-                    for ticker in ticker_batch.iter() {
-                        all_results.insert(ticker.clone(), None);
+                    Err(e) => {
+                        println!("   ❌ Task join error: {:?}", e);
                     }
                 }
             }
-            let api_elapsed = api_start.elapsed();
 
-            // Minimal sleep 10-30ms between batches (VCI client has internal rate limiter)
-            let sleep_ms = 10 + (rand::random::<u64>() % 20);
-            println!("   ⏱️  API: {:.2}s | Sleep: {:.2}s", api_elapsed.as_secs_f64(), sleep_ms as f64 / 1000.0);
-            tokio::time::sleep(StdDuration::from_millis(sleep_ms)).await;
+            // Small delay between groups (not needed between individual batches in a group)
+            if group_idx < ticker_batches.chunks(concurrent_batches).len() - 1 {
+                tokio::time::sleep(StdDuration::from_millis(50)).await;
+            }
         }
 
         Ok(all_results)

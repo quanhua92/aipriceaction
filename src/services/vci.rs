@@ -90,6 +90,7 @@ pub struct FinancialRatio {
     pub eps: Option<f64>,
 }
 
+#[derive(Clone)]
 pub struct VciClient {
     client: Client,
     base_url: String,

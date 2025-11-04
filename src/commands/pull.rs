@@ -35,6 +35,7 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         resume_days,
         intervals,
         full,
+        3, // concurrent_batches: 3 concurrent requests
     );
 
     // Run sync

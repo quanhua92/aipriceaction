@@ -108,6 +108,7 @@ impl DataSync {
                     &self.config.end_date,
                     interval,
                     batch_size,
+                    self.config.concurrent_batches,
                 )
                 .await?
         } else {
@@ -126,6 +127,7 @@ impl DataSync {
                     &self.config.end_date,
                     interval,
                     2, // Smaller batch size for full downloads
+                    self.config.concurrent_batches,
                 )
                 .await?
         } else {
