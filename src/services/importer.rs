@@ -14,7 +14,13 @@ use std::time::Instant;
 ///
 /// # Example
 /// ```no_run
+/// use aipriceaction::services::import_legacy;
+/// use std::path::Path;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// import_legacy(Path::new("./references/aipriceaction-data"))?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn import_legacy(source_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Instant::now();
@@ -253,4 +259,269 @@ fn import_ticker(source_path: &Path, ticker: &str) -> Result<ImportStats, Box<dy
     }
 
     Ok(stats)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    /// Helper to create a temporary CSV file with test data
+    fn create_test_csv(path: &Path, _ticker: &str, rows: Vec<&str>) -> std::io::Result<()> {
+        let mut file = std::fs::File::create(path)?;
+        // Write header
+        writeln!(file, "ticker,time,open,high,low,close,volume")?;
+        // Write data rows
+        for row in rows {
+            writeln!(file, "{}", row)?;
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_files_match() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with stock ticker data (prices will be scaled 1000x in dest)
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+            "VCB,2024-01-02,23.2,23.6,23.1,23.3,1100000",
+            "VCB,2024-01-03,23.3,23.7,23.2,23.4,1200000",
+        ];
+        create_test_csv(&source, "VCB", source_rows.clone()).unwrap();
+
+        // Create dest with scaled prices (multiply by 1000)
+        let dest_rows = vec![
+            "VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000",
+            "VCB,2024-01-02,23200.0,23600.0,23100.0,23300.0,1100000",
+            "VCB,2024-01-03,23300.0,23700.0,23200.0,23400.0,1200000",
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Should return true - data matches (accounting for scaling)
+        assert!(is_data_up_to_date(&source, &dest, "VCB", 3));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_files_differ() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+            "VCB,2024-01-02,23.2,23.6,23.1,23.3,1100000",
+            "VCB,2024-01-03,23.3,23.7,23.2,23.4,1200000",
+        ];
+        create_test_csv(&source, "VCB", source_rows).unwrap();
+
+        // Create dest with DIFFERENT last row (price change - e.g., dividend adjustment)
+        let dest_rows = vec![
+            "VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000",
+            "VCB,2024-01-02,23200.0,23600.0,23100.0,23300.0,1100000",
+            "VCB,2024-01-03,23300.0,23700.0,23200.0,22400.0,1200000", // Different close: 22400 vs 23400
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Should return false - data differs
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 3));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_dest_missing() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv"); // Doesn't exist
+
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+        ];
+        create_test_csv(&source, "VCB", source_rows).unwrap();
+
+        // Should return false - dest doesn't exist
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 1));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_index_no_scaling() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with index data (no scaling)
+        let source_rows = vec![
+            "VNINDEX,2024-01-01,1250.5,1260.3,1245.2,1255.8,0",
+            "VNINDEX,2024-01-02,1255.8,1265.4,1250.1,1260.2,0",
+        ];
+        create_test_csv(&source, "VNINDEX", source_rows.clone()).unwrap();
+
+        // Create dest with SAME prices (no scaling for indices)
+        let dest_rows = vec![
+            "VNINDEX,2024-01-01,1250.5,1260.3,1245.2,1255.8,0",
+            "VNINDEX,2024-01-02,1255.8,1265.4,1250.1,1260.2,0",
+        ];
+        create_test_csv(&dest, "VNINDEX", dest_rows).unwrap();
+
+        // Should return true - data matches (no scaling for indices)
+        assert!(is_data_up_to_date(&source, &dest, "VNINDEX", 2));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_vn30_no_scaling() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with VN30 index data
+        let source_rows = vec![
+            "VN30,2024-01-01,850.5,860.3,845.2,855.8,0",
+        ];
+        create_test_csv(&source, "VN30", source_rows.clone()).unwrap();
+
+        // Create dest with same prices
+        let dest_rows = vec![
+            "VN30,2024-01-01,850.5,860.3,845.2,855.8,0",
+        ];
+        create_test_csv(&dest, "VN30", dest_rows).unwrap();
+
+        // Should return true
+        assert!(is_data_up_to_date(&source, &dest, "VN30", 1));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_insufficient_rows() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create files with only 2 data rows
+        let rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+            "VCB,2024-01-02,23.2,23.6,23.1,23.3,1100000",
+        ];
+        create_test_csv(&source, "VCB", rows.clone()).unwrap();
+
+        let dest_rows = vec![
+            "VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000",
+            "VCB,2024-01-02,23200.0,23600.0,23100.0,23300.0,1100000",
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Asking for 10 rows but only 2 exist - should return false
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 10));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_volume_differs() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+        ];
+        create_test_csv(&source, "VCB", source_rows).unwrap();
+
+        // Create dest with different volume
+        let dest_rows = vec![
+            "VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,999999", // Different volume
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Should return false - volume differs
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 1));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_checks_only_last_n_rows() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with 5 rows
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+            "VCB,2024-01-02,23.2,23.6,23.1,23.3,1100000",
+            "VCB,2024-01-03,23.3,23.7,23.2,23.4,1200000",
+            "VCB,2024-01-04,23.4,23.8,23.3,23.5,1300000",
+            "VCB,2024-01-05,23.5,23.9,23.4,23.6,1400000",
+        ];
+        create_test_csv(&source, "VCB", source_rows).unwrap();
+
+        // Create dest where first row differs but last 3 rows match
+        let dest_rows = vec![
+            "VCB,2024-01-01,99999.0,99999.0,99999.0,99999.0,999999", // DIFFERENT
+            "VCB,2024-01-02,23200.0,23600.0,23100.0,23300.0,1100000",
+            "VCB,2024-01-03,23300.0,23700.0,23200.0,23400.0,1200000",
+            "VCB,2024-01-04,23400.0,23800.0,23300.0,23500.0,1300000",
+            "VCB,2024-01-05,23500.0,23900.0,23400.0,23600.0,1400000",
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Check only last 3 rows - should return true (they match)
+        assert!(is_data_up_to_date(&source, &dest, "VCB", 3));
+
+        // Check all 5 rows - should return false (first row differs)
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 5));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_floating_point_tolerance() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source
+        let source_rows = vec![
+            "VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000",
+        ];
+        create_test_csv(&source, "VCB", source_rows).unwrap();
+
+        // Create dest with tiny floating point difference (within 0.01 tolerance)
+        let dest_rows = vec![
+            "VCB,2024-01-01,23100.005,23500.003,23000.002,23200.001,1000000",
+        ];
+        create_test_csv(&dest, "VCB", dest_rows).unwrap();
+
+        // Should return true - differences are within tolerance
+        assert!(is_data_up_to_date(&source, &dest, "VCB", 1));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_empty_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create empty files (just header)
+        std::fs::File::create(&source).unwrap();
+        std::fs::File::create(&dest).unwrap();
+
+        // Should return false - not enough data
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 1));
+    }
+
+    #[test]
+    fn test_import_stats_initialization() {
+        let stats = ImportStats {
+            files_imported: 0,
+            skipped: 0,
+            reimported: 0,
+            daily_records: 0,
+            hourly_records: 0,
+            minute_records: 0,
+        };
+
+        assert_eq!(stats.files_imported, 0);
+        assert_eq!(stats.skipped, 0);
+        assert_eq!(stats.reimported, 0);
+        assert_eq!(stats.daily_records, 0);
+        assert_eq!(stats.hourly_records, 0);
+        assert_eq!(stats.minute_records, 0);
+    }
 }
