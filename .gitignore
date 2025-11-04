@@ -69,3 +69,7 @@ vite.config.ts.timestamp-*
 # Market Data (CSV files only, keep structure)
 market_data/**/*.csv
 market_data/**/*.parquet
+
+# Exception: Include sample tickers for reference
+!market_data/VNINDEX/*.csv
+!market_data/VIC/*.csv
