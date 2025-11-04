@@ -17,15 +17,13 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         println!("🐛 DEBUG MODE: Using hardcoded test tickers (VNINDEX, VIC, VCB)");
     }
 
-    // Show which resume days are being used
+    // Show resume mode info
     if !full {
         if let Some(days) = resume_days {
-            println!("📅 Using custom resume days: {} days (overrides smart defaults)", days);
+            println!("📅 Resume mode: Using fixed {} days (overrides adaptive mode)", days);
         } else {
-            println!("📅 Using smart resume defaults:");
-            for interval in &intervals {
-                println!("   {} → {} days", interval.to_vci_format(), interval.default_resume_days());
-            }
+            println!("📅 Resume mode: ADAPTIVE (reads last date from CSV files)");
+            println!("   Fallback: 2 days if CSV read fails");
         }
     }
 

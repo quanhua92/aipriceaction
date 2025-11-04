@@ -82,11 +82,24 @@ impl DataSync {
         let batch_start = Instant::now();
         let resume_results = if !category.resume_tickers.is_empty() {
             let resume_ticker_names = category.get_resume_ticker_names();
-            let fetch_start_date = category.get_min_resume_date()
-                .unwrap_or_else(|| self.config.get_fetch_start_date(interval));
 
-            println!("\n⚡ Batch processing {} tickers using adaptive resume mode...", resume_ticker_names.len());
-            println!("   📅 Fetching from {} (earliest last date in batch)", fetch_start_date);
+            // Try adaptive mode first (read from CSV dates)
+            let (fetch_start_date, is_adaptive) = match category.get_min_resume_date() {
+                Some(date) => {
+                    (date, true) // ✅ Adaptive: using actual CSV dates
+                }
+                None => {
+                    (self.config.get_fetch_start_date(interval), false) // ⚠️ Fallback: using fixed days
+                }
+            };
+
+            if is_adaptive {
+                println!("\n⚡ Batch processing {} tickers using ADAPTIVE resume mode...", resume_ticker_names.len());
+                println!("   📅 Fetching from {} (earliest last date from CSV files)", fetch_start_date);
+            } else {
+                println!("\n⚠️  Batch processing {} tickers using FALLBACK mode (CSV read failed)...", resume_ticker_names.len());
+                println!("   📅 Fetching from {} (using {} day fallback)", fetch_start_date, interval.default_resume_days());
+            }
 
             self.fetcher
                 .batch_fetch(
