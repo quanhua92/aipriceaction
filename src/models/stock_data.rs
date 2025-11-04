@@ -2,6 +2,24 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// Stock data with OHLCV and technical indicators
+///
+/// # Price Format
+/// **IMPORTANT**: All prices and MAs are stored in **full format**.
+///
+/// ## Stock Tickers (VCB, FPT, HPG, etc.)
+/// - CSV stores: 23.2 (price/1000)
+/// - **Store as**: 23200.0 (multiply by 1000)
+/// - Applies to: OHLC prices and moving averages
+///
+/// ## Market Indices (VNINDEX, VN30)
+/// - CSV stores: 1250.5 (actual value)
+/// - **Store as**: 1250.5 (no conversion)
+///
+/// ## MA Scores
+/// - Always percentages (format-independent)
+/// - No conversion needed
+///
+/// **Rule**: Multiply by 1000 ONLY for stock tickers, NOT for indices.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockData {
     /// Timestamp of the data point
@@ -11,31 +29,31 @@ pub struct StockData {
     /// Ticker symbol
     pub ticker: String,
 
-    /// Opening price
+    /// Opening price in full VND (e.g., 23200, not 23.2)
     pub open: f64,
 
-    /// Highest price
+    /// Highest price in full VND (e.g., 23700, not 23.7)
     pub high: f64,
 
-    /// Lowest price
+    /// Lowest price in full VND (e.g., 22600, not 22.6)
     pub low: f64,
 
-    /// Closing price
+    /// Closing price in full VND (e.g., 23700, not 23.7)
     pub close: f64,
 
-    /// Trading volume
+    /// Trading volume (number of shares)
     pub volume: u64,
 
     // Moving Averages
-    /// 10-period moving average
+    /// 10-period moving average in full VND (e.g., 22500, not 22.5)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma10: Option<f64>,
 
-    /// 20-period moving average
+    /// 20-period moving average in full VND (e.g., 21800, not 21.8)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma20: Option<f64>,
 
-    /// 50-period moving average
+    /// 50-period moving average in full VND (e.g., 20300, not 20.3)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50: Option<f64>,
 

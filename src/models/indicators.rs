@@ -1,11 +1,36 @@
+//! Technical indicators and calculations for stock data
+//!
+//! # Price Format Convention
+//! **CRITICAL**: All price values use **full format** (not CSV short form).
+//!
+//! ## Stock Tickers (VCB, FPT, HPG, etc.)
+//! - CSV stores: 23.2 (price/1000)
+//! - **Pass to functions**: 23200.0 (multiply by 1000)
+//!
+//! ## Market Indices (VNINDEX, VN30)
+//! - CSV stores: 1250.5 (actual value)
+//! - **Pass to functions**: 1250.5 (no conversion)
+//!
+//! **Rule**: Multiply by 1000 ONLY for stock tickers, NOT for indices.
+//!
+//! ## Vietnamese Market Specifics
+//! - Daily price limit: ±6.5%
+//! - Stock prices stored in full VND in memory
+//! - CSV files use short format for stocks only
+
 /// Calculate Simple Moving Average for a given period
 ///
+/// # Price Format
+/// **IMPORTANT**: Input prices must be in **full format**.
+/// - Stock tickers: 23200.0 (not 23.2)
+/// - Indices: 1250.5 (actual value)
+///
 /// # Arguments
-/// * `closes` - Slice of closing prices
+/// * `closes` - Slice of closing prices in full format
 /// * `period` - Period for the moving average (e.g., 10, 20, 50)
 ///
 /// # Returns
-/// * Vector of MA values (same length as input, early values are 0.0)
+/// * Vector of MA values in same format as input (early values are 0.0)
 pub fn calculate_sma(closes: &[f64], period: usize) -> Vec<f64> {
     let mut ma_values = vec![0.0; closes.len()];
 
@@ -24,7 +49,19 @@ pub fn calculate_sma(closes: &[f64], period: usize) -> Vec<f64> {
 
 /// Calculate MA score: ((close - ma) / ma) * 100
 ///
-/// Returns the percentage difference between close price and moving average
+/// Returns the percentage difference between close price and moving average.
+///
+/// # Price Format
+/// **IMPORTANT**: Both `close` and `ma` must be in the same format.
+/// - Stock tickers: Both should be in full VND (e.g., 23200, not 23.2)
+/// - Indices: Both should be actual values (e.g., 1250.5)
+/// - The returned score is a percentage (format-independent)
+///
+/// # Example
+/// ```
+/// // Stock: close = 23700, ma = 22500
+/// // score = ((23700 - 22500) / 22500) * 100 = 5.33%
+/// ```
 pub fn calculate_ma_score(close: f64, ma: f64) -> f64 {
     if ma == 0.0 {
         0.0
@@ -35,6 +72,12 @@ pub fn calculate_ma_score(close: f64, ma: f64) -> f64 {
 
 /// Calculate money flow multiplier (Vietnamese market specific)
 ///
+/// # Price Format
+/// **IMPORTANT**: All prices must be in the same consistent format.
+/// - Stock tickers: Use full VND (e.g., 23200, not 23.2)
+/// - Indices: Use actual values (e.g., 1250.5)
+/// - Since this calculates a ratio, the format cancels out, but consistency is critical
+///
 /// # Arguments
 /// * `open` - Opening price
 /// * `high` - High price
@@ -43,7 +86,7 @@ pub fn calculate_ma_score(close: f64, ma: f64) -> f64 {
 /// * `prev_close` - Previous closing price (optional)
 ///
 /// # Returns
-/// * Multiplier value between -1.0 and 1.0
+/// * Multiplier value between -1.0 and 1.0 (format-independent ratio)
 pub fn calculate_money_flow_multiplier(
     open: f64,
     high: f64,
