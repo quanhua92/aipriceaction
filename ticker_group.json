@@ -7,7 +7,6 @@
         "VRE",
         "CRV",
         "KDH",
-        "SSH",
         "NVL",
         "NLG",
         "PDR",
@@ -109,7 +108,7 @@
         "MSB"
     ],
     "NHUA": ["NTP", "BMP", "AAA", "APH", "NHH", "HCD"],
-    "NONG_NGHIEP": ["HAG", "DBC", "PAN", "VLC", "BAF", "LTG", "NAF", "TSC"],
+    "NONG_NGHIEP": ["HAG", "DBC", "PAN", "VLC", "BAF", "NAF", "TSC"],
     "OTHERS": [
         "VEA",
         "GEX",
@@ -140,8 +139,7 @@
         "DAH",
         "HID",
         "CIG",
-        "DST",
-        "PXI"
+        "DST"
     ],
     "SUC_KHOE": ["DHG", "IMP", "DVN", "DHT", "TNH", "DCL", "JVC"],
     "THEP": [
@@ -182,7 +180,6 @@
         "VSC",
         "VOS",
         "PVP",
-        "TCD",
         "TCL",
         "VTO",
         "VIP",
@@ -191,13 +188,12 @@
         "VNA",
         "MHC"
     ],
-    "VLXD": ["HT1", "PTB", "VLB", "BCC", "CTI", "BTS", "DHA", "HOM", "BTN"],
+    "VLXD": ["HT1", "PTB", "VLB", "BCC", "CTI", "BTS", "DHA", "HOM"],
     "XAY_DUNG": [
         "HUT",
         "CTD",
         "CII",
         "IJC",
-        "BCG",
         "DPG",
         "CKG",
         "HBC",
@@ -209,8 +205,7 @@
         "TLD",
         "PHC",
         "C47",
-        "BCE",
-        "FID"
+        "BCE"
     ],
     "XAY_LAP_DIEN": ["CTR", "PC1", "TV2", "VNE", "SCI"]
 }

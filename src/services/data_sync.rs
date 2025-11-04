@@ -160,8 +160,10 @@ impl DataSync {
                     self.stats.files_written += 1;
                     self.stats.total_records += data.len();
 
-                    println!("   ✅ SUCCESS: {} - {} records saved (file I/O: {:.3}s)",
-                        ticker, data.len(), save_elapsed.as_secs_f64());
+                    // Success - only show timing if slow (> 0.1s)
+                    if save_elapsed.as_secs_f64() > 0.1 {
+                        println!("   ✅ {} ({} records, {:.3}s)", ticker, data.len(), save_elapsed.as_secs_f64());
+                    }
                 }
                 Err(e) => {
                     self.stats.failed += 1;
@@ -198,7 +200,7 @@ impl DataSync {
     ) -> Result<Vec<OhlcvData>, Error> {
         // Check if we have batch result
         if let Some(Some(batch_data)) = batch_results.get(ticker) {
-            println!("   ✅ Using batch result for {}", ticker);
+            // Using batch result for ticker
 
             // For resume tickers, check dividend and merge
             if category.resume_tickers.contains(&ticker.to_string()) {
@@ -256,8 +258,6 @@ impl DataSync {
         }
 
         // No dividend - merge with existing data
-        println!("   📝 No dividend, merging with existing data...");
-
         let file_path = self.get_ticker_file_path(ticker, interval);
 
         if !file_path.exists() {
@@ -269,7 +269,8 @@ impl DataSync {
         let read_start = Instant::now();
         let existing_data = self.read_existing_data(&file_path)?;
         let read_time = read_start.elapsed().as_secs_f64();
-        if read_time > 0.001 {
+        // File read timing (only show if > 0.01s to reduce noise)
+        if read_time > 0.01 {
             println!("   ⏱️  File read took: {:.3}s ({} rows)", read_time, existing_data.len());
         }
 
@@ -342,14 +343,11 @@ impl DataSync {
         let mut wtr = csv::Writer::from_path(&file_path)
             .map_err(|e| Error::Io(format!("Failed to create CSV writer: {}", e)))?;
 
-        // Determine scaling factor
-        let scale_factor = if is_index(ticker) { 1.0 } else { 1000.0 };
-
         // Write header
         wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
             .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
 
-        // Write data rows
+        // Write data rows (API values are already in correct format - store as-is)
         for row in data {
             // Format timestamp based on interval
             let time_str = match interval {
@@ -360,10 +358,10 @@ impl DataSync {
             wtr.write_record(&[
                 ticker,
                 &time_str,
-                &(row.open / scale_factor).to_string(),
-                &(row.high / scale_factor).to_string(),
-                &(row.low / scale_factor).to_string(),
-                &(row.close / scale_factor).to_string(),
+                &format!("{:.2}", row.open),
+                &format!("{:.2}", row.high),
+                &format!("{:.2}", row.low),
+                &format!("{:.2}", row.close),
                 &row.volume.to_string(),
             ])
             .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
@@ -371,8 +369,6 @@ impl DataSync {
 
         wtr.flush()
             .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-
-        println!("   - Data saved to: {}", file_path.display());
 
         Ok(())
     }

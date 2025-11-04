@@ -5,36 +5,37 @@ Convenient shell scripts for syncing market data. Run from the project root dire
 ## Available Scripts
 
 ### 📊 pull_daily.sh
-Syncs daily data for all 290 tickers (last 3 days)
+Syncs daily data for all 283 tickers (last 1 day)
 ```bash
 ./scripts/pull_daily.sh
 ```
-**Expected time**: ~5-6 seconds (30-ticker batches)
-**Data volume**: 3 records/ticker = very light
+**Expected time**: ~3 seconds (50-ticker batches)
+**Data volume**: 1 record/ticker = very light
 
 ### 📊 pull_hourly.sh
-Syncs hourly data for all 290 tickers (last 5 days)
+Syncs hourly data for all 283 tickers (last 5 days)
 ```bash
 ./scripts/pull_hourly.sh
 ```
-**Expected time**: ~15-20 seconds (20-ticker batches)
+**Expected time**: ~4 seconds (20-ticker batches)
 **Data volume**: ~30 records/ticker = moderate
 
 ### 📊 pull_minute.sh
-Syncs minute data for all 290 tickers (last 2 days)
+Syncs minute data for all 283 tickers (last 2 days)
 ```bash
 ./scripts/pull_minute.sh
 ```
 **Expected time**: ~5 minutes (3-ticker batches)
-**Data volume**: ~720 records/ticker = heavy (optimized to avoid API overload)
+**Data volume**: ~400 records/ticker = heavy (optimized to avoid API overload)
 
 ### 📊 pull_all.sh
 Syncs all intervals (daily, hourly, minute) in sequence
 ```bash
 ./scripts/pull_all.sh
 ```
-**Expected time**: ~6 minutes total
+**Expected time**: ~5-6 minutes total
 **Uses smart interval-specific defaults (no parameters needed)**
+**Breakdown**: Daily (3s) + Hourly (4s) + Minute (5min) = ~5min 7s
 
 ## Usage
 
@@ -79,15 +80,16 @@ The scripts use interval-specific resume days and batch sizes, all configured au
 
 | Interval | Resume Days | Batch Size | Records/Batch | Performance |
 |----------|-------------|------------|---------------|-------------|
-| **Daily** | 3 | 30 tickers | 90 records | ~5s for 290 tickers |
-| **Hourly** | 5 | 20 tickers | 600 records | ~15s for 290 tickers |
-| **Minute** | 2 | 3 tickers | 900 records | ~5min for 290 tickers |
+| **Daily** | 1 | 50 tickers | 50 records | ~3s for 283 tickers |
+| **Hourly** | 5 | 20 tickers | 600 records | ~4s for 283 tickers |
+| **Minute** | 2 | 3 tickers | 1200 records | ~5min for 283 tickers |
 
 **Why different batch sizes?**
-- Daily data is very light (3 records/ticker), so we can batch 30 tickers together
-- Hourly data is moderate (~30 records/ticker), so 20 tickers/batch works well
-- Minute data is heavy (~360 records/ticker), so only 3 tickers/batch to avoid API overload
+- Daily data is very light (1 record/ticker), large batches for maximum speed
+- Hourly data is moderate (~30 records/ticker), 20 tickers/batch balances speed and reliability
+- Minute data is heavy (~400 records/ticker), only 3 tickers/batch to avoid API overload
 - All intervals now use batch API for maximum performance!
+- Note: 7 tickers without daily/hourly data removed from ticker list (BCG, BTN, FID, LTG, PXI, SSH, TCD)
 
 ## Notes
 

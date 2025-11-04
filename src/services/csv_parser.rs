@@ -6,8 +6,10 @@ fn is_index(ticker: &str) -> bool {
     matches!(ticker, "VNINDEX" | "VN30")
 }
 
-/// Apply price scaling: multiply by 1000 for stocks, keep as-is for indices
-fn scale_price(price: f64, ticker: &str) -> f64 {
+/// Apply price scaling for legacy import: multiply by 1000 for stocks, keep as-is for indices
+/// Legacy CSV has human-readable prices (e.g., 49.8)
+/// New system stores full numbers (e.g., 49800) to match API format
+fn scale_price_legacy(price: f64, ticker: &str) -> f64 {
     if is_index(ticker) {
         price
     } else {
@@ -60,27 +62,27 @@ pub fn parse_daily_csv(input_path: &Path, output_path: &Path) -> Result<usize, B
         let dollar_flow = record.get(14).unwrap_or("");
         let trend_score = record.get(15).unwrap_or("");
 
-        // Scale prices
-        let scaled_open = scale_price(open, ticker);
-        let scaled_high = scale_price(high, ticker);
-        let scaled_low = scale_price(low, ticker);
-        let scaled_close = scale_price(close, ticker);
-        let scaled_ma10 = ma10.map(|v| scale_price(v, ticker));
-        let scaled_ma20 = ma20.map(|v| scale_price(v, ticker));
-        let scaled_ma50 = ma50.map(|v| scale_price(v, ticker));
+        // Scale prices for legacy import (multiply stocks by 1000, keep indices as-is)
+        let scaled_open = scale_price_legacy(open, ticker);
+        let scaled_high = scale_price_legacy(high, ticker);
+        let scaled_low = scale_price_legacy(low, ticker);
+        let scaled_close = scale_price_legacy(close, ticker);
+        let scaled_ma10 = ma10.map(|v| scale_price_legacy(v, ticker));
+        let scaled_ma20 = ma20.map(|v| scale_price_legacy(v, ticker));
+        let scaled_ma50 = ma50.map(|v| scale_price_legacy(v, ticker));
 
-        // Write record with scaled prices
+        // Write record with scaled prices (formatted to 2 decimals)
         writer.write_record(&[
             ticker,
             time,
-            &scaled_open.to_string(),
-            &scaled_high.to_string(),
-            &scaled_low.to_string(),
-            &scaled_close.to_string(),
+            &format!("{:.2}", scaled_open),
+            &format!("{:.2}", scaled_high),
+            &format!("{:.2}", scaled_low),
+            &format!("{:.2}", scaled_close),
             volume,
-            &scaled_ma10.map_or(String::new(), |v| v.to_string()),
-            &scaled_ma20.map_or(String::new(), |v| v.to_string()),
-            &scaled_ma50.map_or(String::new(), |v| v.to_string()),
+            &scaled_ma10.map_or(String::new(), |v| format!("{:.2}", v)),
+            &scaled_ma20.map_or(String::new(), |v| format!("{:.2}", v)),
+            &scaled_ma50.map_or(String::new(), |v| format!("{:.2}", v)),
             ma10_score,
             ma20_score,
             ma50_score,
@@ -120,20 +122,20 @@ pub fn parse_intraday_csv(input_path: &Path, output_path: &Path) -> Result<usize
         let close: f64 = record.get(5).unwrap_or("").parse().unwrap_or(0.0);
         let volume = record.get(6).unwrap_or("");
 
-        // Scale prices
-        let scaled_open = scale_price(open, ticker);
-        let scaled_high = scale_price(high, ticker);
-        let scaled_low = scale_price(low, ticker);
-        let scaled_close = scale_price(close, ticker);
+        // Scale prices for legacy import (multiply stocks by 1000, keep indices as-is)
+        let scaled_open = scale_price_legacy(open, ticker);
+        let scaled_high = scale_price_legacy(high, ticker);
+        let scaled_low = scale_price_legacy(low, ticker);
+        let scaled_close = scale_price_legacy(close, ticker);
 
-        // Write record with scaled prices
+        // Write record with scaled prices (formatted to 2 decimals)
         writer.write_record(&[
             ticker,
             time,
-            &scaled_open.to_string(),
-            &scaled_high.to_string(),
-            &scaled_low.to_string(),
-            &scaled_close.to_string(),
+            &format!("{:.2}", scaled_open),
+            &format!("{:.2}", scaled_high),
+            &format!("{:.2}", scaled_low),
+            &format!("{:.2}", scaled_close),
             volume,
         ])?;
 
@@ -157,13 +159,13 @@ mod tests {
     }
 
     #[test]
-    fn test_scale_price() {
+    fn test_scale_price_legacy() {
         // Stock ticker should be multiplied by 1000
-        assert_eq!(scale_price(23.2, "VCB"), 23200.0);
-        assert_eq!(scale_price(60.5, "FPT"), 60500.0);
+        assert_eq!(scale_price_legacy(23.2, "VCB"), 23200.0);
+        assert_eq!(scale_price_legacy(60.5, "FPT"), 60500.0);
 
         // Index should remain unchanged
-        assert_eq!(scale_price(1250.5, "VNINDEX"), 1250.5);
-        assert_eq!(scale_price(600.25, "VN30"), 600.25);
+        assert_eq!(scale_price_legacy(1250.5, "VNINDEX"), 1250.5);
+        assert_eq!(scale_price_legacy(600.25, "VN30"), 600.25);
     }
 }

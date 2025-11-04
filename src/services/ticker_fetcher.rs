@@ -92,7 +92,6 @@ impl TickerFetcher {
                 ticker_batches.len(),
                 ticker_batch.len()
             );
-            println!("Tickers: {}", ticker_batch.join(", "));
 
             let api_start = std::time::Instant::now();
             match self
@@ -106,7 +105,7 @@ impl TickerFetcher {
                         if let Some(data) = batch_data.get(ticker) {
                             if let Some(ohlcv_vec) = data {
                                 if !ohlcv_vec.is_empty() {
-                                    println!("   ✅ Batch success: {} ({} records)", ticker, ohlcv_vec.len());
+                                    // Success - store result silently
                                     all_results.insert(ticker.clone(), Some(ohlcv_vec.clone()));
                                 } else {
                                     println!("   ❌ Batch failed: {} (empty data)", ticker);
@@ -406,7 +405,7 @@ impl TickerFetcher {
             return Ok(false); // No existing data to compare
         }
 
-        println!("   - Checking for dividend adjustments (using fetched data)...");
+        // Checking for dividend adjustments (using fetched data)
         let div_start = std::time::Instant::now();
 
         // Load existing data from CSV
@@ -427,9 +426,7 @@ impl TickerFetcher {
             .collect();
 
         if recent_window.len() < 2 || existing_window.len() < 2 {
-            let div_elapsed = div_start.elapsed();
-            println!("   - No dividend detected (insufficient data, check took {:.3}s)",
-                div_elapsed.as_secs_f64());
+            // Insufficient data for dividend check
             return Ok(false);
         }
 
@@ -458,9 +455,7 @@ impl TickerFetcher {
             }
         }
 
-        let div_elapsed = div_start.elapsed();
-        println!("   - No dividend detected (check took {:.3}s - NO API CALL!)",
-            div_elapsed.as_secs_f64());
+        // No dividend detected
         Ok(false)
     }
 

@@ -140,17 +140,17 @@ impl SyncConfig {
     /// Get batch size based on interval and mode (reduce for full downloads or high-volume intervals)
     ///
     /// Optimized batch sizes based on data volume per interval:
-    /// - Daily: 30 tickers × 3 records = 90 records/batch (sweet spot - fast and reliable)
-    /// - Hourly: 20 tickers × 30 records = 600 records/batch (moderate, safe batch size)
-    /// - Minute: 3 tickers × 300 records = 900 records/batch (manageable)
+    /// - Daily: 50 tickers × 1 record = 50 records/batch (fast and efficient)
+    /// - Hourly: 20 tickers × 30 records = 600 records/batch (balanced)
+    /// - Minute: 3 tickers × 400 records = 1200 records/batch (manageable)
     pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
             match interval {
-                Interval::Daily => 50,               // 50 tickers × 3 records = 150 records/batch (testing higher)
-                Interval::Hourly => 20,              // 20 tickers × 30 records = 600 records/batch
-                Interval::Minute => 3,               // 3 tickers × 300 records = 900 records/batch
+                Interval::Daily => 50,               // Optimal for fast resume mode
+                Interval::Hourly => 20,              // Balanced speed and reliability
+                Interval::Minute => 3,               // Prevents API overload with high-volume data
             }
         }
     }
@@ -327,9 +327,9 @@ mod tests {
         let mut config = SyncConfig::default();
 
         // Resume mode: interval-specific batch sizes
-        assert_eq!(config.get_batch_size(Interval::Daily), 50); // Testing higher batch size
-        assert_eq!(config.get_batch_size(Interval::Hourly), 20);
-        assert_eq!(config.get_batch_size(Interval::Minute), 3); // Smaller for high-volume data
+        assert_eq!(config.get_batch_size(Interval::Daily), 50); // Optimal for fast resume mode
+        assert_eq!(config.get_batch_size(Interval::Hourly), 20); // Balanced speed and reliability
+        assert_eq!(config.get_batch_size(Interval::Minute), 3); // Prevents API overload
 
         // Full mode: always use 2 regardless of interval
         config.force_full = true;
