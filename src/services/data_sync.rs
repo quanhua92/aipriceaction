@@ -333,9 +333,15 @@ impl DataSync {
 
         // Write data rows
         for row in data {
+            // Format timestamp based on interval
+            let time_str = match interval {
+                Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
+                Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+            };
+
             wtr.write_record(&[
                 ticker,
-                &row.time.format("%Y-%m-%d").to_string(),
+                &time_str,
                 &(row.open / scale_factor).to_string(),
                 &(row.high / scale_factor).to_string(),
                 &(row.low / scale_factor).to_string(),
@@ -404,7 +410,12 @@ impl DataSync {
             return Ok(dt.with_timezone(&Utc));
         }
 
-        // Try date only format
+        // Try datetime format "YYYY-MM-DD HH:MM:SS"
+        if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
+            return Ok(dt.and_utc());
+        }
+
+        // Try date only format "YYYY-MM-DD"
         let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
             .map_err(|e| Error::Parse(format!("Invalid date format: {}", e)))?;
 

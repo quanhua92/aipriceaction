@@ -529,7 +529,13 @@ impl TickerFetcher {
             let time_str = &record[1];
             let time = chrono::DateTime::parse_from_rfc3339(time_str)
                 .or_else(|_| {
-                    // Try parsing as date only
+                    // Try parsing as datetime "YYYY-MM-DD HH:MM:SS"
+                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|dt| dt.and_utc().into())
+                        .map_err(|_| Error::Parse(format!("Invalid datetime: {}", time_str)))
+                })
+                .or_else(|_| {
+                    // Try parsing as date only "YYYY-MM-DD"
                     let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
                         .map_err(|e| Error::Parse(format!("Invalid date: {}", e)))?;
                     Ok(date
