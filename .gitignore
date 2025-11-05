@@ -76,3 +76,4 @@ market_data/**/*.parquet
 
 # Reference projects (external git repos)
 references/
+market_data.tar.gz

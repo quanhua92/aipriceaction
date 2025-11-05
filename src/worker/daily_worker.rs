@@ -118,7 +118,7 @@ async fn sync_daily_data() -> Result<(), Error> {
     let config = SyncConfig::new(
         start_date,
         Some(end_date),
-        50, // batch_size
+        10, // batch_size (default)
         Some(2), // resume_days: 2 days adaptive mode
         vec![Interval::Daily],
         false, // not full sync
