@@ -197,6 +197,13 @@ Health check endpoint with system statistics.
   "hourly_records_count": 314313,
   "minute_records_count": 8748154,
 
+  // Disk cache statistics (for hourly/minute/historical data)
+  "disk_cache_entries": 13,
+  "disk_cache_size_bytes": 264707384,
+  "disk_cache_size_mb": 252.52,
+  "disk_cache_limit_mb": 500,
+  "disk_cache_usage_percent": 50.50,
+
   // System info
   "uptime_secs": 101,
   "current_system_time": "2025-11-05T13:08:03.087470+00:00"
@@ -493,20 +500,88 @@ The server allows requests from **any origin** with the following methods:
 
 ## Caching
 
-The API implements a sophisticated TTL (Time To Live) caching system for optimal performance.
+The API implements a sophisticated multi-tier caching system for optimal performance.
+
+### Cache Architecture
+
+The server uses two cache layers:
+
+1. **Memory Cache** (Daily data)
+   - Stores last 1 year of daily data
+   - Fast in-memory access
+   - TTL: 60 seconds
+
+2. **Disk Cache** (Hourly/Minute/Historical data)
+   - Intelligent disk read caching
+   - Configurable size limit (default: 500MB via `MAX_CACHE_SIZE_MB` env)
+   - Per-item size limit: 100MB
+   - LRU (Least Recently Used) eviction
+   - TTL: 60 seconds
 
 ### Cache Behavior
 
 | Cache Parameter | Description | Behavior |
 |----------------|-------------|---------|
-| `cache=true` (default) | Use memory cache | Fast responses from in-memory cache. TTL: 60 seconds |
-| `cache=false` | Force disk read | Slower responses reading directly from CSV files, bypassing cache |
+| `cache=true` (default) | Use cache | Daily: memory cache, Hourly/Minute: disk cache with TTL |
+| `cache=false` | Bypass primary cache | All data read from disk (but may use disk cache for subsequent reads) |
+
+### Disk Cache Details
+
+The disk cache automatically stores frequently accessed data:
+
+- **What gets cached:**
+  - Hourly data (`interval=1H`)
+  - Minute data (`interval=1m`)
+  - Historical daily queries (`cache=false` or with date filters)
+
+- **Size limits:**
+  - Maximum total cache: 500MB (configurable via `MAX_CACHE_SIZE_MB`)
+  - Maximum per-item: 100MB
+  - Items larger than 100MB are not cached
+
+- **Eviction policy:**
+  - LRU-based: Oldest entries removed when cache is full
+  - Automatic expiration after 60 seconds (TTL)
+
+- **Performance impact:**
+  - First request: Disk read + cache population
+  - Subsequent requests: Served from cache (fast)
+  - Cache hit logged as: "Cache hit for {ticker}/{interval}"
 
 ### TTL (Time To Live)
 
-- **Cache TTL**: 60 seconds for memory cache
+- **Memory cache TTL**: 60 seconds for daily data
+- **Disk cache TTL**: 60 seconds for hourly/minute/historical data
 - **Auto-refresh**: Cache automatically refreshes from disk when expired
 - **Race condition prevention**: DataSync preserves existing indicators during updates
+
+### Cache Statistics
+
+Monitor cache performance via `/health` endpoint:
+
+```json
+{
+  "disk_cache_entries": 13,           // Number of cached items
+  "disk_cache_size_mb": 252.52,       // Total cache size
+  "disk_cache_limit_mb": 500,         // Maximum cache size
+  "disk_cache_usage_percent": 50.50   // Percentage used
+}
+```
+
+### Configuration
+
+Set the maximum disk cache size via environment variable:
+
+```bash
+# Default: 500MB
+export MAX_CACHE_SIZE_MB=500
+
+# Increase for better caching (more memory usage)
+export MAX_CACHE_SIZE_MB=1000
+
+# Decrease for lower memory usage
+export MAX_CACHE_SIZE_MB=250
+```
 
 ### Use Cases
 
@@ -514,24 +589,34 @@ The API implements a sophisticated TTL (Time To Live) caching system for optimal
 - Normal API usage with best performance
 - Multiple requests for same data within TTL window
 - Real-time dashboard or charting applications
+- Hourly/minute data queries (benefits from disk cache)
 
 **Use cache=false for:**
 - Getting absolute latest data after background worker updates
 - Debugging data integrity issues
 - Ensuring you have the most recent indicators
+- First-time historical data queries (will populate disk cache)
 
 ### Examples
 
 ```bash
-# Fast response from memory cache (typical use case)
-curl "http://localhost:3000/tickers?symbol=VCB&cache=true"
+# Fast response from memory cache for daily data
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&cache=true"
 
-# Slower response but guaranteed fresh data
+# First request reads from disk and populates cache
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1H"
+
+# Second request served from disk cache (fast)
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1H"
+
+# Bypass primary cache but may use disk cache
 curl "http://localhost:3000/tickers?symbol=VCB&cache=false"
 
 # Monitor cache behavior in logs
-# Look for: "use_cache=true/false" and "Cache refreshed" messages
-docker logs aipriceaction | grep -E "(use_cache|Cache)"
+docker logs aipriceaction | grep -E "(Cache hit|Cache miss|Cached)"
+
+# Check cache statistics
+curl "http://localhost:3000/health" | jq '{disk_cache_entries, disk_cache_size_mb, disk_cache_usage_percent}'
 ```
 
 ### Cache Headers
