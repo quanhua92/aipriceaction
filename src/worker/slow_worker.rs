@@ -122,12 +122,7 @@ async fn sync_slow_data() -> Result<(), Error> {
         3, // concurrent_batches
     );
 
-    // Create Tokio runtime and run sync
-    let runtime = tokio::runtime::Runtime::new()
-        .map_err(|e| Error::Network(format!("Failed to create runtime: {}", e)))?;
-
-    runtime.block_on(async {
-        let mut sync = DataSync::new(config)?;
-        sync.sync_all_intervals(false).await
-    })
+    // Run sync directly (already in async context)
+    let mut sync = DataSync::new(config)?;
+    sync.sync_all_intervals(false).await
 }

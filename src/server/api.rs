@@ -14,10 +14,10 @@ use tracing::{debug, info, warn, instrument};
 /// Query parameters for /tickers endpoint
 #[derive(Debug, Deserialize)]
 pub struct TickerQuery {
-    /// Ticker symbols to query (can be repeated: symbol[]=VCB&symbol[]=FPT)
+    /// Ticker symbols to query (can be repeated: symbol=VCB&symbol=FPT)
     pub symbol: Option<Vec<String>>,
 
-    /// Interval: daily (default), 1h, 1m
+    /// Interval: 1D (default), 1H, 1m
     pub interval: Option<String>,
 
     /// Start date filter (YYYY-MM-DD)
@@ -25,6 +25,9 @@ pub struct TickerQuery {
 
     /// End date filter (YYYY-MM-DD)
     pub end_date: Option<String>,
+
+    /// Limit number of records per ticker (most recent first)
+    pub limit: Option<usize>,
 }
 
 /// Response structure for /tickers endpoint
@@ -39,9 +42,9 @@ pub struct TickersResponse {
 /// GET /tickers - Query stock data from in-memory store
 ///
 /// Examples:
-/// - /tickers?symbol[]=VCB&symbol[]=FPT (default to daily)
-/// - /tickers?symbol[]=VCB&interval=1h
-/// - /tickers?symbol[]=VCB&interval=daily&start_date=2024-01-01&end_date=2024-12-31
+/// - /tickers?symbol=VCB (default to daily)
+/// - /tickers?symbol=VCB&interval=1H
+/// - /tickers?symbol=VCB&interval=1D&start_date=2024-01-01&end_date=2024-12-31
 #[instrument(skip(data_state))]
 pub async fn get_tickers_handler(
     State(data_state): State<SharedDataStore>,
@@ -51,32 +54,22 @@ pub async fn get_tickers_handler(
 
     // Parse interval (default to daily)
     let interval = match params.interval.as_deref() {
-        Some("daily") | None => Interval::Daily,
-        Some("1h") => Interval::Hourly,
-        Some("1m") => Interval::Minute,
+        Some("1D") | Some("daily") | None => Interval::Daily,
+        Some("1H") | Some("hourly") => Interval::Hourly,
+        Some("1m") | Some("minute") => Interval::Minute,
         Some(other) => {
             warn!(interval = %other, "Invalid interval parameter");
             return (
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
-                    "error": "Invalid interval. Valid values: daily, 1h, 1m"
+                    "error": "Invalid interval. Valid values: 1D, 1H, 1m (or daily, hourly, minute)"
                 }))
             ).into_response();
         }
     };
 
-    // Get ticker symbols (required)
-    let symbols = match params.symbol {
-        Some(s) if !s.is_empty() => s,
-        _ => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": "Missing required parameter: symbol[]"
-                }))
-            ).into_response();
-        }
-    };
+    // Get ticker symbols (optional - if not provided, return all tickers)
+    let symbols_filter = params.symbol.filter(|s| !s.is_empty());
 
     // Parse date filters
     let start_date_filter = match &params.start_date {
@@ -119,11 +112,17 @@ pub async fn get_tickers_handler(
     let data_guard = data_state.lock().await;
     let mut result_data: HashMap<String, Vec<crate::models::StockData>> = HashMap::new();
 
-    for symbol in &symbols {
+    // Determine which symbols to query
+    let symbols_to_query: Vec<String> = match &symbols_filter {
+        Some(symbols) => symbols.clone(),
+        None => data_guard.keys().cloned().collect(), // All tickers
+    };
+
+    for symbol in &symbols_to_query {
         if let Some(ticker_intervals) = data_guard.get(symbol) {
             if let Some(interval_data) = ticker_intervals.get(&interval) {
                 // Apply date filtering
-                let filtered: Vec<_> = interval_data.iter()
+                let mut filtered: Vec<_> = interval_data.iter()
                     .filter(|d| {
                         let start_ok = start_date_filter.map_or(true, |start| d.time >= start);
                         let end_ok = end_date_filter.map_or(true, |end| d.time <= end);
@@ -131,6 +130,14 @@ pub async fn get_tickers_handler(
                     })
                     .cloned()
                     .collect();
+
+                // Apply limit (take most recent records)
+                if let Some(limit) = params.limit {
+                    if filtered.len() > limit {
+                        // Take the last N records (most recent)
+                        filtered = filtered.into_iter().rev().take(limit).rev().collect();
+                    }
+                }
 
                 if !filtered.is_empty() {
                     result_data.insert(symbol.clone(), filtered);
@@ -148,13 +155,13 @@ pub async fn get_tickers_handler(
         ticker_count,
         total_records,
         interval = %interval.to_filename(),
-        symbols = ?symbols,
+        symbols = ?symbols_filter,
         "Returning ticker data"
     );
 
     let response = TickersResponse {
         data: result_data,
-        interval: interval.to_filename().to_string(),
+        interval: interval.to_vci_format().to_string(),
         ticker_count,
         total_records,
     };

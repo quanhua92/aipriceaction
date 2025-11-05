@@ -58,7 +58,7 @@ pub async fn serve(
         .allow_headers(Any);
 
     tracing::info!("Registering routes:");
-    tracing::info!("  GET /tickers?symbol[]=VCB&interval=daily&start_date=2024-01-01");
+    tracing::info!("  GET /tickers?symbol=VCB&interval=1D&start_date=2024-01-01");
     tracing::info!("  GET /health");
     tracing::info!("  GET /tickers/group");
 

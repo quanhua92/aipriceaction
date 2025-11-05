@@ -129,7 +129,7 @@ impl DataStore {
             }
 
             // Read and parse CSV
-            match self.read_csv_file(&csv_path, &ticker, cutoff_date) {
+            match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
                 Ok(ticker_data) => {
                     if !ticker_data.is_empty() {
                         data.insert(ticker.clone(), ticker_data);
@@ -154,7 +154,7 @@ impl DataStore {
     }
 
     /// Read a single CSV file and return StockData vector
-    fn read_csv_file(&self, csv_path: &Path, ticker: &str, cutoff_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
+    fn read_csv_file(&self, csv_path: &Path, ticker: &str, interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
         let mut reader = csv::ReaderBuilder::new()
             .flexible(true) // Allow 7 or 16 columns
             .from_path(csv_path)?;
@@ -164,11 +164,25 @@ impl DataStore {
         for result in reader.records() {
             let record = result?;
 
-            // Parse time
+            // Parse time based on interval format
             let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
-            let time = chrono::DateTime::parse_from_rfc3339(time_str)
-                .map(|dt| dt.with_timezone(&Utc))
-                .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?;
+            let time = match interval {
+                Interval::Daily => {
+                    // Daily format: "2025-01-05"
+                    let naive_date = chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+                        .map_err(|e| Error::Io(format!("Invalid date: {}", e)))?;
+                    DateTime::<Utc>::from_naive_utc_and_offset(
+                        naive_date.and_hms_opt(0, 0, 0).unwrap(),
+                        Utc
+                    )
+                }
+                Interval::Hourly | Interval::Minute => {
+                    // Hourly/Minute format: "2023-09-10 13:00:00"
+                    let naive_dt = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                        .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?;
+                    DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc)
+                }
+            };
 
             // Skip data older than cutoff
             if let Some(cutoff) = cutoff_date {
