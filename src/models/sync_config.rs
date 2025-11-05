@@ -14,6 +14,18 @@ pub enum Interval {
 }
 
 impl Interval {
+    /// Get the minimum allowed start date for each interval
+    ///
+    /// Hourly and Minute data are only available from 2023-09-01 onwards.
+    /// Daily data can go back to 2015-01-05.
+    pub fn min_start_date(&self) -> &'static str {
+        match self {
+            Interval::Daily => "2015-01-05",
+            Interval::Hourly => "2023-09-01",  // Hourly data only from Sept 2023
+            Interval::Minute => "2023-09-01",  // Minute data only from Sept 2023
+        }
+    }
+
     /// Convert to VCI API format ("1D", "1H", "1m")
     pub fn to_vci_format(&self) -> &'static str {
         match self {
@@ -130,18 +142,37 @@ impl SyncConfig {
         }
     }
 
-    /// Get fetch start date based on resume mode and interval
+    /// Get effective start date for an interval, respecting minimum allowed dates
     ///
-    /// If resume_days is explicitly provided, uses that value.
-    /// Otherwise, uses interval-specific optimal defaults (3 days for daily, 5 for hourly, 2 for minute).
-    pub fn get_fetch_start_date(&self, interval: Interval) -> String {
-        if self.force_full {
+    /// Ensures that minute data never goes before 2023-09-01, even if user
+    /// specifies an earlier date or if full download is requested.
+    pub fn get_effective_start_date(&self, interval: Interval) -> String {
+        let requested_start = if self.force_full {
             self.start_date.clone()
         } else {
             let days = self.resume_days.unwrap_or_else(|| interval.default_resume_days());
             let resume_date = Utc::now() - chrono::Duration::days(days as i64);
             resume_date.format("%Y-%m-%d").to_string()
+        };
+
+        // Enforce interval-specific minimum start date
+        let min_date = interval.min_start_date();
+        if requested_start < min_date.to_string() {
+            min_date.to_string()
+        } else {
+            requested_start
         }
+    }
+
+    /// Get fetch start date based on resume mode and interval
+    ///
+    /// If resume_days is explicitly provided, uses that value.
+    /// Otherwise, uses interval-specific optimal defaults (3 days for daily, 5 for hourly, 2 for minute).
+    ///
+    /// **Deprecated**: Use `get_effective_start_date()` instead to respect interval minimums.
+    #[deprecated(since = "0.1.0", note = "Use get_effective_start_date() to respect interval-specific minimum dates")]
+    pub fn get_fetch_start_date(&self, interval: Interval) -> String {
+        self.get_effective_start_date(interval)
     }
 
     /// Get batch size based on interval and mode
@@ -438,5 +469,58 @@ mod tests {
         // They should all be the same (7 days ago)
         assert_eq!(daily_start, hourly_start);
         assert_eq!(hourly_start, minute_start);
+    }
+
+    #[test]
+    fn test_interval_min_start_date() {
+        // Test that each interval has correct minimum start date
+        assert_eq!(Interval::Daily.min_start_date(), "2015-01-05");
+        assert_eq!(Interval::Hourly.min_start_date(), "2023-09-01");
+        assert_eq!(Interval::Minute.min_start_date(), "2023-09-01");
+    }
+
+    #[test]
+    fn test_get_effective_start_date_respects_minimums() {
+        // Test that minute and hourly intervals never go before 2023-09-01
+        let config = SyncConfig::new(
+            "2015-01-05".to_string(),  // Request very old data
+            None,
+            10,
+            None,
+            vec![Interval::Daily, Interval::Hourly, Interval::Minute],
+            true,  // Force full download
+            3,
+        );
+
+        // Daily should honor the requested date
+        let daily_start = config.get_effective_start_date(Interval::Daily);
+        assert_eq!(daily_start, "2015-01-05");
+
+        // Hourly should be clamped to 2023-09-01
+        let hourly_start = config.get_effective_start_date(Interval::Hourly);
+        assert_eq!(hourly_start, "2023-09-01");
+
+        // Minute should be clamped to 2023-09-01
+        let minute_start = config.get_effective_start_date(Interval::Minute);
+        assert_eq!(minute_start, "2023-09-01");
+    }
+
+    #[test]
+    fn test_get_effective_start_date_allows_newer_dates() {
+        // Test that intervals can use dates newer than their minimums
+        let config = SyncConfig::new(
+            "2024-01-01".to_string(),  // Request newer data
+            None,
+            10,
+            None,
+            vec![Interval::Daily, Interval::Hourly, Interval::Minute],
+            true,
+            3,
+        );
+
+        // All should honor the requested date since it's after their minimums
+        assert_eq!(config.get_effective_start_date(Interval::Daily), "2024-01-01");
+        assert_eq!(config.get_effective_start_date(Interval::Hourly), "2024-01-01");
+        assert_eq!(config.get_effective_start_date(Interval::Minute), "2024-01-01");
     }
 }

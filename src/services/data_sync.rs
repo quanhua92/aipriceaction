@@ -89,7 +89,7 @@ impl DataSync {
                     (date, true) // ✅ Adaptive: using actual CSV dates
                 }
                 None => {
-                    (self.config.get_fetch_start_date(interval), false) // ⚠️ Fallback: using fixed days
+                    (self.config.get_effective_start_date(interval), false) // ⚠️ Fallback: using fixed days (respects interval minimums)
                 }
             };
 
@@ -123,7 +123,7 @@ impl DataSync {
             self.fetcher
                 .batch_fetch(
                     &category.full_history_tickers,
-                    &self.config.start_date,
+                    &self.config.get_effective_start_date(interval),
                     &self.config.end_date,
                     interval,
                     2, // Smaller batch size for full downloads
@@ -255,7 +255,7 @@ impl DataSync {
         } else {
             // Full history mode: fetch complete data
             self.fetcher
-                .fetch_full_history(ticker, &self.config.start_date, &self.config.end_date, interval)
+                .fetch_full_history(ticker, &self.config.get_effective_start_date(interval), &self.config.end_date, interval)
                 .await
         }
     }
@@ -276,7 +276,7 @@ impl DataSync {
 
             return self
                 .fetcher
-                .fetch_full_history(ticker, &self.config.start_date, &self.config.end_date, interval)
+                .fetch_full_history(ticker, &self.config.get_effective_start_date(interval), &self.config.end_date, interval)
                 .await;
         }
 
