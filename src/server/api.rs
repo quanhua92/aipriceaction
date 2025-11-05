@@ -2,8 +2,8 @@ use crate::models::Interval;
 use crate::services::{SharedDataStore, SharedHealthStats, estimate_memory_usage};
 use axum::{
     extract::{State, Json},
-    http::{HeaderMap, StatusCode, header::CACHE_CONTROL},
-    response::IntoResponse,
+    http::{HeaderMap, StatusCode, header::{CACHE_CONTROL, CONTENT_TYPE}},
+    response::{IntoResponse, Response},
 };
 use axum_extra::extract::Query;
 use chrono::{NaiveDate, Utc};
@@ -45,10 +45,18 @@ pub struct TickerQuery {
     /// Return legacy format (production API compatibility) - default: true
     #[serde(default = "default_legacy")]
     pub legacy: bool,
+
+    /// Response format: json (default) or csv
+    #[serde(default = "default_format")]
+    pub format: String,
 }
 
 fn default_legacy() -> bool {
     true // Default to legacy format for backward compatibility
+}
+
+fn default_format() -> String {
+    "json".to_string() // Default to JSON format
 }
 
 /// Response structure for /tickers endpoint
@@ -178,13 +186,20 @@ pub async fn get_tickers_handler(
         interval = %interval.to_filename(),
         symbols = ?symbols_filter,
         legacy = params.legacy,
+        format = %params.format,
         "Returning ticker data"
     );
 
     let mut headers = HeaderMap::new();
     headers.insert(CACHE_CONTROL, "max-age=30".parse().unwrap());
 
-    // Return format based on legacy parameter
+    // Check format parameter
+    if params.format == "csv" {
+        // Generate CSV format
+        return generate_csv_response(result_data, interval, params.legacy, headers);
+    }
+
+    // Return JSON format based on legacy parameter
     if params.legacy {
         // Legacy format: unwrapped HashMap with string dates and "symbol" field
         let legacy_data: HashMap<String, Vec<LegacyStockData>> = result_data
@@ -221,6 +236,106 @@ pub async fn get_tickers_handler(
 
         (StatusCode::OK, headers, Json(response)).into_response()
     }
+}
+
+/// Generate CSV response from stock data
+fn generate_csv_response(
+    data: HashMap<String, Vec<crate::models::StockData>>,
+    interval: Interval,
+    legacy: bool,
+    mut headers: HeaderMap,
+) -> Response {
+    let ticker_field = if legacy { "symbol" } else { "ticker" };
+
+    // Build CSV content
+    let mut csv_content = String::new();
+
+    // CSV header - adapt based on whether we have technical indicators
+    // For simplicity, we'll check the first record to see what fields are available
+    let has_indicators = data.values().next()
+        .and_then(|records| records.first())
+        .map(|record| record.ma10.is_some())
+        .unwrap_or(false);
+
+    if has_indicators {
+        // Full header with technical indicators
+        csv_content.push_str(&format!(
+            "{},time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score\n",
+            ticker_field
+        ));
+    } else {
+        // Basic header without technical indicators
+        csv_content.push_str(&format!(
+            "{},time,open,high,low,close,volume\n",
+            ticker_field
+        ));
+    }
+
+    // Add data rows - sort by ticker for consistency
+    let mut tickers: Vec<_> = data.keys().cloned().collect();
+    tickers.sort();
+
+    for ticker in tickers {
+        if let Some(records) = data.get(&ticker) {
+            for record in records {
+                let time_str = match interval {
+                    Interval::Daily => record.time.format("%Y-%m-%d").to_string(),
+                    Interval::Hourly | Interval::Minute => record.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                };
+
+                if has_indicators {
+                    // Write row with all fields
+                    csv_content.push_str(&format!(
+                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                        ticker,
+                        time_str,
+                        record.open,
+                        record.high,
+                        record.low,
+                        record.close,
+                        record.volume,
+                        record.ma10.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma20.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma50.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma10_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma20_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma50_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.money_flow.map(|v| v.to_string()).unwrap_or_default(),
+                        record.dollar_flow.map(|v| v.to_string()).unwrap_or_default(),
+                        record.trend_score.map(|v| v.to_string()).unwrap_or_default(),
+                    ));
+                } else {
+                    // Write row with basic fields only
+                    csv_content.push_str(&format!(
+                        "{},{},{},{},{},{},{}\n",
+                        ticker,
+                        time_str,
+                        record.open,
+                        record.high,
+                        record.low,
+                        record.close,
+                        record.volume,
+                    ));
+                }
+            }
+        }
+    }
+
+    // Set CSV content type
+    headers.insert(
+        CONTENT_TYPE,
+        "text/csv; charset=utf-8".parse().unwrap()
+    );
+
+    // Suggest filename for download
+    headers.insert(
+        "Content-Disposition",
+        format!("attachment; filename=\"tickers_{}.csv\"", interval.to_filename().trim_end_matches(".csv"))
+            .parse()
+            .unwrap()
+    );
+
+    (StatusCode::OK, headers, csv_content).into_response()
 }
 
 /// GET /health - Health statistics endpoint
