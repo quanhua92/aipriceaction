@@ -18,6 +18,10 @@ pub enum Commands {
         /// Path to the aipriceaction-data directory
         #[arg(short, long)]
         source: Option<PathBuf>,
+
+        /// Force reimport: delete existing files and start from scratch
+        #[arg(long)]
+        force: bool,
     },
     /// Pull latest data from VCI API
     Pull {
@@ -62,8 +66,8 @@ pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::ImportLegacy { source } => {
-            commands::import_legacy::run(source);
+        Commands::ImportLegacy { source, force } => {
+            commands::import_legacy::run(source, force);
         }
         Commands::Pull {
             intervals,
