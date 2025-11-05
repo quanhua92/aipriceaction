@@ -5,6 +5,7 @@ pub mod vci;
 pub mod ticker_fetcher;
 pub mod data_sync;
 pub mod csv_enhancer;
+pub mod csv_validator;
 pub mod data_store;
 
 pub use importer::import_legacy;
@@ -13,4 +14,5 @@ pub use vci::{VciClient, VciError, OhlcvData, CompanyInfo};
 pub use ticker_fetcher::TickerFetcher;
 pub use data_sync::DataSync;
 pub use csv_enhancer::{enhance_interval, EnhancementStats};
+pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
