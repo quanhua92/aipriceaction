@@ -101,6 +101,12 @@ pub fn run() {
                         interval.to_filename(),
                         report.record_count
                     ));
+                } else if interval == Interval::Daily && report.record_count < 2000 {
+                    ticker_issues.push(format!(
+                        "  ⚠️  {} - Only {} records (recommended 2000+ for historical analysis)",
+                        interval.to_filename(),
+                        report.record_count
+                    ));
                 }
 
                 if report.missing_indicators && report.record_count >= 50 {

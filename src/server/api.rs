@@ -1,9 +1,10 @@
 use crate::models::Interval;
 use crate::services::{SharedDataStore, SharedHealthStats};
+use crate::utils::get_public_dir;
 use axum::{
     extract::{State, Json},
     http::{HeaderMap, StatusCode, header::{CACHE_CONTROL, CONTENT_TYPE}},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Response, Html},
 };
 use axum_extra::extract::Query;
 use chrono::{NaiveDate, Utc};
@@ -427,6 +428,27 @@ pub async fn get_ticker_groups_handler() -> impl IntoResponse {
                 Json(serde_json::json!({
                     "error": "Ticker groups file not found"
                 }))
+            ).into_response()
+        }
+    }
+}
+
+/// Handler for /explorer route - serves the API explorer UI
+#[instrument]
+pub async fn explorer_handler() -> impl IntoResponse {
+    let public_dir = get_public_dir();
+    let index_path = public_dir.join("index.html");
+
+    match tokio::fs::read_to_string(&index_path).await {
+        Ok(html) => {
+            info!("Serving explorer UI from {}", index_path.display());
+            Html(html).into_response()
+        }
+        Err(e) => {
+            warn!(error = %e, path = %index_path.display(), "Failed to read index.html");
+            (
+                StatusCode::NOT_FOUND,
+                Html("<h1>Explorer not found</h1><p>Unable to load the API explorer interface.</p>")
             ).into_response()
         }
     }

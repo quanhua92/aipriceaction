@@ -1,12 +1,471 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Price Action</title>
-</head>
-<body>
-    <div>Hello</div>
-    <script src="index.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Price Action - API Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+      .active-tab {
+        border-color: #4f46e5 !important;
+        color: #4f46e5 !important;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+      <div class="container mx-auto px-4 py-6">
+        <h1 class="text-2xl md:text-3xl font-bold">AI Price Action</h1>
+        <p class="text-blue-100 text-sm md:text-base mt-1">API Explorer & Debug Tool</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6 space-y-6">
+
+      <!-- API Overview Section -->
+      <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-6 border border-blue-200">
+        <h2 class="text-xl font-bold text-gray-800 mb-3">📊 API Overview</h2>
+        <div class="grid md:grid-cols-3 gap-4 text-sm">
+          <div class="bg-white rounded p-4 shadow-sm">
+            <div class="text-gray-600 font-medium mb-1">Available Endpoints</div>
+            <div class="text-2xl font-bold text-blue-600">4</div>
+            <div class="text-xs text-gray-500 mt-1">/tickers, /health, /tickers/group, /raw/*</div>
+          </div>
+          <div class="bg-white rounded p-4 shadow-sm">
+            <div class="text-gray-600 font-medium mb-1">Supported Formats</div>
+            <div class="text-2xl font-bold text-green-600">2</div>
+            <div class="text-xs text-gray-500 mt-1">JSON, CSV</div>
+          </div>
+          <div class="bg-white rounded p-4 shadow-sm">
+            <div class="text-gray-600 font-medium mb-1">Time Intervals</div>
+            <div class="text-2xl font-bold text-purple-600">3</div>
+            <div class="text-xs text-gray-500 mt-1">1D (Daily), 1H (Hourly), 1m (Minute)</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- System Health Section -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800">🏥 System Health & Performance</h2>
+          <button
+            onclick="fetchHealth()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            Check Health
+          </button>
+        </div>
+        <div class="text-sm text-gray-600 mb-3">
+          Monitor system status, cache performance, and data availability. This endpoint provides real-time insights into the API's health.
+        </div>
+        <div id="health-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-sm overflow-x-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Ticker Groups Section -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800">📋 Available Tickers</h2>
+          <button
+            onclick="fetchGroups()"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            Load Groups
+          </button>
+        </div>
+        <div class="text-sm text-gray-600 mb-3">
+          Browse all available stock symbols organized by category. See which tickers have data for different time intervals.
+        </div>
+        <div id="groups-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-sm overflow-x-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Ticker Data Explorer Section -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">🔍 Ticker Data Explorer</h2>
+        <div class="text-sm text-gray-600 mb-4">
+          Query historical price data with flexible date ranges and formats. Perfect for backtesting and analysis.
+        </div>
+
+        <div class="space-y-4">
+          <!-- Symbol Input -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
+            <input
+              type="text"
+              id="symbol"
+              value="VCB"
+              placeholder="e.g., VCB, FPT, VIC"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <!-- Interval Select -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Interval</label>
+            <select
+              id="interval"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="1D">1 Day (1D)</option>
+              <option value="1H">1 Hour (1H)</option>
+              <option value="1m">1 Minute (1m)</option>
+            </select>
+          </div>
+
+          <!-- Start Date Input -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date (optional)</label>
+            <input
+              type="date"
+              id="start_date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+
+          <!-- Format Select -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+            <select
+              id="format"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="json">JSON</option>
+              <option value="csv">CSV</option>
+            </select>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button
+              onclick="fetchTicker()"
+              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+              Fetch Data
+            </button>
+            <button
+              onclick="copyApiUrl()"
+              class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+              Copy API URL
+            </button>
+          </div>
+        </div>
+
+        <!-- API URL Display -->
+        <div id="api-url" class="mt-4 p-3 bg-blue-50 rounded border border-blue-200 hidden">
+          <p class="text-xs text-gray-600 mb-1">API URL:</p>
+          <code class="text-sm text-blue-800 break-all"></code>
+        </div>
+
+        <!-- Result Display -->
+        <div id="ticker-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-medium text-gray-700">Response:</span>
+            <span id="result-count" class="text-xs text-gray-500"></span>
+          </div>
+          <pre class="text-sm overflow-x-auto max-h-96 overflow-y-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Quick Examples Section -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">⚡ Quick Examples</h2>
+        <div class="text-sm text-gray-600 mb-3">
+          Try these pre-configured queries to quickly explore different data ranges and intervals.
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <button
+            onclick="quickFetch('VCB', '1D', '2024-11-01')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded border border-blue-200 transition duration-200">
+            <span class="font-medium text-gray-800">🏦 VCB - Daily (1Y)</span>
+            <p class="text-xs text-gray-600 mt-1">Daily candles from Nov 2024</p>
+          </button>
+          <button
+            onclick="quickFetch('FPT', '1D', '2025-01-01')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded border border-green-200 transition duration-200">
+            <span class="font-medium text-gray-800">💻 FPT - This Year</span>
+            <p class="text-xs text-gray-600 mt-1">Daily data from Jan 2025</p>
+          </button>
+          <button
+            onclick="quickFetch('VIC', '1H', '2025-11-01')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded border border-purple-200 transition duration-200">
+            <span class="font-medium text-gray-800">🏢 VIC - Hourly</span>
+            <p class="text-xs text-gray-600 mt-1">Intraday 1H candles</p>
+          </button>
+          <button
+            onclick="quickFetch('VNINDEX', '1D', '2024-01-01')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 rounded border border-orange-200 transition duration-200">
+            <span class="font-medium text-gray-800">📈 VN-INDEX - Full Year</span>
+            <p class="text-xs text-gray-600 mt-1">Market index 2024-2025</p>
+          </button>
+        </div>
+      </section>
+
+      <!-- Market Overview & Top Performers -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800">📈 Market Overview & Top Performers</h2>
+          <button
+            onclick="loadMarketOverview()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            Load Market Data
+          </button>
+        </div>
+        <div class="text-sm text-gray-600 mb-3">
+          View real-time market leaders, top gainers/losers, and performance metrics across all tracked stocks.
+        </div>
+
+        <!-- Loading State -->
+        <div id="market-loading" class="hidden text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <p class="text-sm text-gray-600 mt-2">Loading market data...</p>
+        </div>
+
+        <!-- Market Stats -->
+        <div id="market-stats" class="hidden grid md:grid-cols-4 gap-3 mb-4">
+          <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+            <div class="text-xs text-gray-600">Total Tickers</div>
+            <div id="stat-total" class="text-2xl font-bold text-blue-700">--</div>
+          </div>
+          <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+            <div class="text-xs text-gray-600">Gainers (24h)</div>
+            <div id="stat-gainers" class="text-2xl font-bold text-green-700">--</div>
+          </div>
+          <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-3 border border-red-200">
+            <div class="text-xs text-gray-600">Losers (24h)</div>
+            <div id="stat-losers" class="text-2xl font-bold text-red-700">--</div>
+          </div>
+          <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200">
+            <div class="text-xs text-gray-600">Avg Volume</div>
+            <div id="stat-volume" class="text-2xl font-bold text-purple-700">--</div>
+          </div>
+        </div>
+
+        <!-- Date Picker -->
+        <div id="market-date-picker" class="hidden mb-4">
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700">Analysis Date:</label>
+            <input
+              type="date"
+              id="market-analysis-date"
+              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <button
+              onclick="refreshMarketData()"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              Refresh
+            </button>
+            <span class="text-xs text-gray-500">Last updated: <span id="last-update-time">--</span></span>
+          </div>
+        </div>
+
+        <!-- Tabs for different views -->
+        <div id="market-tabs" class="hidden mb-4">
+          <div class="border-b border-gray-200">
+            <nav class="flex space-x-4" aria-label="Tabs">
+              <button onclick="showMarketTab('by-sector')" class="market-tab active-tab px-3 py-2 text-sm font-medium border-b-2">
+                🏢 By Sector
+              </button>
+              <button onclick="showMarketTab('top-gainers')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+                🚀 Top Gainers
+              </button>
+              <button onclick="showMarketTab('top-losers')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+                📉 Top Losers
+              </button>
+              <button onclick="showMarketTab('top-ma')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+                📊 MA Scores
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <!-- By Sector Table (default) -->
+        <div id="tab-by-sector" class="market-tab-content">
+          <div class="space-y-4" id="sector-container">
+            <div class="text-center py-8 text-gray-500">No data loaded</div>
+          </div>
+        </div>
+
+        <!-- Top Gainers Table -->
+        <div id="tab-top-gainers" class="market-tab-content hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Change %</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Volume</th>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody id="gainers-tbody" class="bg-white divide-y divide-gray-200">
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No data loaded</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Losers Table -->
+        <div id="tab-top-losers" class="market-tab-content hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Change %</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Volume</th>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody id="losers-tbody" class="bg-white divide-y divide-gray-200">
+                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">No data loaded</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- MA Scores Table -->
+        <div id="tab-top-ma" class="market-tab-content hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">MA Score</th>
+                  <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Trend</th>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody id="ma-tbody" class="bg-white divide-y divide-gray-200">
+                <tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No data loaded</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- API Documentation Section -->
+      <section class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">📚 API Reference</h2>
+        <div class="space-y-4">
+          <!-- /tickers endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/tickers</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Retrieve historical price data for a specific ticker symbol.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Parameters:</span>
+                <div class="flex-1">
+                  <div><code>symbol</code> - Ticker symbol (required)</div>
+                  <div><code>interval</code> - Time interval: 1D, 1H, 1m (required)</div>
+                  <div><code>start_date</code> - Start date YYYY-MM-DD (optional)</div>
+                  <div><code>format</code> - Response format: json, csv (default: json)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- /tickers/group endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/tickers/group</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">List all available ticker symbols grouped by data availability.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Returns:</span>
+                <span class="flex-1">Groups of tickers with their available intervals</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /health endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/health</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Check API health status and cache performance metrics.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Returns:</span>
+                <span class="flex-1">System status, cache stats, and data availability</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /raw/* endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/raw/*</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Legacy GitHub proxy for backward compatibility.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Note:</span>
+                <span class="flex-1 text-orange-600">Deprecated - use /tickers endpoint instead</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tips & Best Practices Section -->
+      <section class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg shadow-md p-6 border border-green-200">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">💡 Tips & Best Practices</h2>
+        <div class="grid md:grid-cols-2 gap-4 text-sm">
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">🚀 Performance</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>CSV format is faster for large datasets</li>
+              <li>Use start_date to limit data range</li>
+              <li>Disk cache improves repeat queries</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">📊 Data Quality</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>Check /health for data freshness</li>
+              <li>1m data has limited history</li>
+              <li>Use 1D for long-term analysis</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">🔧 Integration</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>CORS enabled for subdomains</li>
+              <li>JSON format for web apps</li>
+              <li>CSV format for data science tools</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">⚠️ Common Issues</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>Check ticker availability first</li>
+              <li>Verify date format (YYYY-MM-DD)</li>
+              <li>Ensure interval matches data</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-6 mt-12">
+      <div class="container mx-auto px-4 text-center text-sm">
+        <p>AI Price Action API Explorer</p>
+        <p class="mt-2">Server: <span id="server-url" class="text-blue-400">http://localhost:3000</span></p>
+      </div>
+    </footer>
+
+    <script src="/public/index.js"></script>
+  </body>
 </html>
