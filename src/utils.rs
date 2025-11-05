@@ -6,3 +6,10 @@ pub fn get_market_data_dir() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("market_data"))
 }
+
+/// Get public directory from environment variable or use default
+pub fn get_public_dir() -> PathBuf {
+    std::env::var("PUBLIC_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("public"))
+}

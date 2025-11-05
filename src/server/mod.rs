@@ -2,9 +2,11 @@ pub mod api;
 pub mod legacy;
 
 use crate::services::{SharedDataStore, SharedHealthStats};
+use crate::utils::get_public_dir;
 use axum::{extract::FromRef, routing::get, Router};
 use std::net::SocketAddr;
 use tower_http::cors::{CorsLayer, Any};
+use tower_http::services::ServeDir;
 
 /// Application state shared across all handlers
 #[derive(Clone)]
@@ -69,11 +71,15 @@ pub async fn serve(
         ])
         .allow_headers(Any);
 
+    let public_dir = get_public_dir();
+    tracing::info!("Using public directory: {}", public_dir.display());
+
     tracing::info!("Registering routes:");
     tracing::info!("  GET /tickers?symbol=VCB&interval=1D&start_date=2024-01-01");
     tracing::info!("  GET /health");
     tracing::info!("  GET /tickers/group");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
+    tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
     // Build router with routes
     let app = Router::new()
@@ -81,6 +87,7 @@ pub async fn serve(
         .route("/health", get(api::health_handler))
         .route("/tickers/group", get(api::get_ticker_groups_handler))
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
+        .nest_service("/public", ServeDir::new(public_dir))
         .layer(cors)
         .with_state(app_state);
 
