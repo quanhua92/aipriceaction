@@ -66,18 +66,27 @@ pub struct TickerQuery {
     /// Response format: json (default) or csv
     #[serde(default = "default_format")]
     pub format: String,
+
+    /// Use memory cache (default: true) - set to false to force disk read
+    #[serde(default = "default_cache")]
+    pub cache: bool,
 }
 
 fn default_format() -> String {
     "json".to_string() // Default to JSON format
 }
 
-/// GET /tickers - Query stock data from in-memory store
+fn default_cache() -> bool {
+    true // Default to using memory cache
+}
+
+/// GET /tickers - Query stock data from in-memory store or disk
 ///
 /// Examples:
-/// - /tickers?symbol=VCB (default to daily)
+/// - /tickers?symbol=VCB (default to daily, uses cache)
 /// - /tickers?symbol=VCB&interval=1H
 /// - /tickers?symbol=VCB&interval=1D&start_date=2024-01-01&end_date=2024-12-31
+/// - /tickers?symbol=VCB&cache=false (force disk read, bypass memory cache)
 #[instrument(skip(data_state))]
 pub async fn get_tickers_handler(
     State(data_state): State<SharedDataStore>,
@@ -158,12 +167,13 @@ pub async fn get_tickers_handler(
         None => data_state.get_all_ticker_names().await, // All tickers
     };
 
-    // Query data using DataStore (automatically reads from memory for daily, disk for hourly/minute)
-    let result_data = data_state.get_data(
+    // Query data using DataStore with cache control
+    let result_data = data_state.get_data_with_cache(
         symbols_to_query,
         interval,
         start_date_filter,
-        end_date_filter
+        end_date_filter,
+        params.cache
     ).await;
 
     let ticker_count = result_data.len();
@@ -176,6 +186,7 @@ pub async fn get_tickers_handler(
         symbols = ?symbols_filter,
         legacy_prices = params.legacy,
         format = %params.format,
+        use_cache = params.cache,
         "Returning ticker data"
     );
 

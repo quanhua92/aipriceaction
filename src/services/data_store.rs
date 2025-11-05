@@ -12,6 +12,9 @@ pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit for 1 year of data
 pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
 pub const DATA_RETENTION_DAYS: i64 = 365; // Keep 1 year of data
 
+/// Cache TTL constants
+pub const CACHE_TTL_SECONDS: i64 = 60; // 1 minute TTL for memory cache
+
 /// In-memory data store: HashMap<Ticker, HashMap<Interval, Vec<StockData>>>
 pub type IntervalData = HashMap<Interval, Vec<StockData>>;
 pub type InMemoryData = HashMap<String, IntervalData>;
@@ -82,6 +85,7 @@ pub type SharedHealthStats = Arc<Mutex<HealthStats>>;
 pub struct DataStore {
     data: Mutex<InMemoryData>,
     market_data_dir: PathBuf,
+    cache_last_updated: Mutex<DateTime<Utc>>,
 }
 
 impl DataStore {
@@ -90,6 +94,7 @@ impl DataStore {
         Self {
             data: Mutex::new(HashMap::new()),
             market_data_dir,
+            cache_last_updated: Mutex::new(Utc::now()),
         }
     }
 
@@ -151,6 +156,12 @@ impl DataStore {
             store.entry(ticker)
                 .or_insert_with(HashMap::new)
                 .insert(interval, ticker_data);
+        }
+
+        // Update cache timestamp to reflect fresh data
+        {
+            let mut cache_last_updated = self.cache_last_updated.lock().await;
+            *cache_last_updated = Utc::now();
         }
 
         Ok(())
@@ -251,12 +262,39 @@ impl DataStore {
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
     ) -> HashMap<String, Vec<StockData>> {
+        self.get_data_with_cache(tickers, interval, start_date, end_date, true).await
+    }
+
+    /// Get data with cache control option
+    pub async fn get_data_with_cache(
+        &self,
+        tickers: Vec<String>,
+        interval: Interval,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+        use_cache: bool,
+    ) -> HashMap<String, Vec<StockData>> {
         // For hourly/minute data, read directly from disk
         if interval == Interval::Hourly || interval == Interval::Minute {
             return self.get_data_from_disk(tickers, interval, start_date, end_date);
         }
 
-        // For daily data, use in-memory cache
+        // For daily data, check cache preference
+        if !use_cache {
+            return self.get_data_from_disk(tickers, interval, start_date, end_date);
+        }
+
+        // Check if cache is expired (TTL)
+        if self.is_cache_expired().await {
+            tracing::debug!("Cache expired (TTL: {}s), refreshing from disk", CACHE_TTL_SECONDS);
+            // Refresh cache from disk and then serve fresh data
+            if let Err(e) = self.refresh_cache(interval).await {
+                tracing::warn!("Failed to refresh cache: {}, falling back to disk read", e);
+                return self.get_data_from_disk(tickers, interval, start_date, end_date);
+            }
+        }
+
+        // Use in-memory cache
         let store = self.data.lock().await;
         let mut result = HashMap::new();
 
@@ -378,6 +416,32 @@ impl DataStore {
     pub async fn get_all_ticker_names(&self) -> Vec<String> {
         let store = self.data.lock().await;
         store.keys().cloned().collect()
+    }
+
+    /// Check if cache has expired based on TTL
+    async fn is_cache_expired(&self) -> bool {
+        let cache_last_updated = self.cache_last_updated.lock().await;
+        let now = Utc::now();
+        let cache_age = now.signed_duration_since(*cache_last_updated);
+        cache_age.num_seconds() >= CACHE_TTL_SECONDS
+    }
+
+    /// Refresh cache from disk for a specific interval
+    async fn refresh_cache(&self, interval: Interval) -> Result<(), Error> {
+        tracing::info!("Refreshing cache for interval: {}", interval.to_filename());
+
+        // Load fresh data from disk
+        let cutoff_date = Utc::now() - Duration::days(DATA_RETENTION_DAYS);
+        self.load_interval(interval, Some(cutoff_date)).await?;
+
+        // Update cache timestamp
+        {
+            let mut cache_last_updated = self.cache_last_updated.lock().await;
+            *cache_last_updated = Utc::now();
+        }
+
+        tracing::info!("Cache refreshed successfully for interval: {}", interval.to_filename());
+        Ok(())
     }
 }
 
