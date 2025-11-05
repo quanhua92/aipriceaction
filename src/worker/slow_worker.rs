@@ -1,17 +1,23 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval};
+use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
 use chrono::Utc;
 use std::path::Path;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
 
-const SYNC_INTERVAL_SECS: u64 = 300; // 5 minutes for slow updates
+// Trading hours: 5 minutes (active market, frequent refresh)
+// Non-trading hours: 30 minutes (market closed, very relaxed)
+const TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
+const NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes
 
 #[instrument(skip(data_store, health_stats))]
 pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
-    info!("Starting slow worker (every {} seconds)", SYNC_INTERVAL_SECS);
+    info!(
+        "Starting slow worker - Trading hours: {}s, Non-trading hours: {}s",
+        TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS
+    );
 
     let mut iteration_count = 0u64;
     let market_data_dir = Path::new("market_data");
@@ -20,8 +26,13 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
     loop {
         iteration_count += 1;
         let loop_start = std::time::Instant::now();
+        let is_trading = is_trading_hours();
 
-        info!(iteration = iteration_count, "Slow worker: Starting sync");
+        info!(
+            iteration = iteration_count,
+            is_trading_hours = is_trading,
+            "Slow worker: Starting sync"
+        );
 
         // Step 0: Validate and repair CSV files (corruption recovery)
         for interval in &intervals {
@@ -64,7 +75,11 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
             Err(e) => {
                 error!(iteration = iteration_count, error = %e, "Slow worker: Sync failed");
                 // Continue to next iteration even if sync fails
-                sleep(Duration::from_secs(SYNC_INTERVAL_SECS)).await;
+                let sync_interval = get_sync_interval(
+                    Duration::from_secs(TRADING_INTERVAL_SECS),
+                    Duration::from_secs(NON_TRADING_INTERVAL_SECS)
+                );
+                sleep(sync_interval).await;
                 continue;
             }
         }
@@ -122,17 +137,27 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
             health.hourly_last_sync = Some(Utc::now().to_rfc3339());
             health.minute_last_sync = Some(Utc::now().to_rfc3339());
             health.slow_iteration_count = iteration_count;
+            health.is_trading_hours = is_trading;
         }
 
         let loop_duration = loop_start.elapsed();
+
+        // Get dynamic interval based on trading hours
+        let sync_interval = get_sync_interval(
+            Duration::from_secs(TRADING_INTERVAL_SECS),
+            Duration::from_secs(NON_TRADING_INTERVAL_SECS)
+        );
+
         info!(
             iteration = iteration_count,
             loop_duration_secs = loop_duration.as_secs_f64(),
+            next_sync_secs = sync_interval.as_secs(),
+            is_trading_hours = is_trading,
             "Slow worker: Iteration completed"
         );
 
         // Sleep for remaining time
-        sleep(Duration::from_secs(SYNC_INTERVAL_SECS)).await;
+        sleep(sync_interval).await;
     }
 }
 

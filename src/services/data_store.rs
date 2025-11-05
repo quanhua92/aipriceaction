@@ -27,6 +27,10 @@ pub struct HealthStats {
     pub daily_iteration_count: u64,
     pub slow_iteration_count: u64,
 
+    // Trading hours info
+    pub is_trading_hours: bool,
+    pub trading_hours_timezone: String,
+
     // Memory statistics
     pub memory_usage_bytes: usize,
     pub memory_usage_mb: f64,
@@ -53,6 +57,8 @@ impl Default for HealthStats {
             minute_last_sync: None,
             daily_iteration_count: 0,
             slow_iteration_count: 0,
+            is_trading_hours: false,
+            trading_hours_timezone: "Asia/Ho_Chi_Minh".to_string(),
             memory_usage_bytes: 0,
             memory_usage_mb: 0.0,
             memory_limit_mb: MAX_MEMORY_MB,

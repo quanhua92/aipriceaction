@@ -7,6 +7,7 @@ pub mod data_sync;
 pub mod csv_enhancer;
 pub mod csv_validator;
 pub mod data_store;
+pub mod trading_hours;
 
 pub use importer::import_legacy;
 pub use market_stats::{get_market_stats, get_ticker_info, is_index, MarketStats, TickerInfo, TimeframeInfo};
@@ -16,3 +17,4 @@ pub use data_sync::DataSync;
 pub use csv_enhancer::{enhance_interval, EnhancementStats};
 pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
+pub use trading_hours::{is_trading_hours, get_sync_interval};
