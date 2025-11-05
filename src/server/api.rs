@@ -11,6 +11,19 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, warn, instrument};
 
+/// Legacy stock data format for backward compatibility with production API
+#[derive(Debug, Serialize)]
+pub struct LegacyStockData {
+    /// Time in YYYY-MM-DD format (daily) or YYYY-MM-DD HH:MM:SS format (intraday)
+    pub time: String,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub volume: u64,
+    pub symbol: String,
+}
+
 /// Query parameters for /tickers endpoint
 #[derive(Debug, Deserialize)]
 pub struct TickerQuery {
@@ -28,6 +41,14 @@ pub struct TickerQuery {
 
     /// Limit number of records per ticker (most recent first)
     pub limit: Option<usize>,
+
+    /// Return legacy format (production API compatibility) - default: true
+    #[serde(default = "default_legacy")]
+    pub legacy: bool,
+}
+
+fn default_legacy() -> bool {
+    true // Default to legacy format for backward compatibility
 }
 
 /// Response structure for /tickers endpoint
@@ -156,20 +177,50 @@ pub async fn get_tickers_handler(
         total_records,
         interval = %interval.to_filename(),
         symbols = ?symbols_filter,
+        legacy = params.legacy,
         "Returning ticker data"
     );
-
-    let response = TickersResponse {
-        data: result_data,
-        interval: interval.to_vci_format().to_string(),
-        ticker_count,
-        total_records,
-    };
 
     let mut headers = HeaderMap::new();
     headers.insert(CACHE_CONTROL, "max-age=30".parse().unwrap());
 
-    (StatusCode::OK, headers, Json(response)).into_response()
+    // Return format based on legacy parameter
+    if params.legacy {
+        // Legacy format: unwrapped HashMap with string dates and "symbol" field
+        let legacy_data: HashMap<String, Vec<LegacyStockData>> = result_data
+            .into_iter()
+            .map(|(ticker, data)| {
+                let legacy_records = data.into_iter().map(|d| {
+                    let time_str = match interval {
+                        Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
+                        Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    };
+                    LegacyStockData {
+                        time: time_str,
+                        open: d.open,
+                        high: d.high,
+                        low: d.low,
+                        close: d.close,
+                        volume: d.volume,
+                        symbol: d.ticker,
+                    }
+                }).collect();
+                (ticker, legacy_records)
+            })
+            .collect();
+
+        (StatusCode::OK, headers, Json(legacy_data)).into_response()
+    } else {
+        // Enhanced format: wrapped with metadata and technical indicators
+        let response = TickersResponse {
+            data: result_data,
+            interval: interval.to_vci_format().to_string(),
+            ticker_count,
+            total_records,
+        };
+
+        (StatusCode::OK, headers, Json(response)).into_response()
+    }
 }
 
 /// GET /health - Health statistics endpoint
