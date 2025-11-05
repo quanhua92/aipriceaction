@@ -274,9 +274,12 @@ impl DataSync {
             println!("   💰 Dividend detected, re-downloading full history...");
             self.stats.updated += 1;
 
+            // For dividend re-downloads, use the minimum start date for the interval
+            // to ensure we get complete history (not just recent days from resume mode)
+            let start_date = interval.min_start_date();
             return self
                 .fetcher
-                .fetch_full_history(ticker, &self.config.get_effective_start_date(interval), &self.config.end_date, interval)
+                .fetch_full_history(ticker, start_date, &self.config.end_date, interval)
                 .await;
         }
 

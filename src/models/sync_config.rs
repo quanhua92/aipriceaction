@@ -156,9 +156,10 @@ impl SyncConfig {
         };
 
         // Enforce interval-specific minimum start date
-        let min_date = interval.min_start_date();
-        if requested_start < min_date.to_string() {
-            min_date.to_string()
+        // Return the LATER of the two dates (max) to ensure we don't go before the minimum
+        let min_date = interval.min_start_date().to_string();
+        if requested_start < min_date {
+            min_date
         } else {
             requested_start
         }
