@@ -2,7 +2,7 @@ use crate::models::{Interval, TickerGroups};
 use crate::services::{csv_parser, csv_enhancer};
 use crate::utils::get_market_data_dir;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::Instant;
 
 /// Import legacy data from reference project structure

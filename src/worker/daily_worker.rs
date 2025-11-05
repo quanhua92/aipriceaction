@@ -3,7 +3,6 @@ use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
 use crate::utils::get_market_data_dir;
 use chrono::Utc;
-use std::path::Path;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};

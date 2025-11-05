@@ -605,7 +605,7 @@ impl DataSync {
     /// Read existing indicators for a specific timestamp from enhanced CSV file
     /// Returns 10 indicator values or empty strings if not found
     fn read_existing_indicators(&self, file_path: &Path, target_time: &str) -> Result<Vec<String>, Error> {
-        use std::io::{BufRead, BufReader};
+        use std::io::BufReader;
 
         let file = std::fs::File::open(file_path)
             .map_err(|e| Error::Io(format!("Failed to open file for reading indicators: {}", e)))?;

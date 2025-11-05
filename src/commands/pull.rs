@@ -2,7 +2,6 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, csv_enhancer, validate_and_repair_interval};
 use crate::utils::get_market_data_dir;
-use std::path::Path;
 
 pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
     // Parse intervals

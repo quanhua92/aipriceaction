@@ -10,7 +10,7 @@
 use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score, calculate_money_flow_multiplier};
-use chrono::{DateTime, Utc, NaiveDate, Timelike};
+use chrono::NaiveDate;
 use csv::Writer;
 use std::collections::HashMap;
 use std::path::Path;

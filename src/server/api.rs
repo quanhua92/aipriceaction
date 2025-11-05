@@ -359,6 +359,7 @@ pub async fn health_handler(
     let memory_bytes = data_state.estimate_memory_usage().await;
     let (daily_count, hourly_count, minute_count) = data_state.get_record_counts().await;
     let active_tickers = data_state.get_active_ticker_count().await;
+    let (disk_cache_entries, disk_cache_size_bytes, disk_cache_limit_bytes) = data_state.get_disk_cache_stats().await;
 
     health_stats.memory_usage_bytes = memory_bytes;
     health_stats.memory_usage_mb = memory_bytes as f64 / (1024.0 * 1024.0);
@@ -368,6 +369,16 @@ pub async fn health_handler(
     health_stats.daily_records_count = daily_count;
     health_stats.hourly_records_count = hourly_count;
     health_stats.minute_records_count = minute_count;
+
+    health_stats.disk_cache_entries = disk_cache_entries;
+    health_stats.disk_cache_size_bytes = disk_cache_size_bytes;
+    health_stats.disk_cache_size_mb = disk_cache_size_bytes as f64 / (1024.0 * 1024.0);
+    health_stats.disk_cache_limit_mb = disk_cache_limit_bytes / (1024 * 1024);
+    health_stats.disk_cache_usage_percent = if disk_cache_limit_bytes > 0 {
+        (disk_cache_size_bytes as f64 / disk_cache_limit_bytes as f64) * 100.0
+    } else {
+        0.0
+    };
 
     health_stats.current_system_time = Utc::now().to_rfc3339();
 

@@ -15,9 +15,25 @@ pub const DATA_RETENTION_DAYS: i64 = 365; // Keep 1 year of data
 /// Cache TTL constants
 pub const CACHE_TTL_SECONDS: i64 = 60; // 1 minute TTL for memory cache
 
+/// Cache size limits (configurable via environment variables)
+pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
+pub const MAX_ITEM_CACHE_SIZE_MB: usize = 100; // Don't cache individual items larger than 100MB
+
 /// In-memory data store: HashMap<Ticker, HashMap<Interval, Vec<StockData>>>
 pub type IntervalData = HashMap<Interval, Vec<StockData>>;
 pub type InMemoryData = HashMap<String, IntervalData>;
+
+/// Cache entry for tracking individual cached items
+#[derive(Clone, Debug)]
+struct CacheEntry {
+    data: Vec<StockData>,
+    size_bytes: usize,
+    cached_at: DateTime<Utc>,
+}
+
+/// Cache for hourly/minute data with size tracking
+/// Key: (ticker, interval)
+type HourlyMinuteCache = HashMap<(String, Interval), CacheEntry>;
 
 // Shared data store for passing between threads
 pub type SharedDataStore = Arc<DataStore>;
@@ -49,6 +65,13 @@ pub struct HealthStats {
     pub hourly_records_count: usize,
     pub minute_records_count: usize,
 
+    // Disk cache statistics
+    pub disk_cache_entries: usize,
+    pub disk_cache_size_bytes: usize,
+    pub disk_cache_size_mb: f64,
+    pub disk_cache_limit_mb: usize,
+    pub disk_cache_usage_percent: f64,
+
     // System info
     pub uptime_secs: u64,
     pub current_system_time: String,
@@ -73,6 +96,11 @@ impl Default for HealthStats {
             daily_records_count: 0,
             hourly_records_count: 0,
             minute_records_count: 0,
+            disk_cache_entries: 0,
+            disk_cache_size_bytes: 0,
+            disk_cache_size_mb: 0.0,
+            disk_cache_limit_mb: DEFAULT_MAX_CACHE_SIZE_MB,
+            disk_cache_usage_percent: 0.0,
             uptime_secs: 0,
             current_system_time: Utc::now().to_rfc3339(),
         }
@@ -86,15 +114,38 @@ pub struct DataStore {
     data: Mutex<InMemoryData>,
     market_data_dir: PathBuf,
     cache_last_updated: Mutex<DateTime<Utc>>,
+    /// Cache for disk-read data (hourly, minute, and cache=false queries)
+    disk_cache: Mutex<HourlyMinuteCache>,
+    /// Total size of disk cache in bytes
+    disk_cache_size: Mutex<usize>,
+    /// Maximum cache size in bytes (configurable via env)
+    max_cache_size_bytes: usize,
 }
 
 impl DataStore {
     /// Create a new data store
     pub fn new(market_data_dir: PathBuf) -> Self {
+        // Read MAX_CACHE_SIZE_MB from environment variable, default to 500MB
+        let max_cache_size_mb = std::env::var("MAX_CACHE_SIZE_MB")
+            .ok()
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap_or(DEFAULT_MAX_CACHE_SIZE_MB);
+
+        let max_cache_size_bytes = max_cache_size_mb * 1024 * 1024;
+
+        tracing::info!(
+            "Initializing DataStore with max_cache_size={}MB ({}bytes)",
+            max_cache_size_mb,
+            max_cache_size_bytes
+        );
+
         Self {
             data: Mutex::new(HashMap::new()),
             market_data_dir,
             cache_last_updated: Mutex::new(Utc::now()),
+            disk_cache: Mutex::new(HashMap::new()),
+            disk_cache_size: Mutex::new(0),
+            max_cache_size_bytes,
         }
     }
 
@@ -274,23 +325,19 @@ impl DataStore {
         end_date: Option<DateTime<Utc>>,
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
-        // For hourly/minute data, read directly from disk
-        if interval == Interval::Hourly || interval == Interval::Minute {
-            return self.get_data_from_disk(tickers, interval, start_date, end_date);
+        // For hourly/minute data or when cache=false, use disk cache
+        if interval == Interval::Hourly || interval == Interval::Minute || !use_cache {
+            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
         }
 
-        // For daily data, check cache preference
-        if !use_cache {
-            return self.get_data_from_disk(tickers, interval, start_date, end_date);
-        }
-
+        // For daily data with cache=true, check cache preference
         // Check if cache is expired (TTL)
         if self.is_cache_expired().await {
             tracing::debug!("Cache expired (TTL: {}s), refreshing from disk", CACHE_TTL_SECONDS);
             // Refresh cache from disk and then serve fresh data
             if let Err(e) = self.refresh_cache(interval).await {
                 tracing::warn!("Failed to refresh cache: {}, falling back to disk read", e);
-                return self.get_data_from_disk(tickers, interval, start_date, end_date);
+                return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
             }
         }
 
@@ -329,8 +376,8 @@ impl DataStore {
         result
     }
 
-    /// Read data from disk (for hourly/minute intervals)
-    fn get_data_from_disk(
+    /// Read data from disk with caching (for hourly/minute intervals and cache=false queries)
+    async fn get_data_from_disk_with_cache(
         &self,
         tickers: Vec<String>,
         interval: Interval,
@@ -340,42 +387,160 @@ impl DataStore {
         let mut result = HashMap::new();
 
         for ticker in tickers {
-            let csv_path = self.market_data_dir.join(&ticker).join(interval.to_filename());
-            if !csv_path.exists() {
-                continue;
-            }
+            let cache_key = (ticker.clone(), interval);
 
-            match self.read_csv_file(&csv_path, &ticker, interval, None) {
-                Ok(mut data) => {
-                    // Filter by date range
-                    if start_date.is_some() || end_date.is_some() {
-                        data.retain(|d| {
-                            if let Some(start) = start_date {
-                                if d.time < start {
-                                    return false;
-                                }
-                            }
-                            if let Some(end) = end_date {
-                                if d.time > end {
-                                    return false;
-                                }
-                            }
-                            true
-                        });
+            // Check disk cache first
+            let cache_hit = {
+                let disk_cache = self.disk_cache.lock().await;
+                if let Some(entry) = disk_cache.get(&cache_key) {
+                    // Check if cache entry is still valid (TTL)
+                    let now = Utc::now();
+                    let age = now.signed_duration_since(entry.cached_at);
+                    if age.num_seconds() < CACHE_TTL_SECONDS {
+                        Some(entry.data.clone())
+                    } else {
+                        None
                     }
-
-                    if !data.is_empty() {
-                        result.insert(ticker.clone(), data);
-                    }
+                } else {
+                    None
                 }
-                Err(e) => {
-                    tracing::warn!("Failed to read {} data for {}: {}", interval.to_filename(), ticker, e);
+            };
+
+            let data = if let Some(cached_data) = cache_hit {
+                tracing::debug!("Cache hit for {}/{}", ticker, interval.to_filename());
+                cached_data
+            } else {
+                // Cache miss, read from disk
+                let csv_path = self.market_data_dir.join(&ticker).join(interval.to_filename());
+                if !csv_path.exists() {
                     continue;
                 }
+
+                match self.read_csv_file(&csv_path, &ticker, interval, None) {
+                    Ok(data) => {
+                        if data.is_empty() {
+                            continue;
+                        }
+
+                        // Calculate size of this data
+                        let item_size = self.estimate_data_size(&data);
+
+                        // Only cache if item size is under 100MB
+                        if item_size <= MAX_ITEM_CACHE_SIZE_MB * 1024 * 1024 {
+                            // Try to add to cache
+                            self.try_add_to_cache(cache_key.clone(), data.clone(), item_size).await;
+                        } else {
+                            tracing::debug!(
+                                "Skipping cache for {}/{} (size {}MB > {}MB limit)",
+                                ticker,
+                                interval.to_filename(),
+                                item_size / (1024 * 1024),
+                                MAX_ITEM_CACHE_SIZE_MB
+                            );
+                        }
+
+                        data
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read {} data for {}: {}", interval.to_filename(), ticker, e);
+                        continue;
+                    }
+                }
+            };
+
+            // Filter by date range
+            let filtered = if start_date.is_some() || end_date.is_some() {
+                data.into_iter()
+                    .filter(|d| {
+                        if let Some(start) = start_date {
+                            if d.time < start {
+                                return false;
+                            }
+                        }
+                        if let Some(end) = end_date {
+                            if d.time > end {
+                                return false;
+                            }
+                        }
+                        true
+                    })
+                    .collect()
+            } else {
+                data
+            };
+
+            if !filtered.is_empty() {
+                result.insert(ticker.clone(), filtered);
             }
         }
 
         result
+    }
+
+    /// Try to add data to cache, evicting old entries if necessary
+    async fn try_add_to_cache(&self, key: (String, Interval), data: Vec<StockData>, size: usize) {
+        let mut disk_cache = self.disk_cache.lock().await;
+        let mut disk_cache_size = self.disk_cache_size.lock().await;
+
+        // Check if we need to evict entries to make room
+        while *disk_cache_size + size > self.max_cache_size_bytes && !disk_cache.is_empty() {
+            // Evict the oldest entry (LRU-like)
+            if let Some(oldest_key) = disk_cache
+                .iter()
+                .min_by_key(|(_, entry)| entry.cached_at)
+                .map(|(k, _)| k.clone())
+            {
+                if let Some(evicted) = disk_cache.remove(&oldest_key) {
+                    *disk_cache_size -= evicted.size_bytes;
+                    tracing::debug!(
+                        "Evicted cache entry for {}/{} (size {}MB)",
+                        oldest_key.0,
+                        oldest_key.1.to_filename(),
+                        evicted.size_bytes / (1024 * 1024)
+                    );
+                }
+            } else {
+                break;
+            }
+        }
+
+        // Add new entry if there's room
+        if *disk_cache_size + size <= self.max_cache_size_bytes {
+            let entry = CacheEntry {
+                data,
+                size_bytes: size,
+                cached_at: Utc::now(),
+            };
+
+            disk_cache.insert(key.clone(), entry);
+            *disk_cache_size += size;
+
+            tracing::debug!(
+                "Cached {}/{} (size {}MB, total cache {}MB/{}MB)",
+                key.0,
+                key.1.to_filename(),
+                size / (1024 * 1024),
+                *disk_cache_size / (1024 * 1024),
+                self.max_cache_size_bytes / (1024 * 1024)
+            );
+        } else {
+            tracing::warn!(
+                "Cannot cache {}/{} (size {}MB) - would exceed cache limit",
+                key.0,
+                key.1.to_filename(),
+                size / (1024 * 1024)
+            );
+        }
+    }
+
+    /// Estimate size of StockData vector
+    fn estimate_data_size(&self, data: &[StockData]) -> usize {
+        let mut size = std::mem::size_of::<Vec<StockData>>();
+        size += data.len() * std::mem::size_of::<StockData>();
+        for item in data {
+            size += item.ticker.len();
+        }
+        size
     }
 
     /// Estimate memory usage of the data store
@@ -416,6 +581,13 @@ impl DataStore {
     pub async fn get_all_ticker_names(&self) -> Vec<String> {
         let store = self.data.lock().await;
         store.keys().cloned().collect()
+    }
+
+    /// Get disk cache statistics (entries count, size, limit)
+    pub async fn get_disk_cache_stats(&self) -> (usize, usize, usize) {
+        let disk_cache = self.disk_cache.lock().await;
+        let disk_cache_size = self.disk_cache_size.lock().await;
+        (disk_cache.len(), *disk_cache_size, self.max_cache_size_bytes)
     }
 
     /// Check if cache has expired based on TTL
