@@ -535,40 +535,50 @@ impl TickerFetcher {
         // Load existing data from CSV
         let existing_data = self.read_ohlcv_from_csv(&file_path)?;
 
-        // Compare overlapping dates (3 weeks ago to 1 week ago window)
-        let three_weeks_ago = chrono::Utc::now() - chrono::Duration::days(21);
-        let one_week_ago = chrono::Utc::now() - chrono::Duration::days(7);
-
-        let recent_window: Vec<&OhlcvData> = recent_data
+        // Find the most recent date in the new data (last trading day)
+        let most_recent_date = recent_data
             .iter()
-            .filter(|d| d.time >= three_weeks_ago && d.time <= one_week_ago)
-            .collect();
+            .map(|d| d.time.date_naive())
+            .max();
 
-        let existing_window: Vec<&OhlcvData> = existing_data
-            .iter()
-            .filter(|d| d.time >= three_weeks_ago && d.time <= one_week_ago)
-            .collect();
-
-        if recent_window.len() < 2 || existing_window.len() < 2 {
-            // Insufficient data for dividend check
+        if most_recent_date.is_none() || recent_data.len() < 2 {
+            // Not enough data to check
             return Ok(false);
         }
 
-        // Check price ratios for matching dates
-        for recent_row in recent_window.iter().take(3) {
-            for existing_row in &existing_window {
+        let last_day = most_recent_date.unwrap();
+
+        // Get OLD days only (exclude the last/most recent day which can still be changing)
+        let old_days_new: Vec<&OhlcvData> = recent_data
+            .iter()
+            .filter(|d| d.time.date_naive() < last_day)
+            .collect();
+
+        let old_days_existing: Vec<&OhlcvData> = existing_data
+            .iter()
+            .filter(|d| d.time.date_naive() < last_day)
+            .collect();
+
+        if old_days_new.is_empty() || old_days_existing.is_empty() {
+            // No old days to compare (only have today's data)
+            return Ok(false);
+        }
+
+        // Check price ratios for matching dates in OLD days only
+        for new_row in &old_days_new {
+            for existing_row in &old_days_existing {
                 // Compare dates (same day)
-                if recent_row.time.date_naive() == existing_row.time.date_naive() {
-                    if existing_row.close > 0.0 && recent_row.close > 0.0 {
-                        let ratio = existing_row.close / recent_row.close;
+                if new_row.time.date_naive() == existing_row.time.date_naive() {
+                    if existing_row.close > 0.0 && new_row.close > 0.0 {
+                        let ratio = existing_row.close / new_row.close;
 
                         // 2% threshold for dividend detection
                         if ratio > 1.02 {
                             let div_elapsed = div_start.elapsed();
                             println!(
-                                "   - 💰 DIVIDEND DETECTED for {} on {}: ratio={:.4} (check took {:.3}s)",
+                                "   - 💰 DIVIDEND DETECTED for {} on {} (old day): ratio={:.4} (check took {:.3}s)",
                                 ticker,
-                                recent_row.time.format("%Y-%m-%d"),
+                                new_row.time.format("%Y-%m-%d"),
                                 ratio,
                                 div_elapsed.as_secs_f64()
                             );
