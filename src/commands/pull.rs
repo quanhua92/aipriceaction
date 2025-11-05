@@ -65,6 +65,41 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
                         stats.records,
                         stats.duration.as_secs_f64()
                     );
+
+                    // Detailed breakdown
+                    println!("   ⏱️  Read CSVs:     {:.2}s ({:.1}%)",
+                        stats.read_time.as_secs_f64(),
+                        (stats.read_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
+                    );
+                    println!("   ⏱️  Calculate MAs: {:.2}s ({:.1}%)",
+                        stats.ma_time.as_secs_f64(),
+                        (stats.ma_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
+                    );
+                    println!("   ⏱️  Money flows:   {:.2}s ({:.1}%)",
+                        stats.money_flow_time.as_secs_f64(),
+                        (stats.money_flow_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
+                    );
+                    println!("   ⏱️  Trend scores:  {:.2}s ({:.1}%)",
+                        stats.trend_score_time.as_secs_f64(),
+                        (stats.trend_score_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
+                    );
+                    println!("   ⏱️  Write CSVs:    {:.2}s ({:.1}%)",
+                        stats.write_time.as_secs_f64(),
+                        (stats.write_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
+                    );
+
+                    // Throughput metrics
+                    let records_per_sec = stats.records as f64 / stats.duration.as_secs_f64();
+                    let mb_written = stats.total_bytes_written as f64 / (1024.0 * 1024.0);
+                    let write_throughput = mb_written / stats.write_time.as_secs_f64();
+
+                    println!("   📊 Throughput:    {:.0} records/sec",
+                        records_per_sec
+                    );
+                    println!("   💾 Data written:  {:.2} MB ({:.2} MB/s)",
+                        mb_written,
+                        write_throughput
+                    );
                 }
             }
             Err(e) => {

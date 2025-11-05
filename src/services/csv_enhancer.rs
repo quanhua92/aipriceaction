@@ -22,6 +22,12 @@ pub struct EnhancementStats {
     pub tickers: usize,
     pub records: usize,
     pub duration: Duration,
+    pub read_time: Duration,
+    pub ma_time: Duration,
+    pub money_flow_time: Duration,
+    pub trend_score_time: Duration,
+    pub write_time: Duration,
+    pub total_bytes_written: u64,
 }
 
 /// Read all OHLCV data for an interval from per-ticker CSV files
@@ -290,8 +296,9 @@ fn write_enhanced_csv(
     data: &HashMap<String, Vec<StockData>>,
     interval: Interval,
     market_data_dir: &Path,
-) -> Result<usize, Error> {
+) -> Result<(usize, u64), Error> {
     let mut total_record_count = 0;
+    let mut total_bytes_written = 0u64;
 
     for (ticker, ticker_data) in data {
         let ticker_dir = market_data_dir.join(ticker);
@@ -338,9 +345,15 @@ fn write_enhanced_csv(
         }
 
         writer.flush().map_err(|e| Error::Io(format!("Failed to flush {}: {}", csv_path.display(), e)))?;
+
+        // Estimate bytes written (rough approximation: avg 65 bytes per 16-col record)
+        let file_size = std::fs::metadata(&csv_path)
+            .map(|m| m.len())
+            .unwrap_or(0);
+        total_bytes_written += file_size;
     }
 
-    Ok(total_record_count)
+    Ok((total_record_count, total_bytes_written))
 }
 
 /// Main entry point: Enhance CSV for a specific interval
@@ -350,14 +363,22 @@ pub fn enhance_interval(
 ) -> Result<EnhancementStats, Error> {
     let start_time = Instant::now();
 
-    // Read raw OHLCV data
+    // Step 1: Read raw OHLCV data
+    let read_start = Instant::now();
     let mut data = read_interval_data(interval, market_data_dir)?;
+    let read_time = read_start.elapsed();
 
     if data.is_empty() {
         return Ok(EnhancementStats {
             tickers: 0,
             records: 0,
             duration: start_time.elapsed(),
+            read_time: Duration::ZERO,
+            ma_time: Duration::ZERO,
+            money_flow_time: Duration::ZERO,
+            trend_score_time: Duration::ZERO,
+            write_time: Duration::ZERO,
+            total_bytes_written: 0,
         });
     }
 
@@ -366,21 +387,35 @@ pub fn enhance_interval(
     // Extract VNINDEX data for volume scaling
     let vnindex_data = data.get("VNINDEX").cloned();
 
-    // Step 1: Calculate moving averages and scores
+    // Step 2: Calculate moving averages and scores
+    let ma_start = Instant::now();
     calculate_ticker_mas(&mut data);
+    let ma_time = ma_start.elapsed();
 
-    // Step 2: Calculate money flows with market normalization
+    // Step 3: Calculate money flows with market normalization
+    let money_flow_start = Instant::now();
     calculate_market_money_flows(&mut data, vnindex_data.as_ref());
+    let money_flow_time = money_flow_start.elapsed();
 
-    // Step 3: Calculate trend scores
+    // Step 4: Calculate trend scores
+    let trend_score_start = Instant::now();
     calculate_trend_scores(&mut data);
+    let trend_score_time = trend_score_start.elapsed();
 
-    // Step 4: Write enhanced CSV back to per-ticker directories
-    let record_count = write_enhanced_csv(&data, interval, market_data_dir)?;
+    // Step 5: Write enhanced CSV back to per-ticker directories
+    let write_start = Instant::now();
+    let (record_count, total_bytes_written) = write_enhanced_csv(&data, interval, market_data_dir)?;
+    let write_time = write_start.elapsed();
 
     Ok(EnhancementStats {
         tickers: ticker_count,
         records: record_count,
         duration: start_time.elapsed(),
+        read_time,
+        ma_time,
+        money_flow_time,
+        trend_score_time,
+        write_time,
+        total_bytes_written,
     })
 }
