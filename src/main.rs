@@ -1,6 +1,5 @@
 use aipriceaction::cli;
 
-#[tokio::main]
-async fn main() {
-    cli::run().await;
+fn main() {
+    cli::run();
 }

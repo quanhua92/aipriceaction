@@ -56,7 +56,7 @@ pub enum Commands {
     Status,
 }
 
-pub async fn run() {
+pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
@@ -75,7 +75,11 @@ pub async fn run() {
             commands::pull::run(intervals, full, resume_days, start_date, debug, batch_size);
         }
         Commands::Serve { port } => {
-            commands::serve::run(port).await;
+            // Serve needs async runtime - create one just for this command
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                commands::serve::run(port).await;
+            });
         }
         Commands::Status => {
             commands::status::run();
