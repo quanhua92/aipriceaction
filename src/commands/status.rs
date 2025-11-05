@@ -40,7 +40,7 @@ fn show_status() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("\n═══════════════════════════════════════════════════════════\n");
     println!("💡 Tip: All {} tickers stored in market_data/ directory", stats.total_tickers);
-    println!("   Each ticker has: daily.csv, 1h.csv, 1m.csv");
+    println!("   Each ticker has: 1D.csv, 1H.csv, 1m.csv");
 
     Ok(())
 }

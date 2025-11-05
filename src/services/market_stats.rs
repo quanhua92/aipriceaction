@@ -1,3 +1,4 @@
+use crate::models::Interval;
 use std::fs;
 use std::path::Path;
 
@@ -58,9 +59,9 @@ pub fn get_ticker_info(ticker: &str) -> Result<TickerInfo, Box<dyn std::error::E
 
     Ok(TickerInfo {
         ticker: ticker.to_string(),
-        daily: read_timeframe_info(&ticker_path.join("daily.csv"))?,
-        hourly: read_timeframe_info(&ticker_path.join("1h.csv"))?,
-        minute: read_timeframe_info(&ticker_path.join("1m.csv"))?,
+        daily: read_timeframe_info(&ticker_path.join(Interval::Daily.to_filename()))?,
+        hourly: read_timeframe_info(&ticker_path.join(Interval::Hourly.to_filename()))?,
+        minute: read_timeframe_info(&ticker_path.join(Interval::Minute.to_filename()))?,
     })
 }
 

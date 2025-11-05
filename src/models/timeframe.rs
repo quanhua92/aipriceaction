@@ -51,15 +51,15 @@ impl Timeframe {
     /// Get the filename for this timeframe in the new ticker-first structure
     ///
     /// # Returns
-    /// Filename like "daily.csv", "1h.csv", "5m.csv"
+    /// Filename like "1D.csv", "1H.csv", "5m.csv"
     pub fn to_filename(&self) -> &'static str {
         match self {
             Timeframe::Minute1 => "1m.csv",
             Timeframe::Minute5 => "5m.csv",
             Timeframe::Minute15 => "15m.csv",
             Timeframe::Minute30 => "30m.csv",
-            Timeframe::Hour1 => "1h.csv",
-            Timeframe::Day1 => "daily.csv",
+            Timeframe::Hour1 => "1H.csv",
+            Timeframe::Day1 => "1D.csv",
             Timeframe::Week1 => "weekly.csv",
             Timeframe::Month1 => "monthly.csv",
         }
@@ -71,14 +71,14 @@ impl Timeframe {
     /// * `ticker` - The ticker symbol (e.g., "VCB", "FPT", "VNINDEX")
     ///
     /// # Returns
-    /// Path like "market_data/VCB/daily.csv"
+    /// Path like "market_data/VCB/1D.csv"
     ///
     /// # Example
     /// ```
     /// use aipriceaction::models::Timeframe;
     ///
     /// let path = Timeframe::Day1.get_data_path("VCB");
-    /// assert_eq!(path, "market_data/VCB/daily.csv");
+    /// assert_eq!(path, "market_data/VCB/1D.csv");
     /// ```
     pub fn get_data_path(&self, ticker: &str) -> String {
         format!("market_data/{}/{}", ticker, self.to_filename())

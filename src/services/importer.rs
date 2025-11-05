@@ -242,7 +242,7 @@ fn import_ticker(
     // Import daily data
     if import_daily {
         let daily_source = source_path.join("market_data").join(format!("{}.csv", ticker));
-        let daily_dest = ticker_dir.join("daily.csv");
+        let daily_dest = ticker_dir.join(Interval::Daily.to_filename());
 
         // If force mode, delete existing file
         if force && daily_dest.exists() {
@@ -273,7 +273,7 @@ fn import_ticker(
     // Import hourly data
     if import_hourly {
     let hourly_source = source_path.join("market_data_hour").join(format!("{}.csv", ticker));
-    let hourly_dest = ticker_dir.join("1h.csv");
+    let hourly_dest = ticker_dir.join(Interval::Hourly.to_filename());
 
     // If force mode, delete existing file
     if force && hourly_dest.exists() {
@@ -304,7 +304,7 @@ fn import_ticker(
     // Import minute data
     if import_minute {
     let minute_source = source_path.join("market_data_minutes").join(format!("{}.csv", ticker));
-    let minute_dest = ticker_dir.join("1m.csv");
+    let minute_dest = ticker_dir.join(Interval::Minute.to_filename());
 
     // If force mode, delete existing file
     if force && minute_dest.exists() {

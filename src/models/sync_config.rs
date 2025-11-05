@@ -5,9 +5,9 @@ use std::time::Duration;
 /// Interval types for market data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Interval {
-    /// Daily data -> daily.csv
+    /// Daily data -> 1D.csv
     Daily,
-    /// Hourly data -> 1h.csv
+    /// Hourly data -> 1H.csv
     Hourly,
     /// Minute data -> 1m.csv
     Minute,
@@ -23,11 +23,11 @@ impl Interval {
         }
     }
 
-    /// Convert to filename (daily.csv, 1h.csv, 1m.csv)
+    /// Convert to filename (1D.csv, 1H.csv, 1m.csv)
     pub fn to_filename(&self) -> &'static str {
         match self {
-            Interval::Daily => "daily.csv",
-            Interval::Hourly => "1h.csv",
+            Interval::Daily => "1D.csv",
+            Interval::Hourly => "1H.csv",
             Interval::Minute => "1m.csv",
         }
     }
@@ -328,8 +328,8 @@ mod tests {
 
     #[test]
     fn test_interval_to_filename() {
-        assert_eq!(Interval::Daily.to_filename(), "daily.csv");
-        assert_eq!(Interval::Hourly.to_filename(), "1h.csv");
+        assert_eq!(Interval::Daily.to_filename(), "1D.csv");
+        assert_eq!(Interval::Hourly.to_filename(), "1H.csv");
         assert_eq!(Interval::Minute.to_filename(), "1m.csv");
     }
 
