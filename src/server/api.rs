@@ -11,9 +11,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::{debug, info, warn, instrument};
 
-/// Legacy stock data format for backward compatibility with production API
+/// Stock data response with VCI time format and optional technical indicators
 #[derive(Debug, Serialize)]
-pub struct LegacyStockData {
+pub struct StockDataResponse {
     /// Time in YYYY-MM-DD format (daily) or YYYY-MM-DD HH:MM:SS format (intraday)
     pub time: String,
     pub open: f64,
@@ -22,6 +22,26 @@ pub struct LegacyStockData {
     pub close: f64,
     pub volume: u64,
     pub symbol: String,
+
+    // Technical indicators (only included when available)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma10: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma20: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma50: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma10_score: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma20_score: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma50_score: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub money_flow: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dollar_flow: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trend_score: Option<f64>,
 }
 
 /// Query parameters for /tickers endpoint
@@ -39,11 +59,8 @@ pub struct TickerQuery {
     /// End date filter (YYYY-MM-DD)
     pub end_date: Option<String>,
 
-    /// Limit number of records per ticker (most recent first)
-    pub limit: Option<usize>,
-
-    /// Return legacy format (production API compatibility) - default: true
-    #[serde(default = "default_legacy")]
+    /// Legacy price format: divide by 1000 for old proxy compatibility - default: false
+    #[serde(default)]
     pub legacy: bool,
 
     /// Response format: json (default) or csv
@@ -51,21 +68,8 @@ pub struct TickerQuery {
     pub format: String,
 }
 
-fn default_legacy() -> bool {
-    true // Default to legacy format for backward compatibility
-}
-
 fn default_format() -> String {
     "json".to_string() // Default to JSON format
-}
-
-/// Response structure for /tickers endpoint
-#[derive(Debug, Serialize)]
-pub struct TickersResponse {
-    pub data: HashMap<String, Vec<crate::models::StockData>>,
-    pub interval: String,
-    pub ticker_count: usize,
-    pub total_records: usize,
 }
 
 /// GET /tickers - Query stock data from in-memory store
@@ -137,6 +141,17 @@ pub async fn get_tickers_handler(
         None => None,
     };
 
+    // Default behavior: if no dates specified, return today only (production-compatible)
+    let (start_date_filter, end_date_filter) = if start_date_filter.is_none() && end_date_filter.is_none() {
+        // Get today only to match production API behavior
+        let now = Utc::now();
+        let start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+        let end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+        (Some(start), Some(end))
+    } else {
+        (start_date_filter, end_date_filter)
+    };
+
     // Query data from in-memory store
     let data_guard = data_state.lock().await;
     let mut result_data: HashMap<String, Vec<crate::models::StockData>> = HashMap::new();
@@ -151,7 +166,7 @@ pub async fn get_tickers_handler(
         if let Some(ticker_intervals) = data_guard.get(symbol) {
             if let Some(interval_data) = ticker_intervals.get(&interval) {
                 // Apply date filtering
-                let mut filtered: Vec<_> = interval_data.iter()
+                let filtered: Vec<_> = interval_data.iter()
                     .filter(|d| {
                         let start_ok = start_date_filter.map_or(true, |start| d.time >= start);
                         let end_ok = end_date_filter.map_or(true, |end| d.time <= end);
@@ -159,14 +174,6 @@ pub async fn get_tickers_handler(
                     })
                     .cloned()
                     .collect();
-
-                // Apply limit (take most recent records)
-                if let Some(limit) = params.limit {
-                    if filtered.len() > limit {
-                        // Take the last N records (most recent)
-                        filtered = filtered.into_iter().rev().take(limit).rev().collect();
-                    }
-                }
 
                 if !filtered.is_empty() {
                     result_data.insert(symbol.clone(), filtered);
@@ -185,7 +192,7 @@ pub async fn get_tickers_handler(
         total_records,
         interval = %interval.to_filename(),
         symbols = ?symbols_filter,
-        legacy = params.legacy,
+        legacy_prices = params.legacy,
         format = %params.format,
         "Returning ticker data"
     );
@@ -199,53 +206,61 @@ pub async fn get_tickers_handler(
         return generate_csv_response(result_data, interval, params.legacy, headers);
     }
 
-    // Return JSON format based on legacy parameter
-    if params.legacy {
-        // Legacy format: unwrapped HashMap with string dates and "symbol" field
-        let legacy_data: HashMap<String, Vec<LegacyStockData>> = result_data
-            .into_iter()
-            .map(|(ticker, data)| {
-                let legacy_records = data.into_iter().map(|d| {
-                    let time_str = match interval {
-                        Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
-                        Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%d %H:%M:%S").to_string(),
-                    };
-                    LegacyStockData {
-                        time: time_str,
-                        open: d.open,
-                        high: d.high,
-                        low: d.low,
-                        close: d.close,
-                        volume: d.volume,
-                        symbol: d.ticker,
-                    }
-                }).collect();
-                (ticker, legacy_records)
-            })
-            .collect();
+    // Helper function to check if ticker is a market index
+    let is_index = |ticker: &str| -> bool {
+        ticker == "VNINDEX" || ticker == "VN30" || ticker.starts_with("VN")
+    };
 
-        (StatusCode::OK, headers, Json(legacy_data)).into_response()
-    } else {
-        // Enhanced format: wrapped with metadata and technical indicators
-        let response = TickersResponse {
-            data: result_data,
-            interval: interval.to_vci_format().to_string(),
-            ticker_count,
-            total_records,
-        };
+    // Return JSON format - always use HashMap with VCI time format and technical indicators
+    let response_data: HashMap<String, Vec<StockDataResponse>> = result_data
+        .into_iter()
+        .map(|(ticker, data)| {
+            let records = data.into_iter().map(|d| {
+                let time_str = match interval {
+                    Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
+                    Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                };
 
-        (StatusCode::OK, headers, Json(response)).into_response()
-    }
+                // Apply legacy price format if requested (divide by 1000 for stocks only)
+                let price_divisor = if params.legacy && !is_index(&ticker) { 1000.0 } else { 1.0 };
+
+                StockDataResponse {
+                    time: time_str,
+                    open: d.open / price_divisor,
+                    high: d.high / price_divisor,
+                    low: d.low / price_divisor,
+                    close: d.close / price_divisor,
+                    volume: d.volume,
+                    symbol: d.ticker,
+                    ma10: d.ma10.map(|v| v / price_divisor),
+                    ma20: d.ma20.map(|v| v / price_divisor),
+                    ma50: d.ma50.map(|v| v / price_divisor),
+                    ma10_score: d.ma10_score,
+                    ma20_score: d.ma20_score,
+                    ma50_score: d.ma50_score,
+                    money_flow: d.money_flow,
+                    dollar_flow: d.dollar_flow,
+                    trend_score: d.trend_score,
+                }
+            }).collect();
+            (ticker, records)
+        })
+        .collect();
+
+    (StatusCode::OK, headers, Json(response_data)).into_response()
 }
 
 /// Generate CSV response from stock data
 fn generate_csv_response(
     data: HashMap<String, Vec<crate::models::StockData>>,
     interval: Interval,
-    legacy: bool,
+    legacy_prices: bool,
     mut headers: HeaderMap,
 ) -> Response {
-    let ticker_field = if legacy { "symbol" } else { "ticker" };
+    // Helper function to check if ticker is a market index
+    let is_index = |ticker: &str| -> bool {
+        ticker == "VNINDEX" || ticker == "VN30" || ticker.starts_with("VN")
+    };
 
     // Build CSV content
     let mut csv_content = String::new();
@@ -259,16 +274,12 @@ fn generate_csv_response(
 
     if has_indicators {
         // Full header with technical indicators
-        csv_content.push_str(&format!(
-            "{},time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score\n",
-            ticker_field
-        ));
+        csv_content.push_str(
+            "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score\n"
+        );
     } else {
         // Basic header without technical indicators
-        csv_content.push_str(&format!(
-            "{},time,open,high,low,close,volume\n",
-            ticker_field
-        ));
+        csv_content.push_str("symbol,time,open,high,low,close,volume\n");
     }
 
     // Add data rows - sort by ticker for consistency
@@ -277,6 +288,9 @@ fn generate_csv_response(
 
     for ticker in tickers {
         if let Some(records) = data.get(&ticker) {
+            // Determine price divisor for this ticker
+            let price_divisor = if legacy_prices && !is_index(&ticker) { 1000.0 } else { 1.0 };
+
             for record in records {
                 let time_str = match interval {
                     Interval::Daily => record.time.format("%Y-%m-%d").to_string(),
@@ -289,14 +303,14 @@ fn generate_csv_response(
                         "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                         ticker,
                         time_str,
-                        record.open,
-                        record.high,
-                        record.low,
-                        record.close,
+                        record.open / price_divisor,
+                        record.high / price_divisor,
+                        record.low / price_divisor,
+                        record.close / price_divisor,
                         record.volume,
-                        record.ma10.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma20.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma50.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma10.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
+                        record.ma20.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
+                        record.ma50.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
                         record.ma10_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma20_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma50_score.map(|v| v.to_string()).unwrap_or_default(),
@@ -310,10 +324,10 @@ fn generate_csv_response(
                         "{},{},{},{},{},{},{}\n",
                         ticker,
                         time_str,
-                        record.open,
-                        record.high,
-                        record.low,
-                        record.close,
+                        record.open / price_divisor,
+                        record.high / price_divisor,
+                        record.low / price_divisor,
+                        record.close / price_divisor,
                         record.volume,
                     ));
                 }

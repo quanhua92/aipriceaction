@@ -1,4 +1,5 @@
 pub mod api;
+pub mod legacy;
 
 use crate::services::{SharedDataStore, SharedHealthStats};
 use axum::{extract::FromRef, routing::get, Router};
@@ -61,12 +62,14 @@ pub async fn serve(
     tracing::info!("  GET /tickers?symbol=VCB&interval=1D&start_date=2024-01-01");
     tracing::info!("  GET /health");
     tracing::info!("  GET /tickers/group");
+    tracing::info!("  GET /raw/* (legacy GitHub proxy)");
 
     // Build router with routes
     let app = Router::new()
         .route("/tickers", get(api::get_tickers_handler))
         .route("/health", get(api::health_handler))
         .route("/tickers/group", get(api::get_ticker_groups_handler))
+        .route("/raw/{*path}", get(legacy::raw_proxy_handler))
         .layer(cors)
         .with_state(app_state);
 
