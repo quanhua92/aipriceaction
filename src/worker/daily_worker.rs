@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::utils::get_market_data_dir;
 use chrono::Utc;
 use std::path::Path;
 use std::time::Duration;
@@ -20,7 +21,7 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
     );
 
     let mut iteration_count = 0u64;
-    let market_data_dir = Path::new("market_data");
+    let market_data_dir = get_market_data_dir();
 
     loop {
         iteration_count += 1;
@@ -34,7 +35,7 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
         );
 
         // Step 0: Validate and repair CSV files (corruption recovery)
-        match validate_and_repair_interval(Interval::Daily, market_data_dir) {
+        match validate_and_repair_interval(Interval::Daily, &market_data_dir) {
             Ok(reports) => {
                 if !reports.is_empty() {
                     warn!(
@@ -76,7 +77,7 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
 
         // Step 2: Enhance CSV files with technical indicators
         info!(iteration = iteration_count, "Daily worker: Enhancing CSV");
-        match csv_enhancer::enhance_interval(Interval::Daily, market_data_dir) {
+        match csv_enhancer::enhance_interval(Interval::Daily, &market_data_dir) {
             Ok(stats) => {
                 info!(
                     iteration = iteration_count,

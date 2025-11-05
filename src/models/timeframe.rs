@@ -1,3 +1,4 @@
+use crate::utils::get_market_data_dir;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -71,17 +72,21 @@ impl Timeframe {
     /// * `ticker` - The ticker symbol (e.g., "VCB", "FPT", "VNINDEX")
     ///
     /// # Returns
-    /// Path like "market_data/VCB/1D.csv"
+    /// Path like "market_data/VCB/1D.csv" (or custom path from MARKET_DATA_DIR env var)
     ///
     /// # Example
     /// ```
     /// use aipriceaction::models::Timeframe;
     ///
     /// let path = Timeframe::Day1.get_data_path("VCB");
-    /// assert_eq!(path, "market_data/VCB/1D.csv");
+    /// // Returns path based on MARKET_DATA_DIR env var, defaults to "market_data/VCB/1D.csv"
     /// ```
     pub fn get_data_path(&self, ticker: &str) -> String {
-        format!("market_data/{}/{}", ticker, self.to_filename())
+        get_market_data_dir()
+            .join(ticker)
+            .join(self.to_filename())
+            .display()
+            .to_string()
     }
 
     /// Get all available timeframes

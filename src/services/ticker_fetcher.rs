@@ -1,12 +1,11 @@
 use crate::error::Error;
 use crate::models::{Interval, TickerCategory};
 use crate::services::vci::{OhlcvData, VciClient};
+use crate::utils::get_market_data_dir;
 use chrono::{Datelike, NaiveDate};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration as StdDuration;
-
-const MARKET_DATA_DIR: &str = "market_data";
 
 /// Ticker data fetcher using VCI client
 pub struct TickerFetcher {
@@ -595,7 +594,7 @@ impl TickerFetcher {
 
     /// Get file path for ticker data
     fn get_ticker_file_path(&self, ticker: &str, interval: Interval) -> PathBuf {
-        Path::new(MARKET_DATA_DIR)
+        get_market_data_dir()
             .join(ticker)
             .join(interval.to_filename())
     }

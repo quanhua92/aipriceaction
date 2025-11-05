@@ -1,4 +1,5 @@
 use crate::models::Interval;
+use crate::utils::get_market_data_dir;
 use std::fs;
 use std::path::Path;
 
@@ -29,7 +30,7 @@ pub struct TimeframeInfo {
 
 /// Get overall market data statistics
 pub fn get_market_stats() -> Result<MarketStats, Box<dyn std::error::Error>> {
-    let market_data_path = Path::new("market_data");
+    let market_data_path = get_market_data_dir();
 
     if !market_data_path.exists() {
         return Ok(MarketStats {
@@ -51,7 +52,7 @@ pub fn get_market_stats() -> Result<MarketStats, Box<dyn std::error::Error>> {
 
 /// Get detailed information for a specific ticker
 pub fn get_ticker_info(ticker: &str) -> Result<TickerInfo, Box<dyn std::error::Error>> {
-    let ticker_path = Path::new("market_data").join(ticker);
+    let ticker_path = get_market_data_dir().join(ticker);
 
     if !ticker_path.exists() {
         return Err(format!("Ticker '{}' not found", ticker).into());

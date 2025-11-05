@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Single node deployment
+  aipriceaction:
+    build: .
+    container_name: aipriceaction
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount market_data directory for persistent storage
+      - ./market_data:/app/market_data
+      # ticker_group.json is already copied in Dockerfile
+    environment:
+      - RUST_LOG=info
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Production deployment using pre-built image
+  # Uncomment to use Docker Hub image instead of building locally
+  # aipriceaction-prod:
+  #   image: quanhua92/aipriceaction:latest
+  #   platform: linux/amd64
+  #   container_name: aipriceaction-prod
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./market_data:/app/market_data
+  #     - ./ticker_group.json:/app/ticker_group.json:ro
+  #   environment:
+  #     - RUST_LOG=info
+  #     - PORT=3000
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 40s

@@ -2,13 +2,13 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
+use crate::utils::get_market_data_dir;
 use chrono::{DateTime, NaiveDate, Utc};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-const MARKET_DATA_DIR: &str = "market_data";
 const TICKER_GROUP_FILE: &str = "ticker_group.json";
 
 /// High-level data synchronization orchestrator
@@ -343,7 +343,7 @@ impl DataSync {
             self.stats.updated += 1;
 
             // Delete ALL CSV files for this ticker (1D.csv, 1H.csv, 1m.csv)
-            let ticker_dir = Path::new(MARKET_DATA_DIR).join(ticker);
+            let ticker_dir = get_market_data_dir().join(ticker);
             for interval_type in [Interval::Daily, Interval::Hourly, Interval::Minute] {
                 let csv_path = ticker_dir.join(interval_type.to_filename());
                 if csv_path.exists() {
@@ -431,7 +431,7 @@ impl DataSync {
         }
 
         // Create ticker directory
-        let ticker_dir = Path::new(MARKET_DATA_DIR).join(ticker);
+        let ticker_dir = get_market_data_dir().join(ticker);
         fs::create_dir_all(&ticker_dir)
             .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
 
@@ -720,7 +720,7 @@ impl DataSync {
 
     /// Get file path for ticker data
     fn get_ticker_file_path(&self, ticker: &str, interval: Interval) -> PathBuf {
-        Path::new(MARKET_DATA_DIR)
+        get_market_data_dir()
             .join(ticker)
             .join(interval.to_filename())
     }

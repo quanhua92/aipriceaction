@@ -48,9 +48,20 @@ pub async fn serve(
         health_stats: shared_health_stats,
     };
 
-    // Configure CORS
+    // Configure CORS - allow specific origins for better security
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin([
+            "https://aipriceaction.com".parse().unwrap(),
+            "https://www.aipriceaction.com".parse().unwrap(),
+            "http://localhost:3000".parse().unwrap(),
+            "http://localhost:5173".parse().unwrap(), // Vite dev server
+            "http://127.0.0.1:3000".parse().unwrap(),
+            "http://127.0.0.1:5173".parse().unwrap(), // Vite dev server
+            "http://100.121.116.69:9876".parse().unwrap(), // Internal network
+            "http://100.121.116.69:5173".parse().unwrap(), // Internal network
+            "http://192.168.1.13:5173".parse().unwrap(), // Local network
+            "http://192.168.1.13:9876".parse().unwrap(), // Local network
+        ])
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,

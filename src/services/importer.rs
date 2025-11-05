@@ -1,5 +1,6 @@
 use crate::models::{Interval, TickerGroups};
 use crate::services::{csv_parser, csv_enhancer};
+use crate::utils::get_market_data_dir;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -104,7 +105,7 @@ pub fn import_legacy(source_path: &Path, intervals: String, force: bool) -> Resu
     // Phase 2: Enhance CSVs with technical indicators
     println!("\n🔧 Enhancing CSVs with technical indicators...");
     let enhancement_start = Instant::now();
-    let market_data_dir = Path::new("market_data");
+    let market_data_dir = get_market_data_dir();
 
     let mut intervals_to_enhance = Vec::new();
     if import_daily {
@@ -119,7 +120,7 @@ pub fn import_legacy(source_path: &Path, intervals: String, force: bool) -> Resu
 
     for interval in intervals_to_enhance {
         print!("   📊 Enhancing {} data... ", interval.to_filename().trim_end_matches(".csv"));
-        match csv_enhancer::enhance_interval(interval, market_data_dir) {
+        match csv_enhancer::enhance_interval(interval, &market_data_dir) {
             Ok(stats) => {
                 println!("✅ {} tickers, {} records ({:.2}s)",
                     stats.tickers, stats.records, stats.duration.as_secs_f64());
@@ -236,7 +237,7 @@ fn import_ticker(
     };
 
     // Create ticker directory in market_data
-    let ticker_dir = PathBuf::from("market_data").join(ticker);
+    let ticker_dir = get_market_data_dir().join(ticker);
     fs::create_dir_all(&ticker_dir)?;
 
     // Import daily data

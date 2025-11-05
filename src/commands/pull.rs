@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, csv_enhancer, validate_and_repair_interval};
+use crate::utils::get_market_data_dir;
 use std::path::Path;
 
 pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
@@ -41,11 +42,11 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
 
     // Step 0: Validate and repair CSV files (recovery step)
     println!("\n🔍 Validating CSV files for corruption...");
-    let market_data_dir = Path::new("market_data");
+    let market_data_dir = get_market_data_dir();
     let mut all_corrupted_tickers = Vec::new();
 
     for interval in &intervals {
-        match validate_and_repair_interval(*interval, market_data_dir) {
+        match validate_and_repair_interval(*interval, &market_data_dir) {
             Ok(reports) => {
                 if !reports.is_empty() {
                     println!("\n⚠️  Found {} corrupted {} files:", reports.len(), interval.to_filename());
@@ -117,10 +118,10 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
 
     // Enhance CSV files with indicators
     println!("\n📊 Enhancing CSV files with indicators...");
-    let market_data_dir = Path::new("market_data");
+    let market_data_dir = get_market_data_dir();
 
     for interval in &synced_intervals {
-        match csv_enhancer::enhance_interval(*interval, market_data_dir) {
+        match csv_enhancer::enhance_interval(*interval, &market_data_dir) {
             Ok(stats) => {
                 if stats.records > 0 {
                     println!("✅ {} enhanced: {} tickers, {} records in {:.2}s",

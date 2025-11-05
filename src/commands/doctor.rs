@@ -1,4 +1,5 @@
 use crate::models::Interval;
+use crate::utils::get_market_data_dir;
 use chrono::NaiveDate;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -28,7 +29,7 @@ struct FileReport {
 pub fn run() {
     println!("🔍 Running health check on market_data...\n");
 
-    let market_data_dir = Path::new("market_data");
+    let market_data_dir = get_market_data_dir();
     if !market_data_dir.exists() {
         eprintln!("❌ Error: market_data directory not found");
         std::process::exit(1);
