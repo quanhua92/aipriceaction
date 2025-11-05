@@ -369,7 +369,7 @@ impl DataSync {
         merged
     }
 
-    /// Save ticker data to CSV file
+    /// Save ticker data to CSV file (append-only for minimal I/O)
     fn save_ticker_data(
         &self,
         ticker: &str,
@@ -388,38 +388,158 @@ impl DataSync {
         // Get file path
         let file_path = ticker_dir.join(interval.to_filename());
 
-        // Write CSV
-        let mut wtr = csv::Writer::from_path(&file_path)
-            .map_err(|e| Error::Io(format!("Failed to create CSV writer: {}", e)))?;
+        // Check if file exists and what format it has
+        let file_exists = file_path.exists();
+        let is_enhanced = if file_exists {
+            self.check_if_enhanced(&file_path)?
+        } else {
+            false
+        };
 
-        // Write header
-        wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
-            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+        if !file_exists {
+            // New file - write header + all data
+            let mut wtr = csv::Writer::from_path(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to create CSV writer: {}", e)))?;
 
-        // Write data rows (API values are already in correct format - store as-is)
-        for row in data {
-            // Format timestamp based on interval
-            let time_str = match interval {
-                Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
-                Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
-            };
+            wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
+                .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
 
-            wtr.write_record(&[
-                ticker,
-                &time_str,
-                &format!("{:.2}", row.open),
-                &format!("{:.2}", row.high),
-                &format!("{:.2}", row.low),
-                &format!("{:.2}", row.close),
-                &row.volume.to_string(),
-            ])
-            .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+            for row in data {
+                let time_str = match interval {
+                    Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
+                    Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                };
+
+                wtr.write_record(&[
+                    ticker,
+                    &time_str,
+                    &format!("{:.2}", row.open),
+                    &format!("{:.2}", row.high),
+                    &format!("{:.2}", row.low),
+                    &format!("{:.2}", row.close),
+                    &row.volume.to_string(),
+                ])
+                .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+        } else {
+            // File exists - ultra-efficient strategy:
+            // Seek backwards from end, find cutoff point, truncate there, append new data
+            // This avoids reading ANY old data!
+
+            // Calculate cutoff date based on resume_days (default 2 days)
+            let resume_days = self.config.resume_days.unwrap_or(2) as i64;
+            let cutoff_date = Utc::now() - chrono::Duration::days(resume_days);
+
+            // Find truncation point by reading file backwards
+            use std::io::{BufRead, BufReader, Seek, SeekFrom};
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to open file: {}", e)))?;
+
+            // Read file to find last line before cutoff
+            let reader = BufReader::new(&file);
+            let mut truncate_pos: Option<u64> = None;
+            let mut current_pos = 0u64;
+
+            for line_result in reader.lines() {
+                let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+                let line_len = (line.len() + 1) as u64; // +1 for newline
+
+                // Parse timestamp from line (skip header)
+                if current_pos > 0 {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let time_str = parts[1];
+                        let time = if time_str.contains(' ') {
+                            chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                                .ok()
+                                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+                        } else {
+                            chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+                                .ok()
+                                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+                        };
+
+                        if let Some(t) = time {
+                            if t >= cutoff_date {
+                                // Found cutoff - truncate here
+                                break;
+                            }
+                            // This line is before cutoff, update truncate position
+                            truncate_pos = Some(current_pos + line_len);
+                        }
+                    }
+                }
+
+                current_pos += line_len;
+            }
+
+            // Truncate file at cutoff point (or keep all if no cutoff found)
+            if let Some(pos) = truncate_pos {
+                file.set_len(pos)
+                    .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
+            }
+
+            // Seek to end and append new data (only rows >= cutoff_date)
+            file.seek(SeekFrom::End(0))
+                .map_err(|e| Error::Io(format!("Failed to seek to end: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+            for row in data.iter().filter(|r| r.time >= cutoff_date) {
+                let time_str = match interval {
+                    Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
+                    Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                };
+
+                if is_enhanced {
+                    wtr.write_record(&[
+                        ticker,
+                        &time_str,
+                        &format!("{:.2}", row.open),
+                        &format!("{:.2}", row.high),
+                        &format!("{:.2}", row.low),
+                        &format!("{:.2}", row.close),
+                        &row.volume.to_string(),
+                        "", "", "", "", "", "", "", "", "",
+                    ])
+                    .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+                } else {
+                    wtr.write_record(&[
+                        ticker,
+                        &time_str,
+                        &format!("{:.2}", row.open),
+                        &format!("{:.2}", row.high),
+                        &format!("{:.2}", row.low),
+                        &format!("{:.2}", row.close),
+                        &row.volume.to_string(),
+                    ])
+                    .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+                }
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
         }
 
-        wtr.flush()
-            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-
         Ok(())
+    }
+
+    /// Check if CSV file has enhanced columns (16 columns vs 7)
+    fn check_if_enhanced(&self, file_path: &Path) -> Result<bool, Error> {
+        let mut reader = csv::Reader::from_path(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
+
+        if let Some(headers) = reader.headers().ok() {
+            Ok(headers.len() >= 16)  // Enhanced CSVs have 16 columns
+        } else {
+            Ok(false)
+        }
     }
 
     /// Read existing data from CSV file
