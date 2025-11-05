@@ -328,11 +328,10 @@ fn write_enhanced_csv(
         ]).map_err(|e| Error::Io(format!("Failed to write header to {}: {}", csv_path.display(), e)))?;
 
         for stock_data in ticker_data {
-            // Format time based on whether it has hour/minute components
-            let time_str = if stock_data.time.hour() == 0 && stock_data.time.minute() == 0 {
-                stock_data.time.format("%Y-%m-%d").to_string()
-            } else {
-                stock_data.time.format("%Y-%m-%d %H:%M:%S").to_string()
+            // Format time based on interval type
+            let time_str = match interval {
+                Interval::Daily => stock_data.time.format("%Y-%m-%d").to_string(),
+                Interval::Hourly | Interval::Minute => stock_data.time.format("%Y-%m-%d %H:%M:%S").to_string(),
             };
 
             writer.write_record(&[
@@ -405,15 +404,23 @@ pub fn enhance_interval(
     calculate_ticker_mas(&mut data);
     let ma_time = ma_start.elapsed();
 
-    // Step 3: Calculate money flows with market normalization
+    // Step 3: Calculate money flows with market normalization (ONLY for daily interval)
     let money_flow_start = Instant::now();
-    calculate_market_money_flows(&mut data, vnindex_data.as_ref());
-    let money_flow_time = money_flow_start.elapsed();
+    let (money_flow_time, trend_score_time) = match interval {
+        Interval::Daily => {
+            calculate_market_money_flows(&mut data, vnindex_data.as_ref());
+            let mf_time = money_flow_start.elapsed();
 
-    // Step 4: Calculate trend scores
-    let trend_score_start = Instant::now();
-    calculate_trend_scores(&mut data);
-    let trend_score_time = trend_score_start.elapsed();
+            // Step 4: Calculate trend scores (only for daily)
+            let trend_score_start = Instant::now();
+            calculate_trend_scores(&mut data);
+            (mf_time, trend_score_start.elapsed())
+        },
+        Interval::Hourly | Interval::Minute => {
+            // Skip money flow and trend scores for intraday data
+            (Duration::ZERO, Duration::ZERO)
+        }
+    };
 
     // Step 5: Write enhanced CSV back to per-ticker directories
     let write_start = Instant::now();

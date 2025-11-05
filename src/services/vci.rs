@@ -401,7 +401,9 @@ impl VciClient {
 
         let interval_value = self.get_interval_value(interval)?;
         let end_timestamp = self.calculate_timestamp(end);
-        let count_back = self.calculate_count_back(start, end, interval);
+        let original_count_back = self.calculate_count_back(start, end, interval);
+        // Double countBack to fix VCI batch history bug (per legacy Python code)
+        let count_back = original_count_back * 2;
 
         let url = format!("{}chart/OHLCChart/gap-chart", self.base_url);
         let payload = serde_json::json!({
@@ -411,8 +413,8 @@ impl VciClient {
             "countBack": count_back
         });
 
-        tracing::debug!("VCI API request: interval={}, start={}, end={:?}, count_back={}, to_timestamp={}", 
-            interval, start, end, count_back, end_timestamp);
+        tracing::debug!("VCI API request: interval={}, start={}, end={:?}, original_count_back={}, count_back={} (2x), to_timestamp={}",
+            interval, start, end, original_count_back, count_back, end_timestamp);
         
         tracing::debug!("VCI API payload: {}", serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "failed to serialize".to_string()));
 

@@ -116,32 +116,42 @@ impl DataSync {
         };
         println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
 
-        // Batch fetch full history tickers (all intervals support batch API, use smaller batch size)
+        // Fetch full history tickers individually (single-ticker API for complete data)
         let full_history_start = Instant::now();
-        let full_history_results = if !category.full_history_tickers.is_empty() {
-            println!("\n🚀 Processing {} tickers needing full history...", category.full_history_tickers.len());
-            self.fetcher
-                .batch_fetch(
-                    &category.full_history_tickers,
-                    &self.config.get_effective_start_date(interval),
-                    &self.config.end_date,
-                    interval,
-                    2, // Smaller batch size for full downloads
-                    self.config.concurrent_batches,
-                )
-                .await?
-        } else {
-            if !category.full_history_tickers.is_empty() {
-                println!(
-                    "\n🚀 Full history: {} tickers (will fetch individually for {} interval)",
-                    category.full_history_tickers.len(),
-                    interval.to_vci_format()
-                );
-            }
-            HashMap::new()
-        };
+        let mut full_history_results = HashMap::new();
+
         if !category.full_history_tickers.is_empty() {
-            println!("⏱️  Full history batch fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
+            // For full history, use the interval's minimum start date (2023-09-01 for hourly/minute)
+            let full_history_start_date = interval.min_start_date();
+
+            println!(
+                "\n🚀 Processing {} tickers needing full history (single-ticker requests from {})...",
+                category.full_history_tickers.len(),
+                full_history_start_date
+            );
+
+            for ticker in &category.full_history_tickers {
+                match self.fetcher
+                    .fetch_full_history(
+                        ticker,
+                        full_history_start_date,
+                        &self.config.end_date,
+                        interval,
+                    )
+                    .await
+                {
+                    Ok(data) => {
+                        println!("   ✅ {}: {} records", ticker, data.len());
+                        full_history_results.insert(ticker.clone(), Some(data));
+                    }
+                    Err(e) => {
+                        println!("   ❌ {}: Failed - {}", ticker, e);
+                        full_history_results.insert(ticker.clone(), None);
+                    }
+                }
+            }
+
+            println!("⏱️  Full history fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
         }
 
         // Combine batch results
@@ -170,6 +180,15 @@ impl DataSync {
 
             match result {
                 Ok(data) => {
+                    // DEBUG: Log data details
+                    if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
+                        eprintln!("DEBUG [{}:{}]: API returned {} rows", ticker, interval.to_filename(), data.len());
+                        if !data.is_empty() {
+                            eprintln!("DEBUG [{}:{}]: First API row: {}", ticker, interval.to_filename(), data[0].time);
+                            eprintln!("DEBUG [{}:{}]: Last API row: {}", ticker, interval.to_filename(), data[data.len()-1].time);
+                        }
+                    }
+
                     // Save to CSV
                     let save_start = Instant::now();
                     self.save_ticker_data(ticker, &data, interval)?;
@@ -490,8 +509,20 @@ impl DataSync {
             file.seek(SeekFrom::End(0))
                 .map_err(|e| Error::Io(format!("Failed to seek to end: {}", e)))?;
 
+            // DEBUG: Log what we're about to write
+            let rows_to_write: Vec<_> = data.iter().filter(|r| r.time >= cutoff_date).collect();
+            if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
+                eprintln!("DEBUG [{}:{}]: Writing {} rows (filtered from {} total)",
+                    ticker, interval.to_filename(), rows_to_write.len(), data.len());
+                if !rows_to_write.is_empty() {
+                    eprintln!("DEBUG [{}:{}]: First row time: {}", ticker, interval.to_filename(), rows_to_write[0].time);
+                    eprintln!("DEBUG [{}:{}]: Last row time: {}", ticker, interval.to_filename(), rows_to_write[rows_to_write.len()-1].time);
+                    eprintln!("DEBUG [{}:{}]: Cutoff date: {}", ticker, interval.to_filename(), cutoff_date);
+                }
+            }
+
             let mut wtr = csv::Writer::from_writer(file);
-            for row in data.iter().filter(|r| r.time >= cutoff_date) {
+            for row in rows_to_write {
                 let time_str = match interval {
                     Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
                     Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
