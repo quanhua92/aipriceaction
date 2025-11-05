@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::DataSync;
+use crate::services::{DataSync, csv_enhancer};
+use std::path::Path;
 
 pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
     // Parse intervals
@@ -39,6 +40,7 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
     );
 
     // Run sync
+    let synced_intervals = config.intervals.clone();
     match run_sync(config, debug) {
         Ok(_) => {
             println!("\n✅ Data sync completed successfully!");
@@ -46,6 +48,28 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         Err(e) => {
             eprintln!("\n❌ Data sync failed: {}", e);
             std::process::exit(1);
+        }
+    }
+
+    // Enhance CSV files with indicators
+    println!("\n📊 Enhancing CSV files with indicators...");
+    let market_data_dir = Path::new("market_data");
+
+    for interval in &synced_intervals {
+        match csv_enhancer::enhance_interval(*interval, market_data_dir) {
+            Ok(stats) => {
+                if stats.records > 0 {
+                    println!("✅ {} enhanced: {} tickers, {} records in {:.2}s",
+                        interval.to_filename(),
+                        stats.tickers,
+                        stats.records,
+                        stats.duration.as_secs_f64()
+                    );
+                }
+            }
+            Err(e) => {
+                eprintln!("⚠️  {} enhancement failed: {}", interval.to_filename(), e);
+            }
         }
     }
 }
