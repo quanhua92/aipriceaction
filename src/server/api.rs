@@ -8,7 +8,7 @@ use axum::{
 use axum_extra::extract::Query;
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use tracing::{debug, info, warn, instrument};
 
 /// Stock data response with VCI time format and optional technical indicators
@@ -193,8 +193,8 @@ pub async fn get_tickers_handler(
         ticker == "VNINDEX" || ticker == "VN30" || ticker.starts_with("VN")
     };
 
-    // Return JSON format - always use HashMap with VCI time format and technical indicators
-    let response_data: HashMap<String, Vec<StockDataResponse>> = result_data
+    // Return JSON format - use BTreeMap for alphabetically sorted keys
+    let response_data: BTreeMap<String, Vec<StockDataResponse>> = result_data
         .into_iter()
         .map(|(ticker, data)| {
             let records = data.into_iter().map(|d| {
