@@ -91,10 +91,11 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
                 .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
 
             // Parse datetime (handles both "YYYY-MM-DD" and "YYYY-MM-DD HH:MM:SS" formats)
+            // Timestamps in CSV are already in UTC, so parse them directly as UTC
             let time = if time_str.contains(' ') {
-                DateTime::parse_from_str(&format!("{} +0700", time_str), "%Y-%m-%d %H:%M:%S %z")
-                    .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?
-                    .with_timezone(&Utc)
+                let naive_dt = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                    .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?;
+                naive_dt.and_utc()
             } else {
                 let naive_date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
                     .map_err(|e| Error::Io(format!("Invalid date: {}", e)))?;

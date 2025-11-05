@@ -319,11 +319,15 @@ impl VciClient {
 
         let response_data = self.make_request(&url, &payload).await?;
 
+        // Log raw VCI response for debugging
+        tracing::debug!("VCI API raw response for {}: {}", symbol, serde_json::to_string(&response_data).unwrap_or_else(|_| "invalid json".to_string()));
+
         if !response_data.is_array() || response_data.as_array().unwrap().is_empty() {
             return Err(VciError::NoData);
         }
 
         let data_item = &response_data[0];
+        tracing::debug!("VCI data for {}: {} records in response arrays", symbol, data_item.get("t").and_then(|t| t.as_array()).map(|a| a.len()).unwrap_or(0));
         
         
         let required_keys = ["o", "h", "l", "c", "v", "t"];
