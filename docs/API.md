@@ -53,6 +53,7 @@ Query stock data with optional filters.
 | `end_date` | string | No | Today | End date filter (YYYY-MM-DD format) |
 | `legacy` | boolean | No | `false` | If true, divides stock prices by 1000 (old proxy compatibility) |
 | `format` | string | No | `json` | Response format: `json` or `csv` |
+| `cache` | boolean | No | `true` | Use memory cache (default). Set to `false` to force disk read and bypass TTL cache |
 
 #### Default Behavior
 
@@ -155,6 +156,11 @@ curl "http://localhost:3000/tickers"
 **Export to CSV:**
 ```bash
 curl "http://localhost:3000/tickers?symbol=VCB&format=csv" -o VCB.csv
+```
+
+**Force disk read (bypass memory cache):**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&cache=false"
 ```
 
 ---
@@ -487,13 +493,56 @@ The server allows requests from **any origin** with the following methods:
 
 ## Caching
 
+The API implements a sophisticated TTL (Time To Live) caching system for optimal performance.
+
+### Cache Behavior
+
+| Cache Parameter | Description | Behavior |
+|----------------|-------------|---------|
+| `cache=true` (default) | Use memory cache | Fast responses from in-memory cache. TTL: 60 seconds |
+| `cache=false` | Force disk read | Slower responses reading directly from CSV files, bypassing cache |
+
+### TTL (Time To Live)
+
+- **Cache TTL**: 60 seconds for memory cache
+- **Auto-refresh**: Cache automatically refreshes from disk when expired
+- **Race condition prevention**: DataSync preserves existing indicators during updates
+
+### Use Cases
+
+**Use cache=true (default) for:**
+- Normal API usage with best performance
+- Multiple requests for same data within TTL window
+- Real-time dashboard or charting applications
+
+**Use cache=false for:**
+- Getting absolute latest data after background worker updates
+- Debugging data integrity issues
+- Ensuring you have the most recent indicators
+
+### Examples
+
+```bash
+# Fast response from memory cache (typical use case)
+curl "http://localhost:3000/tickers?symbol=VCB&cache=true"
+
+# Slower response but guaranteed fresh data
+curl "http://localhost:3000/tickers?symbol=VCB&cache=false"
+
+# Monitor cache behavior in logs
+# Look for: "use_cache=true/false" and "Cache refreshed" messages
+docker logs aipriceaction | grep -E "(use_cache|Cache)"
+```
+
+### Cache Headers
+
 All responses include cache headers:
 
 ```
 Cache-Control: max-age=30
 ```
 
-Clients can cache responses for up to 30 seconds.
+Clients can cache responses for up to 30 seconds, independent of the internal TTL cache.
 
 ---
 

@@ -561,18 +561,27 @@ impl DataSync {
                 };
 
                 if is_enhanced {
-                    wtr.write_record(&[
-                        ticker,
-                        &time_str,
-                        &format!("{:.2}", row.open),
-                        &format!("{:.2}", row.high),
-                        &format!("{:.2}", row.low),
-                        &format!("{:.2}", row.close),
-                        &row.volume.to_string(),
-                        "", "", "", "", "", "", "", "", "",
-                    ])
-                    .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+                    // For enhanced files, try to preserve existing indicators
+                    // Read existing indicators for this timestamp if they exist
+                    let existing_indicators = self.read_existing_indicators(&file_path, &time_str)?;
+
+                    let mut record = vec![
+                        ticker.to_string(),
+                        time_str,
+                        format!("{:.2}", row.open),
+                        format!("{:.2}", row.high),
+                        format!("{:.2}", row.low),
+                        format!("{:.2}", row.close),
+                        row.volume.to_string(),
+                    ];
+
+                    // Add existing indicators (10 columns) or empty strings if not found
+                    record.extend(existing_indicators);
+
+                    wtr.write_record(&record)
+                        .map_err(|e| Error::Io(format!("Failed to write enhanced row: {}", e)))?;
                 } else {
+                    // Standard 7-column format for non-enhanced files
                     wtr.write_record(&[
                         ticker,
                         &time_str,
@@ -582,7 +591,7 @@ impl DataSync {
                         &format!("{:.2}", row.close),
                         &row.volume.to_string(),
                     ])
-                    .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+                        .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
                 }
             }
 
@@ -591,6 +600,43 @@ impl DataSync {
         }
 
         Ok(())
+    }
+
+    /// Read existing indicators for a specific timestamp from enhanced CSV file
+    /// Returns 10 indicator values or empty strings if not found
+    fn read_existing_indicators(&self, file_path: &Path, target_time: &str) -> Result<Vec<String>, Error> {
+        use std::io::{BufRead, BufReader};
+
+        let file = std::fs::File::open(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open file for reading indicators: {}", e)))?;
+        let reader = BufReader::new(file);
+        let mut csv_reader = csv::Reader::from_reader(reader);
+
+        // Skip header row
+        let mut records = csv_reader.records();
+        records.next(); // Skip header
+
+        for result in records {
+            let record = result.map_err(|e| Error::Io(format!("Failed to read CSV record: {}", e)))?;
+
+            if record.len() >= 2 && record.get(1) == Some(target_time) {
+                // Found matching row, extract indicators (columns 8-16, index 7-15)
+                let mut indicators = Vec::new();
+                for i in 7..record.len().min(17) { // columns 8-17 (0-indexed: 7-16)
+                    indicators.push(record.get(i).unwrap_or("").to_string());
+                }
+
+                // Pad with empty strings if less than 10 indicators
+                while indicators.len() < 10 {
+                    indicators.push("".to_string());
+                }
+
+                return Ok(indicators);
+            }
+        }
+
+        // No matching row found, return 10 empty strings
+        Ok(vec!["".to_string(); 10])
     }
 
     /// Check if CSV file has enhanced columns (16 columns vs 7)
