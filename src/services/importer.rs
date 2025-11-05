@@ -176,6 +176,12 @@ fn is_data_up_to_date(source: &Path, dest: &Path, ticker: &str, rows_to_check: u
         return false;
     }
 
+    // Check if source has significantly more data than destination
+    // This catches cases where pull command added recent data but historical data is missing
+    if source_lines.len() > dest_lines.len() + 100 {
+        return false;  // Source has 100+ more rows - needs reimport
+    }
+
     // Compare last N rows
     let source_last = &source_lines[source_lines.len().saturating_sub(rows_to_check)..];
     let dest_last = &dest_lines[dest_lines.len().saturating_sub(rows_to_check)..];
@@ -584,6 +590,61 @@ mod tests {
 
         // Should return false - not enough data
         assert!(!is_data_up_to_date(&source, &dest, "VCB", 1));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_source_has_more_rows() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with 200 rows (simulating complete historical data)
+        let mut source_rows = Vec::new();
+        for i in 1..=200 {
+            source_rows.push(format!("VCB,2024-01-{:02},23.1,23.5,23.0,23.2,1000000", i % 28 + 1));
+        }
+        let source_rows_str: Vec<&str> = source_rows.iter().map(|s| s.as_str()).collect();
+        create_test_csv(&source, "VCB", source_rows_str).unwrap();
+
+        // Create dest with only 50 rows (simulating partial import with recent data)
+        // This simulates the CTR bug: dest has recent data but missing historical middle data
+        let mut dest_rows = Vec::new();
+        for i in 151..=200 {
+            dest_rows.push(format!("VCB,2024-01-{:02},23100.0,23500.0,23000.0,23200.0,1000000", i % 28 + 1));
+        }
+        let dest_rows_str: Vec<&str> = dest_rows.iter().map(|s| s.as_str()).collect();
+        create_test_csv(&dest, "VCB", dest_rows_str).unwrap();
+
+        // Should return false because source has 150 more rows than dest (> 100 threshold)
+        // Even though the last 10 rows might match, we need to reimport the missing data
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 10));
+    }
+
+    #[test]
+    fn test_is_data_up_to_date_small_row_difference_ok() {
+        let temp_dir = TempDir::new().unwrap();
+        let source = temp_dir.path().join("source.csv");
+        let dest = temp_dir.path().join("dest.csv");
+
+        // Create source with 50 rows
+        let mut source_rows = Vec::new();
+        for i in 1..=50 {
+            source_rows.push(format!("VCB,2024-01-{:02},23.{},23.5,23.0,23.2,1000000", i % 28 + 1, i));
+        }
+        let source_rows_str: Vec<&str> = source_rows.iter().map(|s| s.as_str()).collect();
+        create_test_csv(&source, "VCB", source_rows_str).unwrap();
+
+        // Create dest with 40 rows (only 10 row difference, below 100 threshold)
+        let mut dest_rows = Vec::new();
+        for i in 1..=40 {
+            dest_rows.push(format!("VCB,2024-01-{:02},23{}00.0,23500.0,23000.0,23200.0,1000000", i % 28 + 1, i));
+        }
+        let dest_rows_str: Vec<&str> = dest_rows.iter().map(|s| s.as_str()).collect();
+        create_test_csv(&dest, "VCB", dest_rows_str).unwrap();
+
+        // With only 10 row difference (< 100 threshold), should check last N rows
+        // In this test they won't match due to different values, so should return false
+        assert!(!is_data_up_to_date(&source, &dest, "VCB", 10));
     }
 
     #[test]
