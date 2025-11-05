@@ -54,6 +54,8 @@ pub enum Commands {
     },
     /// Show current status
     Status,
+    /// Run health check on market_data CSV files
+    Doctor,
 }
 
 pub fn run() {
@@ -83,6 +85,9 @@ pub fn run() {
         }
         Commands::Status => {
             commands::status::run();
+        }
+        Commands::Doctor => {
+            commands::doctor::run();
         }
     }
 }
