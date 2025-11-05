@@ -603,7 +603,7 @@ impl DataSync {
     }
 
     /// Read existing indicators for a specific timestamp from enhanced CSV file
-    /// Returns 10 indicator values or empty strings if not found
+    /// Returns 9 indicator values or empty strings if not found
     fn read_existing_indicators(&self, file_path: &Path, target_time: &str) -> Result<Vec<String>, Error> {
         use std::io::BufReader;
 
@@ -621,13 +621,14 @@ impl DataSync {
 
             if record.len() >= 2 && record.get(1) == Some(target_time) {
                 // Found matching row, extract indicators (columns 8-16, index 7-15)
+                // 9 indicators: ma10, ma20, ma50, ma10_score, ma20_score, ma50_score, money_flow, dollar_flow, trend_score
                 let mut indicators = Vec::new();
-                for i in 7..record.len().min(17) { // columns 8-17 (0-indexed: 7-16)
+                for i in 7..record.len().min(16) { // columns 8-16 (0-indexed: 7-15), exactly 9 fields
                     indicators.push(record.get(i).unwrap_or("").to_string());
                 }
 
-                // Pad with empty strings if less than 10 indicators
-                while indicators.len() < 10 {
+                // Pad with empty strings if less than 9 indicators
+                while indicators.len() < 9 {
                     indicators.push("".to_string());
                 }
 
@@ -635,8 +636,8 @@ impl DataSync {
             }
         }
 
-        // No matching row found, return 10 empty strings
-        Ok(vec!["".to_string(); 10])
+        // No matching row found, return 9 empty strings
+        Ok(vec!["".to_string(); 9])
     }
 
     /// Check if CSV file has enhanced columns (16 columns vs 7)
