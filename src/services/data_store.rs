@@ -15,7 +15,9 @@ pub const DATA_RETENTION_DAYS: i64 = 365; // Keep 1 year of data
 /// In-memory data store: HashMap<Ticker, HashMap<Interval, Vec<StockData>>>
 pub type IntervalData = HashMap<Interval, Vec<StockData>>;
 pub type InMemoryData = HashMap<String, IntervalData>;
-pub type SharedDataStore = Arc<Mutex<InMemoryData>>;
+
+// Shared data store for passing between threads
+pub type SharedDataStore = Arc<DataStore>;
 
 /// Health statistics for the data store
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -78,7 +80,7 @@ pub type SharedHealthStats = Arc<Mutex<HealthStats>>;
 
 /// Data store for managing in-memory stock data
 pub struct DataStore {
-    data: SharedDataStore,
+    data: Mutex<InMemoryData>,
     market_data_dir: PathBuf,
 }
 
@@ -86,14 +88,9 @@ impl DataStore {
     /// Create a new data store
     pub fn new(market_data_dir: PathBuf) -> Self {
         Self {
-            data: Arc::new(Mutex::new(HashMap::new())),
+            data: Mutex::new(HashMap::new()),
             market_data_dir,
         }
-    }
-
-    /// Get shared reference to the data store
-    pub fn shared(&self) -> SharedDataStore {
-        self.data.clone()
     }
 
     /// Load last 1 year of data from CSV files for specified intervals
@@ -245,6 +242,8 @@ impl DataStore {
     }
 
     /// Get data for specific tickers and interval
+    /// - Daily: Read from memory
+    /// - Hourly/Minute: Read from disk on-demand
     pub async fn get_data(
         &self,
         tickers: Vec<String>,
@@ -252,6 +251,12 @@ impl DataStore {
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
     ) -> HashMap<String, Vec<StockData>> {
+        // For hourly/minute data, read directly from disk
+        if interval == Interval::Hourly || interval == Interval::Minute {
+            return self.get_data_from_disk(tickers, interval, start_date, end_date);
+        }
+
+        // For daily data, use in-memory cache
         let store = self.data.lock().await;
         let mut result = HashMap::new();
 
@@ -279,6 +284,55 @@ impl DataStore {
                     if !filtered.is_empty() {
                         result.insert(ticker.clone(), filtered);
                     }
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Read data from disk (for hourly/minute intervals)
+    fn get_data_from_disk(
+        &self,
+        tickers: Vec<String>,
+        interval: Interval,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+    ) -> HashMap<String, Vec<StockData>> {
+        let mut result = HashMap::new();
+
+        for ticker in tickers {
+            let csv_path = self.market_data_dir.join(&ticker).join(interval.to_filename());
+            if !csv_path.exists() {
+                continue;
+            }
+
+            match self.read_csv_file(&csv_path, &ticker, interval, None) {
+                Ok(mut data) => {
+                    // Filter by date range
+                    if start_date.is_some() || end_date.is_some() {
+                        data.retain(|d| {
+                            if let Some(start) = start_date {
+                                if d.time < start {
+                                    return false;
+                                }
+                            }
+                            if let Some(end) = end_date {
+                                if d.time > end {
+                                    return false;
+                                }
+                            }
+                            true
+                        });
+                    }
+
+                    if !data.is_empty() {
+                        result.insert(ticker.clone(), data);
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to read {} data for {}: {}", interval.to_filename(), ticker, e);
+                    continue;
                 }
             }
         }
@@ -318,6 +372,12 @@ impl DataStore {
     pub async fn get_active_ticker_count(&self) -> usize {
         let store = self.data.lock().await;
         store.len()
+    }
+
+    /// Get all ticker names (from in-memory data)
+    pub async fn get_all_ticker_names(&self) -> Vec<String> {
+        let store = self.data.lock().await;
+        store.keys().cloned().collect()
     }
 }
 

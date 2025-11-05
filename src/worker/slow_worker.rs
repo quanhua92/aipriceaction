@@ -109,29 +109,7 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
             }
         }
 
-        // Step 3: Reload data into shared memory
-        for interval in &intervals {
-            info!(iteration = iteration_count, interval = %interval.to_filename(), "Slow worker: Reloading into memory");
-            match data_store.reload_interval(*interval).await {
-                Ok(_) => {
-                    info!(
-                        iteration = iteration_count,
-                        interval = %interval.to_filename(),
-                        "Slow worker: Reload completed"
-                    );
-                }
-                Err(e) => {
-                    warn!(
-                        iteration = iteration_count,
-                        interval = %interval.to_filename(),
-                        error = %e,
-                        "Slow worker: Reload failed"
-                    );
-                }
-            }
-        }
-
-        // Step 4: Update health stats
+        // Step 3: Update health stats (no reload needed - data served from disk)
         {
             let mut health = health_stats.lock().await;
             health.hourly_last_sync = Some(Utc::now().to_rfc3339());

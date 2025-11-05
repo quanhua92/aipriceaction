@@ -13,7 +13,7 @@ pub async fn run(port: u16) {
     // Create data store
     let market_data_dir = PathBuf::from("market_data");
     let data_store = DataStore::new(market_data_dir);
-    let shared_data = data_store.shared();
+    let shared_data_store = Arc::new(data_store);
 
     // Initialize health stats
     let start_time = Instant::now();
@@ -23,15 +23,15 @@ pub async fn run(port: u16) {
     };
     let shared_health_stats = Arc::new(Mutex::new(health_stats));
 
-    // Load last 1 year of data into memory
-    println!("📊 Loading last 1 year of data into memory...");
-    let load_intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
+    // Load only daily data into memory (hourly/minute read from disk on-demand)
+    println!("📊 Loading daily data into memory (hourly/minute served from disk)...");
+    let load_intervals = vec![Interval::Daily];
 
-    match data_store.load_last_year(load_intervals).await {
+    match shared_data_store.load_last_year(load_intervals).await {
         Ok(_) => {
-            let (daily_count, hourly_count, minute_count) = data_store.get_record_counts().await;
-            let active_tickers = data_store.get_active_ticker_count().await;
-            let memory_mb = data_store.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
+            let (daily_count, hourly_count, minute_count) = shared_data_store.get_record_counts().await;
+            let active_tickers = shared_data_store.get_active_ticker_count().await;
+            let memory_mb = shared_data_store.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
 
             println!("✅ Data loaded successfully:");
             println!("   📈 Active tickers: {}", active_tickers);
@@ -85,7 +85,7 @@ pub async fn run(port: u16) {
     // Start axum server (blocking)
     println!("🌐 Starting HTTP server...");
     println!();
-    if let Err(e) = server::serve(shared_data, shared_health_stats, port).await {
+    if let Err(e) = server::serve(shared_data_store, shared_health_stats, port).await {
         eprintln!("❌ Server error: {}", e);
         std::process::exit(1);
     }
