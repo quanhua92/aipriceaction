@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer};
+use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval};
 use chrono::Utc;
 use std::path::Path;
 use std::time::Duration;
@@ -21,6 +21,30 @@ pub async fn run(data_store: DataStore, health_stats: SharedHealthStats) {
         let loop_start = std::time::Instant::now();
 
         info!(iteration = iteration_count, "Daily worker: Starting sync");
+
+        // Step 0: Validate and repair CSV files (corruption recovery)
+        match validate_and_repair_interval(Interval::Daily, market_data_dir) {
+            Ok(reports) => {
+                if !reports.is_empty() {
+                    warn!(
+                        iteration = iteration_count,
+                        corrupted_count = reports.len(),
+                        "Daily worker: Found and repaired corrupted CSV files"
+                    );
+                    for report in &reports {
+                        warn!(
+                            iteration = iteration_count,
+                            ticker = %report.ticker,
+                            removed_lines = report.removed_lines,
+                            "Daily worker: Repaired corrupted file"
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                warn!(iteration = iteration_count, error = %e, "Daily worker: Validation failed");
+            }
+        }
 
         // Step 1: Sync daily data using existing DataSync
         match sync_daily_data().await {
