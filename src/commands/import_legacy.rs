@@ -1,10 +1,11 @@
 use crate::services;
 use std::path::PathBuf;
 
-pub fn run(source: Option<PathBuf>, force: bool) {
+pub fn run(source: Option<PathBuf>, intervals: String, force: bool) {
     let source_path = source.unwrap_or_else(|| PathBuf::from("./references/aipriceaction-data"));
 
     println!("📁 Source path: {}", source_path.display());
+    println!("📊 Intervals: {}", intervals);
     if force {
         println!("⚠️  Force mode: existing files will be deleted and reimported");
     }
@@ -15,7 +16,7 @@ pub fn run(source: Option<PathBuf>, force: bool) {
         std::process::exit(1);
     }
 
-    match services::import_legacy(&source_path, force) {
+    match services::import_legacy(&source_path, intervals, force) {
         Ok(()) => {
             println!("\n🎉 Import completed successfully!");
         }

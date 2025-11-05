@@ -11,6 +11,7 @@ use std::time::Instant;
 ///
 /// # Arguments
 /// * `source_path` - Path to the reference data directory (e.g., "./references/aipriceaction-data")
+/// * `intervals` - Comma-separated list of intervals to import: "all", "daily", "hourly", "minute"
 /// * `force` - If true, delete existing files and reimport from scratch
 ///
 /// # Example
@@ -19,15 +20,26 @@ use std::time::Instant;
 /// use std::path::Path;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// import_legacy(Path::new("./references/aipriceaction-data"), false)?;
+/// import_legacy(Path::new("./references/aipriceaction-data"), "all".to_string(), false)?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn import_legacy(source_path: &Path, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+pub fn import_legacy(source_path: &Path, intervals: String, force: bool) -> Result<(), Box<dyn std::error::Error>> {
     let start_time = Instant::now();
 
     println!("🚀 Starting smart import from: {}", source_path.display());
     println!("⏱️  Start time: {}\n", chrono::Local::now().format("%H:%M:%S"));
+
+    // Parse intervals
+    let import_daily = intervals == "all" || intervals.contains("daily");
+    let import_hourly = intervals == "all" || intervals.contains("hourly") || intervals.contains("1h");
+    let import_minute = intervals == "all" || intervals.contains("minute") || intervals.contains("1m");
+
+    println!("📋 Import plan:");
+    println!("   Daily:  {}", if import_daily { "✅" } else { "⏭️  Skip" });
+    println!("   Hourly: {}", if import_hourly { "✅" } else { "⏭️  Skip" });
+    println!("   Minute: {}", if import_minute { "✅" } else { "⏭️  Skip" });
+    println!();
 
     // Load ticker groups
     let ticker_groups = TickerGroups::load_default()?;
@@ -43,16 +55,6 @@ pub fn import_legacy(source_path: &Path, force: bool) -> Result<(), Box<dyn std:
 
     println!("📊 Found {} tickers to process\n", tickers.len());
 
-    // If force mode, delete existing market_data directory
-    if force {
-        let market_data_dir = PathBuf::from("market_data");
-        if market_data_dir.exists() {
-            println!("🗑️  Deleting existing market_data directory...");
-            fs::remove_dir_all(&market_data_dir)?;
-            println!("✅ Existing data deleted\n");
-        }
-    }
-
     let mut success_count = 0;
     let mut error_count = 0;
     let mut skipped_count = 0;
@@ -62,7 +64,7 @@ pub fn import_legacy(source_path: &Path, force: bool) -> Result<(), Box<dyn std:
         let progress = index + 1;
         print!("[{}/{}] {}: ", progress, tickers.len(), ticker);
 
-        match import_ticker(source_path, ticker, force) {
+        match import_ticker(source_path, ticker, import_daily, import_hourly, import_minute, force) {
             Ok(stats) => {
                 // Display what happened for this ticker
                 if stats.reimported > 0 && stats.skipped > 0 {
@@ -104,8 +106,18 @@ pub fn import_legacy(source_path: &Path, force: bool) -> Result<(), Box<dyn std:
     let enhancement_start = Instant::now();
     let market_data_dir = Path::new("market_data");
 
-    let intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
-    for interval in intervals {
+    let mut intervals_to_enhance = Vec::new();
+    if import_daily {
+        intervals_to_enhance.push(Interval::Daily);
+    }
+    if import_hourly {
+        intervals_to_enhance.push(Interval::Hourly);
+    }
+    if import_minute {
+        intervals_to_enhance.push(Interval::Minute);
+    }
+
+    for interval in intervals_to_enhance {
         print!("   📊 Enhancing {} data... ", interval.to_filename().trim_end_matches(".csv"));
         match csv_enhancer::enhance_interval(interval, market_data_dir) {
             Ok(stats) => {
@@ -205,8 +217,15 @@ fn is_data_up_to_date(source: &Path, dest: &Path, ticker: &str, rows_to_check: u
     true
 }
 
-/// Import a single ticker from all timeframes
-fn import_ticker(source_path: &Path, ticker: &str, force: bool) -> Result<ImportStats, Box<dyn std::error::Error>> {
+/// Import a single ticker from specified timeframes
+fn import_ticker(
+    source_path: &Path,
+    ticker: &str,
+    import_daily: bool,
+    import_hourly: bool,
+    import_minute: bool,
+    force: bool,
+) -> Result<ImportStats, Box<dyn std::error::Error>> {
     let mut stats = ImportStats {
         files_imported: 0,
         skipped: 0,
@@ -221,9 +240,16 @@ fn import_ticker(source_path: &Path, ticker: &str, force: bool) -> Result<Import
     fs::create_dir_all(&ticker_dir)?;
 
     // Import daily data
-    let daily_source = source_path.join("market_data").join(format!("{}.csv", ticker));
-    let daily_dest = ticker_dir.join("daily.csv");
-    if daily_source.exists() {
+    if import_daily {
+        let daily_source = source_path.join("market_data").join(format!("{}.csv", ticker));
+        let daily_dest = ticker_dir.join("daily.csv");
+
+        // If force mode, delete existing file
+        if force && daily_dest.exists() {
+            fs::remove_file(&daily_dest)?;
+        }
+
+        if daily_source.exists() {
         if !force && is_data_up_to_date(&daily_source, &daily_dest, ticker, 10) {
             stats.skipped += 1;
         } else {
@@ -241,11 +267,19 @@ fn import_ticker(source_path: &Path, ticker: &str, force: bool) -> Result<Import
                 }
             }
         }
+        }
     }
 
     // Import hourly data
+    if import_hourly {
     let hourly_source = source_path.join("market_data_hour").join(format!("{}.csv", ticker));
     let hourly_dest = ticker_dir.join("1h.csv");
+
+    // If force mode, delete existing file
+    if force && hourly_dest.exists() {
+        fs::remove_file(&hourly_dest)?;
+    }
+
     if hourly_source.exists() {
         if !force && is_data_up_to_date(&hourly_source, &hourly_dest, ticker, 10) {
             stats.skipped += 1;
@@ -265,10 +299,18 @@ fn import_ticker(source_path: &Path, ticker: &str, force: bool) -> Result<Import
             }
         }
     }
+    }
 
     // Import minute data
+    if import_minute {
     let minute_source = source_path.join("market_data_minutes").join(format!("{}.csv", ticker));
     let minute_dest = ticker_dir.join("1m.csv");
+
+    // If force mode, delete existing file
+    if force && minute_dest.exists() {
+        fs::remove_file(&minute_dest)?;
+    }
+
     if minute_source.exists() {
         if !force && is_data_up_to_date(&minute_source, &minute_dest, ticker, 10) {
             stats.skipped += 1;
@@ -287,6 +329,7 @@ fn import_ticker(source_path: &Path, ticker: &str, force: bool) -> Result<Import
                 }
             }
         }
+    }
     }
 
     // Ensure at least one file was imported or skipped

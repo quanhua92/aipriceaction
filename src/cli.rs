@@ -19,6 +19,10 @@ pub enum Commands {
         #[arg(short, long)]
         source: Option<PathBuf>,
 
+        /// Intervals to import: all, daily, hourly, minute (comma-separated)
+        #[arg(short, long, default_value = "all")]
+        intervals: String,
+
         /// Force reimport: delete existing files and start from scratch
         #[arg(long)]
         force: bool,
@@ -66,8 +70,8 @@ pub fn run() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::ImportLegacy { source, force } => {
-            commands::import_legacy::run(source, force);
+        Commands::ImportLegacy { source, intervals, force } => {
+            commands::import_legacy::run(source, intervals, force);
         }
         Commands::Pull {
             intervals,

@@ -53,6 +53,9 @@ pub fn run() {
         .collect();
     ticker_dirs.sort_by_key(|e| e.file_name());
 
+    let total_ticker_count = ticker_dirs.len();
+    println!("📋 Scanning {} tickers...\n", total_ticker_count);
+
     for entry in ticker_dirs {
         let ticker_dir = entry.path();
         let ticker = match ticker_dir.file_name().and_then(|n| n.to_str()) {
@@ -61,6 +64,8 @@ pub fn run() {
         };
 
         total_tickers += 1;
+        print!("   [{:>3}/{}] Checking {}... ", total_tickers, total_ticker_count, ticker);
+        std::io::Write::flush(&mut std::io::stdout()).unwrap();
 
         // Check each interval
         let intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
@@ -114,13 +119,18 @@ pub fn run() {
 
         if !ticker_issues.is_empty() {
             total_issues += ticker_issues.len();
+            println!("⚠️  {} issues", ticker_issues.len());
             ticker_reports.push(TickerReport {
                 ticker: ticker.clone(),
                 total_issues: ticker_issues.len(),
                 issues: ticker_issues,
             });
+        } else {
+            println!("✅");
         }
     }
+
+    println!();
 
     // Print summary
     println!("📊 Health Check Summary");
