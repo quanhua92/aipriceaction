@@ -57,7 +57,9 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
             continue;
         }
 
-        let mut reader = Reader::from_path(&csv_path)
+        let mut reader = csv::ReaderBuilder::new()
+            .flexible(true) // Allow varying number of fields per record
+            .from_path(&csv_path)
             .map_err(|e| Error::Io(format!("Failed to read {}: {}", csv_path.display(), e)))?;
 
         let mut ticker_data = Vec::new();
@@ -65,6 +67,17 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
         for result in reader.records() {
             let record = result.map_err(|e| Error::Io(format!("CSV parse error in {}: {}", csv_path.display(), e)))?;
 
+            // Check field count to determine if this is raw (7) or enhanced (16) CSV
+            // Header is skipped by reader, so we only see data rows
+            let num_fields = record.len();
+            if num_fields != 7 && num_fields != 16 {
+                return Err(Error::Io(format!(
+                    "Invalid CSV format in {}: expected 7 or 16 fields, got {}",
+                    csv_path.display(), num_fields
+                )));
+            }
+
+            // Fields 0-6 are the same for both formats (ticker, time, OHLCV)
             let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time".to_string()))?;
             let open: f64 = record.get(2).ok_or_else(|| Error::Io("Missing open".to_string()))?.parse()
                 .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
