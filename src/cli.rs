@@ -47,12 +47,16 @@ pub enum Commands {
         batch_size: usize,
     },
     /// Start the server
-    Serve,
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value = "3000")]
+        port: u16,
+    },
     /// Show current status
     Status,
 }
 
-pub fn run() {
+pub async fn run() {
     let cli = Cli::parse();
 
     match cli.command {
@@ -70,8 +74,8 @@ pub fn run() {
             // resume_days is now Option<u32>, passed directly
             commands::pull::run(intervals, full, resume_days, start_date, debug, batch_size);
         }
-        Commands::Serve => {
-            commands::serve::run();
+        Commands::Serve { port } => {
+            commands::serve::run(port).await;
         }
         Commands::Status => {
             commands::status::run();

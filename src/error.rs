@@ -30,6 +30,12 @@ impl From<std::io::Error> for AppError {
     }
 }
 
+impl From<csv::Error> for AppError {
+    fn from(err: csv::Error) -> Self {
+        AppError::Io(format!("CSV error: {}", err))
+    }
+}
+
 pub type Result<T> = std::result::Result<T, AppError>;
 
 // Alias for convenience
