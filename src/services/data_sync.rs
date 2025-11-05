@@ -267,15 +267,51 @@ impl DataSync {
         recent_data: &[OhlcvData],
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
-        // Check for dividend using the data we already have (NO API call!)
+        // IMPORTANT: Only check for dividends in DAILY interval
+        // For hourly/minute: just merge data without dividend checking
+        if interval != Interval::Daily {
+            // For non-daily intervals: check if CSV exists, if not it means
+            // this ticker was marked for re-download due to dividend in daily pull
+            let file_path = self.get_ticker_file_path(ticker, interval);
+
+            if !file_path.exists() {
+                // No existing file - download full history
+                println!("   📊 No existing {} file, downloading full history...", interval.to_filename());
+                let start_date = interval.min_start_date();
+                return self
+                    .fetcher
+                    .fetch_full_history(ticker, start_date, &self.config.end_date, interval)
+                    .await;
+            }
+
+            // File exists - merge with existing data
+            let existing_data = self.read_existing_data(&file_path)?;
+            let merged_data = self.merge_data(existing_data, recent_data.to_vec());
+            self.stats.updated += 1;
+            return Ok(merged_data);
+        }
+
+        // DAILY interval: Check for dividend using the data we already have (NO API call!)
         let dividend_detected = self.fetcher.check_dividend_from_data(ticker, recent_data, interval)?;
 
         if dividend_detected {
-            println!("   💰 Dividend detected, re-downloading full history...");
+            println!("   💰 Dividend detected! Deleting ALL CSV files for {} to force re-download...", ticker);
             self.stats.updated += 1;
 
-            // For dividend re-downloads, use the minimum start date for the interval
-            // to ensure we get complete history (not just recent days from resume mode)
+            // Delete ALL CSV files for this ticker (1D.csv, 1H.csv, 1m.csv)
+            let ticker_dir = Path::new(MARKET_DATA_DIR).join(ticker);
+            for interval_type in [Interval::Daily, Interval::Hourly, Interval::Minute] {
+                let csv_path = ticker_dir.join(interval_type.to_filename());
+                if csv_path.exists() {
+                    if let Err(e) = std::fs::remove_file(&csv_path) {
+                        eprintln!("   ⚠️  Failed to delete {}: {}", csv_path.display(), e);
+                    } else {
+                        println!("   🗑️  Deleted {}", interval_type.to_filename());
+                    }
+                }
+            }
+
+            // Re-download daily data with full history
             let start_date = interval.min_start_date();
             return self
                 .fetcher
