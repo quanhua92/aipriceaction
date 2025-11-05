@@ -5,8 +5,9 @@ use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
 use axum::{extract::FromRef, routing::get, Router};
 use std::net::SocketAddr;
-use tower_http::cors::{CorsLayer, Any};
+use tower_http::cors::{CorsLayer, Any, AllowOrigin};
 use tower_http::services::ServeDir;
+use axum::http::HeaderValue;
 
 /// Application state shared across all handlers
 #[derive(Clone)]
@@ -50,20 +51,29 @@ pub async fn serve(
         health_stats: shared_health_stats,
     };
 
-    // Configure CORS - allow specific origins for better security
+    // Configure CORS - allow all subdomains of aipriceaction.com plus localhost
     let cors = CorsLayer::new()
-        .allow_origin([
-            "https://aipriceaction.com".parse().unwrap(),
-            "https://www.aipriceaction.com".parse().unwrap(),
-            "http://localhost:3000".parse().unwrap(),
-            "http://localhost:5173".parse().unwrap(), // Vite dev server
-            "http://127.0.0.1:3000".parse().unwrap(),
-            "http://127.0.0.1:5173".parse().unwrap(), // Vite dev server
-            "http://100.121.116.69:9876".parse().unwrap(), // Internal network
-            "http://100.121.116.69:5173".parse().unwrap(), // Internal network
-            "http://192.168.1.13:5173".parse().unwrap(), // Local network
-            "http://192.168.1.13:9876".parse().unwrap(), // Local network
-        ])
+        .allow_origin(AllowOrigin::predicate(
+            |origin: &HeaderValue, _request_parts: &_| {
+                if let Ok(origin_str) = origin.to_str() {
+                    // Allow all subdomains of aipriceaction.com (including the main domain)
+                    if origin_str.ends_with(".aipriceaction.com")
+                        || origin_str == "https://aipriceaction.com"
+                        || origin_str == "http://aipriceaction.com" {
+                        return true;
+                    }
+
+                    // Allow localhost and local network for development
+                    if origin_str.starts_with("http://localhost:")
+                        || origin_str.starts_with("http://127.0.0.1:")
+                        || origin_str.starts_with("http://100.121.116.69:")
+                        || origin_str.starts_with("http://192.168.1.13:") {
+                        return true;
+                    }
+                }
+                false
+            }
+        ))
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
