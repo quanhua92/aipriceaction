@@ -1,0 +1,208 @@
+{
+  "symbol": "VCI",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 26989110000000.0,
+  "current_price": 37350.0,
+  "outstanding_shares": 722600000,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Vietcap (VCI), tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Bản Việt,&nbsp;được th&agrave;nh lập v&agrave; ch&iacute;nh thức hoạt động v&agrave;o năm 2007. C&ocirc;ng ty hoạt&nbsp;động ch&iacute;nh trong lĩnh vực&nbsp;dịch vụ m&ocirc;i giới chứng kho&aacute;n, ng&acirc;n h&agrave;ng đầu tư v&agrave; dịch vụ nghi&ecirc;n cứu chứng kho&aacute;n. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 729,6 tỷ đồng, tăng 36.28% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 85.79%, giảm 17.47%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 786,94 tỷ đồng, tăng 76.15% v&agrave; đ&oacute;ng g&oacute;p 39.78 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 1.089,34 tỷ đồng, tăng 91.07%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 8.97%, tăng 1.87%.&nbsp;VCI được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2017.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tô Hải",
+      "percentage": 0.1787
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0491
+    },
+    {
+      "name": "Nguyễn Phan Minh Khôi",
+      "percentage": 0.04591
+    },
+    {
+      "name": "Võ Thị Anh Quân",
+      "percentage": 0.0458
+    },
+    {
+      "name": "Nguyễn Thanh Tú",
+      "percentage": 0.0378
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0322
+    },
+    {
+      "name": "Nguyễn Thanh Phượng",
+      "percentage": 0.0318
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.0265
+    },
+    {
+      "name": "Trương Nguyễn Thiên Kim",
+      "percentage": 0.0174
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0165
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.01515
+    },
+    {
+      "name": "Trần Thanh Tân",
+      "percentage": 0.0125
+    },
+    {
+      "name": "Lưu Công Toại",
+      "percentage": 0.0125
+    },
+    {
+      "name": "Nguyễn Thị Lan",
+      "percentage": 0.0054
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.00389
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.00324
+    },
+    {
+      "name": "Nguyễn Quang Bảo",
+      "percentage": 0.0032
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Trần Quyết Thắng",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.00111
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Đinh Quang Hoàn",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Thiên Việt 2",
+      "percentage": 0.0006087021
+    },
+    {
+      "name": "Đoàn Minh Thiện",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Tô Hồng Hà",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Vũ Hoàng Tuyên",
+      "percentage": 0.000095
+    },
+    {
+      "name": "Đoàn Trần Phương Thảo",
+      "percentage": 0.000048
+    }
+  ],
+  "officers": [
+    {
+      "name": "Tô Hải",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.1787
+    },
+    {
+      "name": "Nguyễn Thanh Phượng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0318
+    },
+    {
+      "name": "Nguyễn Quang Bảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Trần Quyết Thắng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Đinh Quang Hoàn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Đoàn Minh Thiện",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Bùi Vũ Hoàng Tuyên",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.000095
+    },
+    {
+      "name": "Nguyễn  Việt Hòa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàng Bảo",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Phạm Ngọc Phương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Ngọc Hoài Phương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lân Trung Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Thị Huyền Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Minh Nguyệt",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:49:36.332653Z"
+}

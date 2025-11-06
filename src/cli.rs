@@ -64,6 +64,20 @@ pub enum Commands {
     Status,
     /// Run health check on market_data CSV files
     Doctor,
+    /// Fetch company information and financial data
+    Company {
+        /// Specific tickers to process (comma-separated)
+        #[arg(short, long)]
+        tickers: Option<String>,
+
+        /// Force refresh all data (ignore cache)
+        #[arg(long)]
+        force: bool,
+
+        /// Number of days before cache expires (default: 7)
+        #[arg(long)]
+        cache_days: Option<i64>,
+    },
 }
 
 pub fn run() {
@@ -96,6 +110,14 @@ pub fn run() {
         }
         Commands::Doctor => {
             commands::doctor::run();
+        }
+        Commands::Company { tickers, force, cache_days } => {
+            let ticker_list = tickers.map(|t| {
+                t.split(',')
+                    .map(|s| s.trim().to_uppercase())
+                    .collect::<Vec<String>>()
+            });
+            commands::company::run(ticker_list, force, cache_days);
         }
     }
 }
