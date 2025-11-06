@@ -88,7 +88,7 @@ fn validate_and_repair_csv(
         let field_count = fields.len();
 
         // Check if this line has the correct number of fields
-        let is_valid = field_count == 7 || field_count == 16;
+        let is_valid = field_count == 7 || field_count == 15;
 
         if !is_valid {
             corrupted_line_numbers.push(line_num + 1);
