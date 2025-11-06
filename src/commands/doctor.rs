@@ -216,7 +216,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
     let mut has_any_indicators = false;
     let mut last_date: Option<NaiveDate> = None;
     let mut last_timestamp: Option<NaiveDateTime> = None;
-    let mut date_gaps = Vec::new();
+    let date_gaps = Vec::new();
     let mut time_reversals = Vec::new();
 
     for (line_num, line_result) in reader.lines().enumerate() {
