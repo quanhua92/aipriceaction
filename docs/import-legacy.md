@@ -17,7 +17,7 @@ The `import-legacy` command intelligently imports historical market data from th
 ## What It Does
 
 1. **Reads legacy data** from three directories:
-   - `market_data/` → Daily OHLCV with indicators (16 columns)
+   - `market_data/` → Daily OHLCV with old indicators (16 columns, converted to 15)
    - `market_data_hour/` → Hourly OHLCV (7 columns)
    - `market_data_minutes/` → Minute OHLCV (7 columns)
 
