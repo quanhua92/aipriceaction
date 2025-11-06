@@ -59,7 +59,7 @@ pub async fn run(port: u16) {
 
     // Spawn daily worker (fast: 15 seconds)
     println!("⚡ Spawning daily worker (every 15 seconds)...");
-    let daily_data_store = DataStore::new(market_data_dir.clone());
+    let daily_data_store = shared_data_store.clone();
     let daily_health_stats = shared_health_stats.clone();
     tokio::spawn(async move {
         worker::run_daily_worker(daily_data_store, daily_health_stats).await;
@@ -67,7 +67,7 @@ pub async fn run(port: u16) {
 
     // Spawn slow worker (hourly + minute: 5 minutes)
     println!("🐌 Spawning slow worker (every 5 minutes)...");
-    let slow_data_store = DataStore::new(market_data_dir.clone());
+    let slow_data_store = shared_data_store.clone();
     let slow_health_stats = shared_health_stats.clone();
     tokio::spawn(async move {
         worker::run_slow_worker(slow_data_store, slow_health_stats).await;

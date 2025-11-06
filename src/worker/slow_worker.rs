@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, DataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
 use crate::utils::get_market_data_dir;
 use chrono::Utc;
 use std::time::Duration;
@@ -13,7 +13,7 @@ const TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
 const NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes
 
 #[instrument(skip(_data_store, health_stats))]
-pub async fn run(_data_store: DataStore, health_stats: SharedHealthStats) {
+pub async fn run(_data_store: SharedDataStore, health_stats: SharedHealthStats) {
     info!(
         "Starting slow worker - Trading hours: {}s, Non-trading hours: {}s",
         TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS

@@ -151,13 +151,34 @@ pub async fn get_tickers_handler(
         None => None,
     };
 
-    // Default behavior: if no dates specified, return today only (production-compatible)
+    // Default behavior: if no dates specified, find last trading day from VNINDEX
     let (start_date_filter, end_date_filter) = if start_date_filter.is_none() && end_date_filter.is_none() {
-        // Get today only to match production API behavior
-        let now = Utc::now();
-        let start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
-        let end = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
-        (Some(start), Some(end))
+        // Query VNINDEX to find the last trading day
+        let vnindex_data = data_state.get_data_with_cache(
+            vec!["VNINDEX".to_string()],
+            interval,
+            None,
+            None,
+            params.cache
+        ).await;
+
+        if let Some(vnindex_records) = vnindex_data.get("VNINDEX") {
+            if let Some(last_record) = vnindex_records.last() {
+                let last_day = last_record.time;
+                let start = last_day.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+                let end = last_day.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+                debug!("Using last trading day from VNINDEX: {}", last_day.format("%Y-%m-%d"));
+                (Some(start), Some(end))
+            } else {
+                // Fallback: last 1 day if VNINDEX has no data
+                let now = Utc::now();
+                (Some(now - chrono::Duration::days(1)), Some(now))
+            }
+        } else {
+            // Fallback: last 1 day if VNINDEX not found
+            let now = Utc::now();
+            (Some(now - chrono::Duration::days(1)), Some(now))
+        }
     } else {
         (start_date_filter, end_date_filter)
     };

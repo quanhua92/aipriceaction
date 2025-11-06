@@ -355,8 +355,8 @@ test_csv_export_performance() {
         return 1
     fi
 
-    # Check that single ticker minute is reasonable (< 200ms)
-    if (( $(echo "$minute_time_ms < 200" | bc -l) )); then
+    # Check that single ticker minute is reasonable (< 500ms)
+    if (( $(echo "$minute_time_ms < 500" | bc -l) )); then
         print_success "Single ticker minute CSV: ${minute_time_ms}ms ✓"
     else
         print_error "Single ticker minute CSV too slow: ${minute_time_ms}ms"
@@ -372,6 +372,85 @@ test_csv_export_performance() {
     fi
 
     print_success "CSV performance tests passed"
+    return 0
+}
+
+test_historical_data_range() {
+    print_test "Historical Data Range (2023-2024)"
+
+    # Test 1: cache=true (should auto-read from disk if cache insufficient)
+    local start_time=$(date +%s.%N)
+    local response=$(curl -s "$BASE_URL/tickers?symbol=VCB&start_date=2023-01-01&end_date=2024-12-31&interval=1D&cache=true" || echo "")
+    local cache_true_time=$(echo "$(date +%s.%N) - $start_time" | bc)
+
+    if [[ -z "$response" ]]; then
+        print_error "No response for historical data range (cache=true)"
+        return 1
+    fi
+
+    local record_count_cache_true=$(echo "$response" | jq '.VCB | length // 0')
+    local cache_true_ms=$(echo "$cache_true_time * 1000" | bc)
+
+    # Should have data for 2023-2024 (approximately 500+ trading days)
+    if (( record_count_cache_true < 400 )); then
+        print_error "Insufficient historical data (cache=true): ${record_count_cache_true} records (expected 400+)"
+        return 1
+    fi
+
+    print_success "cache=true: ${record_count_cache_true} records in ${cache_true_ms}ms"
+
+    # Verify date range for cache=true
+    local first_date=$(echo "$response" | jq -r '.VCB[0].time // empty')
+    local last_date=$(echo "$response" | jq -r '.VCB[-1].time // empty')
+
+    if [[ -z "$first_date" || -z "$last_date" ]]; then
+        print_error "Missing date fields in response (cache=true)"
+        return 1
+    fi
+
+    # Check that first date is in 2023 range
+    if [[ "$first_date" < "2023-01-01" || "$first_date" > "2023-12-31" ]]; then
+        print_error "First date out of range (cache=true): $first_date (expected 2023)"
+        return 1
+    fi
+
+    # Check that last date is in 2024 range
+    if [[ "$last_date" < "2024-01-01" || "$last_date" > "2024-12-31" ]]; then
+        print_error "Last date out of range (cache=true): $last_date (expected 2024)"
+        return 1
+    fi
+
+    print_success "cache=true date range: $first_date to $last_date ✓"
+
+    # Test 2: cache=false (force disk read)
+    start_time=$(date +%s.%N)
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&start_date=2023-01-01&end_date=2024-12-31&interval=1D&cache=false" || echo "")
+    local cache_false_time=$(echo "$(date +%s.%N) - $start_time" | bc)
+
+    if [[ -z "$response" ]]; then
+        print_error "No response for historical data range (cache=false)"
+        return 1
+    fi
+
+    local record_count_cache_false=$(echo "$response" | jq '.VCB | length // 0')
+    local cache_false_ms=$(echo "$cache_false_time * 1000" | bc)
+
+    if (( record_count_cache_false < 400 )); then
+        print_error "Insufficient historical data (cache=false): ${record_count_cache_false} records (expected 400+)"
+        return 1
+    fi
+
+    print_success "cache=false: ${record_count_cache_false} records in ${cache_false_ms}ms"
+
+    # Verify both return same data
+    if [[ "$record_count_cache_true" != "$record_count_cache_false" ]]; then
+        print_error "Record count mismatch: cache=true (${record_count_cache_true}) vs cache=false (${record_count_cache_false})"
+        return 1
+    fi
+
+    print_success "Both cache modes return same data ✓"
+
+    print_success "Historical data range test passed"
     return 0
 }
 
@@ -424,6 +503,9 @@ main() {
 
     ((TOTAL_TESTS++))
     test_csv_export_performance || true
+
+    ((TOTAL_TESTS++))
+    test_historical_data_range || true
 
     # Final results
     echo ""

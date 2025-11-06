@@ -317,6 +317,7 @@ impl DataStore {
     }
 
     /// Get data with cache control option
+    /// Smart caching: if cache doesn't have requested range or is expired, automatically read from disk
     pub async fn get_data_with_cache(
         &self,
         tickers: Vec<String>,
@@ -325,58 +326,103 @@ impl DataStore {
         end_date: Option<DateTime<Utc>>,
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
-        // For hourly/minute data or when cache=false, use disk cache
+        // For hourly/minute data or when cache=false explicitly requested, always use disk
         if interval == Interval::Hourly || interval == Interval::Minute || !use_cache {
             return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
         }
 
-        // For daily data with cache=true, check cache preference
-        // Check if cache is expired (TTL)
-        if self.is_cache_expired().await {
-            tracing::debug!("Cache expired (TTL: {}s), refreshing from disk", CACHE_TTL_SECONDS);
-            // Refresh cache from disk and then serve fresh data
-            if let Err(e) = self.refresh_cache(interval).await {
-                tracing::warn!("Failed to refresh cache: {}, falling back to disk read", e);
-                return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
+        // For daily data with cache=true: check if cache is expired (TTL)
+        let cache_expired = self.is_cache_expired().await;
+        if cache_expired {
+            tracing::info!("In-memory cache expired (TTL: {}s), reading from disk", CACHE_TTL_SECONDS);
+            // Cache expired - read from disk for all tickers
+            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
+        }
+
+        // Cache is fresh - try cache first, fall back to disk if insufficient
+        let store = self.data.lock().await;
+        let mut result = HashMap::new();
+        let mut need_disk_read: Vec<String> = Vec::new();
+
+        for ticker in &tickers {
+            if let Some(ticker_data) = store.get(ticker) {
+                if let Some(interval_data) = ticker_data.get(&interval) {
+                    // Check if cache has the requested date range
+                    let has_required_range = if let Some(start) = start_date {
+                        // Check if cache has data going back to requested start date
+                        interval_data.first().map(|d| d.time <= start).unwrap_or(false)
+                    } else {
+                        true // No specific start requested, cache is fine
+                    };
+
+                    if has_required_range {
+                        // Cache has sufficient data
+                        let filtered: Vec<StockData> = interval_data
+                            .iter()
+                            .filter(|d| {
+                                if let Some(start) = start_date {
+                                    if d.time < start {
+                                        return false;
+                                    }
+                                }
+                                if let Some(end) = end_date {
+                                    if d.time > end {
+                                        return false;
+                                    }
+                                }
+                                true
+                            })
+                            .cloned()
+                            .collect();
+
+                        if !filtered.is_empty() {
+                            result.insert(ticker.clone(), filtered);
+                        }
+                    } else {
+                        // Cache doesn't have full range - need disk read
+                        tracing::debug!(
+                            "Cache insufficient for {} (requested start: {:?}, cache starts: {:?})",
+                            ticker,
+                            start_date,
+                            interval_data.first().map(|d| d.time)
+                        );
+                        need_disk_read.push(ticker.clone());
+                    }
+                } else {
+                    // No data in cache for this ticker/interval
+                    need_disk_read.push(ticker.clone());
+                }
+            } else {
+                // Ticker not in cache
+                need_disk_read.push(ticker.clone());
             }
         }
 
-        // Use in-memory cache
-        let store = self.data.lock().await;
-        let mut result = HashMap::new();
+        drop(store); // Release lock before disk read
 
-        for ticker in tickers {
-            if let Some(ticker_data) = store.get(&ticker) {
-                if let Some(interval_data) = ticker_data.get(&interval) {
-                    let filtered: Vec<StockData> = interval_data
-                        .iter()
-                        .filter(|d| {
-                            if let Some(start) = start_date {
-                                if d.time < start {
-                                    return false;
-                                }
-                            }
-                            if let Some(end) = end_date {
-                                if d.time > end {
-                                    return false;
-                                }
-                            }
-                            true
-                        })
-                        .cloned()
-                        .collect();
+        // Read missing tickers from disk
+        if !need_disk_read.is_empty() {
+            tracing::info!(
+                "Reading {} tickers from disk (cache insufficient): {:?}",
+                need_disk_read.len(),
+                need_disk_read
+            );
+            let disk_data = self.get_data_from_disk_with_cache(
+                need_disk_read,
+                interval,
+                start_date,
+                end_date,
+            ).await;
 
-                    if !filtered.is_empty() {
-                        result.insert(ticker.clone(), filtered);
-                    }
-                }
-            }
+            // Merge disk data into result
+            result.extend(disk_data);
         }
 
         result
     }
 
     /// Read data from disk with caching (for hourly/minute intervals and cache=false queries)
+    /// Also updates in-memory cache timestamp when reading daily data
     async fn get_data_from_disk_with_cache(
         &self,
         tickers: Vec<String>,
@@ -407,11 +453,12 @@ impl DataStore {
             };
 
             let data = if let Some(cached_data) = cache_hit {
-                tracing::debug!("Cache hit for {}/{}", ticker, interval.to_filename());
+                tracing::debug!("Disk cache hit for {}/{}", ticker, interval.to_filename());
                 cached_data
             } else {
                 // Cache miss, read from disk
                 let csv_path = self.market_data_dir.join(&ticker).join(interval.to_filename());
+
                 if !csv_path.exists() {
                     continue;
                 }
@@ -472,6 +519,12 @@ impl DataStore {
             if !filtered.is_empty() {
                 result.insert(ticker.clone(), filtered);
             }
+        }
+
+        // Update cache timestamp for daily data (to reset TTL)
+        if interval == Interval::Daily && !result.is_empty() {
+            self.update_cache_timestamp().await;
+            tracing::debug!("Updated in-memory cache timestamp after disk read");
         }
 
         result
@@ -590,7 +643,7 @@ impl DataStore {
         (disk_cache.len(), *disk_cache_size, self.max_cache_size_bytes)
     }
 
-    /// Check if cache has expired based on TTL
+    /// Check if in-memory cache has expired based on TTL
     async fn is_cache_expired(&self) -> bool {
         let cache_last_updated = self.cache_last_updated.lock().await;
         let now = Utc::now();
@@ -598,22 +651,10 @@ impl DataStore {
         cache_age.num_seconds() >= CACHE_TTL_SECONDS
     }
 
-    /// Refresh cache from disk for a specific interval
-    async fn refresh_cache(&self, interval: Interval) -> Result<(), Error> {
-        tracing::info!("Refreshing cache for interval: {}", interval.to_filename());
-
-        // Load fresh data from disk
-        let cutoff_date = Utc::now() - Duration::days(DATA_RETENTION_DAYS);
-        self.load_interval(interval, Some(cutoff_date)).await?;
-
-        // Update cache timestamp
-        {
-            let mut cache_last_updated = self.cache_last_updated.lock().await;
-            *cache_last_updated = Utc::now();
-        }
-
-        tracing::info!("Cache refreshed successfully for interval: {}", interval.to_filename());
-        Ok(())
+    /// Update cache timestamp (called after reading fresh data from disk)
+    async fn update_cache_timestamp(&self) {
+        let mut cache_last_updated = self.cache_last_updated.lock().await;
+        *cache_last_updated = Utc::now();
     }
 }
 
