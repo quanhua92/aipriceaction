@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours};
 use crate::utils::get_market_data_dir;
 use chrono::Utc;
 use std::fs::OpenOptions;
@@ -9,21 +9,55 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
 
-// Trading hours: 5 minutes (active market, frequent refresh)
-// Non-trading hours: 30 minutes (market closed, very relaxed)
-const TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
-const NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes
+// Hourly sync intervals
+const HOURLY_TRADING_INTERVAL_SECS: u64 = 60; // 1 minute (trading hours)
+const HOURLY_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
+
+// Minute sync intervals
+const MINUTE_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes (trading hours)
+const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
 
 #[instrument(skip(_data_store, health_stats))]
 pub async fn run(_data_store: SharedDataStore, health_stats: SharedHealthStats) {
     info!(
-        "Starting slow worker - Trading hours: {}s, Non-trading hours: {}s",
-        TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS
+        "Starting slow worker with 2 independent tasks:"
+    );
+    info!(
+        "  - Hourly: {}s (trading) / {}s (off-hours)",
+        HOURLY_TRADING_INTERVAL_SECS, HOURLY_NON_TRADING_INTERVAL_SECS
+    );
+    info!(
+        "  - Minute: {}s (trading) / {}s (off-hours)",
+        MINUTE_TRADING_INTERVAL_SECS, MINUTE_NON_TRADING_INTERVAL_SECS
     );
 
+    // Spawn two independent async tasks
+    let health_stats_hourly = health_stats.clone();
+    let health_stats_minute = health_stats.clone();
+
+    let hourly_task = tokio::spawn(async move {
+        run_interval_worker(Interval::Hourly, health_stats_hourly).await;
+    });
+
+    let minute_task = tokio::spawn(async move {
+        run_interval_worker(Interval::Minute, health_stats_minute).await;
+    });
+
+    // Wait for both tasks (they run forever)
+    let _ = tokio::join!(hourly_task, minute_task);
+}
+
+/// Run a worker for a specific interval
+async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats) {
     let mut iteration_count = 0u64;
     let market_data_dir = get_market_data_dir();
-    let intervals = vec![Interval::Hourly, Interval::Minute];
+    let interval_name = match interval {
+        Interval::Hourly => "Hourly",
+        Interval::Minute => "Minute",
+        Interval::Daily => "Daily", // shouldn't happen
+    };
+
+    info!("{} worker started", interval_name);
 
     loop {
         iteration_count += 1;
@@ -31,119 +65,142 @@ pub async fn run(_data_store: SharedDataStore, health_stats: SharedHealthStats) 
         let is_trading = is_trading_hours();
 
         info!(
+            worker = interval_name,
             iteration = iteration_count,
             is_trading_hours = is_trading,
-            "Slow worker: Starting sync"
+            "Starting sync"
         );
 
         // Step 0: Validate and repair CSV files (corruption recovery)
-        for interval in &intervals {
-            match validate_and_repair_interval(*interval, &market_data_dir) {
-                Ok(reports) => {
-                    if !reports.is_empty() {
+        match validate_and_repair_interval(interval, &market_data_dir) {
+            Ok(reports) => {
+                if !reports.is_empty() {
+                    warn!(
+                        worker = interval_name,
+                        iteration = iteration_count,
+                        corrupted_count = reports.len(),
+                        "Found and repaired corrupted CSV files"
+                    );
+                    for report in &reports {
                         warn!(
+                            worker = interval_name,
                             iteration = iteration_count,
-                            interval = %interval.to_filename(),
-                            corrupted_count = reports.len(),
-                            "Slow worker: Found and repaired corrupted CSV files"
+                            ticker = %report.ticker,
+                            removed_lines = report.removed_lines,
+                            "Repaired corrupted file"
                         );
-                        for report in &reports {
-                            warn!(
-                                iteration = iteration_count,
-                                interval = %interval.to_filename(),
-                                ticker = %report.ticker,
-                                removed_lines = report.removed_lines,
-                                "Slow worker: Repaired corrupted file"
-                            );
-                        }
                     }
                 }
-                Err(e) => {
-                    warn!(
-                        iteration = iteration_count,
-                        interval = %interval.to_filename(),
-                        error = %e,
-                        "Slow worker: Validation failed"
-                    );
-                }
+            }
+            Err(e) => {
+                warn!(
+                    worker = interval_name,
+                    iteration = iteration_count,
+                    error = %e,
+                    "Validation failed"
+                );
             }
         }
 
-        // Step 1: Sync each interval separately and log individually
-        for interval in &intervals {
-            let sync_start = Utc::now();
-            let sync_result = sync_interval_data(*interval).await;
-            let sync_end = Utc::now();
-            let sync_duration = (sync_end - sync_start).num_seconds();
+        // Step 1: Sync this interval
+        let sync_start = Utc::now();
+        let sync_result = sync_interval_data(interval).await;
+        let sync_end = Utc::now();
+        let sync_duration = (sync_end - sync_start).num_seconds();
 
-            let (sync_success, stats) = match sync_result {
-                Ok(s) => {
-                    info!(iteration = iteration_count, interval = %interval.to_filename(), "Slow worker: Sync completed");
-                    (true, s)
-                }
-                Err(e) => {
-                    error!(iteration = iteration_count, interval = %interval.to_filename(), error = %e, "Slow worker: Sync failed");
-                    // Continue to next interval on failure
-                    continue;
-                }
-            };
+        let (sync_success, stats) = match sync_result {
+            Ok(s) => {
+                info!(worker = interval_name, iteration = iteration_count, "Sync completed");
+                (true, s)
+            }
+            Err(e) => {
+                error!(worker = interval_name, iteration = iteration_count, error = %e, "Sync failed");
+                // Continue to next iteration on failure
+                let sync_interval = get_interval_duration(interval, is_trading);
+                sleep(sync_interval).await;
+                continue;
+            }
+        };
 
-            // Write log entry for this interval
-            write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, *interval);
-        }
+        // Write log entry for this interval
+        write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, interval);
 
-        // Step 2: Enhance CSV files for each interval
-        for interval in &intervals {
-            info!(iteration = iteration_count, interval = %interval.to_filename(), "Slow worker: Enhancing CSV");
-            match csv_enhancer::enhance_interval(*interval, &market_data_dir) {
-                Ok(stats) => {
-                    info!(
-                        iteration = iteration_count,
-                        interval = %interval.to_filename(),
-                        tickers = stats.tickers,
-                        records = stats.records,
-                        duration_secs = stats.duration.as_secs_f64(),
-                        "Slow worker: Enhancement completed"
-                    );
-                }
-                Err(e) => {
-                    warn!(
-                        iteration = iteration_count,
-                        interval = %interval.to_filename(),
-                        error = %e,
-                        "Slow worker: Enhancement failed"
-                    );
-                }
+        // Step 2: Enhance CSV files
+        info!(worker = interval_name, iteration = iteration_count, "Enhancing CSV");
+        match csv_enhancer::enhance_interval(interval, &market_data_dir) {
+            Ok(stats) => {
+                info!(
+                    worker = interval_name,
+                    iteration = iteration_count,
+                    tickers = stats.tickers,
+                    records = stats.records,
+                    duration_secs = stats.duration.as_secs_f64(),
+                    "Enhancement completed"
+                );
+            }
+            Err(e) => {
+                warn!(
+                    worker = interval_name,
+                    iteration = iteration_count,
+                    error = %e,
+                    "Enhancement failed"
+                );
             }
         }
 
-        // Step 3: Update health stats (no reload needed - data served from disk)
+        // Step 3: Update health stats
         {
             let mut health = health_stats.lock().await;
-            health.hourly_last_sync = Some(Utc::now().to_rfc3339());
-            health.minute_last_sync = Some(Utc::now().to_rfc3339());
+            match interval {
+                Interval::Hourly => {
+                    health.hourly_last_sync = Some(Utc::now().to_rfc3339());
+                }
+                Interval::Minute => {
+                    health.minute_last_sync = Some(Utc::now().to_rfc3339());
+                }
+                Interval::Daily => {} // shouldn't happen
+            }
             health.slow_iteration_count = iteration_count;
             health.is_trading_hours = is_trading;
         }
 
         let loop_duration = loop_start.elapsed();
 
-        // Get dynamic interval based on trading hours
-        let sync_interval = get_sync_interval(
-            Duration::from_secs(TRADING_INTERVAL_SECS),
-            Duration::from_secs(NON_TRADING_INTERVAL_SECS)
-        );
+        // Get dynamic interval based on trading hours and interval type
+        let sync_interval = get_interval_duration(interval, is_trading);
 
         info!(
+            worker = interval_name,
             iteration = iteration_count,
             loop_duration_secs = loop_duration.as_secs_f64(),
             next_sync_secs = sync_interval.as_secs(),
             is_trading_hours = is_trading,
-            "Slow worker: Iteration completed"
+            "Iteration completed"
         );
 
         // Sleep for remaining time
         sleep(sync_interval).await;
+    }
+}
+
+/// Get sync interval duration based on interval type and trading hours
+fn get_interval_duration(interval: Interval, is_trading: bool) -> Duration {
+    match interval {
+        Interval::Hourly => {
+            if is_trading {
+                Duration::from_secs(HOURLY_TRADING_INTERVAL_SECS)
+            } else {
+                Duration::from_secs(HOURLY_NON_TRADING_INTERVAL_SECS)
+            }
+        }
+        Interval::Minute => {
+            if is_trading {
+                Duration::from_secs(MINUTE_TRADING_INTERVAL_SECS)
+            } else {
+                Duration::from_secs(MINUTE_NON_TRADING_INTERVAL_SECS)
+            }
+        }
+        Interval::Daily => Duration::from_secs(300), // shouldn't happen
     }
 }
 
