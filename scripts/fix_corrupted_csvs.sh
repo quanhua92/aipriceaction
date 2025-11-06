@@ -20,8 +20,8 @@ for file in glob.glob('market_data/*/1D.csv'):
 
             corrupted_lines = []
             for i, row in enumerate(reader, start=2):
-                # Check for wrong field count
-                if len(row) not in [7, 16]:
+                # Check for wrong field count (7 basic or 15 enhanced)
+                if len(row) not in [7, 15]:
                     corrupted_lines.append((i, len(row), "wrong field count"))
                     continue
 
