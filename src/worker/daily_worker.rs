@@ -184,7 +184,7 @@ fn write_log_entry(
     {
         let status = if success { "OK" } else { "FAIL" };
         let log_line = format!(
-            "{} | {} | {}s | {} | ok:{} fail:{} skip:{} upd:{} files:{} recs:{}\n",
+            "{} | {} | {}s | 1D | {} | ok:{} fail:{} skip:{} upd:{} files:{} recs:{}\n",
             start_time.format("%Y-%m-%d %H:%M:%S"),
             end_time.format("%Y-%m-%d %H:%M:%S"),
             duration_secs,
