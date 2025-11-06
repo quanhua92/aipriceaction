@@ -327,7 +327,7 @@ impl FetchProgress {
 }
 
 /// Statistics for sync operation
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct SyncStats {
     pub successful: usize,
     pub failed: usize,

@@ -598,4 +598,9 @@ impl DataSync {
         println!("📁 Files written: {}", self.stats.files_written);
         println!("📈 Total records: {}", self.stats.total_records);
     }
+
+    /// Get current sync statistics
+    pub fn get_stats(&self) -> &SyncStats {
+        &self.stats
+    }
 }

@@ -3,6 +3,8 @@ use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
 use crate::utils::get_market_data_dir;
 use chrono::Utc;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
@@ -58,9 +60,15 @@ pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
         }
 
         // Step 1: Sync daily data using existing DataSync
-        match sync_daily_data().await {
-            Ok(_) => {
+        let sync_start = Utc::now();
+        let sync_result = sync_daily_data().await;
+        let sync_end = Utc::now();
+        let sync_duration = (sync_end - sync_start).num_seconds();
+
+        let (sync_success, stats) = match sync_result {
+            Ok(s) => {
                 info!(iteration = iteration_count, "Daily worker: Sync completed");
+                (true, s)
             }
             Err(e) => {
                 error!(iteration = iteration_count, error = %e, "Daily worker: Sync failed");
@@ -72,7 +80,7 @@ pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
                 sleep(sync_interval).await;
                 continue;
             }
-        }
+        };
 
         // Step 2: Enhance CSV files with technical indicators
         info!(iteration = iteration_count, "Daily worker: Enhancing CSV");
@@ -126,13 +134,16 @@ pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
             "Daily worker: Iteration completed"
         );
 
+        // Write compact log entry
+        write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success);
+
         // Sleep for remaining time
         sleep(sync_interval).await;
     }
 }
 
 /// Sync daily data using existing DataSync infrastructure
-async fn sync_daily_data() -> Result<(), Error> {
+async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
     // Calculate date range (last 7 days for resume mode)
     let end_date = Utc::now().format("%Y-%m-%d").to_string();
     let start_date = (Utc::now() - chrono::Duration::days(7))
@@ -152,5 +163,39 @@ async fn sync_daily_data() -> Result<(), Error> {
 
     // Run sync directly (already in async context)
     let mut sync = DataSync::new(config)?;
-    sync.sync_all_intervals(false).await
+    sync.sync_all_intervals(false).await?;
+    Ok(sync.get_stats().clone())
+}
+
+/// Write compact log entry to fast_worker.log
+fn write_log_entry(
+    start_time: &chrono::DateTime<Utc>,
+    end_time: &chrono::DateTime<Utc>,
+    duration_secs: i64,
+    stats: &crate::models::SyncStats,
+    success: bool,
+) {
+    let log_path = get_market_data_dir().join("fast_worker.log");
+
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        let status = if success { "OK" } else { "FAIL" };
+        let log_line = format!(
+            "{} | {} | {}s | {} | ok:{} fail:{} skip:{} upd:{} files:{} recs:{}\n",
+            start_time.format("%Y-%m-%d %H:%M:%S"),
+            end_time.format("%Y-%m-%d %H:%M:%S"),
+            duration_secs,
+            status,
+            stats.successful,
+            stats.failed,
+            stats.skipped,
+            stats.updated,
+            stats.files_written,
+            stats.total_records
+        );
+        let _ = file.write_all(log_line.as_bytes());
+    }
 }
