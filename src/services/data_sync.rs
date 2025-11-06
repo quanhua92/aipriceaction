@@ -43,19 +43,19 @@ impl DataSync {
             self.load_tickers()?
         };
 
-        println!("\n🚀 Starting data sync: {} tickers, {} intervals",
-            tickers.len(),
-            self.config.intervals.len()
-        );
+        // println!("\n🚀 Starting data sync: {} tickers, {} intervals",
+        //     tickers.len(),
+        //     self.config.intervals.len()
+        // );
 
-        println!("📅 Date range: {} to {}", self.config.start_date, self.config.end_date);
-        println!("📊 Mode: {}", if self.config.force_full { "FULL DOWNLOAD" } else { "RESUME (incremental)" });
+        // println!("📅 Date range: {} to {}", self.config.start_date, self.config.end_date);
+        // println!("📊 Mode: {}", if self.config.force_full { "FULL DOWNLOAD" } else { "RESUME (incremental)" });
 
         // Process each interval
         for interval in &self.config.intervals.clone() {
-            println!("\n{}", "=".repeat(70));
-            println!("📊 Interval: {} ({})", interval.to_vci_format(), self.interval_name(*interval));
-            println!("{}", "=".repeat(70));
+            // println!("\n{}", "=".repeat(70));
+            // println!("📊 Interval: {} ({})", interval.to_vci_format(), self.interval_name(*interval));
+            // println!("{}", "=".repeat(70));
 
             self.sync_interval(&tickers, *interval).await?;
         }
@@ -75,7 +75,7 @@ impl DataSync {
         // Categorize tickers (resume vs full history)
         let categorize_start = Instant::now();
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
-        println!("⏱️  Categorization took: {:.2}s", categorize_start.elapsed().as_secs_f64());
+        // println!("⏱️  Categorization took: {:.2}s", categorize_start.elapsed().as_secs_f64());
 
         let batch_size = self.config.get_batch_size(interval);
 
@@ -94,13 +94,13 @@ impl DataSync {
                 }
             };
 
-            if is_adaptive {
-                println!("\n⚡ Batch processing {} tickers using ADAPTIVE resume mode...", resume_ticker_names.len());
-                println!("   📅 Fetching from {} (earliest last date from CSV files)", fetch_start_date);
-            } else {
-                println!("\n⚠️  Batch processing {} tickers using FALLBACK mode (CSV read failed)...", resume_ticker_names.len());
-                println!("   📅 Fetching from {} (using {} day fallback)", fetch_start_date, interval.default_resume_days());
-            }
+            // if is_adaptive {
+            //     println!("\n⚡ Batch processing {} tickers using ADAPTIVE resume mode...", resume_ticker_names.len());
+            //     println!("   📅 Fetching from {} (earliest last date from CSV files)", fetch_start_date);
+            // } else {
+            //     println!("\n⚠️  Batch processing {} tickers using FALLBACK mode (CSV read failed)...", resume_ticker_names.len());
+            //     println!("   📅 Fetching from {} (using {} day fallback)", fetch_start_date, interval.default_resume_days());
+            // }
 
             self.fetcher
                 .batch_fetch(
@@ -115,7 +115,7 @@ impl DataSync {
         } else {
             HashMap::new()
         };
-        println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
+        // println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
 
         // Fetch full history tickers individually (single-ticker API for complete data)
         let full_history_start = Instant::now();
@@ -125,11 +125,11 @@ impl DataSync {
             // For full history, use the interval's minimum start date (2023-09-01 for hourly/minute)
             let full_history_start_date = interval.min_start_date();
 
-            println!(
-                "\n🚀 Processing {} tickers needing full history (single-ticker requests from {})...",
-                category.full_history_tickers.len(),
-                full_history_start_date
-            );
+            // println!(
+            //     "\n🚀 Processing {} tickers needing full history (single-ticker requests from {})...",
+            //     category.full_history_tickers.len(),
+            //     full_history_start_date
+            // );
 
             for ticker in &category.full_history_tickers {
                 match self.fetcher
@@ -142,7 +142,7 @@ impl DataSync {
                     .await
                 {
                     Ok(data) => {
-                        println!("   ✅ {}: {} records", ticker, data.len());
+                        // println!("   ✅ {}: {} records", ticker, data.len());
                         full_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
@@ -152,7 +152,7 @@ impl DataSync {
                 }
             }
 
-            println!("⏱️  Full history fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
+            // println!("⏱️  Full history fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
         }
 
         // Combine batch results
@@ -160,7 +160,7 @@ impl DataSync {
         batch_results.extend(full_history_results);
 
         // Process each ticker with fallback strategy
-        println!("\n🔄 Processing individual tickers with fallback strategy...");
+        // println!("\n🔄 Processing individual tickers with fallback strategy...");
         let processing_start = Instant::now();
 
         let total_tickers = tickers.len();
@@ -200,13 +200,13 @@ impl DataSync {
                     self.stats.total_records += data.len();
 
                     // Compact success line with progress
-                    print!("\r✅ {} | {} records", progress.format_compact(), data.len());
+                    // print!("\r✅ {} | {} records", progress.format_compact(), data.len());
 
-                    // Only show timing if slow (> 0.1s)
-                    if save_elapsed.as_secs_f64() > 0.1 {
-                        print!(" | {:.2}s", save_elapsed.as_secs_f64());
-                    }
-                    println!(); // New line after progress
+                    // // Only show timing if slow (> 0.1s)
+                    // if save_elapsed.as_secs_f64() > 0.1 {
+                    //     print!(" | {:.2}s", save_elapsed.as_secs_f64());
+                    // }
+                    // println!(); // New line after progress
                 }
                 Err(e) => {
                     self.stats.failed += 1;
@@ -215,14 +215,15 @@ impl DataSync {
             }
         }
 
-        println!("⏱️  Individual processing took: {:.2}s", processing_start.elapsed().as_secs_f64());
-
+        // Show minimal summary - just one line per sync
         let interval_time = interval_start_time.elapsed();
         println!(
-            "\n✨ {} sync complete: {} tickers in {:.1}min",
+            "✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
             self.interval_name(interval),
             total_tickers,
-            interval_time.as_secs_f64() / 60.0
+            interval_time.as_secs(),
+            self.stats.successful,
+            self.stats.failed
         );
 
         Ok(())
@@ -582,21 +583,21 @@ impl DataSync {
 
     /// Print final summary
     fn print_final_summary(&self, total_time: std::time::Duration) {
-        println!("\n{}", "=".repeat(70));
-        println!("🎉 SYNC COMPLETE!");
-        println!("{}", "=".repeat(70));
-        println!("⏰ Finished at: {}", Utc::now().format("%Y-%m-%d %H:%M:%S"));
-        println!(
-            "⏱️  Total execution time: {:.2} minutes ({:.1} seconds)",
-            total_time.as_secs_f64() / 60.0,
-            total_time.as_secs_f64()
-        );
-        println!(
-            "📊 Results: ✅{} successful, ❌{} failed, 📝{} updated, ⏭️ {} skipped",
-            self.stats.successful, self.stats.failed, self.stats.updated, self.stats.skipped
-        );
-        println!("📁 Files written: {}", self.stats.files_written);
-        println!("📈 Total records: {}", self.stats.total_records);
+        // println!("\n{}", "=".repeat(70));
+        // println!("🎉 SYNC COMPLETE!");
+        // println!("{}", "=".repeat(70));
+        // println!("⏰ Finished at: {}", Utc::now().format("%Y-%m-%d %H:%M:%S"));
+        // println!(
+        //     "⏱️  Total execution time: {:.2} minutes ({:.1} seconds)",
+        //     total_time.as_secs_f64() / 60.0,
+        //     total_time.as_secs_f64()
+        // );
+        // println!(
+        //     "📊 Results: ✅{} successful, ❌{} failed, 📝{} updated, ⏭️ {} skipped",
+        //     self.stats.successful, self.stats.failed, self.stats.updated, self.stats.skipped
+        // );
+        // println!("📁 Files written: {}", self.stats.files_written);
+        // println!("📈 Total records: {}", self.stats.total_records);
     }
 
     /// Get current sync statistics

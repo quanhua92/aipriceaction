@@ -227,16 +227,26 @@ impl TickerFetcher {
             let results = futures::future::join_all(tasks).await;
 
             // Process results
+            let total_batches = ticker_batches.len();
             for task_result in results {
                 match task_result {
                     Ok((batch_idx, ticker_batch, api_result, api_elapsed)) => {
-                        println!(
-                            "\n--- Batch {}/{}: {} tickers | {:.2}s ---",
-                            batch_idx + 1,
-                            ticker_batches.len(),
-                            ticker_batch.len(),
-                            api_elapsed.as_secs_f64()
-                        );
+                        // Only show first and last batch
+                        let show_first = 1;
+                        let show_last = 1;
+                        let should_print = batch_idx < show_first || batch_idx >= total_batches - show_last;
+
+                        if should_print {
+                            println!(
+                                "\n--- Batch {}/{}: {} tickers | {:.2}s ---",
+                                batch_idx + 1,
+                                total_batches,
+                                ticker_batch.len(),
+                                api_elapsed.as_secs_f64()
+                            );
+                        } else if batch_idx == show_first {
+                            println!("   ... ({} more batches) ...", total_batches - show_first - show_last);
+                        }
 
                         match api_result {
                             Ok(batch_data) => {
