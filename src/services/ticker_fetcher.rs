@@ -72,28 +72,46 @@ impl TickerFetcher {
         );
 
         let mut category = TickerCategory::new();
+        let total = tickers.len();
+        let show_first = 1;
+        let show_last = 1;
 
-        for ticker in tickers {
+        for (idx, ticker) in tickers.iter().enumerate() {
             let file_path = self.get_ticker_file_path(ticker, interval);
 
+            // Only print first few and last few
+            let should_print = idx < show_first || idx >= total - show_last;
+
+            if idx == show_first && total > show_first + show_last {
+                println!("   ... ({} more tickers) ...", total - show_first - show_last);
+            }
+
             if !file_path.exists() {
-                println!("   📄 {} - File does not exist: {:?}", ticker, file_path);
+                if should_print {
+                    println!("   📄 {} - File does not exist: {:?}", ticker, file_path);
+                }
                 category.full_history_tickers.push(ticker.clone());
             } else {
                 // File exists - read last date and use resume mode
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
-                        println!("   📄 {} - Resume from: {}", ticker, last_date);
+                        if should_print {
+                            println!("   📄 {} - Resume from: {}", ticker, last_date);
+                        }
                         category.resume_tickers.push((ticker.clone(), last_date));
                     }
                     Ok(None) => {
                         // File exists but no valid data - need full history
-                        println!("   📄 {} - File exists but no valid data found: {:?}", ticker, file_path);
+                        if should_print {
+                            println!("   📄 {} - File exists but no valid data found: {:?}", ticker, file_path);
+                        }
                         category.full_history_tickers.push(ticker.clone());
                     }
                     Err(e) => {
                         // Error reading file - need full history
-                        println!("   📄 {} - Error reading file: {} - {:?}", ticker, e, file_path);
+                        if should_print {
+                            println!("   📄 {} - Error reading file: {} - {:?}", ticker, e, file_path);
+                        }
                         category.full_history_tickers.push(ticker.clone());
                     }
                 }

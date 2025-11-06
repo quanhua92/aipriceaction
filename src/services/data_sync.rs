@@ -182,13 +182,13 @@ impl DataSync {
             match result {
                 Ok(data) => {
                     // DEBUG: Log data details
-                    if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
-                        eprintln!("DEBUG [{}:{}]: API returned {} rows", ticker, interval.to_filename(), data.len());
-                        if !data.is_empty() {
-                            eprintln!("DEBUG [{}:{}]: First API row: {}", ticker, interval.to_filename(), data[0].time);
-                            eprintln!("DEBUG [{}:{}]: Last API row: {}", ticker, interval.to_filename(), data[data.len()-1].time);
-                        }
-                    }
+                    // if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
+                    //     eprintln!("DEBUG [{}:{}]: API returned {} rows", ticker, interval.to_filename(), data.len());
+                    //     if !data.is_empty() {
+                    //         eprintln!("DEBUG [{}:{}]: First API row: {}", ticker, interval.to_filename(), data[0].time);
+                    //         eprintln!("DEBUG [{}:{}]: Last API row: {}", ticker, interval.to_filename(), data[data.len()-1].time);
+                    //     }
+                    // }
 
                     // Enhance and save to CSV (single write)
                     let save_start = Instant::now();
@@ -236,7 +236,7 @@ impl DataSync {
         batch_results: &HashMap<String, Option<Vec<OhlcvData>>>,
         category: &crate::models::TickerCategory,
     ) -> Result<Vec<OhlcvData>, Error> {
-        eprintln!("DEBUG [{}:process_ticker]: Starting processing", ticker);
+        // eprintln!("DEBUG [{}:process_ticker]: Starting processing", ticker);
 
         // Check if ticker is in resume mode (has last date)
         let ticker_last_date = category.resume_tickers
@@ -245,15 +245,15 @@ impl DataSync {
             .map(|(_, date)| date.clone());
 
         let is_resume = ticker_last_date.is_some();
-        eprintln!("DEBUG [{}:process_ticker]: is_resume={}", ticker, is_resume);
+        // eprintln!("DEBUG [{}:process_ticker]: is_resume={}", ticker, is_resume);
 
         // Check if we have batch result
         if let Some(Some(batch_data)) = batch_results.get(ticker) {
-            eprintln!("DEBUG [{}:process_ticker]: Using batch result with {} rows", ticker, batch_data.len());
-            if !batch_data.is_empty() {
-                eprintln!("DEBUG [{}:process_ticker]: Batch first row: {}", ticker, batch_data.first().unwrap().time);
-                eprintln!("DEBUG [{}:process_ticker]: Batch last row: {}", ticker, batch_data.last().unwrap().time);
-            }
+            // eprintln!("DEBUG [{}:process_ticker]: Using batch result with {} rows", ticker, batch_data.len());
+            // if !batch_data.is_empty() {
+            //     eprintln!("DEBUG [{}:process_ticker]: Batch first row: {}", ticker, batch_data.first().unwrap().time);
+            //     eprintln!("DEBUG [{}:process_ticker]: Batch last row: {}", ticker, batch_data.last().unwrap().time);
+            // }
 
             // For resume tickers, check dividend and merge
             if is_resume {
@@ -262,7 +262,7 @@ impl DataSync {
                     .await;
             } else {
                 // Full history ticker - return batch data directly
-                eprintln!("DEBUG [{}:process_ticker]: Full history ticker, returning batch data directly", ticker);
+                // eprintln!("DEBUG [{}:process_ticker]: Full history ticker, returning batch data directly", ticker);
                 return Ok(batch_data.clone());
             }
         }
@@ -273,33 +273,33 @@ impl DataSync {
         if is_resume {
             // Resume mode: fetch from last date in file
             let fetch_start = ticker_last_date.unwrap();
-            eprintln!("DEBUG [{}:process_ticker]: Resume mode, fetching from {}", ticker, fetch_start);
+            // eprintln!("DEBUG [{}:process_ticker]: Resume mode, fetching from {}", ticker, fetch_start);
             let recent_data = self
                 .fetcher
                 .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)
                 .await?;
 
-            eprintln!("DEBUG [{}:process_ticker]: Fetched {} rows for resume", ticker, recent_data.len());
-            if !recent_data.is_empty() {
-                eprintln!("DEBUG [{}:process_ticker]: Resume first row: {}", ticker, recent_data.first().unwrap().time);
-                eprintln!("DEBUG [{}:process_ticker]: Resume last row: {}", ticker, recent_data.last().unwrap().time);
-            }
+            // eprintln!("DEBUG [{}:process_ticker]: Fetched {} rows for resume", ticker, recent_data.len());
+            // if !recent_data.is_empty() {
+            //     eprintln!("DEBUG [{}:process_ticker]: Resume first row: {}", ticker, recent_data.first().unwrap().time);
+            //     eprintln!("DEBUG [{}:process_ticker]: Resume last row: {}", ticker, recent_data.last().unwrap().time);
+            // }
 
             self.smart_dividend_check_and_merge(ticker, &recent_data, interval)
                 .await
         } else {
             // Full history mode: fetch complete data
             let start_date = self.config.get_effective_start_date(interval);
-            eprintln!("DEBUG [{}:process_ticker]: Full history mode, fetching from {}", ticker, start_date);
+            // eprintln!("DEBUG [{}:process_ticker]: Full history mode, fetching from {}", ticker, start_date);
             let data = self.fetcher
                 .fetch_full_history(ticker, &start_date, &self.config.end_date, interval)
                 .await?;
 
-            eprintln!("DEBUG [{}:process_ticker]: Full history fetched {} rows", ticker, data.len());
-            if !data.is_empty() {
-                eprintln!("DEBUG [{}:process_ticker]: Full history first row: {}", ticker, data.first().unwrap().time);
-                eprintln!("DEBUG [{}:process_ticker]: Full history last row: {}", ticker, data.last().unwrap().time);
-            }
+            // eprintln!("DEBUG [{}:process_ticker]: Full history fetched {} rows", ticker, data.len());
+            // if !data.is_empty() {
+            //     eprintln!("DEBUG [{}:process_ticker]: Full history first row: {}", ticker, data.first().unwrap().time);
+            //     eprintln!("DEBUG [{}:process_ticker]: Full history last row: {}", ticker, data.last().unwrap().time);
+            // }
 
             Ok(data)
         }
@@ -421,11 +421,11 @@ impl DataSync {
         data: &[OhlcvData],
         interval: Interval,
     ) -> Result<(), Error> {
-        eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Received {} rows to enhance and save", ticker, data.len());
-        if !data.is_empty() {
-            eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input first row: {}", ticker, data.first().unwrap().time);
-            eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input last row: {}", ticker, data.last().unwrap().time);
-        }
+        // eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Received {} rows to enhance and save", ticker, data.len());
+        // if !data.is_empty() {
+        //     eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input first row: {}", ticker, data.first().unwrap().time);
+        //     eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input last row: {}", ticker, data.last().unwrap().time);
+        // }
 
         if data.is_empty() {
             return Err(Error::InvalidInput("No data to save".to_string()));
