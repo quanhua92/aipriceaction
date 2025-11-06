@@ -528,19 +528,33 @@ impl DataSync {
             return Err(Error::InvalidInput("No data to save".to_string()));
         }
 
-        // Create HashMap for single ticker data (required by enhance_data)
-        let mut ticker_data = HashMap::new();
-        ticker_data.insert(ticker.to_string(), data.to_vec());
-
-        // Enhance data in-memory (calculates MA, MA scores, close_changed, volume_changed)
-        let enhanced = enhance_data(ticker_data);
-
         // Calculate cutoff date based on resume_days (default 2 days)
         let resume_days = self.config.resume_days.unwrap_or(2) as i64;
         let cutoff_date = Utc::now() - chrono::Duration::days(resume_days);
 
+        // Find cutoff index: where data.time >= cutoff_date
+        let cutoff_index = data.iter()
+            .position(|d| d.time >= cutoff_date)
+            .unwrap_or(data.len());
+
+        // Optimization: Only enhance records near cutoff with MA buffer
+        // Take 200 records before cutoff (for MA200 context) + all records after cutoff
+        const MA_BUFFER: usize = 200;
+        let start_index = cutoff_index.saturating_sub(MA_BUFFER);
+        let sliced_data = &data[start_index..];
+
+        // eprintln!("DEBUG [{}]: Total records: {}, Cutoff index: {}, Sliced: {} (from {})",
+        //     ticker, data.len(), cutoff_index, sliced_data.len(), start_index);
+
+        // Create HashMap for single ticker data (required by enhance_data)
+        let mut ticker_data = HashMap::new();
+        ticker_data.insert(ticker.to_string(), sliced_data.to_vec());
+
+        // Enhance only the sliced portion (massive performance gain for minute data)
+        let enhanced = enhance_data(ticker_data);
+
         // Save enhanced data to CSV with smart cutoff strategy and file locking
-        // This writes the 11-column enhanced CSV in one pass
+        // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
             save_enhanced_csv(ticker, stock_data, interval, cutoff_date)?;
         }
