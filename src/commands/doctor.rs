@@ -1,6 +1,6 @@
 use crate::models::Interval;
 use crate::utils::get_market_data_dir;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -24,6 +24,7 @@ struct FileReport {
     missing_indicators: bool,
     insufficient_data: bool,
     date_gaps: Vec<String>,
+    time_reversals: Vec<String>,
 }
 
 pub fn run() {
@@ -121,6 +122,12 @@ pub fn run() {
                         ticker_issues.push(format!("  ⚠️  {} - {}", interval.to_filename(), gap));
                     }
                 }
+
+                if !report.time_reversals.is_empty() {
+                    for reversal in &report.time_reversals {
+                        ticker_issues.push(format!("  ❌ {} - {}", interval.to_filename(), reversal));
+                    }
+                }
             }
         }
 
@@ -178,6 +185,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
             missing_indicators: false,
             insufficient_data: false,
             date_gaps: Vec::new(),
+            time_reversals: Vec::new(),
         };
     }
 
@@ -194,6 +202,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
                 missing_indicators: false,
                 insufficient_data: false,
                 date_gaps: Vec::new(),
+                time_reversals: Vec::new(),
             }
         }
     };
@@ -206,7 +215,9 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
     let mut missing_indicators = false;
     let mut has_any_indicators = false;
     let mut last_date: Option<NaiveDate> = None;
+    let mut last_timestamp: Option<NaiveDateTime> = None;
     let mut date_gaps = Vec::new();
+    let mut time_reversals = Vec::new();
 
     for (line_num, line_result) in reader.lines().enumerate() {
         total_lines += 1;
@@ -246,15 +257,30 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
             }
         }
 
-        // Check date sequence (field 1 is the date)
+        // Check time sequence (field 1 is the timestamp)
         if fields.len() >= 2 {
-            if let Ok(date) = NaiveDate::parse_from_str(fields[1].split(' ').next().unwrap_or(fields[1]), "%Y-%m-%d") {
-                if let Some(prev_date) = last_date {
-                    if date < prev_date {
-                        date_gaps.push(format!("Date out of order: {} before {}", date, prev_date));
+            let timestamp_str = fields[1];
+
+            // Try to parse as full datetime first (for intraday data)
+            if timestamp_str.contains(' ') {
+                if let Ok(current_ts) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
+                    if let Some(prev_ts) = last_timestamp {
+                        if current_ts <= prev_ts {
+                            time_reversals.push(format!("Time not increasing: {} comes after {}", timestamp_str, prev_ts));
+                        }
                     }
+                    last_timestamp = Some(current_ts);
                 }
-                last_date = Some(date);
+            } else {
+                // Daily data - just check dates
+                if let Ok(date) = NaiveDate::parse_from_str(timestamp_str, "%Y-%m-%d") {
+                    if let Some(prev_date) = last_date {
+                        if date <= prev_date {
+                            time_reversals.push(format!("Time not increasing: {} comes after {}", timestamp_str, prev_date));
+                        }
+                    }
+                    last_date = Some(date);
+                }
             }
         }
     }
@@ -274,6 +300,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         missing_indicators,
         insufficient_data: record_count < 50,
         date_gaps,
+        time_reversals,
     }
 }
 
