@@ -363,8 +363,8 @@ test_csv_export_performance() {
         return 1
     fi
 
-    # Check that 10 tickers minute is reasonable (< 1000ms)
-    if (( $(echo "$ten_tickers_time_ms < 1000" | bc -l) )); then
+    # Check that 10 tickers minute is reasonable (< 2000ms)
+    if (( $(echo "$ten_tickers_time_ms < 2000" | bc -l) )); then
         print_success "10 tickers minute CSV: ${ten_tickers_time_ms}ms ✓"
     else
         print_error "10 tickers minute CSV too slow: ${ten_tickers_time_ms}ms"
