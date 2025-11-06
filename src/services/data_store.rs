@@ -348,11 +348,23 @@ impl DataStore {
             if let Some(ticker_data) = store.get(ticker) {
                 if let Some(interval_data) = ticker_data.get(&interval) {
                     // Check if cache has the requested date range
-                    let has_required_range = if let Some(start) = start_date {
-                        // Check if cache has data going back to requested start date
-                        interval_data.first().map(|d| d.time <= start).unwrap_or(false)
-                    } else {
-                        true // No specific start requested, cache is fine
+                    let has_required_range = {
+                        let start_ok = if let Some(start) = start_date {
+                            // Check if cache has data going back to requested start date
+                            interval_data.first().map(|d| d.time <= start).unwrap_or(false)
+                        } else {
+                            true // No specific start requested
+                        };
+
+                        let end_ok = if let Some(end) = end_date {
+                            // Check if cache has data for the requested end date
+                            // Cache should either contain the end date or start before it
+                            interval_data.first().map(|d| d.time <= end).unwrap_or(false)
+                        } else {
+                            true // No specific end requested
+                        };
+
+                        start_ok && end_ok
                     };
 
                     if has_required_range {

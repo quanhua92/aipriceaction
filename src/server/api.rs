@@ -58,6 +58,10 @@ pub struct TickerQuery {
     /// End date filter (YYYY-MM-DD)
     pub end_date: Option<String>,
 
+    /// Limit number of records to return (works with end_date to get N rows back in history)
+    /// If start_date is provided, limit is ignored
+    pub limit: Option<usize>,
+
     /// Legacy price format: divide by 1000 for old proxy compatibility - default: false
     #[serde(default)]
     pub legacy: bool,
@@ -85,6 +89,7 @@ fn default_cache() -> bool {
 /// - /tickers?symbol=VCB (default to daily, uses cache)
 /// - /tickers?symbol=VCB&interval=1H
 /// - /tickers?symbol=VCB&interval=1D&start_date=2024-01-01&end_date=2024-12-31
+/// - /tickers?symbol=VCB&end_date=2024-06-15&limit=5 (get 5 rows back from June 15, 2024)
 /// - /tickers?symbol=VCB&cache=false (force disk read, bypass memory cache)
 #[instrument(skip(data_state))]
 pub async fn get_tickers_handler(
@@ -149,33 +154,39 @@ pub async fn get_tickers_handler(
         None => None,
     };
 
-    // Default behavior: if no dates specified, find last trading day from VNINDEX
+    // Default behavior: if no dates specified
     let (start_date_filter, end_date_filter) = if start_date_filter.is_none() && end_date_filter.is_none() {
-        // Query VNINDEX to find the last trading day
-        let vnindex_data = data_state.get_data_with_cache(
-            vec!["VNINDEX".to_string()],
-            interval,
-            None,
-            None,
-            params.cache
-        ).await;
+        // If limit is provided, don't restrict to just today - let limit parameter control the range
+        if params.limit.is_some() {
+            debug!("Limit provided without dates - will fetch all data and apply limit");
+            (None, None)
+        } else {
+            // Query VNINDEX to find the last trading day
+            let vnindex_data = data_state.get_data_with_cache(
+                vec!["VNINDEX".to_string()],
+                interval,
+                None,
+                None,
+                params.cache
+            ).await;
 
-        if let Some(vnindex_records) = vnindex_data.get("VNINDEX") {
-            if let Some(last_record) = vnindex_records.last() {
-                let last_day = last_record.time;
-                let start = last_day.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
-                let end = last_day.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
-                debug!("Using last trading day from VNINDEX: {}", last_day.format("%Y-%m-%d"));
-                (Some(start), Some(end))
+            if let Some(vnindex_records) = vnindex_data.get("VNINDEX") {
+                if let Some(last_record) = vnindex_records.last() {
+                    let last_day = last_record.time;
+                    let start = last_day.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
+                    let end = last_day.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+                    debug!("Using last trading day from VNINDEX: {}", last_day.format("%Y-%m-%d"));
+                    (Some(start), Some(end))
+                } else {
+                    // Fallback: last 1 day if VNINDEX has no data
+                    let now = Utc::now();
+                    (Some(now - chrono::Duration::days(1)), Some(now))
+                }
             } else {
-                // Fallback: last 1 day if VNINDEX has no data
+                // Fallback: last 1 day if VNINDEX not found
                 let now = Utc::now();
                 (Some(now - chrono::Duration::days(1)), Some(now))
             }
-        } else {
-            // Fallback: last 1 day if VNINDEX not found
-            let now = Utc::now();
-            (Some(now - chrono::Duration::days(1)), Some(now))
         }
     } else {
         (start_date_filter, end_date_filter)
@@ -188,13 +199,32 @@ pub async fn get_tickers_handler(
     };
 
     // Query data using DataStore with cache control
-    let result_data = data_state.get_data_with_cache(
+    let mut result_data = data_state.get_data_with_cache(
         symbols_to_query,
         interval,
         start_date_filter,
         end_date_filter,
         params.cache
     ).await;
+
+    // Apply limit if provided and start_date is not specified
+    // Limit works with end_date to get N rows back in history
+    if let Some(limit) = params.limit {
+        if params.start_date.is_none() && limit > 0 {
+            result_data = result_data
+                .into_iter()
+                .map(|(ticker, mut records)| {
+                    // Sort by time descending and take last N records
+                    records.sort_by(|a, b| b.time.cmp(&a.time));
+                    records.truncate(limit);
+                    // Sort back to ascending order for response
+                    records.sort_by(|a, b| a.time.cmp(&b.time));
+                    (ticker, records)
+                })
+                .collect();
+            debug!(limit, "Applied limit to results");
+        }
+    }
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();

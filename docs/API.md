@@ -51,6 +51,7 @@ Query stock data with optional filters.
 | `interval` | string | No | `1D` | Time interval: `1D` (daily), `1H` (hourly), `1m` (minute) |
 | `start_date` | string | No | Yesterday | Start date filter (YYYY-MM-DD format) |
 | `end_date` | string | No | Today | End date filter (YYYY-MM-DD format) |
+| `limit` | number | No | None | Limit number of records to return (works with `end_date` to get N rows back in history). Ignored if `start_date` is provided |
 | `legacy` | boolean | No | `false` | If true, divides stock prices by 1000 (old proxy compatibility) |
 | `format` | string | No | `json` | Response format: `json` or `csv` |
 | `cache` | boolean | No | `true` | Use memory cache (default). Set to `false` to force disk read and bypass TTL cache |
@@ -140,6 +141,16 @@ curl "http://localhost:3000/tickers?symbol=VCB&symbol=FPT&interval=1H"
 **Get historical daily data:**
 ```bash
 curl "http://localhost:3000/tickers?symbol=VCB&start_date=2025-01-01&end_date=2025-12-31"
+```
+
+**Get last 5 trading days before a specific date:**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&end_date=2024-06-15&limit=5"
+```
+
+**Get last 10 trading days (using limit with today's date):**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&limit=10"
 ```
 
 **Get data in legacy price format:**

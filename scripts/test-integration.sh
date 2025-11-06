@@ -375,6 +375,63 @@ test_csv_export_performance() {
     return 0
 }
 
+test_limit_parameter() {
+    print_test "Limit Parameter Test"
+
+    # Test 1: Get last 5 records with end_date
+    local response=$(curl -s "$BASE_URL/tickers?symbol=VCB&end_date=2024-06-15&limit=5" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for limit parameter test"
+        return 1
+    fi
+
+    local record_count=$(echo "$response" | jq '.VCB | length // 0')
+    print_result "Limit=5 returns 5 records" "5" "$record_count" || return 1
+
+    # Verify records are before end_date
+    local last_date=$(echo "$response" | jq -r '.VCB[-1].time // empty')
+    if [[ "$last_date" > "2024-06-15" ]]; then
+        print_error "Last date ($last_date) exceeds end_date (2024-06-15)"
+        return 1
+    fi
+    print_success "Records respect end_date: last record is $last_date"
+
+    # Test 2: Get last 10 records without date (should get last 10 trading days)
+    response=$(curl -s "$BASE_URL/tickers?symbol=FPT&limit=10" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for limit without date"
+        return 1
+    fi
+
+    record_count=$(echo "$response" | jq '.FPT | length // 0')
+
+    # Should get at most 10 records (may be less if fewer trading days available)
+    if (( record_count > 10 )); then
+        print_error "Limit=10 returned $record_count records (expected max 10)"
+        return 1
+    fi
+    print_success "Limit=10 returns $record_count records (max 10)"
+
+    # Test 3: Verify limit is ignored when start_date is provided
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&start_date=2024-06-01&end_date=2024-06-15&limit=5" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for limit with start_date"
+        return 1
+    fi
+
+    record_count=$(echo "$response" | jq '.VCB | length // 0')
+
+    # Should get all records in range, not limited to 5
+    if (( record_count < 8 )); then
+        print_error "Limit incorrectly applied with start_date: got $record_count records (expected ~10)"
+        return 1
+    fi
+    print_success "Limit ignored when start_date provided: got $record_count records"
+
+    print_success "Limit parameter test passed"
+    return 0
+}
+
 test_historical_data_range() {
     print_test "Historical Data Range (2023-2024)"
 
@@ -503,6 +560,9 @@ main() {
 
     ((TOTAL_TESTS++))
     test_csv_export_performance || true
+
+    ((TOTAL_TESTS++))
+    test_limit_parameter || true
 
     ((TOTAL_TESTS++))
     test_historical_data_range || true
