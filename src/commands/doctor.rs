@@ -1,3 +1,4 @@
+use crate::constants::{CSV_BASIC_COLUMNS, CSV_ENHANCED_COLUMNS, MIN_RECORDS_FOR_MA50, MIN_RECORDS_FOR_ANALYSIS};
 use crate::models::Interval;
 use crate::utils::get_market_data_dir;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -109,25 +110,27 @@ pub fn run() {
                     ticker_issues.push(format!("  ⚠️  {} - No records found", interval.to_filename()));
                 } else if report.insufficient_data {
                     ticker_issues.push(format!(
-                        "  ⚠️  {} - Only {} records (need 50+ for MA50)",
+                        "  ⚠️  {} - Only {} records (need {}+ for MA50)",
                         interval.to_filename(),
-                        report.record_count
+                        report.record_count,
+                        MIN_RECORDS_FOR_MA50
                     ));
-                } else if interval == Interval::Daily && report.record_count < 1500 {
+                } else if interval == Interval::Daily && report.record_count < MIN_RECORDS_FOR_ANALYSIS {
                     let date_info = if report.first_date.is_some() && report.last_date.is_some() {
                         format!(" [{} → {}]", report.first_date.as_ref().unwrap(), report.last_date.as_ref().unwrap())
                     } else {
                         String::new()
                     };
                     ticker_issues.push(format!(
-                        "  ⚠️  {} - Only {} records{} (recommended 1500+ for historical analysis)",
+                        "  ⚠️  {} - Only {} records{} (recommended {}+ for historical analysis)",
                         interval.to_filename(),
                         report.record_count,
-                        date_info
+                        date_info,
+                        MIN_RECORDS_FOR_ANALYSIS
                     ));
                 }
 
-                if report.missing_indicators && report.record_count >= 50 {
+                if report.missing_indicators && report.record_count >= MIN_RECORDS_FOR_MA50 {
                     ticker_issues.push(format!(
                         "  ⚠️  {} - Missing technical indicators (should run enhancement)",
                         interval.to_filename()
@@ -272,8 +275,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         let fields: Vec<&str> = line.split(',').collect();
         let field_count = fields.len();
 
-        // Valid CSV should have 7 (basic) or 15 (with indicators) fields
-        if field_count != 7 && field_count != 15 {
+        // Valid CSV should have CSV_BASIC_COLUMNS (basic) or CSV_ENHANCED_COLUMNS (with indicators) fields
+        if field_count != CSV_BASIC_COLUMNS && field_count != CSV_ENHANCED_COLUMNS {
             corrupted_lines.push(line_num + 1);
             continue;
         }
@@ -281,7 +284,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         record_count += 1;
 
         // Check if indicators are present (field 7+ should be non-empty)
-        if field_count == 15 && record_count >= 50 {
+        if field_count == CSV_ENHANCED_COLUMNS && record_count >= MIN_RECORDS_FOR_MA50 {
             // Check if MA10 field (index 7) is non-empty
             if fields.len() > 7 && !fields[7].is_empty() {
                 has_any_indicators = true;
@@ -324,7 +327,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
     }
 
     // Determine if indicators are missing
-    if record_count >= 50 && !has_any_indicators {
+    if record_count >= MIN_RECORDS_FOR_MA50 && !has_any_indicators {
         missing_indicators = true;
     }
 
@@ -336,7 +339,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         header_valid,
         corrupted_lines,
         missing_indicators,
-        insufficient_data: record_count < 50,
+        insufficient_data: record_count < MIN_RECORDS_FOR_MA50,
         date_gaps,
         time_reversals,
         first_date: first_date_str,

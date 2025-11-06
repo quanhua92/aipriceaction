@@ -1,3 +1,4 @@
+use crate::constants::csv_column;
 use crate::error::Error;
 use crate::models::{Interval, StockData};
 use chrono::{DateTime, Duration, Utc};
@@ -268,23 +269,23 @@ impl DataStore {
             let volume: u64 = record.get(6).ok_or_else(|| Error::Io("Missing volume".to_string()))?.parse()
                 .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
 
-            // Parse technical indicators if present (16 columns)
+            // Parse technical indicators if present (enhanced CSV format)
             let mut stock_data = StockData::new(time, ticker.to_string(), open, high, low, close, volume);
 
-            if record.len() >= 16 {
+            if record.len() >= csv_column::VOLUME_CHANGED + 1 {
                 // Parse MAs
-                stock_data.ma10 = record.get(7).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma20 = record.get(8).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma50 = record.get(9).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma10 = record.get(csv_column::MA10).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma20 = record.get(csv_column::MA20).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma50 = record.get(csv_column::MA50).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
 
                 // Parse MA scores
-                stock_data.ma10_score = record.get(10).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma20_score = record.get(11).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma50_score = record.get(12).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma10_score = record.get(csv_column::MA10_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma20_score = record.get(csv_column::MA20_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma50_score = record.get(csv_column::MA50_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
 
-                // Parse change indicators (NEW format: close_changed and volume_changed)
-                stock_data.close_changed = record.get(13).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.volume_changed = record.get(14).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                // Parse change indicators (percentage change from previous row)
+                stock_data.close_changed = record.get(csv_column::CLOSE_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.volume_changed = record.get(csv_column::VOLUME_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
             }
 
             data.push(stock_data);
