@@ -25,6 +25,8 @@ struct FileReport {
     insufficient_data: bool,
     date_gaps: Vec<String>,
     time_reversals: Vec<String>,
+    first_date: Option<String>,
+    last_date: Option<String>,
 }
 
 pub fn run() {
@@ -72,10 +74,19 @@ pub fn run() {
         // Check each interval
         let intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
         let mut ticker_issues = Vec::new();
+        let mut daily_date_range: Option<String> = None;
 
         for interval in intervals {
             let csv_path = ticker_dir.join(interval.to_filename());
             let report = check_csv_file(&ticker, &csv_path, interval);
+
+            // Capture daily date range for display
+            if interval == Interval::Daily && report.exists && report.first_date.is_some() && report.last_date.is_some() {
+                daily_date_range = Some(format!("{} → {}",
+                    report.first_date.as_ref().unwrap(),
+                    report.last_date.as_ref().unwrap()
+                ));
+            }
 
             // Collect issues from this file
             if !report.exists {
@@ -133,14 +144,22 @@ pub fn run() {
 
         if !ticker_issues.is_empty() {
             total_issues += ticker_issues.len();
-            println!("⚠️  {} issues", ticker_issues.len());
+            if let Some(date_range) = daily_date_range {
+                println!("⚠️  {} issues [{}]", ticker_issues.len(), date_range);
+            } else {
+                println!("⚠️  {} issues", ticker_issues.len());
+            }
             ticker_reports.push(TickerReport {
                 ticker: ticker.clone(),
                 total_issues: ticker_issues.len(),
                 issues: ticker_issues,
             });
         } else {
-            println!("✅");
+            if let Some(date_range) = daily_date_range {
+                println!("✅ [{}]", date_range);
+            } else {
+                println!("✅");
+            }
         }
     }
 
@@ -186,6 +205,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
             insufficient_data: false,
             date_gaps: Vec::new(),
             time_reversals: Vec::new(),
+            first_date: None,
+            last_date: None,
         };
     }
 
@@ -203,6 +224,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
                 insufficient_data: false,
                 date_gaps: Vec::new(),
                 time_reversals: Vec::new(),
+                first_date: None,
+                last_date: None,
             }
         }
     };
@@ -218,6 +241,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
     let mut last_timestamp: Option<NaiveDateTime> = None;
     let date_gaps = Vec::new();
     let mut time_reversals = Vec::new();
+    let mut first_date_str: Option<String> = None;
+    let mut last_date_str: Option<String> = None;
 
     for (line_num, line_result) in reader.lines().enumerate() {
         total_lines += 1;
@@ -261,6 +286,13 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         if fields.len() >= 2 {
             let timestamp_str = fields[1];
 
+            // Capture first date
+            if first_date_str.is_none() {
+                first_date_str = Some(timestamp_str.to_string());
+            }
+            // Always update last date
+            last_date_str = Some(timestamp_str.to_string());
+
             // Try to parse as full datetime first (for intraday data)
             if timestamp_str.contains(' ') {
                 if let Ok(current_ts) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
@@ -301,6 +333,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         insufficient_data: record_count < 50,
         date_gaps,
         time_reversals,
+        first_date: first_date_str,
+        last_date: last_date_str,
     }
 }
 
