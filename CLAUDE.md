@@ -1,0 +1,365 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**aipriceaction** is a Vietnamese stock market data management system that fetches, stores, and serves market data from the VCI (Vietcap) API. It provides both a CLI for data synchronization and a REST API server with in-memory caching.
+
+## Build & Development Commands
+
+### Build
+```bash
+# Debug build
+cargo build
+
+# Release build (optimized)
+cargo build --release
+
+# Check compilation without building
+cargo check
+```
+
+### Run CLI Commands
+```bash
+# Fetch latest market data (adaptive resume mode)
+cargo run -- pull
+
+# Start API server with background workers
+cargo run -- serve --port 3000
+
+# Show data statistics
+cargo run -- status
+
+# Validate and repair CSV files
+cargo run -- doctor
+
+# Import historical data from reference project
+cargo run -- import-legacy
+
+# Get company information
+cargo run -- company <TICKER>
+```
+
+### Run with Release Binary
+```bash
+# Build once
+cargo build --release
+
+# Then use the optimized binary
+./target/release/aipriceaction pull
+./target/release/aipriceaction serve --port 3000
+```
+
+### Testing
+```bash
+# Run integration tests (requires server running on localhost:3000)
+./scripts/test-integration.sh
+
+# Run integration tests against custom URL
+./scripts/test-integration.sh http://localhost:3001
+```
+
+### Docker
+
+**Important:** Use `docker-compose.local.yml` for local development (has absolute path to market_data).
+
+```bash
+# Start server (local development with existing data)
+docker compose -f docker-compose.local.yml up -d
+
+# Start server (production - empty market_data, will sync from scratch)
+docker compose up -d
+
+# Rebuild and start
+docker compose -f docker-compose.local.yml up -d --build
+
+# View logs
+docker logs aipriceaction --tail 50
+docker logs aipriceaction -f
+
+# Stop and remove
+docker compose -f docker-compose.local.yml down
+
+# Check container stats
+docker stats aipriceaction
+```
+
+### Useful Scripts
+```bash
+# Pull all intervals (daily, hourly, minute)
+./scripts/pull_all.sh
+
+# Pull specific intervals
+./scripts/pull_daily.sh
+./scripts/pull_hourly.sh
+./scripts/pull_minute.sh
+
+# Start server
+./scripts/serve.sh
+
+# Verify API endpoints
+./scripts/api_verification.sh
+
+# Fix corrupted CSV files
+./scripts/fix_corrupted_csvs.sh
+```
+
+## Architecture
+
+### 4-Layer Structure
+
+```
+┌─────────────────────────────────────────────────────┐
+│  CLI Layer (commands/)                              │
+│  - pull, serve, status, doctor, import-legacy       │
+└─────────────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────────────┐
+│  Service Layer (services/)                          │
+│  - VciClient: VCI API integration                   │
+│  - DataSync: Sync orchestration                     │
+│  - DataStore: Dual-layer caching                    │
+│  - CSV Enhancement: Technical indicators            │
+└─────────────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────────────┐
+│  Server Layer (server/)                             │
+│  - Axum REST API with background workers            │
+└─────────────────────────────────────────────────────┘
+                     ↓
+┌─────────────────────────────────────────────────────┐
+│  Storage: market_data/{TICKER}/{INTERVAL}.csv       │
+│  - 19-column format with technical indicators       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+**Services (`src/services/`)**
+- **VciClient** (`vci.rs`): VCI API client with rate limiting (30 req/min), retry logic, batch fetching
+- **DataSync** (`data_sync.rs`): Orchestrates syncing - batch fetching, dividend detection, data merging
+- **DataStore** (`data_store.rs`): Dual-layer cache:
+  - Memory cache: Last 1 year daily data (4GB limit, 60s TTL)
+  - Disk cache: LRU cache for hourly/minute (500MB limit, 60s TTL)
+- **TickerFetcher** (`ticker_fetcher.rs`): Handles API calls, categorizes tickers (resume vs full)
+- **CSV Enhancer** (`csv_enhancer.rs`): Adds technical indicators during sync (single-phase enhancement)
+
+**Server (`src/server/`)**
+- **API** (`api.rs`): Axum REST API
+  - `GET /tickers` - Query stock data
+  - `GET /health` - System health/stats
+  - `GET /tickers/group` - Ticker groupings
+- **Background Workers** (`worker/`):
+  - `daily_worker`: Syncs daily data (15s trading hours, 5min off-hours)
+  - `slow_worker`: Syncs hourly/minute (5min trading, 30min off-hours)
+
+**Models (`src/models/`)**
+- **StockData**: OHLCV + 10 technical indicators (ma10-200, scores, changes)
+- **Interval**: Daily (1D), Hourly (1H), Minute (1m)
+
+### Data Flow Patterns
+
+**Sync Flow (CLI `pull`):**
+1. Pre-scan: Read last dates from CSV files
+2. Categorize: Resume tickers vs Full history tickers
+3. Batch fetch: VCI API (adaptive start date)
+4. Dividend check: Detect price adjustments (daily only)
+5. Merge: Smart merging with existing data
+6. Enhance: Calculate indicators in-memory (single-phase)
+7. Write: Write enhanced CSV once (19 columns)
+
+**API Request Flow:**
+1. Request: `GET /tickers?symbol=VCB&interval=1D`
+2. Cache check: Memory (daily) or Disk (hourly/minute)
+3. If expired/missing: Read from disk, update cache
+4. Filter: Apply date range and limit
+5. Transform: Apply legacy scaling if needed
+6. Response: JSON or CSV format
+
+**Background Worker Flow:**
+1. Check trading hours (9:00-15:00 ICT)
+2. Validate CSV files (auto-repair corruption)
+3. Sync data via DataSync
+4. Enhance CSVs with indicators
+5. Reload into memory cache
+6. Update health stats
+7. Sleep until next iteration
+
+## Critical Implementation Details
+
+### Price Format Convention (CRITICAL)
+
+**Stock prices are stored in FULL VND format** (not divided by 1000):
+- Stock tickers (VCB, FPT): 60300.0 (not 60.3)
+- Market indices (VNINDEX, VN30): 1642.64 (actual value)
+- API returns full prices → CSV stores full prices → Memory stores full prices
+- Only divide by 1000 when `legacy=true` flag is used (backward compatibility)
+- Index tickers defined in `INDEX_TICKERS` constant in `src/constants.rs`
+
+### CSV Format (19 columns)
+
+```
+ticker,time,open,high,low,close,volume,
+ma10,ma20,ma50,ma100,ma200,
+ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,
+close_changed,volume_changed
+```
+
+- All CSV files follow this enhanced format (added in v0.3.0)
+- Technical indicators calculated during sync (single-phase enhancement)
+- Time format: "YYYY-MM-DD" (daily) or "YYYY-MM-DD HH:MM:SS" (hourly/minute)
+
+### File Structure
+
+```
+market_data/
+├── VCB/
+│   ├── 1D.csv   # Daily data (19 columns)
+│   ├── 1h.csv   # Hourly data
+│   └── 1m.csv   # Minute data
+├── FPT/
+│   ├── 1D.csv
+│   ├── 1h.csv
+│   └── 1m.csv
+└── VNINDEX/
+    ├── 1D.csv
+    ├── 1h.csv
+    └── 1m.csv
+```
+
+### Adaptive Resume Mode
+
+- Reads last date from each ticker's CSV file
+- Uses minimum (earliest) date across all tickers as batch fetch start
+- Automatically scales: 1 day if run daily, 7 days if missed a week
+- No fixed `resume_days` configuration needed
+- Fallback: 2 days if CSV read fails
+
+### Dividend Detection
+
+When a dividend is issued, VCI API returns price-adjusted historical data:
+- Compares recent API data (3 weeks to 1 week ago) with existing CSV
+- Threshold: >2% price difference
+- Action: Delete ALL CSV files (1D, 1H, 1m) and re-download full history
+- Ensures data consistency across all intervals
+
+### Single-Phase CSV Enhancement
+
+**Old approach:** Fetch → Write raw → Read → Enhance → Write enhanced (2 writes)
+**New approach:** Fetch → Enhance in-memory → Write enhanced once (1 write)
+
+Benefits:
+- Faster sync times
+- Safe with file locking during API writes
+- No redundant disk I/O
+
+### Batch API Strategy
+
+- Resume mode: 50 tickers/batch (daily), 20 (hourly), 3 (minute)
+- Full history: 2 tickers/batch (more reliable for large data)
+- Rate limiting: 30 calls/min, 2-3s between batches
+- Retry: Exponential backoff, max 5 retries
+
+### Trading Hours
+
+- Hardcoded in `src/services/trading_hours.rs`
+- Vietnam stock market: 9:00-15:00 ICT (UTC+7)
+- Affects worker sync frequency
+
+## Common Patterns
+
+### Adding a New API Endpoint
+
+1. Add handler function in `src/server/api.rs`
+2. Register route in `src/server/mod.rs`
+3. Update `scripts/test-integration.sh` to test it
+4. Document in `docs/API.md`
+
+### Adding a New Technical Indicator
+
+1. Add fields to `StockData` in `src/models/stock_data.rs`
+2. Update `CSV_ENHANCED_COLUMNS` count in `src/constants.rs`
+3. Add column indices in `csv_column` module
+4. Implement calculation in `src/services/csv_enhancer.rs`
+5. Update CSV parser in `src/services/csv_parser.rs`
+6. Update API response in `src/server/api.rs` (StockDataResponse)
+
+### Working with Index Tickers
+
+Index tickers (VNINDEX, VN30) are treated differently:
+- No dividend detection (indices don't have dividends)
+- No legacy price scaling (keep original values)
+- Defined in `INDEX_TICKERS` constant in `src/constants.rs`
+
+To add a new index:
+```rust
+// src/constants.rs
+pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "NEW_INDEX"];
+```
+
+### File Locking
+
+The codebase uses `fs2` for cross-process file locking:
+- Enables safe concurrent access during background sync
+- API reads are safe even during worker writes
+- Always use `OpenOptions::new().read(true).open()` pattern
+
+## Configuration
+
+### Environment Variables
+
+- `MAX_CACHE_SIZE_MB`: Disk cache limit (default: 500MB)
+- `RUST_LOG`: Logging level (`info`, `debug`, `trace`)
+- `PORT`: Server port (default: 3000)
+
+### Key Files
+
+- `ticker_group.json`: Ticker groupings (VN30, BANKING, etc.)
+- `market_data/`: CSV storage directory
+- `Cargo.toml`: Dependencies and build config
+- `Dockerfile`: Multi-stage build for production
+- `docker-compose.local.yml`: Local development (absolute path to market_data)
+- `docker-compose.yml`: Production deployment (relative path)
+
+## Performance Notes
+
+- **Resume sync** (daily): 1-2 minutes for 290 tickers
+- **Full sync** (daily): 6-8 minutes for 290 tickers
+- **Hourly sync**: 2.5-4 hours (chunked by year)
+- **Minute sync**: 30-50 hours (chunked by month)
+- **Memory usage**: ~2.8GB for 282 tickers (1 year daily data)
+- **API throughput**: ~30 requests/minute (VCI rate limit)
+
+## Common Issues
+
+### Docker Volume Mounting
+
+Use `docker-compose.local.yml` for local development because:
+- `docker-compose.yml` uses relative path `./market_data`
+- May not work properly with symlinks or Colima on macOS
+- `docker-compose.local.yml` uses absolute path `/Volumes/data/workspace/aipriceaction/market_data`
+
+### CSV Corruption
+
+If CSV files get corrupted:
+```bash
+# Auto-detect and repair
+cargo run -- doctor
+
+# Or manually fix with script
+./scripts/fix_corrupted_csvs.sh
+```
+
+### API Rate Limiting
+
+VCI API limits: ~30 requests/minute
+- Built-in rate limiting in `VciClient`
+- Automatic retry with exponential backoff
+- If rate limited, wait 60 seconds before retry
+
+### Cache Not Updating
+
+Cache TTL is 60 seconds. To force refresh:
+- Add `cache=false` query parameter: `/tickers?symbol=VCB&cache=false`
+- Or restart the server to clear memory cache
