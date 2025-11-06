@@ -63,3 +63,7 @@ pub const MIN_RECORDS_FOR_MA200: usize = 200;
 
 /// Minimum number of records recommended for historical analysis
 pub const MIN_RECORDS_FOR_ANALYSIS: usize = 1500;
+
+/// List of index tickers (not individual stocks)
+/// These indices should NOT be scaled when using legacy price format
+pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];

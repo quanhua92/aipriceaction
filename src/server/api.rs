@@ -1,3 +1,4 @@
+use crate::constants::INDEX_TICKERS;
 use crate::models::Interval;
 use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
@@ -259,7 +260,7 @@ pub async fn get_tickers_handler(
 
     // Helper function to check if ticker is a market index
     let is_index = |ticker: &str| -> bool {
-        ticker == "VNINDEX" || ticker == "VN30" || ticker.starts_with("VN")
+        INDEX_TICKERS.contains(&ticker)
     };
 
     // Return JSON format - use BTreeMap for alphabetically sorted keys
@@ -313,7 +314,7 @@ fn generate_csv_response(
 ) -> Response {
     // Helper function to check if ticker is a market index
     let is_index = |ticker: &str| -> bool {
-        ticker == "VNINDEX" || ticker == "VN30" || ticker.starts_with("VN")
+        INDEX_TICKERS.contains(&ticker)
     };
 
     // Build CSV content
