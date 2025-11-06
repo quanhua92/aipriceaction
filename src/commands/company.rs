@@ -19,7 +19,6 @@ struct CachedCompanyInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 struct CachedFinancialInfo {
     symbol: String,
     period: String,
@@ -190,9 +189,21 @@ async fn process_ticker(
         }
     };
 
-    // For now, we'll skip financial_info until we implement it
-    // TODO: Implement financial_info method
-    let financial_info: Option<HashMap<String, Value>> = None;
+    // Small delay between requests
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+    // Fetch financial ratios
+    println!("   - Fetching financial ratios from VCI...");
+    let financial_ratios = match vci_client.financial_ratios(ticker, "quarter").await {
+        Ok(ratios) => {
+            println!("   - ✅ VCI financial ratios success ({} periods)", ratios.len());
+            Some(ratios)
+        }
+        Err(e) => {
+            println!("   - ⚠️  VCI financial ratios failed: {:?}", e);
+            None
+        }
+    };
 
     // Save results if we got company data
     if let Some(company_data) = company_info {
@@ -203,8 +214,23 @@ async fn process_ticker(
         };
         save_json(&cached_company, &file_paths["company_info"])?;
 
+        // Save financial ratios if available
+        if let Some(ref ratios) = financial_ratios {
+            let cached_financial = CachedFinancialInfo {
+                symbol: ticker.to_string(),
+                period: "quarter".to_string(),
+                data: {
+                    let mut map = HashMap::new();
+                    map.insert("ratios".to_string(), serde_json::to_value(ratios).unwrap_or(Value::Null));
+                    map
+                },
+                created_at: Utc::now(),
+            };
+            save_json(&cached_financial, &file_paths["financial_info"])?;
+        }
+
         // Create curated data
-        let curated = extract_curated_data(&company_data, &financial_info);
+        let curated = extract_curated_data(&company_data, &financial_ratios);
         save_json(&curated, &file_paths["curated"])?;
 
         println!("   - ✅ Completed {} (processed by: VCI)", ticker);
@@ -216,11 +242,31 @@ async fn process_ticker(
 
 fn extract_curated_data(
     company_data: &CompanyInfo,
-    _financial_data: &Option<HashMap<String, Value>>,
+    financial_ratios: &Option<Vec<HashMap<String, Value>>>,
 ) -> CuratedData {
     // Extract company name from profile or use symbol
     let company_name = extract_company_name(&company_data.company_profile)
         .or_else(|| Some(company_data.symbol.clone()));
+
+    // Extract latest financial metrics from the most recent quarter
+    let (pe_ratio, pb_ratio, roe, roa, revenue, net_profit, dividend, eps) = if let Some(ratios) = financial_ratios {
+        if let Some(latest) = ratios.first() {
+            (
+                latest.get("pe").and_then(|v| v.as_f64()),
+                latest.get("pb").and_then(|v| v.as_f64()),
+                latest.get("roe").and_then(|v| v.as_f64()),
+                latest.get("roa").and_then(|v| v.as_f64()),
+                latest.get("revenue").and_then(|v| v.as_f64()),
+                latest.get("netProfit").and_then(|v| v.as_f64()),
+                latest.get("dividend").and_then(|v| v.as_f64()),
+                latest.get("eps").and_then(|v| v.as_f64()),
+            )
+        } else {
+            (None, None, None, None, None, None, None, None)
+        }
+    } else {
+        (None, None, None, None, None, None, None, None)
+    };
 
     CuratedData {
         symbol: company_data.symbol.clone(),
@@ -242,15 +288,15 @@ fn extract_curated_data(
         market_cap: company_data.market_cap,
         outstanding_shares: company_data.outstanding_shares,
 
-        // Financial metrics - these would come from financial_info
-        pe_ratio: None,
-        pb_ratio: None,
-        roe: None,
-        roa: None,
-        revenue: None,
-        net_profit: None,
-        dividend: None,
-        eps: None,
+        // Financial metrics from financial ratios
+        pe_ratio,
+        pb_ratio,
+        roe,
+        roa,
+        revenue,
+        net_profit,
+        dividend,
+        eps,
     }
 }
 
@@ -316,8 +362,7 @@ fn load_all_tickers() -> Vec<String> {
 fn get_file_paths(ticker: &str) -> HashMap<&'static str, PathBuf> {
     let mut paths = HashMap::new();
     paths.insert("company_info", PathBuf::from(COMPANY_DATA_DIR).join(format!("{}_company_info.json", ticker)));
-    // Skip financial_info for now since we don't have that implementation yet
-    // paths.insert("financial_info", PathBuf::from(COMPANY_DATA_DIR).join(format!("{}_financial_info.json", ticker)));
+    paths.insert("financial_info", PathBuf::from(COMPANY_DATA_DIR).join(format!("{}_financial_info.json", ticker)));
     paths.insert("curated", PathBuf::from(COMPANY_DATA_DIR).join(format!("{}.json", ticker)));
     paths
 }

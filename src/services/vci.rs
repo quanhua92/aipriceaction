@@ -740,7 +740,139 @@ impl VciClient {
 
         Ok(company_info)
     }
-    
+
+    pub async fn financial_ratios(&mut self, symbol: &str, period: &str) -> Result<Vec<HashMap<String, Value>>, VciError> {
+        let url = self.base_url.replace("/api/", "/data-mt/") + "graphql";
+
+        // Map period: "quarter" -> "Q", "year" -> "Y"
+        let vci_period = match period {
+            "quarter" => "Q",
+            "year" => "Y",
+            _ => "Q",
+        };
+
+        let graphql_query = r#"fragment Ratios on CompanyFinancialRatio {
+  ticker
+  yearReport
+  lengthReport
+  updateDate
+  revenue
+  revenueGrowth
+  netProfit
+  netProfitGrowth
+  ebitMargin
+  roe
+  roic
+  roa
+  pe
+  pb
+  eps
+  currentRatio
+  cashRatio
+  quickRatio
+  interestCoverage
+  ae
+  netProfitMargin
+  grossMargin
+  ev
+  issueShare
+  ps
+  pcf
+  bvps
+  evPerEbitda
+  BSA1
+  BSA2
+  BSA5
+  BSA8
+  BSA10
+  BSA159
+  BSA16
+  BSA22
+  BSA23
+  BSA24
+  BSA162
+  BSA27
+  BSA29
+  BSA43
+  BSA46
+  BSA50
+  BSA209
+  BSA53
+  BSA54
+  BSA55
+  BSA56
+  BSA58
+  BSA67
+  BSA71
+  BSA173
+  BSA78
+  BSA79
+  BSA80
+  BSA175
+  BSA86
+  BSA90
+  BSA96
+  CFA21
+  CFA22
+  at
+  fat
+  acp
+  dso
+  dpo
+  ccc
+  de
+  le
+  ebitda
+  ebit
+  dividend
+  RTQ10
+  charterCapitalRatio
+  RTQ4
+  epsTTM
+  charterCapital
+  __typename
+}
+
+query Query($ticker: String!, $period: String!) {
+  CompanyFinancialRatio(ticker: $ticker, period: $period) {
+    ratio {
+      ...Ratios
+      __typename
+    }
+    period
+    __typename
+  }
+}"#;
+
+        let payload = serde_json::json!({
+            "query": graphql_query,
+            "variables": {
+                "ticker": symbol.to_uppercase(),
+                "period": vci_period
+            }
+        });
+
+        let response_data = self.make_request(&url, &payload).await?;
+
+        let data = response_data.get("data").ok_or(VciError::NoData)?;
+        let financial_ratio = data.get("CompanyFinancialRatio").ok_or(VciError::NoData)?;
+        let ratios = financial_ratio.get("ratio").and_then(|v| v.as_array()).ok_or(VciError::NoData)?;
+
+        // Convert each ratio object to HashMap
+        let mut result = Vec::new();
+        for ratio in ratios {
+            if let Some(obj) = ratio.as_object() {
+                let mut map = HashMap::new();
+                for (key, value) in obj {
+                    map.insert(key.clone(), value.clone());
+                }
+                result.push(map);
+            }
+        }
+
+        Ok(result)
+    }
+
     fn resample_ohlcv(&self, data: Vec<OhlcvData>, interval: &str) -> Result<Vec<OhlcvData>, VciError> {
         if data.is_empty() {
             return Ok(data);
