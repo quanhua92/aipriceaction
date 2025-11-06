@@ -32,11 +32,19 @@ pub struct StockDataResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma100: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma200: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ma10_score: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma20_score: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50_score: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma100_score: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma200_score: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub close_changed: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -278,9 +286,13 @@ pub async fn get_tickers_handler(
                     ma10: d.ma10.map(|v| v / price_divisor),
                     ma20: d.ma20.map(|v| v / price_divisor),
                     ma50: d.ma50.map(|v| v / price_divisor),
+                    ma100: d.ma100.map(|v| v / price_divisor),
+                    ma200: d.ma200.map(|v| v / price_divisor),
                     ma10_score: d.ma10_score,
                     ma20_score: d.ma20_score,
                     ma50_score: d.ma50_score,
+                    ma100_score: d.ma100_score,
+                    ma200_score: d.ma200_score,
                     close_changed: d.close_changed,
                     volume_changed: d.volume_changed,
                 }
@@ -315,9 +327,9 @@ fn generate_csv_response(
         .unwrap_or(false);
 
     if has_indicators {
-        // Full header with technical indicators (NEW 11-column format)
+        // Full header with technical indicators (NEW 19-column format)
         csv_content.push_str(
-            "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed\n"
+            "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed\n"
         );
     } else {
         // Basic header without technical indicators
@@ -340,9 +352,9 @@ fn generate_csv_response(
                 };
 
                 if has_indicators {
-                    // Write row with all fields (NEW 11-column format)
+                    // Write row with all fields (NEW 19-column format)
                     csv_content.push_str(&format!(
-                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                         ticker,
                         time_str,
                         record.open / price_divisor,
@@ -353,9 +365,13 @@ fn generate_csv_response(
                         record.ma10.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
                         record.ma20.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
                         record.ma50.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
+                        record.ma100.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
+                        record.ma200.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
                         record.ma10_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma20_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma50_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma100_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.ma200_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.close_changed.map(|v| v.to_string()).unwrap_or_default(),
                         record.volume_changed.map(|v| v.to_string()).unwrap_or_default(),
                     ));

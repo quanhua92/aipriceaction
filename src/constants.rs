@@ -4,9 +4,12 @@
 //!
 //! ## CSV Format Evolution
 //!
-//! **Current Format (v0.2.0)**: 15 columns
+//! **Current Format (v0.3.0)**: 19 columns
 //! - 7 basic OHLCV columns
-//! - 8 technical indicator columns
+//! - 12 technical indicator columns
+//!
+//! **Previous Format (v0.2.0)**: 15 columns (deprecated)
+//! - Only ma10, ma20, ma50
 //!
 //! **Previous Format (v0.1.0)**: 16 columns (deprecated)
 //! - Included money_flow, dollar_flow, trend_score
@@ -18,10 +21,10 @@ pub const CSV_BASIC_COLUMNS: usize = 7;
 ///
 /// Enhanced format includes:
 /// - 7 basic OHLCV columns
-/// - 3 moving averages (ma10, ma20, ma50)
-/// - 3 MA scores (ma10_score, ma20_score, ma50_score)
+/// - 5 moving averages (ma10, ma20, ma50, ma100, ma200)
+/// - 5 MA scores (ma10_score, ma20_score, ma50_score, ma100_score, ma200_score)
 /// - 2 change indicators (close_changed, volume_changed)
-pub const CSV_ENHANCED_COLUMNS: usize = 15;
+pub const CSV_ENHANCED_COLUMNS: usize = 19;
 
 /// Column indices for enhanced CSV format (0-indexed)
 pub mod csv_column {
@@ -34,19 +37,29 @@ pub mod csv_column {
     pub const CLOSE: usize = 5;
     pub const VOLUME: usize = 6;
 
-    // Technical indicator columns (7-14)
+    // Technical indicator columns (7-18)
     pub const MA10: usize = 7;
     pub const MA20: usize = 8;
     pub const MA50: usize = 9;
-    pub const MA10_SCORE: usize = 10;
-    pub const MA20_SCORE: usize = 11;
-    pub const MA50_SCORE: usize = 12;
-    pub const CLOSE_CHANGED: usize = 13;
-    pub const VOLUME_CHANGED: usize = 14;
+    pub const MA100: usize = 10;
+    pub const MA200: usize = 11;
+    pub const MA10_SCORE: usize = 12;
+    pub const MA20_SCORE: usize = 13;
+    pub const MA50_SCORE: usize = 14;
+    pub const MA100_SCORE: usize = 15;
+    pub const MA200_SCORE: usize = 16;
+    pub const CLOSE_CHANGED: usize = 17;
+    pub const VOLUME_CHANGED: usize = 18;
 }
 
 /// Minimum number of records required to calculate MA50
 pub const MIN_RECORDS_FOR_MA50: usize = 50;
+
+/// Minimum number of records required to calculate MA100
+pub const MIN_RECORDS_FOR_MA100: usize = 100;
+
+/// Minimum number of records required to calculate MA200
+pub const MIN_RECORDS_FOR_MA200: usize = 200;
 
 /// Minimum number of records recommended for historical analysis
 pub const MIN_RECORDS_FOR_ANALYSIS: usize = 1500;

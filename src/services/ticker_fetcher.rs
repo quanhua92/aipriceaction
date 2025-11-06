@@ -77,19 +77,23 @@ impl TickerFetcher {
             let file_path = self.get_ticker_file_path(ticker, interval);
 
             if !file_path.exists() {
+                println!("   📄 {} - File does not exist: {:?}", ticker, file_path);
                 category.full_history_tickers.push(ticker.clone());
             } else {
                 // File exists - read last date and use resume mode
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
+                        println!("   📄 {} - Resume from: {}", ticker, last_date);
                         category.resume_tickers.push((ticker.clone(), last_date));
                     }
                     Ok(None) => {
                         // File exists but no valid data - need full history
+                        println!("   📄 {} - File exists but no valid data found: {:?}", ticker, file_path);
                         category.full_history_tickers.push(ticker.clone());
                     }
-                    Err(_) => {
+                    Err(e) => {
                         // Error reading file - need full history
+                        println!("   📄 {} - Error reading file: {} - {:?}", ticker, e, file_path);
                         category.full_history_tickers.push(ticker.clone());
                     }
                 }

@@ -57,6 +57,14 @@ pub struct StockData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50: Option<f64>,
 
+    /// 100-period moving average in full VND (e.g., 19800, not 19.8)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma100: Option<f64>,
+
+    /// 200-period moving average in full VND (e.g., 18500, not 18.5)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma200: Option<f64>,
+
     // Moving Average Scores (percentage difference from MA)
     /// MA10 score: ((close - ma10) / ma10) * 100
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,6 +77,14 @@ pub struct StockData {
     /// MA50 score: ((close - ma50) / ma50) * 100
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50_score: Option<f64>,
+
+    /// MA100 score: ((close - ma100) / ma100) * 100
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma100_score: Option<f64>,
+
+    /// MA200 score: ((close - ma200) / ma200) * 100
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ma200_score: Option<f64>,
 
     // Change Indicators (percentage change from previous row)
     /// Close price percentage change from previous row: ((curr_close - prev_close) / prev_close) * 100
@@ -102,9 +118,13 @@ impl StockData {
             ma10: None,
             ma20: None,
             ma50: None,
+            ma100: None,
+            ma200: None,
             ma10_score: None,
             ma20_score: None,
             ma50_score: None,
+            ma100_score: None,
+            ma200_score: None,
             close_changed: None,
             volume_changed: None,
         }
@@ -120,6 +140,12 @@ impl StockData {
         }
         if let Some(ma50) = self.ma50 {
             self.ma50_score = Some(Self::calculate_score(self.close, ma50));
+        }
+        if let Some(ma100) = self.ma100 {
+            self.ma100_score = Some(Self::calculate_score(self.close, ma100));
+        }
+        if let Some(ma200) = self.ma200 {
+            self.ma200_score = Some(Self::calculate_score(self.close, ma200));
         }
     }
 

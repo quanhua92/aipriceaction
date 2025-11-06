@@ -52,6 +52,8 @@ pub fn enhance_data(
         let ma10_values = calculate_sma(&closes, 10);
         let ma20_values = calculate_sma(&closes, 20);
         let ma50_values = calculate_sma(&closes, 50);
+        let ma100_values = calculate_sma(&closes, 100);
+        let ma200_values = calculate_sma(&closes, 200);
 
         // Update StockData with MA values and scores
         for (i, stock) in stock_data.iter_mut().enumerate() {
@@ -67,6 +69,14 @@ pub fn enhance_data(
             if ma50_values[i] > 0.0 {
                 stock.ma50 = Some(ma50_values[i]);
                 stock.ma50_score = Some(calculate_ma_score(stock.close, ma50_values[i]));
+            }
+            if ma100_values[i] > 0.0 {
+                stock.ma100 = Some(ma100_values[i]);
+                stock.ma100_score = Some(calculate_ma_score(stock.close, ma100_values[i]));
+            }
+            if ma200_values[i] > 0.0 {
+                stock.ma200 = Some(ma200_values[i]);
+                stock.ma200_score = Some(calculate_ma_score(stock.close, ma200_values[i]));
             }
         }
 
@@ -132,10 +142,11 @@ pub fn save_enhanced_csv(
 
         let mut wtr = csv::Writer::from_writer(file);
 
-        // Write 11-column header
+        // Write 19-column header
         wtr.write_record(&[
             "ticker", "time", "open", "high", "low", "close", "volume",
-            "ma10", "ma20", "ma50", "ma10_score", "ma20_score", "ma50_score",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
             "close_changed", "volume_changed"
         ])
         .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
@@ -242,9 +253,13 @@ fn write_stock_data_row(
         &stock_data.ma10.map_or(String::new(), |v| format!("{:.2}", v)),
         &stock_data.ma20.map_or(String::new(), |v| format!("{:.2}", v)),
         &stock_data.ma50.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma100.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma200.map_or(String::new(), |v| format!("{:.2}", v)),
         &stock_data.ma10_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.ma20_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.ma50_score.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.ma100_score.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.ma200_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.close_changed.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.volume_changed.map_or(String::new(), |v| format!("{:.4}", v)),
     ])
