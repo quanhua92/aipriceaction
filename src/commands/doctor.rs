@@ -113,14 +113,14 @@ pub fn run() {
                         interval.to_filename(),
                         report.record_count
                     ));
-                } else if interval == Interval::Daily && report.record_count < 2000 {
+                } else if interval == Interval::Daily && report.record_count < 1500 {
                     let date_info = if report.first_date.is_some() && report.last_date.is_some() {
                         format!(" [{} → {}]", report.first_date.as_ref().unwrap(), report.last_date.as_ref().unwrap())
                     } else {
                         String::new()
                     };
                     ticker_issues.push(format!(
-                        "  ⚠️  {} - Only {} records{} (recommended 2000+ for historical analysis)",
+                        "  ⚠️  {} - Only {} records{} (recommended 1500+ for historical analysis)",
                         interval.to_filename(),
                         report.record_count,
                         date_info
