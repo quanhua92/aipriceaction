@@ -1,5 +1,5 @@
 use crate::models::{Interval, TickerGroups};
-use crate::services::{csv_parser, csv_enhancer};
+use crate::services::csv_parser;
 use crate::utils::get_market_data_dir;
 use std::fs;
 use std::path::Path;
@@ -90,7 +90,7 @@ pub fn import_legacy(source_path: &Path, intervals: String, force: bool) -> Resu
         }
     }
 
-    let elapsed = start_time.elapsed();
+    let total_elapsed = start_time.elapsed();
 
     println!("\n✨ Import complete!");
     println!("   ✅ Success: {} tickers", success_count);
@@ -99,43 +99,9 @@ pub fn import_legacy(source_path: &Path, intervals: String, force: bool) -> Resu
     if error_count > 0 {
         println!("   ❌ Errors: {}", error_count);
     }
-    println!("\n⏱️  Import time: {:.2}s ({} tickers)", elapsed.as_secs_f64(), tickers.len());
-    println!("   Average: {:.3}s per ticker", elapsed.as_secs_f64() / tickers.len() as f64);
-
-    // Phase 2: Enhance CSVs with technical indicators
-    println!("\n🔧 Enhancing CSVs with technical indicators...");
-    let enhancement_start = Instant::now();
-    let market_data_dir = get_market_data_dir();
-
-    let mut intervals_to_enhance = Vec::new();
-    if import_daily {
-        intervals_to_enhance.push(Interval::Daily);
-    }
-    if import_hourly {
-        intervals_to_enhance.push(Interval::Hourly);
-    }
-    if import_minute {
-        intervals_to_enhance.push(Interval::Minute);
-    }
-
-    for interval in intervals_to_enhance {
-        print!("   📊 Enhancing {} data... ", interval.to_filename().trim_end_matches(".csv"));
-        match csv_enhancer::enhance_interval(interval, &market_data_dir) {
-            Ok(stats) => {
-                println!("✅ {} tickers, {} records ({:.2}s)",
-                    stats.tickers, stats.records, stats.duration.as_secs_f64());
-            }
-            Err(e) => {
-                println!("⚠️  Warning: {}", e);
-            }
-        }
-    }
-
-    let enhancement_elapsed = enhancement_start.elapsed();
-    let total_elapsed = start_time.elapsed();
-
-    println!("\n⏱️  Enhancement time: {:.2}s", enhancement_elapsed.as_secs_f64());
-    println!("⏱️  Total time: {:.2}s", total_elapsed.as_secs_f64());
+    println!("\n⏱️  Total time: {:.2}s ({} tickers)", total_elapsed.as_secs_f64(), tickers.len());
+    println!("   Average: {:.3}s per ticker", total_elapsed.as_secs_f64() / tickers.len() as f64);
+    println!("\n💡 Note: CSVs are already enhanced with technical indicators (single-phase import)");
 
     Ok(())
 }
@@ -261,7 +227,7 @@ fn import_ticker(
             stats.skipped += 1;
         } else {
             let existed_before = daily_dest.exists();
-            match csv_parser::parse_daily_csv(&daily_source, &daily_dest) {
+            match csv_parser::parse_daily_csv(&daily_source) {
                 Ok(count) => {
                     stats.files_imported += 1;
                     if existed_before {
@@ -292,7 +258,7 @@ fn import_ticker(
             stats.skipped += 1;
         } else {
             let existed_before = hourly_dest.exists();
-            match csv_parser::parse_intraday_csv(&hourly_source, &hourly_dest) {
+            match csv_parser::parse_intraday_csv(&hourly_source, Interval::Hourly) {
                 Ok(count) => {
                     stats.files_imported += 1;
                     if existed_before {
@@ -323,7 +289,7 @@ fn import_ticker(
             stats.skipped += 1;
         } else {
             let existed_before = minute_dest.exists();
-            match csv_parser::parse_intraday_csv(&minute_source, &minute_dest) {
+            match csv_parser::parse_intraday_csv(&minute_source, Interval::Minute) {
                 Ok(count) => {
                     stats.files_imported += 1;
                     if existed_before {

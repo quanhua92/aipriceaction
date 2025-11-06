@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, csv_enhancer, validate_and_repair_interval};
+use crate::services::{DataSync, validate_and_repair_interval};
 use crate::utils::get_market_data_dir;
 
 pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
@@ -103,72 +103,15 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         }
     }
 
-    // Step 2: Run normal sync
-    let synced_intervals = config.intervals.clone();
+    // Step 2: Run normal sync (now includes enhancement in single phase)
     match run_sync(config, debug) {
         Ok(_) => {
             println!("\n✅ Data sync completed successfully!");
+            println!("💡 Note: CSV files are already enhanced with technical indicators (single-phase write)");
         }
         Err(e) => {
             eprintln!("\n❌ Data sync failed: {}", e);
             std::process::exit(1);
-        }
-    }
-
-    // Enhance CSV files with indicators
-    println!("\n📊 Enhancing CSV files with indicators...");
-    let market_data_dir = get_market_data_dir();
-
-    for interval in &synced_intervals {
-        match csv_enhancer::enhance_interval(*interval, &market_data_dir) {
-            Ok(stats) => {
-                if stats.records > 0 {
-                    println!("✅ {} enhanced: {} tickers, {} records in {:.2}s",
-                        interval.to_filename(),
-                        stats.tickers,
-                        stats.records,
-                        stats.duration.as_secs_f64()
-                    );
-
-                    // Detailed breakdown
-                    println!("   ⏱️  Read CSVs:     {:.2}s ({:.1}%)",
-                        stats.read_time.as_secs_f64(),
-                        (stats.read_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
-                    );
-                    println!("   ⏱️  Calculate MAs: {:.2}s ({:.1}%)",
-                        stats.ma_time.as_secs_f64(),
-                        (stats.ma_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
-                    );
-                    println!("   ⏱️  Money flows:   {:.2}s ({:.1}%)",
-                        stats.money_flow_time.as_secs_f64(),
-                        (stats.money_flow_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
-                    );
-                    println!("   ⏱️  Trend scores:  {:.2}s ({:.1}%)",
-                        stats.trend_score_time.as_secs_f64(),
-                        (stats.trend_score_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
-                    );
-                    println!("   ⏱️  Write CSVs:    {:.2}s ({:.1}%)",
-                        stats.write_time.as_secs_f64(),
-                        (stats.write_time.as_secs_f64() / stats.duration.as_secs_f64()) * 100.0
-                    );
-
-                    // Throughput metrics
-                    let records_per_sec = stats.records as f64 / stats.duration.as_secs_f64();
-                    let mb_written = stats.total_bytes_written as f64 / (1024.0 * 1024.0);
-                    let write_throughput = mb_written / stats.write_time.as_secs_f64();
-
-                    println!("   📊 Throughput:    {:.0} records/sec",
-                        records_per_sec
-                    );
-                    println!("   💾 Data written:  {:.2} MB ({:.2} MB/s)",
-                        mb_written,
-                        write_throughput
-                    );
-                }
-            }
-            Err(e) => {
-                eprintln!("⚠️  {} enhancement failed: {}", interval.to_filename(), e);
-            }
         }
     }
 }

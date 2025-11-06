@@ -1,17 +1,19 @@
 //! CSV Enhancement Service
 //!
-//! Enhances raw OHLCV CSV files (7 columns) with technical indicators,
-//! producing enhanced CSV files with 16 columns including:
+//! Enhances raw OHLCV data with technical indicators in-memory,
+//! producing enhanced CSV files with 11 columns including:
 //! - Moving averages (MA10, MA20, MA50)
 //! - MA scores (percentage deviation from MA)
-//! - Money flow and dollar flow (market-normalized percentages)
-//! - Trend scores (10-day rolling average)
+//! - Close changed and volume changed (percentage change from previous row)
 
 use crate::error::Error;
 use crate::models::{Interval, StockData};
-use crate::models::indicators::{calculate_sma, calculate_ma_score, calculate_money_flow_multiplier};
-use chrono::NaiveDate;
+use crate::models::indicators::{calculate_sma, calculate_ma_score};
+use crate::services::vci::OhlcvData;
+use crate::utils::get_market_data_dir;
+use chrono::DateTime;
 use csv::Writer;
+use fs2::FileExt;
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
@@ -22,17 +24,309 @@ pub struct EnhancementStats {
     pub tickers: usize,
     pub records: usize,
     pub duration: Duration,
-    pub read_time: Duration,
     pub ma_time: Duration,
-    pub money_flow_time: Duration,
-    pub trend_score_time: Duration,
     pub write_time: Duration,
     pub total_bytes_written: u64,
 }
 
-/// Read all OHLCV data for an interval from per-ticker CSV files
-fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<HashMap<String, Vec<StockData>>, Error> {
-    let mut data: HashMap<String, Vec<StockData>> = HashMap::new();
+/// Enhance OHLCV data with technical indicators (in-memory)
+/// Returns HashMap of enhanced StockData ready to be saved
+pub fn enhance_data(
+    data: HashMap<String, Vec<OhlcvData>>,
+) -> HashMap<String, Vec<StockData>> {
+    let mut enhanced: HashMap<String, Vec<StockData>> = HashMap::new();
+
+    for (ticker, ohlcv_vec) in data {
+        if ohlcv_vec.is_empty() {
+            continue;
+        }
+
+        // Convert OhlcvData to StockData
+        let mut stock_data: Vec<StockData> = ohlcv_vec
+            .iter()
+            .map(|d| StockData::new(d.time, ticker.clone(), d.open, d.high, d.low, d.close, d.volume))
+            .collect();
+
+        // Calculate moving averages
+        let closes: Vec<f64> = stock_data.iter().map(|d| d.close).collect();
+        let ma10_values = calculate_sma(&closes, 10);
+        let ma20_values = calculate_sma(&closes, 20);
+        let ma50_values = calculate_sma(&closes, 50);
+
+        // Update StockData with MA values and scores
+        for (i, stock) in stock_data.iter_mut().enumerate() {
+            // Set MA values
+            if ma10_values[i] > 0.0 {
+                stock.ma10 = Some(ma10_values[i]);
+                stock.ma10_score = Some(calculate_ma_score(stock.close, ma10_values[i]));
+            }
+            if ma20_values[i] > 0.0 {
+                stock.ma20 = Some(ma20_values[i]);
+                stock.ma20_score = Some(calculate_ma_score(stock.close, ma20_values[i]));
+            }
+            if ma50_values[i] > 0.0 {
+                stock.ma50 = Some(ma50_values[i]);
+                stock.ma50_score = Some(calculate_ma_score(stock.close, ma50_values[i]));
+            }
+        }
+
+        // Calculate close_changed and volume_changed in a second pass to avoid borrow checker issues
+        for i in 1..stock_data.len() {
+            let prev_close = stock_data[i - 1].close;
+            let prev_volume = stock_data[i - 1].volume;
+            let curr = &mut stock_data[i];
+
+            // Close changed: ((curr - prev) / prev) * 100
+            if prev_close > 0.0 {
+                curr.close_changed = Some(((curr.close - prev_close) / prev_close) * 100.0);
+            }
+
+            // Volume changed: ((curr - prev) / prev) * 100
+            if prev_volume > 0 {
+                curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
+            }
+        }
+
+        enhanced.insert(ticker, stock_data);
+    }
+
+    enhanced
+}
+
+/// Save enhanced stock data to CSV with smart cutoff strategy and file locking
+///
+/// This function uses the efficient cutoff strategy from data_sync.rs:
+/// - For existing files: truncate to cutoff_date, then append new data
+/// - For new files: create with all data
+/// - Uses file locking to prevent race conditions
+pub fn save_enhanced_csv(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+) -> Result<(), Error> {
+    if data.is_empty() {
+        return Err(Error::InvalidInput("No data to save".to_string()));
+    }
+
+    // Create ticker directory
+    let ticker_dir = get_market_data_dir().join(ticker);
+    std::fs::create_dir_all(&ticker_dir)
+        .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+
+    // Get file path
+    let file_path = ticker_dir.join(interval.to_filename());
+    let file_exists = file_path.exists();
+
+    if !file_exists {
+        // New file - create with exclusive lock
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
+
+        // Acquire exclusive lock before writing
+        file.lock_exclusive()
+            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+
+        // Write 11-column header
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma10_score", "ma20_score", "ma50_score",
+            "close_changed", "volume_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        for row in data {
+            write_stock_data_row(&mut wtr, row, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+        // Lock is automatically released when file (inside wtr) goes out of scope
+    } else {
+        // File exists - use smart cutoff strategy
+        use std::io::{BufRead, BufReader, Seek, SeekFrom};
+
+        // Step 1: Find truncation point by reading file backwards
+        let truncate_pos: Option<u64> = {
+            let file = std::fs::File::open(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
+            let reader = BufReader::new(file);
+            let mut pos: Option<u64> = None;
+            let mut current_pos = 0u64;
+
+            for line_result in reader.lines() {
+                let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+                let line_len = (line.len() + 1) as u64; // +1 for newline
+
+                // Parse timestamp from line (skip header)
+                if current_pos > 0 {
+                    let parts: Vec<&str> = line.split(',').collect();
+                    if parts.len() >= 2 {
+                        let time_str = parts[1];
+                        let time = parse_time(time_str)?;
+
+                        if time >= cutoff_date {
+                            // Found cutoff - truncate here
+                            break;
+                        }
+                        // This line is before cutoff, update truncate position
+                        pos = Some(current_pos + line_len);
+                    }
+                }
+
+                current_pos += line_len;
+            }
+
+            pos
+        }; // Reader is now dropped, file is closed
+
+        // Step 2: Open file for writing, truncate and append
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
+
+        // CRITICAL SECTION: Acquire exclusive lock to prevent race conditions
+        file.lock_exclusive()
+            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
+
+        // Truncate file at cutoff point (or keep all if no cutoff found)
+        if let Some(pos) = truncate_pos {
+            file.set_len(pos)
+                .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
+        }
+
+        // Seek to end and append new data (only rows >= cutoff_date)
+        file.seek(SeekFrom::End(0))
+            .map_err(|e| Error::Io(format!("Failed to seek to end: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+        for row in data.iter().filter(|r| r.time >= cutoff_date) {
+            write_stock_data_row(&mut wtr, row, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+        // Lock is automatically released when file (inside wtr) goes out of scope
+    }
+
+    Ok(())
+}
+
+/// Write a single StockData row to CSV (11 columns)
+fn write_stock_data_row(
+    wtr: &mut Writer<std::fs::File>,
+    stock_data: &StockData,
+    ticker: &str,
+    interval: Interval,
+) -> Result<(), Error> {
+    let time_str = match interval {
+        Interval::Daily => stock_data.time.format("%Y-%m-%d").to_string(),
+        Interval::Hourly | Interval::Minute => stock_data.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+    };
+
+    wtr.write_record(&[
+        ticker,
+        &time_str,
+        &format!("{:.2}", stock_data.open),
+        &format!("{:.2}", stock_data.high),
+        &format!("{:.2}", stock_data.low),
+        &format!("{:.2}", stock_data.close),
+        &stock_data.volume.to_string(),
+        &stock_data.ma10.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma20.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma50.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma10_score.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.ma20_score.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.ma50_score.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.close_changed.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.volume_changed.map_or(String::new(), |v| format!("{:.4}", v)),
+    ])
+    .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
+
+    Ok(())
+}
+
+/// Parse time from string (supports multiple formats)
+fn parse_time(time_str: &str) -> Result<DateTime<chrono::Utc>, Error> {
+    use chrono::NaiveDate;
+
+    // Try RFC3339 first
+    if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
+        return Ok(dt.with_timezone(&chrono::Utc));
+    }
+
+    // Try datetime format "YYYY-MM-DD HH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
+        return Ok(dt.and_utc());
+    }
+
+    // Try date only format "YYYY-MM-DD"
+    let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+        .map_err(|e| Error::Parse(format!("Invalid date format: {}", e)))?;
+
+    Ok(date
+        .and_hms_opt(0, 0, 0)
+        .ok_or_else(|| Error::Parse("Failed to set time".to_string()))?
+        .and_utc())
+}
+
+/// Legacy function for backward compatibility: reads CSV files and enhances them
+/// This is used by workers that don't have direct access to OhlcvData
+pub fn enhance_interval(
+    interval: Interval,
+    market_data_dir: &Path,
+) -> Result<EnhancementStats, Error> {
+    let start_time = Instant::now();
+
+    // Read all CSV files for this interval
+    let ma_start = Instant::now();
+    let data = read_and_enhance_interval(interval, market_data_dir)?;
+    let ma_time = ma_start.elapsed();
+
+    if data.is_empty() {
+        return Ok(EnhancementStats {
+            tickers: 0,
+            records: 0,
+            duration: start_time.elapsed(),
+            ma_time: Duration::ZERO,
+            write_time: Duration::ZERO,
+            total_bytes_written: 0,
+        });
+    }
+
+    let ticker_count = data.len();
+
+    // Calculate cutoff date (2 days ago) for smart saving
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(2);
+
+    // Write enhanced CSV back to per-ticker directories
+    let write_start = Instant::now();
+    let (record_count, total_bytes_written) = write_enhanced_csv(&data, interval, market_data_dir, cutoff_date)?;
+    let write_time = write_start.elapsed();
+
+    Ok(EnhancementStats {
+        tickers: ticker_count,
+        records: record_count,
+        duration: start_time.elapsed(),
+        ma_time,
+        write_time,
+        total_bytes_written,
+    })
+}
+
+/// Read CSV files and enhance them (legacy function for workers)
+fn read_and_enhance_interval(
+    interval: Interval,
+    market_data_dir: &Path,
+) -> Result<HashMap<String, Vec<StockData>>, Error> {
+    let mut data: HashMap<String, Vec<OhlcvData>> = HashMap::new();
 
     // Scan all ticker subdirectories
     let entries = std::fs::read_dir(market_data_dir)
@@ -46,7 +340,8 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
             continue;
         }
 
-        let ticker = ticker_dir.file_name()
+        let ticker = ticker_dir
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| Error::Io("Invalid ticker directory name".to_string()))?
             .to_string();
@@ -67,43 +362,51 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
         for result in reader.records() {
             let record = result.map_err(|e| Error::Io(format!("CSV parse error in {}: {}", csv_path.display(), e)))?;
 
-            // Check field count to determine if this is raw (7) or enhanced (16) CSV
-            // Header is skipped by reader, so we only see data rows
-            let num_fields = record.len();
-            if num_fields != 7 && num_fields != 16 {
-                return Err(Error::Io(format!(
-                    "Invalid CSV format in {}: expected 7 or 16 fields, got {}",
-                    csv_path.display(), num_fields
-                )));
+            // Read basic OHLCV data (first 7 columns)
+            if record.len() < 7 {
+                continue;
             }
 
-            // Fields 0-6 are the same for both formats (ticker, time, OHLCV)
             let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time".to_string()))?;
-            let open: f64 = record.get(2).ok_or_else(|| Error::Io("Missing open".to_string()))?.parse()
+            let open: f64 = record
+                .get(2)
+                .ok_or_else(|| Error::Io("Missing open".to_string()))?
+                .parse()
                 .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
-            let high: f64 = record.get(3).ok_or_else(|| Error::Io("Missing high".to_string()))?.parse()
+            let high: f64 = record
+                .get(3)
+                .ok_or_else(|| Error::Io("Missing high".to_string()))?
+                .parse()
                 .map_err(|e| Error::Io(format!("Invalid high: {}", e)))?;
-            let low: f64 = record.get(4).ok_or_else(|| Error::Io("Missing low".to_string()))?.parse()
+            let low: f64 = record
+                .get(4)
+                .ok_or_else(|| Error::Io("Missing low".to_string()))?
+                .parse()
                 .map_err(|e| Error::Io(format!("Invalid low: {}", e)))?;
-            let close: f64 = record.get(5).ok_or_else(|| Error::Io("Missing close".to_string()))?.parse()
+            let close: f64 = record
+                .get(5)
+                .ok_or_else(|| Error::Io("Missing close".to_string()))?
+                .parse()
                 .map_err(|e| Error::Io(format!("Invalid close: {}", e)))?;
-            let volume: u64 = record.get(6).ok_or_else(|| Error::Io("Missing volume".to_string()))?.parse()
+            let volume: u64 = record
+                .get(6)
+                .ok_or_else(|| Error::Io("Missing volume".to_string()))?
+                .parse()
                 .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
 
-            // Parse datetime (handles both "YYYY-MM-DD" and "YYYY-MM-DD HH:MM:SS" formats)
-            // Timestamps in CSV are already in UTC, so parse them directly as UTC
-            let time = if time_str.contains(' ') {
-                let naive_dt = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                    .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?;
-                naive_dt.and_utc()
-            } else {
-                let naive_date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-                    .map_err(|e| Error::Io(format!("Invalid date: {}", e)))?;
-                naive_date.and_hms_opt(0, 0, 0).unwrap().and_utc()
-            };
+            // Parse datetime
+            let time = parse_time(time_str)?;
 
-            let stock_data = StockData::new(time, ticker.clone(), open, high, low, close, volume);
-            ticker_data.push(stock_data);
+            let ohlcv = OhlcvData {
+                time,
+                open,
+                high,
+                low,
+                close,
+                volume,
+                symbol: Some(ticker.clone()),
+            };
+            ticker_data.push(ohlcv);
         }
 
         // Sort by time (oldest first)
@@ -114,252 +417,28 @@ fn read_interval_data(interval: Interval, market_data_dir: &Path) -> Result<Hash
         }
     }
 
-    Ok(data)
+    // Enhance the data in-memory
+    Ok(enhance_data(data))
 }
 
-/// Calculate moving averages and MA scores for all tickers
-fn calculate_ticker_mas(data: &mut HashMap<String, Vec<StockData>>) {
-    for ticker_data in data.values_mut() {
-        if ticker_data.is_empty() {
-            continue;
-        }
-
-        // Extract close prices
-        let closes: Vec<f64> = ticker_data.iter().map(|d| d.close).collect();
-
-        // Calculate MAs
-        let ma10_values = calculate_sma(&closes, 10);
-        let ma20_values = calculate_sma(&closes, 20);
-        let ma50_values = calculate_sma(&closes, 50);
-
-        // Update StockData with MA values and scores
-        for (i, stock_data) in ticker_data.iter_mut().enumerate() {
-            if ma10_values[i] > 0.0 {
-                stock_data.ma10 = Some(ma10_values[i]);
-                stock_data.ma10_score = Some(calculate_ma_score(stock_data.close, ma10_values[i]));
-            }
-            if ma20_values[i] > 0.0 {
-                stock_data.ma20 = Some(ma20_values[i]);
-                stock_data.ma20_score = Some(calculate_ma_score(stock_data.close, ma20_values[i]));
-            }
-            if ma50_values[i] > 0.0 {
-                stock_data.ma50 = Some(ma50_values[i]);
-                stock_data.ma50_score = Some(calculate_ma_score(stock_data.close, ma50_values[i]));
-            }
-        }
-    }
-}
-
-/// Calculate money flow and dollar flow with market normalization
-fn calculate_market_money_flows(
-    data: &mut HashMap<String, Vec<StockData>>,
-    vnindex_data: Option<&Vec<StockData>>,
-) {
-    // Step 1: Calculate raw money flow multipliers and flows for each ticker
-    for (ticker, ticker_data) in data.iter_mut() {
-        if ticker == "VNINDEX" || ticker == "VN30" {
-            continue; // Skip indices
-        }
-
-        for i in 0..ticker_data.len() {
-            let prev_close = if i > 0 {
-                Some(ticker_data[i - 1].close)
-            } else {
-                None
-            };
-
-            let multiplier = calculate_money_flow_multiplier(
-                ticker_data[i].open,
-                ticker_data[i].high,
-                ticker_data[i].low,
-                ticker_data[i].close,
-                prev_close,
-            );
-
-            // Calculate raw flows
-            let activity_flow = multiplier * ticker_data[i].volume as f64;
-            let dollar_flow = multiplier * ticker_data[i].close * ticker_data[i].volume as f64;
-
-            // Store temporarily as raw values (will be converted to percentages below)
-            ticker_data[i].money_flow = Some(activity_flow);
-            ticker_data[i].dollar_flow = Some(dollar_flow);
-        }
-    }
-
-    // Step 2: Calculate VNINDEX volume scaling (0.5 to 1.0 range)
-    let vnindex_scaling = if let Some(vnindex) = vnindex_data {
-        calculate_vnindex_scaling(vnindex)
-    } else {
-        HashMap::new()
-    };
-
-    // Step 3: Calculate daily totals across all tickers
-    let mut daily_activity_totals: HashMap<String, f64> = HashMap::new();
-    let mut daily_dollar_totals: HashMap<String, f64> = HashMap::new();
-
-    for (ticker, ticker_data) in data.iter() {
-        if ticker == "VNINDEX" || ticker == "VN30" {
-            continue;
-        }
-
-        for stock_data in ticker_data {
-            let date_key = stock_data.time.format("%Y-%m-%d").to_string();
-
-            if let Some(mf) = stock_data.money_flow {
-                *daily_activity_totals.entry(date_key.clone()).or_insert(0.0) += mf.abs();
-            }
-            if let Some(df) = stock_data.dollar_flow {
-                *daily_dollar_totals.entry(date_key).or_insert(0.0) += df.abs();
-            }
-        }
-    }
-
-    // Step 4: Convert to percentages and apply VNINDEX scaling
-    for ticker_data in data.values_mut() {
-        for stock_data in ticker_data {
-            let date_key = stock_data.time.format("%Y-%m-%d").to_string();
-            let scaling = vnindex_scaling.get(&date_key).copied().unwrap_or(1.0);
-
-            // Convert money flow to percentage
-            if let Some(mf) = stock_data.money_flow {
-                if let Some(total) = daily_activity_totals.get(&date_key) {
-                    if *total > 0.0 {
-                        let percentage = (mf.abs() / total) * 100.0;
-                        let signed_percentage = if mf >= 0.0 { percentage } else { -percentage };
-                        stock_data.money_flow = Some(signed_percentage * scaling);
-                    }
-                }
-            }
-
-            // Convert dollar flow to percentage
-            if let Some(df) = stock_data.dollar_flow {
-                if let Some(total) = daily_dollar_totals.get(&date_key) {
-                    if *total > 0.0 {
-                        let percentage = (df.abs() / total) * 100.0;
-                        let signed_percentage = if df >= 0.0 { percentage } else { -percentage };
-                        stock_data.dollar_flow = Some(signed_percentage * scaling);
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Calculate VNINDEX volume scaling (0.5 to 1.0 range)
-fn calculate_vnindex_scaling(vnindex_data: &[StockData]) -> HashMap<String, f64> {
-    let mut scaling_map = HashMap::new();
-
-    if vnindex_data.is_empty() {
-        return scaling_map;
-    }
-
-    // Find min and max volumes
-    let volumes: Vec<f64> = vnindex_data.iter().map(|d| d.volume as f64).collect();
-    let min_volume = volumes.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_volume = volumes.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-
-    if (max_volume - min_volume).abs() < f64::EPSILON {
-        // All volumes are the same, use 1.0 scaling
-        for data in vnindex_data {
-            let date_key = data.time.format("%Y-%m-%d").to_string();
-            scaling_map.insert(date_key, 1.0);
-        }
-    } else {
-        // Linear interpolation: 0.5 to 1.0 range
-        for data in vnindex_data {
-            let date_key = data.time.format("%Y-%m-%d").to_string();
-            let normalized = (data.volume as f64 - min_volume) / (max_volume - min_volume);
-            let scaling = 0.5 + normalized * 0.5;
-            scaling_map.insert(date_key, scaling);
-        }
-    }
-
-    scaling_map
-}
-
-/// Calculate trend scores (10-day rolling average of absolute money flow)
-fn calculate_trend_scores(data: &mut HashMap<String, Vec<StockData>>) {
-    for ticker_data in data.values_mut() {
-        if ticker_data.len() < 10 {
-            continue; // Not enough data for trend score
-        }
-
-        // Reverse order for rolling window (newest first matches Python)
-        ticker_data.reverse();
-
-        for i in 0..ticker_data.len() {
-            let window_end = (i + 10).min(ticker_data.len());
-            let window = &ticker_data[i..window_end];
-
-            let sum: f64 = window.iter()
-                .filter_map(|d| d.money_flow)
-                .map(|mf| mf.abs())
-                .sum();
-
-            let count = window.len();
-            ticker_data[i].trend_score = Some(sum / count as f64);
-        }
-
-        // Restore chronological order
-        ticker_data.reverse();
-    }
-}
-
-/// Write enhanced data back to per-ticker CSV files (16 columns)
+/// Write enhanced data back to per-ticker CSV files (11 columns)
 fn write_enhanced_csv(
     data: &HashMap<String, Vec<StockData>>,
     interval: Interval,
     market_data_dir: &Path,
+    cutoff_date: DateTime<chrono::Utc>,
 ) -> Result<(usize, u64), Error> {
     let mut total_record_count = 0;
     let mut total_bytes_written = 0u64;
 
     for (ticker, ticker_data) in data {
+        save_enhanced_csv(ticker, ticker_data, interval, cutoff_date)?;
+
+        total_record_count += ticker_data.len();
+
+        // Estimate bytes written
         let ticker_dir = market_data_dir.join(ticker);
         let csv_path = ticker_dir.join(interval.to_filename());
-
-        let mut writer = Writer::from_path(&csv_path)
-            .map_err(|e| Error::Io(format!("Failed to create {}: {}", csv_path.display(), e)))?;
-
-        // Write header
-        writer.write_record(&[
-            "ticker", "time", "open", "high", "low", "close", "volume",
-            "ma10", "ma20", "ma50", "ma10_score", "ma20_score", "ma50_score",
-            "money_flow", "dollar_flow", "trend_score"
-        ]).map_err(|e| Error::Io(format!("Failed to write header to {}: {}", csv_path.display(), e)))?;
-
-        for stock_data in ticker_data {
-            // Format time based on interval type
-            let time_str = match interval {
-                Interval::Daily => stock_data.time.format("%Y-%m-%d").to_string(),
-                Interval::Hourly | Interval::Minute => stock_data.time.format("%Y-%m-%d %H:%M:%S").to_string(),
-            };
-
-            writer.write_record(&[
-                &stock_data.ticker,
-                &time_str,
-                &format!("{:.2}", stock_data.open),
-                &format!("{:.2}", stock_data.high),
-                &format!("{:.2}", stock_data.low),
-                &format!("{:.2}", stock_data.close),
-                &stock_data.volume.to_string(),
-                &stock_data.ma10.map_or(String::new(), |v| format!("{:.2}", v)),
-                &stock_data.ma20.map_or(String::new(), |v| format!("{:.2}", v)),
-                &stock_data.ma50.map_or(String::new(), |v| format!("{:.2}", v)),
-                &stock_data.ma10_score.map_or(String::new(), |v| format!("{:.4}", v)),
-                &stock_data.ma20_score.map_or(String::new(), |v| format!("{:.4}", v)),
-                &stock_data.ma50_score.map_or(String::new(), |v| format!("{:.4}", v)),
-                &stock_data.money_flow.map_or(String::new(), |v| format!("{:.4}", v)),
-                &stock_data.dollar_flow.map_or(String::new(), |v| format!("{:.4}", v)),
-                &stock_data.trend_score.map_or(String::new(), |v| format!("{:.4}", v)),
-            ]).map_err(|e| Error::Io(format!("Failed to write record to {}: {}", csv_path.display(), e)))?;
-
-            total_record_count += 1;
-        }
-
-        writer.flush().map_err(|e| Error::Io(format!("Failed to flush {}: {}", csv_path.display(), e)))?;
-
-        // Estimate bytes written (rough approximation: avg 65 bytes per 16-col record)
         let file_size = std::fs::metadata(&csv_path)
             .map(|m| m.len())
             .unwrap_or(0);
@@ -367,76 +446,4 @@ fn write_enhanced_csv(
     }
 
     Ok((total_record_count, total_bytes_written))
-}
-
-/// Main entry point: Enhance CSV for a specific interval
-pub fn enhance_interval(
-    interval: Interval,
-    market_data_dir: &Path,
-) -> Result<EnhancementStats, Error> {
-    let start_time = Instant::now();
-
-    // Step 1: Read raw OHLCV data
-    let read_start = Instant::now();
-    let mut data = read_interval_data(interval, market_data_dir)?;
-    let read_time = read_start.elapsed();
-
-    if data.is_empty() {
-        return Ok(EnhancementStats {
-            tickers: 0,
-            records: 0,
-            duration: start_time.elapsed(),
-            read_time: Duration::ZERO,
-            ma_time: Duration::ZERO,
-            money_flow_time: Duration::ZERO,
-            trend_score_time: Duration::ZERO,
-            write_time: Duration::ZERO,
-            total_bytes_written: 0,
-        });
-    }
-
-    let ticker_count = data.len();
-
-    // Extract VNINDEX data for volume scaling
-    let vnindex_data = data.get("VNINDEX").cloned();
-
-    // Step 2: Calculate moving averages and scores
-    let ma_start = Instant::now();
-    calculate_ticker_mas(&mut data);
-    let ma_time = ma_start.elapsed();
-
-    // Step 3: Calculate money flows with market normalization (ONLY for daily interval)
-    let money_flow_start = Instant::now();
-    let (money_flow_time, trend_score_time) = match interval {
-        Interval::Daily => {
-            calculate_market_money_flows(&mut data, vnindex_data.as_ref());
-            let mf_time = money_flow_start.elapsed();
-
-            // Step 4: Calculate trend scores (only for daily)
-            let trend_score_start = Instant::now();
-            calculate_trend_scores(&mut data);
-            (mf_time, trend_score_start.elapsed())
-        },
-        Interval::Hourly | Interval::Minute => {
-            // Skip money flow and trend scores for intraday data
-            (Duration::ZERO, Duration::ZERO)
-        }
-    };
-
-    // Step 5: Write enhanced CSV back to per-ticker directories
-    let write_start = Instant::now();
-    let (record_count, total_bytes_written) = write_enhanced_csv(&data, interval, market_data_dir)?;
-    let write_time = write_start.elapsed();
-
-    Ok(EnhancementStats {
-        tickers: ticker_count,
-        records: record_count,
-        duration: start_time.elapsed(),
-        read_time,
-        ma_time,
-        money_flow_time,
-        trend_score_time,
-        write_time,
-        total_bytes_written,
-    })
 }

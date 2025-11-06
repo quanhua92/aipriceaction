@@ -1,4 +1,9 @@
+use crate::models::Interval;
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
+use crate::services::vci::OhlcvData;
+use chrono::{DateTime, NaiveDate, Utc};
 use csv::Reader;
+use std::collections::HashMap;
 use std::path::Path;
 
 /// Check if a ticker is an index (should not be multiplied by 1000)
@@ -17,110 +22,130 @@ fn scale_price_legacy(price: f64, ticker: &str) -> f64 {
     }
 }
 
-/// Parse and convert a daily CSV file (16 columns with indicators)
+/// Parse time from string (supports multiple formats)
+fn parse_time(time_str: &str) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
+    // Try RFC3339 first
+    if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
+        return Ok(dt.with_timezone(&Utc));
+    }
+
+    // Try datetime format "YYYY-MM-DD HH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
+        return Ok(dt.and_utc());
+    }
+
+    // Try date only format "YYYY-MM-DD"
+    let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")?;
+    Ok(date
+        .and_hms_opt(0, 0, 0)
+        .ok_or_else(|| "Failed to set time")?
+        .and_utc())
+}
+
+/// Parse and convert a daily CSV file - NEW SINGLE-PHASE APPROACH
 ///
-/// Reads from legacy format and converts prices according to ticker type.
+/// Reads from legacy format, converts to OhlcvData, enhances with indicators,
+/// and writes enhanced 11-column CSV in one pass to the standard market_data directory.
+///
 /// Stock prices are multiplied by 1000, index prices are kept as-is.
-pub fn parse_daily_csv(input_path: &Path, output_path: &Path) -> Result<usize, Box<dyn std::error::Error>> {
+///
+/// Note: Output path is determined automatically as market_data/{ticker}/1D.csv
+pub fn parse_daily_csv(input_path: &Path) -> Result<usize, Box<dyn std::error::Error>> {
     let mut reader = Reader::from_path(input_path)?;
-    let mut writer = csv::Writer::from_path(output_path)?;
+    let mut ohlcv_data = Vec::new();
+    let mut ticker_name = String::new();
 
-    // Write header
-    writer.write_record(&[
-        "ticker", "time", "open", "high", "low", "close", "volume",
-        "ma10", "ma20", "ma50", "ma10_score", "ma20_score", "ma50_score",
-        "money_flow", "dollar_flow", "trend_score"
-    ])?;
-
-    let mut count = 0;
+    // Read all data rows and convert to OhlcvData
     for result in reader.records() {
         let record = result?;
 
         // Extract values
         let ticker = record.get(0).unwrap_or("");
-        let time = record.get(1).unwrap_or("");
+        if ticker_name.is_empty() {
+            ticker_name = ticker.to_string();
+        }
+
+        let time_str = record.get(1).unwrap_or("");
         let open: f64 = record.get(2).unwrap_or("").parse().unwrap_or(0.0);
         let high: f64 = record.get(3).unwrap_or("").parse().unwrap_or(0.0);
         let low: f64 = record.get(4).unwrap_or("").parse().unwrap_or(0.0);
         let close: f64 = record.get(5).unwrap_or("").parse().unwrap_or(0.0);
-        let volume = record.get(6).unwrap_or("");
-
-        // Moving averages (may be empty)
-        let ma10_str = record.get(7).unwrap_or("");
-        let ma20_str = record.get(8).unwrap_or("");
-        let ma50_str = record.get(9).unwrap_or("");
-
-        let ma10: Option<f64> = ma10_str.parse().ok();
-        let ma20: Option<f64> = ma20_str.parse().ok();
-        let ma50: Option<f64> = ma50_str.parse().ok();
-
-        // Scores and flows (may be empty)
-        let ma10_score = record.get(10).unwrap_or("");
-        let ma20_score = record.get(11).unwrap_or("");
-        let ma50_score = record.get(12).unwrap_or("");
-        let money_flow = record.get(13).unwrap_or("");
-        let dollar_flow = record.get(14).unwrap_or("");
-        let trend_score = record.get(15).unwrap_or("");
+        let volume: u64 = record.get(6).unwrap_or("").parse().unwrap_or(0);
 
         // Scale prices for legacy import (multiply stocks by 1000, keep indices as-is)
         let scaled_open = scale_price_legacy(open, ticker);
         let scaled_high = scale_price_legacy(high, ticker);
         let scaled_low = scale_price_legacy(low, ticker);
         let scaled_close = scale_price_legacy(close, ticker);
-        let scaled_ma10 = ma10.map(|v| scale_price_legacy(v, ticker));
-        let scaled_ma20 = ma20.map(|v| scale_price_legacy(v, ticker));
-        let scaled_ma50 = ma50.map(|v| scale_price_legacy(v, ticker));
 
-        // Write record with scaled prices (formatted to 2 decimals)
-        writer.write_record(&[
-            ticker,
+        // Parse time
+        let time = parse_time(time_str)?;
+
+        let ohlcv = OhlcvData {
             time,
-            &format!("{:.2}", scaled_open),
-            &format!("{:.2}", scaled_high),
-            &format!("{:.2}", scaled_low),
-            &format!("{:.2}", scaled_close),
+            open: scaled_open,
+            high: scaled_high,
+            low: scaled_low,
+            close: scaled_close,
             volume,
-            &scaled_ma10.map_or(String::new(), |v| format!("{:.2}", v)),
-            &scaled_ma20.map_or(String::new(), |v| format!("{:.2}", v)),
-            &scaled_ma50.map_or(String::new(), |v| format!("{:.2}", v)),
-            ma10_score,
-            ma20_score,
-            ma50_score,
-            money_flow,
-            dollar_flow,
-            trend_score,
-        ])?;
-
-        count += 1;
+            symbol: Some(ticker.to_string()),
+        };
+        ohlcv_data.push(ohlcv);
     }
 
-    writer.flush()?;
+    let count = ohlcv_data.len();
+
+    if !ohlcv_data.is_empty() {
+        // Create HashMap for enhance_data
+        let mut data_map = HashMap::new();
+        data_map.insert(ticker_name.clone(), ohlcv_data);
+
+        // Enhance data in-memory (calculates MA, MA scores, close_changed, volume_changed)
+        let enhanced = enhance_data(data_map);
+
+        // Save enhanced data to CSV (11 columns) with cutoff date far in the past (to include all data)
+        let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
+
+        if let Some(stock_data) = enhanced.get(&ticker_name) {
+            save_enhanced_csv(&ticker_name, stock_data, Interval::Daily, cutoff_date)?;
+        }
+    }
+
     Ok(count)
 }
 
-/// Parse and convert hourly/minute CSV file (7 columns, OHLCV only)
+/// Parse and convert hourly/minute CSV file - NEW SINGLE-PHASE APPROACH
 ///
-/// Reads from legacy format and converts prices according to ticker type.
+/// Reads from legacy format, converts to OhlcvData, enhances with indicators,
+/// and writes enhanced 11-column CSV in one pass to the standard market_data directory.
+///
 /// Stock prices are multiplied by 1000, index prices are kept as-is.
-pub fn parse_intraday_csv(input_path: &Path, output_path: &Path) -> Result<usize, Box<dyn std::error::Error>> {
+///
+/// Note: Output path is determined automatically as market_data/{ticker}/{interval}.csv
+pub fn parse_intraday_csv(
+    input_path: &Path,
+    interval: Interval,
+) -> Result<usize, Box<dyn std::error::Error>> {
     let mut reader = Reader::from_path(input_path)?;
-    let mut writer = csv::Writer::from_path(output_path)?;
+    let mut ohlcv_data = Vec::new();
+    let mut ticker_name = String::new();
 
-    // Write header
-    writer.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])?;
-
-    let mut count = 0;
+    // Read all data rows and convert to OhlcvData
     for result in reader.records() {
         let record = result?;
 
         // Extract values
         let ticker = record.get(0).unwrap_or("");
-        let time = record.get(1).unwrap_or("");
+        if ticker_name.is_empty() {
+            ticker_name = ticker.to_string();
+        }
+
+        let time_str = record.get(1).unwrap_or("");
         let open: f64 = record.get(2).unwrap_or("").parse().unwrap_or(0.0);
         let high: f64 = record.get(3).unwrap_or("").parse().unwrap_or(0.0);
         let low: f64 = record.get(4).unwrap_or("").parse().unwrap_or(0.0);
         let close: f64 = record.get(5).unwrap_or("").parse().unwrap_or(0.0);
-        let volume = record.get(6).unwrap_or("");
+        let volume: u64 = record.get(6).unwrap_or("").parse().unwrap_or(0);
 
         // Scale prices for legacy import (multiply stocks by 1000, keep indices as-is)
         let scaled_open = scale_price_legacy(open, ticker);
@@ -128,21 +153,39 @@ pub fn parse_intraday_csv(input_path: &Path, output_path: &Path) -> Result<usize
         let scaled_low = scale_price_legacy(low, ticker);
         let scaled_close = scale_price_legacy(close, ticker);
 
-        // Write record with scaled prices (formatted to 2 decimals)
-        writer.write_record(&[
-            ticker,
-            time,
-            &format!("{:.2}", scaled_open),
-            &format!("{:.2}", scaled_high),
-            &format!("{:.2}", scaled_low),
-            &format!("{:.2}", scaled_close),
-            volume,
-        ])?;
+        // Parse time
+        let time = parse_time(time_str)?;
 
-        count += 1;
+        let ohlcv = OhlcvData {
+            time,
+            open: scaled_open,
+            high: scaled_high,
+            low: scaled_low,
+            close: scaled_close,
+            volume,
+            symbol: Some(ticker.to_string()),
+        };
+        ohlcv_data.push(ohlcv);
     }
 
-    writer.flush()?;
+    let count = ohlcv_data.len();
+
+    if !ohlcv_data.is_empty() {
+        // Create HashMap for enhance_data
+        let mut data_map = HashMap::new();
+        data_map.insert(ticker_name.clone(), ohlcv_data);
+
+        // Enhance data in-memory (calculates MA, MA scores, close_changed, volume_changed)
+        let enhanced = enhance_data(data_map);
+
+        // Save enhanced data to CSV (11 columns) with cutoff date far in the past (to include all data)
+        let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
+
+        if let Some(stock_data) = enhanced.get(&ticker_name) {
+            save_enhanced_csv(&ticker_name, stock_data, interval, cutoff_date)?;
+        }
+    }
+
     Ok(count)
 }
 

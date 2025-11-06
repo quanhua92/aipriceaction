@@ -70,18 +70,14 @@ pub struct StockData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50_score: Option<f64>,
 
-    // Money Flow Indicators (optional)
-    /// Money flow indicator
+    // Change Indicators (percentage change from previous row)
+    /// Close price percentage change from previous row: ((curr_close - prev_close) / prev_close) * 100
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub money_flow: Option<f64>,
+    pub close_changed: Option<f64>,
 
-    /// Dollar flow indicator
+    /// Volume percentage change from previous row: ((curr_volume - prev_volume) / prev_volume) * 100
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dollar_flow: Option<f64>,
-
-    /// Trend score
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trend_score: Option<f64>,
+    pub volume_changed: Option<f64>,
 }
 
 impl StockData {
@@ -109,9 +105,8 @@ impl StockData {
             ma10_score: None,
             ma20_score: None,
             ma50_score: None,
-            money_flow: None,
-            dollar_flow: None,
-            trend_score: None,
+            close_changed: None,
+            volume_changed: None,
         }
     }
 

@@ -282,10 +282,9 @@ impl DataStore {
                 stock_data.ma20_score = record.get(11).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.ma50_score = record.get(12).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
 
-                // Parse flow indicators
-                stock_data.money_flow = record.get(13).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.dollar_flow = record.get(14).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.trend_score = record.get(15).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                // Parse change indicators (NEW format: close_changed and volume_changed)
+                stock_data.close_changed = record.get(13).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.volume_changed = record.get(14).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
             }
 
             data.push(stock_data);

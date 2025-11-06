@@ -21,27 +21,29 @@ The `import-legacy` command intelligently imports historical market data from th
    - `market_data_hour/` → Hourly OHLCV (7 columns)
    - `market_data_minutes/` → Minute OHLCV (7 columns)
 
-2. **Converts to new structure**:
+2. **Enhances data in-memory** with technical indicators (single-phase write)
+
+3. **Converts to new structure**:
    ```
    market_data/
    ├── VCB/
-   │   ├── daily.csv
-   │   ├── 1h.csv
-   │   └── 1m.csv
+   │   ├── 1D.csv     (11 columns with indicators)
+   │   ├── 1h.csv     (11 columns with indicators)
+   │   └── 1m.csv     (11 columns with indicators)
    ├── FPT/
-   │   ├── daily.csv
+   │   ├── 1D.csv
    │   ├── 1h.csv
    │   └── 1m.csv
    └── ...
    ```
 
-3. **Applies price scaling** (CRITICAL for Vietnamese market):
+4. **Applies price scaling** (CRITICAL for Vietnamese market):
    - **Stock tickers** (VCB, FPT, HPG, etc.): Multiply by 1000
      - Source: `23.2` → Destination: `23200.0`
    - **Market indices** (VNINDEX, VN30): No scaling
      - Source: `1250.5` → Destination: `1250.5`
 
-4. **Validates existing data**:
+5. **Validates existing data**:
    - Compares last 10 rows with source
    - Skips import if data matches
    - Reimports if changes detected (e.g., dividend adjustments)
@@ -293,19 +295,21 @@ cat ticker_group.json | jq '.groups[].tickers | .[]' | sort | uniq | wc -l
 
 ## Technical Details
 
-### CSV Format
+### CSV Format (NEW 11-COLUMN FORMAT)
 
-#### Daily Format (16 columns)
+All intervals use the same enhanced format with technical indicators:
+
 ```csv
-ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score
-VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000,22800.0,22500.0,22000.0,1.75,3.11,5.45,50000000,50000,75.5
+ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed
+VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000,22800.0,22500.0,22000.0,1.75,3.11,5.45,1.52,-10.23
+VCB,2024-01-01 09:00:00,23100.0,23200.0,23000.0,23150.0,100000,22850.0,22550.0,22050.0,1.34,2.66,4.99,0.43,5.21
 ```
 
-#### Hourly/Minute Format (7 columns)
-```csv
-ticker,time,open,high,low,close,volume
-VCB,2024-01-01 09:00:00,23100.0,23200.0,23000.0,23150.0,100000
-```
+**Columns:**
+- 1-7: OHLCV data (ticker, time, open, high, low, close, volume)
+- 8-10: Moving averages (ma10, ma20, ma50)
+- 11-13: MA scores (percentage deviation)
+- 14-15: Percentage changes (close_changed, volume_changed)
 
 ### Performance Characteristics
 

@@ -85,9 +85,8 @@ Query stock data with optional filters.
       "ma10_score": 1.4009,            // ((close - ma10) / ma10) * 100
       "ma20_score": -0.2788,           // ((close - ma20) / ma20) * 100
       "ma50_score": -3.4476,           // ((close - ma50) / ma50) * 100
-      "money_flow": 0.3888,            // Money flow indicator
-      "dollar_flow": 0.8236,           // Dollar flow indicator
-      "trend_score": 0.2026            // Trend score
+      "close_changed": 1.5234,         // Percentage change from previous close
+      "volume_changed": -10.2341       // Percentage change from previous volume
     }
   ]
 }
@@ -118,8 +117,8 @@ When `legacy=true`:
 When `format=csv`, returns CSV with the following structure:
 
 ```csv
-symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score
-VCB,2025-11-05,60000.0,61100.0,59900.0,60800.0,4601700,59960.0,60970.0,62971.0,1.4009,-0.2788,-3.4476,0.3888,0.8236,0.2026
+symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed
+VCB,2025-11-05,60000.0,61100.0,59900.0,60800.0,4601700,59960.0,60970.0,62971.0,1.4009,-0.2788,-3.4476,1.5234,-10.2341
 ```
 
 **Headers:**
@@ -316,9 +315,8 @@ The following tickers are treated as indices (prices not divided when legacy=tru
 | `ma10_score` | `((close - ma10) / ma10) * 100` | % | Distance from MA10 |
 | `ma20_score` | `((close - ma20) / ma20) * 100` | % | Distance from MA20 |
 | `ma50_score` | `((close - ma50) / ma50) * 100` | % | Distance from MA50 |
-| `money_flow` | Proprietary | -1 to 1 | Money flow indicator |
-| `dollar_flow` | Proprietary | -1 to 1 | Dollar flow indicator |
-| `trend_score` | Proprietary | -1 to 1 | Trend strength score |
+| `close_changed` | `((curr_close - prev_close) / prev_close) * 100` | % | Price change from previous period |
+| `volume_changed` | `((curr_volume - prev_volume) / prev_volume) * 100` | % | Volume change from previous period |
 
 ---
 
@@ -349,9 +347,8 @@ curl "http://localhost:3000/tickers?symbol=VCB"
       "ma10_score": 1.4009,
       "ma20_score": -0.2788,
       "ma50_score": -3.4476,
-      "money_flow": 0.3888,
-      "dollar_flow": 0.8236,
-      "trend_score": 0.2026
+      "close_changed": 1.5234,
+      "volume_changed": -10.2341
     }
   ]
 }
@@ -442,9 +439,9 @@ curl "http://localhost:3000/tickers?symbol=VCB&format=csv" -o VCB.csv
 
 **Output file (VCB.csv):**
 ```csv
-symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score
-VCB,2025-11-04,59200.0,60400.0,59100.0,60100.0,2952400,59840.0,61160.0,63017.8,0.4345,-1.7332,-4.6301,0.1127,0.258,0.1798
-VCB,2025-11-05,60000.0,61100.0,59900.0,60800.0,4601700,59960.0,60970.0,62971.0,1.4009,-0.2788,-3.4476,0.3888,0.8236,0.2026
+symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed
+VCB,2025-11-04,59200.0,60400.0,59100.0,60100.0,2952400,59840.0,61160.0,63017.8,0.4345,-1.7332,-4.6301,1.5234,-10.2341
+VCB,2025-11-05,60000.0,61100.0,59900.0,60800.0,4601700,59960.0,60970.0,62971.0,1.4009,-0.2788,-3.4476,1.1673,55.8934
 ```
 
 ---

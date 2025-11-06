@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `pull` command fetches the latest market data from the VCI (Vietcap) API and updates the local `market_data/` directory. It supports smart incremental updates, dividend detection, and multiple data intervals (daily, hourly, minute).
+The `pull` command fetches the latest market data from the VCI (Vietcap) API and updates the local `market_data/` directory with **enhanced CSV files** (including technical indicators) in a **single write operation**. It supports smart incremental updates, dividend detection, and multiple data intervals (daily, hourly, minute).
 
 ## Usage
 
@@ -69,7 +69,26 @@ FPT last date: 2025-10-30  (missed a week, need 6 days)
 → Covers all tickers with no gaps!
 ```
 
-### 2. Batch Fetching Strategy
+### 2. Single-Phase Enhancement (NEW)
+
+**Data Flow:**
+```
+VCI API → OhlcvData → CSV Enhancer (in-memory) → Enhanced 11-column CSV
+```
+
+**What happens:**
+1. Fetch OHLCV data from VCI API
+2. **Enhance in-memory** (calculate MAs, MA scores, close_changed, volume_changed)
+3. **Write enhanced CSV once** with file locking
+4. **No double-write** (old approach was: raw CSV → read → enhance → write again)
+
+**Advantages:**
+- ✅ Faster (single write operation)
+- ✅ API-safe (tickers API can read during writes with file locking)
+- ✅ Simpler (no temporary files)
+- ✅ Efficient (no redundant I/O)
+
+### 3. Batch Fetching Strategy
 
 **For Resume Tickers (Adaptive Mode):**
 - Uses VCI batch API for efficiency (50 tickers/batch for daily, 20 for hourly, 3 for minute)
@@ -93,7 +112,7 @@ FPT last date: 2025-10-30  (missed a week, need 6 days)
    ...
 ```
 
-### 3. Dividend Detection
+### 4. Dividend Detection
 
 For resume tickers, the command checks for dividend adjustments:
 
@@ -117,7 +136,7 @@ For resume tickers, the command checks for dividend adjustments:
    - Downloading full history from 2015-01-05 to 2025-11-04 using VCI [1D]...
 ```
 
-### 4. Smart Data Merging
+### 5. Smart Data Merging
 
 For resume tickers without dividends:
 
@@ -139,7 +158,7 @@ For resume tickers without dividends:
    - DEBUG: Final merged data has 2,708 rows
 ```
 
-### 5. Chunking for Large Datasets
+### 6. Chunking for Large Datasets
 
 **Hourly Data (1H):**
 ```
@@ -163,7 +182,7 @@ For resume tickers without dividends:
    - Combined 215,478 total records from 130 monthly chunks
 ```
 
-### 6. Progress Tracking
+### 7. Progress Tracking
 
 Real-time progress with ETA calculation:
 
@@ -178,37 +197,37 @@ Real-time progress with ETA calculation:
 
 ## Directory Structure
 
-Data is saved in **ticker-first** structure:
+Data is saved in **ticker-first** structure with **enhanced 11-column CSV files**:
 
 ```
 market_data/
 ├── VNINDEX/
-│   ├── daily.csv      # Daily OHLCV data
-│   ├── 1h.csv         # Hourly OHLCV data
-│   └── 1m.csv         # Minute OHLCV data
+│   ├── 1D.csv         # Enhanced 11-column CSV (OHLCV + indicators)
+│   ├── 1h.csv         # Enhanced 11-column CSV
+│   └── 1m.csv         # Enhanced 11-column CSV
 ├── VIC/
-│   ├── daily.csv
+│   ├── 1D.csv
 │   ├── 1h.csv
 │   └── 1m.csv
 ├── FPT/
-│   ├── daily.csv
+│   ├── 1D.csv
 │   ├── 1h.csv
 │   └── 1m.csv
 ```
 
-### CSV Format
+### CSV Format (NEW 11-COLUMN FORMAT)
 
-All CSV files use the same format:
+All CSV files are enhanced with technical indicators during sync:
 
 ```csv
-ticker,time,open,high,low,close,volume
-VCB,2024-01-01,23.1,23.5,23.0,23.2,1000000
-VCB,2024-01-02,23.2,23.8,23.1,23.6,1200000
+ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed
+VCB,2024-01-01,23100.0,23500.0,23000.0,23200.0,1000000,22800.0,22500.0,22000.0,1.75,3.11,5.45,1.52,-10.23
+VCB,2024-01-02,23200.0,23800.0,23100.0,23600.0,1200000,22850.0,22550.0,22050.0,3.28,4.65,7.03,1.72,20.00
 ```
 
 **Important Price Format:**
-- **Stock tickers** (VCB, FPT, HPG, etc.): Divided by 1000
-  - API returns: `23200` → CSV stores: `23.2`
+- **Stock tickers** (VCB, FPT, HPG, etc.): Full VND prices
+  - API returns: `23200` → CSV stores: `23200.0`
 - **Market indices** (VNINDEX, VN30): No scaling
   - API returns: `1250.5` → CSV stores: `1250.5`
 
@@ -250,8 +269,8 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
 [001/290] VNINDEX
 ==================================================================
    ✅ Using full history batch result for VNINDEX
-   - Data saved to: market_data/VNINDEX/daily.csv
-   ✅ SUCCESS: VNINDEX - 2707 records saved
+   - Enhancing and saving to: market_data/VNINDEX/1D.csv (11 columns)
+   ✅ SUCCESS: VNINDEX - 2707 records saved with indicators
 
 [001/290] VNINDEX | 1.2s | Elapsed: 0.0min | ETA: 5.8min
 ...
@@ -268,6 +287,7 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
 📈 Total records: 785,030
 
 ✅ Data sync completed successfully!
+💡 Note: CSV files are already enhanced with technical indicators (single-phase write)
 ```
 
 ### Subsequent Runs (Resume Mode)
@@ -312,8 +332,8 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
    📝 No dividend, merging with existing data...
    - DEBUG: Existing data has 2,707 rows, new data has 30 rows
    - DEBUG: Adding 1 new/updated rows
-   - Data saved to: market_data/VNINDEX/daily.csv
-   ✅ SUCCESS: VNINDEX - 2708 records saved
+   - Enhancing and saving to: market_data/VNINDEX/1D.csv (11 columns)
+   ✅ SUCCESS: VNINDEX - 2708 records saved with indicators
 
 [001/290] VNINDEX | 1.5s | Elapsed: 0.0min | ETA: 7.2min
 ...
@@ -322,6 +342,9 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
 
 ⏱️  Total execution time: 1.18 minutes (70.8 seconds)
 📊 Results: ✅290 successful, ❌0 failed, 📝290 updated, ⏭️ 0 skipped
+
+✅ Data sync completed successfully!
+💡 Note: CSV files are already enhanced with technical indicators (single-phase write)
 ```
 
 ### All Intervals (Daily + Hourly + Minute)
@@ -352,6 +375,9 @@ $ ./target/release/aipriceaction pull --intervals all
 ✨ Minute sync complete: 290 tickers in 3.2hours
 
 ⏱️  Total execution time: 4.23 hours
+
+✅ Data sync completed successfully!
+💡 Note: CSV files are already enhanced with technical indicators (single-phase write)
 ```
 
 ## Performance
@@ -362,12 +388,14 @@ $ ./target/release/aipriceaction pull --intervals all
 - **Rate limiting**: 2s between batches
 - **Average**: ~0.2-0.4s per ticker
 - **Scales automatically**: Missed a week? Still ~1-2 min (only fetches what's needed)
+- **Enhancement**: Integrated (no additional time)
 
 ### Full Download
 - **Daily data**: ~6-8 minutes for 290 tickers
 - **Batch size**: 2 tickers per request (more reliable)
 - **Rate limiting**: 2s between batches
 - **Average**: ~1.5-2s per ticker
+- **Enhancement**: Integrated (no additional time)
 
 ### Hourly Data (Chunked)
 - **Per ticker**: ~30-60s (11 yearly chunks)
@@ -461,7 +489,7 @@ If you hit rate limits:
 Run daily after market close (15:00 ICT):
 
 ```bash
-# Quick daily update (1-2 minutes)
+# Quick daily update (1-2 minutes, includes enhancement)
 ./target/release/aipriceaction pull --intervals daily
 ```
 
@@ -470,7 +498,7 @@ Run daily after market close (15:00 ICT):
 Update hourly data once a week:
 
 ```bash
-# Daily + hourly update (~1 hour)
+# Daily + hourly update (~1 hour, includes enhancement)
 ./target/release/aipriceaction pull --intervals daily,hourly
 ```
 
@@ -479,14 +507,14 @@ Update hourly data once a week:
 Full sync including minute data once a month:
 
 ```bash
-# Complete data sync (several hours)
+# Complete data sync (several hours, includes enhancement)
 ./target/release/aipriceaction pull --intervals all --resume-days 60
 ```
 
 ### After System Reinstall
 
 ```bash
-# Fresh full download from 2015
+# Fresh full download from 2015 (includes enhancement)
 ./target/release/aipriceaction pull --intervals daily --full
 ```
 
@@ -494,8 +522,8 @@ Full sync including minute data once a month:
 
 The `pull` command uses the **new ticker-first structure**, while `import-legacy` uses the **old structure**. They're compatible:
 
-1. **First time**: Run `import-legacy` to get historical data
-2. **Daily updates**: Run `pull` to fetch latest data
+1. **First time**: Run `import-legacy` to get historical data (already enhanced)
+2. **Daily updates**: Run `pull` to fetch latest data (with enhancement)
 3. **Data structure**: Both write to `market_data/{TICKER}/`
 
 The `pull` command will:
@@ -503,21 +531,23 @@ The `pull` command will:
 - Categorize as resume tickers (if >5 rows)
 - Only fetch recent updates
 - Merge smartly with existing data
+- Enhance during write (single-phase)
 
 ## Related Commands
 
 - `status` - View imported data summary
 - `import-legacy` - Import historical data from reference project
-- `serve` - Start REST API server (TODO)
+- `serve` - Start REST API server
 
 ## Source Code
 
 - Implementation: `src/services/data_sync.rs`, `src/services/ticker_fetcher.rs`
+- Enhancement: `src/services/csv_enhancer.rs`
 - Configuration: `src/models/sync_config.rs`
 - Command: `src/commands/pull.rs`
 - Tests: (TODO)
 
 ---
 
-**Last Updated**: 2025-11-04
-**Version**: 0.1.0
+**Last Updated**: 2025-11-06
+**Version**: 0.2.0 (Single-phase enhancement)

@@ -38,11 +38,9 @@ pub struct StockDataResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ma50_score: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub money_flow: Option<f64>,
+    pub close_changed: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dollar_flow: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub trend_score: Option<f64>,
+    pub volume_changed: Option<f64>,
 }
 
 /// Query parameters for /tickers endpoint
@@ -253,9 +251,8 @@ pub async fn get_tickers_handler(
                     ma10_score: d.ma10_score,
                     ma20_score: d.ma20_score,
                     ma50_score: d.ma50_score,
-                    money_flow: d.money_flow,
-                    dollar_flow: d.dollar_flow,
-                    trend_score: d.trend_score,
+                    close_changed: d.close_changed,
+                    volume_changed: d.volume_changed,
                 }
             }).collect();
             (ticker, records)
@@ -288,9 +285,9 @@ fn generate_csv_response(
         .unwrap_or(false);
 
     if has_indicators {
-        // Full header with technical indicators
+        // Full header with technical indicators (NEW 11-column format)
         csv_content.push_str(
-            "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,money_flow,dollar_flow,trend_score\n"
+            "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed\n"
         );
     } else {
         // Basic header without technical indicators
@@ -313,9 +310,9 @@ fn generate_csv_response(
                 };
 
                 if has_indicators {
-                    // Write row with all fields
+                    // Write row with all fields (NEW 11-column format)
                     csv_content.push_str(&format!(
-                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
                         ticker,
                         time_str,
                         record.open / price_divisor,
@@ -329,9 +326,8 @@ fn generate_csv_response(
                         record.ma10_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma20_score.map(|v| v.to_string()).unwrap_or_default(),
                         record.ma50_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.money_flow.map(|v| v.to_string()).unwrap_or_default(),
-                        record.dollar_flow.map(|v| v.to_string()).unwrap_or_default(),
-                        record.trend_score.map(|v| v.to_string()).unwrap_or_default(),
+                        record.close_changed.map(|v| v.to_string()).unwrap_or_default(),
+                        record.volume_changed.map(|v| v.to_string()).unwrap_or_default(),
                     ));
                 } else {
                     // Write row with basic fields only

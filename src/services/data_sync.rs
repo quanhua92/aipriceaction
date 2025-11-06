@@ -2,9 +2,9 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
 use crate::utils::get_market_data_dir;
 use chrono::{DateTime, NaiveDate, Utc};
-use fs2::FileExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -190,9 +190,9 @@ impl DataSync {
                         }
                     }
 
-                    // Save to CSV
+                    // Enhance and save to CSV (single write)
                     let save_start = Instant::now();
-                    self.save_ticker_data(ticker, &data, interval)?;
+                    self.enhance_and_save_ticker_data(ticker, &data, interval)?;
                     let save_elapsed = save_start.elapsed();
 
                     self.stats.successful += 1;
@@ -414,268 +414,41 @@ impl DataSync {
         merged
     }
 
-    /// Save ticker data to CSV file (append-only for minimal I/O)
-    fn save_ticker_data(
+    /// Enhance and save ticker data to CSV in a single write operation
+    fn enhance_and_save_ticker_data(
         &self,
         ticker: &str,
         data: &[OhlcvData],
         interval: Interval,
     ) -> Result<(), Error> {
-        eprintln!("DEBUG [{}:save_ticker_data]: Received {} rows to save", ticker, data.len());
+        eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Received {} rows to enhance and save", ticker, data.len());
         if !data.is_empty() {
-            eprintln!("DEBUG [{}:save_ticker_data]: Input first row: {}", ticker, data.first().unwrap().time);
-            eprintln!("DEBUG [{}:save_ticker_data]: Input last row: {}", ticker, data.last().unwrap().time);
+            eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input first row: {}", ticker, data.first().unwrap().time);
+            eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input last row: {}", ticker, data.last().unwrap().time);
         }
 
         if data.is_empty() {
             return Err(Error::InvalidInput("No data to save".to_string()));
         }
 
-        // Create ticker directory
-        let ticker_dir = get_market_data_dir().join(ticker);
-        fs::create_dir_all(&ticker_dir)
-            .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+        // Create HashMap for single ticker data (required by enhance_data)
+        let mut ticker_data = HashMap::new();
+        ticker_data.insert(ticker.to_string(), data.to_vec());
 
-        // Get file path
-        let file_path = ticker_dir.join(interval.to_filename());
+        // Enhance data in-memory (calculates MA, MA scores, close_changed, volume_changed)
+        let enhanced = enhance_data(ticker_data);
 
-        // Check if file exists and what format it has
-        let file_exists = file_path.exists();
-        eprintln!("DEBUG [{}:save_ticker_data]: File exists: {}", ticker, file_exists);
-        let is_enhanced = if file_exists {
-            self.check_if_enhanced(&file_path)?
-        } else {
-            false
-        };
+        // Calculate cutoff date based on resume_days (default 2 days)
+        let resume_days = self.config.resume_days.unwrap_or(2) as i64;
+        let cutoff_date = Utc::now() - chrono::Duration::days(resume_days);
 
-        if !file_exists {
-            // New file - create with exclusive lock to prevent race conditions
-            let file = std::fs::OpenOptions::new()
-                .create(true)
-                .write(true)
-                .open(&file_path)
-                .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
-
-            // Acquire exclusive lock before writing
-            file.lock_exclusive()
-                .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
-
-            let mut wtr = csv::Writer::from_writer(file);
-
-            wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
-                .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
-
-            for row in data {
-                let time_str = match interval {
-                    Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
-                };
-
-                wtr.write_record(&[
-                    ticker,
-                    &time_str,
-                    &format!("{:.2}", row.open),
-                    &format!("{:.2}", row.high),
-                    &format!("{:.2}", row.low),
-                    &format!("{:.2}", row.close),
-                    &row.volume.to_string(),
-                ])
-                .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
-            }
-
-            wtr.flush()
-                .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-            // Lock is automatically released when file (inside wtr) goes out of scope
-        } else {
-            // File exists - ultra-efficient strategy:
-            // Seek backwards from end, find cutoff point, truncate there, append new data
-            // This avoids reading ANY old data!
-
-            // Calculate cutoff date based on resume_days (default 2 days)
-            let resume_days = self.config.resume_days.unwrap_or(2) as i64;
-            let cutoff_date = Utc::now() - chrono::Duration::days(resume_days);
-
-            // Find truncation point by reading file backwards
-            use std::io::{BufRead, BufReader, Seek, SeekFrom};
-
-            // Step 1: Read file to find truncation point
-            // Use a separate scope to ensure the reader is dropped before we modify the file
-            let truncate_pos: Option<u64> = {
-                let file = std::fs::File::open(&file_path)
-                    .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
-                let reader = BufReader::new(file);
-                let mut pos: Option<u64> = None;
-                let mut current_pos = 0u64;
-
-                for line_result in reader.lines() {
-                    let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
-                    let line_len = (line.len() + 1) as u64; // +1 for newline
-
-                    // Parse timestamp from line (skip header)
-                    if current_pos > 0 {
-                        let parts: Vec<&str> = line.split(',').collect();
-                        if parts.len() >= 2 {
-                            let time_str = parts[1];
-                            let time = if time_str.contains(' ') {
-                                chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                                    .ok()
-                                    .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
-                            } else {
-                                chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-                                    .ok()
-                                    .and_then(|d| d.and_hms_opt(0, 0, 0))
-                                    .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
-                            };
-
-                            if let Some(t) = time {
-                                if t >= cutoff_date {
-                                    // Found cutoff - truncate here
-                                    break;
-                                }
-                                // This line is before cutoff, update truncate position
-                                pos = Some(current_pos + line_len);
-                            }
-                        }
-                    }
-
-                    current_pos += line_len;
-                }
-
-                pos
-            }; // Reader is now dropped, file is closed
-
-            // Step 2: Open file for writing, truncate and append
-            let mut file = std::fs::OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(&file_path)
-                .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
-
-            // CRITICAL SECTION: Acquire exclusive lock to prevent race conditions
-            // This prevents multiple processes from corrupting the file simultaneously
-            file.lock_exclusive()
-                .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
-
-            // Truncate file at cutoff point (or keep all if no cutoff found)
-            if let Some(pos) = truncate_pos {
-                file.set_len(pos)
-                    .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
-            }
-
-            // Seek to end and append new data (only rows >= cutoff_date)
-            file.seek(SeekFrom::End(0))
-                .map_err(|e| Error::Io(format!("Failed to seek to end: {}", e)))?;
-
-            // DEBUG: Log what we're about to write
-            let rows_to_write: Vec<_> = data.iter().filter(|r| r.time >= cutoff_date).collect();
-            if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
-                eprintln!("DEBUG [{}:{}]: Writing {} rows (filtered from {} total)",
-                    ticker, interval.to_filename(), rows_to_write.len(), data.len());
-                if !rows_to_write.is_empty() {
-                    eprintln!("DEBUG [{}:{}]: First row time: {}", ticker, interval.to_filename(), rows_to_write[0].time);
-                    eprintln!("DEBUG [{}:{}]: Last row time: {}", ticker, interval.to_filename(), rows_to_write[rows_to_write.len()-1].time);
-                    eprintln!("DEBUG [{}:{}]: Cutoff date: {}", ticker, interval.to_filename(), cutoff_date);
-                }
-            }
-
-            let mut wtr = csv::Writer::from_writer(file);
-            for row in rows_to_write {
-                let time_str = match interval {
-                    Interval::Daily => row.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => row.time.format("%Y-%m-%d %H:%M:%S").to_string(),
-                };
-
-                if is_enhanced {
-                    // For enhanced files, try to preserve existing indicators
-                    // Read existing indicators for this timestamp if they exist
-                    let existing_indicators = self.read_existing_indicators(&file_path, &time_str)?;
-
-                    let mut record = vec![
-                        ticker.to_string(),
-                        time_str,
-                        format!("{:.2}", row.open),
-                        format!("{:.2}", row.high),
-                        format!("{:.2}", row.low),
-                        format!("{:.2}", row.close),
-                        row.volume.to_string(),
-                    ];
-
-                    // Add existing indicators (10 columns) or empty strings if not found
-                    record.extend(existing_indicators);
-
-                    wtr.write_record(&record)
-                        .map_err(|e| Error::Io(format!("Failed to write enhanced row: {}", e)))?;
-                } else {
-                    // Standard 7-column format for non-enhanced files
-                    wtr.write_record(&[
-                        ticker,
-                        &time_str,
-                        &format!("{:.2}", row.open),
-                        &format!("{:.2}", row.high),
-                        &format!("{:.2}", row.low),
-                        &format!("{:.2}", row.close),
-                        &row.volume.to_string(),
-                    ])
-                        .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
-                }
-            }
-
-            wtr.flush()
-                .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-            // Lock is automatically released when file (inside wtr) goes out of scope
+        // Save enhanced data to CSV with smart cutoff strategy and file locking
+        // This writes the 11-column enhanced CSV in one pass
+        if let Some(stock_data) = enhanced.get(ticker) {
+            save_enhanced_csv(ticker, stock_data, interval, cutoff_date)?;
         }
 
         Ok(())
-    }
-
-    /// Read existing indicators for a specific timestamp from enhanced CSV file
-    /// Returns 9 indicator values or empty strings if not found
-    fn read_existing_indicators(&self, file_path: &Path, target_time: &str) -> Result<Vec<String>, Error> {
-        use std::io::BufReader;
-
-        let file = std::fs::File::open(file_path)
-            .map_err(|e| Error::Io(format!("Failed to open file for reading indicators: {}", e)))?;
-        let reader = BufReader::new(file);
-        let mut csv_reader = csv::Reader::from_reader(reader);
-
-        // Skip header row
-        let mut records = csv_reader.records();
-        records.next(); // Skip header
-
-        for result in records {
-            let record = result.map_err(|e| Error::Io(format!("Failed to read CSV record: {}", e)))?;
-
-            if record.len() >= 2 && record.get(1) == Some(target_time) {
-                // Found matching row, extract indicators (columns 8-16, index 7-15)
-                // 9 indicators: ma10, ma20, ma50, ma10_score, ma20_score, ma50_score, money_flow, dollar_flow, trend_score
-                let mut indicators = Vec::new();
-                for i in 7..record.len().min(16) { // columns 8-16 (0-indexed: 7-15), exactly 9 fields
-                    indicators.push(record.get(i).unwrap_or("").to_string());
-                }
-
-                // Pad with empty strings if less than 9 indicators
-                while indicators.len() < 9 {
-                    indicators.push("".to_string());
-                }
-
-                return Ok(indicators);
-            }
-        }
-
-        // No matching row found, return 9 empty strings
-        Ok(vec!["".to_string(); 9])
-    }
-
-    /// Check if CSV file has enhanced columns (16 columns vs 7)
-    fn check_if_enhanced(&self, file_path: &Path) -> Result<bool, Error> {
-        let mut reader = csv::Reader::from_path(file_path)
-            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
-
-        if let Some(headers) = reader.headers().ok() {
-            Ok(headers.len() >= 16)  // Enhanced CSVs have 16 columns
-        } else {
-            Ok(false)
-        }
     }
 
     /// Read existing data from CSV file
