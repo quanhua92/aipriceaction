@@ -272,8 +272,8 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         let fields: Vec<&str> = line.split(',').collect();
         let field_count = fields.len();
 
-        // Valid CSV should have 7 (basic) or 16 (with indicators) fields
-        if field_count != 7 && field_count != 16 {
+        // Valid CSV should have 7 (basic) or 15 (with indicators) fields
+        if field_count != 7 && field_count != 15 {
             corrupted_lines.push(line_num + 1);
             continue;
         }
@@ -281,7 +281,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         record_count += 1;
 
         // Check if indicators are present (field 7+ should be non-empty)
-        if field_count == 16 && record_count >= 50 {
+        if field_count == 15 && record_count >= 50 {
             // Check if MA10 field (index 7) is non-empty
             if fields.len() > 7 && !fields[7].is_empty() {
                 has_any_indicators = true;
