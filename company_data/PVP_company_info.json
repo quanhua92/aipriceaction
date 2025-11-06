@@ -1,0 +1,110 @@
+{
+  "symbol": "PVP",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1498500431400.0,
+  "current_price": 14450.0,
+  "outstanding_shares": 103702452,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Vận tải Dầu kh&iacute; Th&aacute;i B&igrave;nh Dương&nbsp;(PVP) được th&agrave;nh lập v&agrave;o năm 2007&nbsp;với c&aacute;c cổ đ&ocirc;ng s&aacute;ng lập gồm Tổng C&ocirc;ng ty Cổ phần Vận tải Dầu kh&iacute; (PVTrans), Tổng C&ocirc;ng ty Cổ phần T&agrave;i ch&iacute;nh Dầu kh&iacute; (PVFC), Tổng C&ocirc;ng ty Cổ phần Bảo hiểm Dầu kh&iacute; Việt Nam (PVI), Ng&acirc;n h&agrave;ng TMCP Ngoại Thương Việt Nam (Vietcombank). PVP hoạt động ch&iacute;nh trong lĩnh vực kinh doanh vận tải dầu th&ocirc;, v&agrave; c&aacute;c dịch vụ hỗ trợ vận tải.&nbsp;C&ocirc;ng ty&nbsp;hiện đang sở hữu v&agrave; vận h&agrave;nh&nbsp;t&agrave;u PVT Athena&nbsp;với trọng tải 105.000 tấn v&agrave; t&agrave;u&nbsp;FSO PVN&nbsp;Dai Hung Queen với trọng tải 105.000 tấn. PVP cung cấp dịch vụ vận chuyển dầu th&ocirc; cho hầu hết c&aacute;c h&atilde;ng đầu kh&iacute; nổi tiếng to&agrave;n cầu như Exxon, BP, Shell, Chevron, Petronas. Ng&agrave;y 17/01/2023, PVP ni&ecirc;m yết tr&ecirc;n Sở giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Cổ phần Vận tải Dầu khí",
+      "percentage": 0.6492
+    },
+    {
+      "name": "Lê Ngọc Anh",
+      "percentage": 0.0674
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Thiên Việt 3",
+      "percentage": 0.023654
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Thiên Việt",
+      "percentage": 0.023018
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Thiên Việt 4",
+      "percentage": 0.015168
+    },
+    {
+      "name": "Lê Minh Đức",
+      "percentage": 0.0097
+    },
+    {
+      "name": "Lê Ngọc Ý",
+      "percentage": 0.0075
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ Ngân hàng TMCP Đại chúng Việt nam",
+      "percentage": 5.6e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Mạnh Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lan Hương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Khiếu Trung Trực",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Đức Chính",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hoàng Phương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Đình Hiếu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Trúc Lâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Mạnh Tuấn",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Hữu Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thị Hồng Hạnh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Ngọc Khôi",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Phong Phúc",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:49.857653Z"
+}

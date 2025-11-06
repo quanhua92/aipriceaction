@@ -1,0 +1,240 @@
+{
+  "symbol": "ADS",
+  "exchange": "HOSE",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 634840181370.0,
+  "current_price": 8310.0,
+  "outstanding_shares": 76394727,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Damsan (ADS) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Dệt sợi Damsan&nbsp;được th&agrave;nh lập&nbsp;v&agrave;o năm 2006. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực kinh doanh, sản xuất&nbsp;c&aacute;c sản phẩm sợi v&agrave; khăn b&ocirc;ng. ADS trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ năm 2011.&nbsp;C&ocirc;ng ty l&agrave; một trong c&aacute;c doanh nghiệp lớn nhất Việt Nam&nbsp;về quy m&ocirc; sản xuất sợi với số lượng cọc sợi đứng thứ 5 cả nước. Hiện ADS&nbsp;đang quản l&yacute; vận h&agrave;nh 03 nh&agrave; m&aacute;y&nbsp;dệt sợi với tổng c&ocirc;ng suất 16.560 tấn sợi/năm v&agrave; 2.040 tấn khăn/năm.&nbsp;B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty c&ograve;n tham gia đầu tư ph&aacute;t triển v&agrave; kinh doanh bất động sản nh&agrave;&nbsp;ở v&agrave; hạ tầng khu&nbsp;c&ocirc;ng nghiệp&nbsp;với c&aacute;c dự &aacute;n T&ograve;a Nh&agrave; Dam San - Quang Trung tại Phường Quang Trung - Th&agrave;nh phố Th&aacute;i B&igrave;nh, Khu&nbsp;đ&ocirc; thị Ph&uacute;&nbsp;Xu&acirc;n - Damsan tại Th&agrave;nh phố Th&aacute;i&nbsp;B&igrave;nh&nbsp;v&agrave; Cụm c&ocirc;ng nghiệp An Ninh tại x&atilde; An Ninh, huyện Tiền Hải, tỉnh Th&aacute;i B&igrave;nh. ADS được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 06/2016.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Vũ Huy Đông",
+      "percentage": 0.1205094
+    },
+    {
+      "name": "Công ty TNHH Thương mại và Đầu tư Xây dựng ACC",
+      "percentage": 0.0593
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Xây Dựng Và Thương Mại Đức Tuấn",
+      "percentage": 0.0533
+    },
+    {
+      "name": "Đỗ Đức Khang",
+      "percentage": 0.05312113
+    },
+    {
+      "name": "Đỗ Văn Khôi",
+      "percentage": 0.0519604
+    },
+    {
+      "name": "Công ty Tài chính Tổng hợp Cổ phần Điện Lực",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Hoàng Kim Thu",
+      "percentage": 0.0485
+    },
+    {
+      "name": "Nguyễn Lê Hùng",
+      "percentage": 0.0472813
+    },
+    {
+      "name": "Công ty TNHH Golf Long Hưng",
+      "percentage": 0.0215
+    },
+    {
+      "name": "Vũ Huy Đức",
+      "percentage": 0.0201518
+    },
+    {
+      "name": "Vương Quốc Dương",
+      "percentage": 0.0149989
+    },
+    {
+      "name": "Lê Văn Tuấn",
+      "percentage": 0.0108471
+    },
+    {
+      "name": "Công ty Cổ phần Xây dựng Đức Dũng Thái Bình",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Nguyễn Thị Oanh",
+      "percentage": 0.00810953
+    },
+    {
+      "name": "Lương Thị Dung",
+      "percentage": 0.00552121
+    },
+    {
+      "name": "Đào Thị Duyên",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Đỗ Thị Khuyên",
+      "percentage": 0.0047797
+    },
+    {
+      "name": "Lê Xuân Chiến",
+      "percentage": 0.004474
+    },
+    {
+      "name": "Vũ Thị Thoa",
+      "percentage": 0.00266596
+    },
+    {
+      "name": "Vũ Phương Diệp",
+      "percentage": 0.0015927
+    },
+    {
+      "name": "Vũ Văn Hiệu",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Thị Mên",
+      "percentage": 0.00099972
+    },
+    {
+      "name": "Vũ Thị Thảo",
+      "percentage": 0.00097551
+    },
+    {
+      "name": "Hà Thị Tỉnh Tâm",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Vũ Thùy Linh",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Phạm Thị Dung",
+      "percentage": 0.00038805
+    },
+    {
+      "name": "Vũ Xuân Chiều",
+      "percentage": 0.00027114
+    },
+    {
+      "name": "Phạm Thị Hồi",
+      "percentage": 0.00008133
+    },
+    {
+      "name": "Bùi Thị Hường",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Lê Thị Huế",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Vũ Văn Linh",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Tạ Thị Tỵ",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Vũ Thị Đào",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Mai Thị Thảo",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Lê Văn Hiếu",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Vũ Thị Xuân",
+      "percentage": 0.000019
+    },
+    {
+      "name": "Tạ Thị Thu Hiền",
+      "percentage": 0.00001051
+    },
+    {
+      "name": "Bùi Thị Thu Huyền",
+      "percentage": 9.97e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Huy Đông",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1205094
+    },
+    {
+      "name": "Đỗ Văn Khôi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0519604
+    },
+    {
+      "name": "Nguyễn Lê Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0472813
+    },
+    {
+      "name": "Vũ Huy Đức",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0201518
+    },
+    {
+      "name": "Vương Quốc Dương",
+      "position": "Phó Tổng Giám đốc Sản xuất",
+      "percentage": 0.0149989
+    },
+    {
+      "name": "Lê Văn Tuấn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0108471
+    },
+    {
+      "name": "Lê Xuân Chiến",
+      "position": "Phó Tổng Giám đốc Tài chính - Kế toán/Kế toán trưởng",
+      "percentage": 0.004474
+    },
+    {
+      "name": "Vũ Phương Diệp",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0015927
+    },
+    {
+      "name": "Vũ Thùy Linh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Phạm Thị Hồi",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00008133
+    },
+    {
+      "name": "Tạ Thị Thu Hiền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00001051
+    },
+    {
+      "name": "Bùi Thị Thu Huyền",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 9.97e-6
+    },
+    {
+      "name": "Phạm Văn Thượng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Quỳnh Hoa",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:33.619673Z"
+}

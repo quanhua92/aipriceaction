@@ -1,0 +1,182 @@
+{
+  "symbol": "PVI",
+  "exchange": "HNX",
+  "industry": "Bảo hiểm phi nhân thọ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 18458259119600.0,
+  "current_price": 78800.0,
+  "outstanding_shares": 234241867,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">C&ocirc;ng ty Cổ phần PVI (PVI) c&oacute; tiền th&acirc;n l&agrave;&nbsp;Tổng c&ocirc;ng ty cổ phần Bảo hiểm Dầu kh&iacute; Việt Nam&nbsp;được th&agrave;nh lập v&agrave;o năm&nbsp;1996. C&ocirc;ng ty hoạt động trong lĩnh vực kinh doanh&nbsp;bảo hiểm v&agrave; đầu tư t&agrave;i ch&iacute;nh. Từ năm 2006, PVI chuyển sang hoạt động theo m&ocirc; h&igrave;nh Tổng c&ocirc;ng ty cổ phần. Hiện tại, PVI đứng thứ hai về thị phần tr&ecirc;n thị trường bảo hiểm phi nh&acirc;n thọ Việt Nam v&agrave; tiếp tục giữ vững vị tr&iacute; đứng đầu lĩnh vực bảo hiểm c&ocirc;ng nghiệp trong nước v&agrave; c&oacute; mối quan hệ tốt đẹp với c&aacute;c chủ tầu lớn như: VSP, PTSC, Vitranschart, Vosco, Vinashin. Hiện nay, PVI l&agrave; doanh nghiệp bảo hiểm duy nhất ở Việt Nam c&oacute; hợp đồng bảo hiểm cố định năng lượng tại thị trường Lloyds v&agrave; c&aacute;c hợp đồng bảo hiểm cố định h&agrave;ng hải, phi h&agrave;ng hải. Ngo&agrave;i ra, PVI c&ograve;n mở rộng thị trường nhận t&aacute;i bảo hiểm ra c&aacute;c nước khu vực v&agrave; thế giới với đối t&aacute;c của l&agrave; những nh&agrave; bảo hiểm, t&aacute;i bảo hiểm h&agrave;ng đầu tr&ecirc;n thế giới v&agrave; khu vực như Swiss Re, Munich Re, Korean Re. PVI ch&iacute;nh thức được ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ ng&agrave;y 10/08/2007.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hdi Global Se",
+      "percentage": 0.4238
+    },
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.35
+    },
+    {
+      "name": "Funderburk Lighthouse Limited",
+      "percentage": 0.1262
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Đường Mặt Trời",
+      "percentage": 0.0446
+    },
+    {
+      "name": "Red River Holding",
+      "percentage": 0.0248973425
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Thành phố Hồ Chí Minh",
+      "percentage": 0.0206
+    },
+    {
+      "name": "Temasia Capital Limited",
+      "percentage": 0.0142910746
+    },
+    {
+      "name": "Ifc Emerging Asia Fund, Lp",
+      "percentage": 0.0092
+    },
+    {
+      "name": "Ifc Financial Institutions Growth Fund, Lp",
+      "percentage": 0.0092
+    },
+    {
+      "name": "Công ty Tài Chính Quốc Tế",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đại chúng Việt Nam",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu MB",
+      "percentage": 0.0004473901
+    },
+    {
+      "name": "Bùi Vạn Thuận",
+      "percentage": 0.000397
+    },
+    {
+      "name": "Bùi Ngọc Thắng",
+      "percentage": 0.00024415
+    },
+    {
+      "name": "Nguyễn Thanh Nghị",
+      "percentage": 0.0002027475
+    },
+    {
+      "name": "Trịnh Quỳnh Giao",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Hồ Thu Hương",
+      "percentage": 0.0000309825
+    },
+    {
+      "name": "Đào Hải Yến",
+      "percentage": 4.3e-6
+    },
+    {
+      "name": "Hà Lan",
+      "percentage": 3.3e-6
+    },
+    {
+      "name": "Trương Quốc Lâm",
+      "percentage": 4.4e-7
+    },
+    {
+      "name": "Trần Văn Quý",
+      "percentage": 5.39e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Vạn Thuận",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000397
+    },
+    {
+      "name": "Hà Lan",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 3.3e-6
+    },
+    {
+      "name": "Christian Hermelingmeier",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Hòa",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Nguyệt",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Jens Holger Wohlthat",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ulrich Heinz Wollschlager",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tài Đức",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Daryl John Vella",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Duy Cương",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Anh Đức",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Văn Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Oliver Massmann",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Tuấn Kiên",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Minh Đức",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:47.132875Z"
+}

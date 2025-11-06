@@ -1,0 +1,169 @@
+{
+  "symbol": "ANV",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 7493356750000.0,
+  "current_price": 28100.0,
+  "outstanding_shares": 266667500,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Nam Việt (ANV) c&oacute;&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Nam Việt được th&agrave;nh lập v&agrave;o&nbsp;năm 1993. C&ocirc;ng ty hoạt động trong lĩnh vực nu&ocirc;i<strong> </strong>trồng, chế biến&nbsp;thủy sản, xuất khẩu thủy sản, sản xuất thức ăn thủy sản. ANV ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2006. Sản phẩm của C&ocirc;ng ty đ&atilde; c&oacute; mặt tr&ecirc;n 100 quốc gia tr&ecirc;n thế giới như Nga, EU, Trung quốc, &Uacute;c. ANV hiện đang sở hữu vận h&agrave;nh 04&nbsp;nh&agrave; m&aacute;y chế biến thủy sản với tổng c&ocirc;ng suất 1.050 tấn nguy&ecirc;n vật liệu/ng&agrave;y. C&ocirc;ng ty đ&atilde; ho&agrave;n th&agrave;nh việc x&acirc;y dựng chuỗi sản xuất kh&eacute;p k&iacute;n từ con giống, thức ăn, nu&ocirc;i trồng thủy sản tới chế biến với&nbsp;08 d&acirc;y chuyền sản xuất thức ăn chăn nu&ocirc;i&nbsp;với tổng c&ocirc;ng suất l&ecirc;n đến 800 tấn/ng&agrave;y v&agrave; 250 ha v&ugrave;ng nu&ocirc;i c&aacute; nguy&ecirc;n liệu. ANV ch&iacute;nh thức ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE)&nbsp;từ năm 2007.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Doãn Tới",
+      "percentage": 0.54979998
+    },
+    {
+      "name": "Doãn Chí Thanh",
+      "percentage": 0.1107
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0489253484
+    },
+    {
+      "name": "Nguyễn Duy Nhứt",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Đỗ Lập Nghiệp",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Nguyễn Văn Vỹ",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Nguyễn Văn Dương",
+      "percentage": 0.00262905
+    },
+    {
+      "name": "Nguyễn Thanh Liêm",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Trần Minh Cảnh",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Doãn Chí Thiên",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đỗ Thị Thanh Thuỷ",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Huỳnh Thị Kim Thoa",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Đặng Văn Điền",
+      "percentage": 0.0001524268
+    },
+    {
+      "name": "Doãn Quốc Xã",
+      "percentage": 0.0001524268
+    },
+    {
+      "name": "Nguyễn Thừa Bửu",
+      "percentage": 0.0001524268
+    },
+    {
+      "name": "Dương Minh Phong",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Ánh",
+      "percentage": 0.0000762134
+    },
+    {
+      "name": "Lê Thị Tuyết Mai",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Nguyễn Hà Thu Diễm",
+      "percentage": 0.000056
+    },
+    {
+      "name": "Doãn Văn Nho",
+      "percentage": 0.0000304853
+    },
+    {
+      "name": "Đỗ Thị Thảo",
+      "percentage": 0.0000304853
+    },
+    {
+      "name": "Nguyễn Thị Minh Thành",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thanh Ngọc",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Dương Thị Kim Loan",
+      "percentage": 4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Doãn Tới",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.54979998
+    },
+    {
+      "name": "Đỗ Lập Nghiệp",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Nguyễn Văn Vỹ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Trần Minh Cảnh",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Doãn Chí Thiên",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Huỳnh Thị Kim Thoa",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Dương Minh Phong",
+      "position": "Trưởng ban kiểm toán/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Minh Ý",
+      "position": "Trưởng ban kiểm toán/Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Thị Kim Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tiến Dũng",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Doãn Hải Phượng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:42.257662Z"
+}

@@ -1,0 +1,179 @@
+{
+  "symbol": "TTN",
+  "exchange": "UPCOM",
+  "industry": "Viễn thông cố định",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 639058500000.0,
+  "current_price": 17400.0,
+  "outstanding_shares": 36727500,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần C&ocirc;ng nghệ v&agrave; Truyền th&ocirc;ng Việt Nam (TTN) được th&agrave;nh lập v&agrave;o năm 2008. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực dịch vụ viễn th&ocirc;ng, c&ocirc;ng nghệ th&ocirc;ng tin, t&iacute;ch hợp hệ thống v&agrave; dịch vụ cơ điện (M&amp;E). TTN được biết đến l&agrave; nh&agrave; cung cấp dịch vụ viễn th&ocirc;ng trọn g&oacute;i trong c&aacute;c khu c&ocirc;ng nghiệp, khu d&acirc;n cư, khu đ&ocirc; thị dịch vụ của BECAMEX IDC v&agrave; VSIP đầu tư. B&ecirc;n cạnh đ&oacute;, TTN đ&atilde; đầu tư x&acirc;y dựng một trong những trung t&acirc;m dữ liệu lớn của Việt Nam theo ti&ecirc;u chuẩn Tier-3. C&ocirc;ng ty cũng tham gia cung cấp dịch vụ cơ điện. TTN được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 04/2017.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Đầu tư và Phát triển Công nghiệp Becamex - CTCP",
+      "percentage": 0.4859
+    },
+    {
+      "name": "Tập Đoàn Bưu Chính Viễn Thông Việt Nam",
+      "percentage": 0.0545
+    },
+    {
+      "name": "Công ty Cổ phần Phát triển Hạ tầng Kỹ thuật",
+      "percentage": 0.0463
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.0385
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Kinh tế hiện đại VinaCapital",
+      "percentage": 0.0333
+    },
+    {
+      "name": "Giang Quốc Dũng",
+      "percentage": 0.002
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "percentage": 0.002
+    },
+    {
+      "name": "Huỳnh Kim Thảo",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Thanh Khiết",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Huỳnh Quang Hải",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Văn Hiệu",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Đặng Thanh Hưng",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Ngô Duy Khang",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "percentage": 0.00055
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nhàn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Thị Lan Thảo",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Xuân Vinh",
+      "percentage": 0.00036
+    },
+    {
+      "name": "Lại Xuân Nghĩa",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Võ Thị Thanh Hương",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Minh Dương",
+      "percentage": 0.000136
+    },
+    {
+      "name": "Huỳnh Song Ngọc Trang",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Võ Trần Phương Anh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Bá Thước",
+      "percentage": 0.0000136
+    },
+    {
+      "name": "Lê Thị Xuân Diệu",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Giang Quốc Dũng",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.002
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.002
+    },
+    {
+      "name": "Huỳnh Quang Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Đặng Thanh Hưng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Ngô Duy Khang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00055
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nhàn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lê Xuân Vinh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00036
+    },
+    {
+      "name": "Lại Xuân Nghĩa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Võ Thị Thanh Hương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Bá Thước",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000136
+    },
+    {
+      "name": "Lê Thị Xuân Diệu",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Văn Phúc",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:10.412897Z"
+}

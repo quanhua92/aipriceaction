@@ -1,0 +1,112 @@
+{
+  "symbol": "DAH",
+  "exchange": "HOSE",
+  "industry": "Du lịch & Giải trí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 314066000000.0,
+  "current_price": 3730.0,
+  "outstanding_shares": 84200000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Kh&aacute;ch sạn Đ&ocirc;ng &Aacute; (DAH), tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đầu tư X&acirc;y dựng v&agrave; Thương mại Đ&ocirc;ng &Aacute;, được th&agrave;nh lập từ năm 2003. C&ocirc;ng ty chủ yếu tham gia v&agrave;o lĩnh vực dịch vụ kh&aacute;ch sạn với hệ thống c&aacute;c kh&aacute;ch sạn, khu nghỉ dưỡng lớn tr&ecirc;n địa b&agrave;n tỉnh Th&aacute;i Nguy&ecirc;n v&agrave; TP. Nha Trang, Kh&aacute;nh H&ograve;a. B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty c&ograve;n mở rộng v&agrave; tham gia v&agrave;o lĩnh vực tư vấn, thi c&ocirc;ng x&acirc;y dựng v&agrave; kinh doanh thương mại vật liệu x&acirc;y dựng, bất động sản, si&ecirc;u thị. DAH được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2016.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Đầu tư Toàn cầu HIT",
+      "percentage": 0.17815
+    },
+    {
+      "name": "Trần Minh Tuấn",
+      "percentage": 0.089
+    },
+    {
+      "name": "Trần Kim Phượng",
+      "percentage": 0.0484
+    },
+    {
+      "name": "Nguyễn Đức Thịnh",
+      "percentage": 0.0416
+    },
+    {
+      "name": "Công ty Cổ Phần Mbg Lạc Sanh Phú Yên",
+      "percentage": 0.02375
+    },
+    {
+      "name": "Nguyễn Văn Đông",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Văn Thanh",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Thu",
+      "percentage": 0.00002924
+    },
+    {
+      "name": "Nguyễn Thị Mai",
+      "percentage": 0.0000175
+    },
+    {
+      "name": "Nguyễn Thu Giang",
+      "percentage": 0.000013
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Minh Tuấn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.089
+    },
+    {
+      "name": "Nguyễn Văn Thanh",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Văn Thảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Trường Giang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Nữ Ngọc Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hải Yến",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin/Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "PHẠM HUY THÀNH",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trường Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Nguyệt",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:53.460023Z"
+}

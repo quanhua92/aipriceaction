@@ -1,0 +1,136 @@
+{
+  "symbol": "FIT",
+  "exchange": "HOSE",
+  "industry": "Dược phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1573889947420.0,
+  "current_price": 4630.0,
+  "outstanding_shares": 339933034,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n F.I.T (FIT) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đầu tư F.I.T được th&agrave;nh lập&nbsp;v&agrave;o năm 2007. Tập đo&agrave;n F.I.T hoạt động ch&iacute;nh trong lĩnh vực tư vấn&nbsp;đầu tư&nbsp;v&agrave; trực tiếp tham gia đầu tư&nbsp;cổ phiếu, tr&aacute;i phiếu, đầu tư v&agrave;o c&ocirc;ng ty con, c&ocirc;ng ty li&ecirc;n kết,&nbsp;đầu tư ph&aacute;t triển v&agrave; kinh doanh bất&nbsp;động sản. FIT tham gia&nbsp;v&agrave;o c&aacute;c lĩnh vực&nbsp;dược phẩm, trang thiết bị y tế, thực phẩm, ng&agrave;nh h&agrave;ng ti&ecirc;u d&ugrave;ng, n&ocirc;ng nghiệp th&ocirc;ng qua hệ thống c&aacute;c c&ocirc;ng ty con v&agrave; c&ocirc;ng ty li&ecirc;n kết trực thuộc. FIT được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2015.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Đầu tư JJK Holdings",
+      "percentage": 0.304
+    },
+    {
+      "name": "Công ty Cổ phần Thương mại và Phát triển Nông nghiệp VP",
+      "percentage": 0.0416
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư và Phát triển Nghệ An",
+      "percentage": 0.0415
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư và Phát triển Nông sản Hưng Yên",
+      "percentage": 0.0393
+    },
+    {
+      "name": "Nguyễn  Quang  Huy",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Phan Trung Phương",
+      "percentage": 0.0005579968
+    },
+    {
+      "name": "Ninh Thị Phương",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Minh Nguyệt",
+      "percentage": 0.0000559
+    },
+    {
+      "name": "Hoàng Minh Tâm",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Dương Minh Tú",
+      "percentage": 0.0000278998
+    },
+    {
+      "name": "Nguyễn Thị Nga",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Anh Trọng",
+      "percentage": 6e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn  Quang  Huy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Thị Minh Nguyệt",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0000559
+    },
+    {
+      "name": "Nguyễn Thị Nga",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Bùi Tuấn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Minh Sáng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thế Cao",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thúy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kiều Hữu Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Trọng Hoan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Sang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Hồng Hạnh",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Văn Khá",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Xuân Vũ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:34.576205Z"
+}

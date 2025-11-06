@@ -1,0 +1,353 @@
+{
+  "symbol": "PVS",
+  "exchange": "HNX",
+  "industry": "Thiết bị, Dịch vụ và Phân phối Dầu khí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 16298650489000.0,
+  "current_price": 34100.0,
+  "outstanding_shares": 477966290,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Cổ phần Dịch vụ Kỹ thuật Dầu kh&iacute; Việt Nam (PVS), tiền th&acirc;n l&agrave; C&ocirc;ng ty Dịch vụ Kỹ thuật Dầu kh&iacute; được th&agrave;nh lập năm 1993. Năm 2006, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. Vốn điều lệ hiện tại của C&ocirc;ng ty l&agrave; 4.779,66 tỷ đồng. Lĩnh vực kinh doanh ch&iacute;nh l&agrave;: Cung cấp T&agrave;u dịch vụ chuy&ecirc;n ng&agrave;nh dầu kh&iacute;; Căn cứ Cảng dịch vụ dầu kh&iacute;; Dịch vụ kho nổi chứa, xử l&yacute; v&agrave; xuất dầu th&ocirc; (FSO/FPSO)...PVS một đơn vị th&agrave;nh vi&ecirc;n của Tập đo&agrave;n Dầu kh&iacute; Quốc gia Việt Nam, PVS lu&ocirc;n nhận được sự quan t&acirc;m, chỉ đạo của Tập đo&agrave;n trong c&ocirc;ng t&aacute;c sản xuất kinh doanh, đặc biệt được c&oacute; cơ hội tham gia đấu thầu cung cấp dịch vụ kỹ thuật dầu kh&iacute; tại Việt Nam.&nbsp;PVS sở hữu&nbsp;xưởng cơ kh&iacute; bảo dưỡng Diện t&iacute;ch 11.462 m&sup2; với c&aacute;c trang thiết bị, m&aacute;y m&oacute;c hiện đại, c&oacute; thể sửa chữa, bảo dưỡng v&agrave; cung cấp c&aacute;c dịch vụ ho&aacute;n cải, n&acirc;ng cấp, chế tạo c&aacute;c cấu kiện c&oacute; kết cấu l&ecirc;n đến 500 tấn...Ng&agrave;y 20/09/2007, PVS ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX)</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.5138
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0444477978
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.03766
+    },
+    {
+      "name": "Ngân hàng TM TNHH MTV Việt Nam Hiện đại",
+      "percentage": 0.0326724563
+    },
+    {
+      "name": "TGIT-Templeton Frontier Markets Fund",
+      "percentage": 0.0293279866
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 0.024
+    },
+    {
+      "name": "FTIF - Templeton Frontier Markets Fund",
+      "percentage": 0.014071847
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.013023
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.009381
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.009028
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.0082
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.007934
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.0074
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.0064
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.004812
+    },
+    {
+      "name": "Vietnam Investment Limited",
+      "percentage": 0.0048
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.004728
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Kinh tế hiện đại VinaCapital",
+      "percentage": 0.003
+    },
+    {
+      "name": "FTIF Templeton Emerging Markets Smaller Companies Fund",
+      "percentage": 0.0028990346
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đại chúng Việt Nam",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Templeton Frontier Markets Fund",
+      "percentage": 0.0022000203
+    },
+    {
+      "name": "Curian/Franklin Templeton Frontier Markets Fund",
+      "percentage": 0.0012484877
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Kinh tế Hiện đại VinaCapital",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Thái Quốc Hiệp",
+      "percentage": 0.00079971
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.000732
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000513
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000352
+    },
+    {
+      "name": "Frontier Markets Equity (Master) Fund, Ltd.",
+      "percentage": 0.0003006489
+    },
+    {
+      "name": "Nguyễn Hùng Dũng",
+      "percentage": 0.0002985602
+    },
+    {
+      "name": "Lều Minh Tiến",
+      "percentage": 0.000276935
+    },
+    {
+      "name": "Lê Chiến Thắng",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Lê Cự Tân",
+      "percentage": 0.0002517929
+    },
+    {
+      "name": "Templeton ASEAN Consumer Fund Ltd.",
+      "percentage": 0.00024625
+    },
+    {
+      "name": "Vũ Thị Thu Hương",
+      "percentage": 0.000123
+    },
+    {
+      "name": "Lê Mạnh Cường",
+      "percentage": 0.000116
+    },
+    {
+      "name": "Phan Thanh Tùng",
+      "percentage": 0.0001016
+    },
+    {
+      "name": "Nguyễn Hữu Hải",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000959001
+    },
+    {
+      "name": "Nguyễn Văn Mậu",
+      "percentage": 0.00008955
+    },
+    {
+      "name": "Bùi Thị Ngọc Lan",
+      "percentage": 0.0000884
+    },
+    {
+      "name": "Nguyễn Xuân Nhậm",
+      "percentage": 0.0000504
+    },
+    {
+      "name": "Công ty TNHH Quản Lý Quỹ Kim Việt Nam",
+      "percentage": 0.0000447727
+    },
+    {
+      "name": "Đỗ Quốc Hoan",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trần Thị Hải Yến",
+      "percentage": 0.00003488
+    },
+    {
+      "name": "Phạm Hùng Cường",
+      "percentage": 0.0000322923
+    },
+    {
+      "name": "Thái Quốc Huy",
+      "percentage": 0.00002626
+    },
+    {
+      "name": "Hà Thị Kim Lan",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Nguyễn Hữu Dũng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đoàn Thị Kim Hồng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Trần Thị Hoàng Anh",
+      "percentage": 0.00001763
+    },
+    {
+      "name": "Nguyễn Văn Dân",
+      "percentage": 0.00001557
+    },
+    {
+      "name": "Phạm Văn Hùng",
+      "percentage": 0.0000121
+    },
+    {
+      "name": "Thái Thanh Hoàng",
+      "percentage": 0.00001113
+    },
+    {
+      "name": "Nguyễn Xuân Cường",
+      "percentage": 0.0000105
+    },
+    {
+      "name": "Nguyễn Trần Toàn",
+      "percentage": 7.94e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 6.3854e-6
+    },
+    {
+      "name": "Trần Hồ Bắc",
+      "percentage": 4.5e-6
+    },
+    {
+      "name": "Bùi Hữu Việt Cường",
+      "percentage": 3.5e-6
+    },
+    {
+      "name": "Tạ Đức Tiến",
+      "percentage": 3.42e-6
+    },
+    {
+      "name": "Hồ Thị Oanh",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Tấn Hòa",
+      "percentage": 4.9e-7
+    },
+    {
+      "name": "Triệu Văn Nghị",
+      "percentage": 3.9e-7
+    },
+    {
+      "name": "Phạm Văn Hà",
+      "percentage": 2.6e-7
+    },
+    {
+      "name": "Nguyễn Văn Bảo",
+      "percentage": 2e-7
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "percentage": 1.4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Mạnh Cường",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.000116
+    },
+    {
+      "name": "Phan Thanh Tùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001016
+    },
+    {
+      "name": "Nguyễn Hữu Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Quốc Hoan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Xuân Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000105
+    },
+    {
+      "name": "Nguyễn Trần Toàn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 7.94e-6
+    },
+    {
+      "name": "Trần Hồ Bắc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 4.5e-6
+    },
+    {
+      "name": "Bùi Hữu Việt Cường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 3.5e-6
+    },
+    {
+      "name": "Tạ Đức Tiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 3.42e-6
+    },
+    {
+      "name": "Nguyễn Văn Bảo",
+      "position": "Kế toán trưởng",
+      "percentage": 2e-7
+    },
+    {
+      "name": "Nguyễn Xuân Ngọc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Đức Hoàng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Tiến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thu Hà",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Thủy",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:53.875743Z"
+}

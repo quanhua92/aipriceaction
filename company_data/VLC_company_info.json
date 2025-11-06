@@ -1,0 +1,121 @@
+{
+  "symbol": "VLC",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2953633392900.0,
+  "current_price": 13900.0,
+  "outstanding_shares": 212491611,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p style=\"text-align: justify;\">Tổng C&ocirc;ng ty Chăn nu&ocirc;i Việt Nam - CTCP (VLC), tiền thần l&agrave; một Doanh nghiệp Nh&agrave; nước được th&agrave;nh lập năm 1996. Năm 2013, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. Lĩnh vực kinh doanh ch&iacute;nh&nbsp;của C&ocirc;ng ty&nbsp;trong lĩnh vực: Chăn nu&ocirc;i gia s&uacute;c, gia cầm; B&aacute;n bu&ocirc;n thực phẩm; Xuất nhập khẩu c&aacute;c sản phẩm gia s&uacute;c, gia cầm, thực phẩm, nguy&ecirc;n liệu th&ocirc;, thức ăn chăn nu&ocirc;i, thuốc th&uacute; y v&agrave; vật tư th&uacute; &yacute;... VLC hiện đang điều h&agrave;nh C&ocirc;ng ty cổ phần giống b&ograve; sữa Mộc Ch&acirc;u, với quy m&ocirc; sản xuất chăn nu&ocirc;i lớn tại tỉnh Sơn La, g&oacute;p phần chủ lực cho doanh thu hiện c&oacute; của Tổng c&ocirc;ng ty. VLC l&agrave; đơn vị th&agrave;nh vi&ecirc;n của C&ocirc;ng ty Cổ phần GTNFOODS, do đ&oacute; VLC lu&ocirc;n nhận được sự gi&uacute;p đỡ kịp thời về vốn, chiến lược kinh doanh, hệ thống nh&agrave; cung cấp, k&ecirc;nh ph&acirc;n phối từ ph&iacute;a GTN.&nbsp;Ng&agrave;y 26/10/2015, VLC ch&iacute;nh thức được giao dịch tr&ecirc;n thị trường UPCOM</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Sữa Việt Nam",
+      "percentage": 0.6894
+    },
+    {
+      "name": "Phạm Thị Linh",
+      "percentage": 0.0297694
+    },
+    {
+      "name": "Đỗ Hoàng Phương",
+      "percentage": 0.0294129
+    },
+    {
+      "name": "Công ty CP Thái Minh Group",
+      "percentage": 0.0265
+    },
+    {
+      "name": "Trần Công Chiến",
+      "percentage": 0.001902
+    },
+    {
+      "name": "Bùi Đức Hoàn",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Trần Văn Hùng",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Đào Duy Linh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Hoàng Mạnh Cường",
+      "percentage": 0.0000368
+    },
+    {
+      "name": "Lê Nhân Đức",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Nguyễn Duy Lý",
+      "percentage": 0.0000126
+    },
+    {
+      "name": "Trần Chí Sơn",
+      "percentage": 9.98e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Công Chiến",
+      "position": "Thành viên Hội đồng đầu tư/Phó Tổng Giám đốc",
+      "percentage": 0.001902
+    },
+    {
+      "name": "Trần Trí Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Huy Hoàng",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Công Tuyến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đăng Khoa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Quốc Dũng",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Huy Bích",
+      "position": "Phụ trách Công bố thông tin/Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Thị Diệu Thu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Kiều Liên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Công Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Thị Hà",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:34.477106Z"
+}

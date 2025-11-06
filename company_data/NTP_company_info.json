@@ -1,0 +1,179 @@
+{
+  "symbol": "NTP",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10775407860000.0,
+  "current_price": 63000.0,
+  "outstanding_shares": 171038220,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Nhựa Thiếu ni&ecirc;n Tiền Phong (NTP),&nbsp;tiền th&acirc;n l&agrave; Nh&agrave; m&aacute;y Nhựa Thiếu ni&ecirc;n Tiền phong th&agrave;nh lập năm 1960. Năm 2005, C&ocirc;ng ty&nbsp;chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh th&agrave;nh C&ocirc;ng&nbsp;ty Cổ phần. Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; sản xuất c&aacute;c sản phẩm ống nhựa như u.PVC, ống HDPE, ống nhựa PPR v&agrave; c&aacute;c sản phẩm phụ t&ugrave;ng như: PVC, HDPE, PPR phục vụ cho ng&agrave;nh x&acirc;y dựng, cấp tho&aacute;t nước với hệ thống nh&agrave; m&aacute;y gồm 5 ph&acirc;n xưởng sản xuất v&agrave; 1 ph&acirc;n xưởng cơ điện. Với năng lực sản xuất h&agrave;ng năm khoảng 120.000 tấn, dẫn đầu cả nước về sản lượng. Thị trường được tập trung phần lớn tại Miền Bắc, một phần ti&ecirc;u thụ tại Miền Trung v&agrave; khu vực th&agrave;nh phố Hồ Ch&iacute; Minh. Hiện C&ocirc;ng ty cổ phần Nhựa Thiếu ni&ecirc;n&nbsp;Tiền Phong chiếm 30% thị trường nội địa v&agrave; 70% thị trường miền Bắc.&nbsp;C&ocirc;ng ty c&oacute; hệ thống ph&acirc;n phối rộng khắp, bao gồm 12&nbsp;trung t&acirc;m ph&acirc;n phối. Ngo&agrave;i ra c&ocirc;ng ty c&oacute; 400 đại l&yacute; v&agrave; tr&ecirc;n 26.000 điểm b&aacute;n h&agrave;ng tr&ecirc;n to&agrave;n thị trường. Ng&agrave;y 11/12/2006, NTP&nbsp;ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.37104
+    },
+    {
+      "name": "Sekisui Chemical Co., Ltd.",
+      "percentage": 0.15
+    },
+    {
+      "name": "Công ty Cổ Phần Nhựa Thiếu Niên Tiền Phong Phía Nam",
+      "percentage": 0.1313
+    },
+    {
+      "name": "Đặng Quốc Dũng",
+      "percentage": 0.068732
+    },
+    {
+      "name": "Hồ Phi Hải",
+      "percentage": 0.0602
+    },
+    {
+      "name": "Công ty TNHH Windstar Resources",
+      "percentage": 0.0437877114
+    },
+    {
+      "name": "Công Đoàn Công ty Cổ Phần Nhựa Thiếu Niên Tiền Phong",
+      "percentage": 0.0388
+    },
+    {
+      "name": "Đặng Quốc Minh",
+      "percentage": 0.032
+    },
+    {
+      "name": "Đặng Thị Minh Hương",
+      "percentage": 0.0203
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 0.0132
+    },
+    {
+      "name": "Trần Bá Phúc",
+      "percentage": 0.00543
+    },
+    {
+      "name": "NGUYỄN QUỐC TRƯỜNG",
+      "percentage": 0.00529
+    },
+    {
+      "name": "Lê Thị Thúy Hải",
+      "percentage": 0.0048
+    },
+    {
+      "name": "Chu Văn Phương",
+      "percentage": 0.0036466
+    },
+    {
+      "name": "Trần Ngọc Bảo",
+      "percentage": 0.00141
+    },
+    {
+      "name": "Phạm Văn Viện",
+      "percentage": 0.0004663313
+    },
+    {
+      "name": "Trần Thị Hoài Thu",
+      "percentage": 0.00037714
+    },
+    {
+      "name": "Phạm Văn Nguyên",
+      "percentage": 0.0002926431
+    },
+    {
+      "name": "Đào Anh Thắng",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Nguyễn Thị Thanh Xuân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đỗ Thị Thủy",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Đồng Xuân Việt",
+      "percentage": 0.0000394041
+    },
+    {
+      "name": "Nguyễn Bích Thủy",
+      "percentage": 0.0000342
+    },
+    {
+      "name": "Nguyễn Thị Hạnh Nguyên",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trần Thị Hoài Anh",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Quỳnh Hường",
+      "percentage": 4.6e-6
+    },
+    {
+      "name": "Ngô Thị Thu Thủy",
+      "percentage": 3.8e-6
+    },
+    {
+      "name": "Phạm Văn Bằng",
+      "percentage": 2.6785e-6
+    },
+    {
+      "name": "Trần Nhật Ninh",
+      "percentage": 2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Quốc Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.068732
+    },
+    {
+      "name": "Chu Văn Phương",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0036466
+    },
+    {
+      "name": "Trần Ngọc Bảo",
+      "position": "Thành viên Hội đồng Quản trị/Kế toán trưởng",
+      "percentage": 0.00141
+    },
+    {
+      "name": "Đào Anh Thắng",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Ngô Thị Thu Thủy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 3.8e-6
+    },
+    {
+      "name": "Trần Nhật Ninh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Noboru Kobayashi",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Phương",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hùng Cường",
+      "position": "Chuyên viên /Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:28.538689Z"
+}

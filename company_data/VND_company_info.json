@@ -1,0 +1,159 @@
+{
+  "symbol": "VND",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 30369883164600.0,
+  "current_price": 19950.0,
+  "outstanding_shares": 1522299908,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n VNDIRECT (VND)&nbsp;được th&agrave;nh lập v&agrave;o năm 2006. C&ocirc;ng ty hoạt&nbsp;động trong lĩnh vực m&ocirc;i giới lưu k&yacute; chứng kho&aacute;n, tư vấn t&agrave;i ch&iacute;nh doanh nghiệp, tự doanh, bảo l&atilde;nh ph&aacute;t h&agrave;nh v&agrave;&nbsp;quản l&yacute; danh mục&nbsp;đầu tư. Trong năm 2024, C&ocirc;ng ty xếp ở vị tr&iacute; 6 với 5.87% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HOSE, vị tr&iacute; thứ 3 với 7.26% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HNX v&agrave;&nbsp;thứ 4 với 5.59% thị phần m&ocirc;i giới cổ phiếu đăng k&yacute; giao dịch tr&ecirc;n thị trường UPCOM. Tr&ecirc;n thị trường ph&aacute;i sinh, VND đứng vị tr&iacute; thứ 7 thị phần m&ocirc;i giới chứng kho&aacute;n ph&aacute;i sinh với 3.12%. Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 719,86 tỷ đồng. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 51.48%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 1.496,8 tỷ đồng, đ&oacute;ng g&oacute;p 46.73% tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 2.088,32 tỷ đồng. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 9.49%.&nbsp;VND được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 08/2017.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn Đầu tư I.P.A",
+      "percentage": 0.2584
+    },
+    {
+      "name": "Yurie Vietnam Securities Investment Trust",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Vietnam Investment Fund I, L.P",
+      "percentage": 0.0427
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0404
+    },
+    {
+      "name": "PXP Vietnam Smaller Companies Fund Limited",
+      "percentage": 0.0324
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Dragon Capital Việt Nam",
+      "percentage": 0.03225894
+    },
+    {
+      "name": "Phạm Minh Hương",
+      "percentage": 0.0295
+    },
+    {
+      "name": "Endurance Capital Vietnam I Ltd",
+      "percentage": 0.0121
+    },
+    {
+      "name": "Access S.a., Sicav-sif-asia Top Picks",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Đậu Thúy Hà",
+      "percentage": 0.000760939
+    },
+    {
+      "name": "Nguyễn Tống Sơn",
+      "percentage": 0.0004846321
+    },
+    {
+      "name": "Trần Vũ Thạch",
+      "percentage": 0.000454
+    },
+    {
+      "name": "Yurie Vietnam Smart Accumulated Target Return Fund",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Thị Hà Ninh",
+      "percentage": 0.000116
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000959136
+    },
+    {
+      "name": "Lê Thị Hồng Lĩnh",
+      "percentage": 0.0000164066
+    },
+    {
+      "name": "Vũ Việt Anh",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Vũ Hiền",
+      "percentage": 4e-7
+    },
+    {
+      "name": "Nguyễn Vũ Long",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Minh Hương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0295
+    },
+    {
+      "name": "Vũ Hiền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 4e-7
+    },
+    {
+      "name": "Nguyễn Vũ Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2e-7
+    },
+    {
+      "name": "Trần Thị Hồng Nhung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Minh Hạnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Ngọc Quỳnh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Điêu Ngọc Tuấn",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Thuý Nga",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Nam Hương",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Lê Nhật Quang",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thanh Bình Minh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Pekka Mikael Nastamo",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Duy Khoa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:40.126071Z"
+}

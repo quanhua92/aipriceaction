@@ -1,0 +1,315 @@
+{
+  "symbol": "GDT",
+  "exchange": "HOSE",
+  "industry": "Hàng gia dụng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 519116020800.0,
+  "current_price": 20800.0,
+  "outstanding_shares": 24957501,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty Cổ phần Chế biến Gỗ Đức Th&agrave;nh (GDT) c&oacute; tiền th&acirc;n l&agrave; Cơ sở Chế biến Gỗ Tam Hiệp, được th&agrave;nh lập v&agrave;o th&aacute;ng 05/1991. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực sản xuất v&agrave; kinh doanh c&aacute;c mặt h&agrave;ng nh&agrave; bếp, h&agrave;ng gia dụng v&agrave; đồ chơi trẻ em bằng gỗ. GDT ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2000. C&ocirc;ng ty hiện đang sở hữu v&agrave; vận h&agrave;nh 5 Nh&agrave; m&aacute;y Chế biến Gỗ tại th&agrave;nh phố Hồ Ch&iacute; Minh v&agrave; tỉnh B&igrave;nh Dương. Thị trường ch&iacute;nh của c&ocirc;ng ty l&agrave; thị trường xuất khẩu, đặc biệt l&agrave; c&aacute;c nước Ch&acirc;u &Aacute;, Ch&acirc;u &Acirc;u, Ch&acirc;u Mỹ v&agrave; Ch&acirc;u &Uacute;c. Sản phẩm của GDT đ&atilde; được xuất khẩu đến hơn 50 quốc gia tr&ecirc;n thế giới, v&agrave; được b&agrave;y b&aacute;n tại khắp c&aacute;c si&ecirc;u thị, cửa h&agrave;ng đồ gỗ trong cả nước. Năm 2009, GDT ch&iacute;nh thức được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê Hải Liễu",
+      "percentage": 0.2503
+    },
+    {
+      "name": "Nguyễn Hà Ngọc Diệp",
+      "percentage": 0.0571
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0499
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.04788
+    },
+    {
+      "name": "AFC Vietnam Fund",
+      "percentage": 0.0474
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0414
+    },
+    {
+      "name": "Vũ Tuyết Phương",
+      "percentage": 0.0408617868
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0361
+    },
+    {
+      "name": "Lê Như Vũ",
+      "percentage": 0.0353
+    },
+    {
+      "name": "Lê Hồng Thành",
+      "percentage": 0.0294
+    },
+    {
+      "name": "LÊ HỒNG THẮNG",
+      "percentage": 0.0261
+    },
+    {
+      "name": "Lê Phước Lành",
+      "percentage": 0.0166
+    },
+    {
+      "name": "Lê Tấn Lợi",
+      "percentage": 0.0095
+    },
+    {
+      "name": "Huỳnh Thị Thanh",
+      "percentage": 0.0083
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Lê Thu Cúc",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Lê Hải Lý",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Lê Thu Vân",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Nguyễn Đông Nam",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Nguyễn Thị Phương Lan",
+      "percentage": 0.0027845
+    },
+    {
+      "name": "Bùi Phương Thảo",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Hồ Phạm Huy Ánh",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Hồ Trọng Phương",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Hoàng Minh Khôi",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Đức Tình",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Thị Thanh Huyền",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Kim Lê Chuyên",
+      "percentage": 0.0020085424
+    },
+    {
+      "name": "Trương Thị Bình",
+      "percentage": 0.002
+    },
+    {
+      "name": "Lê Trọng Nhân",
+      "percentage": 0.002
+    },
+    {
+      "name": "Lê Thị Hải Lài",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Phạm Anh Huấn",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Trương Thị Diệu Lê",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trần Ngọc Hùng",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Công Hiếu",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trần Xuân Nam",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phan Thị Vân",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Hà Phước Hiệp",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Hương Huyền",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Phạm Minh Duy",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Lê Vy",
+      "percentage": 0.0005866
+    },
+    {
+      "name": "Hoàng Anh Tuấn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Quốc Hiệp",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Chế Văn Tạo",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lê Như Ái",
+      "percentage": 0.0004
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0004
+    },
+    {
+      "name": "CHẾ ĐÔNG KHÁNH",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Huyền Trân",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Công Tú",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Việt Ảnh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Bùi Tường Anh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hoàng Minh Tâm",
+      "percentage": 0.0001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Hải Liễu",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2503
+    },
+    {
+      "name": "Nguyễn Hà Ngọc Diệp",
+      "position": "Giám đốc Tài chính/Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0571
+    },
+    {
+      "name": "Lê Hồng Thành",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0294
+    },
+    {
+      "name": "LÊ HỒNG THẮNG",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0261
+    },
+    {
+      "name": "Bùi Phương Thảo",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Thị Thanh Huyền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Đức Tình",
+      "position": "Giám đốc",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Trương Thị Bình",
+      "position": "Trưởng Ban kiểm soát/Người phụ trách quản trị công ty",
+      "percentage": 0.002
+    },
+    {
+      "name": "Trần Ngọc Hùng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trương Thị Diệu Lê",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trần Xuân Nam",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "position": "Phó Giám đốc Kỹ thuật",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Hoàng Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0005
+    },
+    {
+      "name": "CHẾ ĐÔNG KHÁNH",
+      "position": "Giám đốc Sản xuất",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Công Tú",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Bùi Tường Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hoàng Minh Tâm",
+      "position": "Phó Giám đốc Sản xuất",
+      "percentage": 0.0001
+    }
+  ],
+  "created_at": "2025-11-06T01:59:00.678459Z"
+}

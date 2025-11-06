@@ -1,0 +1,120 @@
+{
+  "symbol": "TSC",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 582702418000.0,
+  "current_price": 2960.0,
+  "outstanding_shares": 196858925,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Vật tư Kỹ thuật N&ocirc;ng nghiệp Cần Thơ (TSC) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Vật tư N&ocirc;ng nghiệp Hậu Giang&nbsp;được th&agrave;nh lập v&agrave;o năm 1976. C&ocirc;ng ty hoạt động trong lĩnh vực kinh doanh cung ứng&nbsp;vật tư n&ocirc;ng nghiệp, giống c&acirc;y trồng,&nbsp;sản xuất chế biến&nbsp;xuất khẩu rau quả&nbsp;đ&oacute;ng hộp. TSC&nbsp;ch&iacute;nh thức hoạt&nbsp;động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2003. Sản phẩm ph&acirc;n b&oacute;n nhập khẩu từ c&aacute;c nh&agrave; ph&acirc;n b&oacute;n h&agrave;ng đầu tr&ecirc;n thế giới như Agrosin, Mosaic, Yara Asia, Transammonia AG, Mitsubishi Corp v&agrave; được ph&acirc;n phối tr&ecirc;n khắp c&aacute;c tỉnh Đồng bằng S&ocirc;ng Cửu Long, miền Đ&ocirc;ng Nam Bộ v&agrave; T&acirc;y Nguy&ecirc;n.&nbsp;B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty&nbsp;c&ograve;n tham gia kinh doanh ph&acirc;n phối ng&agrave;nh h&agrave;ng ti&ecirc;u d&ugrave;ng, c&aacute;c mặt h&agrave;ng nước giải kh&aacute;t v&agrave; c&aacute;c sản phẩm chăm s&oacute;c gia đ&igrave;nh v&agrave; c&aacute; nh&acirc;n th&ocirc;ng qua c&aacute;c mạng lưới c&aacute;c c&ocirc;ng ty con v&agrave; c&ocirc;ng ty li&ecirc;n kết. TSC được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2007.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn F.I.T",
+      "percentage": 0.4107
+    },
+    {
+      "name": "Nguyễn Văn Sang",
+      "percentage": 0.0386
+    },
+    {
+      "name": "Nguyễn Ngọc Bích",
+      "percentage": 0.0115138642
+    },
+    {
+      "name": "Trương Tấn Lộc",
+      "percentage": 0.0024584132
+    },
+    {
+      "name": "Macquarie Bank Limited Obu",
+      "percentage": 0.00176115
+    },
+    {
+      "name": "Nguyễn Văn Ba",
+      "percentage": 0.0011852507
+    },
+    {
+      "name": "Phạm Văn Tuấn",
+      "percentage": 0.0007111504
+    },
+    {
+      "name": "Lê Văn Phước",
+      "percentage": 0.0003981087
+    },
+    {
+      "name": "Nguyễn Trí Dũng",
+      "percentage": 0.0000745014
+    },
+    {
+      "name": "Trần Văn Thuộc",
+      "percentage": 0.0000719955
+    },
+    {
+      "name": "Hoàng Minh Tâm",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Bàng Minh Trang",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Đỗ Văn Thành",
+      "percentage": 1.3545e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Trang",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Minh Sáng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tưởng Thị Thu Hạnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thế Cao",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Minh Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thanh Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Hồng Hạnh",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Minh Nguyệt",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:04.772255Z"
+}

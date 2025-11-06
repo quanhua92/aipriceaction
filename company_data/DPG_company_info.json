@@ -1,0 +1,271 @@
+{
+  "symbol": "DPG",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4379717940400.0,
+  "current_price": 43450.0,
+  "outstanding_shares": 100799032,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Đạt Phương (DPG) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần X&acirc;y dựng v&agrave; Vận tải Đạt Phương, được th&agrave;nh lập v&agrave;o năm 2002. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực đầu tư x&acirc;y lắp c&aacute;c c&ocirc;ng tr&igrave;nh giao th&ocirc;ng v&agrave; thủy điện. B&ecirc;n cạnh đ&oacute;, DPG c&ograve;n tham gia kinh doanh b&aacute;n điện, vật liệu x&acirc;y dựng v&agrave; cho thu&ecirc; m&aacute;y m&oacute;c thiết bị ng&agrave;nh x&acirc;y dựng. DPG đ&atilde; thi c&ocirc;ng nhiều dự &aacute;n quy m&ocirc; lớn như Cầu An Nghĩa, Cầu Thủ Thi&ecirc;m,Cầu Đ&ograve; L&egrave;n, Cầu Bến Thủy II, Cầu Cửa Đại. DPG đ&atilde; ho&agrave;n th&agrave;nh việc đầu tư v&agrave; thi c&ocirc;ng x&acirc;y lắp Nh&agrave; m&aacute;y Thủy điện S&ocirc;ng Bung 6 với tổng c&ocirc;ng suất 30MW v&agrave;o năm 2010, thực hiện đầu tư x&acirc;y dựng c&ocirc;ng tr&igrave;nh thủy điện Sơn Tr&agrave; 1 với c&ocirc;ng suất 60MW. DPG ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 05/2018.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lương Minh Tuấn",
+      "percentage": 0.1594243
+    },
+    {
+      "name": "Phạm Kim Châu",
+      "percentage": 0.0663414
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "percentage": 0.0577581
+    },
+    {
+      "name": "Lương Thị Thanh",
+      "percentage": 0.0477
+    },
+    {
+      "name": "Trần Thị Thúy Hằng",
+      "percentage": 0.0447559
+    },
+    {
+      "name": "Lương Tuấn Minh",
+      "percentage": 0.0232
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.023
+    },
+    {
+      "name": "Lương Xuân Mẫn",
+      "percentage": 0.0224212
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0164
+    },
+    {
+      "name": "Võ Thị Phương Lâm",
+      "percentage": 0.0142103
+    },
+    {
+      "name": "Lương Thị Lan",
+      "percentage": 0.0101
+    },
+    {
+      "name": "Đặng Thị Thanh Hương",
+      "percentage": 0.009
+    },
+    {
+      "name": "Lê Ngọc Hào",
+      "percentage": 0.00762
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Vũ Văn Phi",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0043
+    },
+    {
+      "name": "Võ Thị Thái Hòa",
+      "percentage": 0.0040709
+    },
+    {
+      "name": "Hoàng Gia Chiểu",
+      "percentage": 0.0034115
+    },
+    {
+      "name": "Phạm Quang Bình",
+      "percentage": 0.0033725
+    },
+    {
+      "name": "Đặng Thị Loan",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Trần Thị Bích Liên",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Phan Thị Tuyết Nhung",
+      "percentage": 0.001981
+    },
+    {
+      "name": "Huỳnh Thị Phương Dung",
+      "percentage": 0.0015
+    },
+    {
+      "name": "KIM PMAA Vietnam Securities Investment Trust 1(Equity)",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Đặng Thị Xuân",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Quyên",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Tùng",
+      "percentage": 0.0010983
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Anh",
+      "percentage": 0.00109634
+    },
+    {
+      "name": "Tôn Nữ Tú Trinh",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trần Thái Lợi",
+      "percentage": 0.00076
+    },
+    {
+      "name": "Lê Ngọc Cương",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lương Thị Liên",
+      "percentage": 0.00045
+    },
+    {
+      "name": "Nguyễn Anh Quân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thành Luân",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Đặng Thanh Hường",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Đinh Gia Nội",
+      "percentage": 0.0001424
+    },
+    {
+      "name": "Lương Thị Cường",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Trịnh Viết Tùy",
+      "percentage": 0.000082
+    },
+    {
+      "name": "Lê Thị Hà",
+      "percentage": 0.0000746
+    },
+    {
+      "name": "Nguyễn Thị Việt Hà",
+      "percentage": 1.59e-6
+    },
+    {
+      "name": "Lê Văn Tám",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Phan Anh Tuấn",
+      "percentage": 5e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lương Minh Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1594243
+    },
+    {
+      "name": "Phạm Kim Châu",
+      "position": "Phó Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0663414
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0577581
+    },
+    {
+      "name": "Hoàng Gia Chiểu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0034115
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00109634
+    },
+    {
+      "name": "Lê Thị Hà",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0000746
+    },
+    {
+      "name": "Phan Anh Tuấn",
+      "position": "Giám đốc Chi nhánh",
+      "percentage": 5e-7
+    },
+    {
+      "name": "Đỗ Thị Thu",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lã Thị Minh Loan",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Quang Huy",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thu Trang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng  Hoàng Huy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Văn Công",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê  Văn Quyết",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ  Xuân Diện",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Đức Tình",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Quỳnh Doan",
+      "position": "Giám đốc khối",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:33.994818Z"
+}

@@ -1,0 +1,220 @@
+{
+  "symbol": "NTL",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2220034180000.0,
+  "current_price": 18200.0,
+  "outstanding_shares": 121979900,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Ph&aacute;t triển Đ&ocirc; thị Từ Li&ecirc;m (NTL), tiền th&acirc;n l&agrave; X&iacute; nghiệp X&acirc;y dựng Từ Li&ecirc;m được th&agrave;nh lập từ năm 1974. Năm 2004, chuyển đổi sang hoạt động theo m&ocirc; h&igrave;nh cổ phần. Năm 2007 đổi t&ecirc;n th&agrave;nh C&ocirc;ng ty cổ phần ph&aacute;t triển đ&ocirc; thị Từ li&ecirc;m v&agrave; cổ phiếu của C&ocirc;ng ty ni&ecirc;m yết tr&ecirc;n HOSE. Hoạt động kinh doanh ch&iacute;nh của c&ocirc;ng ty l&agrave; x&acirc;y lắp v&agrave; đầu tư kinh doanh dự &aacute;n c&aacute;c khu đ&ocirc; thị, khu c&ocirc;ng nghiệp. C&ocirc;ng ty đ&atilde; v&agrave; đang thực hiện nhiều dự &aacute;n lớn như khu đ&ocirc; thị mới Dịch Vọng, dự &aacute;n khu đ&ocirc; thị ph&iacute;a Bắc quốc lộ 32 thị trấn Trạm Tr&ocirc;i; Dự &aacute;n Chung cư LIDECO Hạ Long&nbsp;với tổng mức đầu tư 915 tỷ đồng; Dự &aacute;n Khu đ&ocirc; thị mới tại khu vực N&uacute;i Hạm - Hạ Long với tổng diện t&iacute;ch 68ha... Trải qua&nbsp;hơn 40 năm x&acirc;y dựng, ph&aacute;t triển v&agrave; trưởng th&agrave;nh, đến nay quy m&ocirc; tổ chức hoạt động của C&ocirc;ng ty đ&atilde; được n&acirc;ng l&ecirc;n tầm cao mới v&agrave; hoạt động theo m&ocirc; h&igrave;nh C&ocirc;ng ty kinh doanh đa ng&agrave;nh nghề. Ng&agrave;y 21/12/2007, NTL ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đinh Quang Chiến",
+      "percentage": 0.1476
+    },
+    {
+      "name": "Vũ Gia Cường",
+      "percentage": 0.0605
+    },
+    {
+      "name": "Luminous Vietnam and Indochina Growth Fund",
+      "percentage": 0.051119
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.05
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư MB",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Trần Thị Mừng",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Quỹ Đầu tư Chứng Khoán Năng động DC",
+      "percentage": 0.0463
+    },
+    {
+      "name": "Asiavantage Global Limited",
+      "percentage": 0.0455850628
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.044037893
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Việt Nam (VF2)",
+      "percentage": 0.0431869496
+    },
+    {
+      "name": "Nguyễn Thị Mai",
+      "percentage": 0.0317
+    },
+    {
+      "name": "Lê Minh Quân",
+      "percentage": 0.021
+    },
+    {
+      "name": "Lê Minh Tuân",
+      "percentage": 0.0172
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.012729088
+    },
+    {
+      "name": "Nguyễn Văn Ninh",
+      "percentage": 0.0124
+    },
+    {
+      "name": "Nguyễn Hữu Lập",
+      "percentage": 0.009
+    },
+    {
+      "name": "Nguyễn Ngọc Thắng",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Nguyễn Hồng Khiêm",
+      "percentage": 0.007
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tập trung Cổ tức DC",
+      "percentage": 0.006
+    },
+    {
+      "name": "Công ty TNHH MTV Quản Lý Quỹ Ngân Hàng Thương Mại Cổ phần Công Thương Việt Nam",
+      "percentage": 0.0046698113
+    },
+    {
+      "name": "Nguyễn Thị Thúy Trinh",
+      "percentage": 0.004116
+    },
+    {
+      "name": "Nguyễn Ngọc Thịnh",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Phan Thị Chung",
+      "percentage": 0.000912
+    },
+    {
+      "name": "Đỗ Thị Thu Hiền",
+      "percentage": 0.000646
+    },
+    {
+      "name": "Trần Thị Lệ Hằng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Mạnh Chiến",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Lâm Giang",
+      "percentage": 0.000097
+    },
+    {
+      "name": "Nguyễn Kim Huệ",
+      "percentage": 0.000066
+    },
+    {
+      "name": "Lê Văn Thục",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Nguyễn Thị Thêu",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Hải Long",
+      "percentage": 4.6e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đinh Quang Chiến",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.1476
+    },
+    {
+      "name": "Vũ Gia Cường",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0605
+    },
+    {
+      "name": "Lê Minh Tuân",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0172
+    },
+    {
+      "name": "Nguyễn Văn Ninh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0124
+    },
+    {
+      "name": "Nguyễn Hữu Lập",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.009
+    },
+    {
+      "name": "Nguyễn Hồng Khiêm",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.007
+    },
+    {
+      "name": "Nguyễn Hải Long",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 4.6e-6
+    },
+    {
+      "name": "Trần Quang Hiện",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Huy Khải",
+      "position": "Kế toán trưởng/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Đức Tiệp",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trọng Nghĩa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Diệu Linh",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "NGUYỄN VĂN KHA",
+      "position": "Chủ tịch Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thu Phương",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:25.641826Z"
+}

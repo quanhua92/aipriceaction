@@ -1,0 +1,223 @@
+{
+  "symbol": "SCS",
+  "exchange": "HOSE",
+  "industry": "Du lịch & Giải trí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 5209295311800.0,
+  "current_price": 54900.0,
+  "outstanding_shares": 94886982,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Dịch vụ H&agrave;ng h&oacute;a S&agrave;i G&ograve;n (SCS) được th&agrave;nh lập v&agrave;o ng&agrave;y 08/04/2008 với vốn điều lệ ban đầu l&agrave; 300 tỷ đồng. C&ocirc;ng ty chuy&ecirc;n cung cấp&nbsp;dịch vụ khai th&aacute;c h&agrave;ng h&oacute;a h&agrave;ng kh&ocirc;ng tại Cảng h&agrave;ng kh&ocirc;ng quốc tế T&acirc;n Sơn Nhất. C&ocirc;ng ty đang quản l&yacute; v&agrave; vận h&agrave;nh 143.000m2 nh&agrave; ga h&agrave;ng h&oacute;a SCSC nằm ở ph&iacute;a T&acirc;y Nam ga h&agrave;nh kh&aacute;ch &ndash; Cảng h&agrave;ng kh&ocirc;ng quốc tế T&acirc;n Sơn Nhất, bao gồm 52.421 m2 khu vực s&acirc;n đậu m&aacute;y bay c&oacute; sức chứa 3 m&aacute;y bay B747F hoặc 5 m&aacute;y bay A321 c&ugrave;ng l&uacute;c, 26.670m2 khu vực nh&agrave; ga h&agrave;ng h&oacute;a c&oacute; c&ocirc;ng suất thiết kế 200.000 tấn h&agrave;ng h&oacute;a trong giai đoạn 1 v&agrave; 350.000 tấn h&agrave;ng h&oacute;a trong giai đoạn 2, v&agrave; 64.000m2 khu vực nh&agrave; kho, b&atilde;i đậu xe, đường giao th&ocirc;ng, t&ograve;a nh&agrave; văn ph&ograve;ng v&agrave; c&ocirc;ng tr&igrave;nh phụ trợ. SCS được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 07/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Gemadept",
+      "percentage": 0.3342285
+    },
+    {
+      "name": "Tổng Công ty Cảng Hàng không Việt Nam - CTCP",
+      "percentage": 0.1369
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Sửa Chữa Máy Bay 41",
+      "percentage": 0.0707
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.049
+    },
+    {
+      "name": "The Ton Poh Fund",
+      "percentage": 0.0473
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Công nghiệp Việt Nam",
+      "percentage": 0.0459
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Việt Á",
+      "percentage": 0.04372487
+    },
+    {
+      "name": "Công ty Cổ phần Thương mại Dịch vụ Đầu tư Sài Gòn Hàng Không",
+      "percentage": 0.04
+    },
+    {
+      "name": "Đoàn Ngọc Cương",
+      "percentage": 0.0187
+    },
+    {
+      "name": "Đặng Thị Thanh Trà",
+      "percentage": 0.0183
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "percentage": 0.0137
+    },
+    {
+      "name": "Đỗ Tất Luận",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Phạm Bích Vượng",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Đỗ Tất Bình",
+      "percentage": 0.00080265
+    },
+    {
+      "name": "Phan Lê Hoan",
+      "percentage": 0.00079
+    },
+    {
+      "name": "Nguyễn Thị Ngọc",
+      "percentage": 0.00077
+    },
+    {
+      "name": "Lương Hoài Nam",
+      "percentage": 0.00077
+    },
+    {
+      "name": "Bùi Á Đông",
+      "percentage": 0.00063
+    },
+    {
+      "name": "Bùi Thị Thu Hương",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Mai Xuân Cảnh",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Lê Xuân Lộc",
+      "percentage": 0.00042
+    },
+    {
+      "name": "Cù Thị Thuận",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Tạ Thu Hà",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Quang Hải",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Trần Thị Huyền Trân",
+      "percentage": 0.00035
+    },
+    {
+      "name": "Chu Trung Kiên",
+      "percentage": 0.00032
+    },
+    {
+      "name": "Ngô Thị Anh Thư",
+      "percentage": 0.00031
+    },
+    {
+      "name": "Tô Hiến Phượng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thái Sơn",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Nguyễn Ngọc Quý",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Vũ Thị Hoàng Bắc",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Khoa Năng Lưu",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trương Minh Sang",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Bùi Thị Yến Ngọc",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thái Bảo",
+      "percentage": 7e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0137
+    },
+    {
+      "name": "Đoàn Ngọc Cương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.01119
+    },
+    {
+      "name": "Đỗ Tất Bình",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00080265
+    },
+    {
+      "name": "Bùi Thị Thu Hương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Mai Xuân Cảnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Tạ Thu Hà",
+      "position": "Người phụ trách quản trị công ty/Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Cù Thị Thuận",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Quang Hải",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Tô Hiến Phượng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thái Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Vũ Thị Hoàng Bắc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Khoa Năng Lưu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trương Minh Sang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00004
+    }
+  ],
+  "created_at": "2025-11-06T02:05:31.197619Z"
+}

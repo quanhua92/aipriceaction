@@ -1,0 +1,398 @@
+{
+  "symbol": "SBT",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 20730171217100.0,
+  "current_price": 25450.0,
+  "outstanding_shares": 814545038,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần M&iacute;a đường Th&agrave;nh Th&agrave;nh C&ocirc;ng T&acirc;y Ninh (SBT) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty li&ecirc;n doanh giữa Tập đo&agrave;n Group Sucrecries Bourbon v&agrave; Li&ecirc;n hiệp M&iacute;a đường II v&agrave; Li&ecirc;n hiệp m&iacute;a đường T&acirc;y Ninh được th&agrave;nh lập&nbsp;v&agrave;o năm 1995. C&ocirc;ng ty ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm&nbsp;2007. C&ocirc;ng ty hoạt động trong lĩnh vực sản xuất kinh doanh đường v&agrave;&nbsp;c&aacute;c sản phẩm phụ của qu&aacute; tr&igrave;nh sản xuất đường. SBT hiện sở hữu 09 nh&agrave; m&aacute;y luyện Đường từ Đường th&ocirc; v&agrave; M&iacute;a, trong đ&oacute; c&oacute; 4 Trung t&acirc;m luyện Đường th&ocirc; lớn l&agrave; TTCS, Bi&ecirc;n H&ograve;a - Ninh H&ograve;a, Bi&ecirc;n H&ograve;a - Trị An, Bi&ecirc;n H&ograve;a - Đồng Nai với tổng c&ocirc;ng suất luyện Đường từ Đường th&ocirc; khoảng 300.000 tấn Đường/năm.&nbsp;Sản phẩm của c&ocirc;ng ty được ph&acirc;n phối qua c&aacute;c k&ecirc;nh si&ecirc;u thị, đại l&yacute;, nh&agrave; ph&acirc;n phối tr&ecirc;n khắp c&aacute;c tỉnh th&agrave;nh cả nước. C&aacute;c sản&nbsp;phẩm&nbsp;đường của C&ocirc;ng ty&nbsp;được&nbsp;cung cấp cho c&aacute;c kh&aacute;ch h&agrave;ng c&ocirc;ng nghiệp như Coca-Cola, Suntory Pepsi, Dược Hậu Giang, Dược Cửu Long, Pepsi, Red bull, Vinamilk, Acecook&hellip;SBT được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh từ năm 2008.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Đặng Thành",
+      "percentage": 0.23606512
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Thành Thành Công",
+      "percentage": 0.2191
+    },
+    {
+      "name": "Legendary Venture Fund I",
+      "percentage": 0.1654
+    },
+    {
+      "name": "ĐẶNG HUỲNH ỨC MY",
+      "percentage": 0.1614
+    },
+    {
+      "name": "Đặng Huỳnh Ức My",
+      "percentage": 0.0944
+    },
+    {
+      "name": "Huỳnh Bích Ngọc",
+      "percentage": 0.0892
+    },
+    {
+      "name": "Agri Asia Pacific Limited",
+      "percentage": 0.0484
+    },
+    {
+      "name": "Công ty TNHH Kinh Đô",
+      "percentage": 0.0477864646
+    },
+    {
+      "name": "Công ty Cổ phần Sữa Việt Nam",
+      "percentage": 0.0475757575
+    },
+    {
+      "name": "Halley Sicav - Halley Asian Prosperity",
+      "percentage": 0.0471656565
+    },
+    {
+      "name": "Công ty Cổ Phần Xuất Nhập Khẩu Bến Tre",
+      "percentage": 0.0408
+    },
+    {
+      "name": "DEG – Deutsche Investitions - Und Entwicklungsgesellschaft MBH",
+      "percentage": 0.031
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0156
+    },
+    {
+      "name": "Công ty Cổ Phần Giao Dịch Hàng Hóa Sơn Tín",
+      "percentage": 0.0148
+    },
+    {
+      "name": "Nguyễn Thanh Ngữ",
+      "percentage": 0.00749
+    },
+    {
+      "name": "Trần Quế Trang",
+      "percentage": 0.0057
+    },
+    {
+      "name": "Quách Kim Long",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Hoàng Mạnh Tiến",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Nguyễn Thùy Vân",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Nguyễn Thị Hoa",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Thị Bích Ngọc",
+      "percentage": 0.001925
+    },
+    {
+      "name": "Nguyễn Thị Thủy Tiên",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Henry Chung",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Thị Phương Thảo",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Huỳnh Văn Pháp",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Dương Thị Tô Châu",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Lê Quang Hải",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trần Quốc Thảo",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Trần Tấn Việt",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Thái Văn Chuyện",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Đinh Vũ Quốc Huy",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Văn Đệ",
+      "percentage": 0.00066
+    },
+    {
+      "name": "Trần Trọng Gia Vinh",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Phát Tín",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Quang Phúc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thành Khiêm",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Thị Thu Trang",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lê Đức Tồn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Hồng Dương",
+      "percentage": 0.00045
+    },
+    {
+      "name": "Trang Thanh Trúc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Tiến Cường",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Nguyễn Thị Thu Trang",
+      "percentage": 0.00033
+    },
+    {
+      "name": "Nguyễn Minh Tín",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đặng Thị Diễm Trinh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Hồng Phúc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Đức Tồn",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Daniel Larribe",
+      "percentage": 0.0002020819
+    },
+    {
+      "name": "Nguyễn Xuân Thanh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Thái Bá Hòa",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Võ Thúy Anh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Huỳnh Thái Sơn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Việt Hùng",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Bá Chủ",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Lê Ngọc Thông",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Hùng Việt",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Võ Hồng Tuyển",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Hữu Đạt",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000826808
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Tiên",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Trọng Hòa",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Hồ Nguyễn Duy Khương",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Jacques de Chateauvieux",
+      "percentage": 0.0000696834
+    },
+    {
+      "name": "Đinh Văn Hiệp",
+      "percentage": 0.0000696834
+    },
+    {
+      "name": "Lê Văn Dĩnh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Trương Trí Cường",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000438266
+    },
+    {
+      "name": "Huỳnh Thành Nhân",
+      "percentage": 0.0000425
+    },
+    {
+      "name": "Lê Hà Thị Mai Thảo",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Võ Thị Bích Hạnh",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trương Văn Toại",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Tăng Kim Tây",
+      "percentage": 0.0000159
+    },
+    {
+      "name": "Trần Phương Quỳnh",
+      "percentage": 8.8e-6
+    },
+    {
+      "name": "Võ Thị Tuyết Oanh",
+      "percentage": 2.2e-6
+    },
+    {
+      "name": "Trần Huy Hào",
+      "percentage": 1.2e-7
+    },
+    {
+      "name": "Trương Thị Hồng",
+      "percentage": 1.39e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Huỳnh Ức My",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0944
+    },
+    {
+      "name": "Huỳnh Bích Ngọc",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0892
+    },
+    {
+      "name": "Nguyễn Thanh Ngữ",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00749
+    },
+    {
+      "name": "Hoàng Mạnh Tiến",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Nguyễn Thị Phương Thảo",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Huỳnh Văn Pháp",
+      "position": "Giám đốc Kinh doanh",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Dương Thị Tô Châu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Lê Phát Tín",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Đức Tồn",
+      "position": "Giám đốc Nhà máy",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Hồng Dương",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00045
+    },
+    {
+      "name": "Võ Thúy Anh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Huy Hào",
+      "position": "Giám đốc điều hành",
+      "percentage": 1.2e-7
+    },
+    {
+      "name": "Đoàn Vũ Uyên Duyên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huang Lovia",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Thị Ngọc Thảo",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Tòng Xuân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:20.544451Z"
+}

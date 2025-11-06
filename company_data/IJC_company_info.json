@@ -1,0 +1,181 @@
+{
+  "symbol": "IJC",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4589642865600.0,
+  "current_price": 12150.0,
+  "outstanding_shares": 377748384,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Ph&aacute;t triển Hạ tầng Kỹ thuật (IJC) được th&agrave;nh lập v&agrave;o năm 2007 theo&nbsp;phương &aacute;n cổ phần h&oacute;a Dự &aacute;n quốc lộ 13 thuộc C&ocirc;ng ty Đầu tư v&agrave; Ph&aacute;t triển C&ocirc;ng nghiệp (Becamex IDC Corp) v&agrave;o năm 2006. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực cung cấp dịch vụ, kinh doanh bất động sản v&agrave; x&acirc;y dựng. C&aacute;c dự &aacute;n bất động sản của IJC&nbsp;tập trung chủ yếu tại Th&agrave;nh phố mới B&igrave;nh Dương ti&ecirc;u biểu như: Khu biệt thự Sunflower, Chung cư IJC Aroma, Khu đ&ocirc; thị IJC&hellip;Ngo&agrave;i ra, c&ocirc;ng ty&nbsp;c&ograve;n triển khai c&aacute;c dự &aacute;n kh&aacute;c tại c&aacute;c khu vực l&acirc;n cận Th&agrave;nh phố&nbsp;Thủ Dầu Một như: Thị x&atilde; Bến C&aacute;t, T&acirc;n Uy&ecirc;n&hellip;. IJC được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 04/2010.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Đầu tư và Phát triển Công nghiệp Becamex - CTCP",
+      "percentage": 0.4976
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellschaft",
+      "percentage": 0.049716784
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0405849825
+    },
+    {
+      "name": "Dragon Capital Vietnam Mother Fund",
+      "percentage": 0.0404384442
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0337
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam",
+      "percentage": 0.024481798
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị Bảo Việt",
+      "percentage": 0.0147
+    },
+    {
+      "name": "Dragon Capital Vietnam Fund",
+      "percentage": 0.01326649
+    },
+    {
+      "name": "Công ty TNHH MTV Quản lý quỹ Đầu tư chứng khoán I.P.A.",
+      "percentage": 0.00656468
+    },
+    {
+      "name": "The Blackhorse Enhanced Vietnam Inc.",
+      "percentage": 0.00300881
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Vietnam Emerging Equity Fund Limited",
+      "percentage": 0.00070662
+    },
+    {
+      "name": "Temasia Capital Limited",
+      "percentage": 0.00041485
+    },
+    {
+      "name": "Legacy Emerging Asia Limited",
+      "percentage": 0.00018235
+    },
+    {
+      "name": "Phạm Thị Lan Thảo",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Lê Hữu Thanh Tuấn",
+      "percentage": 0.0000389
+    },
+    {
+      "name": "Dương Thị Hồng Tỵ",
+      "percentage": 0.00002285
+    },
+    {
+      "name": "Phan Trần Thùy Linh",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Lê Thị Xuân Diệu",
+      "percentage": 0.0000123
+    },
+    {
+      "name": "Châu Thị Vân",
+      "percentage": 2.3e-6
+    },
+    {
+      "name": "Đoàn Thị Kiều Oanh",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Bùi Văn Đức",
+      "percentage": 1.7505e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Châu Thị Vân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 2.3e-6
+    },
+    {
+      "name": "Nguyễn Văn Hiền Phúc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Đức Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàn Vũ",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Quang Ngôn",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Thị Huyền Trang",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Thanh Hùng",
+      "position": "Giám đốc Tài chính/Người phụ trách quản trị công ty/Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thùy Dương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Nguyên Thảo",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thiện Thể",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Thùy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:00:57.064482Z"
+}

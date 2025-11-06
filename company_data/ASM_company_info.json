@@ -1,0 +1,205 @@
+{
+  "symbol": "ASM",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2546826360000.0,
+  "current_price": 6880.0,
+  "outstanding_shares": 370178250,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Sao Mai&nbsp;(ASM) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần&nbsp;Đầu tư v&agrave; X&acirc;y dựng Sao Mai tỉnh An Giang được th&agrave;nh lập v&agrave;o năm 1997. C&ocirc;ng ty hoạt động trong lĩnh vực&nbsp;xuất khẩu&nbsp;thủy sản, đầu tư x&acirc;y dựng, kinh doanh&nbsp;bất động sản, phụ phẩm, v&agrave; dịch vụ du lịch. ASM đ&atilde; tham gia đầu tư ph&aacute;t triển&nbsp;gần 100 dự &aacute;n bất động sản trải d&agrave;i khắp cả nước. C&ocirc;ng ty&nbsp;sở hữu Nh&agrave; m&aacute;y Thủy sản với c&ocirc;ng suất 600 tấn nguy&ecirc;n liệu/ng&agrave;y, Nh&agrave; m&aacute;y chế biến thức ăn thủy sản với c&ocirc;ng suất 378.000 tấn/năm v&agrave;&nbsp;nh&agrave; m&aacute;y tinh luyện dầu c&aacute; của ASM với c&ocirc;ng suất 200 tấn/ng&agrave;y. B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty c&ograve;n cung cấp dịch vụ du lịch lữ h&agrave;nh, nghỉ dưỡng, v&agrave; lắp đặt hệ thống năng lượng mặt trời th&ocirc;ng qua c&aacute;c c&ocirc;ng ty con. ASM được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2010.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê Thanh Thuấn",
+      "percentage": 0.1931
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "percentage": 0.1126
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.1119
+    },
+    {
+      "name": "Lê Thị Nguyệt Thu",
+      "percentage": 0.0533
+    },
+    {
+      "name": "Võ Thị Thanh Tâm",
+      "percentage": 0.052
+    },
+    {
+      "name": "Lê Thị Thiên Trang",
+      "percentage": 0.0514
+    },
+    {
+      "name": "Nguyễn Văn Phụng",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Lê Văn Tình",
+      "percentage": 0.0337
+    },
+    {
+      "name": "Lê Văn Chung",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Phạm Thị Trúc",
+      "percentage": 0.0064
+    },
+    {
+      "name": "Lê Văn Thủy",
+      "percentage": 0.005
+    },
+    {
+      "name": "Lê Văn Thành",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Lê Xuân Quế",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Lê Quốc Hưng",
+      "percentage": 0.0026325377
+    },
+    {
+      "name": "Công ty TNHH Ha Đạt",
+      "percentage": 0.00233
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Địa ốc & Khoáng sản Châu Á",
+      "percentage": 0.00231813
+    },
+    {
+      "name": "Lê Văn Quyền",
+      "percentage": 0.0021142142
+    },
+    {
+      "name": "Lê Văn Thông",
+      "percentage": 0.0021015
+    },
+    {
+      "name": "Nguyễn Mạnh Huy",
+      "percentage": 0.0017641185
+    },
+    {
+      "name": "Nguyễn Văn Hung",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Lê Quốc Trường",
+      "percentage": 0.00081
+    },
+    {
+      "name": "Trương Công Khánh",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Lê Thị Phượng",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trương Vĩnh Thành",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Lê Thị Thúy",
+      "percentage": 0.0005727
+    },
+    {
+      "name": "Nguyễn Hoàng Sang",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Hồng Loan",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Võ Thị Hồng Tâm",
+      "percentage": 3e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Thanh Thuấn",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.1931
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.1126
+    },
+    {
+      "name": "Lê Thị Nguyệt Thu",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0533
+    },
+    {
+      "name": "Lê Văn Chung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Lê Văn Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Lê Xuân Quế",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Nguyễn Văn Hung",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Trương Công Khánh",
+      "position": "Phụ trách Công bố thông tin/Giám đốc Tài chính",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trương Vĩnh Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Thị Hồng Loan",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Gia Thuần",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Văn Thanh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thị Tố Ngân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Quốc Cường",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Lâm",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:53.747340Z"
+}

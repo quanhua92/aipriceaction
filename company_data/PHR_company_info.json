@@ -1,0 +1,197 @@
+{
+  "symbol": "PHR",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 7438905970200.0,
+  "current_price": 54900.0,
+  "outstanding_shares": 135499198,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Cao su Phước H&ograve;a (PHR) c&oacute;&nbsp;tiền th&acirc;n l&agrave; Đồn điền Cao su Phước H&ograve;a được th&agrave;nh lập sau ng&agrave;y miền Nam ho&agrave;n to&agrave;n giải ph&oacute;ng. C&ocirc;ng ty&nbsp;hoạt động trong lĩnh vực trồng, khai th&aacute;c, chế biến mủ cao su v&agrave; chế biến gỗ cao su.&nbsp;PHR ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2008. C&ocirc;ng ty&nbsp;l&agrave; một trong những c&ocirc;ng ty c&oacute; diện t&iacute;ch cao su lớn của ng&agrave;nh, nằm trong Top 5 đơn vị quản l&yacute; diện t&iacute;ch v&agrave; sản lượng cao su lớn nhất ng&agrave;nh. C&ocirc;ng ty c&oacute; diện t&iacute;ch đất trồng cao su l&agrave; 15.227 ha v&agrave; 3 nh&agrave; m&aacute;y chế biến mủ cao su với tổng c&ocirc;ng suất 27.000 tấn/năm. PHR được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 08/2009.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp Cao su Việt Nam - Công ty Cổ phần",
+      "percentage": 0.6662
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 0.0499
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.034986
+    },
+    {
+      "name": "Halley Sicav - Halley Asian Prosperity",
+      "percentage": 0.0296
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.005751
+    },
+    {
+      "name": "Nguyễn Văn Tược",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Tuệ Sáng Vinacapital",
+      "percentage": 0.003176
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "percentage": 0.00272
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.00246987
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.002442
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Cổ tức Năng động VinaCapital",
+      "percentage": 0.001435
+    },
+    {
+      "name": "Công ty TNHH Bảo hiểm nhân thọ Generali Việt Nam",
+      "percentage": 0.001348
+    },
+    {
+      "name": "Công ty Cổ phần Công nghiệp Cao su Miền Nam",
+      "percentage": 0.0012300123
+    },
+    {
+      "name": "Lê Phi Hùng",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Delta Global Financial Holdings Private Limited",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Công ty TNHH Bảo hiểm nhân thọ CHUBB Việt Nam",
+      "percentage": 0.000618
+    },
+    {
+      "name": "Công ty TNHH bảo hiểm nhân thọ CHUBB Việt Nam",
+      "percentage": 0.000618
+    },
+    {
+      "name": "Huỳnh Kim Nhựt",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Kiwoom Vietnam Tomorrow Securities Master Fund",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Công ty TNHH bảo hiểm Hanwha Life Việt Nam",
+      "percentage": 0.000411
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ VinaCapital",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Đức Luyện",
+      "percentage": 0.000221
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000774912
+    },
+    {
+      "name": "Nguyễn Văn Ngọc",
+      "percentage": 0.0000726206
+    },
+    {
+      "name": "Phạm Văn Thành",
+      "percentage": 0.0000637023
+    },
+    {
+      "name": "Đặng Đôn Cư",
+      "percentage": 0.0000407695
+    },
+    {
+      "name": "Nguyễn Văn Tân",
+      "percentage": 0.0000407695
+    },
+    {
+      "name": "Nguyễn Thành Đức",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Hồ Mộng Vân",
+      "percentage": 0.0000145241
+    },
+    {
+      "name": "Võ Thanh Hải",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Công ty TNHH Windstar Resources",
+      "percentage": 3e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Tược",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Huỳnh Kim Nhựt",
+      "position": "Phó Tổng Giám đốc/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00087
+    },
+    {
+      "name": "Nguyễn Thành Đức",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Võ Thanh Hải",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thị Phi Nga",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hoàng Giang",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Phong Thành",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Thanh Tùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Lam Hồng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Quốc Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Hữu Tín",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:11.253346Z"
+}

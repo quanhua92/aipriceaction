@@ -1,0 +1,273 @@
+{
+  "symbol": "PLX",
+  "exchange": "HOSE",
+  "industry": "Sản xuất Dầu khí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 45544508451200.0,
+  "current_price": 35200.0,
+  "outstanding_shares": 1293878081,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tập đo&agrave;n Xăng dầu Việt Nam (PLX) c&oacute; tiền th&acirc;n Tổng C&ocirc;ng ty Xăng Dầu Việt Nam, được th&agrave;nh lập v&agrave;o năm 1995. Lĩnh vực kinh doanh ch&iacute;nh của Petrolimex l&agrave; xuất nhập khẩu v&agrave; kinh doanh xăng dầu, lọc - h&oacute;a dầu, đầu tư. Với mạng lưới ph&acirc;n phối gồm 4.365&nbsp;cửa h&agrave;ng bao gồm&nbsp;trạm b&aacute;n lẻ của Petrolimex v&agrave; c&aacute;c&nbsp;đại l&yacute; tr&ecirc;n to&agrave;n quốc, Petrolimex l&agrave; nh&agrave; cung cấp lớn nhất tất cả c&aacute;c loại sản phẩm xăng dầu tr&ecirc;n thị trường nội địa. B&ecirc;n cạnh đ&oacute;, Petrolimex cũng hoạt động tr&ecirc;n c&aacute;c lĩnh vực kinh doanh kh&aacute;c như bảo hiểm, ng&acirc;n h&agrave;ng, giao th&ocirc;ng vận tải với c&aacute;c thương hiệu như PLC, PGC, PG TANKER, PJJICO. PLX được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 04/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Bộ Tài Chính",
+      "percentage": 0.759
+    },
+    {
+      "name": "Uỷ ban Quản lý Vốn Nhà nước tại Doanh nghiệp",
+      "percentage": 0.7587
+    },
+    {
+      "name": "Ủy Ban Quản Lý Vốn Nhà Nước Tại Doanh Nghiệp",
+      "percentage": 0.7587
+    },
+    {
+      "name": "Công Ty TNHH Eneos Việt Nam",
+      "percentage": 0.1308
+    },
+    {
+      "name": "Jx Nippon Oil & Energy Corporation",
+      "percentage": 0.08001
+    },
+    {
+      "name": "Vũ Lâm",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.00025978
+    },
+    {
+      "name": "Bùi Ngọc Bảo",
+      "percentage": 0.0000252
+    },
+    {
+      "name": "Đinh Thái Hương",
+      "percentage": 0.000025
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "percentage": 0.00001787
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000171479
+    },
+    {
+      "name": "Phạm Đức Thắng",
+      "percentage": 0.000017
+    },
+    {
+      "name": "Trần Văn Thịnh",
+      "percentage": 0.0000157
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00001398
+    },
+    {
+      "name": "Vũ Khoa Nguyên",
+      "percentage": 0.000012
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 9.0862e-6
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "percentage": 8.7e-6
+    },
+    {
+      "name": "Nguyễn Quang Dũng",
+      "percentage": 6.4e-6
+    },
+    {
+      "name": "Đinh Viết Tiến",
+      "percentage": 6.2e-6
+    },
+    {
+      "name": "Hoàng Mai Ninh",
+      "percentage": 5.4e-6
+    },
+    {
+      "name": "Lê Văn Hướng",
+      "percentage": 5.35e-6
+    },
+    {
+      "name": "Nguyễn Xuân Hùng",
+      "percentage": 4.7e-6
+    },
+    {
+      "name": "Trần Ngọc Năm",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Đặng Thị Hồng Hà",
+      "percentage": 2.5e-6
+    },
+    {
+      "name": "Đào Nam Hải",
+      "percentage": 2.4e-6
+    },
+    {
+      "name": "Lê Thị Thu Hà",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Ngọc Tú",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Nguyễn Quang Kiên",
+      "percentage": 1.1e-6
+    },
+    {
+      "name": "Lê Thị Kim Huyền",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Hoàng Thị Yến Oanh",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Đặng Hồng Liên",
+      "percentage": 8.9e-7
+    },
+    {
+      "name": "Vương Thái Dũng",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Nguyễn Thu Hà",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Lê Huy Hiệp",
+      "percentage": 8e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00001787
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 8.7e-6
+    },
+    {
+      "name": "Nguyễn Quang Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 6.4e-6
+    },
+    {
+      "name": "Hoàng Mai Ninh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 5.4e-6
+    },
+    {
+      "name": "Lê Văn Hướng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 5.35e-6
+    },
+    {
+      "name": "Nguyễn Xuân Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 4.7e-6
+    },
+    {
+      "name": "Trần Ngọc Năm",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Đào Nam Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2.4e-6
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Lê Huy Hiệp",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Nguyễn Văn Sự",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Vinh Thanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Toshiya Nakahara",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Sỹ Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tống Văn Hải",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trang Thảo",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Phương Anh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Kim Ngân",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Văn Tuyển",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Quang Tuấn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Bá Tùng",
+      "position": "Kế toán trưởng/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Thị Kiều Trang",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Thanh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:19.335384Z"
+}

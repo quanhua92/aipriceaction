@@ -1,0 +1,187 @@
+{
+  "symbol": "VGT",
+  "exchange": "UPCOM",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6100000000000.0,
+  "current_price": 12200.0,
+  "outstanding_shares": 500000000,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Tập đo&agrave;n Dệt May Việt Nam (Vinatex) c&oacute; tiền th&acirc;n l&agrave; Tổng C&ocirc;ng ty Dệt May Việt Nam, được th&agrave;nh lập v&agrave;o ng&agrave;y 29/04/1995. Tập đo&agrave;n hoạt động ch&iacute;nh trong lĩnh vực sản xuất, kinh doanh v&agrave; xuất khẩu c&aacute;c sản phẩm ng&agrave;nh dệt may. C&ocirc;ng ty mẹ &ndash; Tập đo&agrave;n Dệt May Việt Nam &ndash; ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần v&agrave;o năm 2015. Vinatex giữ vị tr&iacute; dẫn đầu trong ng&agrave;nh dệt may Việt Nam với c&ocirc;ng suất thiết kế l&ecirc;n đến 172.270 tấn sợi/năm, 170 triệu m&sup2; vải dệt thoi/năm, 24.325 tấn vải dệt kim v&agrave; 353 triệu đơn vị may mặc mỗi năm. Cổ phiếu của Vinatex được giao dịch tr&ecirc;n thị trường UPCOM từ đầu năm 2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.5349
+    },
+    {
+      "name": "Itochu Corporation",
+      "percentage": 0.13
+    },
+    {
+      "name": "Bùi Mạnh Hưng",
+      "percentage": 0.0496
+    },
+    {
+      "name": "Nguyễn Xuân Đông",
+      "percentage": 0.03028
+    },
+    {
+      "name": "Trần Quang Nghị",
+      "percentage": 0.0200078
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.01
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.008
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.008
+    },
+    {
+      "name": "Veil Holdings Limited",
+      "percentage": 0.006
+    },
+    {
+      "name": "Đoàn Thị Thu Hương",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Lê Tiến Trường",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Lê Mạc Thuấn",
+      "percentage": 0.0000102
+    },
+    {
+      "name": "Lê Trung Hải",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Đặng Vũ Hùng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Nguyên Hạnh",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Cao Hữu Hiếu",
+      "percentage": 6.6e-6
+    },
+    {
+      "name": "Nguyễn Thị Minh Hiền",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Phạm Duy Hạnh",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Nguyễn Thị Kim Dung",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Hoàng Vệ Dũng",
+      "percentage": 3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Xuân Đông",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.03028
+    },
+    {
+      "name": "Trần Quang Nghị",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0200078
+    },
+    {
+      "name": "Đoàn Thị Thu Hương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Lê Tiến Trường",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Lê Mạc Thuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000102
+    },
+    {
+      "name": "Đặng Vũ Hùng",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Lê Trung Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Nguyên Hạnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Cao Hữu Hiếu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 6.6e-6
+    },
+    {
+      "name": "Đặng Thị Hồng Lê",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Hồng Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Cách",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Trị",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Trà My",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Tân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thu Hằng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tạ Hữu Doanh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:58.983406Z"
+}

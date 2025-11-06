@@ -1,0 +1,258 @@
+{
+  "symbol": "IDC",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 14648654567800.0,
+  "current_price": 38600.0,
+  "outstanding_shares": 379498823,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty IDICO (IDC), c&oacute; tiền th&acirc;n l&agrave; Tổng C&ocirc;ng ty Đầu tư ph&aacute;t triển Đ&ocirc; thị v&agrave; Khu c&ocirc;ng nghiệp Việt Nam&nbsp;được th&agrave;nh lập v&agrave;o ng&agrave;y 6/12/2000 theo Quyết định số 26/2000/QĐ-BXD của Bộ trưởng Bộ X&acirc;y dựng. IDC chuy&ecirc;n đầu tư, ph&aacute;t triển v&agrave; kinh doanh khu c&ocirc;ng nghiệp, khu đ&ocirc; thị, khu d&acirc;n cư v&agrave; c&aacute;c c&ocirc;ng tr&igrave;nh c&ocirc;ng nghiệp v&agrave; d&acirc;n dụng kh&aacute;c. IDC đ&atilde; v&agrave; đang đầu tư x&acirc;y dựng, quản l&yacute; v&agrave; vận h&agrave;nh 17 dự &aacute;n khu c&ocirc;ng nghiệp tr&ecirc;n cả nước với tổng diện t&iacute;ch khoảng 7.000ha, tổng mức đầu tư khoảng 10.000 tỷ đồng. B&ecirc;n cạnh đ&oacute;, IDC cũng đang đầu tư ph&aacute;t triển 04 dự &aacute;n thủy điện với c&ocirc;ng suất 333MW, tổng mức đầu tư 409 triệu USD. Địa b&agrave;n kinh doanh ch&iacute;nh của c&ocirc;ng ty l&agrave; c&aacute;c tỉnh ph&iacute;a Nam bao gồm Th&agrave;nh phố Hồ Ch&iacute; Minh, Đồng Nai, B&agrave; Rịa - Vũng T&agrave;u, Long An,...&nbsp;&nbsp;Ngo&agrave;i ra, Tổng C&ocirc;ng ty cũng tham gia kinh doanh xuất nhập khẩu vật tư, thiết bị, vật liệu x&acirc;y dựng v&agrave; c&ocirc;ng nghệ x&acirc;y dựng. Ng&agrave;y 10/12/2019, IDC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn S.S.G",
+      "percentage": 0.225
+    },
+    {
+      "name": "Công ty TNHH Sản Xuất Và Thương Mại Bách Việt",
+      "percentage": 0.1193
+    },
+    {
+      "name": "Vũ Thị Thu Hằng",
+      "percentage": 0.0633
+    },
+    {
+      "name": "Công ty TNHH Kinh Doanh Và Cho Thuê Nhà Tân Bách Việt",
+      "percentage": 0.0291
+    },
+    {
+      "name": "Đặng Việt Dũng",
+      "percentage": 0.0253
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.012138
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.010538
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.009777
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.008353
+    },
+    {
+      "name": "Công ty TNHH Covestcons",
+      "percentage": 0.0062
+    },
+    {
+      "name": "Fides Xin Moi B&I Private Investment Trust 4",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Fides Jump Up Private Investment Trust 3",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.002897
+    },
+    {
+      "name": "Fides Xin Moi B&I Private Investment Trust 5",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Fides Xin Moi B&I Private Investment Trust 3",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn Thị Như Mai",
+      "percentage": 0.0018603
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.001818
+    },
+    {
+      "name": "Fides Xin Moi B&I Private Investment Trust 9",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Fides Xin Moi B&I Private Investment Trust 7",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị MB Capital",
+      "percentage": 0.00083333
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu Bảo Việt",
+      "percentage": 0.00076667
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0007666667
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00066667
+    },
+    {
+      "name": "Idris Ltd",
+      "percentage": 0.00055
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.00055
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000455
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.000403
+    },
+    {
+      "name": "Fides Jump Up Active Private Investment Trust 5",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Danang Investments Limited",
+      "percentage": 0.000303
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.000242
+    },
+    {
+      "name": "Võ Tấn Dũng",
+      "percentage": 0.00007767
+    },
+    {
+      "name": "Lê Thị Hương",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Tuế Loan",
+      "percentage": 0.000063
+    },
+    {
+      "name": "Ninh Mạnh Hồng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đặng Phương Thảo",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đào Minh Tiến",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Văn Đạt",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Minh Hiệp",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Văn Toán",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Trịnh Hùng Lâm",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Phan Văn Chính",
+      "percentage": 6.7e-6
+    },
+    {
+      "name": "Hoàng Văn Tịnh",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Trần Thị Ngọc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Hoàng Văn Hiến",
+      "percentage": 1.67e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phan Văn Chính",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 6.7e-6
+    },
+    {
+      "name": "Trần Thị Ngọc",
+      "position": "Kế toán trưởng",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Hoàng Văn Hiến",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Cao Nguyên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Hữu Thắng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Văn Chung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Chính Trung",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hồng Hải",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tôn Thất Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thanh Linh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Bá Thọ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:00:41.442053Z"
+}

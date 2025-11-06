@@ -1,0 +1,188 @@
+{
+  "symbol": "NAF",
+  "exchange": "HOSE",
+  "industry": "Bia và đồ uống",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1932807093000.0,
+  "current_price": 34750.0,
+  "outstanding_shares": 55620348,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty cổ phần Nafoods Group (NAF), tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Th&agrave;nh Vinh,&nbsp;được th&agrave;nh lập từ năm 1995. Năm 2010, C&ocirc;ng ty chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh hoạt&nbsp;động dưới h&igrave;nh thức&nbsp;C&ocirc;ng ty Cổ phần.&nbsp;Hoạt động kinh doanh trong lĩnh vực chế biến v&agrave; xuất khẩu c&aacute;c sản phẩm nước &eacute;p tr&aacute;i c&acirc;y v&agrave; rau củ quả đ&ocirc;ng lạnh, NAF thực hiện chuỗi m&ocirc; h&igrave;nh sản xuất kinh doanh kh&eacute;p k&iacute;n từ nghi&ecirc;n cứu giống c&acirc;y trồng đến chế biến v&agrave; ph&acirc;n phối sản phẩm. Trong số hơn 30 loại sản phẩm rau củ được chế biến v&agrave; xuất khẩu, chanh leo v&agrave; gấc l&agrave; hai sản phẩm mũi nhọn của NAF. Thị trường xuất khẩu chủ yếu của c&ocirc;ng ty l&agrave; Ch&acirc;u &Acirc;u, Mỹ, Nhật Bản, H&agrave;n Quốc, Trung Đ&ocirc;ng v&agrave; &Uacute;c. V&ugrave;ng nguy&ecirc;n liệu của Nafoods Group trải d&agrave;i từ T&acirc;y Bắc, c&aacute;c tỉnh miền Trung, c&aacute;c tỉnh T&acirc;y Nguy&ecirc;n, v&agrave; khu vực Đồng bằng s&ocirc;ng Cửu Long. Hệ thống Nafoods Group đ&atilde; v&agrave; đang hợp t&aacute;c l&agrave;m việc với b&agrave; con n&ocirc;ng d&acirc;n, c&aacute;c hợp t&aacute;c x&atilde; v&agrave; c&aacute;c đối t&aacute;c ở cả ba khu vực Bắc, Trung, Nam v&agrave; một số đối t&aacute;c lớn tại L&agrave;o, Campuchia.&nbsp;Vườn ươm giống quy m&ocirc; 5ha, c&ocirc;ng suất 6 &ndash; 6.5 triệu c&acirc;y giống/năm, tại x&atilde; Tri Lễ, Quế Phong, Nghệ An. Ng&agrave;y 07/10/2015, NAF ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "percentage": 0.39629999
+    },
+    {
+      "name": "Công ty Tài Chính Quốc Tế",
+      "percentage": 0.196
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0474
+    },
+    {
+      "name": "PHAN THỊ MINH CHÂU",
+      "percentage": 0.017
+    },
+    {
+      "name": "Phạm Duy Thái",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Điền Thị Lan Phương",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Lê Tuấn",
+      "percentage": 0.0062
+    },
+    {
+      "name": "Nguyễn Tiến Chinh",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Nguyễn Thị Trang",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Ngô Sỹ Mạnh",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Diệp Thị Mỹ Hảo",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Nguyễn Mạnh Cường",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Hồ Hải Quân",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Đặng Thị Loan",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Phan Minh Đức",
+      "percentage": 0.001
+    },
+    {
+      "name": "Đặng Thị Thắm",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Quốc Huân (Nyvene Johan)",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Phương Hồng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Văn Minh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 0.000167
+    },
+    {
+      "name": "Hồ Quốc Công",
+      "percentage": 0.000111
+    },
+    {
+      "name": "Nguyễn Văn Bộ",
+      "percentage": 0.000063
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Hồ Minh Tuấn",
+      "percentage": 0.00002137
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.39629999
+    },
+    {
+      "name": "PHAN THỊ MINH CHÂU",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.017
+    },
+    {
+      "name": "Điền Thị Lan Phương",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Phạm Duy Thái",
+      "position": "Người phụ trách quản trị công ty/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Nguyễn Tiến Chinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Diệp Thị Mỹ Hảo",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Đặng Thị Loan",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Nguyễn Thị Phương Hồng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Hồ Quốc Công",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000111
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Ryan Walter Galloway",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Johan Nyvene",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lâm Trung Kiên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Johan de Geer",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:48.012197Z"
+}

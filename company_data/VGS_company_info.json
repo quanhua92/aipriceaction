@@ -1,0 +1,139 @@
+{
+  "symbol": "VGS",
+  "exchange": "HNX",
+  "industry": "Kim loại",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1753438417500.0,
+  "current_price": 28500.0,
+  "outstanding_shares": 61524155,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Ống th&eacute;p Việt Đức VG PIPE (VGS), tiền th&acirc;n l&agrave; Nh&agrave; m&aacute;y Ống th&eacute;p Việt Đức được th&agrave;nh lập năm 2002. Năm 2007, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. Ống th&eacute;p Việt Đức&nbsp;l&agrave; doanh nghiệp h&agrave;ng&nbsp;đầu trong c&ocirc;ng nghiệp sản xuất&nbsp;ống th&eacute;p tại Việt Nam. Năm 2025,&nbsp;Ống th&eacute;p Việt Đức nằm trong top 4 nh&agrave; m&aacute;y sản xuất v&agrave; ti&ecirc;u thụ &ocirc;ng th&eacute;p (chiếm 7,77% thị phần) v&agrave; top 3 nh&agrave; sản xuất th&eacute;p x&acirc;y dựng lớn nhất tại Việt nam (chiếm 5% thị phần). Thương hiệu Sản phẩm th&eacute;p của Ống th&eacute;p Việt Đức&nbsp;đ&atilde; gắn liền với c&aacute;c c&ocirc;ng tr&igrave;nh trọng điểm quốc gia như: cầu Thanh Tr&igrave;, cầu Vĩnh Tuy, cầu Ph&aacute;p V&acirc;n, Trung t&acirc;m Hội nghị Quốc Gia, The Manor, Keangnam, The Landmark, Xi măng Thăng Long, Xi măng Ho&agrave;ng Thạch, Nhiệt điện Phả Lại, Nhiệt điện U&ocirc;ng B&iacute;, đường cao tốc S&agrave;i G&ograve;n &ndash; Trung Lương. Hiện nay sản phẩm th&eacute;p của c&ocirc;ng ty đ&atilde; xuất khẩu sang Mỹ, Canada, EU, Indonesia, L&agrave;o, Myanmar (chiếm 30% tổng sản lượng). VGS ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ ng&agrave;y&nbsp;04/12/2008.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Thị Thanh Thủy",
+      "percentage": 0.25670001
+    },
+    {
+      "name": "Lê Khánh Huyền",
+      "percentage": 0.0824
+    },
+    {
+      "name": "Lê Quốc Khánh",
+      "percentage": 0.0515
+    },
+    {
+      "name": "Nguyễn Vũ Lê",
+      "percentage": 0.05
+    },
+    {
+      "name": "TRẦN XUÂN NINH",
+      "percentage": 0.0472
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán MB",
+      "percentage": 0.04262512
+    },
+    {
+      "name": "Lê Minh Hải",
+      "percentage": 0.0332
+    },
+    {
+      "name": "Nguyễn Hữu Thế",
+      "percentage": 0.0307
+    },
+    {
+      "name": "Đỗ Thanh Tùng",
+      "percentage": 0.0049995403
+    },
+    {
+      "name": "Lê Phan Đức",
+      "percentage": 0.0025553206
+    },
+    {
+      "name": "Nguyễn Tuấn Hưng",
+      "percentage": 0.0005610039
+    },
+    {
+      "name": "Nguyễn Thị Xuân Hòa",
+      "percentage": 0.00008496
+    },
+    {
+      "name": "NGÔ VI ANH TÚ",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Ngô Vi Anh Tuấn",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Quốc Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0515
+    },
+    {
+      "name": "Lê Minh Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0332
+    },
+    {
+      "name": "Nguyễn Hữu Thế",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0307
+    },
+    {
+      "name": "NGÔ VI ANH TÚ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Lê Quý Minh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Quang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Vinh Tuyên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trọng Đắc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Văn Hiệu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Nhi",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Lộc",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:56.193311Z"
+}

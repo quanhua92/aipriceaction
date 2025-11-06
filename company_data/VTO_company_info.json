@@ -1,0 +1,233 @@
+{
+  "symbol": "VTO",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 946419992100.0,
+  "current_price": 11850.0,
+  "outstanding_shares": 79866666,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần&nbsp;Vận tải Xăng dầu VITACO (VTO) c&oacute;&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty Vận tải Nhi&ecirc;n liệu VITACO được th&agrave;nh lập v&agrave;o năm 1975. C&ocirc;ng ty&nbsp;hoạt động trong lĩnh vực kinh doanh vận tải xăng dầu đường biển, dịch vụ h&agrave;ng hải, đại l&yacute; t&agrave;u biển. VTO ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2005. C&ocirc;ng ty sở hữu đội t&agrave;u vận chuyển xăng dầu với&nbsp;tổng trọng tải&nbsp;143.239 DWT. Đội t&agrave;u ven biển chiếm khoảng 40% thị phần vận tải nội địa to&agrave;n quốc, tương đương với 66% thị phần vận tải của Petrolimex. VTO được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2007.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công Ty Vận Tải Thủy Petrolimex",
+      "percentage": 0.519181
+    },
+    {
+      "name": "Huỳnh Quế Hà",
+      "percentage": 0.0393702454
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Sài Gòn Thương Tín",
+      "percentage": 0.03681135
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.02329332
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0197
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0138
+    },
+    {
+      "name": "La Văn Út",
+      "percentage": 0.01252
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0125
+    },
+    {
+      "name": "Văn Thị Hồng Phượng",
+      "percentage": 0.00751
+    },
+    {
+      "name": "Nguyễn Thị Tuyết",
+      "percentage": 0.0074
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0067
+    },
+    {
+      "name": "KIM PMAA Vietnam Securities Investment Trust 1(Equity)",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Hà Thị Nga",
+      "percentage": 0.00438
+    },
+    {
+      "name": "Lưu Văn Thăng",
+      "percentage": 0.00268117
+    },
+    {
+      "name": "Đàm Xuân Trọng",
+      "percentage": 0.0013521555
+    },
+    {
+      "name": "Trần Tố Uyên",
+      "percentage": 0.0012725
+    },
+    {
+      "name": "Hoàng Thị Mỹ Lợi",
+      "percentage": 0.0012521
+    },
+    {
+      "name": "Phan Thị Kim Liên",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Công Định",
+      "percentage": 0.0006082417
+    },
+    {
+      "name": "Lưu Văn Chung",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Thanh Tuyên",
+      "percentage": 0.000175
+    },
+    {
+      "name": "Phạm Văn Trương",
+      "percentage": 0.0001483516
+    },
+    {
+      "name": "Nguyễn Quang Chiến",
+      "percentage": 0.000145
+    },
+    {
+      "name": "Nguyễn Hữu Khánh",
+      "percentage": 0.0001329585
+    },
+    {
+      "name": "Nguyễn Đức Huấn",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Nguyễn Văn Tiến",
+      "percentage": 0.0000760777
+    },
+    {
+      "name": "Trương Văn Minh",
+      "percentage": 0.0000704
+    },
+    {
+      "name": "Phạm Lý Trang Khanh",
+      "percentage": 0.00006886
+    },
+    {
+      "name": "Bùi Hồng Dũng",
+      "percentage": 0.0000545
+    },
+    {
+      "name": "Nguyễn Chí Nam",
+      "percentage": 0.0000288
+    },
+    {
+      "name": "Nguyễn Trọng Nghĩa",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Phan Thị Thuý Hằng",
+      "percentage": 1.5e-6
+    },
+    {
+      "name": "Nguyễn Phương Mai",
+      "percentage": 9e-7
+    },
+    {
+      "name": "Đinh Kim Oanh",
+      "percentage": 8.8e-7
+    },
+    {
+      "name": "Phạm Ngọc Sinh",
+      "percentage": 6e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "La Văn Út",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.01252
+    },
+    {
+      "name": "Văn Thị Hồng Phượng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00751
+    },
+    {
+      "name": "Nguyễn Thanh Tuyên",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.000175
+    },
+    {
+      "name": "Nguyễn Quang Chiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000145
+    },
+    {
+      "name": "Trương Văn Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000704
+    },
+    {
+      "name": "Phạm Lý Trang Khanh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.00006886
+    },
+    {
+      "name": "Bùi Hồng Dũng",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000545
+    },
+    {
+      "name": "Nguyễn Chí Nam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000288
+    },
+    {
+      "name": "Nguyễn Trọng Nghĩa",
+      "position": "Kế toán trưởng/Trưởng phòng Tài chính - Kế toán",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Phạm Văn Trung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Minh Ngọc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Cương",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tiến Dũng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thúy Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Quang Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:15.297819Z"
+}

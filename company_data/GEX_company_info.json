@@ -1,0 +1,317 @@
+{
+  "symbol": "GEX",
+  "exchange": "HOSE",
+  "industry": "Điện tử & Thiết bị điện",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 40878672344400.0,
+  "current_price": 45300.0,
+  "outstanding_shares": 902398948,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>Được th&agrave;nh lập từ năm 1990, C&ocirc;ng ty Cổ phần Tập đo&agrave;n Gelex (GEX) l&agrave; doanh nghiệp h&agrave;ng đầu của Việt Nam trong lĩnh vực chế tạo Thiết bị đo điện. C&aacute;c&nbsp;hoạt&nbsp;động&nbsp;ch&iacute;nh của Gelex bao gồm: (i) sản xuất thiết bị điện, (ii) x&acirc;y dựng v&agrave; lắp đặt m&aacute;y biến &aacute;p điện &aacute;p cao, (iii) kinh doanh bất động sản. Năm 2010 Gelex được cổ phần h&oacute;a v&agrave; ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần. Gelex sở hữu&nbsp;c&aacute;c thương&nbsp;hiệu c&oacute; uy t&iacute;n như GELEX, CADIVI, THIBIDI, HEM, VIHEM, VINAKIP. Gelex đ&atilde; x&acirc;y dựng được một mạng lưới kh&aacute;ch h&agrave;ng rộng lớn bao gồm c&aacute;c tập đo&agrave;n lớn như: EVN, PetroVietnam, Vinacomin, Vicem, VNSteel, Vinaconex. GEX ch&iacute;nh thức được giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ Ng&agrave;y 18/01/2018.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "percentage": 0.23630001
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Nước sạch và Môi trường ECO & MORE",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Công ty Cổ phần MHC",
+      "percentage": 0.0463
+    },
+    {
+      "name": "Công ty TNHH MTV Quản Lý Quỹ Ngân Hàng Thương Mại Cổ phần Công Thương Việt Nam",
+      "percentage": 0.0461
+    },
+    {
+      "name": "Đào Thị Lơ",
+      "percentage": 0.04374
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư ICAPITAL",
+      "percentage": 0.0377
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0374
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 0.0352
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Vietcap",
+      "percentage": 0.0324
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư MB",
+      "percentage": 0.028
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.018887
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.014717
+    },
+    {
+      "name": "Nguyễn Hoa Cương",
+      "percentage": 0.0131
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.011126
+    },
+    {
+      "name": "Công ty TNHH Vlcc",
+      "percentage": 0.0105
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0098
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0074
+    },
+    {
+      "name": "Viola Ltd",
+      "percentage": 0.0074
+    },
+    {
+      "name": "Idris Ltd",
+      "percentage": 0.0063
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.005015
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Trọng Hiền",
+      "percentage": 0.003
+    },
+    {
+      "name": "Lương Thanh Tùng",
+      "percentage": 0.003
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Đỏ",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Nguyễn Trọng Tiếu",
+      "percentage": 0.0021993
+    },
+    {
+      "name": "Võ Anh Linh",
+      "percentage": 0.002
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.002
+    },
+    {
+      "name": "Nguyễn Thị Bích Ngọc",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Bích Hà",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Liên Hương",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.001174
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Đậu Minh Lâm",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lê Bá Thọ",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0008
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000432
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.000329
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "percentage": 0.00032
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0003021476
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0002951322
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu Bảo Việt",
+      "percentage": 0.00028409
+    },
+    {
+      "name": "Nguyễn Hoàng Long",
+      "percentage": 0.0002713
+    },
+    {
+      "name": "Veil Holdings Limited",
+      "percentage": 0.000235
+    },
+    {
+      "name": "Nguyễn Tiến Vinh",
+      "percentage": 0.00021
+    },
+    {
+      "name": "Nguyễn Trọng Thắng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Xuân Thanh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Phương",
+      "percentage": 0.0001616
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00015827
+    },
+    {
+      "name": "Phạm Tuấn Anh",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Lê Việt Hà",
+      "percentage": 0.0001233
+    },
+    {
+      "name": "Bùi Đăng Khoa",
+      "percentage": 0.0001233
+    },
+    {
+      "name": "Đỗ Văn Chính",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Thị Mỹ Hà",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Hoàng Hưng",
+      "percentage": 0.0000399
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu MB",
+      "percentage": 4.3e-9
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.23630001
+    },
+    {
+      "name": "Nguyễn Hoa Cương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0131
+    },
+    {
+      "name": "Nguyễn Trọng Hiền",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.003
+    },
+    {
+      "name": "Lương Thanh Tùng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Trọng Tiếu",
+      "position": "Giám đốc điều hành/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0021993
+    },
+    {
+      "name": "Võ Anh Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.002
+    },
+    {
+      "name": "Đậu Minh Lâm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Thị Phương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0001616
+    },
+    {
+      "name": "Phạm Tuấn Anh",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Lê Việt Hà",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0001233
+    },
+    {
+      "name": "Lê Thị Hiền",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Trung",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tào  Hải Nhân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàng Việt",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Phương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:09.993364Z"
+}

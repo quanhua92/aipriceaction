@@ -1,0 +1,111 @@
+{
+  "symbol": "MSR",
+  "exchange": "UPCOM",
+  "industry": "Khai khoáng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 24636181248000.0,
+  "current_price": 22400.0,
+  "outstanding_shares": 1099829520,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Masan High-Tech Materials (MSR)&nbsp;được th&agrave;nh lập v&agrave;o năm 2010. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực khai th&aacute;c, chế biến v&agrave; kinh doanh&nbsp;kho&aacute;ng&nbsp;sản,&nbsp;kim loại m&agrave;u v&agrave; kim loại qu&yacute; hiếm. MSR đang quản l&yacute; v&agrave; khai th&aacute;c quặng N&uacute;i Ph&aacute;o tại huyện Đại Từ, tỉnh Th&aacute;i Nguy&ecirc;n với trữ lượng ước t&iacute;nh khoảng 66 triệu tấn. Sản&nbsp;phẩm ch&iacute;nh của&nbsp;C&ocirc;ng ty l&agrave; Vonfram, florit, bismuth v&agrave; đồng. MSR Ch&iacute;nh thức được giao dịch tr&ecirc;n thị trường UPCOM v&agrave;o th&aacute;ng 09/2015.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn Masan",
+      "percentage": 0.96
+    },
+    {
+      "name": "Công ty TNHH Tầm Nhìn Masan",
+      "percentage": 0.9494
+    },
+    {
+      "name": "Dominic John Heaton",
+      "percentage": 0.0117
+    },
+    {
+      "name": "Nguyễn Thiều Nam",
+      "percentage": 0.00099
+    },
+    {
+      "name": "Craig Richard Bradshaw",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Quỳnh Lâm",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Lê Thanh Tùng",
+      "percentage": 1.9e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thiều Nam",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.00099
+    },
+    {
+      "name": "Craig Richard Bradshaw",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Quỳnh Lâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Trần Quang Chúc",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Quỳnh Nga",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Akira Osada",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Thị Mỹ Duyên",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thu Hiền",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Mai",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Nguyên Hải",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hady Seyeda",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Stuart James Wells",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Danny Le",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:38.348453Z"
+}

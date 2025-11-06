@@ -1,0 +1,284 @@
+{
+  "symbol": "HDC",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 5823289639900.0,
+  "current_price": 32650.0,
+  "outstanding_shares": 178354966,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Ph&aacute;t triển Nh&agrave; B&agrave; Rịa Vũng T&agrave;u (HDC) c&oacute;&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty Ph&aacute;t triển Nh&agrave; Tỉnh B&agrave; Rịa - Vũng T&agrave;u, được&nbsp;th&agrave;nh lập v&agrave;o năm 1990. C&ocirc;ng ty hoạt&nbsp;động chủ yếu trong lĩnh vực đầu tư kinh doanh bất động sản, sản xuất vật liệu x&acirc;y dựng, c&aacute;c dịch vụ du lịch v&agrave; bất động sản kh&aacute;c. HDC&nbsp;ch&iacute;nh thức chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần từ năm 2001.&nbsp;C&ocirc;ng ty&nbsp;hiện đang c&oacute; quỹ đất khoảng 400ha tại th&agrave;nh phố Vũng T&agrave;u. Một số dự &aacute;n ti&ecirc;u biểu của C&ocirc;ng ty như: Khu nh&agrave; ở Sao Mai Bến Đ&igrave;nh, Khu nh&agrave; ở G&ograve; Sao - Quận 12, th&agrave;nh phố Hồ Ch&iacute; Minh, Chung cư B&igrave;nh Gi&atilde; Resident, Chung cư B&igrave;nh An, Chung cư L&ocirc; A - 199 Nam Kỳ Khởi Nghĩa, Chung cư L&ocirc;&nbsp;B - 199 Nam Kỳ Khởi Nghĩa, Chung cư B&igrave;nh An. HDC&nbsp;được ni&ecirc;m&nbsp;yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2007.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đoàn Hữu Thuận",
+      "percentage": 0.0985
+    },
+    {
+      "name": "Trần Minh Chính",
+      "percentage": 0.04538
+    },
+    {
+      "name": "Asean Deep Value Fund",
+      "percentage": 0.0392
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Ngân hàng Công thương Việt Nam",
+      "percentage": 0.0382
+    },
+    {
+      "name": "Lê Viết Liên",
+      "percentage": 0.0368
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hà",
+      "percentage": 0.0337
+    },
+    {
+      "name": "Đoàn Hữu Hà Vinh",
+      "percentage": 0.0218
+    },
+    {
+      "name": "Phan Văn Minh",
+      "percentage": 0.0209282043
+    },
+    {
+      "name": "Công ty Cổ phần Xây lắp Thừa Thiên Huế",
+      "percentage": 0.0136
+    },
+    {
+      "name": "Hoàng Thị Hương",
+      "percentage": 0.0133
+    },
+    {
+      "name": "Nguyễn Tú Quỳnh",
+      "percentage": 0.0111
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VNDIRECT",
+      "percentage": 0.01088507
+    },
+    {
+      "name": "Đoàn Hữu Hà An",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Credit Suise (Hong Kong) Limited",
+      "percentage": 0.00775055
+    },
+    {
+      "name": "Bùi Thị Thịnh",
+      "percentage": 0.0064
+    },
+    {
+      "name": "Trần Văn Tấn",
+      "percentage": 0.0061789431
+    },
+    {
+      "name": "Lâm Hoàng Lộc",
+      "percentage": 0.005956
+    },
+    {
+      "name": "Đặng Ngọc Cẩm Hằng",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Hoàng Phạm Tuấn Anh",
+      "percentage": 0.00455
+    },
+    {
+      "name": "DƯƠNG NGỌC THANH",
+      "percentage": 0.0029384
+    },
+    {
+      "name": "Hồ Viết Thới",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Bá Lưu",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Dương Thị Ngọc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Lê Quỳnh Hoa",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Trần Thị Thanh Thùy",
+      "percentage": 0.00112
+    },
+    {
+      "name": "Lương Thị Phương",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Bùi Duy Chinh",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Quang Đạt",
+      "percentage": 0.001
+    },
+    {
+      "name": "Đoàn Hữu Hải",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Đình Duy",
+      "percentage": 0.001
+    },
+    {
+      "name": "Bùi Thị Việt",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Phan Thị Thanh Huyền",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Hồ Diên Tiếu",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Mai Thị Tuyết Lan",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lê Quý Định",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Bạch Trọng Định",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Hoàng Chung Kiên",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Công Đoàn Công ty Cổ Phần Phát Triển Nhà Bà Rịa Vũng Tàu",
+      "percentage": 0.000369
+    },
+    {
+      "name": "Đào Thị Lan Hương",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đoàn Thị Hồng Mai",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Hồng Dương",
+      "percentage": 0.0002043974
+    },
+    {
+      "name": "Phan Đình Hiệp",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Văn Bảy",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Thị Yến",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Trần Trung Hiếu",
+      "percentage": 0.000037
+    },
+    {
+      "name": "Nguyễn Hoàng Thiên Trúc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Phạm Thị Nhung",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Hoàng Thanh Hải",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Lucerne Enterprise Ltd",
+      "percentage": 3e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đoàn Hữu Thuận",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0985
+    },
+    {
+      "name": "Lê Viết Liên",
+      "position": "Tổng Giám đốc điều hành/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0368
+    },
+    {
+      "name": "Đoàn Hữu Hà Vinh",
+      "position": "Thành viên Ban đại diện Quỹ/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0218
+    },
+    {
+      "name": "Bùi Thị Thịnh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0064
+    },
+    {
+      "name": "Lê Quỳnh Hoa",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Quang Đạt",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Đình Duy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.001
+    },
+    {
+      "name": "Phan Thị Thanh Huyền",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Hồ Diên Tiếu",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lê Quý Định",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Hoàng Chung Kiên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phan Văn Thắng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tuấn Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quốc Trung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:50.136743Z"
+}

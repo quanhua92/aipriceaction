@@ -1,0 +1,180 @@
+{
+  "symbol": "JVC",
+  "exchange": "HOSE",
+  "industry": "Thiết bị và Dịch vụ Y tế",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 906751378260.0,
+  "current_price": 8060.0,
+  "outstanding_shares": 112500171,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư v&agrave; Ph&aacute;t triển Y tế Việt Nhật (JVC) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Thiết bị Y Tế Việt Nhật được th&agrave;nh lập&nbsp;v&agrave;o năm 2001. C&ocirc;ng ty ch&iacute;nh thức cổ phần h&oacute;a&nbsp;v&agrave; hoạt&nbsp;động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2010. C&ocirc;ng ty chuy&ecirc;n ph&acirc;n phối, bảo h&agrave;nh, sửa chữa c&aacute;c thiết bị chuẩn đo&aacute;n h&igrave;nh ảnh c&ocirc;ng nghệ hiện đại, ch&aacute;t lượng của h&atilde;ng. &nbsp;Kinh doanh thiết bị y tế l&agrave; mảng hoạt động ch&iacute;nh của C&ocirc;ng ty. C&ocirc;ng ty chuy&ecirc;n cung cấp c&aacute;c d&ograve;ng sản phẩm thiết bị y tế c&ocirc;ng nghệ cao như m&aacute;y cộng hưởng từ (MRI), m&aacute;y chụp cắt lớp vi t&iacute;nh (CT-scanner system), m&aacute;y X-quang (X-ray system), m&aacute;y si&ecirc;u &acirc;m (Ultrasound-scanner system), hệ thống chụp X-quang số, m&aacute;y chạy thận nh&acirc;n tạo, m&aacute;y x&eacute;t nghiệm huyết học, m&aacute;y mổ taath kh&uacute;c xạ, m&aacute;y mổ đục thủy tinh thể...được nhập từ c&aacute;c nước Nhật Bản, H&agrave;n Quốc, Singapore. Ng&agrave;y 21/06/2011, JVC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE)</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công Ty Cổ Phần Quản Lý Và Đầu Tư Dtn Việt Nam",
+      "percentage": 0.1511
+    },
+    {
+      "name": "Vietnam Equity Holding",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Nguyễn Văn Hiếu",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Lê Văn Hướng",
+      "percentage": 0.0427
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0412
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.0324176218
+    },
+    {
+      "name": "Indochina Development Partners L.P",
+      "percentage": 0.02139909
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0167
+    },
+    {
+      "name": "Hồ Bích Ngọc",
+      "percentage": 0.0016148686
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.00143662
+    },
+    {
+      "name": "Phạm Văn Thanh",
+      "percentage": 0.0011807004
+    },
+    {
+      "name": "Nguyễn Phương Hạnh",
+      "percentage": 0.00079695
+    },
+    {
+      "name": "Đặng Trần Đạt",
+      "percentage": 0.000422
+    },
+    {
+      "name": "Nguyễn Thị Thuý Quỳnh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Đỗ Thị Ngọc Hoa",
+      "percentage": 0.0000356
+    },
+    {
+      "name": "Vũ Khánh Din",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Văn Dương",
+      "percentage": 7.9022e-6
+    },
+    {
+      "name": "Vũ Thị Hải Ninh",
+      "percentage": 4.4444e-6
+    },
+    {
+      "name": "Nguyễn Hữu Điền",
+      "percentage": 4.4444e-6
+    },
+    {
+      "name": "Nguyễn Hữu Thắng",
+      "percentage": 3.6977e-6
+    },
+    {
+      "name": "Nguyễn Thị Quỳnh Anh",
+      "percentage": 3.18e-6
+    },
+    {
+      "name": "Đặng Thập Nương",
+      "percentage": 2.2222e-6
+    },
+    {
+      "name": "Đặng Nhị Nương",
+      "percentage": 2.22e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Việt Cường",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Thắng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Khánh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Văn Kiên",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Điệp",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lân Việt Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Huy Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Thùy Mai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Minh Chung",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thảo Hương",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Đức Thanh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Vỹ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hạnh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "ĐẶNG THỊ HÀ GIANG",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:13.550702Z"
+}

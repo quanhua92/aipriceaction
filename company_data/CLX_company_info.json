@@ -1,0 +1,139 @@
+{
+  "symbol": "CLX",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1402920000000.0,
+  "current_price": 16200.0,
+  "outstanding_shares": 86600000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Th&agrave;nh lập năm 1981, C&ocirc;ng ty Cổ phần Xuất nhập khẩu v&agrave; Đầu tư Chợ Lớn (&ldquo;CHOLIMEX&rdquo;) l&agrave; doanh nghiệp Nh&agrave; nước 100%, hoạt động theo m&ocirc; h&igrave;nh C&ocirc;ng ty mẹ - C&ocirc;ng ty con với 3 đơn vị hạch to&aacute;n phụ thuộc, 1 c&ocirc;ng ty con, v&agrave; 8 c&ocirc;ng ty li&ecirc;n kết. Năm 2016 c&ocirc;ng ty ch&agrave;o b&aacute;n th&agrave;nh c&ocirc;ng cổ phần ra c&ocirc;ng ch&uacute;ng v&agrave; chuyển sang hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần, nh&agrave; nước sở hữu 49%. Ng&agrave;nh nghề kinh doanh ch&iacute;nh của c&ocirc;ng ty gồm (i) xuất nhập khẩu, (ii) đầu tư bất động sản, v&agrave; (iii) tham gia v&agrave;o chuỗi cung ứng h&agrave;ng h&oacute;a. CHOLIMEX l&agrave; doanh nghiệp đầu ti&ecirc;n kinh doanh xuất nhập khẩu tại Việt Nam với mặt chủ yếu l&agrave; n&ocirc;ng sản, thực phẩm chế biến sẵn. Thị trường xuất khẩu ch&iacute;nh l&agrave; c&aacute;c nước ch&acirc;u &Acirc;u v&agrave; ch&acirc;u &Aacute;. Năm 2017, cổ phiếu CLX ch&iacute;nh thức được giao dịch tại thị trường Upcom.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Đầu tư Tài chính Nhà nước Thành phố Hồ Chí Minh",
+      "percentage": 0.49
+    },
+    {
+      "name": "Công ty Cổ phần Transimex",
+      "percentage": 0.2811
+    },
+    {
+      "name": "Công Ty CP Dịch Vụ Văn Hóa Việt",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Công ty Cổ Phần Hàng Hải Macs",
+      "percentage": 0.0059
+    },
+    {
+      "name": "Diệp Nam Hải",
+      "percentage": 0.0021353
+    },
+    {
+      "name": "Huỳnh An Trung",
+      "percentage": 0.00147
+    },
+    {
+      "name": "Lê Duy Hiệp",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Võ Văn Thân",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Võ Văn Đầy",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Lưu Thanh Danh",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Trần Thị Thanh Nhàn",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Huỳnh Thị Yến Khanh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Hồng Khoa",
+      "percentage": 0.000078
+    },
+    {
+      "name": "Huỳnh Văn Nẫu",
+      "percentage": 0.00004
+    }
+  ],
+  "officers": [
+    {
+      "name": "Huỳnh An Trung",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00147
+    },
+    {
+      "name": "Lê Duy Hiệp",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Võ Văn Thân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Võ Văn Đầy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Lưu Thanh Danh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Trần Thị Thanh Nhàn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Lê Thị Hồng Khoa",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.000078
+    },
+    {
+      "name": "Lê Văn Hùng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Thanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Quỳnh Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Nguyệt Hằng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Minh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Tuấn Ngọc",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:12.467776Z"
+}

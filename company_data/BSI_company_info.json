@@ -1,0 +1,137 @@
+{
+  "symbol": "BSI",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10317637903150.0,
+  "current_price": 42050.0,
+  "outstanding_shares": 245365943,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n BIDV (BSI) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Chứng kho&aacute;n Ng&acirc;n h&agrave;ng Đầu tư v&agrave; Ph&aacute;t triển Việt Nam, được th&agrave;nh lập v&agrave;o năm 1999.&nbsp;BSI được Ủy ban Chứng kho&aacute;n Nh&agrave; nước cấp giấy ph&eacute;p hoạt động ở đầy đủ mọi lĩnh vực trong kinh doanh chứng kho&aacute;n: m&ocirc;i giới chứng kho&aacute;n, tự doanh, bảo l&atilde;nh ph&aacute;t h&agrave;nh, lưu k&yacute; chứng kho&aacute;n, tư vấn t&agrave;i ch&iacute;nh v&agrave; đầu tư chứng kho&aacute;n.&nbsp;Trong năm 2024, C&ocirc;ng ty&nbsp;đứng vị tr&iacute; thứ 7 với 3.24% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HNX v&agrave;&nbsp;vị tr&iacute; thứ 10 với 3.07% thị phần m&ocirc;i giới cổ phiếu đăng k&yacute; giao dịch tr&ecirc;n thị trường UPCOM. Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 298,87 tỷ đồng, tăng 4.49% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 99.91%, tăng 11.39%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 239,05 tỷ đồng, giảm 7.08% v&agrave; đ&oacute;ng g&oacute;p 27.63 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 515,69 tỷ đồng, tăng 1.3%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 8.48%, giảm 0.55%.&nbsp;BSI được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) v&agrave;o năm 2011.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam",
+      "percentage": 0.5196
+    },
+    {
+      "name": "Công ty TNHH Chứng Khoán Hana",
+      "percentage": 0.3501
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0206
+    },
+    {
+      "name": "Lưu Diễm Cầm",
+      "percentage": 0.0003385317
+    },
+    {
+      "name": "Lê Phương Lan",
+      "percentage": 0.0002945
+    },
+    {
+      "name": "Bùi Thị Hòa",
+      "percentage": 0.0001156069
+    },
+    {
+      "name": "Trần Thị Thu Thanh",
+      "percentage": 0.00011124
+    },
+    {
+      "name": "Đỗ Huy Hoài",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Nguyễn Văn Thắng",
+      "percentage": 0.0000104046
+    },
+    {
+      "name": "Lê Hồng Nhung",
+      "percentage": 6.4855e-6
+    },
+    {
+      "name": "NGUYỄN THANH HUYỀN",
+      "percentage": 2e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Huy Hoài",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000022
+    },
+    {
+      "name": "NGUYỄN THANH HUYỀN",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 2e-8
+    },
+    {
+      "name": "Lê Phương Thủy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Minh Trang",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thanh Bình",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Đào Nguyên",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương  Hải Đăng",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Văn Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Viết Đỉnh",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Duy Viễn",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thị Phong Lan",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Xuân Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quang Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Diệp",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Minh  Châu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:31.681977Z"
+}

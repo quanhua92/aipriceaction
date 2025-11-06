@@ -1,0 +1,187 @@
+{
+  "symbol": "MIG",
+  "exchange": "HOSE",
+  "industry": "Bảo hiểm phi nhân thọ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3775336814550.0,
+  "current_price": 17850.0,
+  "outstanding_shares": 211503463,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng c&ocirc;ng ty Cổ phần Bảo hiểm Qu&acirc;n đội (MIG) được th&agrave;nh lập v&agrave;o năm 2011, c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty bảo hiểm qu&acirc;n đội với vai tr&ograve; ch&iacute;nh l&agrave; một đơn vị bảo hiểm phục vụ cho c&aacute;c đơn vị thuộc Bộ quốc ph&ograve;ng. Sau khi chuyển đổi m&ocirc; h&igrave;nh tổ chức th&agrave;nh Tổng c&ocirc;ng ty Cổ phần v&agrave;o năm 2011, MIC đ&atilde; đẩy mạnh phục vụ c&aacute;c kh&aacute;ch h&agrave;ng doanh nghiệp v&agrave; c&aacute; nh&acirc;n thuộc mọi th&agrave;nh phần kinh tế. MIG được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh từ th&aacute;ng 12/2020.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Quân đội",
+      "percentage": 0.6768
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0992
+    },
+    {
+      "name": "Tổng Công ty Xây Dựng Trường Sơn",
+      "percentage": 0.0459
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư MB",
+      "percentage": 0.0145
+    },
+    {
+      "name": "Phan Phương Anh",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Nguyễn Quang Hiện",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Đức Tuấn",
+      "percentage": 0.001
+    },
+    {
+      "name": "Hoàng Thị Hiền",
+      "percentage": 0.000975
+    },
+    {
+      "name": "Nguyễn Thị Thảo",
+      "percentage": 0.000975
+    },
+    {
+      "name": "Lê Như Hải",
+      "percentage": 0.00092
+    },
+    {
+      "name": "Đặng Quốc Tiến",
+      "percentage": 0.000819
+    },
+    {
+      "name": "Dư Cao Sơn",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Đinh Như Tuynh",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Công Đoàn Tổng Công ty Cổ Phần Bảo Hiểm Quân Đội",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Chử Xuân Bằng",
+      "percentage": 0.000353
+    },
+    {
+      "name": "Ngô Bích Ngọc",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Lê Thị Thanh Hải",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Nguyễn Thị Phương Thúy",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Dương Thị Thanh Nga",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Thị Hải Yến",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Uông Đông Hưng",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Hoàng Thị Tuyết Mai",
+      "percentage": 0.000033
+    },
+    {
+      "name": "Trần Thị Mỹ Châu",
+      "percentage": 0.000024
+    },
+    {
+      "name": "Phạm Trung Dũng",
+      "percentage": 0.000011
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Thủy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Đức Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001
+    },
+    {
+      "name": "Lê Như Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00092
+    },
+    {
+      "name": "Đặng Quốc Tiến",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.000819
+    },
+    {
+      "name": "Dư Cao Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Đinh Như Tuynh",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Ngô Bích Ngọc",
+      "position": "Phụ trách Công bố thông tin/Phó Tổng Giám đốc/Giám đốc Tài chính",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Lê Thị Thanh Hải",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Nguyễn Thị Phương Thúy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Hoàng Thị Tuyết Mai",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000033
+    },
+    {
+      "name": "Phạm Trung Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Vũ Hồng Phú",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Hồng Thúy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:22.608701Z"
+}

@@ -1,0 +1,249 @@
+{
+  "symbol": "MSN",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 115962419651400.0,
+  "current_price": 80200.0,
+  "outstanding_shares": 1445915457,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n Masan (MSN) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần H&agrave;ng hải Ma San được th&agrave;nh lập v&agrave;o năm 2004. MSN l&agrave; c&ocirc;ng ty quản l&yacute; vốn đầu tư v&agrave; t&agrave;i sản, chủ yếu l&agrave; c&aacute;c cổ phần của những c&ocirc;ng ty kh&aacute;c, hiện nay bao gồm cổ phần của C&ocirc;ng ty Cổ phần Thực phẩm Ma San (Masan Food) v&agrave; Ng&acirc;n h&agrave;ng Thương mại cổ phần Kỹ thương Việt Nam (Techcombank). MSN&nbsp;l&agrave; nh&agrave; cung cấp&nbsp;vonfram v&agrave; bismut lớn nhất b&ecirc;n ngo&agrave;i&nbsp;Trung Quốc v&agrave; nh&agrave; cung cấp đơn nhất về florit cấp axit lớn thứ 2 b&ecirc;n ngo&agrave;i Trung Quốc. MSN l&agrave; c&ocirc;ng ty sản xuất đạm động vật lớn nhất Việt Nam sở hữu thương hiệu Bio-zeem, dẫn đầu trong lĩnh vực thức ăn chăn nu&ocirc;i. C&ocirc;ng ty nắm giữ vị thế thống lĩnh trong hầu hết c&aacute;c thị trường, c&aacute;c ng&agrave;nh h&agrave;ng ti&ecirc;u d&ugrave;ng&nbsp;m&agrave; C&ocirc;ng ty tham gia cạnh tranh. MSN được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh từ cuối năm 2009.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công Ty Cổ Phần Masan",
+      "percentage": 0.31027
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Xây Dựng Hoa Hướng Dương",
+      "percentage": 0.13146
+    },
+    {
+      "name": "BankInvest Private Equity New Markets II K/S",
+      "percentage": 0.05760036
+    },
+    {
+      "name": "Sk Investment Vina I Pte. Ltd.",
+      "percentage": 0.0367
+    },
+    {
+      "name": "Ardolis Investment Pte Ltd",
+      "percentage": 0.0276
+    },
+    {
+      "name": "Government Of Singapore",
+      "percentage": 0.0221
+    },
+    {
+      "name": "PENM III Germany GmbH & Co. KG",
+      "percentage": 0.0214
+    },
+    {
+      "name": "MRC Limited",
+      "percentage": 0.0156
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0141099
+    },
+    {
+      "name": "Công ty Cổ phần Xăng dầu HFC",
+      "percentage": 0.01205275
+    },
+    {
+      "name": "Favour Sea Holdings Limited",
+      "percentage": 0.01070953
+    },
+    {
+      "name": "Madhur Maini",
+      "percentage": 0.0088357334
+    },
+    {
+      "name": "Vietnam Resouce Investments (Cayman) Limited",
+      "percentage": 0.00712314
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.007
+    },
+    {
+      "name": "Nguyễn Yến Linh",
+      "percentage": 0.00590732
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thủy",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Công ty Tài Chính Quốc Tế",
+      "percentage": 0.00415968
+    },
+    {
+      "name": "Danny Le",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Michael Hùng Nguyễn",
+      "percentage": 0.00242
+    },
+    {
+      "name": "Nguyễn Thiều Quang",
+      "percentage": 0.00187265
+    },
+    {
+      "name": "Dragon Capital Markets Limited",
+      "percentage": 0.00126615
+    },
+    {
+      "name": "Phùng Minh Nguyệt",
+      "percentage": 0.00075557
+    },
+    {
+      "name": "Nguyễn Anh Nguyên",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Thiều Nam",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Trần Quang Chúc",
+      "percentage": 0.0004025616
+    },
+    {
+      "name": "Phạm Đình Toại",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Phương Bắc",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Nguyễn Huy Hùng",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Đặng Thị Bình An",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.00008623
+    },
+    {
+      "name": "Trần Thị Minh Nguyệt",
+      "percentage": 0.0000803516
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00007622
+    },
+    {
+      "name": "Nguyễn Thu Hiền",
+      "percentage": 0.0000669596
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00004039
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00002566
+    },
+    {
+      "name": "Đoàn Thị Mỹ Duyên",
+      "percentage": 0.0000227662
+    },
+    {
+      "name": "Đỗ Thị Quỳnh Trang",
+      "percentage": 0.0000175
+    },
+    {
+      "name": "Đặng Ngọc Cả",
+      "percentage": 6.3209e-6
+    },
+    {
+      "name": "Tạ Thị Thùy Trang",
+      "percentage": 2.2766e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0336
+    },
+    {
+      "name": "Danny Le",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Michael Hùng Nguyễn",
+      "position": "Giám đốc Tài chính/Phó Tổng Giám đốc",
+      "percentage": 0.00242
+    },
+    {
+      "name": "Nguyễn Quỳnh Lâm",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00145
+    },
+    {
+      "name": "Đoàn Thị Mỹ Duyên",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Nguyễn Thiều Nam",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Phạm Đình Toại",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Phương Bắc",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00023
+    },
+    {
+      "name": "David Tan Wei Ming",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Woncheol Park",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đăng Quang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Thúy Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đoan Hùng",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:35.614124Z"
+}

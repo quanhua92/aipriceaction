@@ -1,0 +1,173 @@
+{
+  "symbol": "ACG",
+  "exchange": "HOSE",
+  "industry": "Lâm nghiệp và Giấy",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 5481141837100.0,
+  "current_price": 36350.0,
+  "outstanding_shares": 150787946,
+  "company_profile": "<p>C&ocirc;ng ty Cổ phần Gỗ An Cường (ACG), tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Thương mại An Cường, được th&agrave;nh lập năm 1994. ACG l&agrave; nh&agrave; sản xuất cung cấp&nbsp;nguy&ecirc;n vật liệu trang tr&iacute; nội thất v&agrave; vật liệu d&eacute;cor tại Việt Nam v&agrave; xuất khẩu nội thất tại Nhật Bản, Đ&ocirc;ng Nam &Aacute;, Mỹ v&agrave; ch&acirc;u &Acirc;u. C&aacute;c d&ograve;ng vật liệu từ gỗ c&ocirc;ng nghiệp của ACG như v&aacute;n MFC, Melamine MDF, Laminate, Acrylic, Veneer, cửa gỗ c&ocirc;ng nghiệp v&agrave; c&aacute;c phụ phẩm được ứng dụng trong thiết kế v&agrave; trang tr&iacute; nội thất cho nh&agrave; ở, chung cư, trường học,&nbsp;bệnh viện,&nbsp;si&ecirc;u thị, nội thất văn ph&ograve;ng, trần, v&aacute;ch toilet, cửa đi, v&aacute;n s&agrave;n ...&nbsp;Hiện nay, ACG c&oacute; 23 showroom tr&ecirc;n to&agrave;n quốc c&ugrave;ng với hệ thống&nbsp;đại diện nước ngo&agrave;i tại Cambodia, Malaysia, Nhật Bản, Canada, Mỹ, &Uacute;c. ACG hiện nắm giữ hơn 55% thị phần vật liệu trang tr&iacute; nội thất v&agrave; vật liệu d&eacute;cor thuộc ph&acirc;n kh&uacute;c tầm trung v&agrave; cao cấp tại Việt Nam (Theo B&aacute;o c&aacute;o thường ni&ecirc;n 2020 của ACG).&nbsp;</p>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Đầu Tư Nc Việt Nam",
+      "percentage": 0.5005
+    },
+    {
+      "name": "Sumitomo Forestry Co., Ltd",
+      "percentage": 0.1961
+    },
+    {
+      "name": "Whitlam Holding Pte.ltd",
+      "percentage": 0.1807
+    },
+    {
+      "name": "Nguyễn Minh Tuấn",
+      "percentage": 0.0198
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Lê Thị Kim Cúc",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Nguyễn Thị Kim Thoa",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Võ Thị Ngọc Ánh",
+      "percentage": 0.002
+    },
+    {
+      "name": "Lê Đức Nghĩa",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Lê Thanh Phong",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Thị Hảo",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.000883
+    },
+    {
+      "name": "Lê Đức Hiếu",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lê Ngọc Vân Anh",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Trần Thị Kim Anh",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Thiều Thị Ngọc Diễm",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Lương Thanh Tùng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Ngô Tấn Trí",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Huỳnh Văn Nhân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Thị Ngọc Tuệ",
+      "percentage": 0.0001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Minh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0198
+    },
+    {
+      "name": "Võ Thị Ngọc Ánh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.002
+    },
+    {
+      "name": "Lê Đức Nghĩa",
+      "position": "Chủ tịch Hội đồng Thành viên",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Thị Hảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Lê Thanh Phong",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Thiều Thị Ngọc Diễm",
+      "position": "Khác",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Lương Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Ngô Tấn Trí",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Huỳnh Văn Nhân",
+      "position": "Trưởng phòng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Duyên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Diệu Phương",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Jess Rueloekke",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Thị Phương Thảo",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Kim Thoa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kamibayashiyama Masao",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:26.162675Z"
+}

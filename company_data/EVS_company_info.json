@@ -1,0 +1,123 @@
+{
+  "symbol": "EVS",
+  "exchange": "HNX",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1005283769800.0,
+  "current_price": 6100.0,
+  "outstanding_shares": 164800618,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n EVS (EVS)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Đại Dương, được th&agrave;nh lập v&agrave;o năm 2006.&nbsp;C&ocirc;ng ty&nbsp;cung cấp&nbsp;tất cả c&aacute;c dịch vụ li&ecirc;n quan đến chứng kho&aacute;n cơ bản bao gồm: m&ocirc;i giới, bảo l&atilde;nh ph&aacute;t h&agrave;nh, lưu k&yacute; chứng kho&aacute;n, tự doanh chứng kho&aacute;n, đầu tư v&agrave; tư vấn t&agrave;i ch&iacute;nh. EVS trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ năm 2018.&nbsp;Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 20,56 tỷ đồng, giảm 22.8% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 10.33%, tăng 2.84%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 113,99 tỷ đồng, giảm 12.14%. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 21,32 tỷ đồng. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 0.88%, giảm 0.84%. EVS được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ th&aacute;ng 05/2019.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "VŨ MẠNH TIẾN",
+      "percentage": 0.0971
+    },
+    {
+      "name": "Phạm Ninh Hải",
+      "percentage": 0.075
+    },
+    {
+      "name": "Ngân hàng TM TNHH MTV Việt Nam Hiện đại",
+      "percentage": 0.055
+    },
+    {
+      "name": "Nguyễn Hải Châu",
+      "percentage": 0.0525
+    },
+    {
+      "name": "Nguyễn Hồng Tuấn",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Vũ Hải Anh",
+      "percentage": 0.0486
+    },
+    {
+      "name": "Quỹ Đầu tư Khám Phá Giá trị Ngân Hàng Công Thương Việt Nam",
+      "percentage": 0.0475
+    },
+    {
+      "name": "Bùi Việt Anh",
+      "percentage": 0.0468
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "percentage": 0.0413
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị Việt Nam",
+      "percentage": 0.03166
+    },
+    {
+      "name": "Trần Đình Lợi",
+      "percentage": 0.029
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "percentage": 0.0172333333
+    },
+    {
+      "name": "Nguyễn Thành Chung",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Ngô Thị Thu Hương",
+      "percentage": 0.00066
+    },
+    {
+      "name": "Công ty Cổ phần FIG",
+      "percentage": 0.00005
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Hải Châu",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0525
+    },
+    {
+      "name": "Nguyễn Thành Chung",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Ngô Thị Thu Hương",
+      "position": "Thành viên Hội đồng Quản trị/Phụ trách Công bố thông tin/Phó Tổng Giám đốc",
+      "percentage": 0.00066
+    },
+    {
+      "name": "Nguyễn Thị Hồng Ngọc",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Thị An",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Công Thiện",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Bích Hằng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lại Thị Sen",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Linh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:28.987515Z"
+}

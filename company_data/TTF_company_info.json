@@ -1,0 +1,251 @@
+{
+  "symbol": "TTF",
+  "exchange": "HOSE",
+  "industry": "Lâm nghiệp và Giấy",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1125548143720.0,
+  "current_price": 2860.0,
+  "outstanding_shares": 393548302,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n Kỹ nghệ Gỗ Trường Th&agrave;nh (TTF)&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Kỹ nghệ Gỗ Trường Th&agrave;nh th&agrave;nh lập năm 2000 v&agrave; chuyển th&agrave;nh c&ocirc;ng ty cổ phần năm 2003. Lĩnh vực kinh doanh ch&iacute;nh của c&ocirc;ng ty l&agrave; sản xuất v&agrave; kinh doanh c&aacute;c sản phẩm từ gỗ. Sản phẩm ch&iacute;nh của c&ocirc;ng ty được chia th&agrave;nh 4 nh&oacute;m sản phẩm: đồ gỗ nội thất, đồ gỗ ngoại thất, v&aacute;n s&agrave;n gỗ v&agrave; c&aacute;c sản phẩm kh&aacute;c như gỗ xẻ S4S, c&aacute;c chi tiết nhỏ bằng gỗ. Gỗ Trường Th&agrave;nh xuất khẩu khoảng 85% sản lượng sản phẩm gỗ đến hơn 30 quốc gia tr&ecirc;n to&agrave;n thế giới, cụ thể l&agrave; Ch&acirc;u &Acirc;u (Anh, Ph&aacute;p, &Yacute;, H&agrave; Lan, T&acirc;y Ban Nha), Nhật Bản, Hoa Kỳ, &Uacute;c. Đối với thị trường trong nước,c&ocirc;ng ty duy tr&igrave; được mạng lưới Đại l&yacute; cấp 1 v&agrave; cửa h&agrave;ng tự doanh tại Đ&agrave; Nẵng, Nha Trang, Bu&ocirc;n Ma Thuột, Đ&agrave; Lạt, Th&agrave;nh phố Hồ Ch&iacute; Minh, B&igrave;nh Dương, B&igrave;nh Phước, Vũng T&agrave;u v&agrave; Long Xuy&ecirc;n. Ng&agrave;y 18/02/2008, TTF ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đinh Thị Kim Dung",
+      "percentage": 0.0914
+    },
+    {
+      "name": "Công ty Cổ Phần Xây Dựng U&i",
+      "percentage": 0.0707
+    },
+    {
+      "name": "Nguyễn Thị Xuân",
+      "percentage": 0.0574147007
+    },
+    {
+      "name": "Võ Trường Thành",
+      "percentage": 0.0542
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0519
+    },
+    {
+      "name": "Excelsior Oak Limited",
+      "percentage": 0.0506
+    },
+    {
+      "name": "Phương Xuân Thụy",
+      "percentage": 0.0501764764
+    },
+    {
+      "name": "Công ty Cổ phần SAM Holdings",
+      "percentage": 0.0348
+    },
+    {
+      "name": "Công ty TNHH MTV Quản Lý Và Khai Thác Tài Sản Ngân Hàng Quốc Tế Việt Nam",
+      "percentage": 0.02855236
+    },
+    {
+      "name": "Diệp Thị Thu",
+      "percentage": 0.0280654
+    },
+    {
+      "name": "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI ĐỒNG TÂM",
+      "percentage": 0.02514
+    },
+    {
+      "name": "Bùi Hồng Minh",
+      "percentage": 0.0233
+    },
+    {
+      "name": "Vũ Xuân Dương",
+      "percentage": 0.0177876
+    },
+    {
+      "name": "DONGTAM PRODUCTION - CONSTRUCTION - TRADING COMPANY LIMITED",
+      "percentage": 0.01696
+    },
+    {
+      "name": "Mai Hữu Tín",
+      "percentage": 0.0133661
+    },
+    {
+      "name": "Đào Thụy Phương Thảo",
+      "percentage": 0.012705
+    },
+    {
+      "name": "Võ Quốc Lợi",
+      "percentage": 0.0110406
+    },
+    {
+      "name": "Quỹ Đầu Tư Việt Nam",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Liam Pius Cully",
+      "percentage": 0.0077607396
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán AGRIBANK",
+      "percentage": 0.00590686
+    },
+    {
+      "name": "AUREOS South East Asia Fund, L.L.C",
+      "percentage": 0.0056555
+    },
+    {
+      "name": "Công ty Cổ Phần Đồng Tâm Dotalia",
+      "percentage": 0.00556
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Dragon Capital Việt Nam",
+      "percentage": 0.00520787
+    },
+    {
+      "name": "Võ Diệp Văn Tuấn",
+      "percentage": 0.00463
+    },
+    {
+      "name": "Đoàn Thuỵ Diễm Huyền",
+      "percentage": 0.00276
+    },
+    {
+      "name": "Ngô Thị Hồng Thu",
+      "percentage": 0.0014276253
+    },
+    {
+      "name": "Công ty Cổ Phần Chế Biến Gỗ Trường Thành",
+      "percentage": 0.0010374
+    },
+    {
+      "name": "Nguyễn Trọng Hiếu",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Hồ Thị Minh Thảo",
+      "percentage": 0.0004532687
+    },
+    {
+      "name": "Phạm Thị Mỹ Hà",
+      "percentage": 0.0002712403
+    },
+    {
+      "name": "Nguyễn Đình Nghĩa",
+      "percentage": 0.0001522768
+    },
+    {
+      "name": "Huỳnh Phú Quốc",
+      "percentage": 0.0001434542
+    },
+    {
+      "name": "Phạm Thị Huyền Nga",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Phạm Thùy Vân Anh",
+      "percentage": 0.0000441134
+    },
+    {
+      "name": "Đinh Văn Hóa",
+      "percentage": 0.0000351907
+    },
+    {
+      "name": "Nguyễn Đặng Đình Nguyên",
+      "percentage": 0.0000306937
+    },
+    {
+      "name": "Đỗ Ngọc Nam",
+      "percentage": 0.0000270105
+    },
+    {
+      "name": "Lê Minh Ngọc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Mai Ngọc Hào",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Trần Lâm Thúy Quyên",
+      "percentage": 5.71e-8
+    },
+    {
+      "name": "Võ Diệp Cẩm Vân",
+      "percentage": 5e-8
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 2e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Xuân Dương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0177876
+    },
+    {
+      "name": "Mai Hữu Tín",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0133661
+    },
+    {
+      "name": "Võ Quốc Lợi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0110406
+    },
+    {
+      "name": "Nguyễn Trọng Hiếu",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị/Người phụ trách quản trị công ty",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Lê Minh Ngọc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Dương Quốc Nam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Giáp",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Anh Tú",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Hồng Hoàng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hiền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Trung",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Ngọc",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Thanh Bình",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:07.529338Z"
+}

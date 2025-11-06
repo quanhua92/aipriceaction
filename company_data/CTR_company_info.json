@@ -1,0 +1,176 @@
+{
+  "symbol": "CTR",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10351922049500.0,
+  "current_price": 90500.0,
+  "outstanding_shares": 114385879,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Cổ phần C&ocirc;ng tr&igrave;nh Viettel (CTR), một c&ocirc;ng ty con của Tập đo&agrave;n Viễn th&ocirc;ng qu&acirc;n đội - Viettel Group, l&agrave; c&ocirc;ng ty lớn trong lĩnh vực x&acirc;y dựng. C&ocirc;ng ty v&agrave; c&aacute;c c&ocirc;ng ty&nbsp;trực thuộc chủ yếu l&agrave; tham gia v&agrave;o x&acirc;y dựng cơ sở hạ tầng viễn th&ocirc;ng. CTR ch&iacute;nh thức hoạt động dưới h&igrave;nh thức c&ocirc;ng ty cổ phần từ năm 2010.&nbsp;Tại thị trường trong nước, c&ocirc;ng ty đ&atilde; tiến h&agrave;nh thi c&ocirc;ng gần 50% tổng số dự &aacute;n viễn th&ocirc;ng được ph&acirc;n c&ocirc;ng từ Viettel Group v&agrave; c&oacute; kế hoạch mở rộng kinh doanh của m&igrave;nh tại lĩnh vực x&acirc;y dựng d&acirc;n dụng v&agrave; chế tạo cơ kh&iacute;. Ng&agrave;y 23/02/2022, CTR ch&iacute;nh thức giao dịch tr&ecirc;n Sở giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp - Viễn thông Quân đội",
+      "percentage": 0.6566
+    },
+    {
+      "name": "Đoàn Hồng Việt",
+      "percentage": 0.04995
+    },
+    {
+      "name": "Dương Quốc Chính",
+      "percentage": 0.005
+    },
+    {
+      "name": "HOÀNG CÔNG VĨNH",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Đặng Thị Quỳnh",
+      "percentage": 0.00201
+    },
+    {
+      "name": "Nguyễn Bá Nhiên",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Bùi Thế Hùng",
+      "percentage": 0.00106
+    },
+    {
+      "name": "Nguyễn Thái Hưng",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Lê Hữu Hiền",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Đào Thu Hiền",
+      "percentage": 0.0005621
+    },
+    {
+      "name": "Bùi Duy Bảo",
+      "percentage": 0.0004384
+    },
+    {
+      "name": "Nguyễn Huy Dũng",
+      "percentage": 0.0002816
+    },
+    {
+      "name": "Nguyễn Giang Sơn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Đình Trường",
+      "percentage": 0.0001778
+    },
+    {
+      "name": "Đỗ Mạnh Hùng",
+      "percentage": 0.0001184
+    },
+    {
+      "name": "Đặng Thị Kim Hoa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thanh Nam",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Tất Trường",
+      "percentage": 0.0000727
+    },
+    {
+      "name": "Ngô Quang Tuệ",
+      "percentage": 0.000044
+    },
+    {
+      "name": "Đặng Văn Chung",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Hữu Hùng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Thị Mai",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Thế Hùng",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00106
+    },
+    {
+      "name": "Lê Hữu Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Nguyễn Thái Hưng",
+      "position": "Phó Giám đốc",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Đào Thu Hiền",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0005621
+    },
+    {
+      "name": "Bùi Duy Bảo",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0004384
+    },
+    {
+      "name": "Nguyễn Huy Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002816
+    },
+    {
+      "name": "Phạm Đình Trường",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0001778
+    },
+    {
+      "name": "Nguyễn Thanh Nam",
+      "position": "Thành viên Hội đồng Quản trị/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Tất Trường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000727
+    },
+    {
+      "name": "Ngô Quang Tuệ",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.000044
+    },
+    {
+      "name": "Mai Thị Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Hồng Quân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nghiêm Phương Nhi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Ánh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:45.253946Z"
+}

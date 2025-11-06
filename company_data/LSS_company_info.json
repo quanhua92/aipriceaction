@@ -1,0 +1,262 @@
+{
+  "symbol": "LSS",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 819689915880.0,
+  "current_price": 9560.0,
+  "outstanding_shares": 85741623,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ Phần M&iacute;a Đường Lam Sơn (LSS) tiền th&acirc;n l&agrave; nh&agrave; m&aacute;y Đường Lam Sơn th&agrave;nh lập năm 1980. Năm 1999, C&ocirc;ng ty thực hiện cổ phần h&oacute;a v&agrave; đổi t&ecirc;n th&agrave;nh C&ocirc;ng ty Cổ phần M&iacute;a đường Lam Sơn. Hoạt động sản xuất kinh doanh ch&iacute;nh của Lasuco l&agrave; sản xuất đường, c&aacute;c sản phẩm n&ocirc;ng nghiệp c&ocirc;ng nghệ cao v&agrave; điện. C&ocirc;ng ty c&oacute; v&ugrave;ng nguy&ecirc;n liệu ổn định rộng nằm tr&ecirc;n khu vực rộng hơn 15.300 ha. C&ocirc;ng ty hiện&nbsp;sở hữu 2 nh&agrave; m&aacute;y đường, 1 nh&agrave; m&aacute;y điện, 1 x&iacute; nghiệp cơ kh&iacute; v&agrave; nh&agrave; m&aacute;y Lavina Food.&nbsp;Với v&ugrave;ng nguy&ecirc;n liệu m&iacute;a ổn định nằm tại c&aacute;c huyện ph&iacute;a T&acirc;y tỉnh Thanh H&oacute;a với diện t&iacute;ch m&iacute;a h&agrave;ng năm từ 14.500 - 15.000 ha, sản lượng v&agrave; chất lượng m&iacute;a&nbsp;đạt năng suất b&igrave;nh qu&acirc;n vụ đạt khoảng 70 tấn/ha. Ng&agrave;y 09/01/2008, LSS ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hiệp Hội Mía Đường Lam Sơn",
+      "percentage": 0.2211
+    },
+    {
+      "name": "Công ty Cổ Phần Thương Mại Và Đầu Tư Thăng Long Hà Nội",
+      "percentage": 0.1048
+    },
+    {
+      "name": "Lê Trung Thành",
+      "percentage": 0.0567
+    },
+    {
+      "name": "Lê Văn Tân",
+      "percentage": 0.0505
+    },
+    {
+      "name": "Lê Thị Phương Linh",
+      "percentage": 0.037
+    },
+    {
+      "name": "Lê Văn Tiến",
+      "percentage": 0.0255
+    },
+    {
+      "name": "Red River Holding",
+      "percentage": 0.02498043
+    },
+    {
+      "name": "Lê Thị  Lộc",
+      "percentage": 0.02286
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán SBS",
+      "percentage": 0.020012
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Phát triển Tân Thành Đạt",
+      "percentage": 0.0181
+    },
+    {
+      "name": "Công ty Cổ phần Lam Sơn Như Xuân",
+      "percentage": 0.013
+    },
+    {
+      "name": "Công ty Cổ phần Sữa Lam Sơn",
+      "percentage": 0.01078781
+    },
+    {
+      "name": "Lê Thanh Tùng",
+      "percentage": 0.00802929
+    },
+    {
+      "name": "Lê Thu Thủy",
+      "percentage": 0.0065
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Việt Nam (VF2)",
+      "percentage": 0.00620557
+    },
+    {
+      "name": "Phùng Thị Tâm",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Sài Gòn Thương Tín",
+      "percentage": 0.003
+    },
+    {
+      "name": "Lê Thị Tiến",
+      "percentage": 0.00124
+    },
+    {
+      "name": "Lê Văn Thanh",
+      "percentage": 0.0010044571
+    },
+    {
+      "name": "Lê Văn Quang",
+      "percentage": 0.00095
+    },
+    {
+      "name": "Hà Đức Chính",
+      "percentage": 0.0007856
+    },
+    {
+      "name": "Trần Quốc Vinh",
+      "percentage": 0.0005553285
+    },
+    {
+      "name": "Lê Khắc Chung",
+      "percentage": 0.0005525
+    },
+    {
+      "name": "Bùi Xuân Sinh",
+      "percentage": 0.0004795714
+    },
+    {
+      "name": "Vũ Trung Thịnh",
+      "percentage": 0.0003767142
+    },
+    {
+      "name": "Đỗ Văn Mạnh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Văn Vinh",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Nguyễn Xuân Lam",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Nguyễn Văn Lâm",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Lê Thị Tình",
+      "percentage": 0.00012936
+    },
+    {
+      "name": "Phạm Văn Ngọc",
+      "percentage": 0.0001178571
+    },
+    {
+      "name": "Lê Huy Hùng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Văn Long",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Lê Đình Trường",
+      "percentage": 0.0000714285
+    },
+    {
+      "name": "Đỗ Thị Thanh Hà",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Phùng Thanh Hải",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Duy Thành",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Phạm Ngọc Quý",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Bùi Thị Thu Nga",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Lê Văn Phương",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Văn Huệ",
+      "percentage": 0.0000321428
+    },
+    {
+      "name": "Lê Bá Chiều",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Tuyết",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đặng Thế Giang",
+      "percentage": 9.2857e-6
+    },
+    {
+      "name": "LÊ THỊ HUỆ",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Thị Bích Hạnh",
+      "percentage": 1.7e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Trung Thành",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0567
+    },
+    {
+      "name": "Lê Văn Tân",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0505
+    },
+    {
+      "name": "Lê Văn Quang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00095
+    },
+    {
+      "name": "Nguyễn Xuân Lam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Lê Huy Hùng",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Thị Thanh Hà",
+      "position": "Kế toán trưởng/Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Phùng Thanh Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Duy Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Phạm Ngọc Quý",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Lê Bá Chiều",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thanh Tân",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Tam",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:02.434669Z"
+}

@@ -1,0 +1,149 @@
+{
+  "symbol": "AGR",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3641573576850.0,
+  "current_price": 15950.0,
+  "outstanding_shares": 228311823,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n AGRIBANK (AGR) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Chứng kho&aacute;n Ng&acirc;n h&agrave;ng N&ocirc;ng nghiệp v&agrave; Ph&aacute;t triển n&ocirc;ng th&ocirc;ng Việt Nam trực thuộc Ng&acirc;n h&agrave;ng N&ocirc;ng nghiệp v&agrave; Ph&aacute;t triển n&ocirc;ng th&ocirc;ng Việt Nam được th&agrave;nh lập v&agrave;o năm 2000. AGR hoạt động ch&iacute;nh trong lĩnh vực m&ocirc;i giới, tự doanh chứng kho&aacute;n, bảo l&atilde;nh ph&aacute;t h&agrave;nh, lưu k&yacute; chứng kho&aacute;n, tư vấn đầu tư, tư vấn t&agrave;i ch&iacute;nh, nhận uỷ th&aacute;c v&agrave; c&aacute;c dịch vụ t&agrave;i ch&iacute;nh kh&aacute;c. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 70.83 tỷ đồng, tăng 20.86% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 65.28%, tăng 11.49%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 19.39 tỷ đồng, tăng 36.27% v&agrave; đ&oacute;ng g&oacute;p 6.44 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 168.54 tỷ đồng, giảm 8.75%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 5.47%, giảm 0.46%.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ngân Hàng Nông Nghiệp Và Phát Triển Nông Thôn Việt Nam",
+      "percentage": 0.7492
+    },
+    {
+      "name": "Hà Huy Toàn",
+      "percentage": 0.01682365
+    },
+    {
+      "name": "Nguyễn Kim Hậu",
+      "percentage": 0.0036027706
+    },
+    {
+      "name": "Vũ Thị Thúy Hà",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Phạm Văn Thành",
+      "percentage": 0.00023674
+    },
+    {
+      "name": "Phan Văn Hiệp",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Thị Cảnh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Mai Thị Thủy",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đinh Thị Hiền",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Xuân Toán",
+      "percentage": 0.0000167282
+    },
+    {
+      "name": "Lê Xuân Sơn",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Ngô Thị Hoàng Nga",
+      "percentage": 5.82e-6
+    },
+    {
+      "name": "Dương Sơn Tùng",
+      "percentage": 2.1875e-6
+    },
+    {
+      "name": "Lê Bích Thảo",
+      "percentage": 5e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Thị Hiền",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thăng Long",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Ngọc Phương",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị độc lập/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Khắc Chinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quang Sự",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Hồng Thu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Hạnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Nhung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Thái Anh Sơn",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Sơn Tùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Văn Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Đức Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tăng Thị Trinh",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Lan",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hương Giang",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:39.183814Z"
+}

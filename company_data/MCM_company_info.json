@@ -1,0 +1,124 @@
+{
+  "symbol": "MCM",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3025000000000.0,
+  "current_price": 27500.0,
+  "outstanding_shares": 110000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Giống b&ograve; sữa Mộc Ch&acirc;u (MCM) c&oacute; tiền th&acirc;n l&agrave; N&ocirc;ng trường Qu&acirc;n đội Mộc Ch&acirc;u&nbsp;được th&agrave;nh lập v&agrave;o&nbsp;năm 1958. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực chăn nu&ocirc;i b&ograve; sữa, cung cấp con giống b&ograve; sữa, sản xuất chế biến c&aacute;c sản phẩm từ sữa v&agrave; sản xuất thức ăn chăn nu&ocirc;i.&nbsp;C&ocirc;ng ty ph&aacute;t triển c&aacute;c sản phẩm sữa tươi, sữa chua tiệt tr&ugrave;ng mang thương hiệu Mộc Ch&acirc;u. Hiện nay, Mộc Ch&acirc;u Milk đang khai th&aacute;c ở c&aacute;c thi trường khu vực T&acirc;y Bắc, Đ&ocirc;ng Bắc, Đồng bằng s&ocirc;ng Hồng, H&agrave; Nội v&agrave; c&aacute;c th&agrave;nh phố l&acirc;n cận, Miền Trung v&agrave; T&acirc;y Nguy&ecirc;n. Ng&agrave;y 25/06/2024, MCM ch&iacute;nh thức giao dịch tr&ecirc;n Sở giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Chăn nuôi Việt Nam - Công ty Cổ phần",
+      "percentage": 0.593
+    },
+    {
+      "name": "Công ty Cổ phần Sữa Việt Nam",
+      "percentage": 0.0885
+    },
+    {
+      "name": "Nguyễn Sỹ Quang",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Lê Thị Lệ",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn Anh Tú",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Phạm Hải Nam",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phạm Quang Thùy",
+      "percentage": 0.001
+    },
+    {
+      "name": "Phạm Lê Hùng",
+      "percentage": 0.0002
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Sỹ Quang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Nguyễn Anh Tú",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Phạm Hải Nam",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phạm Quang Thùy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trần Mạnh Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Kiều Liên",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Công Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Quốc Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Huy Bích",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Tuyên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Duy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Trí",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Tuyên Dương",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:14.136581Z"
+}

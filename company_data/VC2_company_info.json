@@ -1,0 +1,212 @@
+{
+  "symbol": "VC2",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 467631988000.0,
+  "current_price": 6800.0,
+  "outstanding_shares": 68769410,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Đầu tư v&agrave; X&acirc;y dựng Vina 2 (VC2) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty X&acirc;y dựng Xu&acirc;n Ho&agrave;, được th&agrave;nh lập năm 1970.&nbsp;C&ocirc;ng ty hoạt&nbsp;động&nbsp;ch&iacute;nh trong lĩnh vực x&acirc;y dựng c&aacute;c c&ocirc;ng tr&igrave;nh d&acirc;n dụng v&agrave; c&ocirc;ng nghiệp, v&agrave; kinh doanh bất động sản. VC2 ch&iacute;nh thức hoạt động dưới h&igrave;nh thức c&ocirc;ng ty cổ phần từ th&aacute;ng 10/2003. Trong VC2 đ&atilde; tham gia thực hiện c&aacute;c dự&nbsp;&aacute;n x&acirc;y dựng d&acirc;n dụng như&nbsp;Kho bạc Nh&agrave; Nước, Grand Plaza Hotel Hanoi, Khoa&nbsp;A11&nbsp;-&nbsp; Bệnh viện Qu&acirc;n Y 108, Viện Huyết học v&agrave; Truyền m&aacute;u Trung Ương,&nbsp;&nbsp;Trường chuy&ecirc;n Amsterdam, Trung t&acirc;m Thương mại Vĩnh Ph&uacute;c, Savico Plaza Hanoi (Block B), Trung t&acirc;m Marketing Bắc An Kh&aacute;nh. Trong lĩnh vực x&acirc;y dựng c&ocirc;ng nghiệp, một số dự &aacute;n C&ocirc;ng ty đ&atilde; tham gia l&agrave;&nbsp;Nh&agrave; m&aacute;y Mabuchi Motor Đ&agrave; Nẵng, Nh&agrave; m&aacute;y Brother Hải Dương, Nh&agrave; m&aacute;t Fuji Xerox Hải Ph&ograve;ng, Nh&agrave; m&aacute;y Honda H&agrave; Nam, v&agrave; c&aacute;c dự &aacute;n s&acirc;n bay tại S&acirc;n bay Quốc tế Nội B&agrave;i. Ng&agrave;y 11/12/2006, VC2 ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Đầu tư MST",
+      "percentage": 0.3616
+    },
+    {
+      "name": "Đỗ Trọng Quỳnh",
+      "percentage": 0.0526
+    },
+    {
+      "name": "Quỹ Đầu tư Chứng Khoán Năng động DC",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Đỗ Thị Quyên",
+      "percentage": 0.042
+    },
+    {
+      "name": "Đỗ Thị Minh",
+      "percentage": 0.0343
+    },
+    {
+      "name": "Tạ Ngọc Phúc",
+      "percentage": 0.028
+    },
+    {
+      "name": "Trần Ngọc Long",
+      "percentage": 0.0114
+    },
+    {
+      "name": "Nguyễn Quang Lân",
+      "percentage": 0.011
+    },
+    {
+      "name": "Vũ Quý Hà",
+      "percentage": 0.0063282
+    },
+    {
+      "name": "Lò Hồng Hiệp",
+      "percentage": 0.0047
+    },
+    {
+      "name": "VŨ TRỌNG HÙNG",
+      "percentage": 0.0042
+    },
+    {
+      "name": "NGUYỄN ĐĂNG GÔ GANH",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Trịnh Văn Hưng",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Nguyễn Quang Nguyên",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Phạm Thị Liên",
+      "percentage": 0.0035498116
+    },
+    {
+      "name": "HOÀNG VIỆT THANH",
+      "percentage": 0.0035
+    },
+    {
+      "name": "QUÁCH BÁ VƯƠNG",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Trần Đăng Lợi",
+      "percentage": 0.0021684
+    },
+    {
+      "name": "Trịnh Thị Hồng",
+      "percentage": 0.0010258981
+    },
+    {
+      "name": "Vũ Duy Long",
+      "percentage": 0.0007954861
+    },
+    {
+      "name": "Nguyễn Thùy Chung",
+      "percentage": 0.0007490497
+    },
+    {
+      "name": "Đỗ Bảo Hưng",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đặng Thanh Huấn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phan Vũ Anh",
+      "percentage": 0.0001519505
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hằng",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Vũ Anh Tuấn",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Đỗ Trọng Huân",
+      "percentage": 0.000046
+    },
+    {
+      "name": "Nguyễn Văn Chính",
+      "percentage": 0.000034
+    },
+    {
+      "name": "Trần Xuân Trường",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Nguyễn Cường",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Lê Thị Tuyết Anh",
+      "percentage": 7e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Trọng Quỳnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0526
+    },
+    {
+      "name": "NGUYỄN ĐĂNG GÔ GANH",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Trịnh Văn Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Nguyễn Việt Cường",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hằng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Đỗ Trọng Huân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000046
+    },
+    {
+      "name": "Nguyễn Văn Chính",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000034
+    },
+    {
+      "name": "Trần Xuân Trường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Nguyễn Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Lê Thị Tuyết Anh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Nguyễn Thanh Tuyên",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Việt Hậu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Huy Quang",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Quang Việt",
+      "position": "Giám đốc Tài chính/Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:25.998982Z"
+}

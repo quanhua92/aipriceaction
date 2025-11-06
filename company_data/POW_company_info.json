@@ -1,0 +1,279 @@
+{
+  "symbol": "POW",
+  "exchange": "HOSE",
+  "industry": "Sản xuất & Phân phối Điện",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 34425512520000.0,
+  "current_price": 14700.0,
+  "outstanding_shares": 2341871600,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Điện lực Dầu kh&iacute; Việt Nam (POW)&nbsp;được th&agrave;nh lập v&agrave;o năm&nbsp;2007 theo Quyết định 1468/QĐ-DKVN của Hội đồng quản trị Tập đo&agrave;n Dầu kh&iacute; Quốc gia Việt Nam. Tổng C&ocirc;ng ty&nbsp;hoạt động ch&iacute;nh trong lĩnh vực sản xuất, truyền tải, kinh doanh, xuất nhập khẩu điện năng. Tổng C&ocirc;ng ty ch&iacute;nh thức hoạt&nbsp;động theo m&ocirc; h&igrave;nh&nbsp;c&ocirc;ng ty cổ phần từ th&aacute;ng 07/2018. PV Power đang quản l&yacute; vận h&agrave;nh 7&nbsp;Nh&agrave; m&aacute;y điện với tổng c&ocirc;ng suất lắp đặt l&agrave; 4205&nbsp;MW, gồm điện kh&iacute;, than v&agrave; thủy điện. H&agrave;ng năm PV Power cung cấp l&ecirc;n lưới điện Quốc gia khoảng 21 tỷ Kwh, chiếm 13-15% sản lượng điện thương phẩm Quốc gia, đứng vị tr&iacute; thứ 2 sau Tập đo&agrave;n Điện lực Việt Nam. PV Power được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 03/2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.7994
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.02513658
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.012678
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.007082
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.005216
+    },
+    {
+      "name": "Vela SPC Ltd",
+      "percentage": 0.00493
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.004551
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.003547
+    },
+    {
+      "name": "Auriga SPC Ltd",
+      "percentage": 0.00282
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.00282
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị Bảo Việt",
+      "percentage": 0.00213504
+    },
+    {
+      "name": "Quena Ltd",
+      "percentage": 0.002007
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.001612
+    },
+    {
+      "name": "Danang Investments Limited",
+      "percentage": 0.00161
+    },
+    {
+      "name": "Melodica Ltd",
+      "percentage": 0.00159
+    },
+    {
+      "name": "Viola Ltd",
+      "percentage": 0.0011
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.001093
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.00041
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0002457906
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 0.0002047935
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 0.00017041
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0001579933
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu Bảo Việt",
+      "percentage": 0.00015799
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000380849
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00003544
+    },
+    {
+      "name": "Hồ Công Kỳ",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Vũ Huy An",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Bích",
+      "percentage": 0.000018
+    },
+    {
+      "name": "Hoàng Văn Nghiệp",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Phạm Xuân Trường",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Duy Giang",
+      "percentage": 9.4e-6
+    },
+    {
+      "name": "Trương Văn Thục",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Nguyễn Ngọc Hà",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Phan Đại Thành",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Ngô Văn Chiến",
+      "percentage": 2.8e-6
+    },
+    {
+      "name": "Vũ Thị Ngọc Dung",
+      "percentage": 2.2e-6
+    },
+    {
+      "name": "Nguyễn Hữu Quý",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Võ Thị Tú Oanh",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Lý Thị Thu Hương",
+      "percentage": 2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Công Kỳ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Bích",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000018
+    },
+    {
+      "name": "Phạm Xuân Trường",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Duy Giang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 9.4e-6
+    },
+    {
+      "name": "Vũ Thị Ngọc Dung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 2.2e-6
+    },
+    {
+      "name": "Lý Thị Thu Hương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Vũ Chí Cường",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Thị Thu Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Đạo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Tố Nga",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Thị Minh Nguyệt",
+      "position": "Phó Tổng Giám đốc/Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chu Quang Toản",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Kiên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Ngọc Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Như Linh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Quốc Hải",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Mạnh Tưởng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Thi",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Minh Nghĩa",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:26.423899Z"
+}

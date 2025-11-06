@@ -1,0 +1,229 @@
+{
+  "symbol": "VGC",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 21027615000000.0,
+  "current_price": 46900.0,
+  "outstanding_shares": 448350000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Viglacera (VGC) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Gạch ng&oacute;i S&agrave;nh sứ X&acirc;y Dựng,&nbsp;được th&agrave;nh lập v&agrave;o&nbsp;năm 1974. VGC ch&iacute;nh thức hoạt&nbsp;động&nbsp;dưới h&igrave;nh thức c&ocirc;ng ty cổ phần v&agrave;o&nbsp;ng&agrave;y&nbsp;22/07/2014. Hoạt động kinh doanh chủ yếu của c&ocirc;ng ty gồm: (i) Đầu tư, x&acirc;y dựng, kinh doanh ph&aacute;t triển nh&agrave; ở, bất động sản; v&agrave; (ii) Sản xuất v&agrave; kinh doanh vật liệu x&acirc;y dựng (cụ thể l&agrave;: k&iacute;nh x&acirc;y dựng, gạch ốp l&aacute;t, sứ vệ sinh, sản phẩm đất s&eacute;t nung).&nbsp;C&ocirc;ng ty đ&atilde; v&agrave; đang triển khai 1.327 ha diện t&iacute;ch khu c&ocirc;ng nghiệp v&agrave; dịch vụ, gồm 4 khu c&ocirc;ng nghiệp ở tỉnh Bắc Ninh v&agrave; khu c&ocirc;ng nghiệp Ph&uacute; H&agrave; ở Ph&uacute; Thọ. Ở mảng nh&agrave; ở thu nhập thấp, VIGLACERA ti&ecirc;n phong chuyển đổi dự &aacute;n v&agrave; l&agrave; đơn vị đầu ti&ecirc;n được hỗ trợ từ g&oacute;i 30.000 tỷ đồng của Ch&iacute;nh phủ. Ng&agrave;y 29/05/2019, VGC ch&iacute;nh thức&nbsp;giao dịch tr&ecirc;n s&agrave;n giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Viglacera - Công ty Cổ phần",
+      "percentage": 0.999
+    },
+    {
+      "name": "Công ty Cổ phần Hạ tầng Gelex",
+      "percentage": 0.5021
+    },
+    {
+      "name": "Bộ Xây Dựng",
+      "percentage": 0.3858
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị Bảo Việt",
+      "percentage": 0.02223977
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 0.0162
+    },
+    {
+      "name": "Vietnam Ventures Limited",
+      "percentage": 0.0159
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 0.0138
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 0.0125
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.01049
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Vietnam Investment Limited",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.0029
+    },
+    {
+      "name": "NGUYỄN MINH TUẤN",
+      "percentage": 0.00205
+    },
+    {
+      "name": "Draig Ltd",
+      "percentage": 0.00205
+    },
+    {
+      "name": "Quỹ Đầu tư Giá trị MB Capital",
+      "percentage": 0.0018074495
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu MB",
+      "percentage": 0.00156128
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.0012591
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.00106
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Quý Tuấn",
+      "percentage": 0.00047
+    },
+    {
+      "name": "Ngô Thùy Trang",
+      "percentage": 0.00041
+    },
+    {
+      "name": "Auriga SPC Ltd",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Lưu Văn Lấu",
+      "percentage": 0.00037
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Nguyễn Minh Khoa",
+      "percentage": 0.0002275
+    },
+    {
+      "name": "Luyện Công Minh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Idris Ltd",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Bản Việt",
+      "percentage": 0.000133824
+    },
+    {
+      "name": "Nguyễn Hải Long",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000669789
+    },
+    {
+      "name": "Quách  Hữu Thuận",
+      "percentage": 0.0000201
+    },
+    {
+      "name": "Lưu Quang Ngọc",
+      "percentage": 0.0000156
+    },
+    {
+      "name": "Hoàng Thanh Nam",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Đặng Thị Nguyệt Yến",
+      "percentage": 6.7e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0012591
+    },
+    {
+      "name": "Nguyễn Minh Khoa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002275
+    },
+    {
+      "name": "Quách  Hữu Thuận",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000201
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Phó Tổng Giám đốc/Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Mạnh Hữu",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Minh Loan",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn  Trọng Hiền",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Anh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Trọng Toán",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Cẩm Vân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Phương Lan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thanh Tùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Yến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "HOÀNG KIM BỒNG",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:50.267478Z"
+}

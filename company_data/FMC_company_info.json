@@ -1,0 +1,203 @@
+{
+  "symbol": "FMC",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2452083337500.0,
+  "current_price": 37500.0,
+  "outstanding_shares": 65388889,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Thực phẩm Sao Ta (FMC) th&agrave;nh lập năm 1996, năm 2003 chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần, năm 2006 cổ phiếu của c&ocirc;ng ty ni&ecirc;m yết v&agrave; giao dịch tại HOSE. Hoạt động kinh doanh ch&iacute;nh l&agrave; Chế biến v&agrave; xuất khẩu c&aacute;c sản phẩm từ t&ocirc;m chiếm hơn 96 % doanh thu. C&aacute;c sản phẩm ch&iacute;nh của c&ocirc;ng ty l&agrave; T&ocirc;m tươi, T&ocirc;m Nobashi, T&ocirc;m tẩm bột, t&ocirc;m hấp trong đ&oacute; t&ocirc;m tươi chiếm tỉ trọng lớn nhất, 37,02%, sau đ&oacute; l&agrave; t&ocirc;m Nobashi 27,13%, với thị trường ti&ecirc;u thụ truyền thống l&agrave; Nhật v&agrave; Mỹ. Hiện FMC đang mở rộng v&agrave; kh&ocirc;i phục lại c&aacute;c thị trường EU, Nga v&agrave; H&agrave;n Quốc.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn PAN",
+      "percentage": 0.3775
+    },
+    {
+      "name": "Dương Ngọc Kim",
+      "percentage": 0.31
+    },
+    {
+      "name": "Công ty Cổ phần Chăn Nuôi C.p. Việt Nam",
+      "percentage": 0.249
+    },
+    {
+      "name": "Ngô Văn Nghiệp",
+      "percentage": 0.21
+    },
+    {
+      "name": "Mã Ích Hưng",
+      "percentage": 0.17
+    },
+    {
+      "name": "Công ty Cổ phần Xuất nhập khẩu Thủy sản Bến Tre",
+      "percentage": 0.1237
+    },
+    {
+      "name": "Andbanc Investments Sif-Vietnam Value And Income Portfolio",
+      "percentage": 0.0359
+    },
+    {
+      "name": "Công ty TNHH MTV Tư vấn đầu tư An Khánh",
+      "percentage": 0.028174
+    },
+    {
+      "name": "Văn phòng Thành ủy Sóc Trăng",
+      "percentage": 0.0253
+    },
+    {
+      "name": "Văn Anh Kiệt",
+      "percentage": 0.02187625
+    },
+    {
+      "name": "Trần Văn Tuấn",
+      "percentage": 0.0163085
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.014756
+    },
+    {
+      "name": "Quách Hoàng Phong",
+      "percentage": 0.0104515
+    },
+    {
+      "name": "Đoàn Thị Hồng Thúy",
+      "percentage": 0.0072
+    },
+    {
+      "name": "Ban Chấp Hành Công Đoàn Cơ Sở Ctcp Thực Phẩm Sao Ta",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Phạm Hoàng Việt",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Đinh Văn Thới",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Công ty TNHH Ndh Việt Nam",
+      "percentage": 0.0014125
+    },
+    {
+      "name": "Hà Việt Thắng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "HÀ VIỆT THẮNG",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Trà My",
+      "percentage": 0.001
+    },
+    {
+      "name": "Triệu Mai Lan",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trần Ngọc Hiệp",
+      "percentage": 0.00075
+    },
+    {
+      "name": "Huỳnh Thanh Sử",
+      "percentage": 0.000575
+    },
+    {
+      "name": "Lữ Thanh Phú",
+      "percentage": 0.000445
+    },
+    {
+      "name": "Huỳnh Quốc Minh",
+      "percentage": 0.000253
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Tô Minh Chẳng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Ngô Kiều Phương",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Như Diễm Quỳnh",
+      "percentage": 6e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Quốc Lực",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0109
+    },
+    {
+      "name": "Phạm Hoàng Việt",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Đinh Văn Thới",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Mã Ích Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Trà My",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.001
+    },
+    {
+      "name": "Tô Minh Chẳng",
+      "position": "Kế toán trưởng/Người phụ trách quản trị công ty/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Dương Ngọc Kim",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Nguyễn Trúc Dung",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Văn Sỉ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Khải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Thanh Vũ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lý Thái Hưng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Ngọc Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:37.425904Z"
+}

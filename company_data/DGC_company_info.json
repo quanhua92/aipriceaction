@@ -1,0 +1,263 @@
+{
+  "symbol": "DGC",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 36079032170000.0,
+  "current_price": 95000.0,
+  "outstanding_shares": 379779286,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n H&oacute;a chất Đức Giang (DGC)&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty H&oacute;a chất Đức Giang được th&agrave;nh lập năm 1963. Năm 2004 chuyển sang hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần. Phốt pho v&agrave;ng v&agrave; bột giặt, chất tẩy rửa l&agrave; c&aacute;c sản phẩm kinh doanh c&ocirc;t l&otilde;i của C&ocirc;ng ty, mang lại nguồn doanh thu ch&iacute;nh. Ngo&agrave;i ra, C&ocirc;ng ty c&ograve;n sản xuất v&agrave; kinh doanh thương mại nhiều sản phẩm h&oacute;a chất cơ bản kh&aacute;c. Nằm trong chiến lược d&agrave;i hạn, C&ocirc;ng ty c&ograve;n triển khai mở rộng sản xuất sang lĩnh vực h&oacute;a chất n&ocirc;ng nghiệp, ph&acirc;n b&oacute;n. DGC giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 07/2020.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đào Hữu Huyền",
+      "percentage": 0.1838
+    },
+    {
+      "name": "Ngô Thị Ngọc Lan",
+      "percentage": 0.06636783
+    },
+    {
+      "name": "Đào Hữu Kha",
+      "percentage": 0.05968519
+    },
+    {
+      "name": "Nguyễn Thị Hồng Lan",
+      "percentage": 0.03764978
+    },
+    {
+      "name": "Đào Hữu Duy Anh",
+      "percentage": 0.0301144
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.019177
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.014144
+    },
+    {
+      "name": "Đào Hồng Hạnh",
+      "percentage": 0.013525
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.012376
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.006838
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.006197
+    },
+    {
+      "name": "Đào Thị Quyên",
+      "percentage": 0.00571395
+    },
+    {
+      "name": "Quách Tiến Nhất",
+      "percentage": 0.00481943
+    },
+    {
+      "name": "Lê Thị Lựu",
+      "percentage": 0.00452827
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.003556
+    },
+    {
+      "name": "Phan Thị Nhung",
+      "percentage": 0.0035234792
+    },
+    {
+      "name": "Bùi Thị Hà Thu",
+      "percentage": 0.00306759
+    },
+    {
+      "name": "Đào Việt Hưng",
+      "percentage": 0.002890583
+    },
+    {
+      "name": "Vũ Minh Thuyết",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Đào Thị Huyên",
+      "percentage": 0.00200803
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.001964
+    },
+    {
+      "name": "Đào Hữu Tu",
+      "percentage": 0.00195436
+    },
+    {
+      "name": "Phạm Văn Hùng",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Đào Thị Mai",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Vũ Nhất Tâm",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Veil Holdings Limited",
+      "percentage": 0.001169
+    },
+    {
+      "name": "Nguyễn Thị Nam",
+      "percentage": 0.00114767
+    },
+    {
+      "name": "Đào Thị Hồng Hiên",
+      "percentage": 0.00095524
+    },
+    {
+      "name": "Nguyễn Thị Huệ",
+      "percentage": 0.00088545
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000737
+    },
+    {
+      "name": "Lưu Bách Đạt",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đào Thị Huê",
+      "percentage": 0.0006643
+    },
+    {
+      "name": "Lại Cao Hiến",
+      "percentage": 0.0004083476
+    },
+    {
+      "name": "Vũ Văn Ngọ",
+      "percentage": 0.0003237
+    },
+    {
+      "name": "Nguyễn Văn Thất",
+      "percentage": 0.00022987
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000205
+    },
+    {
+      "name": "Vũ Quốc Tuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Danang Investments Limited",
+      "percentage": 0.000166
+    },
+    {
+      "name": "Quách Trung Kiên",
+      "percentage": 0.00016585
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.000158
+    },
+    {
+      "name": "Phạm Thị Yến",
+      "percentage": 0.00015034
+    },
+    {
+      "name": "Nguyễn Văn Kiên",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Phạm Thị Thoa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Hà Thu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quách Kiều Hưng",
+      "percentage": 0.000079
+    },
+    {
+      "name": "Nguyễn Văn Quang",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Lưu Hoàng Đức",
+      "percentage": 0.000046
+    },
+    {
+      "name": "Công Thị Minh Trang",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Vũ Thị Hoa",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Văn Canh",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đào Hữu Huyền",
+      "position": "Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.1838
+    },
+    {
+      "name": "Đào Hữu Duy Anh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0301144
+    },
+    {
+      "name": "Phạm Văn Hùng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Đào Thị Mai",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Vũ Văn Ngọ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0003237
+    },
+    {
+      "name": "Nguyễn Văn Kiên",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Phạm Thị Thoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Văn Quang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Khúc Ngọc Giảng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:10.144407Z"
+}

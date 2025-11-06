@@ -1,0 +1,185 @@
+{
+  "symbol": "DPR",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3306009712600.0,
+  "current_price": 38050.0,
+  "outstanding_shares": 86885932,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Cao su Đồng Ph&uacute; (DPR) c&oacute; tiền th&acirc;n l&agrave; Đồn điền Thuận Lợi của C&ocirc;ng ty Michelin &ndash; Ph&aacute;p, được h&igrave;nh th&agrave;nh v&agrave;o năm 1927. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực trồng trọt, khai th&aacute;c,&nbsp;chế biến v&agrave; kinh doanh&nbsp;cao su.&nbsp;DPR&nbsp;ch&iacute;nh thức hoạt động theo h&igrave;nh thức c&ocirc;ng ty cổ phần từ năm 2006. C&ocirc;ng ty&nbsp;hiện c&oacute; 06 n&ocirc;ng trường cao su với tổng diện t&iacute;ch l&agrave; 9.817,86 ha cao su v&agrave; 02 Nh&agrave; m&aacute;y chế biến mủ cao su với tổng c&ocirc;ng suất 22.000 tấn/năm. Sản phẩm cao su của C&ocirc;ng ty được ti&ecirc;u thụ ở c&aacute;c nước ch&acirc;u &Acirc;u (như Ph&aacute;p, Bỉ, H&agrave; Lan, Anh, T&acirc;y Ban Nha, Slovakia, &hellip;) H&agrave;n quốc, Trung quốc, Mỹ, &hellip; th&ocirc;ng qua c&aacute;c kh&aacute;ch h&agrave;ng truyền thống như SMTP (Michelin), Saficalcan (Ph&aacute;p), Tae Young (H&agrave;n Quốc) v&agrave; c&aacute;c c&ocirc;ng ty kh&aacute;c trong nước. DPR được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2007.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp Cao su Việt Nam - Công ty Cổ phần",
+      "percentage": 0.5524
+    },
+    {
+      "name": "Samarang Ucits - Samarang Asian Prosperity",
+      "percentage": 0.0499
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0496
+    },
+    {
+      "name": "FTIF - Templeton Frontier Markets Fund",
+      "percentage": 0.0060344186
+    },
+    {
+      "name": "Nguyễn Thanh Hải",
+      "percentage": 0.001784
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.00064
+    },
+    {
+      "name": "Đặng Gia Anh",
+      "percentage": 0.00059
+    },
+    {
+      "name": "Phạm Phi Điểu",
+      "percentage": 0.0001587
+    },
+    {
+      "name": "Đào Thị Thuyên",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Huỳnh Minh Tâm",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Phạm Văn Hằng",
+      "percentage": 0.00011215
+    },
+    {
+      "name": "HUỲNH TRỌNG THỦY",
+      "percentage": 0.0000806
+    },
+    {
+      "name": "Ngô Trường Kỳ",
+      "percentage": 0.0000722745
+    },
+    {
+      "name": "Phạm Văn Luyện",
+      "percentage": 0.00006231
+    },
+    {
+      "name": "Hoàng Đình Huy",
+      "percentage": 0.0000623056
+    },
+    {
+      "name": "Tô Phan Trung Thái",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Đinh Thị Phượng",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Nguyễn Hữu Việt",
+      "percentage": 0.000042
+    },
+    {
+      "name": "Trần Thị Kim Thanh",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Phan Phú Cường",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Văn Thái",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Lê Thị Lệ Thủy",
+      "percentage": 0.000037
+    },
+    {
+      "name": "Mai Huỳnh Nhật",
+      "percentage": 0.0000368
+    },
+    {
+      "name": "Hồ Cường",
+      "percentage": 0.0000368
+    },
+    {
+      "name": "Hoàng Ngọc Khải",
+      "percentage": 0.0000249222
+    },
+    {
+      "name": "Phạm Ngọc Huy",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Trần Vĩnh Tuấn",
+      "percentage": 0.00002243
+    },
+    {
+      "name": "Lưu Minh Tuyến",
+      "percentage": 7.3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Phi Điểu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001587
+    },
+    {
+      "name": "Huỳnh Minh Tâm",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00012
+    },
+    {
+      "name": "HUỲNH TRỌNG THỦY",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000806
+    },
+    {
+      "name": "Trần Thị Kim Thanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Mai Huỳnh Nhật",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0000368
+    },
+    {
+      "name": "Hồ Cường",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000368
+    },
+    {
+      "name": "Phạm Ngọc Huy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Lưu Minh Tuyến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 7.3e-6
+    },
+    {
+      "name": "Phan Văn Hà",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thu Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thanh Tâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:40.476069Z"
+}

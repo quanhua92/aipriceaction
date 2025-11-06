@@ -1,0 +1,223 @@
+{
+  "symbol": "PTB",
+  "exchange": "HOSE",
+  "industry": "Lâm nghiệp và Giấy",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3467409275400.0,
+  "current_price": 51800.0,
+  "outstanding_shares": 66938403,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Ph&uacute; T&agrave;i&nbsp; (PTB) c&oacute; tiền th&acirc;n l&agrave; một doanh nghiệp nh&agrave; nước trực thuộc Qu&acirc;n&nbsp;khu 5 - Bộ Quốc Ph&ograve;ng&nbsp;được&nbsp;chuyển đổi th&agrave;nh&nbsp;c&ocirc;ng ty cổ phần từ năm 2004. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực khai th&aacute;c, chế biến, kinh doanh xuất khẩu sản phẩm gỗ, vật liệu đ&aacute; x&acirc;y dựng, ti&ecirc;u thụ sản phẩm xe &ocirc; t&ocirc; Toyota v&agrave; cung cấp c&aacute;c dịch vụ sửa chữa xe &ocirc; t&ocirc; Toyota. PTB c&oacute; năng lực sản xuất đ&aacute; ốp l&aacute;t với c&ocirc;ng suất hơn 4,3 triệu m2/năm, chế biến gỗ với c&ocirc;ng suất hơn 20.000 m3/năm. B&ecirc;n cạnh&nbsp;đ&oacute;, C&ocirc;ng ty cung cấp dịch vụ sửa chữa xe Toyota với c&ocirc;ng suất 36.000 lượt xe/năm v&agrave;&nbsp;ti&ecirc;u thụ 2.000 chiếc/năm. Thị phần của C&ocirc;ng ty về sản phẩm đ&aacute; hiện nay bao gồm những tỉnh th&agrave;nh sau: H&agrave; Nội, Hải Ph&ograve;ng, Vinh, Đ&agrave; Nẵng, B&igrave;nh Định, B&igrave;nh Dương, Tp HCM, Cần Thơ... Sản phẩm gỗ xuất khẩu sang c&aacute;c nước Ch&acirc;u &Acirc;u, Ch&acirc;u Mỹ.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê  Vỹ",
+      "percentage": 0.13249999
+    },
+    {
+      "name": "Lê Văn Thảo",
+      "percentage": 0.0869
+    },
+    {
+      "name": "Nguyễn Sỹ Hòe",
+      "percentage": 0.0626
+    },
+    {
+      "name": "Lê Văn Lộc",
+      "percentage": 0.0615
+    },
+    {
+      "name": "Nguyễn Hữu Tâm",
+      "percentage": 0.0487
+    },
+    {
+      "name": "Trần Thanh Cung",
+      "percentage": 0.043
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.039949
+    },
+    {
+      "name": "Võ Thị Hoài Châu",
+      "percentage": 0.027
+    },
+    {
+      "name": "Phan Quốc Hoài",
+      "percentage": 0.014
+    },
+    {
+      "name": "Trương Huy Danh",
+      "percentage": 0.0088741926
+    },
+    {
+      "name": "Nguyễn Đức Thắng",
+      "percentage": 0.0084
+    },
+    {
+      "name": "Đỗ Xuân Lập",
+      "percentage": 0.005
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Văn Thị Vinh",
+      "percentage": 0.004
+    },
+    {
+      "name": "Phan Hồng Quý",
+      "percentage": 0.003
+    },
+    {
+      "name": "LÊ ANH VĂN",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Lê Anh Văn",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Bùi Thức Hùng",
+      "percentage": 0.0024
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.002285
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.001494
+    },
+    {
+      "name": "Trần Hữu Đức",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Đậu Văn Tâm",
+      "percentage": 0.0010714806
+    },
+    {
+      "name": "Lê Thục Trinh",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lê Văn Luận",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Lê Thị Kim Sang",
+      "percentage": 0.000747
+    },
+    {
+      "name": "Bùi Thị Kim Yến",
+      "percentage": 0.000621
+    },
+    {
+      "name": "Nguyễn Thị Minh",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.0005210688
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Loan",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Thị Tú Oanh",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Đức Hạnh",
+      "percentage": 0.000072
+    },
+    {
+      "name": "Nguyễn Thị Lan",
+      "percentage": 0.000027
+    },
+    {
+      "name": "Nguyễn Việt Minh Phụng",
+      "percentage": 5.25e-6
+    },
+    {
+      "name": "Trần Thế Triều",
+      "percentage": 1.61e-6
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán MB",
+      "percentage": 6.249e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê  Vỹ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.13249999
+    },
+    {
+      "name": "Lê Văn Thảo",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0869
+    },
+    {
+      "name": "Nguyễn Sỹ Hòe",
+      "position": "Thành viên Hội đồng Quản trị/Giám đốc Xí nghiệp/Phó Tổng Giám đốc",
+      "percentage": 0.0626
+    },
+    {
+      "name": "Lê Văn Lộc",
+      "position": "Giám đốc Chi nhánh/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0615
+    },
+    {
+      "name": "Trần Thanh Cung",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.043
+    },
+    {
+      "name": "Phan Quốc Hoài",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.014
+    },
+    {
+      "name": "Đỗ Xuân Lập",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.005
+    },
+    {
+      "name": "Bùi Thức Hùng",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Trần Hữu Đức",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Loan",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Thị Tú Oanh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Trương Công Hoàng",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thị Huệ",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:37.323988Z"
+}

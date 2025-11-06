@@ -1,0 +1,198 @@
+{
+  "symbol": "TVS",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2838919658000.0,
+  "current_price": 17000.0,
+  "outstanding_shares": 166995274,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\" style=\"text-align: justify;\">C&ocirc;ng ty Cổ phần chứng kho&aacute;n Thi&ecirc;n Việt (TVS)&nbsp;được th&agrave;nh lập năm 2007 với vốn&nbsp;điều lệ ban&nbsp;đầu&nbsp;l&agrave; 43 tỷ&nbsp;đồng.&nbsp;C&ocirc;ng ty chuy&ecirc;n cung cấp dịch vụ tư vấn t&agrave;i ch&iacute;nh, đầu tư chứng kho&aacute;n, dịch vụ ng&acirc;n h&agrave;ng đầu tư v&agrave; m&ocirc;i giới chứng kho&aacute;n. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 22,52 tỷ đồng, tăng 23.46% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 17.82%, tăng 8.57%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 331,31 tỷ đồng, tăng 16.53% v&agrave; đ&oacute;ng g&oacute;p 40.92 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 343,79 tỷ đồng, tăng 9.87%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 12.81%, giảm 0.35%.&nbsp;Ng&agrave;y 15/01/2015, TVS&nbsp;ch&iacute;nh thức giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Trung Hà",
+      "percentage": 0.311245
+    },
+    {
+      "name": "Đinh Thị Hoa",
+      "percentage": 0.1557
+    },
+    {
+      "name": "Wardhaven Vietnam Fund",
+      "percentage": 0.0586
+    },
+    {
+      "name": "Apollo Asia Fund",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Panah Master Fund",
+      "percentage": 0.0187
+    },
+    {
+      "name": "Phạm Ngọc Quỳnh",
+      "percentage": 0.0156
+    },
+    {
+      "name": "Nguyễn Thanh Thảo",
+      "percentage": 0.011677
+    },
+    {
+      "name": "Phan Thanh Diện",
+      "percentage": 0.01146042
+    },
+    {
+      "name": "Bùi Thị Kim Oanh",
+      "percentage": 0.009349
+    },
+    {
+      "name": "Phan Thanh Liêm",
+      "percentage": 0.0053
+    },
+    {
+      "name": "Đinh Dũng",
+      "percentage": 0.00473963
+    },
+    {
+      "name": "Lê Quang Tiến",
+      "percentage": 0.004
+    },
+    {
+      "name": "Nguyễn Trường Giang",
+      "percentage": 0.004
+    },
+    {
+      "name": "Huỳnh Vũ Hiền",
+      "percentage": 0.0039
+    },
+    {
+      "name": "Phan Thanh Nhàn",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Trần Thị Hồng Nhung",
+      "percentage": 0.00327
+    },
+    {
+      "name": "Trần Vinh Quang",
+      "percentage": 0.002543
+    },
+    {
+      "name": "Nguyễn Nhân",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Ngô Nhật Minh",
+      "percentage": 0.001564
+    },
+    {
+      "name": "Nguyễn Nam Sơn",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Nguyễn Trung Thành",
+      "percentage": 0.00082
+    },
+    {
+      "name": "Tô Quốc Tuấn",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Bùi Thành Trung",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Nguyễn Trung Anh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Việt Hùng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Tuyết Nhung",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Thế Toàn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Minh Tiến",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Bùi Thị Trang",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Đinh Hùng",
+      "percentage": 6.9e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Trung Hà",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.311245
+    },
+    {
+      "name": "Đinh Thị Hoa",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1557
+    },
+    {
+      "name": "Nguyễn Thanh Thảo",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.011677
+    },
+    {
+      "name": "Bùi Thị Kim Oanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.009349
+    },
+    {
+      "name": "Lê Quang Tiến",
+      "position": "Kế toán trưởng",
+      "percentage": 0.004
+    },
+    {
+      "name": "Trần Thị Hồng Nhung",
+      "position": "Người phụ trách quản trị công ty/Thành viên Ban kiểm soát/Phụ trách Công bố thông tin",
+      "percentage": 0.00327
+    },
+    {
+      "name": "Nguyễn Nam Sơn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Đỗ Việt Hùng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Terence Ting",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Minh Tâm",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thành Nam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đồng Thị Phương Liên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:23.123781Z"
+}

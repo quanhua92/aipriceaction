@@ -1,0 +1,240 @@
+{
+  "symbol": "CKG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1852696172700.0,
+  "current_price": 11450.0,
+  "outstanding_shares": 161807526,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n CIC&nbsp;(CKG), c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Tư vấn X&acirc;y dựng Ki&ecirc;n Giang được th&agrave;nh lập từ năm 1992. Năm 2006, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. C&ocirc;ng ty chủ yếu hoạt động trong lĩnh vực x&acirc;y dựng v&agrave; bất động sản, trong đ&oacute; tập trung tại địa b&agrave;n tỉnh Ki&ecirc;n Giang, chủ yếu ở th&agrave;nh phố Rạch Gi&aacute;, huyện đảo Ph&uacute; Quốc v&agrave; c&aacute;c huyện thị kh&aacute;c thuộc tỉnh Ki&ecirc;n Giang. C&ocirc;ng ty được tin tưởng giao cho thực hiện nhiều dự &aacute;n trọng điểm v&agrave; chiến lược của tỉnh Ki&ecirc;n Giang. Hiện tại thị trường Rạch Gi&aacute; v&agrave; Ph&uacute; Quốc l&agrave; hai thị trường trọng điểm để đ&acirc;u tư với c&aacute;c dự &aacute;n bao gồm: (i) Dự &aacute;n Khu d&acirc;n cư Trung t&acirc;m thương mại Rạch Sỏi (186 căn), (ii) Dự &aacute;n Bến xe tỉnh v&agrave; Khu d&acirc;n cư huyện Ch&acirc;u Th&agrave;nh (317 căn), (iii) Dự &aacute;n Khu d&acirc;n cư phường An B&igrave;nh (983 căn). Năm 2020, cổ phiếu CKG ch&iacute;nh thức được giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Xuân Dũng",
+      "percentage": 0.0963
+    },
+    {
+      "name": "Đinh Thanh Tâm",
+      "percentage": 0.0559
+    },
+    {
+      "name": "Nguyễn Ngọc Tiền",
+      "percentage": 0.0226
+    },
+    {
+      "name": "Công ty TNHH MTV Phương Nam Kiên Giang",
+      "percentage": 0.0092
+    },
+    {
+      "name": "Công ty Cổ phần Phát triển Đô thị Kiên Giang",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Công Ty TNHH Kiến Trúc A.t.a",
+      "percentage": 0.007
+    },
+    {
+      "name": "Công ty TNHH MTV Cấp Thoát Nước Kiên Giang",
+      "percentage": 0.006
+    },
+    {
+      "name": "Nguyễn Đức Hiền",
+      "percentage": 0.00468
+    },
+    {
+      "name": "Trần Quốc Trưởng",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Phạm Thị Như Phượng",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Lê Trọng Ngọc",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Quảng Trọng Sang",
+      "percentage": 0.00309
+    },
+    {
+      "name": "Trần Thị Mai Hương",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Hà Duy Nghiêm",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Thị Hoa Lệ",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Trần Quang Vũ",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn Hoàng Sơn",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Võ Mai Trang",
+      "percentage": 0.001544
+    },
+    {
+      "name": "Đinh Thanh Thảo",
+      "percentage": 0.001544
+    },
+    {
+      "name": "Trần Ngọc Hạnh",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Thanh Hồng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Kha Thị Mỹ Ngọc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phạm Văn Lợi",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thành Hiếu",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Hà Minh Tuân",
+      "percentage": 0.000501
+    },
+    {
+      "name": "Võ Văn Tám",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Thọ Công",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Hoàng Anh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Diệu Trâm",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Đức Hùng",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Nguyễn Tuấn Hưng",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Xây dựng HUD Kiên Giang",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Trần Thị Cẩm Y",
+      "percentage": 5.1e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Thọ Thắng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.07531
+    },
+    {
+      "name": "Phạm Thị Như Phượng",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Trần Quốc Trưởng",
+      "position": "Người phụ trách quản trị công ty/Phó Tổng Giám đốc",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Lê Trọng Ngọc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Quảng Trọng Sang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00309
+    },
+    {
+      "name": "Trần Thị Mai Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Hà Duy Nghiêm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Thị Hoa Lệ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Hoàng Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Trần Ngọc Hạnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Thanh Hồng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Kha Thị Mỹ Ngọc",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Hà Minh Tuân",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.000501
+    },
+    {
+      "name": "Nguyễn Thị Diệu Trâm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thanh Lâm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Trọng Tú",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mã Hồng Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Bích Nghĩa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:09.628822Z"
+}

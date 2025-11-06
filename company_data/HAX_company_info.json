@@ -1,0 +1,194 @@
+{
+  "symbol": "HAX",
+  "exchange": "HOSE",
+  "industry": "Ô tô và phụ tùng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1165720538850.0,
+  "current_price": 10850.0,
+  "outstanding_shares": 107439681,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Dịch vụ &Ocirc; t&ocirc; H&agrave;ng Xanh (HAX) c&oacute;&nbsp;tiền th&acirc;n l&agrave; Cửa h&agrave;ng trưng b&agrave;y v&agrave; Xưởng sửa chữa xe&nbsp;&Ocirc; t&ocirc;&nbsp;(SAMCO3) trực thuộc C&ocirc;ng ty Cơ kh&iacute; &Ocirc; t&ocirc; S&agrave;i G&ograve;n (Nay l&agrave; Tổng C&ocirc;ng ty Cơ kh&iacute; Giao th&ocirc;ng Vận tải S&agrave;i G&ograve;n) được th&agrave;nh lập v&agrave;o&nbsp;năm 1992. C&ocirc;ng ty hoạt động&nbsp;ch&iacute;nh&nbsp;trong lĩnh vực l&agrave;m đại l&yacute; mua b&aacute;n &ocirc; t&ocirc; v&agrave; cung cấp dịch vụ sửa chữa, bảo dưỡng, bảo h&agrave;nh c&aacute;c loại &ocirc; t&ocirc;. HAX ch&iacute;nh thức hoạt&nbsp;động&nbsp;theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2000. C&ocirc;ng ty l&agrave; nh&agrave; ph&acirc;n phối đầu ti&ecirc;n của Mercedes-Benz tại Việt Nam v&agrave; cũng l&agrave;&nbsp;đơn vị ph&acirc;n phối lớn nhất của Mercedes-Benz tại Việt Nam. Năm 2006, HAX được ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Bưu Chính Viễn Thông Việt Nam",
+      "percentage": 0.3263466
+    },
+    {
+      "name": "Đỗ Tiến Dũng",
+      "percentage": 0.1738
+    },
+    {
+      "name": "Vũ Thị Hạnh",
+      "percentage": 0.166078
+    },
+    {
+      "name": "Hoàng Đức Thành",
+      "percentage": 0.0505
+    },
+    {
+      "name": "Công ty TNHH Quản lý quỹ SSI",
+      "percentage": 0.0496
+    },
+    {
+      "name": "Công Ty TNHH Nhựa Phước Thành",
+      "percentage": 0.0482
+    },
+    {
+      "name": "Vũ Ngọc Diệp Linh",
+      "percentage": 0.0466
+    },
+    {
+      "name": "AFC Vietnam Fund",
+      "percentage": 0.0464
+    },
+    {
+      "name": "Đoàn Hùng Dũng",
+      "percentage": 0.0451042081
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0393
+    },
+    {
+      "name": "Phạm Tuấn Mai",
+      "percentage": 0.0292045757
+    },
+    {
+      "name": "Hoàng Đức Hùng",
+      "percentage": 0.0097
+    },
+    {
+      "name": "Trần Quốc Hải",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Nguyễn Tiến Dũng",
+      "percentage": 0.0054882217
+    },
+    {
+      "name": "Nguyễn Hồng Anh",
+      "percentage": 0.0047913989
+    },
+    {
+      "name": "Nguyễn Thị Ngân Hà",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Lê Quang Định",
+      "percentage": 0.0019911
+    },
+    {
+      "name": "Vũ Quang Huy",
+      "percentage": 0.0013286951
+    },
+    {
+      "name": "Võ Thiếu Lâm",
+      "percentage": 0.0010321901
+    },
+    {
+      "name": "Lê Văn Hiệp",
+      "percentage": 0.0005636
+    },
+    {
+      "name": "Hoàng Thị Minh Nguyệt",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Tạ Xuân Thủy",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Văn Mỹ",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đỗ Ngọc Thùy Trang",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Bích",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Văn Ngọc Trường Sơn",
+      "percentage": 0.000179918
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hằng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "percentage": 0.0000836619
+    },
+    {
+      "name": "Nguyễn Thị Hồng Khanh",
+      "percentage": 0.0000492975
+    },
+    {
+      "name": "Đặng Thị Phượng Loan",
+      "percentage": 0.00004345
+    },
+    {
+      "name": "Đỗ Ngọc Oanh",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Trần Thị Ngọc Phương",
+      "percentage": 9e-7
+    },
+    {
+      "name": "Hoàng Thị Nhị Hà",
+      "percentage": 4.497e-7
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 2.7e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Tiến Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.1738
+    },
+    {
+      "name": "Vũ Thị Hạnh",
+      "position": "Người phụ trách quản trị công ty/Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.166078
+    },
+    {
+      "name": "Trần Quốc Hải",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0069
+    },
+    {
+      "name": "Trần Văn Mỹ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đỗ Ngọc Thùy Trang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Bích",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hằng",
+      "position": "Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Tiểu Mai",
+      "position": "Thành viên Hội đồng Quản trị/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:32.637640Z"
+}

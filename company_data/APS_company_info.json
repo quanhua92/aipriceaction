@@ -1,0 +1,159 @@
+{
+  "symbol": "APS",
+  "exchange": "HNX",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 697200000000.0,
+  "current_price": 8400.0,
+  "outstanding_shares": 83000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Ch&acirc;u &Aacute; &ndash; Th&aacute;i B&igrave;nh Dương (APS)&nbsp;được th&agrave;nh lập&nbsp;năm 2006. Năm 2006, c&ocirc;ng ty được Ủy ban chứng kho&aacute;n Nh&agrave; nước cấp giấy ph&eacute;p hoạt&nbsp;động trong lĩnh vực kinh doanh chứng kho&aacute;n.&nbsp;C&ocirc;ng ty cung cấp dịch vụ m&ocirc;i giới, tư vấn v&agrave; đầu tư t&agrave;i ch&iacute;nh, bảo l&atilde;nh ph&aacute;t h&agrave;nh chứng kho&aacute;n. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 6,88 tỷ đồng, giảm 25.59% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 17.09%, giảm 0.63%. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 20.5 tỷ đồng. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 2.75%, tăng 23.4%. APS được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2010.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Đỗ Lăng",
+      "percentage": 0.143
+    },
+    {
+      "name": "Lưu Thanh Bình",
+      "percentage": 0.051025641
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Asean Deep Value Fund",
+      "percentage": 0.0484
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý Quỹ Tín Phát",
+      "percentage": 0.0483410256
+    },
+    {
+      "name": "Lucerne Enterprise Ltd",
+      "percentage": 0.0477
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Apec Group",
+      "percentage": 0.045
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư FPT",
+      "percentage": 0.04102564
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán AGRIBANK",
+      "percentage": 0.03589744
+    },
+    {
+      "name": "HUỲNH THỊ MAI DUNG",
+      "percentage": 0.0202
+    },
+    {
+      "name": "Nguyễn Duy Khanh",
+      "percentage": 0.013
+    },
+    {
+      "name": "Nguyễn Đỗ Hoàng Lan",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Nguyễn Thị Bốn",
+      "percentage": 0.0072
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư APEC Holding",
+      "percentage": 0.002821
+    },
+    {
+      "name": "Nguyễn Mạnh Hào",
+      "percentage": 0.0028205128
+    },
+    {
+      "name": "Phạm Duy Hưng",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Châu Á - Thái Bình Dương",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Phạm Hoài Phương",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Quang Huy",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Phạm Thị Đức Việt",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Đức Quân",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Thị Mai Hương",
+      "percentage": 0.0003846153
+    },
+    {
+      "name": "Vanfleteren Zamiel",
+      "percentage": 0.00005
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Đỗ Lăng",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.143
+    },
+    {
+      "name": "Phạm Duy Hưng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Phạm Hoài Phương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Quang Huy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Phạm Thị Đức Việt",
+      "position": "Trưởng Ban kiểm soát/Phụ trách Công bố thông tin",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Đức Quân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Vũ Trọng Quân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoài Giang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:50.934968Z"
+}

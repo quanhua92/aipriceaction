@@ -1,0 +1,304 @@
+{
+  "symbol": "VHC",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 13175400433300.0,
+  "current_price": 58700.0,
+  "outstanding_shares": 224453159,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p style=\"text-align: justify;\">C&ocirc;ng ty Cổ phần Vĩnh Ho&agrave;n (VHC), c&oacute; tiền th&acirc;n l&agrave; Doanh nghiệp tư nh&acirc;n Vĩnh Ho&agrave;n được th&agrave;nh lập v&agrave;o năm 1997. Năm 2007, VHC&nbsp;ch&iacute;nh thức chuyển đổi m&ocirc; h&igrave;nh kinh doanh sang C&ocirc;ng ty Cổ phần Vĩnh Ho&agrave;n.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực nu&ocirc;i trồng, chế biến xuất khẩu c&aacute; Tra, Basa đ&ocirc;ng lạnh với c&aacute;c sản phẩm ch&iacute;nh l&agrave; c&aacute; tra, basa, l&oacute;c, r&ocirc; phi, fillet mang thương hiệu Vĩnh ho&agrave;n. VHC l&agrave; C&ocirc;ng ty dẫn đầu ng&agrave;nh c&aacute; tra Việt Nam từ năm 2010 đến nay, chiếm thị phần khoảng 15% của to&agrave;n ng&agrave;nh. Sản phẩm của C&ocirc;ng ty đ&atilde; c&oacute; mặt tại c&aacute;c chuỗi b&aacute;n lẻ danh tiếng như Walmart, Target, Trader Joe, v&agrave; Kroger, v&agrave; được ph&acirc;n phối bởi c&aacute;c c&ocirc;ng ty về dịch vụ thực phẩm h&agrave;ng đầu của Mỹ như Sysco, Gordon Food Service, US Foods. VHC đang dẫn đầu trong số lượng c&aacute;c v&ugrave;ng nu&ocirc;i đạt chứng nhận tại Việt Nam với diện t&iacute;ch v&ugrave;ng nu&ocirc;i đạt chứng nhận Aquaculture Stewardship Council (ASC), Best Aquaculture Practices (BAP), Global Good Agricultural Practice (GlobalGAP) lần lượt đạt 180ha, 135ha, v&agrave; 155ha. Ng&agrave;y 24/12/2007, VHC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Trương Thị Lệ Khanh",
+      "percentage": 0.4232
+    },
+    {
+      "name": "Mitsubishi Corporation",
+      "percentage": 0.065
+    },
+    {
+      "name": "Quỹ Đầu Tư Việt Nam",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Dragon Capital Việt Nam",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Red River Holding",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Lâm Quang Thanh",
+      "percentage": 0.0457
+    },
+    {
+      "name": "Lâm Mẫu Diệp",
+      "percentage": 0.0447
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.022795
+    },
+    {
+      "name": "Võ Phú Đức",
+      "percentage": 0.01581
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.015504
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.006821
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.004544
+    },
+    {
+      "name": "Nguyễn Ngô Vi Tâm",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Hà Thị Phương Thủy Hồng Nhung",
+      "percentage": 0.00193
+    },
+    {
+      "name": "Nguyễn Thị Kim Đào",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Trương Tuyết Hoa",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Hồ Thanh Huệ",
+      "percentage": 0.00123
+    },
+    {
+      "name": "Phan Thị Bích Liên",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000916
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.000877
+    },
+    {
+      "name": "Vietnam Co-Investment Fund",
+      "percentage": 0.000824
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000589
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Viola Ltd",
+      "percentage": 0.00044
+    },
+    {
+      "name": "Lê Thị Sáu",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đặng Văn Viễn",
+      "percentage": 0.00023157
+    },
+    {
+      "name": "Trương Chí Phước",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Huỳnh Đức Trung",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Thị Hoàng Thư",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Quang Vinh",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Công Đoàn Cơ Sở Công ty Cổ Phần Vĩnh Hoàn",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Trần Minh Hảo",
+      "percentage": 0.00013549
+    },
+    {
+      "name": "Lê Mạnh Đức",
+      "percentage": 0.0001082204
+    },
+    {
+      "name": "Huỳnh Thị Hồng Diễm",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Thị Kiều Oanh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Diệu Thi",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Mai Thành Trọng Nhân",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Bảo Anh",
+      "percentage": 0.000071
+    },
+    {
+      "name": "Nguyễn Văn Nghệ",
+      "percentage": 0.0000562746
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000560606
+    },
+    {
+      "name": "Văn Thị Thảo",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trương Tuyết Phương",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Thái Quang Vũ",
+      "percentage": 0.0000147
+    },
+    {
+      "name": "Nguyễn Duy Khánh",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thị Cẩm Tú",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Văn Hòa",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Trương Lệ Quyên",
+      "percentage": 3.3e-7
+    },
+    {
+      "name": "Tạ Khánh Toàn",
+      "percentage": 5e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trương Thị Lệ Khanh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.4232
+    },
+    {
+      "name": "Võ Phú Đức",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.01581
+    },
+    {
+      "name": "Nguyễn Ngô Vi Tâm",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Hà Thị Phương Thủy Hồng Nhung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00193
+    },
+    {
+      "name": "Nguyễn Thị Kim Đào",
+      "position": "Giám đốc Tài chính/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Trương Tuyết Hoa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Hồ Thanh Huệ",
+      "position": "Giám đốc Sản xuất",
+      "percentage": 0.00123
+    },
+    {
+      "name": "Huỳnh Đức Trung",
+      "position": "Giám đốc điều hành dự án",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Quang Vinh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Huỳnh Thị Hồng Diễm",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Thị Kiều Oanh",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Văn Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Cẩm Vân",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Kim Hòa",
+      "position": "Giám đốc Kinh doanh/Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Ngọc Tiên",
+      "position": "Giám đốc khối",
+      "percentage": 0.0
+    },
+    {
+      "name": "Jason Koo",
+      "position": "Giám đốc Khối Công nghệ thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thị Thương",
+      "position": "Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thái Ly",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:02.865318Z"
+}

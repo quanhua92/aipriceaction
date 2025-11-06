@@ -1,0 +1,257 @@
+{
+  "symbol": "PHC",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 257564658460.0,
+  "current_price": 5090.0,
+  "outstanding_shares": 50602094,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần X&acirc;y dựng Phục Hưng Holdings (PHC)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH x&acirc;y dựng Phục Hưng được th&agrave;nh lập v&agrave;o năm 2001. Năm 2004, C&ocirc;ng ty chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh hoạt&nbsp;động l&agrave;&nbsp;một C&ocirc;ng ty Cổ phần.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực&nbsp;thi c&ocirc;ng&nbsp;x&acirc;y dựng&nbsp;c&aacute;c c&ocirc;ng tr&igrave;nh&nbsp;d&acirc;n dụng, đầu tư bất động sản, kinh doanh vật tư x&acirc;y dựng, v&agrave; cho thu&ecirc; m&aacute;y m&oacute;c thiết bị. Một số dự &aacute;n nổi bật m&agrave; PHC tham gia thi c&ocirc;ng như Dự &aacute;n Golden Land tại quận&nbsp;Thanh Xu&acirc;n - H&agrave; Nội, dự&nbsp;&aacute;n Kenton Node tại huyện Nh&agrave; B&egrave; - Th&agrave;nh phố Hồ Ch&iacute; Minh, dự &aacute;n Lideco Hạ Long tại th&agrave;nh phố Hạ Long - Quảng Ninh, dự &aacute;n Chung cư CT1 Gamuda Garden tại quận Ho&agrave;ng Mai - H&agrave; Nội. Ng&agrave;y 03/10/2018, PHC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Quang Vinh",
+      "percentage": 0.2121216601
+    },
+    {
+      "name": "Cao Tùng Lâm",
+      "percentage": 0.1166489
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ Ngân hàng TMCP Đại chúng Việt nam",
+      "percentage": 0.1005486574
+    },
+    {
+      "name": "Lương Hoài Thu",
+      "percentage": 0.0695607529
+    },
+    {
+      "name": "Lưu Quang Hưng",
+      "percentage": 0.0695593755
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Sài Gòn - Hà Nội",
+      "percentage": 0.0488287132
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Bảo Việt",
+      "percentage": 0.0442871132
+    },
+    {
+      "name": "Vũ Xuân Quyết",
+      "percentage": 0.0349
+    },
+    {
+      "name": "Bùi Thị Vân Anh",
+      "percentage": 0.0292
+    },
+    {
+      "name": "Nguyễn Công Khanh",
+      "percentage": 0.0288823
+    },
+    {
+      "name": "Trần Huy Tưởng",
+      "percentage": 0.018436
+    },
+    {
+      "name": "Nguyễn Đức Thắng",
+      "percentage": 0.0170159
+    },
+    {
+      "name": "Trần Hồng Phúc",
+      "percentage": 0.0133412
+    },
+    {
+      "name": "Đỗ Doãn Ngọc Ly",
+      "percentage": 0.0104
+    },
+    {
+      "name": "Đỗ Nguyên An",
+      "percentage": 0.0091349
+    },
+    {
+      "name": "Nguyễn Thị Lan Hương",
+      "percentage": 0.0066
+    },
+    {
+      "name": "NGUYỄN THỊ LAN",
+      "percentage": 0.0066
+    },
+    {
+      "name": "Bùi Trường Sơn",
+      "percentage": 0.005542895
+    },
+    {
+      "name": "Tổng Công ty Cổ phần Đầu tư Xây dựng và Thương mại Việt Nam",
+      "percentage": 0.0054844722
+    },
+    {
+      "name": "Đỗ Việt Anh",
+      "percentage": 0.005
+    },
+    {
+      "name": "NGUYỄN ĐỨC CHÍNH",
+      "percentage": 0.00475
+    },
+    {
+      "name": "Nguyễn Minh Tuấn",
+      "percentage": 0.0047015709
+    },
+    {
+      "name": "Lưu Văn Lạc",
+      "percentage": 0.004695143
+    },
+    {
+      "name": "Nguyễn Quốc HIệp",
+      "percentage": 0.0045913779
+    },
+    {
+      "name": "Đặng Trọng Đức",
+      "percentage": 0.0044032
+    },
+    {
+      "name": "HOÀNG VĂN ĐÀO",
+      "percentage": 0.00427
+    },
+    {
+      "name": "Trần Hồng Mây",
+      "percentage": 0.0039462
+    },
+    {
+      "name": "Lê Quốc Tuấn",
+      "percentage": 0.0020836
+    },
+    {
+      "name": "Trần Thắng Lợi",
+      "percentage": 0.0019204
+    },
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "percentage": 0.0016285
+    },
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Hoàng Anh",
+      "percentage": 0.0014263
+    },
+    {
+      "name": "Ngô Thị Minh Nguyệt",
+      "percentage": 0.001315
+    },
+    {
+      "name": "Nguyễn Như Phi",
+      "percentage": 0.00065
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "percentage": 0.00048
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Ngọc Minh",
+      "percentage": 0.00029596
+    },
+    {
+      "name": "Tô Thị Hồng Điệp",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Duy Hòa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lã Đức Thọ",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Cao Xuân Dũng",
+      "percentage": 1.3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Cao Tùng Lâm",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1166489
+    },
+    {
+      "name": "Nguyễn Công Khanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0288823
+    },
+    {
+      "name": "Trần Huy Tưởng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.018436
+    },
+    {
+      "name": "Nguyễn Đức Thắng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0170159
+    },
+    {
+      "name": "Trần Hồng Phúc",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0133412
+    },
+    {
+      "name": "Đỗ Nguyên An",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0091349
+    },
+    {
+      "name": "NGUYỄN THỊ LAN",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0066
+    },
+    {
+      "name": "Đặng Trọng Đức",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0044032
+    },
+    {
+      "name": "Lê Quốc Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0020836
+    },
+    {
+      "name": "Trần Thắng Lợi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0019204
+    },
+    {
+      "name": "Ngô Thị Minh Nguyệt",
+      "position": "Kế toán trưởng",
+      "percentage": 0.001315
+    },
+    {
+      "name": "Nguyễn Như Phi",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00065
+    },
+    {
+      "name": "Cao Xuân Dũng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 1.3e-6
+    },
+    {
+      "name": "Phạm Thị Thanh Tuyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Điệp",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:04.255850Z"
+}

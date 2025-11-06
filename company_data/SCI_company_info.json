@@ -1,0 +1,160 @@
+{
+  "symbol": "SCI",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 304914090000.0,
+  "current_price": 10000.0,
+  "outstanding_shares": 30491409,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần SCI E&amp;C (SCI)&nbsp;được chuyển đổi từ C&ocirc;ng ty TNHH Một th&agrave;nh vi&ecirc;n Cơ kh&iacute; v&agrave; Sửa chữa S&ocirc;ng Đ&agrave; 9. Th&aacute;ng 05, 2010, C&ocirc;ng ty ch&iacute;nh thức&nbsp;hoạt&nbsp;động l&agrave;&nbsp;C&ocirc;ng ty Cổ phần vớ số vốn&nbsp;điều lệ ban&nbsp;đầu l&agrave; 50 tỷ&nbsp;đồng. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vự x&acirc;y lắp thi c&ocirc;ng cơ giới c&aacute;c c&ocirc;ng tr&igrave;nh thủy điện v&agrave; thủy lợi; X&acirc;y dựng c&aacute;c c&ocirc;ng tr&igrave;nh c&ocirc;ng nghiệp: Nh&agrave; m&aacute;y lọc dầu, xưởng h&oacute;a chất; Ph&aacute; dỡ mặt bằng... Doanh thu từ lĩnh vực x&acirc;y dựng c&ocirc;ng tr&igrave;nh thủy điện, thủy lợi chiếm khoảng 70-80% tổng doanh thu của C&ocirc;ng ty. C&ocirc;ng ty đ&atilde; tham gia x&acirc;y dựng Nh&agrave; m&aacute;y thủy điện Sơn La, thủy điện Lai Ch&acirc;u, thủy&nbsp;điện Xekaman 3, thủy điện Trung Sơn, thủy điện Nậm Kh&aacute;nh, Nhiệt điện Long Ph&uacute;, Nhiệt điện Vũng &Aacute;ng,. C&aacute;c c&ocirc;ng tr&igrave;nh giao th&ocirc;ng m&agrave; C&ocirc;ng ty đ&atilde; đảm nhận thi c&ocirc;ng bao gồm: C&ocirc;ng tr&igrave;nh đường giao th&ocirc;ng b&ecirc;n L&agrave;o; C&ocirc;ng tr&igrave;nh thủy điện Ca Nan v&agrave; Giao Th&ocirc;ng L&agrave;o...Tỷ trọng gi&aacute; trị sản lượng của lĩnh vực n&agrave;y chiếm khoảng 15 - 20% tổng sản lượng v&agrave; doanh thu trong qu&aacute; tr&igrave;nh ph&aacute;t triển của C&ocirc;ng ty. Ng&agrave;y 30/06/2014, SCI ch&iacute;nh thức giao dịch tr&ecirc;n thị trường UPCOM.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần SCI",
+      "percentage": 0.51
+    },
+    {
+      "name": "Công ty Cổ phần Giải pháp Công nghệ cao Việt Sifo",
+      "percentage": 0.13
+    },
+    {
+      "name": "Lê Hồng Hà",
+      "percentage": 0.0534
+    },
+    {
+      "name": "Nguyễn Đăng Lanh",
+      "percentage": 0.00412
+    },
+    {
+      "name": "Đào Gia Thắng",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Hoàng Công Tuấn",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Quang Hưng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Lệ Hằng",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Văn Phúc",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phan Thanh Hải",
+      "percentage": 0.00084
+    },
+    {
+      "name": "Nguyễn Công Hùng",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Cao Hải",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Công Hòa",
+      "percentage": 0.00079
+    },
+    {
+      "name": "Nguyễn Tài Sơn",
+      "percentage": 0.00074
+    },
+    {
+      "name": "Quản Thanh Sơn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Nhân Nghĩa",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lưu Minh Thành",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Nguyễn Văn Hùng",
+      "percentage": 0.0002
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Phúc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phan Thanh Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00084
+    },
+    {
+      "name": "Nguyễn Cao Hải",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Công Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Công Hòa",
+      "position": "Phó Giám đốc",
+      "percentage": 0.00079
+    },
+    {
+      "name": "Nguyễn Tài Sơn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00074
+    },
+    {
+      "name": "Nguyễn Văn Hùng",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Thiện",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quách Thị Thanh Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Lữ Phi Hùng",
+      "position": "Kế toán trưởng/Thành viên Ban kiểm soát/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "NGUYỄN CHÍNH ĐẠI",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị/Giám đốc điều hành/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Len",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "NGUYỄN ĐỨC DUY",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:23.523591Z"
+}

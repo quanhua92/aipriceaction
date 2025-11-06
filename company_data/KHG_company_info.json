@@ -1,0 +1,148 @@
+{
+  "symbol": "KHG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3685368681000.0,
+  "current_price": 8200.0,
+  "outstanding_shares": 449435205,
+  "company_profile": "<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n Khải Ho&agrave;n Land (KHG),&nbsp;được th&agrave;nh lập năm 2009&nbsp;theo giấy chứng nhận đăng k&yacute; kinh doanh số 0309139261 do Sở kế hoạch v&agrave; Đầu tư TP Hồ Ch&iacute; Minh cấp. Lĩnh vực kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; m&ocirc;i giới v&agrave; đầu tư bất động sản.&nbsp;KHG kh&ocirc;ng những l&agrave; đối t&aacute;c tin cậy của Vinhomes, m&agrave; c&ograve;n nhiều đơn vị chủ đầu tư trong v&agrave; ngo&agrave;i nước như: Sunshine, Keppel Land, Kiến &Aacute;, Lotte, Vạn Ph&aacute;t Hưng,... Hiện tại Khải Ho&agrave;n Land l&agrave; nh&agrave; ph&acirc;n phối tiếp thị bất động sản h&agrave;ng đầu tại TP Hồ Ch&iacute; Minh, phục vụ tr&ecirc;n 50.000 kh&aacute;ch h&agrave;ng thường xuy&ecirc;n hoặc c&oacute; giao dịch li&ecirc;n quan đến Khải Ho&agrave;n Land. Cộng ty&nbsp;sở hữu 4 k&ecirc;nh ph&acirc;n phối ch&iacute;nh bao gồm: Hệ thống S&agrave;n truyền thống Khải Ho&agrave;n Land, Hệ thống Khải Ho&agrave;n Land Plus, Hệ thống c&ocirc;ng ty con, c&ocirc;ng ty li&ecirc;n kết; Hệ thống s&agrave;n li&ecirc;n kết, cộng t&aacute;c vi&ecirc;n, s&agrave;n trung t&acirc;m... Ng&agrave;y 06/09/2021, KHG được giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE);</p>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Khải Hoàn",
+      "percentage": 0.3197
+    },
+    {
+      "name": "Trần Thị Thu Hương",
+      "percentage": 0.1292
+    },
+    {
+      "name": "Nguyễn Thị Hoài Quyên",
+      "percentage": 0.0427
+    },
+    {
+      "name": "Phan Tuấn Nghĩa",
+      "percentage": 0.0397
+    },
+    {
+      "name": "Đinh Thị Nhật Hạnh",
+      "percentage": 0.0121
+    },
+    {
+      "name": "Võ Công Sơn",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Nguyễn Thế Khoa",
+      "percentage": 0.0098969
+    },
+    {
+      "name": "Nguyễn Thị Lệ Thúy",
+      "percentage": 0.0098969
+    },
+    {
+      "name": "Nguyễn Thế Trung",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phạm Thị Minh Phụ",
+      "percentage": 0.0004264
+    },
+    {
+      "name": "Lê Thị Như Ca",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Dương Thanh Thương",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Trần Văn Thành",
+      "percentage": 0.00033
+    },
+    {
+      "name": "Nguyễn Thị Phương Kiều",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thị Thanh Tâm",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Khu Việt Nghĩa",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "percentage": 0.0000149
+    },
+    {
+      "name": "Trần Đức Giang",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Minh Hiếu",
+      "percentage": 4.34e-6
+    },
+    {
+      "name": "Phạm Thị Hoà",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Khải Hoàn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.3197
+    },
+    {
+      "name": "Đinh Thị Nhật Hạnh",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0121
+    },
+    {
+      "name": "Võ Công Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Phạm Thị Minh Phụ",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0004264
+    },
+    {
+      "name": "Nguyễn Thị Phương Kiều",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Khu Việt Nghĩa",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000149
+    },
+    {
+      "name": "Trần Mạnh Toàn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Phương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Quang Hải",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:31.581736Z"
+}

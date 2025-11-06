@@ -1,0 +1,259 @@
+{
+  "symbol": "HAG",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 21863822085750.0,
+  "current_price": 17250.0,
+  "outstanding_shares": 1267467947,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Ho&agrave;ng Anh Gia Lai (HAG) th&agrave;nh lập v&agrave;o năm 1993, năm 2006 chuyển sang hoạt động động theo m&ocirc; h&igrave;nh cổ phần.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực&nbsp;trồng v&agrave; kinh doanh cao su, cọ dầu v&agrave; c&aacute;c loại c&acirc;y ăn quả; ph&aacute;t triển căn hộ, trung t&acirc;m thương mại, cao ốc văn ph&ograve;ng để b&aacute;n v&agrave; cho thu&ecirc;; x&acirc;y dựng v&agrave; kinh doanh thủy điện; cơ kh&iacute;; sản xuất v&agrave; kinh doanh thức ăn gia s&uacute;c, ph&acirc;n b&oacute;n; chăn nu&ocirc;i v&agrave; kinh doanh b&ograve; thịt v&agrave; b&ograve; sữa; kinh doanh kho b&atilde;i, sơ chế n&ocirc;ng phẩm v&agrave; dịch vụ n&ocirc;ng nghiệp; kinh doanh kh&aacute;ch sạn v&agrave; khu nghỉ dưỡng; v&agrave; c&aacute;c hoạt động về thể thao v&agrave; giải tr&iacute;. Từ năm 2016, HAG đ&atilde; chuyển đổi chiến lược kinh doanh khẳng định lĩnh vực kinh doanh cốt l&otilde;i l&agrave; ng&agrave;nh trồng trọt với trọng t&acirc;m l&agrave; sản xuất tr&aacute;i c&acirc;y để tham gia chuỗi gi&aacute; trị to&agrave;n cầu. HAG được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2008.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đoàn Nguyên Đức",
+      "percentage": 0.2884
+    },
+    {
+      "name": "Đoàn Hoàng Nam",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Công ty Cổ phần Tư vấn Đầu tư Hướng Việt",
+      "percentage": 0.0474
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán LPBank",
+      "percentage": 0.0473
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0348553066
+    },
+    {
+      "name": "Lê Minh Tâm",
+      "percentage": 0.0265
+    },
+    {
+      "name": "Vietnam Century Fund",
+      "percentage": 0.019700993
+    },
+    {
+      "name": "Đoàn Hoàng Anh",
+      "percentage": 0.0123
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán OCBS",
+      "percentage": 0.0122
+    },
+    {
+      "name": "Jaccar Capital Fund",
+      "percentage": 0.01100576
+    },
+    {
+      "name": "Deutche Asset Management (Asia) Ltd.",
+      "percentage": 0.0102004265
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.0065905332
+    },
+    {
+      "name": "Trần Thị Thu Phương",
+      "percentage": 0.0053
+    },
+    {
+      "name": "Dragon Capital Vietnam Fund",
+      "percentage": 0.0046931
+    },
+    {
+      "name": "Phạm Thị Hồng Hoa",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Nguyễn Văn Sự",
+      "percentage": 0.00424294
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán SSI",
+      "percentage": 0.00352388
+    },
+    {
+      "name": "Trà Văn Hàn",
+      "percentage": 0.0015679771
+    },
+    {
+      "name": "Hồ Thị Kim Chi",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Đức Bình",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Lê Hùng",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Deutsche Asset Management (Asia) Limited",
+      "percentage": 0.0002626992
+    },
+    {
+      "name": "Vũ Hữu Điền",
+      "percentage": 0.0002620587
+    },
+    {
+      "name": "Nguyễn Thị Lâm",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đoàn Thị Nguyên Thảo",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Văn Rõ",
+      "percentage": 0.0001517155
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.000150006
+    },
+    {
+      "name": "Phạm Xuân Quỳnh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Lê Quang",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đoàn Thị Nguyên Nguyên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Thơm",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Quang Long",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Võ Hồng Nhân",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Huyền",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Công ty TNHH Quản Lý Quỹ Kim Việt Nam",
+      "percentage": 0.0000759524
+    },
+    {
+      "name": "Lê Văn Kế",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Đoàn Nguyên Thịnh",
+      "percentage": 0.000054
+    },
+    {
+      "name": "Đoàn Thị Nguyên Xuân",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Phan Thanh Thủ",
+      "percentage": 0.00003725
+    },
+    {
+      "name": "Đào Duy Hải",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Văn Tốn",
+      "percentage": 0.0000225775
+    },
+    {
+      "name": "Đoàn Nguyên Ngôn",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đoàn Thị Nguyên Vinh",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đoàn Nguyên Đức",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2884
+    },
+    {
+      "name": "Hồ Thị Kim Chi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Thị Huyền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Võ Thị Huyền Lan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Trường Sơn",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Trương Y Trâm",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Trần Thùy Trang",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Thị Mai Phương",
+      "position": "Thư ký Hội đồng Quản Trị/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Thị Mỹ Hạnh",
+      "position": "Phó Tổng Giám đốc Kinh doanh/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hồng Phong",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Ngọc Châu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:23.971779Z"
+}

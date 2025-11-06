@@ -1,0 +1,129 @@
+{
+  "symbol": "SAS",
+  "exchange": "UPCOM",
+  "industry": "Bán lẻ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4311446313000.0,
+  "current_price": 32300.0,
+  "outstanding_shares": 133481310,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Dịch vụ H&agrave;ng kh&ocirc;ng S&acirc;n bay T&acirc;n Sơn Nhất (SAS)&nbsp;được th&agrave;nh lập năm 1994, l&agrave; c&ocirc;ng ty con của Tổng C&ocirc;ng ty&nbsp;Cảng H&agrave;ng kh&ocirc;ng Việt Nam (ACV), hoạt động ch&iacute;nh trong lĩnh vực kinh doanh h&agrave;ng miễn thuế v&agrave; cung cấp dịch vụ tại s&acirc;n bay. C&ocirc;ng ty&nbsp;hiện&nbsp;kinh doanh dịch vụ h&agrave;ng kh&ocirc;ng chủ lực tại Cảng H&agrave;ng kh&ocirc;ng Quốc tế T&acirc;n Sơn Nhất (s&acirc;n bay c&oacute; lưu lượng h&agrave;nh kh&aacute;ch lớn nhất Việt Nam), Cảng H&agrave;ng kh&ocirc;ng Quốc tế Ph&uacute; Quốc, Cảng H&agrave;ng kh&ocirc;ng Quốc tế Cam ranh. SAS&nbsp;cung cấp nhiều dịch vụ chất lượng cao bao gồm: Ph&ograve;ng chờ hạng thương gia (SASCO Business Lounge), Dịch vụ sleep box, spa, v&agrave; tiện &iacute;ch s&acirc;n bay, B&aacute;n lẻ miễn thuế v&agrave; h&agrave;ng lưu niệm, Nh&agrave; h&agrave;ng, cafe, dịch vụ đưa đ&oacute;n ưu ti&ecirc;n... Ng&agrave;y 16/04/2015, SAS ch&iacute;nh thức&nbsp;giao dịch tr&ecirc;n thị trường UPCOM.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Cảng Hàng không Việt Nam - CTCP",
+      "percentage": 0.4907
+    },
+    {
+      "name": "Công ty TNHH Xuất Nhập Khẩu Liên Thái Bình Dương",
+      "percentage": 0.2498
+    },
+    {
+      "name": "Công Ty TNHH Thời trang và Mỹ phẩm Âu Châu",
+      "percentage": 0.1489
+    },
+    {
+      "name": "Công ty Cổ phần Thời trang và Mỹ phẩm Duy Anh",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Công ty Cổ phần Thương mại Duy Anh",
+      "percentage": 0.0171
+    },
+    {
+      "name": "Đoàn Thị Mai Hương",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn  Hạnh",
+      "percentage": 0.0014987
+    },
+    {
+      "name": "Nguyễn Văn Hùng Cường",
+      "percentage": 0.0011547
+    },
+    {
+      "name": "Cao Hữu Minh Nhật",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Minh Ngọc",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Tôn Nữ Diệu Trí",
+      "percentage": 0.0008835
+    },
+    {
+      "name": "Lê Hồng Thủy Tiên",
+      "percentage": 0.0003747
+    },
+    {
+      "name": "Công ty Cổ Phần Hoàn Lộc Việt",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Thị Thu Trang",
+      "percentage": 0.0000375
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đoàn Thị Mai Hương",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn  Hạnh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0014987
+    },
+    {
+      "name": "Nguyễn Văn Hùng Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0011547
+    },
+    {
+      "name": "Nguyễn Minh Ngọc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Tôn Nữ Diệu Trí",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0008835
+    },
+    {
+      "name": "Trần Thị Thu Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000375
+    },
+    {
+      "name": "Vũ Hoàng Long",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Diệu Thúy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Minh Nguyệt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chu Khánh Toàn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Quốc Hoàng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:14.695458Z"
+}

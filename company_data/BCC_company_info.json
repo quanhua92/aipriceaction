@@ -1,0 +1,195 @@
+{
+  "symbol": "BCC",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 948715552400.0,
+  "current_price": 7700.0,
+  "outstanding_shares": 123209812,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Xi măng Bỉm Sơn (BCC) c&oacute; tiền th&acirc;n l&agrave; Nh&agrave; m&aacute;y Xi măng Bỉm Sơn được th&agrave;nh lập v&agrave;o năm 1980. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực sản xuất, kinh doanh, xuất nhập khẩu xi măng, clinker v&agrave; c&aacute;c loại vật liệu x&acirc;y dựng kh&aacute;c. BCC ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2006.&nbsp;C&ocirc;ng ty&nbsp;c&oacute; tổng c&ocirc;ng suất sản xuất clinker đạt 3,1 triệu tấn/năm v&agrave; tổng c&ocirc;ng suất nghiền xi măng đạt 4 triệu tấn/năm. Sản lượng ti&ecirc;u thụ của BCC chiếm khoảng 6,3% thị phần ti&ecirc;u thụ nội địa v&agrave; khoảng 11% thị phần với sản lượng ti&ecirc;u thụ đạt khoảng 110.000 - 120.000 tấn/th&aacute;ng tại thị trường miền Trung. Năm 2006, c&ocirc;ng ty ch&iacute;nh thức được ni&ecirc;m yết v&agrave; giao dịch tại Sở giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Xi măng Việt Nam",
+      "percentage": 0.73147
+    },
+    {
+      "name": "Doãn Nam Khánh",
+      "percentage": 0.1035652866
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.05018545
+    },
+    {
+      "name": "Nguyễn Thanh Chương",
+      "percentage": 0.0344966737
+    },
+    {
+      "name": "Tạ Duy",
+      "percentage": 0.02889214
+    },
+    {
+      "name": "Công ty Cổ phần Vicem Bao bì Bỉm Sơn",
+      "percentage": 0.00169473
+    },
+    {
+      "name": "NGUYỄN HOÀNH VÂN",
+      "percentage": 0.0003392
+    },
+    {
+      "name": "Nguyễn Như Khuê",
+      "percentage": 0.0000878097
+    },
+    {
+      "name": "Phan Thị Nhường",
+      "percentage": 0.0000846736
+    },
+    {
+      "name": "Hà Văn Diên",
+      "percentage": 0.000052
+    },
+    {
+      "name": "Nguyễn Trung Hòa",
+      "percentage": 0.0000439048
+    },
+    {
+      "name": "Tăng Xuân Trường",
+      "percentage": 0.000035542
+    },
+    {
+      "name": "Trịnh Hữu Hạnh",
+      "percentage": 0.0000334513
+    },
+    {
+      "name": "Lê Văn Bằng",
+      "percentage": 0.0000334513
+    },
+    {
+      "name": "Dương Đình Hội",
+      "percentage": 0.0000261338
+    },
+    {
+      "name": "Nguyễn Đức Sơn",
+      "percentage": 7.3e-6
+    },
+    {
+      "name": "Nguyễn Văn Châu",
+      "percentage": 5.23e-6
+    },
+    {
+      "name": "Lê Hữu Phăng",
+      "percentage": 5.23e-6
+    },
+    {
+      "name": "Nguyễn Thanh Hà",
+      "percentage": 5.2267e-6
+    },
+    {
+      "name": "Nguyễn Chí Thức",
+      "percentage": 5.2e-6
+    },
+    {
+      "name": "Ngô Sỹ Túc",
+      "percentage": 5.2e-6
+    },
+    {
+      "name": "Nguyễn Văn Phán",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Đỗ Tiến Trình",
+      "percentage": 2.09e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "NGUYỄN HOÀNH VÂN",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0003392
+    },
+    {
+      "name": "Nguyễn Đức Sơn",
+      "position": "Trưởng phòng Tài chính - Kế toán/Phụ trách Công bố thông tin",
+      "percentage": 7.3e-6
+    },
+    {
+      "name": "Lê Hữu Phăng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 5.23e-6
+    },
+    {
+      "name": "Nguyễn Văn Châu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 5.23e-6
+    },
+    {
+      "name": "Nguyễn Chí Thức",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 5.2e-6
+    },
+    {
+      "name": "Lê Quang Đông",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Huy Quân",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Khanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Đức Việt",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hữu Hà",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Đức",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Phương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Thúy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Văn Hoan",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Xuân Khôi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thế Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:59.538310Z"
+}

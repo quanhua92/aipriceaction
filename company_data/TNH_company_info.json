@@ -1,0 +1,170 @@
+{
+  "symbol": "TNH",
+  "exchange": "HOSE",
+  "industry": "Thiết bị và Dịch vụ Y tế",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2047629296050.0,
+  "current_price": 12350.0,
+  "outstanding_shares": 165799943,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Bệnh viện TNH (TNH)&nbsp;được th&agrave;nh lập v&agrave;o năm 2012.&nbsp;C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực quản l&yacute; vận h&agrave;nh bệnh viện v&agrave; cung cấp kinh doanh c&aacute;c dịch vụ kh&aacute;m&nbsp;chữa bệnh,&nbsp;chăm s&oacute;c y tế, thiết bị vật tư y tế. TNH trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ cuối năm 2019. C&ocirc;ng ty hiện đang quản l&yacute; v&agrave; khai th&aacute;c kh&aacute;m chữa bệnh tại 2 bệnh viện: Bệnh viện Quốc tế Th&aacute;i Nguy&ecirc;n v&agrave; Bệnh viện Đa khoa Y&ecirc;n B&igrave;nh tại Th&aacute;i Nguy&ecirc;n. C&ocirc;ng ty đ&atilde; k&yacute; kết hợp đồng kh&aacute;m&nbsp;chữa bệnh ch&iacute;nh thức với Sam Sung Th&aacute;i Nguy&ecirc;n, nh&agrave; m&aacute;y lớn nhất ch&acirc;u &Aacute; của Tập đo&agrave;n Samsung c&oacute; quy m&ocirc; hơn 180.000 c&ocirc;ng nh&acirc;n v&agrave; c&aacute;n bộ trong khu c&ocirc;ng nghiệp. TNH được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 12/2020.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Blooming Earth Pte. Ltd",
+      "percentage": 0.1374
+    },
+    {
+      "name": "KWE Beteiligungen AG",
+      "percentage": 0.1051
+    },
+    {
+      "name": "Access S.a., Sicav-sif-asia Top Picks",
+      "percentage": 0.101
+    },
+    {
+      "name": "Albizia Asean Opportunities Fund",
+      "percentage": 0.0478
+    },
+    {
+      "name": "Helvetische Bank AG",
+      "percentage": 0.0463
+    },
+    {
+      "name": "Nguyễn Xuân Hiệp",
+      "percentage": 0.0434
+    },
+    {
+      "name": "KrungThai Xspring Securities Company Limited",
+      "percentage": 0.0347
+    },
+    {
+      "name": "Endurance Capital Vietnam I Ltd",
+      "percentage": 0.0338
+    },
+    {
+      "name": "Hoàng  Tuyên",
+      "percentage": 0.032
+    },
+    {
+      "name": "Endurance Capital Vietnam II S.A. SICAV-RAIF",
+      "percentage": 0.0267
+    },
+    {
+      "name": "Nguyễn Văn Thuỷ",
+      "percentage": 0.0237
+    },
+    {
+      "name": "Lionglobal Vietnam Fund",
+      "percentage": 0.0212
+    },
+    {
+      "name": "HSBC Global Investment Funds - Frontier Markets",
+      "percentage": 0.0203
+    },
+    {
+      "name": "Lê Xuân Tân",
+      "percentage": 0.0181
+    },
+    {
+      "name": "Cao Thị Cẩm Anh",
+      "percentage": 0.0104
+    },
+    {
+      "name": "Vũ Văn Thành",
+      "percentage": 0.0094
+    },
+    {
+      "name": "Ngô Minh Trường",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Trần Thiện Sách",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Anh Đĩnh",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Triệu Xuân Hưng",
+      "percentage": 0.00058
+    },
+    {
+      "name": "Đào Mạnh Duy",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Cao Thị Hồng",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Vũ  Vinh Quang",
+      "percentage": 0.00019
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hoàng  Tuyên",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.032
+    },
+    {
+      "name": "Nguyễn Văn Thuỷ",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0237
+    },
+    {
+      "name": "Lê Xuân Tân",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0181
+    },
+    {
+      "name": "Vũ Văn Thành",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0094
+    },
+    {
+      "name": "Trần Thiện Sách",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Cao Thị Hồng",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Vũ  Vinh Quang",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Nguyễn Xuân Đôn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thúy An",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Hảo",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Thắng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Hồng Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:54.992531Z"
+}

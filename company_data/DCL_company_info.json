@@ -1,0 +1,163 @@
+{
+  "symbol": "DCL",
+  "exchange": "HOSE",
+  "industry": "Dược phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2519915535000.0,
+  "current_price": 34500.0,
+  "outstanding_shares": 73041030,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p align=\"left\">C&ocirc;ng ty Cổ phần Dược phẩm Cửu Long (DCL) th&agrave;nh lập&nbsp;năm&nbsp;1997. Năm 2004,&nbsp;c&ocirc;ng ty chuyển sang hoạt&nbsp;động theo m&ocirc; h&igrave;nh cổ phần. C&ocirc;ng ty chuy&ecirc;n sản xuất,&nbsp;kinh doanh v&agrave; xuất nhập khẩu dược phẩm, capsule, c&aacute;c loại dụng cụ, trang thiết bị y tế cho ng&agrave;nh dược, ng&agrave;nh y tế. DCL c&oacute;&nbsp;5 nh&agrave; m&aacute;y đang hoạt động trong đ&oacute; c&oacute; 4 nh&agrave; m&aacute;y đạt ti&ecirc;u chuẩn GMP-WHO.&nbsp;Ngo&agrave;i thị trường trong nước,sản phẩm của c&ocirc;ng ty c&ograve;n được xuất sang Campuchia, L&agrave;o, Myanmar v&agrave; Nigeria. DCL được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2008.</p>\r\n\r\n<p align=\"left\">&nbsp;</p>\r\n\r\n<p align=\"left\">&nbsp;</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn F.I.T",
+      "percentage": 0.5805
+    },
+    {
+      "name": "Quỹ Đầu tư Chứng khoán Y tế Bản Việt",
+      "percentage": 0.02143948
+    },
+    {
+      "name": "Red River Holding",
+      "percentage": 0.01888467
+    },
+    {
+      "name": "Lê Trung Hiếu",
+      "percentage": 0.0153944339
+    },
+    {
+      "name": "Asiavantage Global Limited",
+      "percentage": 0.01413791
+    },
+    {
+      "name": "Phạm Trung Nghĩa",
+      "percentage": 0.0125254983
+    },
+    {
+      "name": "Nguyễn Thanh Tòng",
+      "percentage": 0.0053566387
+    },
+    {
+      "name": "Lương Văn Hóa",
+      "percentage": 0.0041707921
+    },
+    {
+      "name": "Nguyễn Văn Cần",
+      "percentage": 0.0039427485
+    },
+    {
+      "name": "Nguyễn Văn Ân",
+      "percentage": 0.003495111
+    },
+    {
+      "name": "Nguyễn Văn Thanh Hải",
+      "percentage": 0.0019384699
+    },
+    {
+      "name": "Đỗ Thị Thu Liên",
+      "percentage": 0.0015482907
+    },
+    {
+      "name": "Đặng Thị Hương",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Toàn Thắng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trương Hải Bằng",
+      "percentage": 0.0002485217
+    },
+    {
+      "name": "Nguyễn Thị Minh Nguyệt",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Văn Đăng",
+      "percentage": 0.0001988174
+    },
+    {
+      "name": "Phạm Việt Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Thanh Hương",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Hữu Trung",
+      "percentage": 0.0000320096
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Minh Nguyệt",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trịnh Quốc Khánh",
+      "position": "Giám đốc Tài chính/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phí Xuân Trường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Xuân Vinh",
+      "position": "Phó Tổng Giám đốc Kinh doanh",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Huệ Nga",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thế Cao",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "VŨ THỊ MINH HOÀI",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Hòa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Sang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Bích Ly",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trọng Đức",
+      "position": "Phó Tổng Giám đốc Sản xuất",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Bích",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:59.109454Z"
+}

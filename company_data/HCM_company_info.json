@@ -1,0 +1,248 @@
+{
+  "symbol": "HCM",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 24912372901450.0,
+  "current_price": 23050.0,
+  "outstanding_shares": 1080797089,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Th&agrave;nh Phố Hồ Ch&iacute; Minh (HCM) được th&agrave;nh lập v&agrave;o năm 2003 tr&ecirc;n cơ sở hợp t&aacute;c chiến lược v&agrave; đầu tư của Quỹ Đầu tư Ph&aacute;t triển Đ&ocirc; thị Th&agrave;nh phố Hồ Ch&iacute; Minh (HIFU) v&agrave; Tập đo&agrave;n Dragon Capital của Anh Quốc.&nbsp;C&ocirc;ng ty&nbsp;thừa hưởng những thế mạnh về chuy&ecirc;n m&ocirc;n v&agrave; thế mạnh về t&agrave;i ch&iacute;nh của hai tổ chức n&agrave;y trong việc cung cấp c&aacute;c dịch vụ đầu tư t&agrave;i ch&iacute;nh chuy&ecirc;n nghiệp một c&aacute;ch to&agrave;n diện.&nbsp;Trong năm 2024, C&ocirc;ng ty xếp ở vị tr&iacute; 4 với 6.41% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HOSE. Tr&ecirc;n thị trường ph&aacute;i sinh, HCM đứng vị tr&iacute; thứ 2 thị phần m&ocirc;i giới chứng kho&aacute;n ph&aacute;i sinh với 6.34%.&nbsp;Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 848,41 tỷ đồng, tăng 26.23% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 195.6%, tăng 49.61%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 665,53 tỷ đồng, tăng 40.74% v&agrave; đ&oacute;ng g&oacute;p 38.67 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 1.295,56 tỷ đồng, tăng 53.83%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 11.09%, tăng 2.76%. HCM được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2009.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Dragon Capital Markets Limited",
+      "percentage": 0.3148
+    },
+    {
+      "name": "Nguyễn Văn Sơn",
+      "percentage": 0.1404
+    },
+    {
+      "name": "Công ty Đầu tư Tài chính Nhà nước Thành phố Hồ Chí Minh",
+      "percentage": 0.1125
+    },
+    {
+      "name": "Vietnam Emerging Equity Fund Limited",
+      "percentage": 0.0630309629
+    },
+    {
+      "name": "PXP Vietnam Emerging Equity Fund",
+      "percentage": 0.0356
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0216
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0165
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Phát Triển Thành phố Hồ Chí Minh",
+      "percentage": 0.00845155
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Hạ tầng Kỹ thuật Thành phố Hồ Chí Minh",
+      "percentage": 0.0056376337
+    },
+    {
+      "name": "Trịnh Hoài Giang",
+      "percentage": 0.0056
+    },
+    {
+      "name": "PXP Vietnam Smaller Companies Fund Limited",
+      "percentage": 0.0043
+    },
+    {
+      "name": "Nguyễn Quốc Huân (Nyvene Johan)",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Lâm Hữu Hồ",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Lê Công Thiện",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Lê Anh Quân",
+      "percentage": 0.0014
+    },
+    {
+      "name": "KIM PMAA Vietnam Securities Investment Trust 1(Equity)",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Công ty Cổ Phần Cộng Hưởng",
+      "percentage": 0.00125
+    },
+    {
+      "name": "Phạm Nghiêm Xuân Bắc",
+      "percentage": 0.00082
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0008133949
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0008
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.00077
+    },
+    {
+      "name": "Phạm Minh Phương",
+      "percentage": 0.0006537017
+    },
+    {
+      "name": "Andrew Colin Vallis",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Hoàng Lan",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.0004825993
+    },
+    {
+      "name": "Phạm Thị Phương Lan",
+      "percentage": 0.0004520758
+    },
+    {
+      "name": "Thân Thị Thu Dung",
+      "percentage": 0.00036
+    },
+    {
+      "name": "Lê Anh Minh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Thanh Vân",
+      "percentage": 0.0002245834
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Xuân Dung",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Đỗ Hùng Việt",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Võ Văn Châu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Ngọc Quỳnh Tiên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000762575
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000294987
+    },
+    {
+      "name": "Nguyễn Hoài Bảo",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 5.0476e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trịnh Hoài Giang",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Nguyễn Quốc Huân (Nyvene Johan)",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Lâm Hữu Hồ",
+      "position": "Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Lê Anh Quân",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Phạm Nghiêm Xuân Bắc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00082
+    },
+    {
+      "name": "Andrew Colin Vallis",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Hoàng Lan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Thân Thị Thu Dung",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00036
+    },
+    {
+      "name": "Lê Anh Minh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Hồng Văn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Nguyệt Minh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quốc Tú",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hoàng Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Thanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:41.024033Z"
+}

@@ -1,0 +1,403 @@
+{
+  "symbol": "VNM",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 121217415810000.0,
+  "current_price": 58000.0,
+  "outstanding_shares": 2089955445,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Sữa Việt Nam (VNM) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Sữa &ndash; C&agrave; Ph&ecirc; Miền Nam,&nbsp;được th&agrave;nh lập v&agrave;o năm 1976. C&ocirc;ng ty hoạt&nbsp;động ch&iacute;nh trong lĩnh vực&nbsp;chế biến sản xuất, kinh doanh xuất nhập khẩu c&aacute;c&nbsp;sản phẩm sữa v&agrave; c&aacute;c sản phẩm dinh dưỡng kh&aacute;c. VNM ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm&nbsp;2003. C&ocirc;ng ty giữ vững vị thế top 1 thị phần ng&agrave;nh sữa Việt Nam&nbsp;, hiện nay VNM đang quản l&yacute; hơn 130.000 đ&agrave;n&nbsp;b&ograve; sữa đang khai th&aacute;c, 15 trang trại b&ograve; sữa c&ocirc;ng nghệ cao, 16 nh&agrave; m&aacute;y sữa&nbsp;hiện đại v&agrave; 1 nh&agrave; m&aacute;y thị b&ograve; m&aacute;t 10.000 tấn.&nbsp;Sản phẩm của VNM đ&atilde; c&oacute; mặt tại hơn&nbsp;200.000 điểm b&aacute;n trong hệ thống ph&acirc;n phối&nbsp;v&agrave; được xuất khẩu trực tiếp đến&nbsp;63&nbsp;quốc gia v&agrave; v&ugrave;ng l&atilde;nh thổ&nbsp;tr&ecirc;n thế giới. VNM được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Chứng kho&aacute;n Th&agrave;nh phố Hồ&nbsp;Ch&iacute; Minh (HOSE) từ năm 2006.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.36
+    },
+    {
+      "name": "F&N Dairy Investments Private Limited",
+      "percentage": 0.1769
+    },
+    {
+      "name": "Platinum Victory Private Limited",
+      "percentage": 0.1062
+    },
+    {
+      "name": "F&n Bev Manufacturing Pte. Ltd.",
+      "percentage": 0.027
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0219118879
+    },
+    {
+      "name": "Fubon FTSE Vietnam ETF",
+      "percentage": 0.0128
+    },
+    {
+      "name": "Employees Provident Fund Board",
+      "percentage": 0.0127
+    },
+    {
+      "name": "The Emerging Markets Fund Of The Genesis Group Trust For Employee Benefit Plans",
+      "percentage": 0.0118
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0111
+    },
+    {
+      "name": "First State Global Umbrella Fund Plc - First State Asian Equity Plus Fund",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Matthews Pacific Tiger Fund",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Stichting Depositary Apg Emerging Markets Equity Pool",
+      "percentage": 0.0077
+    },
+    {
+      "name": "The Genesis Emerging Markets Investment Company",
+      "percentage": 0.0072
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0072
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Vietnam Ventures Limited",
+      "percentage": 0.006
+    },
+    {
+      "name": "Matthews Asia Dividend Fund",
+      "percentage": 0.0055
+    },
+    {
+      "name": "Vinacapital Vietnam Opportunity Fund Ltd.",
+      "percentage": 0.0053119
+    },
+    {
+      "name": "Deutsche Asset Management (Asia) Limited",
+      "percentage": 0.0052541996
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0052
+    },
+    {
+      "name": "Beira Limited",
+      "percentage": 0.0049194352
+    },
+    {
+      "name": "Công ty TNHH Manulife (Việt Nam) (Manulife)",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Fidelity Investment Trust - Fidelity Series Emerging Markets Fund",
+      "percentage": 0.0045
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Merrill Lynch International",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Citigroup Global Markets Ltd",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Government Of Singapore",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Mai Kiều Liên",
+      "percentage": 0.0031
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.002699703
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.002
+    },
+    {
+      "name": "Arisaig ASEAN Fund Limited",
+      "percentage": 0.0016277109
+    },
+    {
+      "name": "Food & Beverage",
+      "percentage": 0.0014721898
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0011
+    },
+    {
+      "name": "PXP Vietnam Emerging Equity Fund",
+      "percentage": 0.00108392
+    },
+    {
+      "name": "Quỹ ETF DCVFMVN30",
+      "percentage": 0.00079964
+    },
+    {
+      "name": "Công ty TNHH MTV Đầu Tư SCIC",
+      "percentage": 0.00069
+    },
+    {
+      "name": "Greystanes Limited Company",
+      "percentage": 0.0005929161
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hòa",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hàng Đầu VCBF",
+      "percentage": 0.00049064
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tăng trưởng Mirae Asset Việt Nam",
+      "percentage": 0.00045941
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Việt Nam Chọn lọc",
+      "percentage": 0.0004151368
+    },
+    {
+      "name": "Trần Minh Văn",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Quỹ Đầu tư Chứng Khoán Năng động DC",
+      "percentage": 0.00031519
+    },
+    {
+      "name": "Indochina Capital Vietnam Holdings Ltd.",
+      "percentage": 0.0003139635
+    },
+    {
+      "name": "Lê Thị Ngọc Thuý",
+      "percentage": 0.0002963
+    },
+    {
+      "name": "Mai Hoài Anh",
+      "percentage": 0.000245
+    },
+    {
+      "name": "Lê Thành Liêm",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Nguyễn Thị Như Hằng",
+      "percentage": 0.0002329496
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tập trung Cổ tức DC",
+      "percentage": 0.0002297032
+    },
+    {
+      "name": "Nguyễn Hữu Ngọc Trân",
+      "percentage": 0.0001759103
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.0001567627
+    },
+    {
+      "name": "Dương Thị Ngọc Trinh",
+      "percentage": 0.000132
+    },
+    {
+      "name": "Nguyễn Minh Ân",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Lê Quang Thanh Trúc",
+      "percentage": 0.0001062
+    },
+    {
+      "name": "Trịnh Quốc Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Minh Tiên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000836648
+    },
+    {
+      "name": "Quỹ Đầu tư Chủ động VND",
+      "percentage": 0.00008331
+    },
+    {
+      "name": "Phạm Phú Tuấn",
+      "percentage": 0.0000706751
+    },
+    {
+      "name": "Bùi Thị Hương",
+      "percentage": 0.0000642
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0000455997
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Chiến Lược VCBF",
+      "percentage": 0.00004477
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000327396
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Bản Việt",
+      "percentage": 0.0000275644
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0000275127
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000269901
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0000258416
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Mai",
+      "percentage": 0.000024
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 0.000023958
+    },
+    {
+      "name": "Công ty TNHH MTV Quản Lý Quỹ Ngân Hàng Thương Mại Cổ phần Công Thương Việt Nam",
+      "percentage": 0.0000209975
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "percentage": 0.0000142
+    },
+    {
+      "name": "Ngô Thị Thu Trang",
+      "percentage": 6.5e-6
+    },
+    {
+      "name": "Mai Quang Liêm",
+      "percentage": 2.7e-6
+    },
+    {
+      "name": "Vũ Trí Thức",
+      "percentage": 2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Mai Kiều Liên",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hòa",
+      "position": "Giám đốc điều hành chuỗi cung ứng",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Minh Văn",
+      "position": "Giám đốc điều hành sản xuất",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Thành Liêm",
+      "position": "Thành viên Hội đồng Quản trị/Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Trịnh Quốc Dũng",
+      "position": "Giám đốc điều hành Phát triển vùng nguyên vật liệu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Bùi Thị Hương",
+      "position": "Giám đốc Điều hành Nhân sự - Hành chính",
+      "percentage": 0.0000642
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "position": "Giám đốc Khối Nghiên cứu phát triển",
+      "percentage": 0.0000142
+    },
+    {
+      "name": "Alain Xavier Cany",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tiêu Yến Trinh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Trí",
+      "position": "Giám đốc Marketing",
+      "percentage": 0.0
+    },
+    {
+      "name": "Michael Chye Hin Fah",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trung",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lee Meng Tat",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Ngọc Thạch",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Băng Tâm",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Lê Hùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:46.874015Z"
+}

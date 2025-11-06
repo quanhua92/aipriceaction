@@ -1,0 +1,156 @@
+{
+  "symbol": "VGI",
+  "exchange": "UPCOM",
+  "industry": "Viễn thông di động",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 234982224640000.0,
+  "current_price": 77200.0,
+  "outstanding_shares": 3043811200,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormalCxSpFirst\">Tổng C&ocirc;ng ty Cổ phần Đầu tư Quốc tế Viettel (VGI) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đầu tư Quốc tế Viettel&nbsp;được th&agrave;nh lập&nbsp;v&agrave;o năm 2007. VGI&nbsp;được chuyển sang hoạt&nbsp;động theo m&ocirc; h&igrave;nh&nbsp;tổng c&ocirc;ng ty từ năm 2013.&nbsp;Tổng C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực đầu tư ph&aacute;t triển mạng&nbsp;viễn th&ocirc;ng tại c&aacute;c thị&nbsp;trường nước ngo&agrave;i. VGI&nbsp;c&oacute; 9 mạng viễn th&ocirc;ng tại 9 quốc gia với hơn 65 triệu kh&aacute;ch h&agrave;ng, thuộc top 30 c&ocirc;ng ty viễn th&ocirc;ng tr&ecirc;n Thế giới.&nbsp;VGI được giao dịch tr&ecirc;n thị trường UPCOM từ cuối th&aacute;ng 09/2018.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp - Viễn thông Quân đội",
+      "percentage": 0.99027
+    },
+    {
+      "name": "Hoàng Sơn",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Hải Lý",
+      "percentage": 0.00002503
+    },
+    {
+      "name": "Tào Đức Thắng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đào Thúy Hường",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Lê Đăng Dũng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thanh Nam",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Hoài Thanh",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Nguyễn Thị Thanh Dung",
+      "percentage": 6.5e-6
+    },
+    {
+      "name": "Hà Thế Dương",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Đào Xuân Vũ",
+      "percentage": 5.9e-6
+    },
+    {
+      "name": "Đỗ Mạnh Hùng",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Phan Thanh Sang",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Cao Lợi",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Đoàn Thị Thu Nga",
+      "percentage": 1.1e-6
+    },
+    {
+      "name": "Phạm Hoàng Điệp",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Đức Quang",
+      "percentage": 4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Hải Lý",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00002503
+    },
+    {
+      "name": "Tào Đức Thắng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Hà Thế Dương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Nguyễn Cao Lợi",
+      "position": "Kế toán trưởng/Phó Tổng Giám đốc",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Phan Trường Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nga",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Xuân Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoài Bắc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quản Thị Thu Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đàm Minh Toản",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quang Tiệp",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hoa",
+      "position": "Phó Tổng Giám đốc Đầu tư",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Quang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đạt",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:53.235677Z"
+}

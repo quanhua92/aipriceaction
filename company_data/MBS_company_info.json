@@ -1,0 +1,171 @@
+{
+  "symbol": "MBS",
+  "exchange": "HNX",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 17463787886400.0,
+  "current_price": 29600.0,
+  "outstanding_shares": 589992834,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Được th&agrave;nh lập từ năm 2000 bởi Ng&acirc;n h&agrave;ng Thương mại cổ phần&nbsp;Qu&acirc;n đội (MB), C&ocirc;ng ty Cổ phần&nbsp;Chứng kho&aacute;n MB (MBS), tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty&nbsp;Chứng kho&aacute;n Thăng Long,&nbsp;l&agrave; một trong 5 c&ocirc;ng ty chứng kho&aacute;n đầu ti&ecirc;n tại Việt Nam. C&aacute;c lĩnh vực kinh doanh ch&iacute;nh của c&ocirc;ng ty bao gồm dịch vụ chứng kho&aacute;n, dịch vụ nghi&ecirc;n cứu v&agrave; dịch vụ ng&acirc;n h&agrave;ng đầu tư. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 628.15 tỷ đồng, tăng 2.2% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 146.48%, giảm 22.62%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 186.09 tỷ đồng, tăng 69.51% v&agrave; đ&oacute;ng g&oacute;p 10.88 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 930.64 tỷ đồng, tăng 29.95%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 12.45%, tăng 0.18%.&nbsp;MBS được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2016.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Quân đội",
+      "percentage": 0.64845
+    },
+    {
+      "name": "Lê Viết Hải",
+      "percentage": 0.001628
+    },
+    {
+      "name": "Nguyễn Minh Hằng",
+      "percentage": 0.000869
+    },
+    {
+      "name": "Lê Văn Tuấn",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Bùi Thị Hồng Hạnh",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Công Đoàn Cơ Sở Thành Viên Ctcp Chứng Khoán Mb",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Thành Nam",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Thị Thanh Huyền",
+      "percentage": 0.000234
+    },
+    {
+      "name": "Đặng Thúy Dung",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Vũ Thị Hương",
+      "percentage": 0.00014947
+    },
+    {
+      "name": "Đoàn Kim Dung",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Cao Thị Thúy Nga",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Bùi Thanh Thủy",
+      "percentage": 0.000048
+    },
+    {
+      "name": "Hoàng Minh Tú",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Nguyễn Thúy Hằng",
+      "percentage": 5e-7
+    },
+    {
+      "name": "Phạm Thị Hoa",
+      "percentage": 3e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Viết Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.001628
+    },
+    {
+      "name": "Nguyễn Minh Hằng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000869
+    },
+    {
+      "name": "Lê Thành Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Thị Thanh Huyền",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.000234
+    },
+    {
+      "name": "Vũ Thị Hương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00014947
+    },
+    {
+      "name": "Phạm Thị Hoa",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 3e-7
+    },
+    {
+      "name": "Nguyễn Kim Chung",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Kim Thanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Học",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Thị Sen",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Thúy Nga",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Thị Thanh Hà",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thành Trung",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Thị Thùy Mai",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Diệp Quỳnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hải Hà",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:08.549336Z"
+}

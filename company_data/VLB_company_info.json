@@ -1,0 +1,136 @@
+{
+  "symbol": "VLB",
+  "exchange": "UPCOM",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2210007360000.0,
+  "current_price": 47100.0,
+  "outstanding_shares": 46921600,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty&nbsp;Cổ phần&nbsp;X&acirc;y dựng v&agrave; Sản xuất Vật liệu X&acirc;y dựng Bi&ecirc;n H&ograve;a (VLB) được th&agrave;nh lập năm 1983 với tiền th&acirc;n l&agrave; X&iacute; nghiệp Khai th&aacute;c Đất Bi&ecirc;n H&ograve;a. C&ocirc;ng ty đ&atilde; c&oacute; kinh nghiệm hơn 30 năm hoạt động trong lĩnh vực khai th&aacute;c, chế biến vật liệu x&acirc;y dựng. Tr&ecirc;n địa b&agrave;n tỉnh Đồng Nai, VLB đang quản l&yacute;, khai th&aacute;c v&agrave; kinh doanh 6 mỏ đ&aacute; v&agrave; hệ thống c&aacute;c bến thủy nội địa c&oacute; c&ocirc;ng suất bốc dỡ đ&aacute; tr&ecirc;n 2 triệu m3 đ&aacute; th&agrave;nh phẩm/năm để cung cấp vật liệu x&acirc;y dựng cho khu vực ph&iacute;a nam. VLB được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 09/2016.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Công Nghiệp Thực Phẩm Đồng Nai - MTV Công ty TNHH",
+      "percentage": 0.4908
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư KSB",
+      "percentage": 0.2195
+    },
+    {
+      "name": "Công ty Cổ phần Hóa An",
+      "percentage": 0.0833475
+    },
+    {
+      "name": "Nguyễn Xuân Việt",
+      "percentage": 0.00215
+    },
+    {
+      "name": "Phạm Thái Hợp",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Huỳnh Kim Vũ",
+      "percentage": 0.00128
+    },
+    {
+      "name": "Nguyễn Văn Dũng",
+      "percentage": 0.00103774
+    },
+    {
+      "name": "Trần Thị Thanh Bình",
+      "percentage": 0.00085
+    },
+    {
+      "name": "Hứa Hồ Điệp",
+      "percentage": 0.00083915
+    },
+    {
+      "name": "Nguyễn Thị Thuận Hiếu",
+      "percentage": 0.00063064
+    },
+    {
+      "name": "Trần Quốc Triều",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Quốc Thái",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Huỳnh Xuân Đạo",
+      "percentage": 0.000323
+    },
+    {
+      "name": "Nguyễn Như Thạch",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Nguyễn Hùng Thắng",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Huỳnh Đường Tài",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Hồ Ngọc Liệp",
+      "percentage": 0.00006889
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Xuân Việt",
+      "position": "Phó Giám đốc",
+      "percentage": 0.00215
+    },
+    {
+      "name": "Huỳnh Kim Vũ",
+      "position": "Giám đốc",
+      "percentage": 0.00128
+    },
+    {
+      "name": "Phạm Quốc Thái",
+      "position": "Thành viên Hội đồng Quản trị/Kế toán trưởng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Huỳnh Xuân Đạo",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.000323
+    },
+    {
+      "name": "Nguyễn Hùng Thắng",
+      "position": "Phó Giám đốc",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Huỳnh Đường Tài",
+      "position": "Trưởng Ban kiểm soát/Phụ trách Công bố thông tin",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Nguyễn Thị Thu Trà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Phòng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Trúc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:31.659479Z"
+}

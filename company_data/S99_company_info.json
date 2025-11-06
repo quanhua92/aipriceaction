@@ -1,0 +1,171 @@
+{
+  "symbol": "S99",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 988845424000.0,
+  "current_price": 9500.0,
+  "outstanding_shares": 104088992,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần SCI (S99),&nbsp;tiền th&acirc;n l&agrave; X&iacute; nghiệp S&ocirc;ng Đ&agrave; 903 trực thuộc C&ocirc;ng ty S&ocirc;ng Đ&agrave; 9, được th&agrave;nh lập năm 1998.&nbsp;C&ocirc;ng ty chuy&ecirc;n hoạt động trong lĩnh vực x&acirc;y dựng các c&ocirc;ng trình hạ tầng giao th&ocirc;ng,&nbsp;d&acirc;n dụng, c&ocirc;ng nghi&ecirc;̣p,&nbsp;thủy lợi, thủy đi&ecirc;̣n.&nbsp;Những c&ocirc;ng tr&igrave;nh thủy điện m&agrave; S99 đ&atilde; v&agrave; đang đầu tư bao gồm: Thủy điện Ca Nan 1,2; Thủy điện Nậm Xe; Thủy điện Nậm Lụm 1,2; Thủy điện Mường Lu&acirc;n&hellip; hay đầu tư c&aacute;c dự &aacute;n thủy điện tại L&agrave;o. Ngo&agrave;i thủy điện, C&ocirc;ng ty cổ phần SCI đang nghi&ecirc;n cứu&nbsp;v&agrave;o c&aacute;c c&ocirc;ng tr&igrave;nh điện mặt trời, phong điện v&agrave; c&aacute;c dự &aacute;n về m&ocirc;i trường. C&ocirc;ng ty sở hữu hệ thống m&aacute;y m&oacute;c thiết bị hiện đại đ&aacute;p ứng được y&ecirc;u cầu thi c&ocirc;ng của c&ocirc;ng tr&igrave;nh lớn bao gồm 78 xe tải ben, 44 m&aacute;y x&uacute;c đ&agrave;o, 14 m&aacute;y ủi, 5 m&aacute;y san đầm...&nbsp;Ng&agrave;y 22/12/2006, S99 ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Công Hùng",
+      "percentage": 0.2176
+    },
+    {
+      "name": "Nguyễn Thị Thu Hường",
+      "percentage": 0.0659
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Phan Văn Hùng",
+      "percentage": 0.0171627567
+    },
+    {
+      "name": "Nguyễn Văn Yên",
+      "percentage": 0.0164243243
+    },
+    {
+      "name": "Lương Thanh Tùng",
+      "percentage": 0.0081
+    },
+    {
+      "name": "Nguyễn Minh Hùng",
+      "percentage": 0.00118
+    },
+    {
+      "name": "Phạm Văn Nghĩa",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Vũ An Minh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Công Hòa",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Văn Phúc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Hoàng Lệ Hằng",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Hoàng Thế Vinh",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Nguyễn Văn Độ",
+      "percentage": 0.00004
+    },
+    {
+      "name": "NGUYỄN CHÍNH ĐẠI",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Kim Mạnh Hà",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Nguyễn Quang Hưng",
+      "percentage": 2.7027e-6
+    },
+    {
+      "name": "Dương Ninh Tùng",
+      "percentage": 2.5945e-6
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 2.1891e-6
+    },
+    {
+      "name": "Phan Mạnh Hiệp",
+      "percentage": 1.8648e-6
+    },
+    {
+      "name": "Chu Danh Phương",
+      "percentage": 3.8e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Công Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Giám đốc",
+      "percentage": 0.2092
+    },
+    {
+      "name": "Nguyễn Minh Hùng",
+      "position": "Thành viên Hội đồng Quản trị/Trưởng Ban kiểm soát",
+      "percentage": 0.00118
+    },
+    {
+      "name": "Phạm Văn Nghĩa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Vũ An Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Văn Phúc",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Văn Độ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00004
+    },
+    {
+      "name": "NGUYỄN CHÍNH ĐẠI",
+      "position": "Thành viên Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Đoàn Thế Anh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Xuân Thắng",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Anh",
+      "position": "Thành viên Hội đồng Quản trị/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quản Thanh Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quách Thị Thanh Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Dương Mạnh",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:08.437305Z"
+}

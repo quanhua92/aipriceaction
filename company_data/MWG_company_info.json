@@ -1,0 +1,389 @@
+{
+  "symbol": "MWG",
+  "exchange": "HOSE",
+  "industry": "Bán lẻ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 118671392795400.0,
+  "current_price": 80200.0,
+  "outstanding_shares": 1479693177,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Thế Giới Di Động (MWG) được th&agrave;nh lập từ&nbsp;th&aacute;ng 03/2004, với tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty TNHH Thế Giới Di Động. C&ocirc;ng ty&nbsp;quản l&yacute; vận h&agrave;nh c&aacute;c chuỗi cửa h&agrave;ng b&aacute;n lẻ Thế Giới Di Động, Điện M&aacute;y Xanh, B&aacute;ch Ho&aacute; Xanh,&nbsp;nh&agrave; thuốc An Khang&nbsp;với mạng lưới 5.750&nbsp;cửa h&agrave;ng tr&ecirc;n to&agrave;n quốc. Chuỗi của h&agrave;ng Thế Giới Di Động được th&agrave;nh lập từ 2004 l&agrave; chuỗi b&aacute;n lẻ thiết bị di động c&oacute; thị phần số 1 Việt Nam với hơn&nbsp;1.021&nbsp;cửa h&agrave;ng. Điện M&aacute;y Xanh ra đời cuối 2010, l&agrave; chuỗi b&aacute;n lẻ c&aacute;c sản phẩm điện tử ti&ecirc;u d&ugrave;ng (điện tử, điện lạnh v&agrave; gia dụng) c&oacute; thị phần số 1 Việt Nam với&nbsp;hơn&nbsp;2.026&nbsp;cửa h&agrave;ng. B&aacute;ch H&oacute;a Xanh ho&agrave;n tất giai đoạn thử nghiệm v&agrave;o cuối năm 2016, l&agrave; chuỗi cửa h&agrave;ng chuy&ecirc;n b&aacute;n lẻ thực phẩm tươi sống (thịt c&aacute;, rau củ, tr&aacute;i c&acirc;y&hellip;) v&agrave; nhu yếu phẩm với hơn&nbsp;1.770&nbsp;cửa h&agrave;ng. MWG&nbsp;ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 07/2014.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Tư Vấn Đầu Tư Thế Giới Bán Lẻ",
+      "percentage": 0.10369
+    },
+    {
+      "name": "Công ty TNHH Tri Tâm",
+      "percentage": 0.0986
+    },
+    {
+      "name": "Nt Asian Discovery Master Fund",
+      "percentage": 0.0369852
+    },
+    {
+      "name": "Arisaig Asia Fund Limited",
+      "percentage": 0.0345
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Sơn Ban",
+      "percentage": 0.02262
+    },
+    {
+      "name": "Đinh Anh Huân",
+      "percentage": 0.0222477971
+    },
+    {
+      "name": "Nguyễn Đức Tài",
+      "percentage": 0.02219
+    },
+    {
+      "name": "Công ty TNHH Tư Vấn Đầu Tư Trần Huy",
+      "percentage": 0.022
+    },
+    {
+      "name": "J.p. Morgan Securties Plc",
+      "percentage": 0.01887
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.017254
+    },
+    {
+      "name": "Arisaig Global Emerging Markets Fund Pte. Ltd",
+      "percentage": 0.01074
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.009456
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.008941
+    },
+    {
+      "name": "Dragon Capital Markets Limited",
+      "percentage": 0.0088
+    },
+    {
+      "name": "ĐIÊU CHÍNH HẢI TRIỀU",
+      "percentage": 0.00801
+    },
+    {
+      "name": "Trần Huy Thanh Tùng",
+      "percentage": 0.00752771
+    },
+    {
+      "name": "Chambers Street Global Fund, Lp",
+      "percentage": 0.0068
+    },
+    {
+      "name": "Trần Kinh Doanh",
+      "percentage": 0.00653
+    },
+    {
+      "name": "Thanachart Securities Public Company Limited",
+      "percentage": 0.00647
+    },
+    {
+      "name": "Nojima Corporation",
+      "percentage": 0.0063
+    },
+    {
+      "name": "KrungThai Xspring Securities Company Limited",
+      "percentage": 0.005463
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.005152072
+    },
+    {
+      "name": "Nguyễn Xuân Đoài",
+      "percentage": 0.00513
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.005118
+    },
+    {
+      "name": "Robert Alan Willett",
+      "percentage": 0.0047352
+    },
+    {
+      "name": "Mercer Qif Fund Public Limited Company",
+      "percentage": 0.00464
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "percentage": 0.00454715
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.004335
+    },
+    {
+      "name": "Phan Thị Thu Hiền",
+      "percentage": 0.00396289
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.003847
+    },
+    {
+      "name": "Dempsey Hill Asia Master Fund",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Russell Trust Company Commingled Employee Benefit Funds Trust Russell Emerging Markets Fund",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.002752
+    },
+    {
+      "name": "Coeli Sicav I - Frontier Markets Fund",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Đoàn Văn Hiểu Em",
+      "percentage": 0.00246
+    },
+    {
+      "name": "Idris Ltd",
+      "percentage": 0.00207
+    },
+    {
+      "name": "Phạm Văn Trọng",
+      "percentage": 0.00178
+    },
+    {
+      "name": "Viola Ltd",
+      "percentage": 0.00164
+    },
+    {
+      "name": "ĐẶNG MINH LƯỢM",
+      "percentage": 0.00153719
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.001505
+    },
+    {
+      "name": "Optis Global Opportunities Fund LTD",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.000984
+    },
+    {
+      "name": "Vũ Đăng Linh",
+      "percentage": 0.00094
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000933
+    },
+    {
+      "name": "Lumen Vietnam Fund",
+      "percentage": 0.00085
+    },
+    {
+      "name": "Lý Trần Kim Ngân",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Nguyễn Thị Thu Thảo",
+      "percentage": 0.00072352
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.0006755482
+    },
+    {
+      "name": "Russell Emerging Markets Equity Pool",
+      "percentage": 0.000626
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.000615
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000575
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.0005
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.000365
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 0.0003059511
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.000274
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0002686182
+    },
+    {
+      "name": "Lê Thị Thu Trang",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Hoàng Xuân Thắng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Quỹ Từ Thiện Mái Ấm Thế Giới Di Động",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thu Tâm",
+      "percentage": 0.00019069
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001238601
+    },
+    {
+      "name": "Trần Huy Thanh Đại",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trịnh Quang Khải",
+      "percentage": 0.00009692
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.00009054
+    },
+    {
+      "name": "Arisaig Next Generation Master Fund ICAV",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.000082
+    },
+    {
+      "name": "Hoàng Hữu Hưng",
+      "percentage": 0.000081
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu SSI",
+      "percentage": 0.0000695
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000656181
+    },
+    {
+      "name": "Trần Huy Đông",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00005963
+    },
+    {
+      "name": "Nguyễn Thị Hồng Hạnh",
+      "percentage": 0.00001989
+    },
+    {
+      "name": "Phạm Văn Khôi",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 1.988e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Đức Tài",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.02219
+    },
+    {
+      "name": "ĐIÊU CHÍNH HẢI TRIỀU",
+      "position": "Giám đốc Kỹ thuật",
+      "percentage": 0.00801
+    },
+    {
+      "name": "Trần Huy Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00752771
+    },
+    {
+      "name": "Trần Kinh Doanh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00653
+    },
+    {
+      "name": "Robert Alan Willett",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0047352
+    },
+    {
+      "name": "Đoàn Văn Hiểu Em",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00246
+    },
+    {
+      "name": "ĐẶNG MINH LƯỢM",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00153719
+    },
+    {
+      "name": "Vũ Đăng Linh",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.00094
+    },
+    {
+      "name": "Lý Trần Kim Ngân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Lê Thị Thu Trang",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Hoàng Hữu Hưng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000081
+    },
+    {
+      "name": "Thomas Lanyi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Thế Vinh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tiến Trung",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Tiến Sĩ",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:45.226765Z"
+}

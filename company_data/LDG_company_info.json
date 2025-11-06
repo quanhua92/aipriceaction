@@ -1,0 +1,151 @@
+{
+  "symbol": "LDG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1230898682150.0,
+  "current_price": 4790.0,
+  "outstanding_shares": 256972585,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư LDG (LDG) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Địa ốc Long Điền được th&agrave;nh lập v&agrave;o năm 2010. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực&nbsp;đầu tư, ph&aacute;t triển v&agrave; kinh doanh bất động sản. C&ocirc;ng ty&nbsp;đ&atilde; triển khai&nbsp;đầu tư,&nbsp;ph&aacute;t triển v&agrave; kinh doanh c&aacute;c dự &aacute;n bất động sản v&agrave; du lịch sinh th&aacute;i với tổng diện t&iacute;ch tr&ecirc;n 400 ha ở Đồng Nai, Ph&uacute; Quốc, Bi&ecirc;n H&ograve;a, B&igrave;nh Dương. C&ocirc;ng ty c&oacute; quỹ đất lớn, nằm ở những vị tr&iacute; trọng điểm như khu vực tam gi&aacute;c ph&aacute;t triển nhất Việt Nam (TPHCM, Đồng Nai, B&igrave;nh Dương), khu du lịch hấp dẫn v&agrave; đẹp nhất tại Việt Nam (Ph&uacute; Quốc, Ki&ecirc;n Giang). LDG được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 08/2015.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Sun Holdings",
+      "percentage": 0.04952
+    },
+    {
+      "name": "Lê Thị Tư",
+      "percentage": 0.0438
+    },
+    {
+      "name": "Phạm Nguyễn Thúy An",
+      "percentage": 0.0438
+    },
+    {
+      "name": "Nguyễn Khánh Hưng",
+      "percentage": 0.0392
+    },
+    {
+      "name": "La Mỹ Phượng",
+      "percentage": 0.03788
+    },
+    {
+      "name": "Lê Văn Thăng",
+      "percentage": 0.0375
+    },
+    {
+      "name": "La Mỹ Hoàng",
+      "percentage": 0.03646
+    },
+    {
+      "name": "Lê Thị Phương Uyên",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Bùi Đắc Tuấn",
+      "percentage": 0.00199464
+    },
+    {
+      "name": "Đặng Quang Hải",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Quang Đạt",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Ngô Văn Minh",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Võ Đình Ban",
+      "percentage": 0.00033
+    },
+    {
+      "name": "Nguyễn Quốc Vy Liêm",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Kim Điền",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Phạm Anh Tài",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 3e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Khánh Hưng",
+      "position": "Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.0392
+    },
+    {
+      "name": "Lê Thị Phương Uyên",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Đặng Quang Hải",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Ngô Văn Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Nguyễn Quốc Vy Liêm",
+      "position": "Phó Tổng Giám đốc Kinh doanh và Marketing",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Yến Chi",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lại Thị Bích Hằng",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Quốc Nam",
+      "position": "Thành viên Hội đồng Quản trị/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Bang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Từ Minh Lý",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Khang",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Ngọc Huyên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Vũ",
+      "position": "Thành viên Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:50.400570Z"
+}

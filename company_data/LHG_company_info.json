@@ -1,0 +1,187 @@
+{
+  "symbol": "LHG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1492858498500.0,
+  "current_price": 29850.0,
+  "outstanding_shares": 50012010,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Long Hậu (LHG) được th&agrave;nh lập v&agrave;o năm 2006 theo giấy chứng nhận đăng k&yacute; kinh doanh số&nbsp;5003000142&nbsp;cấp lần&nbsp;đầu bởi&nbsp;Sở Kế hoạch v&agrave; Đầu tư tỉnh Long An. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực đầu tư, ph&aacute;t triển v&agrave; kinh doanh&nbsp;cơ sở hạ tầng v&agrave; dịch vụ tiện &iacute;ch khu c&ocirc;ng nghiệp.&nbsp;LHG được cấp ph&eacute;p x&acirc;y dựng khu c&ocirc;ng nghiệp Long Hậu từ năm 2006 v&agrave; bắt đầu cung cấp dịch vụ cho kh&aacute;ch h&agrave;ng v&agrave;o&nbsp;khu c&ocirc;ng nghiệp&nbsp;từ cuối năm 2007.&nbsp;C&ocirc;ng ty&nbsp;l&agrave; chủ đầu tư c&aacute;c dự &aacute;n Khu c&ocirc;ng nghiệp Long Hậu với tổng diện t&iacute;ch gần 500 ha,&nbsp;bao gồm:&nbsp;Khu c&ocirc;ng nghiệp Long Hậu, Khu c&ocirc;ng nghiệp Long Hậu mở rộng, Khu d&acirc;n cư &ndash; T&aacute;i định cư x&atilde; Long Hậu v&agrave; Khu c&ocirc;ng nghiệp Long Hậu 3 &ndash; giai đoạn 1. LHG được&nbsp;ni&ecirc;m yết&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2010.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH MTV Phát triển Công nghiệp Tân Thuận",
+      "percentage": 0.4867
+    },
+    {
+      "name": "Công ty Jaccar Holdings",
+      "percentage": 0.17040761
+    },
+    {
+      "name": "Công ty Cổ phần Việt Âu",
+      "percentage": 0.12728833
+    },
+    {
+      "name": "Lumen Vietnam Fund",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Trần Anh Viễn",
+      "percentage": 0.045
+    },
+    {
+      "name": "Công ty Cổ phần Phát Triển Nam Sài Gòn",
+      "percentage": 0.0445
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0265
+    },
+    {
+      "name": "Công ty Cổ phần Khu công nghiệp Hiệp Phước",
+      "percentage": 0.02
+    },
+    {
+      "name": "Công ty Cổ phần In và Bao bì Minh Phúc",
+      "percentage": 0.0173
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.011
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 0.00543449
+    },
+    {
+      "name": "Đoàn Hồng Dũng",
+      "percentage": 0.0048110081
+    },
+    {
+      "name": "Phạm Thị Như Anh",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Công ty Cổ phần Xuất nhập khẩu Thủy sản Miền Trung",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Bùi Vân Ảnh",
+      "percentage": 0.0007779613
+    },
+    {
+      "name": "Nguyễn Bá Tùng",
+      "percentage": 0.00067109
+    },
+    {
+      "name": "Trần Thị Mỹ Xuân",
+      "percentage": 0.00042734
+    },
+    {
+      "name": "Nguyễn Việt Dũng",
+      "percentage": 0.0003649666
+    },
+    {
+      "name": "Lê Mạnh Thường",
+      "percentage": 0.00027
+    },
+    {
+      "name": "Võ Thị Huyền Lan",
+      "percentage": 0.00019898
+    },
+    {
+      "name": "Trần Thị Hồng Nhựt",
+      "percentage": 0.00009998
+    },
+    {
+      "name": "Tô Hữu Duy",
+      "percentage": 0.0000792922
+    },
+    {
+      "name": "Trần Vân Khánh Giang",
+      "percentage": 0.000060994
+    },
+    {
+      "name": "Diệp Dũng",
+      "percentage": 0.000048987
+    },
+    {
+      "name": "Nguyễn Thị Bích Ngà",
+      "percentage": 0.0000249346
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Thị Như Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Nguyễn Anh Huy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Tấn Thịnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mã Văn Khanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Út Ba",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Kim Thi",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Đình Thu Nhi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Đăng Khôi",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Vũ Mạnh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hồng Sơn",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Mai",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Công Hiệp",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tấn Phong",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:53.395241Z"
+}

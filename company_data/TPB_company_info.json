@@ -1,0 +1,330 @@
+{
+  "symbol": "TPB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 44649059712400.0,
+  "current_price": 16900.0,
+  "outstanding_shares": 2641956196,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Ti&ecirc;n Phong (TPB) được th&agrave;nh lập v&agrave;o năm 2008. TPB được thừa hưởng sức mạnh vững chắc từ c&aacute;c cổ đ&ocirc;ng chiến lược bao gồm Tập đo&agrave;n V&agrave;ng bạc Đ&aacute; qu&yacute; DOJI, Tập đo&agrave;n C&ocirc;ng nghệ FPT, Tổng C&ocirc;ng ty T&aacute;i bảo hiểm Quốc&nbsp;gia&nbsp;Việt Nam, Tập đo&agrave;n T&agrave;i ch&iacute;nh SBI Ven Holding Pte.Ltd (Singapore), C&ocirc;ng ty T&agrave;i ch&iacute;nh Quốc tế IFC (trực thuộc World Bank) v&agrave; quỹ đầu tư PYN Elite Fund.&nbsp;TPBank l&agrave; ng&acirc;n h&agrave;ng đầu ti&ecirc;n tại Việt Nam đ&aacute;p ứng đồng thời Basel III v&agrave; IFRS 9 trong năm 2021. Tổ chức xếp hạng t&iacute;n nhiệm quốc tế Moody&rsquo;s duy tr&igrave; xếp hạng t&iacute;n nhiệm B1, chỉ số t&iacute;n nhiệm BCA v&agrave; n&acirc;ng cao triển vọng t&iacute;n nhiệm từ &ldquo;ổn định&rdquo; l&ecirc;n mức &ldquo;t&iacute;ch cực&rdquo; - mức đ&aacute;nh gi&aacute; thuộc nh&oacute;m cao nhất trong hệ thống ng&acirc;n h&agrave;ng Việt Nam.&nbsp;Năm 2024, so với c&ugrave;ng kỳ, bi&ecirc;n l&atilde;i thuần (NIM) ở mức 3.51%, giảm 0.42%. Tỷ lệ nợ xấu ở mức 1.52%, giảm 0.53%. Tỷ lệ bao phủ nợ xấu ở mức 81.31%, tăng 17.6%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 6,1 ngh&igrave;n tỷ đồng, tăng 36.03%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 17.26%, tăng 3.53%.&nbsp;TPB được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2018.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Bảo Việt",
+      "percentage": 0.1
+    },
+    {
+      "name": "Công ty Cổ phần FPT",
+      "percentage": 0.06772
+    },
+    {
+      "name": "Công ty Cổ Phần Tập Đoàn Vàng Bạc Đá Quý Doji",
+      "percentage": 0.0593
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.04728
+    },
+    {
+      "name": "Sbi Ven Holdings Private Limited",
+      "percentage": 0.0451
+    },
+    {
+      "name": "Công ty TNHH JB",
+      "percentage": 0.040806
+    },
+    {
+      "name": "Công ty TNHH Sp",
+      "percentage": 0.0408
+    },
+    {
+      "name": "Công ty TNHH VG",
+      "percentage": 0.0384
+    },
+    {
+      "name": "Nguyễn Hà Long",
+      "percentage": 0.0382
+    },
+    {
+      "name": "Đỗ Anh Tú",
+      "percentage": 0.0371
+    },
+    {
+      "name": "Lê Quang Tiến",
+      "percentage": 0.0361
+    },
+    {
+      "name": "Công ty TNHH Fd",
+      "percentage": 0.0349
+    },
+    {
+      "name": "Đỗ Minh Quân",
+      "percentage": 0.0334
+    },
+    {
+      "name": "Trần Cẩm Nhung",
+      "percentage": 0.0323
+    },
+    {
+      "name": "Công ty Cổ phần Hải Phòng Invest",
+      "percentage": 0.0308
+    },
+    {
+      "name": "Đỗ Quỳnh Anh",
+      "percentage": 0.0307
+    },
+    {
+      "name": "Tổng Công ty Cổ phần Tái bảo hiểm Quốc gia Việt Nam",
+      "percentage": 0.0264
+    },
+    {
+      "name": "Nguyễn Thị Khánh Ly",
+      "percentage": 0.0185
+    },
+    {
+      "name": "Công ty Cổ phần Phát Triển Bất Động Sản Dragon",
+      "percentage": 0.0159
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán SSI",
+      "percentage": 0.0119
+    },
+    {
+      "name": "Công ty Tài Chính Quốc Tế",
+      "percentage": 0.0117
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.0112
+    },
+    {
+      "name": "Đỗ Minh Đức",
+      "percentage": 0.0111219
+    },
+    {
+      "name": "Đỗ Vũ Phương Anh",
+      "percentage": 0.0111
+    },
+    {
+      "name": "Trương Gia Bình",
+      "percentage": 0.00188
+    },
+    {
+      "name": "Bùi Thị Thanh Hương",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Đào Trọng Khanh",
+      "percentage": 0.0009009009
+    },
+    {
+      "name": "Trung Thị Lâm Ngọc",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Trương Thị Cúc Hương",
+      "percentage": 0.0008288288
+    },
+    {
+      "name": "Vũ Quốc Khánh",
+      "percentage": 0.00074
+    },
+    {
+      "name": "Trần Thị Nguyệt Oanh",
+      "percentage": 0.0007207207
+    },
+    {
+      "name": "Phan Thanh Sơn",
+      "percentage": 0.0007207207
+    },
+    {
+      "name": "Trần Thị Ngọc Dung",
+      "percentage": 0.0005405405
+    },
+    {
+      "name": "Nguyễn Hưng",
+      "percentage": 0.0005121
+    },
+    {
+      "name": "Công Đoàn Ngân Hàng Tmcp Tiên Phong",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Văn Phong",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Bùi Thành Chung",
+      "percentage": 0.0003603603
+    },
+    {
+      "name": "Nguyễn Việt Anh",
+      "percentage": 0.0002134
+    },
+    {
+      "name": "Phạm Đông Anh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hồng Quân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Khúc Văn Họa",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Huy Công",
+      "percentage": 0.0001801801
+    },
+    {
+      "name": "Nguyễn Việt Thắng",
+      "percentage": 0.0001801801
+    },
+    {
+      "name": "Đinh Văn Chiến",
+      "percentage": 0.0001707
+    },
+    {
+      "name": "Lê Cẩm Tú",
+      "percentage": 0.0001494
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.000114258
+    },
+    {
+      "name": "Bùi Quang Cương",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Gia Tú",
+      "percentage": 0.00009009
+    },
+    {
+      "name": "Vũ Ngọc Tùng",
+      "percentage": 0.000054054
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000477606
+    },
+    {
+      "name": "Lê Hồng Nam",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Thái Duy Nghĩa",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Anh Tú",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0371
+    },
+    {
+      "name": "Lê Quang Tiến",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0361
+    },
+    {
+      "name": "Nguyễn Hưng",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Việt Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002134
+    },
+    {
+      "name": "Khúc Văn Họa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Đông Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hồng Quân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đinh Văn Chiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001707
+    },
+    {
+      "name": "Lê Cẩm Tú",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0001494
+    },
+    {
+      "name": "Thái Duy Nghĩa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Hồng Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thị Thu Nguyệt",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Shuzo Shikata",
+      "position": "Thành viên Hội đồng Quản trị/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Tâm",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Thị Hoàng Lan",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Eiichiro So",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Bảo",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Nhung",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Minh Phú",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:01.985246Z"
+}

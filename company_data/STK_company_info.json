@@ -1,0 +1,130 @@
+{
+  "symbol": "STK",
+  "exchange": "HOSE",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1623500323200.0,
+  "current_price": 16800.0,
+  "outstanding_shares": 96636924,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Sợi Thế Kỷ được th&agrave;nh lập năm 2000. Hoạt động sản xuất ch&iacute;nh của c&ocirc;ng ty l&agrave; sản xuất sợi tơ tổng hợp, dệt kim. C&ocirc;ng ty hiện đang cung cấp c&aacute;c sản phẩm: sợi POY, sợi DTY v&agrave; sợi FDY. Sản phẩm của c&ocirc;ng ty được xuất khẩu chủ yếu sang ch&acirc;u &Acirc;u (Thổ Nhĩ Kỳ) v&agrave; ch&acirc;u &Aacute;. C&ocirc;ng ty cũng l&agrave; nh&agrave; cung cấp cho c&aacute;c doanh nghiệp dệt may như Nike, Adidas, Uniqlo v&agrave; Puma.&nbsp;C&ocirc;ng ty ch&iacute;nh thức hoạt&nbsp;động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2004. C&ocirc;ng ty được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh năm 2015.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đặng Mỹ Linh",
+      "percentage": 0.2159
+    },
+    {
+      "name": "Công ty Cổ phần Tư vấn Đầu tư Hướng Việt",
+      "percentage": 0.2019
+    },
+    {
+      "name": "Đặng Triệu Hòa",
+      "percentage": 0.14569999
+    },
+    {
+      "name": "Tăng Kiến Nghiệp",
+      "percentage": 0.0546
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0437
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Thái Tuấn",
+      "percentage": 0.0076
+    },
+    {
+      "name": "Công ty Cổ Phần Thực Phẩm Xanh",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Phan Như Bích",
+      "percentage": 0.00116
+    },
+    {
+      "name": "Nguyễn Phương Chi",
+      "percentage": 0.00083
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đinh Ngọc Hoa",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Hoàng Nữ Mộng Tuyền",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Võ Quang Long",
+      "percentage": 1e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Mỹ Linh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2159
+    },
+    {
+      "name": "Đặng Triệu Hòa",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.14569999
+    },
+    {
+      "name": "Phan Như Bích",
+      "position": "Kế toán trưởng/Giám đốc Tài chính",
+      "percentage": 0.00116
+    },
+    {
+      "name": "Nguyễn Phương Chi",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.00083
+    },
+    {
+      "name": "Đinh Ngọc Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Hoàng Nữ Mộng Tuyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Đặng Hướng Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Quang Long",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Thị Quế Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chen Che Jen",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tự Lực",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:09.903726Z"
+}

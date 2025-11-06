@@ -1,0 +1,208 @@
+{
+  "symbol": "VRE",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 75686598325000.0,
+  "current_price": 32500.0,
+  "outstanding_shares": 2328818410,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Vincom Retail (VRE) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Vincom Retail được th&agrave;nh lập v&agrave;o năm 2012.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực cho thu&ecirc; c&aacute;c trung t&acirc;m thương mại b&aacute;n lẻ v&agrave; c&aacute;c dịch vụ li&ecirc;n quan, cũng như đầu tư ph&aacute;t triển v&agrave; kinh doanh c&aacute;c loại h&igrave;nh bất động sản. Vincom l&agrave; thương hiệu bất động sản b&aacute;n lẻ h&agrave;ng đầu Việt Nam, giữ vị thế số 1 tại thị trường Việt Nam về mạng lưới v&agrave; độ phủ&nbsp;với 88&nbsp;trung t&acirc;m thương mại tại 48&nbsp;tỉnh th&agrave;nh, được ph&aacute;t triển theo bốn m&ocirc; h&igrave;nh sản phẩm: Vincom Center, Vincom Mega Mall, Vincom Plaza v&agrave; Vincom+.&nbsp;VRE được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ cuối năm 2017.&nbsp;</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Kinh Doanh Thương Mại Sado",
+      "percentage": 0.405
+    },
+    {
+      "name": "Tập đoàn Vingroup - Công ty CP",
+      "percentage": 0.1837
+    },
+    {
+      "name": "WP Investments III B.V.",
+      "percentage": 0.0489
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0278
+    },
+    {
+      "name": "RWC Emerging Equities",
+      "percentage": 0.0204
+    },
+    {
+      "name": "Credit Suisse Singapore Branch",
+      "percentage": 0.0163
+    },
+    {
+      "name": "APG Emerging Markets",
+      "percentage": 0.0093
+    },
+    {
+      "name": "RWC Global Emerging Markets",
+      "percentage": 0.0063
+    },
+    {
+      "name": "AI MEHWAR Emerging Markets",
+      "percentage": 0.0038
+    },
+    {
+      "name": "RWC Emerging Markets SRI",
+      "percentage": 0.0024
+    },
+    {
+      "name": "SIIT International Equities",
+      "percentage": 0.0011
+    },
+    {
+      "name": "RWC Frontier Markets",
+      "percentage": 0.001
+    },
+    {
+      "name": "SIT Emerging Equities",
+      "percentage": 0.001
+    },
+    {
+      "name": "VFM Emerging Markets",
+      "percentage": 0.001
+    },
+    {
+      "name": "RWC Global Emerging Equities",
+      "percentage": 0.0007
+    },
+    {
+      "name": "SEI Global Emerging Markets",
+      "percentage": 0.0004
+    },
+    {
+      "name": "UBS Emerging Markets",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Tutman Global Emerging Markets",
+      "percentage": 0.0003
+    },
+    {
+      "name": "RWC Next Generation Emerging Markets",
+      "percentage": 0.0003
+    },
+    {
+      "name": "SEI Emerging Markets",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000761729
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0000520794
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000190898
+    },
+    {
+      "name": "Nguyễn Trường Thịnh",
+      "percentage": 2.14e-6
+    },
+    {
+      "name": "Nguyễn Thu Phương",
+      "percentage": 3e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thu Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 3e-8
+    },
+    {
+      "name": "Nguyễn  Bảo Hạnh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thu Hương",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Hoàng Việt",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Bảo Hạnh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Hoàng Việt",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Duy Khánh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Thái Thị Thanh Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Mai Lan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thanh Tâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Mai Hoa",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thế Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Sanjay Vinayak",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Fong, Ming Huang Ernest",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Ngọc Hà",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Quỳnh Trang",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm  Thị Thu Hiền",
+      "position": "Phó Tổng Giám đốc Kinh doanh và Marketing",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:04.101545Z"
+}

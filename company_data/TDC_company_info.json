@@ -1,0 +1,173 @@
+{
+  "symbol": "TDC",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1520374600000.0,
+  "current_price": 11950.0,
+  "outstanding_shares": 127228000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Kinh doanh v&agrave; Ph&aacute;t triển B&igrave;nh Dương (TDC),&nbsp;được th&agrave;nh lập năm 2002 tr&ecirc;n cơ sở cổ phần h&oacute;a bộ phận kinh doanh b&aacute;n bu&ocirc;n, b&aacute;n lẻ trực thuộc C&ocirc;ng ty Thương mại Đầu tư v&agrave; Ph&aacute;t triển (Becamex IDC Corp). Sản phẩm v&agrave; dịch vụ&nbsp;của c&ocirc;ng ty l&agrave; vật liệu x&acirc;y dựng v&agrave; trang tr&iacute; nội thất; đầu tư x&acirc;y dựng v&agrave; kinh doanh cơ sở hạ tầng khu d&acirc;n cư v&agrave; khu c&ocirc;ng nghiệp. Trong đ&oacute; hoạt động kinh doanh vật liệu x&acirc;y dựng l&agrave; hoạt động mang t&iacute;nh chủ lực của c&ocirc;ng ty kể từ khi th&agrave;nh lập đến nay.&nbsp;Lĩnh vực x&acirc;y dựng v&agrave; kinh doanh bất động sản sẽ l&agrave; lĩnh vực mang t&iacute;nh chiến lược v&agrave; l&agrave; nền tảng cho sự ph&aacute;t triển của c&ocirc;ng ty trong những năm tới. C&ocirc;ng ty đ&atilde; v&agrave; đang x&acirc;y dựng những dự &aacute;n lớn như: Căn hộ cao cấp TDC Plaza được đặt tại ngay khu Trung t&acirc;m H&agrave;nh ch&iacute;nh, Ch&iacute;nh trị t&acirc;̣p trung Tỉnh B&igrave;nh Dương với tổng diện t&iacute;ch 21.695 m2, tổng gi&aacute; trị đầu tư gần 600 tỷ đồng; Dự &aacute;n Uni - Town với tổng diện t&iacute;ch 118.552m2, tổng gi&aacute; trị đầu tư gần 1.700 tỷ đồng...L&agrave; đơn vị th&agrave;nh vi&ecirc;n của Tổng C&ocirc;ng ty Đầu tư v&agrave; Ph&aacute;t triển C&ocirc;ng nghiệp, TDC lu&ocirc;n nhận được nhiều sự gi&uacute;p đỡ từ ph&iacute;a Tổng C&ocirc;ng ty về vốn, thiết bị, cũng như bạn h&agrave;ng l&acirc;u năm. Ng&agrave;y 04/05/2010, TDC ch&iacute;nh thức giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Đầu tư và Phát triển Công nghiệp Becamex - CTCP",
+      "percentage": 0.607005
+    },
+    {
+      "name": "Công ty Cổ Phần An Phú Gia Holdings",
+      "percentage": 0.0798
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Hải Đăng TBCONS",
+      "percentage": 0.0762
+    },
+    {
+      "name": "Lê Quốc Hưng",
+      "percentage": 0.0098
+    },
+    {
+      "name": "HỒ HOÀN THÀNH",
+      "percentage": 0.00786
+    },
+    {
+      "name": "Đặng Đình Phúc",
+      "percentage": 0.00393
+    },
+    {
+      "name": "Lê Minh Tâm",
+      "percentage": 0.0029217
+    },
+    {
+      "name": "Huỳnh Thị Phương Thảo",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 0.0009232
+    },
+    {
+      "name": "Nguyễn Tấn Phúc",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Ngô Hướng Dương",
+      "percentage": 0.000488
+    },
+    {
+      "name": "Trần Thị Bạch Tuyết",
+      "percentage": 0.000334
+    },
+    {
+      "name": "Lý Thị Bình",
+      "percentage": 0.0002757
+    },
+    {
+      "name": "Bùi Thị Lan",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Dương Thị Hồng Tỵ",
+      "percentage": 0.000194
+    },
+    {
+      "name": "Đoàn Văn Thuận",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Giang Quốc Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Minh Lâm",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Diệp",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Trần Duy Quang",
+      "percentage": 0.00001197
+    }
+  ],
+  "officers": [
+    {
+      "name": "HỒ HOÀN THÀNH",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00786
+    },
+    {
+      "name": "Huỳnh Thị Phương Thảo",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Lý Thị Bình",
+      "position": "Kế toán trưởng/Phó Tổng Giám đốc",
+      "percentage": 0.0002757
+    },
+    {
+      "name": "Bùi Thị Lan",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đoàn Văn Thuận",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Giang Quốc Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trịnh Thị Thu",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Loan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Diệu Thanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàn Vũ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Nga",
+      "position": "Trưởng phòng Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Hiền Phúc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:34.657795Z"
+}

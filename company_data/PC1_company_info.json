@@ -1,0 +1,225 @@
+{
+  "symbol": "PC1",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 8797996176600.0,
+  "current_price": 24600.0,
+  "outstanding_shares": 357642121,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Được th&agrave;nh lập v&agrave;o năm 1963, C&ocirc;ng ty Cổ phần Tập đo&agrave;n PC1 (PC1) l&agrave; c&ocirc;ng ty h&agrave;ng đầu trong x&acirc;y dựng c&aacute;c nh&agrave; m&aacute;y điện v&agrave; truyền tải điện. C&ocirc;ng ty tham gia trong 3 lĩnh vực kinh doanh ch&iacute;nh bao gồm: (i) X&acirc;y dựng v&agrave; lắp đặt nh&agrave; m&aacute;y điện v&agrave; đường truyền tải điện (ii) Ph&aacute;t triển c&aacute;c cao ốc thương mại&nbsp;(iii) Sản xuất cấu kiện v&agrave; thiết bị điện. Sau 50 năm hoạt động, c&ocirc;ng ty đ&atilde; trở th&agrave;nh một trong những c&ocirc;ng ty lớn nhất trong lĩnh vực x&acirc;y dựng nh&agrave; m&aacute;y điện v&agrave; truyền tải điện. C&ocirc;ng ty tham gia v&agrave;o nhiều dự &aacute;n trọng điểm quốc gia như giai đoạn 1 v&agrave; giai đoạn 2 của dự &aacute;n đường điện 500KV Bắc Nam; dự &aacute;n đường điện Sơn La - Lai Ch&acirc;u 500KV, trạm biến &aacute;p 500KV Phố Nối, đường điện Sơn La - H&ograve;a B&igrave;nh - Nho Quan 500KV, nh&agrave; m&aacute;y thủy điện Trung Thu. PCC1 cũng đ&atilde; triển khai nhiều dự &aacute;n EPC với vai tr&ograve; nh&agrave; tổng thầu v&agrave; nh&agrave; phụ thầu như (i) EPC - đường điện 110KV Bắc Giang - Quảng Ch&acirc;u, (ii) EPC - đường điện 500KV Nh&agrave; B&egrave; - Metro City.&nbsp;Ng&agrave;y 16/11/2016, c&ocirc;ng ty ch&iacute;nh thức được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Trịnh Văn Tuấn",
+      "percentage": 0.2138207
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0414
+    },
+    {
+      "name": "Phan Ngọc Hiếu",
+      "percentage": 0.0224
+    },
+    {
+      "name": "Võ Hồng Quang",
+      "percentage": 0.0188373
+    },
+    {
+      "name": "Lê Thị Thoi",
+      "percentage": 0.0188132
+    },
+    {
+      "name": "Nguyễn Minh Đệ",
+      "percentage": 0.0092283
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "percentage": 0.00834
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.00502
+    },
+    {
+      "name": "Nguyễn Nhật Tân",
+      "percentage": 0.0045153
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.003772463
+    },
+    {
+      "name": "Vũ Ánh Dương",
+      "percentage": 0.0028866
+    },
+    {
+      "name": "Đặng Quốc Tưởng",
+      "percentage": 0.0019906
+    },
+    {
+      "name": "Đặng Văn Nghĩa",
+      "percentage": 0.00176
+    },
+    {
+      "name": "Trần Thị Minh Việt",
+      "percentage": 0.0012585
+    },
+    {
+      "name": "Nguyễn Thị Dung",
+      "percentage": 0.000847
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Bản Việt",
+      "percentage": 0.00076398
+    },
+    {
+      "name": "Vũ Anh Hiếu",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Hải Hà",
+      "percentage": 0.0004527
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu SSI",
+      "percentage": 0.00043936
+    },
+    {
+      "name": "Nguyễn Thanh Hương",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Văn Tứ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Văn Trung",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Lê Thị Thanh",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Ngọc Dung",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Hoàng Văn Sáng",
+      "percentage": 0.0000302
+    },
+    {
+      "name": "Vũ Thị Lan Mỹ",
+      "percentage": 0.0000174
+    },
+    {
+      "name": "Trần Thị Lan Phương",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Quang Vũ",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Thị Hồng Liên",
+      "percentage": 6e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 4e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 1.26e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trịnh Văn Tuấn",
+      "position": "Tổng Giám đốc/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2138207
+    },
+    {
+      "name": "Võ Hồng Quang",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0188373
+    },
+    {
+      "name": "Nguyễn Minh Đệ",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0092283
+    },
+    {
+      "name": "Nguyễn Nhật Tân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0045153
+    },
+    {
+      "name": "Vũ Ánh Dương",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0028866
+    },
+    {
+      "name": "Đặng Quốc Tưởng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0019906
+    },
+    {
+      "name": "Trần Thị Minh Việt",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0012585
+    },
+    {
+      "name": "Nguyễn Thị Hải Hà",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0004527
+    },
+    {
+      "name": "Nguyễn Thanh Hương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Văn Tứ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Hoàng Văn Sáng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000302
+    },
+    {
+      "name": "Vũ Thị Lan Mỹ",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0000174
+    },
+    {
+      "name": "Hoàng Văn Cường",
+      "position": "Người phụ trách quản trị công ty/Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Lương Việt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thanh Nghị",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:55.514288Z"
+}

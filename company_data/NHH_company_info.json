@@ -1,0 +1,120 @@
+{
+  "symbol": "NHH",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1304734200000.0,
+  "current_price": 11550.0,
+  "outstanding_shares": 112964000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Nhựa H&agrave; Nội (NHH) c&oacute; tiền th&acirc;n l&agrave; X&iacute; nghiệp Nhựa H&agrave; Nội trực thuộc Sở C&ocirc;ng nghiệp H&agrave; Nội, được th&agrave;nh lập v&agrave;o năm 1972. C&ocirc;ng ty hoạt động trong lĩnh vực sản xuất chế tạo c&aacute;c sản phẩm nhựa phục vụ cho ng&agrave;nh&nbsp;c&ocirc;ng nghiệp phụ trợ. NHH ch&iacute;nh thức chuyển đổi th&agrave;nh c&ocirc;ng ty cổ phần từ năm 2008. C&ocirc;ng ty đ&atilde; tham gia chuỗi cung cấp phụ t&ugrave;ng xe m&aacute;y cho c&aacute;c thương hiệu lớn như Honda, SYM, Ford Việt Nam từ những năm 1997. Đến nay, C&ocirc;ng ty đ&atilde; ph&aacute;t triển&nbsp;th&ecirc;m nhiều ng&agrave;nh h&agrave;ng như điện&nbsp; - điện tử, phụ t&ugrave;ng &ocirc; t&ocirc;, c&aacute;c linh kiện cho ng&agrave;nh x&acirc;y dựng, khu&ocirc;n mẫu ch&iacute;nh x&aacute;c, k&iacute;ch thước lớn cung cấp cho c&aacute;c c&ocirc;ng ty Panasonic, LG Việt Nam, Toyota Việt Nam v&agrave; c&aacute;c tập đo&agrave;n tại Nhật Bản (Lixil Group, Housetec, Hashimoto, Shoden Corp). NHH được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 11/2019.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Nhựa An Phát Xanh",
+      "percentage": 0.7089
+    },
+    {
+      "name": "Lê Xuân Lương",
+      "percentage": 0.1001
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "percentage": 0.04
+    },
+    {
+      "name": "Phùng Thị Khánh Hằng",
+      "percentage": 0.0367
+    },
+    {
+      "name": "Vũ Thị Tuyết",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Trọng Quân",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Bùi Thanh Nam",
+      "percentage": 0.00055
+    },
+    {
+      "name": "Phạm Quốc Trung",
+      "percentage": 0.000344
+    },
+    {
+      "name": "Phạm Vũ Thắng",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Đỗ Thị Hương Giang",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Trần Xuân Thu",
+      "percentage": 0.000029
+    },
+    {
+      "name": "Lâm Thị Hiền",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Nguyễn Hạnh Dung",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Thanh Nam",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00055
+    },
+    {
+      "name": "Đỗ Thị Hương Giang",
+      "position": "Kế toán trưởng/Người phụ trách quản trị công ty",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Kim Ki Min",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Thanh Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Văn Hưởng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tạ Phúc Tâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hòa Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mẫn Chí Trung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hoa Tùng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Minh Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:02.062527Z"
+}

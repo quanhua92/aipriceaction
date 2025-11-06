@@ -1,0 +1,242 @@
+{
+  "symbol": "VNE",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 554354001890.0,
+  "current_price": 6130.0,
+  "outstanding_shares": 90432953,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>Tổng C&ocirc;ng ty Cổ phần X&acirc;y dựng điện Việt Nam (VNE) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty X&acirc;y lắp Điện 3 được th&agrave;nh lập v&agrave;o năm 1988.&nbsp;Năm 2005 chuyển sang hoạt động theo m&ocirc; h&igrave;nh Tổng c&ocirc;ng ty. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực x&acirc;y dựng điện. Th&ocirc;ng qua c&aacute;c c&ocirc;ng ty con, VNE chủ yếu cung cấp dịch vụ cho c&aacute;c dự &aacute;n x&acirc;y dựng hệ thống lưới điện v&agrave; trạm biến &aacute;p 500kV. VNECO đ&atilde; thực hiện thi c&ocirc;ng c&aacute;c nh&agrave; m&aacute;y thủy điện v&agrave; điện mặt trời&nbsp;như&nbsp;Nh&agrave; m&aacute;y thủy điện Hồi xu&acirc;n, nh&agrave; m&aacute;y thủy điện K&rsquo;r&ocirc;ng H&rsquo;năng, nh&agrave; m&aacute;y thủy điện Khe Di&ecirc;n, nh&agrave; m&aacute;y điện mặt trời Cam L&acirc;m, nh&agrave; m&aacute;y điện mặt trời Thuận Nam,... VNE hiện chiếm khoảng 35-40% thị phần ng&agrave;nh x&acirc;y lắp điện. Năm 2007, VNE ch&iacute;nh thức được giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "La Mỹ Phượng",
+      "percentage": 0.1163
+    },
+    {
+      "name": "Erikoissijoitusrahasto Elite (Mutual Fund Elite (Non-ucits))",
+      "percentage": 0.0873
+    },
+    {
+      "name": "Nguyễn Hồng Tân",
+      "percentage": 0.0505
+    },
+    {
+      "name": "Vũ Đình Cương",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Trần Huyền Linh",
+      "percentage": 0.0474
+    },
+    {
+      "name": "Phạm Đỗ Minh Triết",
+      "percentage": 0.0456177
+    },
+    {
+      "name": "Công ty CP Malblue",
+      "percentage": 0.0445
+    },
+    {
+      "name": "Công ty Cổ Phần Khải Toàn",
+      "percentage": 0.0405
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Và Kinh Doanh Tài Sản Việt Nam",
+      "percentage": 0.0371238011
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.024374
+    },
+    {
+      "name": "Đoàn Đức Hồng",
+      "percentage": 0.01581
+    },
+    {
+      "name": "Phạm Đỗ Tường Vy",
+      "percentage": 0.0158
+    },
+    {
+      "name": "Hoàng Thị Lặc",
+      "percentage": 0.00582
+    },
+    {
+      "name": "Nguyễn Đậu Thảo",
+      "percentage": 0.00444
+    },
+    {
+      "name": "Trần Hồng Thịnh",
+      "percentage": 0.00402433
+    },
+    {
+      "name": "Nguyễn Thị Tâm",
+      "percentage": 0.0035092158
+    },
+    {
+      "name": "Phan Anh Quang",
+      "percentage": 0.00253
+    },
+    {
+      "name": "Vũ Văn Diêm",
+      "percentage": 0.0021489922
+    },
+    {
+      "name": "Hồ Bá Thân",
+      "percentage": 0.0019316784
+    },
+    {
+      "name": "Nguyễn Tịnh",
+      "percentage": 0.00189
+    },
+    {
+      "name": "Công ty Cổ phần Xây dựng điện VNECO4",
+      "percentage": 0.00177
+    },
+    {
+      "name": "Thái Văn Chấn",
+      "percentage": 0.001609732
+    },
+    {
+      "name": "Nguyễn Trọng Bình",
+      "percentage": 0.0008821331
+    },
+    {
+      "name": "Phan Tất Trung",
+      "percentage": 0.0006760874
+    },
+    {
+      "name": "Phan Trịnh Anh Tuấn",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Nguyễn Thành Đồng",
+      "percentage": 0.0005923813
+    },
+    {
+      "name": "Phạm Hữu Minh Huy",
+      "percentage": 0.000544
+    },
+    {
+      "name": "Đào Hữu Chuộng",
+      "percentage": 0.0004558761
+    },
+    {
+      "name": "Tống Đình Thắng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đoàn Thị Lê",
+      "percentage": 0.000272
+    },
+    {
+      "name": "Đoàn Thị Đào",
+      "percentage": 0.000269
+    },
+    {
+      "name": "Lê Chí Dũng",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Lê Thanh Hồng",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Lê Thanh Nhã",
+      "percentage": 0.0001629048
+    },
+    {
+      "name": "Lê Văn Khôi",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Nguyễn Thị Như",
+      "percentage": 0.0000743
+    },
+    {
+      "name": "Trần Văn Huy",
+      "percentage": 0.0000548
+    },
+    {
+      "name": "Nguyễn Văn Quảng",
+      "percentage": 0.000043
+    },
+    {
+      "name": "Đặng Trọng Ngôn",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Công ty TNHH Kiểm toán Kroize",
+      "percentage": 4.4e-7
+    },
+    {
+      "name": "Công ty TNHH Chứng khoán Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+      "percentage": 1.2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Quang Cần",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0525
+    },
+    {
+      "name": "Phạm Đỗ Minh Triết",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0456177
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.024374
+    },
+    {
+      "name": "Nguyễn Tịnh",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0020853
+    },
+    {
+      "name": "Phạm Hữu Minh Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000544
+    },
+    {
+      "name": "Lê Chí Dũng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Lê Văn Khôi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Trần Văn Huy",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0000548
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hà",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hoàng Oanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Ngọc Quỳnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Phú Mai",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:42.894339Z"
+}

@@ -1,0 +1,258 @@
+{
+  "symbol": "MPC",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6979018200000.0,
+  "current_price": 17400.0,
+  "outstanding_shares": 401093000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n Thủy sản Minh Ph&uacute; (MPC) c&oacute; tiền th&acirc;n l&agrave; X&iacute; nghiệp cung ứng h&agrave;ng xuất khẩu Minh Ph&uacute;,&nbsp;được&nbsp;th&agrave;nh lập năm 1992. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực chế biến kinh doanh xuất&nbsp;khẩu thủy sản với mặt h&agrave;ng ch&iacute;nh l&agrave; t&ocirc;m đ&ocirc;ng lạnh.&nbsp;MPC ch&iacute;nh thức chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần từ năm 2006.&nbsp;C&ocirc;ng ty l&agrave; doanh nghiệp thủy sản đầu ti&ecirc;n trong nước được c&ocirc;ng nhận ti&ecirc;u chuẩn Global Gap. MPC l&agrave; doanh nghiệp&nbsp;xuất khẩu thủy sản c&oacute; kim ngạch xuất khẩu lớn nhất trong tất cả c&aacute;c doanh nghiệp xuất khẩu thủy sản của&nbsp;Việt Nam. Từ năm những năm&nbsp;2000, C&ocirc;ng ty&nbsp;đ&atilde; vươn l&ecirc;n&nbsp;đứng v&agrave;&nbsp;giữ vững vị tr&iacute; n&agrave;y trong nhiều năm. MPC được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 10/2017.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Mpm Investments Pte., Ltd.",
+      "percentage": 0.3502
+    },
+    {
+      "name": "Chu Thị Bình",
+      "percentage": 0.17545
+    },
+    {
+      "name": "Lê Văn Quang",
+      "percentage": 0.16076
+    },
+    {
+      "name": "Vietnam Investment Limited",
+      "percentage": 0.0713
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Dragon Capital Việt Nam",
+      "percentage": 0.07127357
+    },
+    {
+      "name": "Phạm Ngọc Hồng Thu",
+      "percentage": 0.0568
+    },
+    {
+      "name": "Earls Court Enterprises Limited",
+      "percentage": 0.0418
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Long Phụng",
+      "percentage": 0.0409
+    },
+    {
+      "name": "Lê Thị Dịu Minh",
+      "percentage": 0.03274
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Minh Phú",
+      "percentage": 0.02857143
+    },
+    {
+      "name": "Lê Thị Minh Phú",
+      "percentage": 0.02754
+    },
+    {
+      "name": "Lê Thị Minh Ngọc",
+      "percentage": 0.02752
+    },
+    {
+      "name": "Lê Thị Minh Quí",
+      "percentage": 0.02752
+    },
+    {
+      "name": "Nguyễn Thị Thu Huyền",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Chu Văn An",
+      "percentage": 0.00105
+    },
+    {
+      "name": "Chu Hồng Hà",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Bùi Anh Dũng",
+      "percentage": 0.00073
+    },
+    {
+      "name": "Lê Ngọc Anh",
+      "percentage": 0.00066
+    },
+    {
+      "name": "Nguyễn Văn Di",
+      "percentage": 0.00061
+    },
+    {
+      "name": "Thái Hoàng Hùng",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Văn Điệp",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Lê Thị Thúy",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Nguyễn Thị Huyền Trân",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Lê Văn Tuấn",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Trần Văn Thái",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Hoàng Liêm",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Đinh Thị Ánh Tuyết",
+      "percentage": 0.0000730323
+    },
+    {
+      "name": "Nguyễn Quốc Toàn",
+      "percentage": 0.0000730323
+    },
+    {
+      "name": "Ngô Thanh Hà",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Phan Văn Dũng",
+      "percentage": 0.000045426
+    },
+    {
+      "name": "Mai Thị Hoàng Minh",
+      "percentage": 0.0000438193
+    },
+    {
+      "name": "Lưu Minh Trung",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Hương",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lâm Thị Thúy Kiều",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Tấn Anh",
+      "percentage": 2.19e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Chu Thị Bình",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.17545
+    },
+    {
+      "name": "Lê Văn Quang",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.16076
+    },
+    {
+      "name": "Lê Thị Dịu Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.03274
+    },
+    {
+      "name": "Chu Hồng Hà",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Bùi Anh Dũng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.00073
+    },
+    {
+      "name": "Lê Ngọc Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00066
+    },
+    {
+      "name": "Thái Hoàng Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Văn Điệp",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Lưu Minh Trung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Hương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Tấn Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2.19e-6
+    },
+    {
+      "name": "Hồ Thu Lê",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thanh Lộc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Khánh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Nhân Nghĩa",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Cúc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Hạnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nagoya Yukata",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Suzuki Yoshiaki",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tsukahara Keiichi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:25.343773Z"
+}

@@ -1,0 +1,150 @@
+{
+  "symbol": "BCE",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 374500000000.0,
+  "current_price": 10700.0,
+  "outstanding_shares": 35000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần X&acirc;y Dựng v&agrave; Giao Th&ocirc;ng B&igrave;nh Dương (BCE)&nbsp;được th&agrave;nh lập năm 2002. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực&nbsp;x&acirc;y dựng d&acirc;n dụng c&ocirc;ng nghiệp, giao th&ocirc;ng v&agrave; kinh doanh bất động sản. C&aacute;c hoạt động sản xuất kinh doanh của c&ocirc;ng ty chủ yếu diễn ra tại B&igrave;nh Dương.&nbsp;C&ocirc;ng ty đ&atilde; tham gia thi c&ocirc;ng th&agrave;nh&nbsp;c&ocirc;ng nhiều c&ocirc;ng tr&igrave;nh với tiến độ thi c&ocirc;ng đảm bảo v&agrave; chất lượng cao như: Trung t&acirc;m thương mại Mỹ Phước II, dự &aacute;n phố thương mại Rich Town tại th&agrave;nh phố mới B&igrave;nh Dương, Văn ph&ograve;ng Khu Li&ecirc;n Hợp Tỉnh B&igrave;nh Dương. So với c&aacute;c đơn vị c&ugrave;ng ng&agrave;nh c&oacute; thương hiệu mạnh như C&ocirc;ng ty CP X&acirc;y Dựng v&agrave; Đĩa ốc H&ograve;a B&igrave;nh, COTECCONS, Cơ kh&iacute; Hai Th&agrave;nh, Ti&ecirc;n Tiến, Đại Dũng, tr&igrave;nh độ khoa học kỹ thuật c&ocirc;ng nghệ của c&ocirc;ng ty đạt v&agrave;o hạng kh&aacute;. Trong lĩnh vực bất động sản, BCE đ&atilde; thực hiện th&agrave;nh c&ocirc;ng nhiều dự &aacute;n lớn như Trung t&acirc;m thương mại Mỹ Phước II, phố thương mại Rich Town...&nbsp;Ng&agrave;y 28/06/2010 BCE ch&iacute;nh thức giao dịch tại Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Đầu tư và Phát triển Công nghiệp Becamex - CTCP",
+      "percentage": 0.4442
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư MB",
+      "percentage": 0.0484233333
+    },
+    {
+      "name": "Lê Tuấn Dũ",
+      "percentage": 0.0119596
+    },
+    {
+      "name": "Đỗ Văn Minh",
+      "percentage": 0.0042924333
+    },
+    {
+      "name": "Dương Thị Hồng Tỵ",
+      "percentage": 0.003156
+    },
+    {
+      "name": "Nguyễn Kim Tiên",
+      "percentage": 0.0019
+    },
+    {
+      "name": "HỒ MINH DIỄM THUÝ",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Nguyễn Thị Bửu",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Phạm Thị Lan Thảo",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Văn Cọp",
+      "percentage": 0.000557
+    },
+    {
+      "name": "Nguyễn Thị Ngâu",
+      "percentage": 0.0003333333
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lai Nhật Xuân Trang",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lý Tấn Trí",
+      "percentage": 0.00002
+    },
+    {
+      "name": "New-S Securities Company Limited",
+      "percentage": 0.0000166666
+    },
+    {
+      "name": "Lê Thị Diệu Thanh",
+      "percentage": 1.5e-6
+    },
+    {
+      "name": "Nguyễn Tấn Thuận",
+      "percentage": 3.666e-7
+    },
+    {
+      "name": "Asiavantage Global Limited",
+      "percentage": 1.666e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Kim Tiên",
+      "position": "Phụ trách Công bố thông tin/Phó Tổng Giám đốc",
+      "percentage": 0.0019
+    },
+    {
+      "name": "HỒ MINH DIỄM THUÝ",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lai Nhật Xuân Trang",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Thị Diệu Thanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 1.5e-6
+    },
+    {
+      "name": "Nguyễn Văn Hiền Phúc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thị Quế Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Thanh Huy",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thị Quỳnh Hoa",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Viết Yên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàn Vũ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:02.522525Z"
+}

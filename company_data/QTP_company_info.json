@@ -1,0 +1,156 @@
+{
+  "symbol": "QTP",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất & Phân phối Điện",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 5760000000000.0,
+  "current_price": 12800.0,
+  "outstanding_shares": 450000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Nhiệt điện Quảng Ninh (QTP)&nbsp;được th&agrave;nh lập v&agrave;o năm 2002 với c&aacute;c cổ đ&ocirc;ng s&aacute;ng lập gồm Tổng C&ocirc;ng ty Điện lực Việt Nam (EVN), Tổng C&ocirc;ng ty Than &ndash; Kho&aacute;ng Sản Việt Nam (TKV), Tổng C&ocirc;ng ty Cơ kh&iacute; X&acirc;y Dựng (COMA), Tổng C&ocirc;ng ty Xuất Nhập khẩu X&acirc;y dựng Việt Nam (VINACONEX) v&agrave; Tổng C&ocirc;ng ty Lắp m&aacute;y Việt Nam (LILAMA).&nbsp;C&ocirc;ng ty hoạt động ch&iacute;nh&nbsp;trong lĩnh vực đầu tư x&acirc;y dựng, quản l&yacute; vận h&agrave;nh nh&agrave;&nbsp;m&aacute;y nhiệt&nbsp;điện, sản xuất, truyền tải v&agrave; ph&acirc;n phối điện năng. QTP hiện đang quản l&yacute; vận h&agrave;nh 04 tổ m&aacute;y ph&aacute;t điện thuộc Dự &aacute;n Nhiệt điện Quảng Ninh 1 v&agrave; Dự &aacute;n Nhiệt điện Quảng Ninh 2 với tổng c&ocirc;ng suất 1.200MW. Ngo&agrave;i ra, C&ocirc;ng ty c&ograve;n tham gia b&aacute;n bu&ocirc;n vật liệu, thiết bị lắp đặt kh&aacute;c trong x&acirc;y dựng, sản xuất b&ecirc; t&ocirc;ng, v&ocirc;i v&agrave; thạch cao, v&agrave; x&acirc;y dựng c&ocirc;ng tr&igrave;nh kỹ thuật d&acirc;n dụng kh&aacute;c. QTP được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 03/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Phát điện 1",
+      "percentage": 0.42
+    },
+    {
+      "name": "Công ty Cổ phần Nhiệt điện Phả Lại",
+      "percentage": 0.1635
+    },
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.1142
+    },
+    {
+      "name": "Tổng Công ty Điện lực TKV - Công ty Cổ phần",
+      "percentage": 0.1062
+    },
+    {
+      "name": "Công ty Cổ phần Cơ điện Lạnh",
+      "percentage": 0.0169
+    },
+    {
+      "name": "Tổng Công ty Cổ phần Xuất nhập khẩu và Xây dựng Việt Nam",
+      "percentage": 0.0117
+    },
+    {
+      "name": "Nguyễn Thế Hùng",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Trương Quang Vệ",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Mạnh Cường",
+      "percentage": 0.00042
+    },
+    {
+      "name": "Nguyễn Thị Thanh Huyền",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Trần Thị Kim Tuyến",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thanh Hải",
+      "percentage": 0.00007
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thế Hùng",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Trương Quang Vệ",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Mạnh Cường",
+      "position": "Phó Giám đốc",
+      "percentage": 0.00042
+    },
+    {
+      "name": "Đặng Huy Vũ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Văn Điện",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Hoàng Yến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Nguyễn Phương Trâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Sinh Nghĩa",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tuấn Anh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Việt Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Dũng",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Duy An",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Huy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Diệp",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Tạo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Vũ Linh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Minh Nghĩa",
+      "position": "Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Loan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:05.687771Z"
+}

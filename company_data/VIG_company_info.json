@@ -1,0 +1,135 @@
+{
+  "symbol": "VIG",
+  "exchange": "HNX",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 270799800000.0,
+  "current_price": 6000.0,
+  "outstanding_shares": 45133300,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Đầu tư T&agrave;i ch&iacute;nh Việt Nam (VIG)&nbsp;được ch&iacute;nh thức th&agrave;nh lập năm 2008.&nbsp; C&ocirc;ng ty chuy&ecirc;n cung cấp dịch vụ m&ocirc;i giới, tư vấn v&agrave; đầu tư t&agrave;i ch&iacute;nh. C&ocirc;ng ty c&oacute; lợi thế so với c&aacute;c c&ocirc;ng ty kh&aacute;c khi cổ đ&ocirc;ng s&aacute;ng lập của c&ocirc;ng ty l&agrave; c&aacute;c Tổng C&ocirc;ng ty nh&agrave; nước&nbsp;như Tổng C&ocirc;ng ty H&oacute;a chất Việt Nam, Tổng C&ocirc;ng ty Giấy Việt Nam, Tổng C&ocirc;ng ty Lắp m&aacute;y Việt Nam.&nbsp;Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 3,19 tỷ đồng. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 15,2 tỷ đồng, tăng 9.19% v&agrave; đ&oacute;ng g&oacute;p 44.16 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 25,03 tỷ đồng. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 6%, giảm 3.69%. VIG được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2009.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hồ Thị Sương",
+      "percentage": 0.0762
+    },
+    {
+      "name": "La Mỹ Phượng",
+      "percentage": 0.0685
+    },
+    {
+      "name": "Nguyễn Thị Thảo",
+      "percentage": 0.0496
+    },
+    {
+      "name": "Tổng Công ty Giấy Việt Nam - Công ty TNHH",
+      "percentage": 0.04687505
+    },
+    {
+      "name": "Lê Thị Thanh Bình",
+      "percentage": 0.0449
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Xây dựng và Quản lý Kinh doanh Bất động sản Thăng Long",
+      "percentage": 0.0434780698
+    },
+    {
+      "name": "Lê Thị Ngọc Hà",
+      "percentage": 0.0304
+    },
+    {
+      "name": "Phan Ngọc Hồng",
+      "percentage": 0.0287
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Tài chính Findex",
+      "percentage": 0.02578128
+    },
+    {
+      "name": "Nguyễn Nhật Minh",
+      "percentage": 0.0236
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Đầu tư Thăng Long",
+      "percentage": 0.0188086121
+    },
+    {
+      "name": "Nguyễn Hải",
+      "percentage": 0.0139
+    },
+    {
+      "name": "Cao Văn Anh",
+      "percentage": 0.0119
+    },
+    {
+      "name": "Nguyễn Đăng Quang",
+      "percentage": 0.0097
+    },
+    {
+      "name": "Võ Sỹ Dởng",
+      "percentage": 0.00058594
+    },
+    {
+      "name": "Vũ Xuân Hòa",
+      "percentage": 0.0004394535
+    },
+    {
+      "name": "Hồ Thị Hiền",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Nguyễn Trọng Bằng",
+      "percentage": 0.00015
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Thị Hiền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Nguyễn Xuân Sanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hoa Huệ",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Thị Trinh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tô Thành Vinh",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "position": "Giám đốc khối",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Biểu",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Giang Nam",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Huyền Trâm",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:19.409862Z"
+}

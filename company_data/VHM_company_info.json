@@ -1,0 +1,188 @@
+{
+  "symbol": "VHM",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 409098235598400.0,
+  "current_price": 99600.0,
+  "outstanding_shares": 4107412004,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Vinhomes (VHM) c&oacute;&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đ&ocirc; thị BIDV-PP được th&agrave;nh lập năm 2008. C&ocirc;ng ty hoạt động trong lĩnh vực ph&aacute;t triển, chuyển nhượng, vận h&agrave;nh v&agrave; khai th&aacute;c bất động sản nh&agrave; ở phức hợp.&nbsp;VHM l&agrave;&nbsp;doanh nghiệp lớn nhất Việt Nam trong lĩnh vực ph&aacute;t triển v&agrave; chuyển nhượng bất động sản nh&agrave; ở.&nbsp;Hiện nay,&nbsp;Vinhomes đ&atilde; đưa v&agrave;o vận h&agrave;nh 27 khu đ&ocirc; thị tại bảy tỉnh th&agrave;nh tr&ecirc;n cả nước, với hơn 97.200 căn hộ, biệt thự v&agrave; nh&agrave; phố, phục vụ hơn 300.000 cư d&acirc;n,&nbsp;tổng&nbsp;diện t&iacute;ch quỹ đất&nbsp;l&ecirc;n đến hơn 16.800 ha.&nbsp;VHM được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 05/2018.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Vingroup - Công ty CP",
+      "percentage": 0.7351
+    },
+    {
+      "name": "Government Of Singapore",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Viking Asia Holdings II Pte.Ltd",
+      "percentage": 0.046
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Kinh Doanh Và Thương Mại P&s",
+      "percentage": 0.0268
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0117
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.00999725
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00005401
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.00005157
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00004762
+    },
+    {
+      "name": "Tống Thị Mùi",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00001193
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 9.12e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 6.22e-6
+    },
+    {
+      "name": "Trần Kiên Cường",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Phạm Thị Tuyết Mai",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Kiên Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Hồ  Thị Thu Hằng",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị  Giang",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Thị Bích Hồng",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ashish Jaiprakash Shastry",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Quang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Douglas Farrell",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Vân Quỳnh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Duyên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Khương",
+      "position": "Phó Tổng Giám đốc Xây dựng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Diệu Linh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thiếu Hoa",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Thị Hà An",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Varun Kapur",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mueen Uddeen",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Thu Thủy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Ngọc Lan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tiến Công",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thu Hằng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoang D. Quan",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Vũ Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Nhật Vượng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:06.868688Z"
+}

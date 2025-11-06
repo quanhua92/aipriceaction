@@ -1,0 +1,211 @@
+{
+  "symbol": "SCR",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3741870862840.0,
+  "current_price": 8690.0,
+  "outstanding_shares": 430595036,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Địa Ốc S&agrave;i G&ograve;n Thương T&iacute;n (SCR) được th&agrave;nh lập năm 2004 với t&ecirc;n thương hiệu l&agrave; Sacomreal. Th&aacute;ng 03, 2018, SCR thay thế t&ecirc;n thương hiệu Sacomreal th&agrave;nh TTC Land sau 14 năm th&agrave;nh lập. Lĩnh vực kinh doanh ch&iacute;nh của C&ocirc;ng ty bao gồm dịch vụ m&ocirc;i giới bất động sản, hợp t&aacute;c, đầu tư v&agrave; ph&aacute;t triển c&aacute;c dự &aacute;n bất động sản. Hiện nay C&ocirc;ng ty đ&atilde; trở th&agrave;nh chủ đầu tư của nhiều dự &aacute;n lớn với quy m&ocirc; h&agrave;ng ng&agrave;n tỷ đồng như Dự &aacute;n Chung cư Ho&agrave; B&igrave;nh (Quận T&acirc;n Ph&uacute;), Dự &aacute;n Căn hộ Ph&uacute; Lợi 1 (Quận 8), Dự &aacute;n Cao ốc văn ph&ograve;ng Sacomreal &ndash; Generalimex (Quận 1), Dự &aacute;n Khu căn hộ cao cấp Belleza (Quận 7). Trong thời gian tới Sacomreal sẽ tiếp tục triển khai c&aacute;c dự &aacute;n bất động sản với chất lượng m&ocirc;i trường sống cao c&ugrave;ng những tiện &iacute;ch c&ocirc;ng cộng như: c&ocirc;ng vi&ecirc;n, trường học, khu trung t&acirc;m thương mại... SCR được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2016.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Đầu tư Thành Thành Công",
+      "percentage": 0.227
+    },
+    {
+      "name": "Đặng Hồng Anh",
+      "percentage": 0.1011
+    },
+    {
+      "name": "Công ty Cổ Phần Global Mind Việt Nam",
+      "percentage": 0.089
+    },
+    {
+      "name": "Công ty Cổ phần Thương Mại Thành Thành Công",
+      "percentage": 0.048
+    },
+    {
+      "name": "Công ty Cổ Phần Xuất Nhập Khẩu Bến Tre",
+      "percentage": 0.0421
+    },
+    {
+      "name": "Công ty Cổ phần Khu Công Nghiệp Thành Thành Công",
+      "percentage": 0.0195
+    },
+    {
+      "name": "Bùi Tiến Thắng",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Lâm Minh Châu",
+      "percentage": 0.002
+    },
+    {
+      "name": "Nguyễn Đăng Thanh",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Đặng Văn Thành",
+      "percentage": 0.00054
+    },
+    {
+      "name": "Nguyễn Thị Mai Thảo",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Hồ Hữu Nhân",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Công đoàn Ngân hàng Thương mại Cổ phần Sài Gòn Thương Tín",
+      "percentage": 0.0004247934
+    },
+    {
+      "name": "Nguyễn Văn Triển",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thảo",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Yến Duyên",
+      "percentage": 0.00035
+    },
+    {
+      "name": "Công ty CP Đầu Tư Hạ Tầng Cụm Công Nghiệp Tân Hội",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trịnh Nguyễn Thuỳ Trang",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Thái Văn Chuyện",
+      "percentage": 0.0002501
+    },
+    {
+      "name": "Trần Thiện Thanh Thùy",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Trung Phan Xuân Quang",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Huỳnh Bích Ngọc",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Sài Gòn Thương Tín",
+      "percentage": 0.0001780086
+    },
+    {
+      "name": "Công ty Cổ phần Bảo hiểm Viễn Đông",
+      "percentage": 0.000161826
+    },
+    {
+      "name": "Lương Đình Quang",
+      "percentage": 0.0000753583
+    },
+    {
+      "name": "Lý Kim Dung",
+      "percentage": 0.000073206
+    },
+    {
+      "name": "Phạm Thị Khuê",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Thị Đã",
+      "percentage": 0.000046
+    },
+    {
+      "name": "Đinh Thị Ngọc Trang",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trần Thị Thanh Tâm",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Tôn Thị Nhật Giang",
+      "percentage": 8.293e-7
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Kiến Trúc Xây Dựng Toàn Thịnh Phát",
+      "percentage": 9.7e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Thanh Thảo",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Yến Duyên",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00035
+    },
+    {
+      "name": "Phạm Thị Khuê",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Đỗ Diệu Linh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Sơn Trung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Thị Vy",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Quốc Thái",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Mạnh Tiến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Diệp Phượng Nhi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Ngọc Giang",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thùy Vân",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thành Chương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Quốc Khánh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:26.523320Z"
+}

@@ -1,0 +1,298 @@
+{
+  "symbol": "TNG",
+  "exchange": "HNX",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2378463396400.0,
+  "current_price": 19400.0,
+  "outstanding_shares": 122601206,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư v&agrave; Thương mại TNG (TNG), tiền th&acirc;n l&agrave; X&iacute; nghiệp May Bắc Th&aacute;i, được th&agrave;nh lập năm 1979. Năm 2003, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. Hoạt động kinh doanh chủ yếu của C&ocirc;ng ty l&agrave;: Sản xuất v&agrave; mua b&aacute;n h&agrave;ng may mặc; Sản xuất bao b&igrave; giấy, nhựa l&agrave;m t&uacute;i nilon, &aacute;o mưa nilon v&agrave; nguy&ecirc;n, phụ liệu h&agrave;ng may mặc...&nbsp;C&ocirc;ng ty l&agrave;&nbsp;một trong c&aacute;c doanh nghiệp dệt may xuất khẩu lớn nhất Việt Nam. C&ocirc;ng ty sở hữu 20 chi nh&aacute;nh may với 336 d&acirc;y chuyền. H&agrave;ng năm, c&ocirc;ng ty sản xuất khoảng 12 triệu sản phẩm &aacute;o kho&aacute;c v&agrave; 9 triệu sản phẩm quần Chino. Ngo&agrave;i thị trường nội địa, sản phẩm của c&ocirc;ng ty c&ograve;n được xuất khẩu sang nước ngo&agrave;i như Hoa Kỳ, EU, Canada v&agrave; Mexico. C&ocirc;ng ty đặt trụ sở ch&iacute;nh tại số 434/1, đường Bắc Kạn, Tp. Th&aacute;i Nguy&ecirc;n; c&oacute; 15&nbsp;nh&agrave; m&aacute;y may xuất khẩu nằm tại địa b&agrave;n c&aacute;c huyện thuộc tỉnh Th&aacute;i Nguy&ecirc;n, 02 chi nh&aacute;nh c&ocirc;ng nghệ, 02 nh&agrave; m&aacute;y phụ trợ, 01 chi nh&aacute;nh LAB. Ng&agrave;y 22/11/2007, TNG ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao&nbsp;dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Văn Thời",
+      "percentage": 0.191955
+    },
+    {
+      "name": "Nguyễn Đức Mạnh",
+      "percentage": 0.089933
+    },
+    {
+      "name": "Trần Cảnh Thông",
+      "percentage": 0.0581
+    },
+    {
+      "name": "Phillip Securities Public Company Limited",
+      "percentage": 0.05073
+    },
+    {
+      "name": "Nguyễn Xuân Thụy",
+      "percentage": 0.0504070421
+    },
+    {
+      "name": "Tundra Sustainable Frontier Fund",
+      "percentage": 0.049
+    },
+    {
+      "name": "Asean Deep Value Fund",
+      "percentage": 0.0488
+    },
+    {
+      "name": "Korea Investment Securities Co., Ltd",
+      "percentage": 0.0485
+    },
+    {
+      "name": "Asean Small Cap Fund",
+      "percentage": 0.0432948393
+    },
+    {
+      "name": "Fides KTCU Private Investment Trust 1",
+      "percentage": 0.0334
+    },
+    {
+      "name": "AFC Vietnam Fund",
+      "percentage": 0.0332
+    },
+    {
+      "name": "Đỗ Thị Hà",
+      "percentage": 0.0179
+    },
+    {
+      "name": "Nguyễn Việt Thành",
+      "percentage": 0.0159618958
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán BIDV",
+      "percentage": 0.0109376436
+    },
+    {
+      "name": "FIDES VIETNAM GENERAL PRIVATE INVESTMENT POBA TRUST 1",
+      "percentage": 0.0077
+    },
+    {
+      "name": "FIDES REHOBOTH KBIZ PRIVATE INVESTMENT TRUST 15",
+      "percentage": 0.0072
+    },
+    {
+      "name": "Lương Thị Thúy Hà",
+      "percentage": 0.0066
+    },
+    {
+      "name": "Nguyễn Huy Hoàng",
+      "percentage": 0.0064201233
+    },
+    {
+      "name": "Lã Anh Thắng",
+      "percentage": 0.0060059056
+    },
+    {
+      "name": "Nguyễn Mạnh Linh",
+      "percentage": 0.0059
+    },
+    {
+      "name": "Bùi Thị Thắm",
+      "percentage": 0.0055474817
+    },
+    {
+      "name": "LÝ THỊ LIÊN",
+      "percentage": 0.0044
+    },
+    {
+      "name": "FIDES VIETNAM GENERAL PRIVATE INVESTMENT PMAA TRUST 1",
+      "percentage": 0.0044
+    },
+    {
+      "name": "FIDES VIETNAM GENERAL PRIVATE INVESTMENT SEMA TRUST 1",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Công ty TNHH Quản Lý Quỹ Kim Việt Nam",
+      "percentage": 0.0034107218
+    },
+    {
+      "name": "Đoàn Thị Thu",
+      "percentage": 0.003249
+    },
+    {
+      "name": "Goldman Shachs International Company",
+      "percentage": 0.0031628019
+    },
+    {
+      "name": "Nguyễn Thị Nhuận",
+      "percentage": 0.0025
+    },
+    {
+      "name": "NGUYỄN THỊ MIỆN",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Nguyễn Thị Minh Thọ",
+      "percentage": 0.0022786757
+    },
+    {
+      "name": "FIDES MPLUS GLOBAL GENERAL PRIVATE INVESTMENT TRUST 1",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Trần Thị Thu Hà",
+      "percentage": 0.001405
+    },
+    {
+      "name": "Nguyễn Thị Phương",
+      "percentage": 0.001404
+    },
+    {
+      "name": "FIDES VIETNAM GENERAL PRIVATE INVESTMENT CG TRUST 1",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Cao Thị Tuyết",
+      "percentage": 0.0012997566
+    },
+    {
+      "name": "Đào Đức Thanh",
+      "percentage": 0.00128
+    },
+    {
+      "name": "Trần Minh Hiếu",
+      "percentage": 0.001072
+    },
+    {
+      "name": "Chu Thuyên",
+      "percentage": 0.0009114703
+    },
+    {
+      "name": "NGUYỄN VĂN ĐỨC",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lưu Đức Huy",
+      "percentage": 0.000866
+    },
+    {
+      "name": "Nguyễn Qúy Thịnh",
+      "percentage": 0.0007546974
+    },
+    {
+      "name": "Lê Xuân Vĩ",
+      "percentage": 0.000734
+    },
+    {
+      "name": "NGUYỄN THỊ MIÊN",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Phạm Thanh Tuấn",
+      "percentage": 0.0006
+    },
+    {
+      "name": "FIDES ASSEMBLE GLOBAL PRIVATE INVESTMENT TRUST 1",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Hwan-Kyoon Kim",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thuý Ngân",
+      "percentage": 0.000121
+    },
+    {
+      "name": "NGUYỄN VĂN THỚI",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Lê Quang Vinh",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Asam Vietnam Mezzanine Focus Hedge Fund 1",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Thời",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.191955
+    },
+    {
+      "name": "Nguyễn Đức Mạnh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.089933
+    },
+    {
+      "name": "Trần Cảnh Thông",
+      "position": "Thành viên Hội đồng Quản trị/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0581
+    },
+    {
+      "name": "Đỗ Thị Hà",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0179
+    },
+    {
+      "name": "Lương Thị Thúy Hà",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0066
+    },
+    {
+      "name": "Nguyễn Mạnh Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0059
+    },
+    {
+      "name": "Đoàn Thị Thu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.003249
+    },
+    {
+      "name": "Trần Thị Thu Hà",
+      "position": "Kế toán trưởng/Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.001405
+    },
+    {
+      "name": "Nguyễn Thị Phương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001404
+    },
+    {
+      "name": "Đào Đức Thanh",
+      "position": "Thành viên Ban kiểm soát/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.00128
+    },
+    {
+      "name": "Trần Minh Hiếu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001072
+    },
+    {
+      "name": "NGUYỄN VĂN ĐỨC",
+      "position": "Thành viên Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lưu Đức Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000866
+    },
+    {
+      "name": "Phạm Thanh Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lê Quang Vinh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Hoàng Giang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:52.039832Z"
+}

@@ -1,0 +1,137 @@
+{
+  "symbol": "ACV",
+  "exchange": "UPCOM",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 196698329012700.0,
+  "current_price": 54900.0,
+  "outstanding_shares": 3582847523,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">Tổng C&ocirc;ng ty Cảng H&agrave;ng kh&ocirc;ng Việt Nam (ACV) được th&agrave;nh lập v&agrave;o năm 2012 tr&ecirc;n cơ sở hợp nhất Tổng&nbsp;C&ocirc;ng ty Cảng H&agrave;ng kh&ocirc;ng Miền Bắc, Tổng C&ocirc;ng ty Cảng H&agrave;ng kh&ocirc;ng miền Trung v&agrave;&nbsp;Tổng C&ocirc;ng ty Cảng H&agrave;ng kh&ocirc;ng Miền Nam. Tổng C&ocirc;ng ty ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2016. ACV l&agrave; đơn vị duy nhất quản l&yacute;, vận h&agrave;nh v&agrave; khai th&aacute;c to&agrave;n bộ hệ thống 22 Cảng h&agrave;ng kh&ocirc;ng quốc tế v&agrave; quốc nội tr&ecirc;n to&agrave;n l&atilde;nh thổ Việt Nam. Giai đoạn trước cổ phần h&oacute;a, mỗi năm c&ocirc;ng ty phục vụ tr&ecirc;n 1,006 triệu lượt chuyến bay, 132,61 triệu lượt kh&aacute;ch v&agrave; vận chuyển 2,3 triệu tấn h&agrave;ng h&oacute;a, tăng trung b&igrave;nh 16%/năm.Giai đoạn sau cổ phần, ACV c&oacute; kế hoạch đầu tư x&acirc;y dựng cơ sở hạ tầng tại cảng h&agrave;ng kh&ocirc;ng Quốc tế Nội B&agrave;i, Cảng h&agrave;ng kh&ocirc;ng Quốc t&ecirc; T&acirc;n Sơn Nhất, đầu tư nh&agrave; ga h&agrave;nh kh&aacute;ch quốc tế tại cảng h&agrave;ng kh&ocirc;ng quốc tế Đ&agrave; Nẵng, v&agrave; nh&agrave; ga h&agrave;nh kh&aacute;ch&nbsp;cảng h&agrave;ng kh&ocirc;ng C&aacute;t Bi, Đồng Hới&nbsp;v&agrave; Cảng h&agrave;ng kh&ocirc;ng quốc tế Long Th&agrave;nh đạt cấp 4F, c&ocirc;ng suất 100 triệu h&agrave;ng kh&aacute;ch/năm, 5 triệu tấn h&agrave;ng h&oacute;a/năm.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Bộ Tài Chính",
+      "percentage": 0.954
+    },
+    {
+      "name": "Ủy Ban Quản Lý Vốn Nhà Nước Tại Doanh Nghiệp",
+      "percentage": 0.954
+    },
+    {
+      "name": "Uỷ ban Quản lý Vốn Nhà nước tại Doanh nghiệp",
+      "percentage": 0.954
+    },
+    {
+      "name": "Vinacapital Vietnam Opportunity Fund Ltd.",
+      "percentage": 0.01015714
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.00380495
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00003679
+    },
+    {
+      "name": "Vũ Thế Phiệt",
+      "percentage": 3.17e-6
+    },
+    {
+      "name": "Nguyễn Đức Hùng",
+      "percentage": 2.85e-6
+    },
+    {
+      "name": "Lê Thị Diệu Thúy",
+      "percentage": 2.85e-6
+    },
+    {
+      "name": "Nguyễn Tiến Việt",
+      "percentage": 2.3e-6
+    },
+    {
+      "name": "Nguyễn Thị Hồng Phượng",
+      "percentage": 2.3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Thế Phiệt",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 3.17e-6
+    },
+    {
+      "name": "Nguyễn Đức Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2.85e-6
+    },
+    {
+      "name": "Lê Thị Diệu Thúy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 2.85e-6
+    },
+    {
+      "name": "Nguyễn Thị Hồng Phượng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 2.3e-6
+    },
+    {
+      "name": "Nguyễn Tiến Việt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 2.3e-6
+    },
+    {
+      "name": "Lương Quốc Bình",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hữu Phúc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Tất Bình",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Việt Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lại Xuân Thanh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thị Diệu",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Phương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Khiên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Anh Vũ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Á Đông",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:30.768426Z"
+}

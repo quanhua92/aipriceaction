@@ -1,0 +1,161 @@
+{
+  "symbol": "DDV",
+  "exchange": "UPCOM",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4441740960000.0,
+  "current_price": 30400.0,
+  "outstanding_shares": 146109900,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần DAP - Vinachem (DDV) được th&agrave;nh lập năm 2008, với ng&agrave;nh nghề kinh doanh ch&iacute;nh l&agrave; sản xuất ph&acirc;n b&oacute;n v&agrave; h&oacute;a chất cơ bản. C&aacute;c sản phẩm ch&iacute;nh của c&ocirc;ng ty bao gồm ph&acirc;n b&oacute;n DAP, axit sulfuric v&agrave; axit phốt phoric.&nbsp; C&ocirc;ng ty c&oacute; 01 nh&agrave; m&aacute;y sản xuất ph&acirc;n b&oacute;n DAP c&ocirc;ng suất 330.000 tấn/năm, nh&agrave; m&aacute;y sản xuất Axit Sulfuric (H2SO4) c&ocirc;ng suất 414.000 tấn/năm, nh&agrave; m&aacute;y sản xuất Axit Phốt phoric (H3PO4&not;) c&ocirc;ng suất 161.700 tấn/năm, nh&agrave; m&aacute;y nhiệt điện c&ocirc;ng suất 12 MW, v&agrave; nh&agrave; m&aacute;y xử l&yacute; nước thải c&ocirc;ng suất 40 m3/giờ. Từ năm 2015, DDV được giao dịch tr&ecirc;n thị trường UPCOM.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Hóa chất Việt Nam",
+      "percentage": 0.64
+    },
+    {
+      "name": "Công ty Cổ phần Thương mại và Dịch vụ Việt Kim",
+      "percentage": 0.0437
+    },
+    {
+      "name": "Công ty Cổ phần The Golden Group",
+      "percentage": 0.0171
+    },
+    {
+      "name": "Hoàng Mạnh Thắng",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Nguyễn Văn Oanh",
+      "percentage": 0.00274
+    },
+    {
+      "name": "Cao Thị Hồng",
+      "percentage": 0.00205325
+    },
+    {
+      "name": "Nguyễn Văn Sinh",
+      "percentage": 0.00138731
+    },
+    {
+      "name": "Nguyễn Huyền Linh Phương",
+      "percentage": 0.001026
+    },
+    {
+      "name": "Nguyễn Tuấn Dũng",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Trần Văn Đoàn",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Mai",
+      "percentage": 0.000315
+    },
+    {
+      "name": "Bùi Đăng Duẩn",
+      "percentage": 0.000032
+    },
+    {
+      "name": "Nguyễn Thùy Liên",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Văn Phiên",
+      "percentage": 0.000028
+    },
+    {
+      "name": "Nguyễn Danh Sao",
+      "percentage": 0.00002395
+    },
+    {
+      "name": "Lâm Thái Dương",
+      "percentage": 0.00002122
+    },
+    {
+      "name": "Vũ Văn Bằng",
+      "percentage": 0.0000144
+    },
+    {
+      "name": "Đoàn Thị Minh Thúy",
+      "percentage": 0.00001437
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "percentage": 0.0000109506
+    },
+    {
+      "name": "Đào Thị Thu Hiền",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Lê Ngọc Nhân",
+      "percentage": 4.1e-6
+    },
+    {
+      "name": "Đặng Thị Hoa",
+      "percentage": 4e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Tuấn Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Nguyễn Thị Mai",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000315
+    },
+    {
+      "name": "Bùi Đăng Duẩn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000032
+    },
+    {
+      "name": "Vũ Văn Bằng",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000144
+    },
+    {
+      "name": "Lê Ngọc Nhân",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 4.1e-6
+    },
+    {
+      "name": "Vương Thị Hải Yến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Xuân Quyên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Hạnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Trung Kiên",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàng Trung",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:05.806683Z"
+}

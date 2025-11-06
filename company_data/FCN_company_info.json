@@ -1,0 +1,318 @@
+{
+  "symbol": "FCN",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2424560677000.0,
+  "current_price": 15400.0,
+  "outstanding_shares": 157439005,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần FECON (FECON)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Kỹ thuật nền m&oacute;ng v&agrave; C&ocirc;ng tr&igrave;nh ngầm FECON được th&agrave;nh lập v&agrave;o&nbsp;năm 2004. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực&nbsp;thi c&ocirc;ng x&acirc;y dựng nền m&oacute;ng v&agrave; c&ocirc;ng tr&igrave;nh ngầm phục vụ x&acirc;y dựng nh&agrave; cao tầng, c&ocirc;ng tr&igrave;nh c&ocirc;ng nghiệp, c&ocirc;ng tr&igrave;nh giao th&ocirc;ng, c&ocirc;ng tr&igrave;nh thủy lợi, thi c&ocirc;ng hạ tầng kỹ thuật khu c&ocirc;ng nghiệp v&agrave; đ&ocirc; thị.&nbsp;FECON được ghi nhận l&agrave; nh&agrave; thầu chuy&ecirc;n nghiệp h&agrave;ng đầu Việt Nam về kỹ thuật nền m&oacute;ng c&ocirc;ng tr&igrave;nh, với h&agrave;ng loạt c&ocirc;ng&nbsp;nghệ sản xuất, thi c&ocirc;ng mang t&iacute;nh đột ph&aacute; v&agrave; hiệu quả cao. FECON&nbsp;đ&atilde; tham gia tại hơn 500 dự &aacute;n triển khai tr&ecirc;n to&agrave;n quốc, trong đ&oacute; c&oacute; nhiều dự &aacute;n FDI lớn v&agrave; trọng điểm quốc gia&nbsp;như: Nh&agrave; m&aacute;y gang th&eacute;p Formosa (H&agrave; Tĩnh), Tổ hợp khu c&ocirc;ng nghệ cao Samsung (Th&aacute;i Nguy&ecirc;n), Nh&agrave; m&aacute;y sản xuất, lắp r&aacute;p sản phẩm điển tử c&ocirc;ng nghệ cao LG (Hải Ph&ograve;ng), Nh&agrave; m&aacute;y lọc h&oacute;a dầu Nghi Sơn...với tư c&aacute;ch l&agrave; nh&agrave; thầu chủ đạo c&aacute;c hạng mục nền m&oacute;ng. FECON ch&iacute;nh thức ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n s&agrave;n giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE)&nbsp;từ th&aacute;ng 7 năm 2012.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Raito Kogyo",
+      "percentage": 0.2551
+    },
+    {
+      "name": "Evli Emerging Frontier Fund",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ HD",
+      "percentage": 0.0492
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.042
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0392
+    },
+    {
+      "name": "Phạm Việt Khoa",
+      "percentage": 0.031759
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán MB",
+      "percentage": 0.0257197418
+    },
+    {
+      "name": "Lumen Vietnam Fund",
+      "percentage": 0.022093109
+    },
+    {
+      "name": "Intereffekt Investment Funds N.V",
+      "percentage": 0.0196838106
+    },
+    {
+      "name": "Công ty TNHH Chứng khoán Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+      "percentage": 0.0186
+    },
+    {
+      "name": "Lotus - Mekong River Equity Fund",
+      "percentage": 0.0179120927
+    },
+    {
+      "name": "Công ty Tài chính Tổng hợp Cổ phần Điện Lực",
+      "percentage": 0.0114601332
+    },
+    {
+      "name": "Hà Thế Phương",
+      "percentage": 0.00887
+    },
+    {
+      "name": "Nguyễn Chí Công",
+      "percentage": 0.00825
+    },
+    {
+      "name": "Bùi Thanh Tùng",
+      "percentage": 0.00268
+    },
+    {
+      "name": "Nguyễn Quang Hải",
+      "percentage": 0.00267
+    },
+    {
+      "name": "Phạm Quốc Hùng",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Hà Thị Hương",
+      "percentage": 0.00152
+    },
+    {
+      "name": "Phùng Tiến Trung",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Hà Thế Lộng",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Trần Trọng Thắng",
+      "percentage": 0.0014
+    },
+    {
+      "name": "NGUYỄN VĂN THANH",
+      "percentage": 0.00136
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.00089
+    },
+    {
+      "name": "Đỗ Trần Nam",
+      "percentage": 0.000874836
+    },
+    {
+      "name": "Nguyễn Hồng Luyện",
+      "percentage": 0.00044
+    },
+    {
+      "name": "Nguyễn Hoàng Long",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Hà Thị Giang",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Muôn Văn Chiến",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Hồng",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Đỗ Mạnh Cường",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Tuấn Tú",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Phương",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Phạm Thị Minh Hoa",
+      "percentage": 0.0000546
+    },
+    {
+      "name": "Lê Việt Hà",
+      "percentage": 0.000045
+    },
+    {
+      "name": "Nguyễn Ánh Tuyết",
+      "percentage": 0.0000445
+    },
+    {
+      "name": "Nguyễn Song Thanh",
+      "percentage": 9e-6
+    },
+    {
+      "name": "Lê Thị Thu Hà",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Trần Công Tráng",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Phùng Nguyệt Hà",
+      "percentage": 7e-7
+    },
+    {
+      "name": "Phạm Minh Huệ",
+      "percentage": 5e-7
+    },
+    {
+      "name": "Phạm Trung Thành",
+      "percentage": 2e-7
+    },
+    {
+      "name": "Phạm Thị Hồng Nhung",
+      "percentage": 1.4e-7
+    },
+    {
+      "name": "Nguyễn Thị Liễu",
+      "percentage": 8e-8
+    },
+    {
+      "name": "Nguyễn Đình Sắc",
+      "percentage": 3e-8
+    },
+    {
+      "name": "Phạm Thành Trung",
+      "percentage": 3e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Việt Khoa",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.031759
+    },
+    {
+      "name": "Hà Thế Phương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00887
+    },
+    {
+      "name": "Phạm Quốc Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Phùng Tiến Trung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Hà Thế Lộng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Trần Trọng Thắng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Hoàng Long",
+      "position": "Giám đốc đầu tư",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Muôn Văn Chiến",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đỗ Mạnh Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Phương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Song Thanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 9e-6
+    },
+    {
+      "name": "Trần Công Tráng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Phạm Trung Thành",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 2e-7
+    },
+    {
+      "name": "Phạm Thị Hồng Nhung",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 1.4e-7
+    },
+    {
+      "name": "Satoyuki Yamane",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "TẠ CÔNG THANH VINH",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tiến Thành",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Lam Trà",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Bảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Công Thành",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Nghiên",
+      "position": "Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hữu Thái Hòa",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quang Hanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:31.824513Z"
+}

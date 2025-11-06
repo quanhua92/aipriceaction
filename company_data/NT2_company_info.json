@@ -1,0 +1,207 @@
+{
+  "symbol": "NT2",
+  "exchange": "HOSE",
+  "industry": "Sản xuất & Phân phối Điện",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6937812298900.0,
+  "current_price": 24100.0,
+  "outstanding_shares": 287876029,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Điện lực Dầu kh&iacute; Nhơn Trạch 2 (NT2) được th&agrave;nh lập năm 2007 để thực hiện đầu tư x&acirc;y dựng dự &aacute;n Nh&agrave; m&aacute;y&nbsp;Nhiệt&nbsp;điện&nbsp;Nhơn Trạch 2 tại Khu C&ocirc;ng nghiệp &Ocirc;ng K&egrave;o, ấp 3, x&atilde; Phước Kh&aacute;nh, huyện Nhơn Trạch, Đồng Nai. Nh&agrave; m&aacute;y điện Nhơn Trạch 2 với c&ocirc;ng suất thiết kế 750MW đi v&agrave;o hoạt động từ năm 2011. Trong năm 2017, Nh&agrave; m&aacute;y ho&agrave;n th&agrave;nh c&ocirc;ng t&aacute;c đại tu v&agrave; n&acirc;ng c&ocirc;ng suất&nbsp;l&ecirc;n 774MW. NT2 được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 06/2015.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Điện lực Dầu khí Việt Nam - CTCP",
+      "percentage": 0.593749
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đại chúng Việt Nam",
+      "percentage": 0.1028038
+    },
+    {
+      "name": "Công ty TNHH Phát Triển Công Nghệ",
+      "percentage": 0.0827
+    },
+    {
+      "name": "Samarang Ucits - Samarang Asian Prosperity",
+      "percentage": 0.05
+    },
+    {
+      "name": "Apollo Asia Fund",
+      "percentage": 0.0328
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam",
+      "percentage": 0.0233644993
+    },
+    {
+      "name": "Tập đoàn Điện lực Việt Nam",
+      "percentage": 0.0233644993
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.01754207
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0167905
+    },
+    {
+      "name": "Panah Master Fund",
+      "percentage": 0.0167
+    },
+    {
+      "name": "Tổng Công ty IDICO - CTCP",
+      "percentage": 0.0140187
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0136
+    },
+    {
+      "name": "TCT Cơ điện Xây dựng Nông nghiệp và Thủy lợi",
+      "percentage": 0.0093458
+    },
+    {
+      "name": "Tổng Công ty Sông Đà",
+      "percentage": 0.0093458
+    },
+    {
+      "name": "Tổng Công ty Xây dựng số 1 - CTCP",
+      "percentage": 0.0093458
+    },
+    {
+      "name": "Tổng Công ty Cơ khí Xây dựng - CTCP",
+      "percentage": 0.00700935
+    },
+    {
+      "name": "Đặng Thị Ngọc Bích",
+      "percentage": 0.0056
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Tổng Công ty Cổ phần Sông Hồng",
+      "percentage": 0.0036507
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.0007557
+    },
+    {
+      "name": "Hoàng Xuân Quốc",
+      "percentage": 0.00065
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0001806333
+    },
+    {
+      "name": "Ngô Đức Nhân",
+      "percentage": 0.0001796
+    },
+    {
+      "name": "Nguyễn Hữu Minh",
+      "percentage": 0.0001773
+    },
+    {
+      "name": "Uông Ngọc Hải",
+      "percentage": 0.0001465
+    },
+    {
+      "name": "Lê Tự Hiểu",
+      "percentage": 0.0000602365
+    },
+    {
+      "name": "Hồ Xuân Lan",
+      "percentage": 0.0000573
+    },
+    {
+      "name": "Lê Quý Dương",
+      "percentage": 0.0000456337
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hương",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Cương",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 1e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Ngô Đức Nhân",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001796
+    },
+    {
+      "name": "Nguyễn Hữu Minh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0001773
+    },
+    {
+      "name": "Uông Ngọc Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001465
+    },
+    {
+      "name": "Hồ Xuân Lan",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0000573
+    },
+    {
+      "name": "Nguyễn Công Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Ngọc Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Thúy Lan",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hà",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quốc Hùng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Việt An",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Quyền",
+      "position": "Phụ trách Công bố thông tin/Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quang Mẫn",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Kỳ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:19.987473Z"
+}

@@ -1,0 +1,198 @@
+{
+  "symbol": "LAS",
+  "exchange": "HNX",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1963701360000.0,
+  "current_price": 17400.0,
+  "outstanding_shares": 112856400,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty cổ phần Supe Phốt ph&aacute;t v&agrave; H&oacute;a chất L&acirc;m Thao (LAS), tiền th&acirc;n l&agrave; nh&agrave; m&aacute;y Supe Phốt ph&aacute;t L&acirc;m Thao,&nbsp;được&nbsp;h&igrave;nh th&agrave;nh năm 1962.&nbsp;C&ocirc;ng ty&nbsp;chuyển từ doanh nghiệp nh&agrave; nước sang m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần v&agrave;o năm 2010. Với kinh nghiệm l&acirc;u năm, hiện nay CTCP Supe Phốt ph&aacute;t v&agrave; H&oacute;a chất L&acirc;m Thao sản xuất hơn 50 loại ph&acirc;n b&oacute;n h&oacute;a chất, trong đ&oacute; chiếm tỷ trọng lớn nhất l&agrave;: supe l&acirc;n L&acirc;m Thao, NPK L&acirc;m Thao v&agrave; c&aacute;c loại axit Sunfuric. LAS&nbsp;l&agrave; c&ocirc;ng ty c&oacute; uy t&iacute;n l&acirc;u năm, c&oacute; mạng lưới kh&aacute;ch h&agrave;ng v&agrave; nh&agrave; cung cấp truyền thống, sản phẩm đa dạng v&agrave; thường xuy&ecirc;n được nghi&ecirc;n cứu ph&aacute;t triển, C&ocirc;ng ty&nbsp;đ&atilde;&nbsp;đạt&nbsp;được&nbsp;doanh thu v&agrave; lợi nhuận cao nhất Tập đo&agrave;n H&oacute;a chất Việt Nam trong nhiều năm liền. C&aacute;c c&ocirc;ng tr&igrave;nh&nbsp;lớn m&agrave; c&ocirc;ng ty thực hiện đầu tư: Dự &aacute;n đầu tư x&acirc;y dựng d&acirc;y chuyền sản xuất NPK số 4 c&ocirc;ng suất 150.000 tấn/năm, gi&aacute; trị thực hiện 7,011 tỷ đồng; Dự &aacute;n đầu tư hệ thống quan trắc kh&iacute; thải tự động, li&ecirc;n tục (tại d&acirc;y chuyền Axit số 1), gi&aacute; trị thực hiện 4,753 tỷ đồng; Đầu tư mua sắm xe x&uacute;c lật gi&aacute; trị thực hiện 2,017 tỷ đồng. Ng&agrave;y 01/03/2012, LAS ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch chứng kho&aacute;n H&agrave; Nội (HNX)</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Hóa chất Việt Nam",
+      "percentage": 0.69816
+    },
+    {
+      "name": "Vietnam Investment Limited",
+      "percentage": 0.041
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 0.0076
+    },
+    {
+      "name": "Công ty Cổ phần Vật tư Kỹ thuật Nông nghiệp Bắc Giang",
+      "percentage": 0.0072
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0005139274
+    },
+    {
+      "name": "Vũ Thị Bích Nga",
+      "percentage": 0.0003007
+    },
+    {
+      "name": "Nguyễn Duy Khuyến",
+      "percentage": 0.000254394
+    },
+    {
+      "name": "Nguyễn Duy Việt",
+      "percentage": 0.0002521456
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Thúy",
+      "percentage": 0.0002466851
+    },
+    {
+      "name": "Phạm Khắc Toan",
+      "percentage": 0.0001461481
+    },
+    {
+      "name": "Tạ Đức Lương",
+      "percentage": 0.0001252698
+    },
+    {
+      "name": "Nguyễn Văn Thọ",
+      "percentage": 0.0001226
+    },
+    {
+      "name": "Nguyễn Thị Thuý Hà",
+      "percentage": 0.0001095
+    },
+    {
+      "name": "Phạm Quang Tuyến",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Ngô Thị Hải Yến",
+      "percentage": 0.000067
+    },
+    {
+      "name": "Trần Ngọc Bách",
+      "percentage": 0.0000610288
+    },
+    {
+      "name": "Nguyễn Thành Công",
+      "percentage": 0.000053
+    },
+    {
+      "name": "Nguyễn Bá Nhọn",
+      "percentage": 0.0000529987
+    },
+    {
+      "name": "Lê Hồng Thắng",
+      "percentage": 0.0000463
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "percentage": 0.00004574
+    },
+    {
+      "name": "Văn Thị Thu",
+      "percentage": 0.000037
+    },
+    {
+      "name": "Nguyễn Quốc Anh",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Lê Vinh Quang",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thị Vân Hoa",
+      "percentage": 0.0000163428
+    },
+    {
+      "name": "Nguyễn Văn Hiệu",
+      "percentage": 0.00001606
+    },
+    {
+      "name": "Nguyễn Quốc An",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Nguyễn Trung Cẩn",
+      "percentage": 3.6e-6
+    },
+    {
+      "name": "Văn Khắc Minh",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Trần Đại Nghĩa",
+      "percentage": 1.4e-6
+    },
+    {
+      "name": "Nguyễn Văn Thiệu",
+      "percentage": 1.9e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Thọ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001226
+    },
+    {
+      "name": "Phạm Quang Tuyến",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thành Công",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.000053
+    },
+    {
+      "name": "Lê Hồng Thắng",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0000463
+    },
+    {
+      "name": "Nguyễn Quốc An",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Văn Khắc Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Phạm Thanh Tùng",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vi Hoàng Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Xuân Hồng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Sơn Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Chí Thức",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:44.173645Z"
+}

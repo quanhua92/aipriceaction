@@ -1,0 +1,131 @@
+{
+  "symbol": "BMC",
+  "exchange": "HOSE",
+  "industry": "Khai khoáng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 208196184000.0,
+  "current_price": 16800.0,
+  "outstanding_shares": 12392630,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Kho&aacute;ng sản B&igrave;nh Định (BMC),&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty Kho&aacute;ng Sản B&igrave;nh Định được th&agrave;nh lập năm 1985, l&agrave; một trong những c&ocirc;ng ty c&oacute; uy t&iacute;n v&agrave; ti&ecirc;n phong trong lĩnh vực khai th&aacute;c sa kho&aacute;ng tại tỉnh B&igrave;nh Định cũng như ở Việt Nam. Năm 2001 chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần. BMC l&agrave; một trong những doanh nghiệp khai th&aacute;c chế biến kinh doanh kho&aacute;ng sản ti&ecirc;n phong tại Việt nam. Sản phẩm ch&iacute;nh của C&ocirc;ng ty l&agrave; Ilmentie nguy&ecirc;n liệu ch&iacute;nh để sản xuất bột m&agrave;u Titan dioxit (TiO2) v&agrave; kim loại Titan.&nbsp; Hơn 95% sản phẩm của c&ocirc;ng ty xuất khẩu sang c&aacute;c thị trường Nhật Bản, Malaysia, Trung Quốc. BMC hiện đang quản l&yacute; nh&agrave; m&aacute;y kho&aacute;ng sản Nam De Gi v&agrave; nh&agrave; m&aacute;y xỉ titan tại tỉnh B&igrave;nh Định. C&ocirc;ng ty c&oacute; c&ocirc;ng suất tinh luyện 80.000 tấn quặng titan / năm, 90% trong số đ&oacute; l&agrave; ilmenit v&agrave; 10% c&ograve;n lại l&agrave; c&aacute;c sản phẩm phụ bao gồm zircon, rutile, monazite v&agrave; từ t&iacute;nh. Nh&agrave; m&aacute;y xỉ titan với c&ocirc;ng suất 35.000 tấn / năm đang hoạt động ở mức 70 - 80% c&ocirc;ng suất. C&aacute;c kh&aacute;ch h&agrave;ng lớn của c&ocirc;ng ty l&agrave; c&aacute;c nh&agrave; nhập khẩu quặng của nước ngo&agrave;i như Kayfour Development Corporation&nbsp;Sdn.Bhd, Qinzhou Qinnan District Jia Hua Import Export Td.,Lmt, Mineral Venture Internation Ltd (Mvi). Ng&agrave;y 28/12/2006, BMC ch&iacute;nh thức giao dịch&nbsp;tại Sở Giao dịch&nbsp;Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE);</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Quỹ Đầu tư Phát triển Tỉnh Gia Lai",
+      "percentage": 0.249
+    },
+    {
+      "name": "Văn Phòng Tỉnh Ủy Bình Định",
+      "percentage": 0.155
+    },
+    {
+      "name": "Nguyễn Đức Huyện",
+      "percentage": 0.0539691736
+    },
+    {
+      "name": "Đoàn Thị Thu Thủy",
+      "percentage": 0.04778
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0285
+    },
+    {
+      "name": "Trịnh Thị Xuân",
+      "percentage": 0.0184
+    },
+    {
+      "name": "Nguyễn Thị Minh Huyền",
+      "percentage": 0.0145247618
+    },
+    {
+      "name": "Lê Anh Vũ",
+      "percentage": 0.005112
+    },
+    {
+      "name": "Ngô Văn Tổng",
+      "percentage": 0.0048415872
+    },
+    {
+      "name": "Huỳnh Ngọc Bích",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Lê Thị Trúc Mai",
+      "percentage": 0.00101673
+    },
+    {
+      "name": "Võ Tân",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Hà Văn Cường",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đỗ Thanh Thao",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Xuân Vinh",
+      "percentage": 0.00014363
+    },
+    {
+      "name": "Võ Chí Năng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Hải Vi",
+      "percentage": 0.00002
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Anh Vũ",
+      "position": "Phụ trách Công bố thông tin/Tổng Giám đốc",
+      "percentage": 0.005112
+    },
+    {
+      "name": "Huỳnh Ngọc Bích",
+      "position": "Kế toán trưởng/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Đỗ Thanh Thao",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Hải Vi",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Hồ Tường Vy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Thị Thu Hương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Thái Định",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Trung Hậu",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Cảnh Thịnh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:18.031020Z"
+}

@@ -1,0 +1,158 @@
+{
+  "symbol": "VIF",
+  "exchange": "HNX",
+  "industry": "Lâm nghiệp và Giấy",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 5495000000000.0,
+  "current_price": 15700.0,
+  "outstanding_shares": 350000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng c&ocirc;ng ty L&acirc;m nghiệp Việt Nam (VIF) c&oacute; tiền th&acirc;n l&agrave; Tổng C&ocirc;ng ty L&acirc;m Sản Việt Nam, được th&agrave;nh lập năm 1995 tr&ecirc;n cơ sở s&aacute;p nhập 10 Tổng c&ocirc;ng ty, Li&ecirc;n hiệp c&aacute;c x&iacute; nghiệp trực thuộc Bộ L&acirc;m nghiệp (nay l&agrave; Bộ N&ocirc;ng nghiệp v&agrave; Ph&aacute;t triển N&ocirc;ng th&ocirc;n). Vinafor hoạt động ch&iacute;nh trong lĩnh vực trồng, chăm s&oacute;c, quản l&yacute; rừng v&agrave; chế biến l&acirc;m sản. B&igrave;nh qu&acirc;n mỗi năm Tổng C&ocirc;ng ty L&acirc;m nghiệp Việt Nam trồng từ 5.000 &ndash; 6.000 ha rừng. Ngo&agrave;i ra, Vinafor c&ograve;n đẩy mạnh chế biến c&aacute;c sản phẩm gỗ chất lượng cao (nội thất trong nh&agrave;, nội thất ngo&agrave;i trời, plywood). Nh&agrave; m&aacute;y MDF Gia Lai của VINAFOR c&oacute; c&ocirc;ng suất 54.000 m3 sản phẩm/năm sử dụng d&acirc;y chuyền c&ocirc;ng nghệ hiện đại của Ch&acirc;u &Acirc;u.&nbsp;B&ecirc;n cạnh đ&oacute;, Tổng c&ocirc;ng ty c&ograve;n tham gia chế biến v&agrave; xuất khẩu khoảng 01 triệu tấn dăm gỗ/năm. Ng&agrave;y 03/02/2020, VIF ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ủy Ban Quản Lý Vốn Nhà Nước Tại Doanh Nghiệp",
+      "percentage": 0.51
+    },
+    {
+      "name": "Bộ Tài Chính",
+      "percentage": 0.51
+    },
+    {
+      "name": "Uỷ ban Quản lý Vốn Nhà nước tại Doanh nghiệp",
+      "percentage": 0.51
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn T&T",
+      "percentage": 0.4
+    },
+    {
+      "name": "Tổng Công ty Cổ phần Bảo hiểm Sài Gòn - Hà Nội",
+      "percentage": 0.0473
+    },
+    {
+      "name": "Nguyễn Thị Phương Loan",
+      "percentage": 0.000331
+    },
+    {
+      "name": "Mai Quý Quảng",
+      "percentage": 0.000041
+    },
+    {
+      "name": "Hồ Thị Thanh Huyền",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thị Khanh",
+      "percentage": 0.000018
+    },
+    {
+      "name": "Nguyễn Khương Lâm",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Hà Xuân Mai",
+      "percentage": 0.000012
+    },
+    {
+      "name": "Nguyễn Tân Việt",
+      "percentage": 0.000012
+    },
+    {
+      "name": "Ngô Thị Thúy Mai",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Nguyễn Tấn Cường",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Đào Quốc Hoàn",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Bùi Quang Dũng",
+      "percentage": 9e-6
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 7.7e-6
+    },
+    {
+      "name": "Phí Mạnh Cường",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Vũ Văn Hường",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Cao Văn Thùy",
+      "percentage": 4e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Mai Quý Quảng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000041
+    },
+    {
+      "name": "Hồ Thị Thanh Huyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Khương Lâm",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Ngô Thị Thúy Mai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000011
+    },
+    {
+      "name": "Nguyễn Tấn Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Đào Quốc Hoàn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 7.7e-6
+    },
+    {
+      "name": "Phí Mạnh Cường",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Vũ Văn Hường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quốc Khánh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Ngọc Khanh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:16.654725Z"
+}

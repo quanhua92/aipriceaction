@@ -1,0 +1,299 @@
+{
+  "symbol": "DPM",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 16931769948900.0,
+  "current_price": 24900.0,
+  "outstanding_shares": 679990761,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Ph&acirc;n b&oacute;n v&agrave; H&oacute;a chất Dầu kh&iacute; (DPM)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Ph&acirc;n đạm v&agrave; H&oacute;a chất Dầu kh&iacute; được th&agrave;nh lập v&agrave;o năm 2003. C&ocirc;ng ty c&oacute; Nh&agrave; m&aacute;y đạm Ph&uacute; mỹ đặt tại KCN Ph&uacute; mỹ 1 - B&agrave; rịa, vũng t&agrave;u. Nh&agrave; m&aacute;y c&oacute; tổng VĐT l&agrave; 370 triệu USD với diện t&iacute;ch 63 ha sử dụng c&ocirc;ng nghệ của h&atilde;ng Haldor Topsoe (Đan Mạch) để sản xuất Am&ocirc;niắc (c&ocirc;ng suất 1.350 tấn/ng&agrave;y) v&agrave; c&ocirc;ng nghệ của h&atilde;ng Snamprogetti (Italy) để sản xuất ur&ecirc; (c&ocirc;ng suất 2.200 tấn/ng&agrave;y). Lĩnh vực hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; sản xuất ph&acirc;n đạm (với c&ocirc;ng suất 800 ng&agrave;n tấn đạm/năm). Ngo&agrave;i ra c&ocirc;ng ty c&ograve;n kinh doanh am&ocirc;niắc lỏng (với c&ocirc;ng suất 96 ng&agrave;n tấn axit/năm) v&agrave; điện dư (C&ocirc;ng nghệ sản xuất của nh&agrave; m&aacute;y&nbsp;Đạm&nbsp;Ph&uacute; Mỹ&nbsp;cho ph&eacute;p tạo ra sản phẩm điện, kh&ocirc;ng những cung ứng đủ y&ecirc;u cầu cho bản th&acirc;n nh&agrave; m&aacute;y sản xuất m&agrave; c&ograve;n tạo ra điện thương phẩm b&aacute;n cho tập đo&agrave;n EVN). Sản lượng Đạm Ph&uacute; Mỹ đ&aacute;p ứng khoảng 40% nhu cầu ph&acirc;n đạm trong nước. Ng&agrave;y 05/11/2007, DPM ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.5958
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0461
+    },
+    {
+      "name": "Tổng Công ty CP Vật Tư Nông Nghiệp Nghệ An",
+      "percentage": 0.04071
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0390267105
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam",
+      "percentage": 0.0368421052
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.026831
+    },
+    {
+      "name": "Công ty Cổ Phần Lương Thực Vật Tư Nông Nghiệp Nghệ An",
+      "percentage": 0.019293
+    },
+    {
+      "name": "Công ty Cổ phần Lương thực Vật tư Nông nghiệp Đăk Lăk",
+      "percentage": 0.01899
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.01617
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0151
+    },
+    {
+      "name": "The Edgbaston Asian Equity (Jersey) Trust",
+      "percentage": 0.011
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Á Châu",
+      "percentage": 0.01
+    },
+    {
+      "name": "Deutsche Asset Management (Asia) Limited",
+      "percentage": 0.0062953157
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.005111
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.004081
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.0040730263
+    },
+    {
+      "name": "Beira Limited",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.0032066578
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.002384
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.002044
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.001
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000741
+    },
+    {
+      "name": "Lê Cự Tân",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000379
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.000344
+    },
+    {
+      "name": "Nguyễn Thị Hiền",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Đoàn Văn Nhuộm",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00022998
+    },
+    {
+      "name": "Nguyễn Văn Tòng",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Hoàng Việt Dũng",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0001090789
+    },
+    {
+      "name": "Lê Vinh Văn",
+      "percentage": 0.000086
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đại chúng Việt Nam",
+      "percentage": 0.0000394736
+    },
+    {
+      "name": "Phạm Thành Vinh",
+      "percentage": 0.0000339532
+    },
+    {
+      "name": "Trịnh Thanh Bình",
+      "percentage": 0.0000313212
+    },
+    {
+      "name": "Nguyễn Đức Hòa",
+      "percentage": 0.0000202666
+    },
+    {
+      "name": "Nguyễn Xuân Thắng",
+      "percentage": 0.0000131601
+    },
+    {
+      "name": "Tạ Anh Nghĩa",
+      "percentage": 0.0000131601
+    },
+    {
+      "name": "Bùi Minh Tiến",
+      "percentage": 0.00001316
+    },
+    {
+      "name": "Bùi Quang Hưng",
+      "percentage": 0.0000105281
+    },
+    {
+      "name": "Trương Văn Hiền",
+      "percentage": 8.9e-6
+    },
+    {
+      "name": "Đinh Hữu Lộc",
+      "percentage": 8.6857e-6
+    },
+    {
+      "name": "Phạm Đăng Nam",
+      "percentage": 7.8961e-6
+    },
+    {
+      "name": "Phan Đình Đức",
+      "percentage": 7.8961e-6
+    },
+    {
+      "name": "Cao Tùng Sơn",
+      "percentage": 5.5272e-6
+    },
+    {
+      "name": "Cao Hoài Dương",
+      "percentage": 5.264e-6
+    },
+    {
+      "name": "Ngô Hồng Minh",
+      "percentage": 5.264e-6
+    },
+    {
+      "name": "Lưu Quang Lãm",
+      "percentage": 2.632e-6
+    },
+    {
+      "name": "Đào Thị Lan Anh",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Cự Tân",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Lê Vinh Văn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000086
+    },
+    {
+      "name": "Lê Văn Quốc Việt",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Trọng Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Trí Hội",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Ngọc Phương",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tạ Quang Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Văn Ngọc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Thế Vinh",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Kim Nhân",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Phương Thảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Văn Khiêm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thu Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng  Trung Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Trung Kiên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Louis T Nguyen",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:37.685563Z"
+}

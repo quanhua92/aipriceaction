@@ -1,0 +1,161 @@
+{
+  "symbol": "DGW",
+  "exchange": "HOSE",
+  "industry": "Bán lẻ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 8728942726200.0,
+  "current_price": 39800.0,
+  "outstanding_shares": 219320169,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Th&agrave;nh lập năm 2003, C&ocirc;ng ty Cổ phần Thế giới Số (DGW)&nbsp;l&agrave; một trong những c&ocirc;ng ty h&agrave;ng đầu trong lĩnh vực bu&ocirc;n b&aacute;n, sản xuất c&aacute;c thiết bị, linh kiện, phần mềm c&ocirc;ng nghệ th&ocirc;ng tin. C&ocirc;ng ty l&agrave; nh&agrave; ph&acirc;n phối ch&iacute;nh thức l&acirc;u năm của Acer, Dell v&agrave; Toshiba, Logitech, Belkin, Schneider Electric. Năm 2014, C&ocirc;ng ty trở th&agrave;nh nh&agrave; ph&acirc;n phối m&aacute;y in Ricoh- h&atilde;ng cung cấp giải ph&aacute;p in ấn h&agrave;ng đầu tr&ecirc;n thế giới. Hiện tại C&ocirc;ng ty c&oacute; 3 chi nh&aacute;nh tại H&agrave; Nội, Đ&agrave; Nẵng v&agrave; Tp. Hồ Ch&iacute; Minh. C&ocirc;ng ty cũng đ&atilde; ph&aacute;t triển mạng lưới ph&acirc;n phối sang một số nước như L&agrave;o, Campuchia v&agrave; Myanma.<!--?xml:namespace prefix = \"o\" ns = \"urn:schemas-microsoft-com:office:office\" /--><o:p></o:p></div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Created Future",
+      "percentage": 0.3173
+    },
+    {
+      "name": "PYN Fund Management Ltd",
+      "percentage": 0.09934841
+    },
+    {
+      "name": "Công ty TNHH MTV Dkp",
+      "percentage": 0.0503
+    },
+    {
+      "name": "Evli Emerging Frontier Fund",
+      "percentage": 0.0481
+    },
+    {
+      "name": "Hoàng Tùng",
+      "percentage": 0.0455
+    },
+    {
+      "name": "Công ty TNHH MTV Dhv",
+      "percentage": 0.0413
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0412
+    },
+    {
+      "name": "Công ty TNHH MTV Toht",
+      "percentage": 0.0311
+    },
+    {
+      "name": "Phan Ngọc Bích Hằng",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Lê Thị Huyền Trâm",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Thu Hoài",
+      "percentage": 0.00138
+    },
+    {
+      "name": "Đặng Kiện Phương",
+      "percentage": 0.00081
+    },
+    {
+      "name": "Tô Tiểu Yến",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Tô Tiểu Ngọc",
+      "percentage": 0.00067
+    },
+    {
+      "name": "Vũ Thị Mai Hân",
+      "percentage": 0.00021
+    },
+    {
+      "name": "Lê Khả Tú",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Nguyễn Duy Tùng",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Trần Bảo Minh",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Văn Thuận",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Mai Thế Lễ",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Võ Xuân Huy",
+      "percentage": 0.0000256057
+    },
+    {
+      "name": "Thái Bá Toản",
+      "percentage": 5e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phan Ngọc Bích Hằng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Nguyễn Thu Hoài",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.00138
+    },
+    {
+      "name": "Đặng Kiện Phương",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.00081
+    },
+    {
+      "name": "Vũ Thị Mai Hân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00021
+    },
+    {
+      "name": "Trần Bảo Minh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Duy Tùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Văn Thuận",
+      "position": "Trưởng phòng Tài chính",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Tô Hồng Trang",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Hồng Việt",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Thông",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tuấn Thành",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:13.512571Z"
+}

@@ -1,0 +1,209 @@
+{
+  "symbol": "DHT",
+  "exchange": "HNX",
+  "industry": "Dược phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6323848166400.0,
+  "current_price": 76800.0,
+  "outstanding_shares": 82341773,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty cổ phần Dược phẩm H&agrave; T&acirc;y (DHT) c&oacute;&nbsp;tiền th&acirc;n l&agrave; X&iacute; nghiệp Dược phẩm H&agrave; T&acirc;y được th&agrave;nh lập năm 1965. Năm 2001, c&ocirc;ng ty chuyển sang h&igrave;nh thức c&ocirc;ng ty cổ phần. C&ocirc;ng ty chuy&ecirc;n sản xuất kinh doanh dược phẩm, dược liệu, mỹ phẩm, thực phẩm&nbsp;dinh dưỡng&nbsp;v&agrave; trang thiết bị y tế.&nbsp;C&ocirc;ng ty l&agrave; một trong số &iacute;t đơn vị đ&atilde; đầu tư v&agrave;o cơ sở vật chất đ&aacute;p ứng đủ c&aacute;c ti&ecirc;u chuẩn chất lượng GMP-WHO bao gồm&nbsp;ph&ograve;ng th&iacute; nghiệm đạt ti&ecirc;u chuẩn GLP, hệ thống kho theo ti&ecirc;u chuẩn GSP. DHT&nbsp;sở hữu 2 nh&agrave; m&aacute;y đầu ti&ecirc;n ở Miền Bắc đạt ti&ecirc;u chuẩn GMP, với d&acirc;y chuyền sản xuất thuốc vi&ecirc;n - non beta-lactam năng lực 3.520.000.000 vi&ecirc;n/năm, ph&acirc;n xưởng sản xuất thuốc kh&aacute;ng sinh năng lực sản xuất 495.000.000 vi&ecirc;n/năm. Ng&agrave;y 03/12/2008, DHT ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Aska Pharmaceutical., Ltd",
+      "percentage": 0.4005
+    },
+    {
+      "name": "Dương Hữu Hiếu",
+      "percentage": 0.1277
+    },
+    {
+      "name": "Trần Thu Thảo",
+      "percentage": 0.1241
+    },
+    {
+      "name": "Lê Văn Dũng",
+      "percentage": 0.11940605
+    },
+    {
+      "name": "Lê Việt Linh",
+      "percentage": 0.06341
+    },
+    {
+      "name": "Lê Văn Mạnh",
+      "percentage": 0.06131102
+    },
+    {
+      "name": "Lê Văn Lớ",
+      "percentage": 0.0561
+    },
+    {
+      "name": "Nguyễn Thị Thanh Huế",
+      "percentage": 0.04427576
+    },
+    {
+      "name": "Nguyễn Như Hoa",
+      "percentage": 0.0421
+    },
+    {
+      "name": "Hoàng Văn Tuế",
+      "percentage": 0.03991
+    },
+    {
+      "name": "Lê Xuân Thắng",
+      "percentage": 0.03886
+    },
+    {
+      "name": "Quỹ Đầu Tư Phát Triển Hà Nội",
+      "percentage": 0.037622
+    },
+    {
+      "name": "Lê Anh Trung",
+      "percentage": 0.03722
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Đầu tư I.P.A",
+      "percentage": 0.0350173
+    },
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.0336621673
+    },
+    {
+      "name": "Công ty Cổ Phần Dược Và Thiết Bị Y Tế Hà Tây",
+      "percentage": 0.02607
+    },
+    {
+      "name": "Ngô Văn Chinh",
+      "percentage": 0.0245
+    },
+    {
+      "name": "Lê Phương Thảo",
+      "percentage": 0.02441
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "percentage": 0.01804146
+    },
+    {
+      "name": "Lê Văn Thành",
+      "percentage": 0.00994
+    },
+    {
+      "name": "Lê Thị Hồng Việt",
+      "percentage": 0.00877
+    },
+    {
+      "name": "Nguyễn Bá Lai",
+      "percentage": 0.00698
+    },
+    {
+      "name": "Ngô Tuấn  Việt",
+      "percentage": 0.00607
+    },
+    {
+      "name": "Phạm Ngọc Kiểm",
+      "percentage": 0.00280206
+    },
+    {
+      "name": "Hoàng Thị Quỳnh Anh",
+      "percentage": 0.00244
+    },
+    {
+      "name": "Nguyễn Thị Hạnh",
+      "percentage": 0.00225
+    },
+    {
+      "name": "Nguyễn Thị Minh Hậu",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Bùi Thảo Nguyên",
+      "percentage": 0.0015647
+    },
+    {
+      "name": "Uông Văn Trường",
+      "percentage": 0.00140103
+    },
+    {
+      "name": "Đặng Đình Dự",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Hà Đệ",
+      "percentage": 0.00046
+    },
+    {
+      "name": "Đặng Thúy Hòa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thị Anh Đào",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Ngô Thị Xuân",
+      "percentage": 1.1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Việt Linh",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.06341
+    },
+    {
+      "name": "Lê Văn Lớ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0561
+    },
+    {
+      "name": "Hoàng Văn Tuế",
+      "position": "Kế toán trưởng/Thành viên Hội đồng Quản trị",
+      "percentage": 0.03991
+    },
+    {
+      "name": "Lê Xuân Thắng",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.03886
+    },
+    {
+      "name": "Lê Anh Trung",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.03722
+    },
+    {
+      "name": "Ngô Văn Chinh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0245
+    },
+    {
+      "name": "Nguyễn Bá Lai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00698
+    },
+    {
+      "name": "Đặng Đình Dự",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Hà Đệ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00046
+    },
+    {
+      "name": "Hiroyasu Nishioka",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Keisuke Oshio",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:25.333315Z"
+}

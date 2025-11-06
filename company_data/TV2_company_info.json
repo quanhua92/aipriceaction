@@ -1,0 +1,195 @@
+{
+  "symbol": "TV2",
+  "exchange": "HOSE",
+  "industry": "Tư vấn & Hỗ trợ Kinh doanh",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2376921008000.0,
+  "current_price": 35200.0,
+  "outstanding_shares": 67526165,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tư vấn X&acirc;y dựng Điện 2 (TV2), tiền th&acirc;n l&agrave; C&ocirc;ng ty Khảo&nbsp;s&aacute;t Thiết kế&nbsp;Điện 2,&nbsp;được&nbsp;th&agrave;nh lập năm 1985. Năm 2007, Cổ phần h&oacute;a v&agrave; lấy t&ecirc;n l&agrave; C&ocirc;ng ty Cổ phần Tư vấn X&acirc;y dựng Điện 2. Hoạt động ch&iacute;nh của c&ocirc;ng ty l&agrave; tư vấn x&acirc;y dựng điện; x&acirc;y dựng c&ocirc;ng tr&igrave;nh kỹ thuật d&acirc;n dụng; kinh doanh b&aacute;n bu&ocirc;n vật liệu, thiết bị lắp đặt trong x&acirc;y dựng..., kinh doanh bất động sản; sản xuất truyền tải điện.&nbsp;C&ocirc;ng ty Cổ phần Tư vấn X&acirc;y dựng Điện 2 l&agrave; một trong bốn C&ocirc;ng ty tư vấn điện h&agrave;ng đầu của Việt Nam, chuy&ecirc;n khảo s&aacute;t thiết kế lập dự &aacute;n đầu tư x&acirc;y dựng ph&aacute;t triển điện. Với lợi thế hơn 30 năm hoạt động trong lĩnh vực khảo s&aacute;t thiết kế v&agrave; gi&aacute;m s&aacute;t x&acirc;y dựng c&aacute;c c&ocirc;ng tr&igrave;nh nguồn v&agrave; lưới điện. Nhắc đến TV2, C&ocirc;ng ty&nbsp;gắn liền với h&agrave;ng chục c&ocirc;ng tr&igrave;nh nguồn điện v&agrave; h&agrave;ng trăm c&ocirc;ng tr&igrave;nh lưới điện đ&atilde; được đưa v&agrave;o vận h&agrave;nh. C&aacute;c c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu như: Thủy điện Trị An, Th&aacute;c Mơ, C&agrave; Mau, Nhơn Trạch, Sơn Mỹ, Đường d&acirc;y 500kV Ph&uacute; Mỹ - Nh&agrave; B&egrave; - Ph&uacute; L&acirc;m, 500kV Bắc Nam mạch 1 &amp; 2...Ng&agrave;y 06/06/2019, TV2 ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Điện lực Việt Nam",
+      "percentage": 0.5133
+    },
+    {
+      "name": "Công ty CP Đầu Tư Toàn Việt",
+      "percentage": 0.0473
+    },
+    {
+      "name": "Tạ Công Sơn",
+      "percentage": 0.03254
+    },
+    {
+      "name": "Công Đoàn Công ty Cổ Phần Tư Vấn Xây Dựng Điện 2",
+      "percentage": 0.0129
+    },
+    {
+      "name": "Trần Thị Lam Phương",
+      "percentage": 0.01072
+    },
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "percentage": 0.003001023
+    },
+    {
+      "name": "Nguyễn Chơn Hùng",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Trương Khắc Len",
+      "percentage": 0.002
+    },
+    {
+      "name": "Nguyễn Tài Anh",
+      "percentage": 0.0018188018
+    },
+    {
+      "name": "Nguyễn Văn Hậu",
+      "percentage": 0.0014095714
+    },
+    {
+      "name": "Trần Thị Hòa",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Quốc Long",
+      "percentage": 0.0008639308
+    },
+    {
+      "name": "Nguyễn Hải Phú",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trần Quang Lâm",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Triệu Hải",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Trọng Nam",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Hoàng Quý Phi",
+      "percentage": 0.0006365806
+    },
+    {
+      "name": "Phạm Văn Thảo",
+      "percentage": 0.0006138456
+    },
+    {
+      "name": "Triệu Văn Môn",
+      "percentage": 0.0005683755
+    },
+    {
+      "name": "Hoàng Thụy Hoài Yến",
+      "percentage": 0.0005001705
+    },
+    {
+      "name": "Võ Văn Bình",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trương Minh Tuấn",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Bùi Thị Ngọc Lý",
+      "percentage": 0.0003753
+    },
+    {
+      "name": "Nguyễn Mạnh Phát",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Huỳnh Văn Quang",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Thị Lan Anh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Quế Chi",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Hải Linh",
+      "percentage": 0.000013
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Liên Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00361
+    },
+    {
+      "name": "Nguyễn Chơn Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Trương Khắc Len",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.002
+    },
+    {
+      "name": "Trần Thị Hòa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nguyễn Hải Phú",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Trọng Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Võ Văn Bình",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Bùi Thị Ngọc Lý",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0003753
+    },
+    {
+      "name": "Nguyễn Mạnh Phát",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Huỳnh Văn Quang",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Liên Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hồng Khanh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Việt Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:14.737024Z"
+}

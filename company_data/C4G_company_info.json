@@ -1,0 +1,216 @@
+{
+  "symbol": "C4G",
+  "exchange": "UPCOM",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2894136107400.0,
+  "current_price": 8100.0,
+  "outstanding_shares": 357300754,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập Đo&agrave;n Cienco4 (CIENCO4) c&oacute; tiền th&acirc;n l&agrave; Cục c&ocirc;ng tr&igrave;nh&nbsp;trực thuộc&nbsp;Bộ Giao th&ocirc;ng vận tải được th&agrave;nh lập v&agrave;o năm 1962. Tập đo&agrave;n hoạt động ch&iacute;nh trong c&aacute;c lĩnh vực&nbsp;thi c&ocirc;ng x&acirc;y lắp c&aacute;c c&ocirc;ng tr&igrave;nh giao th&ocirc;ng, c&ocirc;ng tr&igrave;nh d&acirc;n dụng,&nbsp;đầu tư kinh doanh c&aacute;c dự &aacute;n hạ tầng giao th&ocirc;ng theo c&aacute;c h&igrave;nh thức BT, BOT&nbsp;v&agrave; kinh doanh cho thu&ecirc; văn ph&ograve;ng thương mại,&nbsp;khu nghỉ dưỡng. CIENCO4 ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh C&ocirc;ng ty cổ phần&nbsp;từ năm 2014.&nbsp;C&aacute;c c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu của C&ocirc;ng ty bao gồm: C&ocirc;ng tr&igrave;nh n&acirc;ng cấp Quốc lộ 1A đoạn Vinh &ndash; Đ&ocirc;ng H&agrave; g&oacute;i 1&amp;2 (gi&aacute; trị hợp đồng 647 tỷ đồng), X&acirc;y dựng đường cao tốc Hồ Ch&iacute; Minh &ndash; Trung Lương (780 tỷ đồng), C&ocirc;ng tr&igrave;nh x&acirc;y dựng đường v&agrave;nh đai 3 &ndash; g&oacute;i thầu 3 (trị gi&aacute; 1.376 tỷ đồng) v&agrave; g&oacute;i thầu 1 (trị gi&aacute; 1.416 tỷ đồng), x&acirc;y dựng Cầu Bến Thủy 2 (868 tỷ đồng). CIENCO4 được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 12/2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Xuất nhập khẩu và Dịch vụ tổng hợp Nhật Minh",
+      "percentage": 0.1667
+    },
+    {
+      "name": "Công ty Cổ Phần New Link",
+      "percentage": 0.1037
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VNDIRECT",
+      "percentage": 0.0924
+    },
+    {
+      "name": "Công ty Cổ phần Xây Dựng Dũng Hưng",
+      "percentage": 0.0478
+    },
+    {
+      "name": "Nguyễn Tuấn Đại",
+      "percentage": 0.0407
+    },
+    {
+      "name": "Đinh Thi Anh Phương",
+      "percentage": 0.02083523
+    },
+    {
+      "name": "Nguyễn Vĩnh Lộc",
+      "percentage": 0.02
+    },
+    {
+      "name": "Nguyễn Tuấn Huỳnh",
+      "percentage": 0.0175
+    },
+    {
+      "name": "Nguyễn Tuấn Nghi",
+      "percentage": 0.01417573
+    },
+    {
+      "name": "Phạm Thanh Hà",
+      "percentage": 0.00259
+    },
+    {
+      "name": "Nguyễn Phan Bảo Hà",
+      "percentage": 0.002494
+    },
+    {
+      "name": "Trần Thị Thu Hà",
+      "percentage": 0.0024416
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "percentage": 0.00137
+    },
+    {
+      "name": "Đặng Ngọc Anh",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Nguyễn Anh Tân",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Hồ Xuân Sơn",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lương Thị Thanh Bình",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đinh Thị Thanh Huyền",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phan Sỹ Hùng",
+      "percentage": 0.0001483
+    },
+    {
+      "name": "Văn Hồng Tuân",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Phương Vinh",
+      "percentage": 0.0000988
+    },
+    {
+      "name": "Ngô Trọng Hà",
+      "percentage": 0.000098
+    },
+    {
+      "name": "Nguyễn Thanh Tâm",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Thái Hồng Lam",
+      "percentage": 0.0000445
+    },
+    {
+      "name": "Đặng Viết Thanh",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Thị Thúy Hạnh",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Phạm Văn Hiếu",
+      "percentage": 2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Tuấn Huỳnh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0175
+    },
+    {
+      "name": "Trần Thị Thu Hà",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0024416
+    },
+    {
+      "name": "Nguyễn Anh Tân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Hồ Xuân Sơn",
+      "position": "Giám đốc Công nghệ/Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Phan Sỹ Hùng",
+      "position": "Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.0001483
+    },
+    {
+      "name": "Văn Hồng Tuân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Phương Vinh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000988
+    },
+    {
+      "name": "Thái Hồng Lam",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000445
+    },
+    {
+      "name": "Đặng Viết Thanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Văn Hiếu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Đình Nhuận",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Thị Thanh Mai",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Đức Thọ",
+      "position": "Giám đốc Kinh doanh/Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Văn Đào",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Chín",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Trọng Nghĩa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đàm Xuân Toan",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:55.767374Z"
+}

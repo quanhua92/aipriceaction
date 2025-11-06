@@ -1,0 +1,378 @@
+{
+  "symbol": "LPB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 153845028150000.0,
+  "current_price": 51500.0,
+  "outstanding_shares": 2987282100,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Lộc Ph&aacute;t Việt Nam (LPB) được th&agrave;nh lập v&agrave;o năm 2008, một trong những ng&acirc;n h&agrave;ng mới với hiệu suất cao trong lĩnh vực ng&acirc;n h&agrave;ng Việt Nam. Ng&acirc;n h&agrave;ng được s&aacute;p nhập với C&ocirc;ng ty Dịch vụ Tiết kiệm Bưu điện - VPSC (một c&ocirc;ng ty con của VNPT), được đổi t&ecirc;n th&agrave;nh Ng&acirc;n h&agrave;ng Bưu điện Li&ecirc;n Việt.&nbsp;Ng&acirc;n h&agrave;ng c&oacute; quan hệ đối t&aacute;c với c&aacute;c Tổ chức quốc gia v&agrave; quốc tế như: (i) c&aacute;c tổ chức quốc gia Viettel, EVN, (ii) La Poste Group, Viện tiết kiệm Ng&acirc;n h&agrave;ng thế giới, Cơ quan Thương mại v&agrave; Ph&aacute;t triển Mỹ (USTDA), JP Morgan Chase, Wells Fargo v&agrave; Ng&acirc;n h&agrave;ng C&ocirc;ng thương Trung Quốc (ICBC). Năm 2024, so với c&ugrave;ng kỳ, bi&ecirc;n l&atilde;i thuần (NIM) ở mức 3.52%, tăng 0.29%. Tỷ lệ nợ xấu ở mức 1.57%, tăng 0.23%. Tỷ lệ bao phủ nợ xấu ở mức 83.29%, giảm 10.46%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 9,7 ngh&igrave;n tỷ đồng, tăng 74.45%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 25.1%, tăng 5.94%.&nbsp;LPB được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ&nbsp;th&aacute;ng 10/2020.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Bưu Điện Việt Nam",
+      "percentage": 0.0654
+    },
+    {
+      "name": "Công ty TNHH H.T.H",
+      "percentage": 0.0495356
+    },
+    {
+      "name": "Nguyễn Đình Thắng",
+      "percentage": 0.0429
+    },
+    {
+      "name": "Nguyễn Đức Thụy",
+      "percentage": 0.02845
+    },
+    {
+      "name": "Nguyễn Đức Thuỵ",
+      "percentage": 0.027648
+    },
+    {
+      "name": "Phạm Doãn Sơn",
+      "percentage": 0.0185
+    },
+    {
+      "name": "Nguyễn Đức Cử",
+      "percentage": 0.013515
+    },
+    {
+      "name": "NGUYỄN VĂN HUYNH",
+      "percentage": 0.007
+    },
+    {
+      "name": "Nguyễn Hoàng Duy",
+      "percentage": 0.0061
+    },
+    {
+      "name": "Dương Công Đoàn",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Đỗ Thị Hoa",
+      "percentage": 0.003655
+    },
+    {
+      "name": "Hoàng Phương Thảo",
+      "percentage": 0.0029
+    },
+    {
+      "name": "NGUYỄN ĐỨC HƯỞNG",
+      "percentage": 0.0026667
+    },
+    {
+      "name": "Nguyễn Duy Thông",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Nguyễn Minh Trang",
+      "percentage": 0.002089
+    },
+    {
+      "name": "Nguyễn Bảo Ngọc",
+      "percentage": 0.001718
+    },
+    {
+      "name": "Bùi Thái Hà",
+      "percentage": 0.00048
+    },
+    {
+      "name": "Phạm Doãn Phú",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Vũ Quốc Khánh",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Ánh Vân",
+      "percentage": 0.00039
+    },
+    {
+      "name": "Lê Thị Thanh Nga",
+      "percentage": 0.00039
+    },
+    {
+      "name": "Bùi Thị Thanh Huyền",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Nguyễn Thị Gấm",
+      "percentage": 0.00030411
+    },
+    {
+      "name": "Huỳnh Ngọc Huy",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Hồ Nam Tiến",
+      "percentage": 0.0002667
+    },
+    {
+      "name": "Kim Minh Tuấn",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Nguyễn Ngọc Nam",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Nguyễn Quốc Thành",
+      "percentage": 0.000156
+    },
+    {
+      "name": "Lê Hồng Phong",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Trần Thanh Tùng",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Nguyễn Thị Thanh Sơn",
+      "percentage": 0.000107
+    },
+    {
+      "name": "Dương Công Toàn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Thị Lan Hương",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Đặng Minh Hoàng",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Nguyễn Quý Chiến",
+      "percentage": 0.000081
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu Ngân Hàng Công Thương Việt Nam",
+      "percentage": 0.00005911
+    },
+    {
+      "name": "Nguyễn Thị Nguyệt",
+      "percentage": 0.000058
+    },
+    {
+      "name": "Dương Hoài Liên",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Dương Công Thắng",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Lê Vân Quỳnh",
+      "percentage": 0.0000457
+    },
+    {
+      "name": "Nguyễn Lan Anh",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Nguyễn Phú Minh",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Phạm Thị Thanh Thủy",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Hồng Nhung",
+      "percentage": 2.7e-6
+    },
+    {
+      "name": "Phùng Việt Anh",
+      "percentage": 2.6e-6
+    },
+    {
+      "name": "Phạm Văn Chín",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Hồng Cường",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Nguyễn Duy Cường",
+      "percentage": 1.6e-6
+    },
+    {
+      "name": "Nguyễn Vân Hương",
+      "percentage": 1.3e-6
+    },
+    {
+      "name": "Nguyễn Văn Cừ",
+      "percentage": 8.8e-7
+    },
+    {
+      "name": "Hoàng Văn Hạnh",
+      "percentage": 8e-7
+    },
+    {
+      "name": "Nguyễn Xuân Thủy",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Vũ Thu Hiền",
+      "percentage": 5e-8
+    },
+    {
+      "name": "Dương Thị Phương",
+      "percentage": 4e-8
+    },
+    {
+      "name": "Tống Thị Kiều Hoa",
+      "percentage": 3e-8
+    },
+    {
+      "name": "Nguyễn Đức Ứng",
+      "percentage": 3e-8
+    },
+    {
+      "name": "Trần Thị Hoài Hương",
+      "percentage": 1e-8
+    },
+    {
+      "name": "Công ty Cổ phần Thaiholdings",
+      "percentage": 1e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 1e-9
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Đức Thụy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.02845
+    },
+    {
+      "name": "Phạm Doãn Sơn",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0185
+    },
+    {
+      "name": "Bùi Thái Hà",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00048
+    },
+    {
+      "name": "Vũ Quốc Khánh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Ánh Vân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00039
+    },
+    {
+      "name": "Lê Thị Thanh Nga",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00039
+    },
+    {
+      "name": "Nguyễn Thị Gấm",
+      "position": "Phó Tổng Giám đốc/Kế toán trưởng",
+      "percentage": 0.00030411
+    },
+    {
+      "name": "Huỳnh Ngọc Huy",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Hồ Nam Tiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002667
+    },
+    {
+      "name": "Kim Minh Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Nguyễn Ngọc Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Nguyễn Quốc Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000156
+    },
+    {
+      "name": "Lê Hồng Phong",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Trần Thanh Tùng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Dương Công Toàn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Thị Lan Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Nguyễn Quý Chiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000081
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Dương Hoài Liên",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Vũ Thu Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 5e-8
+    },
+    {
+      "name": "Lê Anh Tùng",
+      "position": "Giám đốc khối/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Văn Phúc",
+      "position": "Phó Tổng Giám đốc/Giám đốc khối",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Lan Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Thế Việt",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:59.544125Z"
+}

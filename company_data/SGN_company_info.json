@@ -1,0 +1,147 @@
+{
+  "symbol": "SGN",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2166019069500.0,
+  "current_price": 64500.0,
+  "outstanding_shares": 33581691,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Phục vụ Mặt đất S&agrave;i G&ograve;n (SGN) được th&agrave;nh lập theo quyết định số 3005/QĐ-CHK của Cục trưởng Cục H&agrave;ng kh&ocirc;ng Việt Nam, c&oacute; tiền th&acirc;n l&agrave; trung t&acirc;m Dịch vụ H&agrave;ng kh&ocirc;ng, l&agrave; đơn vị th&agrave;nh vi&ecirc;n của Cụm Cảng H&agrave;ng kh&ocirc;ng Việt Nam. Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; cung cấp c&aacute;c loại h&igrave;nh dịch vụ phục vụ mặt đất theo ti&ecirc;u chuẩn của Hiệp hội vận tải H&agrave;ng kh&ocirc;ng quốc tế IATA v&agrave; của c&aacute;c h&atilde;ng H&agrave;ng kh&ocirc;ng. C&aacute;c sản phẩm dịch vụ ch&iacute;nh của SGN l&agrave; Dịch vụ H&agrave;ng kh&ocirc;ng v&agrave; Dịch vụ Phi h&agrave;ng kh&ocirc;ng.&nbsp;Mặc d&ugrave; lu&ocirc;n phải chịu &aacute;p lực cạnh tranh đến từ c&aacute;c c&ocirc;ng ty c&ugrave;ng ng&agrave;nh hoạt động tại Cảng H&agrave;ng kh&ocirc;ng quốc tế T&acirc;n Sơn Nhất, SGN vẫn chiếm hơn 50% thị phần cung cấp dịch vụ mặt đất tại đ&acirc;y v&agrave; l&agrave; đơn vị đầu ti&ecirc;n c&oacute; khả năng phục vụ h&agrave;ng h&oacute;a trọng tải l&ecirc;n đến 32 tấn/ kiện. SGN&nbsp;được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Cảng Hàng không Việt Nam - CTCP",
+      "percentage": 0.4803
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.2496
+    },
+    {
+      "name": "Công ty Cổ phần Hàng không Vietjet",
+      "percentage": 0.0911
+    },
+    {
+      "name": "Andbanc Investments Sif-Vietnam Value And Income Portfolio",
+      "percentage": 0.0479
+    },
+    {
+      "name": "Công ty Cổ phần Kinh doanh Địa ốc Him Lam",
+      "percentage": 0.047
+    },
+    {
+      "name": "Công ty TNHH Quản lý quỹ SSI",
+      "percentage": 0.0246
+    },
+    {
+      "name": "NGUYỄN ĐÌNH HÙNG",
+      "percentage": 0.0073
+    },
+    {
+      "name": "Nguyễn Nhật Long",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Văn Mỹ",
+      "percentage": 0.0018553
+    },
+    {
+      "name": "Lê Thị Diệu Thúy",
+      "percentage": 0.00075
+    },
+    {
+      "name": "Lưu Quang Lãm",
+      "percentage": 0.00075
+    },
+    {
+      "name": "Nguyễn Thị Đỗ Quyên",
+      "percentage": 0.00075
+    },
+    {
+      "name": "Nguyễn Thị Thanh Vy",
+      "percentage": 0.00021
+    },
+    {
+      "name": "Lê Minh Hưng",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Nguyễn Quốc Cường",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Phùng Thị Thanh Huyền",
+      "percentage": 6e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "NGUYỄN ĐÌNH HÙNG",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0073
+    },
+    {
+      "name": "Nguyễn Văn Mỹ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0018553
+    },
+    {
+      "name": "Nguyễn Nam Tiến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quang Tâm Thảo",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hứa Kiến Trung",
+      "position": "Phụ trách Công bố thông tin/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Hoàng Oanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Danh Nguyên",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Mạnh Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Đức Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Tuấn Tú",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:33.964468Z"
+}

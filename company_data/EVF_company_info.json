@@ -1,0 +1,225 @@
+{
+  "symbol": "EVF",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 9583129105200.0,
+  "current_price": 12600.0,
+  "outstanding_shares": 760565802,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty T&agrave;i ch&iacute;nh Tổng hợp Cổ phần Điện Lực (EVF)&nbsp;được th&agrave;nh lập v&agrave;o th&aacute;ng 07/2008. C&ocirc;ng ty hoạt động trong lĩnh vực i) Huy động vốn, (ii) Cho vay ngắn hạn, trung hạn v&agrave; d&agrave;i hạn, (iii) Chiết khấu thương phiếu, tr&aacute;i phiếu v&agrave; giấy tờ c&oacute; gi&aacute;. EVF&nbsp;trở th&agrave;nh c&ocirc;ng ty&nbsp;đại ch&uacute;ng từ th&aacute;ng 09/2008. C&ocirc;ng ty đ&oacute;ng vai tr&ograve; l&agrave; đầu mối thu xếp vốn, quản trị vốn cho c&aacute;c dự &aacute;n điện thuộc Tập đo&agrave;n Điện lực Việt Nam v&agrave; c&aacute;c đơn vị th&agrave;nh vi&ecirc;n, đồng thời cung cấp c&aacute;c sản phẩm dịch vụ t&agrave;i ch&iacute;nh cho c&aacute;c đơn vị trong ng&agrave;nh điện v&agrave; c&aacute;c đơn vị thuộc c&aacute;c th&agrave;nh phần kinh tế kh&aacute;c. T&iacute;nh đến thời điểm 31/12/2024, Tổng t&agrave;i sản của C&ocirc;ng ty đạt 59.598 tỷ đồng tăng 21% so với c&ugrave;ng kỳ năm trước. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu b&igrave;nh qu&acirc;n v&agrave; tỷ suất lợi nhuận tr&ecirc;n tổng t&agrave;i sản b&igrave;nh qu&acirc;n lần lượt ở mức 6,43% v&agrave; 1,08%.&nbsp;Ng&agrave;y 12/01/2022, EVF giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Văn Cảnh",
+      "percentage": 0.0462
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần An Bình",
+      "percentage": 0.0232
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Amber",
+      "percentage": 0.00525
+    },
+    {
+      "name": "Lê Mạnh Linh",
+      "percentage": 0.0043532
+    },
+    {
+      "name": "Phạm Trung Kiên",
+      "percentage": 0.0043334
+    },
+    {
+      "name": "Mai Danh Hiền",
+      "percentage": 0.0038753
+    },
+    {
+      "name": "Tôn Thị Hải Yến",
+      "percentage": 0.0011372
+    },
+    {
+      "name": "Hoàng Văn Ninh",
+      "percentage": 0.00059
+    },
+    {
+      "name": "Cao Thị Thu Hà",
+      "percentage": 0.00046
+    },
+    {
+      "name": "Bùi Xuân Dũng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Quốc Tuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Hoa",
+      "percentage": 0.000189
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0001636
+    },
+    {
+      "name": "Đào Lê Huy",
+      "percentage": 0.0001136
+    },
+    {
+      "name": "Lê Thị Thu Trang",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Khánh Ngọc",
+      "percentage": 0.0000978
+    },
+    {
+      "name": "Đỗ Thị Hà",
+      "percentage": 0.000088
+    },
+    {
+      "name": "Hoàng Thế Hưng",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Lâm Nguyễn Thiện Nhơn",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Thụy Minh Trúc",
+      "percentage": 0.000065
+    },
+    {
+      "name": "Nghiêm Khắc Đạt",
+      "percentage": 0.0000597
+    },
+    {
+      "name": "Tống Nhật Linh",
+      "percentage": 0.0000587
+    },
+    {
+      "name": "Hoàng Nhật Nam",
+      "percentage": 0.0000582
+    },
+    {
+      "name": "Nguyễn Văn Hải",
+      "percentage": 0.0000489
+    },
+    {
+      "name": "Lê Hoài Nam",
+      "percentage": 0.0000489
+    },
+    {
+      "name": "Nguyễn Trung Thành",
+      "percentage": 0.0000489
+    },
+    {
+      "name": "Lê Long Giang",
+      "percentage": 0.0000473
+    },
+    {
+      "name": "Nguyễn Thị Phong Lan",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Lý Mạnh Hà",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Mai Xuân Đông",
+      "percentage": 0.0000361
+    },
+    {
+      "name": "Hoàng Thị Liên",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Tiến Sỹ",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Xuân Điệp",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Mạnh Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0043532
+    },
+    {
+      "name": "Phạm Trung Kiên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0043334
+    },
+    {
+      "name": "Mai Danh Hiền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0038753
+    },
+    {
+      "name": "Hoàng Văn Ninh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00059
+    },
+    {
+      "name": "Cao Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00046
+    },
+    {
+      "name": "Nguyễn Quốc Tuấn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001636
+    },
+    {
+      "name": "Đào Lê Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001136
+    },
+    {
+      "name": "Đỗ Thị Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000088
+    },
+    {
+      "name": "Hoàng Thế Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Tống Nhật Linh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000587
+    },
+    {
+      "name": "Lê Long Giang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000473
+    },
+    {
+      "name": "Nguyễn Xuân Điệp",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Hoàng Hải",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thúy Trang",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:23.453932Z"
+}

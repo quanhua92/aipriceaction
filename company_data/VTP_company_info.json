@@ -1,0 +1,162 @@
+{
+  "symbol": "VTP",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 13396134620000.0,
+  "current_price": 110000.0,
+  "outstanding_shares": 121783042,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Cổ phần Bưu ch&iacute;nh Viettel (VTP) được th&agrave;nh lập v&agrave;o năm 1997. Tổng C&ocirc;ng ty hoạt động trong lĩnh vực&nbsp;(i) Kinh doanh dịch vụ chuyển ph&aacute;t nhanh bưu phẩm, bưu kiện h&agrave;ng h&oacute;a, (ii) Đại l&yacute; kinh doanh dịch vụ ph&aacute;t h&agrave;nh b&aacute;o ch&iacute;, (iii) Kinh doanh thương mại tr&ecirc;n mạng bưu ch&iacute;nh, thương mại điện tử, v&agrave; (iv) Dịch vụ logistic (dịch vụ bốc xếp h&agrave;ng h&oacute;a, dịch vụ kho b&atilde;i v&agrave; lưu giữ h&agrave;ng h&oacute;a). VTP chuyển sang&nbsp;hoạt&nbsp;động theo m&ocirc; h&igrave;nh&nbsp;tổng c&ocirc;ng ty từ năm 2012.&nbsp;VTP hiện đang sở hữu&nbsp;mạng lưới rộng khắp cả nước với&nbsp;63 Chi nh&aacute;nh, 09 ph&ograve;ng ban chức năng, 3 Trung t&acirc;m, 5 C&ocirc;ng ty th&agrave;nh vi&ecirc;n, 3 kho tổng, 63 kho tỉnh tổng diện t&iacute;ch hơn 209.000 m2, 6 trung t&acirc;m khai th&aacute;c, 3.000 bưu cục, cửa h&agrave;ng, 6.000 điểm giao dịch. Ng&agrave;y 12/03/2024,&nbsp;VTP ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Chi Minh (HOSE);</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp - Viễn thông Quân đội",
+      "percentage": 0.6084
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0163167
+    },
+    {
+      "name": "Công Đoàn Cơ Sở Tổng Công ty Cổ Phần Bưu Chính Viettel",
+      "percentage": 0.0142
+    },
+    {
+      "name": "Trần Trung Hưng",
+      "percentage": 0.003
+    },
+    {
+      "name": "Chu Kim Thoa",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.0015263537
+    },
+    {
+      "name": "Lương Ngọc Hải",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Hoàng Sơn",
+      "percentage": 0.00053
+    },
+    {
+      "name": "Nguyễn Duy Tuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thanh Nam",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trương Hữu Đức",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Phạm Văn Tuyên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Hoàng Long",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Đinh Thanh Sơn",
+      "percentage": 0.000047
+    },
+    {
+      "name": "Lê Thị Thanh Thoảng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Cấn Long Giang",
+      "percentage": 5e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Trung Hưng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Duy Tuấn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thanh Nam",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Văn Tuyên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Hoàng Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Đinh Thanh Sơn",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.000047
+    },
+    {
+      "name": "Lê Thị Thanh Thoảng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nghiêm Phương Nhi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đắc Luân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Công Phú",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Anh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thanh Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Như Tuynh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:18.593731Z"
+}

@@ -1,0 +1,242 @@
+{
+  "symbol": "CMG",
+  "exchange": "HOSE",
+  "industry": "Phần mềm & Dịch vụ Máy tính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 8323107545100.0,
+  "current_price": 39300.0,
+  "outstanding_shares": 211783907,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n C&ocirc;ng nghệ CMC (CMG) hoạt động trong lĩnh vực&nbsp;c&ocirc;ng nghệ th&ocirc;ng tin&nbsp;- Viễn Th&ocirc;ng. Hoạt động kinh doanh ch&iacute;nh của c&ocirc;ng ty bao gồm c&aacute;c lĩnh vực IT (dịch vụ phần mềm v&agrave; gia c&ocirc;ng phần mềm, dịch vụ t&iacute;ch hợp hệ thống v&agrave; dịch vụ c&ocirc;ng nghệ th&ocirc;ng tin, sản xuất v&agrave; lắp r&aacute;p m&aacute;y t&iacute;nh, ph&acirc;n phối), Telecom (dịch vụ hạ tầng viễn th&ocirc;ng, dịch vụ dữ liệu, dịch vụ chăm s&oacute;c kh&aacute;ch h&agrave;ng v&agrave; gi&aacute; trị gia tăng), E-Business (thương mại điện tử, dịch vụ nội dung số, dịch vụ cộng đồng, nghiệp vụ doanh nghiệp). CMG l&agrave; một trong hai đơn vị c&oacute; hệ thống t&iacute;ch hợp hệ thống h&agrave;ng đầu Việt Nam. C&ocirc;ng ty chiếm lĩnh thị trường trọng điểm c&oacute; mức đầu tư v&agrave; ứng dụng CNTT lớn nhất Việt Nam như khối Ch&iacute;nh phủ, T&agrave;i ch&iacute;nh - Bảo hiểm - Ng&acirc;n h&agrave;ng, Gi&aacute;o dục. CMG được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2010.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Samsung Sds Asia Pacific Pte. Ltd",
+      "percentage": 0.2983
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Mvi",
+      "percentage": 0.1347
+    },
+    {
+      "name": "Trương Ngọc Lân",
+      "percentage": 0.0512056469
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Mỹ Linh",
+      "percentage": 0.051
+    },
+    {
+      "name": "Tập Đoàn Geleximco - Công ty Cp",
+      "percentage": 0.0485
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0485
+    },
+    {
+      "name": "Tập đoàn Bảo Việt",
+      "percentage": 0.0376
+    },
+    {
+      "name": "Nguyễn Minh Đức",
+      "percentage": 0.0230007
+    },
+    {
+      "name": "Nguyễn Phước Hải",
+      "percentage": 0.0163
+    },
+    {
+      "name": "Nguyễn Trung Chính",
+      "percentage": 0.01039
+    },
+    {
+      "name": "Hà Thế Minh",
+      "percentage": 0.01
+    },
+    {
+      "name": "Nguyễn Mỹ Hương",
+      "percentage": 0.0034393
+    },
+    {
+      "name": "Tạ Hoàng Linh",
+      "percentage": 0.00285
+    },
+    {
+      "name": "Nguyễn Kim Cương",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Hồng Sơn",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Phạm Hồng Hải",
+      "percentage": 0.0013209003
+    },
+    {
+      "name": "Hoàng Xuân Hiếu",
+      "percentage": 0.0013209003
+    },
+    {
+      "name": "Hoàng Ngọc Hùng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Đỗ Hồng Hạnh",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lê Thanh Sơn",
+      "percentage": 0.00076
+    },
+    {
+      "name": "Ngô Trọng Hiếu",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Phan Hải Linh",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Hồ Thanh Tùng",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Đặng Ngọc Bảo",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Tường Vy",
+      "percentage": 0.0003
+    },
+    {
+      "name": "ĐẶNG TÙNG SƠN",
+      "percentage": 0.00027
+    },
+    {
+      "name": "Phó Đức Kiên",
+      "percentage": 0.00021
+    },
+    {
+      "name": "Nguyễn Minh Tuệ",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Công ty TNHH Thương Mại Và Dịch Vụ Dtsc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Võ Thanh Hải",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Mai Thu Hà",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Việt Hưng",
+      "percentage": 0.0000279276
+    },
+    {
+      "name": "Nguyễn Hồng Phương",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Đức Khương",
+      "percentage": 0.00001887
+    },
+    {
+      "name": "Lương Tuấn Thành",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Ngân Hàng Nông Nghiệp Và Phát Triển Nông Thôn Việt Nam",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Minh Đức",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0230007
+    },
+    {
+      "name": "Nguyễn Phước Hải",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0163
+    },
+    {
+      "name": "Nguyễn Trung Chính",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.01039
+    },
+    {
+      "name": "Lê Thanh Sơn",
+      "position": "Phụ trách Công bố thông tin/Giám đốc khối/Giám đốc Tài chính",
+      "percentage": 0.00076
+    },
+    {
+      "name": "Hồ Thanh Tùng",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Nguyễn Hồng Phương",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Việt Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Thế Vinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Tuấn Lâm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Trung Chính",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thành Nam",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Phương Thanh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lee Jay Seok",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Nhung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kim Jung Wuk",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Danh Lam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:15.323246Z"
+}

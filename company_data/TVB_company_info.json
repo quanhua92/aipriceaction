@@ -1,0 +1,173 @@
+{
+  "symbol": "TVB",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1008873171000.0,
+  "current_price": 9000.0,
+  "outstanding_shares": 112097019,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n T-Cap (TVB)&nbsp;c&oacute; tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Th&aacute;i B&igrave;nh Dương&nbsp;được th&agrave;nh lập v&agrave;o&nbsp;năm 2006. C&ocirc;ng ty hoạt&nbsp;động trong lĩnh vực m&ocirc;i&nbsp;giới, lưu k&yacute; chứng kho&aacute;n, tư vấn&nbsp;đầu tư, v&agrave; c&aacute;c dịch vụ chứng kho&aacute;n li&ecirc;n quan. TVB trở th&agrave;nh c&ocirc;ng ty&nbsp;đại ch&uacute;ng từ&nbsp;năm 2015.&nbsp;Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 2,06 tỷ đồng. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 0.4%, giảm 1.2%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 152,15 tỷ đồng, tăng 82.46%. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 114,39 tỷ đồng, tăng 48.28%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 11.83%, tăng 5.01%. TVB được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 06/2018.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn Quản lý tài sản T-Corp",
+      "percentage": 0.6898
+    },
+    {
+      "name": "Phạm Thanh Tùng",
+      "percentage": 0.0248
+    },
+    {
+      "name": "Đỗ Thanh Hà",
+      "percentage": 0.0133
+    },
+    {
+      "name": "Đỗ Đức Nam",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Nguyễn Tiến Sơn",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Phạm Thị Thanh Huyền",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Lê Thị Thu Hương",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Đỗ Thị Nga",
+      "percentage": 0.00089
+    },
+    {
+      "name": "Phạm Hồng Minh",
+      "percentage": 0.00064
+    },
+    {
+      "name": "Nguyễn Thị Hằng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Vũ Văn Toản",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Thanh Nga",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Mai Quang Thạch",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Bích Vân",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lưu Thị Luyến",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Nhật Linh",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Công ty TNHH MTV Tùng Trí Việt",
+      "percentage": 0.000045
+    },
+    {
+      "name": "Nguyễn Thị Thơm",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Mạnh Cường",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Phạm Thành Trực",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thị Chinh Hương",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thị Thắm",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Bích Thủy",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Trần Thành Trung",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Thanh Tùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0248
+    },
+    {
+      "name": "Đỗ Đức Nam",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Nguyễn Tiến Sơn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Lê Thị Thu Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Thân Đức Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Đức Minh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thu Phượng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Minh Tuấn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Lê Thành Long",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Nga",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn  Phi Khanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:17.521096Z"
+}

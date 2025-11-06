@@ -1,0 +1,217 @@
+{
+  "symbol": "TCH",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 19110973090000.0,
+  "current_price": 22000.0,
+  "outstanding_shares": 868680595,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Dịch vụ T&agrave;i ch&iacute;nh Ho&agrave;ng Huy (TCH) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Thương mại Ho&agrave;ng Huy, được th&agrave;nh lập v&agrave;o th&aacute;ng 10/1995. TCH chuy&ecirc;n hoạt động trong lĩnh vực đầu tư kinh doanh bất động sản v&agrave;&nbsp;lắp r&aacute;p ph&acirc;n phối xe &ocirc; t&ocirc; đầu k&eacute;o.&nbsp;TCH hiện đang l&agrave;&nbsp;nh&agrave;&nbsp;ph&acirc;n phối ch&iacute;nh h&atilde;ng xe tải thương hiệu International của h&atilde;ng Navistar (Hoa Kỳ) v&agrave;&nbsp;c&aacute;c d&ograve;ng xe&nbsp;Dongfeng (Trung Quốc) tại thị trường Việt Nam. C&ocirc;ng ty đ&atilde; x&acirc;y dựng hệ thống ph&acirc;n phối xe tải với&nbsp;hơn 25 đại l&yacute; tr&ecirc;n to&agrave;n quốc.&nbsp;Trong lĩnh vực đầu tư kinh doanh bất động sản, TCH đ&atilde; triển khai&nbsp;thực hiện&nbsp;nhiều dự &aacute;n quy m&ocirc;&nbsp;lớn&nbsp;như&nbsp;Hoang Huy Commerce, Hoang Huy New&nbsp;City, Hoang Huy Green River, ....&nbsp;TCH được giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2016.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đỗ Hữu Hạ",
+      "percentage": 0.3017
+    },
+    {
+      "name": "CÔNG TY CỔ PHẦN HH FINANCE",
+      "percentage": 0.0581
+    },
+    {
+      "name": "Nguyễn Thị Hà",
+      "percentage": 0.0488823
+    },
+    {
+      "name": "Trần Thị Hoàng Hà",
+      "percentage": 0.0346
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.014627
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.012992
+    },
+    {
+      "name": "Hoàng Thị Huyên",
+      "percentage": 0.0098
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.007561
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.006761
+    },
+    {
+      "name": "Đỗ Thị Huyền Trang",
+      "percentage": 0.0061
+    },
+    {
+      "name": "Đỗ Hữu Hưng",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.003218
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.002828
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.001394
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.001151
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00010482
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00002548
+    },
+    {
+      "name": "Phùng Thị Thu Hương",
+      "percentage": 0.0000152
+    },
+    {
+      "name": "Hồ Thị Xuân Hòa",
+      "percentage": 0.0000114
+    },
+    {
+      "name": "Nguyễn Thị Tươi",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Thị Thúy Nga",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Hoàng Tùng",
+      "percentage": 1.5e-6
+    },
+    {
+      "name": "Phan Thị Thu Hường",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Thị Mai Hằng",
+      "percentage": 6.8e-7
+    },
+    {
+      "name": "Phùng Thị Hồng Hòa",
+      "percentage": 4.9e-7
+    },
+    {
+      "name": "Phùng Trọng Đoan",
+      "percentage": 4.9e-7
+    },
+    {
+      "name": "Trần Thu Minh Duyên",
+      "percentage": 4.9e-7
+    },
+    {
+      "name": "Phùng Thị Dung",
+      "percentage": 4.9e-7
+    },
+    {
+      "name": "Bùi Sỹ Tiến",
+      "percentage": 4.5e-7
+    },
+    {
+      "name": "Trần Thị Bích Thủy",
+      "percentage": 4.5e-7
+    },
+    {
+      "name": "Nguyễn Công Hoan",
+      "percentage": 4.5e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Hữu Hạ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.3017
+    },
+    {
+      "name": "Nguyễn Thị Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0488823
+    },
+    {
+      "name": "Trần Thị Hoàng Hà",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0346
+    },
+    {
+      "name": "Đỗ Hữu Hưng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Phùng Thị Thu Hương",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000152
+    },
+    {
+      "name": "Hồ Thị Xuân Hòa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000114
+    },
+    {
+      "name": "Nguyễn Thị Tươi",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Hoàng Tùng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 1.5e-6
+    },
+    {
+      "name": "Phan Thị Thu Hường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Phạm Hồng Dung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Trọng Long",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thế Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Hữu Hậu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hải Yến",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Phương Thủy",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:20.281892Z"
+}

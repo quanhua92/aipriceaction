@@ -1,0 +1,136 @@
+{
+  "symbol": "CIG",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 448130734660.0,
+  "current_price": 8780.0,
+  "outstanding_shares": 51039947,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty cổ phần COMA 18 (CIG), tiền th&acirc;n&nbsp;l&agrave; C&ocirc;ng ty cơ điện H&agrave; T&acirc;y, được th&agrave;nh lập năm 2005. Lĩnh vực kinh doanh chủ yếu của c&ocirc;ng ty bao gồm Đầu tư bất động sản, kinh doanh&nbsp;hạ tầng khu c&ocirc;ng nghiệp v&agrave; cho thu&ecirc; nh&agrave; xưởng.&nbsp;C&ocirc;ng ty chủ yếu hoạt động tại H&agrave; Nội, Th&aacute;i Nguy&ecirc;n, H&agrave; Tĩnh, Thanh H&oacute;a, Lai Ch&acirc;u, Bắc Ninh.&nbsp;Hiện nay, C&ocirc;ng ty đang l&agrave;m chủ đầu tư 2 dự &aacute;n KCN Kim Th&agrave;nh (Hải Dương), KCN Nhuận Trạch (H&ograve;a B&igrave;nh), dự &aacute;n Thuỷ điện H&ugrave;ng Lợi Y&ecirc;n Sơn 1, 2. Coma 18 c&oacute; một số dự &aacute;n ti&ecirc;u biểu kh&aacute;c&nbsp;như: Dự &aacute;n đ&egrave;n Han Bachelorion, nh&agrave; m&aacute;y xi măng B&uacute;t Son , Nh&agrave; m&aacute;y nhiệt điện Phả&nbsp;Lại, nh&agrave; m&aacute;y xi măng Bỉm Sơn, khu c&ocirc;ng nghiệp Thanh Oai, dự &aacute;n chung cư La Kh&ecirc; tại H&agrave; Đ&ocirc;ng, quốc lộ 1A, quốc lộ 3, hệ thống điện quốc lộ tại Hải Dương, H&agrave; Nội, Hồ Ch&iacute; Minh, H&ograve;a B&igrave;nh, Sơn La, Cần Thơ, Bắc Ninh, Bắc Giang,...&nbsp;Ng&agrave;y 19/07/2011, CIG ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Trần Thị Liên",
+      "percentage": 0.2433
+    },
+    {
+      "name": "Nguyễn Văn Đạt",
+      "percentage": 0.1101
+    },
+    {
+      "name": "Nguyễn Văn Tuế",
+      "percentage": 0.1097
+    },
+    {
+      "name": "NGUYỄN MINH THƯ",
+      "percentage": 0.1078
+    },
+    {
+      "name": "Lương Thị Ngọc Trang",
+      "percentage": 0.0784
+    },
+    {
+      "name": "NGUYỄN HẢI ĐĂNG",
+      "percentage": 0.0666
+    },
+    {
+      "name": "Trần Đức Minh",
+      "percentage": 0.0426
+    },
+    {
+      "name": "Đỗ Quang Khuê",
+      "percentage": 0.0412
+    },
+    {
+      "name": "Lê Thị Vân Anh",
+      "percentage": 0.0178
+    },
+    {
+      "name": "BÙI QUANG ĐÔNG",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Nguyễn Thị Lộc Phú",
+      "percentage": 0.00337
+    },
+    {
+      "name": "Nguyễn Văn Toàn",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Thị Thanh Loan",
+      "percentage": 0.000036
+    },
+    {
+      "name": "Lê Thanh Thủy",
+      "percentage": 7.4405e-6
+    },
+    {
+      "name": "Dương Đình Thành",
+      "percentage": 3.4e-6
+    },
+    {
+      "name": "Nguyễn Đức Dũng",
+      "percentage": 1.87e-6
+    },
+    {
+      "name": "Dương Thùy Linh",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Thị Vân Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0178
+    },
+    {
+      "name": "BÙI QUANG ĐÔNG",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Nguyễn Thị Thanh Loan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000036
+    },
+    {
+      "name": "Lê Quang Hải",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Thị Thu Hà",
+      "position": "Phụ trách Công bố thông tin/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nhàn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Thanh Hiền",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Biên",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:04.004204Z"
+}

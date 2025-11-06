@@ -1,0 +1,133 @@
+{
+  "symbol": "DRI",
+  "exchange": "UPCOM",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 856440000000.0,
+  "current_price": 11700.0,
+  "outstanding_shares": 73200000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Cao su Đắk Lắk (DRI)&nbsp;được th&agrave;nh lập v&agrave;o&nbsp;ng&agrave;y 24/02/2012. DRI&nbsp;hoạt động ch&iacute;nh trong lĩnh vực khai th&aacute;c,&nbsp;chế biến mủ cao su v&agrave; c&acirc;y ăn quả.&nbsp;C&ocirc;ng ty&nbsp;hiện đang quản l&yacute; vườn cao su trồng tại 2 tỉnh ChămPaSăk v&agrave; Salaval tại&nbsp;L&agrave;o th&ocirc;ng qua c&ocirc;ng ty con, tổng diện t&iacute;ch cao su l&ecirc;n đến 8.810,5 ha. DRI&nbsp;chủ yếu sản xuất c&aacute;c sản phẩm SVR3L, SVR10 v&agrave; SVR60. Ngo&agrave;i ra, C&ocirc;ng ty c&ograve;n tham gia v&agrave;o hoạt động sản xuất v&agrave; kinh doanh c&aacute;c sản phẩm n&ocirc;ng nghiệp v&agrave; l&acirc;m nghiệp kh&aacute;c như trồng c&agrave; ph&ecirc;, điều v&agrave; bạch đ&agrave;n. DRI được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 05/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Cao su Đắk Lắk",
+      "percentage": 0.45
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Triển vọng Bảo Việt",
+      "percentage": 0.0068306011
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu Bảo Việt",
+      "percentage": 0.0068306
+    },
+    {
+      "name": "Nguyễn Thị Minh Thuận",
+      "percentage": 0.0059
+    },
+    {
+      "name": "Văn Đức Lư",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Bùi Quang Ninh",
+      "percentage": 0.002
+    },
+    {
+      "name": "Nguyễn Kim Hoa",
+      "percentage": 0.00169
+    },
+    {
+      "name": "Nguyễn Độ",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Viết Tượng",
+      "percentage": 0.0013661
+    },
+    {
+      "name": "Nguyễn Thị Hải",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Âu Quý Vinh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Vân Liên",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Phan Thanh Thái",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Thị Quý",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Phan Thanh Cường",
+      "percentage": 1.8e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Quang Ninh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.002
+    },
+    {
+      "name": "Nguyễn Kim Hoa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00169
+    },
+    {
+      "name": "Nguyễn Viết Tượng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0013661
+    },
+    {
+      "name": "Nguyễn Thị Hải",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thanh Tân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thạc Hoành",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thanh Cường",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Thảo",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thanh Cần",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trần Giang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:49.147439Z"
+}

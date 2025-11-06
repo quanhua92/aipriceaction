@@ -1,0 +1,292 @@
+{
+  "symbol": "SSI",
+  "exchange": "HOSE",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 72518928543800.0,
+  "current_price": 34900.0,
+  "outstanding_shares": 2077906262,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\" style=\"text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n SSI (SSI) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Chứng kho&aacute;n S&agrave;i G&ograve;n&nbsp;được th&agrave;nh lập v&agrave;o năm 1999.&nbsp;SSI chuy&ecirc;n cung cấp dịch vụ m&ocirc;i giới, tư vấn v&agrave; đầu tư t&agrave;i ch&iacute;nh, chứng kho&aacute;n với mạng lưới hoạt động rộng tại những th&agrave;nh phố lớn như H&agrave; Nội,&nbsp;Th&agrave;nh phố&nbsp;Hồ Ch&iacute; Minh, Hải Ph&ograve;ng, Nha Trang, Vũng T&agrave;u.&nbsp;C&ocirc;ng ty&nbsp;đ&atilde; cung cấp dịch vụ cho c&aacute;c nh&agrave; đầu tư trong nước v&agrave;&nbsp;nhiều nh&agrave; đầu tư nước ngo&agrave;i danh tiếng với c&aacute;c&nbsp;kh&aacute;ch h&agrave;ng ti&ecirc;u biểu&nbsp;như&nbsp;C&ocirc;ng ty&nbsp;bao gồm Morgan Stanley, HSBC, Vinamilk,&nbsp;Credit Suisse, BIDV, ANZ, Prudential VN, Deutsche Bank. Trong năm 2024, C&ocirc;ng ty xếp ở vị tr&iacute; 2 với 9.18% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HOSE, vị tr&iacute; thứ 4 với 6.95% thị phần m&ocirc;i giới cổ phiếu ni&ecirc;m yết tại HNX v&agrave;&nbsp;vị tr&iacute; thứ 2 với 6.67% thị phần m&ocirc;i giới cổ phiếu đăng k&yacute; giao dịch tr&ecirc;n thị trường UPCOM. Tr&ecirc;n thị trường ph&aacute;i sinh, SSI đứng vị tr&iacute; thứ 6 thị phần m&ocirc;i giới chứng kho&aacute;n ph&aacute;i sinh với 3.58%.&nbsp;Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 1.667,43 tỷ đồng, tăng 11.% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 81.32%, tăng 18.19%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 2.563,13 tỷ đồng, tăng 2.09% v&agrave; đ&oacute;ng g&oacute;p 48.9 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 3.543,53 tỷ đồng, tăng 24.4%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 11.39%, tăng 1.28%. Cổ phiếu của C&ocirc;ng ty được ni&ecirc;m yết tr&ecirc;n s&agrave;n HNX v&agrave;o năm 2006&nbsp;v&agrave; chuyển sang s&agrave;n HOSE từ năm 2007.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Daiwa Securities Group Inc",
+      "percentage": 0.1526
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Ndh",
+      "percentage": 0.08364
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0395
+    },
+    {
+      "name": "Công ty TNHH Bất Động Sản Sài Gòn Đan Linh",
+      "percentage": 0.03879
+    },
+    {
+      "name": "En Fund L.P",
+      "percentage": 0.03565
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0262
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Đường Mặt Trời",
+      "percentage": 0.0258216079
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.023
+    },
+    {
+      "name": "Veil Holdings Limited",
+      "percentage": 0.0092
+    },
+    {
+      "name": "Nguyễn Duy Hưng",
+      "percentage": 0.0082
+    },
+    {
+      "name": "Beira Limited",
+      "percentage": 0.0063
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.00601
+    },
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "percentage": 0.00541
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.00509
+    },
+    {
+      "name": "Nguyễn Hồng Nam",
+      "percentage": 0.004
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0028
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Viola Ltd",
+      "percentage": 0.00251
+    },
+    {
+      "name": "Nguyễn Duy Khánh",
+      "percentage": 0.00241
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hà",
+      "percentage": 0.00224
+    },
+    {
+      "name": "Geaystanes Limited",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Greystanes Limited Company",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng TVAM",
+      "percentage": 0.0017472731
+    },
+    {
+      "name": "Công ty TNHH Nguyễn Sài Gòn",
+      "percentage": 0.00166
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.00156
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Thiên Việt 2",
+      "percentage": 0.0014477406
+    },
+    {
+      "name": "Nguyễn Đức Thông",
+      "percentage": 0.00127
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.001195421
+    },
+    {
+      "name": "Quena Ltd",
+      "percentage": 0.00112
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.00108
+    },
+    {
+      "name": "Nguyễn Kim Long",
+      "percentage": 0.00081
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Vietnam Co-Investment Fund",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Bùi Quang Nghiêm",
+      "percentage": 0.00052
+    },
+    {
+      "name": "Lê Cẩm Bình",
+      "percentage": 0.00041
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0003441065
+    },
+    {
+      "name": "Nguyễn Văn Khải",
+      "percentage": 0.00031
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Phạm Viết Muôn",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Hoàng Thị Minh Thủy",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Ngô Văn Điểm",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Đặng Phong Lưu",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001146644
+    },
+    {
+      "name": "Nguyễn Thị Hải Anh",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Nguyễn Văn Hiển",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000605755
+    },
+    {
+      "name": "Nguyễn Quốc Cường",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Hồ Thị Hương Trà",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Hoàng Thị Khánh Duyên",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.000024961
+    },
+    {
+      "name": "Trần Quang Việt",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Hoàng Nguyễn Quang Huy",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 1.6974e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Duy Hưng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0082
+    },
+    {
+      "name": "Nguyễn Hồng Nam",
+      "position": "Tổng Giám đốc/Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị",
+      "percentage": 0.004
+    },
+    {
+      "name": "Nguyễn Duy Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00241
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hà",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.00224
+    },
+    {
+      "name": "Nguyễn Kim Long",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00081
+    },
+    {
+      "name": "Nguyễn Văn Khải",
+      "position": "Phó Tổng Giám Đốc Khối Quản lý quỹ",
+      "percentage": 0.00031
+    },
+    {
+      "name": "Phạm Viết Muôn",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Ngô Văn Điểm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Hoàng Thị Minh Thủy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Hironori Oka",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:02.116587Z"
+}

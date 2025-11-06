@@ -1,0 +1,138 @@
+{
+  "symbol": "DTD",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1260366439500.0,
+  "current_price": 18900.0,
+  "outstanding_shares": 66686055,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Ph&aacute;t triển Th&agrave;nh Đạt (DTD) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty X&acirc;y dựng Th&agrave;nh Đạt, được th&agrave;nh lập v&agrave;o năm 2001. C&ocirc;ng ty&nbsp;hoạt&nbsp;động ch&iacute;nh trong lĩnh vực&nbsp;x&acirc;y dựng, quản&nbsp;l&yacute; v&agrave; khai th&aacute;c khu c&ocirc;ng nghiệp, cảng ICD. DTD ch&iacute;nh thức hoạt động dưới h&iacute;nh thức c&ocirc;ng ty cổ phần từ năm 2015.&nbsp;C&ocirc;ng ty đ&atilde; thi c&ocirc;ng c&aacute;c dự &aacute;n ti&ecirc;u biểu như Dự &aacute;n X&acirc;y dựng Khu c&ocirc;ng nghiệp Đồng Văn III - Duy Ti&ecirc;n - H&agrave; Nam, Dự &aacute;n đầu tư x&acirc;y dựng c&ocirc;ng tr&igrave;nh Trường THPT chuy&ecirc;n Bi&ecirc;n H&ograve;a - Phủ L&yacute; - H&agrave; Nam, Dự &aacute;n Trung t&acirc;m nu&ocirc;i dưỡng bệnh binh v&agrave; người c&oacute; c&ocirc;ng tỉnh H&agrave; Nam - Hạng mục Nh&agrave; điều dưỡng. C&ocirc;ng ty đang triển khai thực hiện&nbsp;c&aacute;c dự &aacute;n: Hợp đồng x&acirc;y dựng hạ tầng Bệnh viện Hữu Nghị Việt Đức - Cơ sở II, Dự &aacute;n x&acirc;y dựng hạ tầng Bệnh viện Bạch Mai - Cơ sở II. B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty c&ograve;n sản xuất kinh doanh vật liệu x&acirc;y dựng, nước sạch v&agrave; dịch vụ bến xe. DTD được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội(HNX) từ cuối năm 2017.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Huy Cương",
+      "percentage": 0.2922
+    },
+    {
+      "name": "Nguyễn Thanh Tâm",
+      "percentage": 0.0583
+    },
+    {
+      "name": "Nguyễn Quang Trí",
+      "percentage": 0.0529
+    },
+    {
+      "name": "Phillip Securities Public Company Limited",
+      "percentage": 0.0527
+    },
+    {
+      "name": "NGUYỄN THỊ KIM CHUNG",
+      "percentage": 0.0404
+    },
+    {
+      "name": "Phạm Ngọc Oánh",
+      "percentage": 0.0367
+    },
+    {
+      "name": "Nguyễn Mạnh Tuyển",
+      "percentage": 0.035
+    },
+    {
+      "name": "Trần Việt Đức",
+      "percentage": 0.0222
+    },
+    {
+      "name": "NGUYỄN QUANG ANH",
+      "percentage": 0.0121
+    },
+    {
+      "name": "Phạm Văn Bống",
+      "percentage": 0.01
+    },
+    {
+      "name": "Dương Thị Thu Hiền",
+      "percentage": 0.0066
+    },
+    {
+      "name": "Nguyễn Khắc Dụ",
+      "percentage": 0.0063
+    },
+    {
+      "name": "Nguyễn Hữu Thuyết",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Phạm Văn Diễn",
+      "percentage": 0.0048
+    },
+    {
+      "name": "Vũ Đức Quý",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Mạnh Hải",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Đình Thuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Huyền Trang",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trần Thanh Luân",
+      "percentage": 0.000031
+    },
+    {
+      "name": "Nguyễn Thị Phương Quỳnh",
+      "percentage": 0.0000278
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Huy Cương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2922
+    },
+    {
+      "name": "Nguyễn Thanh Tâm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0583
+    },
+    {
+      "name": "Trần Việt Đức",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0222
+    },
+    {
+      "name": "NGUYỄN QUANG ANH",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0121
+    },
+    {
+      "name": "Nguyễn Khắc Dụ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0063
+    },
+    {
+      "name": "Nguyễn Hữu Thuyết",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Vũ Đức Quý",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Phạm Văn Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:00.284384Z"
+}

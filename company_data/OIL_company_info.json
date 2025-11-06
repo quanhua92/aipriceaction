@@ -1,0 +1,146 @@
+{
+  "symbol": "OIL",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất Dầu khí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2215685296000.0,
+  "current_price": 11000.0,
+  "outstanding_shares": 201425936,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng c&ocirc;ng ty Dầu Việt Nam (OIL)&nbsp;được th&agrave;nh lập v&agrave;o năm 2008&nbsp;tr&ecirc;n cơ sở hợp nhất Tổng c&ocirc;ng ty Thương mại dầu kh&iacute; (Petechim), C&ocirc;ng ty Chế biến v&agrave; Kinh doanh ph&acirc;n phối sản phẩm dầu mỏ (PDC). OIL ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ th&aacute;ng 08/2018. Tổng C&ocirc;ng ty hoạt động trong lĩnh vực chế biến, kinh doanh, ph&acirc;n phối, xuất nhập khẩu xăng dầu v&agrave; nhi&ecirc;n liệu sinh học. OIL chiếm khoảng 20% thị phần xăng dầu trong nước. Tổng C&ocirc;ng ty hiện đang quản l&yacute; vận h&agrave;nh nh&agrave; m&aacute;y chế biến condensate với c&ocirc;ng suất 130.000 tấn/năm v&agrave; nh&agrave; m&aacute;y chế biến dầu mỡ nhờn với c&ocirc;ng suất 20.000 tấn/năm. OIL được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 03/2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.8052
+    },
+    {
+      "name": "Uỷ ban Quản lý Vốn Nhà nước tại Doanh nghiệp",
+      "percentage": 0.351
+    },
+    {
+      "name": "Công ty Cổ phần Hàng không Vietjet",
+      "percentage": 0.0483
+    },
+    {
+      "name": "Sk Energy Co., Ltd.",
+      "percentage": 0.0419
+    },
+    {
+      "name": "Cao Hoài Dương",
+      "percentage": 4.9e-6
+    },
+    {
+      "name": "Lê Xuân Trình",
+      "percentage": 2.9e-6
+    },
+    {
+      "name": "Võ Khánh Hưng",
+      "percentage": 2.1e-6
+    },
+    {
+      "name": "Nguyễn Anh Toàn",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Hoàng Đình Tùng",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Tuấn Tú",
+      "percentage": 9.7e-7
+    },
+    {
+      "name": "Phạm Thành Vinh",
+      "percentage": 7.7e-7
+    },
+    {
+      "name": "Lê Văn Nghĩa",
+      "percentage": 6e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Cao Hoài Dương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 4.9e-6
+    },
+    {
+      "name": "Võ Khánh Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2.1e-6
+    },
+    {
+      "name": "Nguyễn Anh Toàn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Tuấn Tú",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 9.7e-7
+    },
+    {
+      "name": "Lê Văn Nghĩa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 6e-7
+    },
+    {
+      "name": "Hạng Anh Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Phượng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Văn Nhuộm",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đăng Trình",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hoài Nam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thanh Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Kện",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Hoài Lam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Ninh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Mậu Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Ngọc Quang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:42.872684Z"
+}

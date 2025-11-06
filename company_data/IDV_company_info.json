@@ -1,0 +1,249 @@
+{
+  "symbol": "IDV",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1092774590500.0,
+  "current_price": 26500.0,
+  "outstanding_shares": 41236777,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Ph&aacute;t triển Hạ tầng Vĩnh Ph&uacute;c (IDV)&nbsp;l&agrave; doanh nghiệp chuy&ecirc;n kinh doanh cơ sở hạ tầng khu c&ocirc;ng nghiệp được th&agrave;nh lập năm 2003. C&ocirc;ng ty l&agrave; chủ đầu tư ph&aacute;t triển kinh doanh hạ tầng của 2 khu c&ocirc;ng nghiệp l&agrave; khu c&ocirc;ng nghiệp Khai Quang tại th&agrave;nh phố Vĩnh Y&ecirc;n, tỉnh Vĩnh Ph&uacute;c v&agrave; khu c&ocirc;ng nghiệp Ch&acirc;u Sơn&nbsp;tại th&agrave;nh phố&nbsp;Phủ L&yacute;, tỉnh H&agrave; Nam. Doanh thu của c&ocirc;ng ty đến từ 3 nguồn ch&iacute;nh l&agrave; ph&iacute; sử dụng hạ tầng, ph&iacute; quản l&yacute; khu c&ocirc;ng nghiệp v&agrave; ph&iacute; xử l&yacute; nước thải. C&ocirc;ng ty l&agrave; một doanh nghiệp c&oacute; uy t&iacute;n trong lĩnh vực x&acirc;y dựng v&agrave; kinh doanh hạ tầng kỹ thuật khu c&ocirc;ng nghiệp. IDV được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2010.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.18007
+    },
+    {
+      "name": "Hoàng Đình Thắng",
+      "percentage": 0.12639999
+    },
+    {
+      "name": "Trịnh Việt Dũng",
+      "percentage": 0.0796
+    },
+    {
+      "name": "Nguyễn Thị Kiến",
+      "percentage": 0.0693
+    },
+    {
+      "name": "VĂN PHỤNG HÀ",
+      "percentage": 0.047422
+    },
+    {
+      "name": "Tạ Phạm Bích Thủy",
+      "percentage": 0.0436
+    },
+    {
+      "name": "CÔNG TY TNHH MTV VPID HÀ NỘI",
+      "percentage": 0.042235491
+    },
+    {
+      "name": "Lê Tùng Sơn",
+      "percentage": 0.0337
+    },
+    {
+      "name": "PHÙNG VĂN QUÝ",
+      "percentage": 0.0305
+    },
+    {
+      "name": "Phạm Hữu Ái",
+      "percentage": 0.017
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "percentage": 0.0105294904
+    },
+    {
+      "name": "Trịnh Việt Cường",
+      "percentage": 0.0094
+    },
+    {
+      "name": "PHẠM TRUNG KIÊN",
+      "percentage": 0.0091
+    },
+    {
+      "name": "Trịnh Thị Hồng Ngọc",
+      "percentage": 0.0076
+    },
+    {
+      "name": "Nguyễn Ngọc Lan",
+      "percentage": 0.0067
+    },
+    {
+      "name": "Lê Hoàng Yến",
+      "percentage": 0.0057
+    },
+    {
+      "name": "Nguyễn Duy Trung",
+      "percentage": 0.0051
+    },
+    {
+      "name": "Nguyễn Anh Đệ",
+      "percentage": 0.005
+    },
+    {
+      "name": "Lê Quốc Minh",
+      "percentage": 0.0048
+    },
+    {
+      "name": "Phạm Hữu Ánh",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Thị Anh Mai",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Phạm Văn Hoanh",
+      "percentage": 0.0042
+    },
+    {
+      "name": "Nguyễn Thị Lâm Hạnh",
+      "percentage": 0.0039
+    },
+    {
+      "name": "Nguyễn Thị Phương Ngọc",
+      "percentage": 0.0032
+    },
+    {
+      "name": "Nguyễn Minh Trường",
+      "percentage": 0.0023687081
+    },
+    {
+      "name": "Văn Thị Bông",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Ngọc Phương Trinh",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Cao Đình Thi",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Thị Hoàn",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn Thùy Linh",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Nguyễn Quang Trung",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Vũ Thị Hồng Trà",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Quách Trọng Đức",
+      "percentage": 0.0009909743
+    },
+    {
+      "name": "Phùng Thị Lan Phương",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Vũ Hà Linh",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Phùng Tiến Nghĩa",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đỗ Ngọc Hoa",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đỗ Minh Hòa",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Công đoàn CTCP Phát triển Hạ tầng Vĩnh Phúc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phùng Thị Vụ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Vũ Anh Tuấn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Huy Tùng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Văn Phụng Trường Sơn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Văn Vinh",
+      "percentage": 9.71e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hoàng Đình Thắng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.12639999
+    },
+    {
+      "name": "Trịnh Việt Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0796
+    },
+    {
+      "name": "Lê Tùng Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0337
+    },
+    {
+      "name": "PHÙNG VĂN QUÝ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0305
+    },
+    {
+      "name": "PHẠM TRUNG KIÊN",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0091
+    },
+    {
+      "name": "Nguyễn Ngọc Lan",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0067
+    },
+    {
+      "name": "Nguyễn Anh Đệ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.005
+    },
+    {
+      "name": "Phạm Hữu Ánh",
+      "position": "Phó Giám đốc Kiểm toán nội bộ/Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Phạm Văn Hoanh",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0042
+    },
+    {
+      "name": "Nguyễn Thị Hoàn",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn Huy Tùng",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0002
+    }
+  ],
+  "created_at": "2025-11-06T02:00:52.371651Z"
+}

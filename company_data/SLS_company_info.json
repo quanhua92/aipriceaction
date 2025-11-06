@@ -1,0 +1,138 @@
+{
+  "symbol": "SLS",
+  "exchange": "HNX",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1636234009500.0,
+  "current_price": 167100.0,
+  "outstanding_shares": 9791945,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần M&iacute;a đường Sơn La (SLS),&nbsp;tiền th&acirc;n l&agrave; Nh&agrave; m&aacute;y Đường Sơn La được th&agrave;nh lập từ năm 1995. Năm 2008, C&ocirc;ng ty&nbsp;chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh hoạt&nbsp;động l&agrave; C&ocirc;ng ty Cổ phần.&nbsp;C&ocirc;ng ty hoạt động kinh doanh ch&iacute;nh trong lĩnh vực chế biến v&agrave; kinh doanh đường, c&aacute;c sản phẩm sau đường (mật rỉ), Trong đ&oacute; hoạt động chế biến v&agrave; kinh doanh đường l&agrave; hoạt động ch&iacute;nh chiếm tỷ trọng lớn nhất trong tổng lợi nhuận của c&ocirc;ng ty (khoảng 88%). C&aacute;c sản phẩm chủ yếu l&agrave; đường A1, A2, B, C v&agrave; mật rỉ được ph&acirc;n phối trực tiếp cho c&aacute;c c&ocirc;ng ty b&aacute;nh kẹo như CTCP B&aacute;nh kẹo Hải h&agrave;, Hải Ch&acirc;u, C&ocirc;ng ty TNHH Kim H&agrave; Việt, C&ocirc;ng ty B&ograve; sữa Mộc Ch&acirc;u... Thị trường ti&ecirc;u thụ sản phẩm ch&iacute;nh của C&ocirc;ng ty l&agrave; H&agrave; Nội, chiếm 75% sản lượng. M&iacute;a đường Sơn La đ&atilde; ho&agrave;n th&agrave;nh dự &aacute;n x&acirc;y dựng d&acirc;y chuyền sản xuất đường RE chất lượng cao, trở th&agrave;nh doanh nghiệp duy nhất c&oacute; khả năng sản xuất đường RE tại miền Bắc v&agrave; cả nước cũng chỉ c&oacute; 5 doanh nghiệp c&oacute; khả năng sản xuất đường RE. Ng&agrave;y 16/10/2012, SLS ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Trần Thị Thái",
+      "percentage": 0.2743132
+    },
+    {
+      "name": "Công ty TNHH Thái Liên",
+      "percentage": 0.15
+    },
+    {
+      "name": "Đặng Việt Anh",
+      "percentage": 0.0984358
+    },
+    {
+      "name": "Tạ Ngọc Hương",
+      "percentage": 0.0289311
+    },
+    {
+      "name": "Trần Thị Liên",
+      "percentage": 0.0147
+    },
+    {
+      "name": "Trần Ngọc Hiếu",
+      "percentage": 0.013453
+    },
+    {
+      "name": "Trần Văn Thành",
+      "percentage": 0.0021532352
+    },
+    {
+      "name": "Lê Quang Nhự",
+      "percentage": 0.001617647
+    },
+    {
+      "name": "Phạm Ngọc Thao",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Văn Dịch",
+      "percentage": 0.00062
+    },
+    {
+      "name": "Nguyễn Anh Tú",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Văn Sở",
+      "percentage": 0.0005329411
+    },
+    {
+      "name": "Đào Viêt Tuấn Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Khương",
+      "percentage": 0.0000944
+    },
+    {
+      "name": "Nguyễn Thị Lương",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Việt Anh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0984358
+    },
+    {
+      "name": "Trần Ngọc Hiếu",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.013453
+    },
+    {
+      "name": "Trần Văn Thành",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0021532352
+    },
+    {
+      "name": "Nguyễn Thị Khương",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000944
+    },
+    {
+      "name": "Thái Văn Hùng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Tài",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Liên",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Bích Nhi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Khắc Chiến",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Minh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trường Chinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:54.858611Z"
+}

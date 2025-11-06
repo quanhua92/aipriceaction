@@ -1,0 +1,153 @@
+{
+  "symbol": "VC7",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1028172309000.0,
+  "current_price": 10700.0,
+  "outstanding_shares": 96090870,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n BGI (VC7), tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty X&acirc;y dựng số 9 (VINANICO) được th&agrave;nh lập năm 1993. Năm 2002, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần.&nbsp;Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave;: X&acirc;y dựng c&aacute;c c&ocirc;ng tr&igrave;nh d&acirc;n dụng, c&ocirc;ng nghiệp, thủy lợi, giao th&ocirc;ng; Lắp đặt thiết bị cơ, điện; X&acirc;y dựng đ&shy;ường d&acirc;y v&agrave; trạm biến &aacute;p điện đến 110KV; Kinh doanh bất động sản...C&aacute;c c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu c&ocirc;ng ty đ&atilde; tham gia bao gồm hệ thống cấp nước S&ocirc;ng Đ&agrave; H&agrave; Nội, nh&agrave; m&aacute;y xi măng Y&ecirc;n B&igrave;nh, chung cư cao cấp Mỹ Đ&igrave;nh H&agrave; Nội, khu nh&agrave; ở tại Từ Li&ecirc;m H&agrave; Nội, Dự &aacute;n Du lịch sinh th&aacute;i Prime - Prime Resorts and Hotels, C&ocirc;ng tr&igrave;nh X&acirc;y lắp Condotel Nha Trang, C&ocirc;ng tr&igrave;nh Phổ Y&ecirc;n - Th&aacute;i Nguy&ecirc;n, C&ocirc;ng tr&igrave;nh 389 Đ&ecirc; La Th&agrave;nh... Ng&agrave;y 28/12/2007, VC7 ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hoàng Trọng Đức",
+      "percentage": 0.40210233
+    },
+    {
+      "name": "Nguyễn Ngọc Tài",
+      "percentage": 0.09256281
+    },
+    {
+      "name": "Nguyễn Đức Hùng",
+      "percentage": 0.06705296
+    },
+    {
+      "name": "Vương Thị Minh Huế",
+      "percentage": 0.0667
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0545
+    },
+    {
+      "name": "Nguyễn Thị Hoài Thu",
+      "percentage": 0.0492
+    },
+    {
+      "name": "Nguyễn Tự Lực",
+      "percentage": 0.0239
+    },
+    {
+      "name": "Nguyễn Văn Thanh",
+      "percentage": 0.0209
+    },
+    {
+      "name": "Nguyễn Thị Thúy Hồng",
+      "percentage": 0.00813333
+    },
+    {
+      "name": "Nguyễn Xuân Thu",
+      "percentage": 0.0061
+    },
+    {
+      "name": "Nguyễn Đình Thiết",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Nguyễn Văn Khắc",
+      "percentage": 0.0025789333
+    },
+    {
+      "name": "Nguyễn Tuấn Dũng",
+      "percentage": 0.002
+    },
+    {
+      "name": "Hà Anh Tuấn",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Đỗ Công Hiển",
+      "percentage": 0.00093333
+    },
+    {
+      "name": "Nguyễn Đức Toàn",
+      "percentage": 0.00088
+    },
+    {
+      "name": "Vũ Viết Độ",
+      "percentage": 0.00042667
+    },
+    {
+      "name": "Nguyễn Thái Hà",
+      "percentage": 0.00006667
+    },
+    {
+      "name": "Nguyễn Thùy Dương",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Phạm Văn Hợp",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hoàng Trọng Đức",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.40210233
+    },
+    {
+      "name": "Nguyễn Đức Hùng",
+      "position": "Phó Tổng Giám đốc/Giám đốc Tài chính",
+      "percentage": 0.06705296
+    },
+    {
+      "name": "Hoàng Anh Tú",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quang Trung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hùng Cường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Khúc Ngọc Thành",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thành Công",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Doãn Dũng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Sơn",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Việt Anh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vương Hải Linh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:07:28.757012Z"
+}

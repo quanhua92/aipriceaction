@@ -1,0 +1,203 @@
+{
+  "symbol": "TCL",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1049513572800.0,
+  "current_price": 34800.0,
+  "outstanding_shares": 30158436,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đại l&yacute; Giao nhận Vận tải Xếp dỡ T&acirc;n Cảng (TCL) được th&agrave;nh lập năm 2007, l&agrave; một đơn vị th&agrave;nh vi&ecirc;n của c&ocirc;ng ty T&acirc;n Cảng S&agrave;i G&ograve;n, hoạt động chủ yếu trong lĩnh vực vận tải đường bộ&nbsp;v&agrave;&nbsp;đường thủy, xếp dỡ containers, dịch vụ đại l&yacute; hải quan v&agrave; khai th&aacute;c depots chứa containers rỗng. Hiện nay, c&ocirc;ng ty đang sử dụng nhiều phương tiện kỹ thuật hiện đại bao gồm: cẩu Kocks, cẩu xếp dỡ RTG6+1; cẩu Mijack3+1; xe n&acirc;ng container rỗng, xe n&acirc;ng container h&agrave;ng tại cả T&acirc;n Cảng Logistic v&agrave; T&acirc;n Cảng Hải Ph&ograve;ng. Ng&agrave;y 24/12/2009, TCL thực hiện giao dịch đầu ti&ecirc;n tr&ecirc;n s&agrave;n chứng kho&aacute;n th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE)</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH MTV Tổng Công ty Tân Cảng Sài Gòn",
+      "percentage": 0.51
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0733201797
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Vietnam Equity Holding",
+      "percentage": 0.0463
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0448
+    },
+    {
+      "name": "Công ty Cổ Phần Container Saigon",
+      "percentage": 0.0111607713
+    },
+    {
+      "name": "Phạm Kim Oanh",
+      "percentage": 0.005331
+    },
+    {
+      "name": "Công ty Cổ phần Tân Cảng V.F",
+      "percentage": 0.003720082
+    },
+    {
+      "name": "Nguyễn Đăng Nghiêm",
+      "percentage": 0.0013112
+    },
+    {
+      "name": "Võ Đắc Thiệu",
+      "percentage": 0.001244
+    },
+    {
+      "name": "Lê Đặng Quỳnh Nghi",
+      "percentage": 0.00093
+    },
+    {
+      "name": "Nguyễn Văn Uấn",
+      "percentage": 0.000867
+    },
+    {
+      "name": "Ngô Minh Thuấn",
+      "percentage": 0.000744
+    },
+    {
+      "name": "Trần Hoài Nam",
+      "percentage": 0.0007061724
+    },
+    {
+      "name": "Phùng Ngọc Minh",
+      "percentage": 0.00068999
+    },
+    {
+      "name": "Đỗ Thanh Trường",
+      "percentage": 0.000689
+    },
+    {
+      "name": "Cao Minh Thụ",
+      "percentage": 0.0005375313
+    },
+    {
+      "name": "Vũ Mạnh Lân",
+      "percentage": 0.000279
+    },
+    {
+      "name": "Võ Thị Xuân Thủy",
+      "percentage": 0.000273
+    },
+    {
+      "name": "Nguyễn Văn Thơ",
+      "percentage": 0.0002666
+    },
+    {
+      "name": "Nguyễn Hữu Đức",
+      "percentage": 0.0002531525
+    },
+    {
+      "name": "Lê Hữu Chí",
+      "percentage": 0.0002100851
+    },
+    {
+      "name": "Nguyễn Xuân Bình",
+      "percentage": 0.000191
+    },
+    {
+      "name": "Đặng Thị Hồng Nhung",
+      "percentage": 0.0001748958
+    },
+    {
+      "name": "Phạm Thị Hồng Thắm",
+      "percentage": 0.000148
+    },
+    {
+      "name": "Lê Hoàng Linh",
+      "percentage": 0.0000243
+    },
+    {
+      "name": "Phạm Trung Nghị",
+      "percentage": 2.7e-6
+    },
+    {
+      "name": "Đào Tuấn Anh",
+      "percentage": 3e-7
+    },
+    {
+      "name": "Bùi Hải Dương",
+      "percentage": 1.9e-7
+    },
+    {
+      "name": "Lê Văn Cường",
+      "percentage": 1e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Võ Đắc Thiệu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.001244
+    },
+    {
+      "name": "Nguyễn Xuân Bình",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000191
+    },
+    {
+      "name": "Lê Hoàng Linh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0000243
+    },
+    {
+      "name": "Đào Tuấn Anh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 3e-7
+    },
+    {
+      "name": "Lê Văn Cường",
+      "position": "Thành viên Hội đồng Quản trị/Giám đốc",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Hoàng Đức Thịnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Châu  Thanh Hải",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Thu Hà",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Phượng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Nhu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Hùng",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thanh Sơn",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Kim Chung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:26.016806Z"
+}

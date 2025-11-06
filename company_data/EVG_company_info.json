@@ -1,0 +1,133 @@
+{
+  "symbol": "EVG",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1780116143720.0,
+  "current_price": 8270.0,
+  "outstanding_shares": 215249836,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Everland (EVG) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đầu tư Everland được th&agrave;nh lập v&agrave;o năm 2009. C&ocirc;ng ty hoạt&nbsp;động&nbsp;trong lĩnh vực kinh doanh&nbsp;kinh doanh nhập khẩu&nbsp;ph&acirc;n phối&nbsp;vật liệu x&acirc;y dựng, thi c&ocirc;ng x&acirc;y dựng&nbsp;ho&agrave;n thiện c&ocirc;ng tr&igrave;nh, kinh doanh&nbsp;đầu tư&nbsp;bất động sản v&agrave;&nbsp;kinh doanh thương mại kh&aacute;c. EVG được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2017. EVG đ&atilde; cung cấp vật tư v&agrave; thi c&ocirc;ng ho&agrave;n thiện nhiều c&ocirc;ng tr&igrave;nh lớn như: Văn ph&ograve;ng l&agrave;m việc của Nh&agrave; m&aacute;y điện tử Samsung tại tỉnh Th&aacute;i Nguy&ecirc;n; T&ograve;a nh&agrave; Lotte Center H&agrave; Nội tại đường Đ&agrave;o Tấn, quận Ba Đ&igrave;nh, H&agrave; Nội; Nh&agrave; ga Quốc tế T2 S&acirc;n bay Nội B&agrave;i, H&agrave; Nội; Trụ sở l&agrave;m việc của Vietcombank tại T&ograve;a nh&agrave; Vietcombank Tower tại số 5 C&ocirc;ng trường M&ecirc; Linh, Phường Bến Ngh&eacute;, Quận 1, TP. HCM; T&ograve;a nh&agrave; Sunsquare L&ecirc; Đức Thọ, H&agrave; Nội. B&ecirc;n cạnh đ&oacute;,&nbsp;C&ocirc;ng ty&nbsp;đ&atilde; tham gia m&ocirc;i giới v&agrave; ph&acirc;n phối sản phẩm cho rất c&aacute;c dự &aacute;n như: Dự &aacute;n Khu đ&ocirc; thị L&ecirc; Trọng Tấn-Geleximco, Dự &aacute;n Khu đ&ocirc; thị Nam An Kh&aacute;nh-Sudico, Dự &aacute;n Khu đ&ocirc; thị Xu&acirc;n Phương-Viglacera, Dự &aacute;n Times City, Dự &aacute;n 19&nbsp;Văn Ph&uacute; Victoria&hellip;</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê Đình Vinh",
+      "percentage": 0.2632713
+    },
+    {
+      "name": "Nguyễn Thúc Cẩn",
+      "percentage": 0.0750001
+    },
+    {
+      "name": "Nguyễn Văn Kha",
+      "percentage": 0.0667
+    },
+    {
+      "name": "Công ty TNHH Dream House Asia",
+      "percentage": 0.0543
+    },
+    {
+      "name": "Lê Thị Thùy Linh",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Cao Thị Huyền My",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Đậu Quốc Dũng",
+      "percentage": 0.048
+    },
+    {
+      "name": "Lê Đình Tuấn",
+      "percentage": 0.030265
+    },
+    {
+      "name": "LÊ THỊ TUYẾN",
+      "percentage": 0.0088
+    },
+    {
+      "name": "Dương Thị Vân Anh",
+      "percentage": 0.0073171
+    },
+    {
+      "name": "Nguyễn Phương Ngân",
+      "percentage": 0.0008333
+    },
+    {
+      "name": "Bùi Nhật Tân",
+      "percentage": 0.000016
+    },
+    {
+      "name": "Nguyễn Hà Nguyên",
+      "percentage": 5.4e-6
+    },
+    {
+      "name": "Vũ Minh Huệ",
+      "percentage": 4.9e-6
+    },
+    {
+      "name": "Ngô Việt Hưng",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Đình Vinh",
+      "position": "Tổng Giám đốc/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2632713
+    },
+    {
+      "name": "Nguyễn Thúc Cẩn",
+      "position": "Phụ trách Công bố thông tin/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0750001
+    },
+    {
+      "name": "Lê Đình Tuấn",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.030265
+    },
+    {
+      "name": "LÊ THỊ TUYẾN",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0088
+    },
+    {
+      "name": "Dương Thị Vân Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0073171
+    },
+    {
+      "name": "Nguyễn Hà Nguyên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 5.4e-6
+    },
+    {
+      "name": "Vũ Minh Huệ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 4.9e-6
+    },
+    {
+      "name": "Nguyễn Ngọc Bích",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Lê",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Thị Hòa",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trọng Phong",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:26.176981Z"
+}

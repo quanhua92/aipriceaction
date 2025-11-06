@@ -1,0 +1,163 @@
+{
+  "symbol": "DSN",
+  "exchange": "HOSE",
+  "industry": "Du lịch & Giải trí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 530444095100.0,
+  "current_price": 43900.0,
+  "outstanding_shares": 12083009,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần C&ocirc;ng vi&ecirc;n nước Đầm Sen (DSN) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH C&ocirc;ng vi&ecirc;n Nước Đầm Sen&nbsp;được th&agrave;nh lập v&agrave; đi v&agrave;o hoạt động&nbsp;v&agrave;o năm&nbsp;1998. C&ocirc;ng ty chủ yếu cung cấp dịch vụ giải tr&iacute;, vui chơi thể thao dưới nước.&nbsp;Từ năm&nbsp;2003, DSN chuyển sang hoạt động theo m&ocirc; h&igrave;nh C&ocirc;ng ty cổ phần. C&ocirc;ng ty được xem l&agrave; một trong những c&ocirc;ng ty đầu ti&ecirc;n cung cấp dịch vụ vui chơi giải tr&iacute; v&agrave; thể thao dưới nước tại Việt Nam theo ti&ecirc;u chuẩn Ch&acirc;u &Acirc;u. Hiện tại, DSN đang quản l&yacute; v&agrave; điều h&agrave;nh C&ocirc;ng vi&ecirc;n Nước Đầm Sen v&agrave; C&ocirc;ng vi&ecirc;n Khủng long.&nbsp;DSN được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n th&agrave;nh phố Hồ Ch&iacute; Minh&nbsp;(HOSE) từ năm 2010.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Dịch vụ Du lịch Phú Thọ",
+      "percentage": 0.3354
+    },
+    {
+      "name": "Kenji Yabe",
+      "percentage": 0.1063
+    },
+    {
+      "name": "AFC Vietnam Fund",
+      "percentage": 0.047
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "percentage": 0.0059
+    },
+    {
+      "name": "Nguyễn Chánh Lộc",
+      "percentage": 0.0042953846
+    },
+    {
+      "name": "Phạm Duy Hưng",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Đặng Huy Huân",
+      "percentage": 0.0032676923
+    },
+    {
+      "name": "Lê Thị Mỹ Sương",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Đặng Ngọc Thiên Tử",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Thái Uyển Phấn",
+      "percentage": 0.0016553846
+    },
+    {
+      "name": "Đặng Ngọc Nghĩa",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Quang Trường",
+      "percentage": 0.0013018
+    },
+    {
+      "name": "Vũ Ngọc Tuấn",
+      "percentage": 0.0006248
+    },
+    {
+      "name": "Đặng Ngọc Bảo Quyên",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đặng Ngọc Niệm Thư",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Hoàng Tố Nga",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Quốc Long",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Thị Châu Dân",
+      "percentage": 0.000089
+    },
+    {
+      "name": "Phạm Ngọc Lệ",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Bùi Thị Kim Oanh",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Duy Hưng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Đặng Ngọc Thiên Tử",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Đặng Ngọc Nghĩa",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Quang Trường",
+      "position": "Phó Tổng Giám đốc/Người phụ trách quản trị công ty",
+      "percentage": 0.0013018
+    },
+    {
+      "name": "Vũ Ngọc Tuấn",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0006248
+    },
+    {
+      "name": "Trần Thị Châu Dân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000089
+    },
+    {
+      "name": "Nguyễn Quốc Anh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Khắc Lân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Việt Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Kim Tuyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Nguyên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phương Xuân Thụy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Lan Hương",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:54.736255Z"
+}

@@ -1,0 +1,267 @@
+{
+  "symbol": "NKG",
+  "exchange": "HOSE",
+  "industry": "Kim loại",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 7586326432950.0,
+  "current_price": 16950.0,
+  "outstanding_shares": 447570881,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Th&eacute;p Nam Kim (NKG)&nbsp;được th&agrave;nh lập năm 2002 với vốn điều lệ ban đầu l&agrave; 60 tỷ đồng. Hoạt động sản xuất kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; sản xuất c&aacute;c loại t&ocirc;n th&eacute;p như t&ocirc;n mạ kẽm, t&ocirc;n mạ m&agrave;u v&agrave; kinh doanh sắt th&eacute;p c&aacute;c loại. NKH hiện quản l&yacute; vận h&agrave;nh 04 Nh&agrave; m&aacute;y với tổng c&ocirc;ng suất l&agrave; 1,2 triệu tấn sản phẩm&nbsp;mạ cuối c&ugrave;ng/năm.&nbsp;C&ocirc;ng ty&nbsp;vẫn duy tr&igrave; với 17.4% thị phần t&ocirc;n mạ. NKG l&agrave; Top 3 doanh nghiệp xuất khẩu vật liệu x&acirc;y dựng uy t&iacute;n tại Việt Nam. R&amp;D th&agrave;nh c&ocirc;ng sản phẩm t&ocirc;n mạ kẽm Z600, độ d&agrave;y 3mm duy nhất được sản xuất tại Việt Nam. NKG được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2011.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hồ Minh Quang",
+      "percentage": 0.1587
+    },
+    {
+      "name": "Công ty TNHH Thép Trường Giang",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Nguyễn Thị Nhân",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.049156
+    },
+    {
+      "name": "Võ Hoàng Vũ",
+      "percentage": 0.0356
+    },
+    {
+      "name": "Unicoh Specialty Chemicals Co., Ltd.",
+      "percentage": 0.0355
+    },
+    {
+      "name": "Nguyễn Hữu Hạnh",
+      "percentage": 0.0328
+    },
+    {
+      "name": "Phạm Văn Trung",
+      "percentage": 0.0273299263
+    },
+    {
+      "name": "Đinh Hữu Thịnh",
+      "percentage": 0.026643742
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0258
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Vietcap",
+      "percentage": 0.0231
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0224
+    },
+    {
+      "name": "Công ty TNHH Manulife (Việt Nam) (Manulife)",
+      "percentage": 0.0163
+    },
+    {
+      "name": "Hồ Tấn Thắng",
+      "percentage": 0.0153160963
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0152
+    },
+    {
+      "name": "La Văn Tốt",
+      "percentage": 0.0077
+    },
+    {
+      "name": "Seahedge Philippines Fund",
+      "percentage": 0.0077
+    },
+    {
+      "name": "Trần Ngọc Diệu",
+      "percentage": 0.0053
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.004121
+    },
+    {
+      "name": "Idris Ltd",
+      "percentage": 0.00378
+    },
+    {
+      "name": "Nguyễn Hữu Kinh Luân",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Lương Thanh Bình",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Quốc Phong",
+      "percentage": 0.0022
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Nguyễn Vinh An",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Trọng Nghĩa",
+      "percentage": 0.0011603103
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00110545
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Liên",
+      "percentage": 0.001
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.00077
+    },
+    {
+      "name": "Nguyễn Thị Huệ",
+      "percentage": 0.0007542017
+    },
+    {
+      "name": "Quảng Trọng Lăng",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phan Thị Vân Anh",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trương Thế Thiện",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Võ Thị Vui",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Vũ Đình Hân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Minh Hùng",
+      "percentage": 0.00018232
+    },
+    {
+      "name": "Nguyễn Ngọc Ý Nhi",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Vũ Thị Huyền",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Minh Hải",
+      "percentage": 0.000044
+    },
+    {
+      "name": "Nguyễn Thị Bích Nhi",
+      "percentage": 0.00003646
+    },
+    {
+      "name": "Lê Nhật Tân",
+      "percentage": 0.0000182
+    },
+    {
+      "name": "Đoàn Đình Thọ",
+      "percentage": 8.8e-6
+    },
+    {
+      "name": "Nguyễn Bá Bắc",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Nông Bích Hiện",
+      "percentage": 2.2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Minh Quang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1587
+    },
+    {
+      "name": "Võ Hoàng Vũ",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0356
+    },
+    {
+      "name": "Trần Ngọc Diệu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0053
+    },
+    {
+      "name": "Nguyễn Hữu Kinh Luân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Nguyễn Vinh An",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Liên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001
+    },
+    {
+      "name": "Quảng Trọng Lăng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Võ Thị Vui",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Ngọc Ý Nhi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Vũ Thị Huyền",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Bích Nhi",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00003646
+    },
+    {
+      "name": "Lê Nhật Tân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000182
+    },
+    {
+      "name": "Võ Thời",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:06.350588Z"
+}

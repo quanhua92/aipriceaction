@@ -1,0 +1,309 @@
+{
+  "symbol": "VIC",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 795647703228000.0,
+  "current_price": 206500.0,
+  "outstanding_shares": 3853015512,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tập đo&agrave;n Vingroup - C&ocirc;ng ty Cổ phần (VIC) c&oacute; tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty Cổ phần Thương mại Tổng hợp Việt Nam được th&agrave;nh lập v&agrave;o năm 2002. Tập đo&agrave;n hoạt động trong lĩnh vực bất động sản, du lịch nghỉ dưỡng - vui chơi giải tr&iacute;, b&aacute;n lẻ, c&ocirc;ng nghiệp v&agrave; hạ tầng x&atilde; hội.&nbsp;VIC&nbsp;đ&atilde;&nbsp;đưa v&agrave;o vận h&agrave;nh 27&nbsp;dự &aacute;n với&nbsp;gần 97,200 căn hộ, biệt thự, nh&agrave; phố thương mại&nbsp;được b&agrave;n giao. Về bất động sản b&aacute;n lẻ, Tập đo&agrave;n&nbsp;đ&atilde; ph&aacute;t triển, sở hữu v&agrave; vận h&agrave;nh 80&nbsp;trung t&acirc;m thương mại. Trong lĩnh vực sản xuất &ocirc; t&ocirc;,&nbsp;VinFast l&agrave; thương hiệu &ocirc; t&ocirc; đầu ti&ecirc;n của Việt Nam&nbsp;đạt đẳng cấp chất lượng v&agrave; mọi ti&ecirc;u chuẩn để xuất khẩu sang Hoa Kỳ.&nbsp;Ngo&agrave;i ra, VIC c&ograve;n tham gia đầu tư ph&aacute;t triển hạ tầng x&atilde; hội trong c&aacute;c lĩnh vực y tế, gi&aacute;o dục. VIC được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 09/2007.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Tập Đoàn Đầu Tư Việt Nam",
+      "percentage": 0.3249
+    },
+    {
+      "name": "Phạm Nhật Vượng",
+      "percentage": 0.1004
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư và Phát triển Đường sắt Cao tốc VINSPEED",
+      "percentage": 0.0977
+    },
+    {
+      "name": "Phạm Thu Hương",
+      "percentage": 0.044
+    },
+    {
+      "name": "Công ty Cổ phần Năng lượng Vinenergo",
+      "percentage": 0.0427
+    },
+    {
+      "name": "Công ty Cổ phần Dịch vụ Thương mại Tổng hợp Wincommerce",
+      "percentage": 0.029942
+    },
+    {
+      "name": "Phạm Thúy Hằng",
+      "percentage": 0.02985
+    },
+    {
+      "name": "Công ty CP Đầu Tư Và Phát Triển Địa Ốc Thành Phố Hoàng Gia",
+      "percentage": 0.0238
+    },
+    {
+      "name": "Công ty Cổ phần Vinpearl",
+      "percentage": 0.0226
+    },
+    {
+      "name": "KEB Hana Bank, Co., Ltd.",
+      "percentage": 0.0164
+    },
+    {
+      "name": "Công ty Cổ phần Di Chuyển Xanh Và Thông Minh GSM",
+      "percentage": 0.0133
+    },
+    {
+      "name": "Phan Thu Hương",
+      "percentage": 0.0125279
+    },
+    {
+      "name": "Công ty TNHH Bất Động Sản Hoa Phượng",
+      "percentage": 0.0076
+    },
+    {
+      "name": "Công ty TNHH MTV Vinpearl Hội An",
+      "percentage": 0.0073
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0051
+    },
+    {
+      "name": "Công ty Cổ Phần Bất Động Sản Xavinco",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Phạm Hồng Linh",
+      "percentage": 0.00362
+    },
+    {
+      "name": "Nguyễn Quốc Thành",
+      "percentage": 0.003344
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.00236257
+    },
+    {
+      "name": "Công ty TNHH Bảo hiểm Nhân thọ Prudential Việt Nam",
+      "percentage": 0.00203946
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Xây Dựng Đại An",
+      "percentage": 0.0017898107
+    },
+    {
+      "name": "Phạm Thị Tuyết Mai",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Lê Minh Ngọc",
+      "percentage": 0.0006526
+    },
+    {
+      "name": "Phạm Văn Khương",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Phan Quang Đăng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Diệu Linh",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Phạm Minh Vũ",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Dương Thị Hoàn",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Nguyễn Việt Quang",
+      "percentage": 0.00018
+    },
+    {
+      "name": "PCA International Funds SPC",
+      "percentage": 0.00010834
+    },
+    {
+      "name": "Đặng Thanh Thủy",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ Đầu tư Bất động sản Techcom Việt Nam",
+      "percentage": 0.00007687
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0000626838
+    },
+    {
+      "name": "HOÀNG BẠCH DƯƠNG",
+      "percentage": 0.0000540536
+    },
+    {
+      "name": "Hoàng Văn Sơn",
+      "percentage": 0.000045705
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00004454
+    },
+    {
+      "name": "Mai Thu Thủy",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thị Thu Hiền",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thế Anh",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Mai Hương Nội",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Bế Thị Thuần",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Trọng Hiền",
+      "percentage": 0.0000191449
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.000014319
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 9.17e-6
+    },
+    {
+      "name": "Phạm Thy Thơ",
+      "percentage": 8.5559e-6
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "percentage": 2.8704e-6
+    },
+    {
+      "name": "Lê Thị Thu Thủy",
+      "percentage": 2.1272e-6
+    },
+    {
+      "name": "Phùng Thu Hằng",
+      "percentage": 2e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Nhật Vượng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1004
+    },
+    {
+      "name": "Phạm Thu Hương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.044
+    },
+    {
+      "name": "Phạm Thúy Hằng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.02985
+    },
+    {
+      "name": "Phạm Văn Khương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Diệu Linh",
+      "position": "Phụ trách Công bố thông tin/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Nguyễn Việt Quang",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Dương Thị Hoàn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Mai Hương Nội",
+      "position": "Phó Tổng Giám đốc Thường trực",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thế Anh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thị Thu Hiền",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Chin Michael Jeawuk",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Lan Phương",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thanh Mai",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ahmad Adil",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ronaldo Dy-Liacco Ibasco",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Park Woncheol",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hồng Mai",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Hồng Vân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thị Nguyệt",
+      "position": "Người phụ trách quản trị công ty/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:13.829361Z"
+}

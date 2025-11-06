@@ -1,0 +1,111 @@
+{
+  "symbol": "VPG",
+  "exchange": "HOSE",
+  "industry": "Khai khoáng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 574702381500.0,
+  "current_price": 6500.0,
+  "outstanding_shares": 88415751,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Thương mại Xuất nhập khẩu Việt Ph&aacute;t (VPG), tiền th&acirc;n l&agrave; một C&ocirc;ng ty dịch vụ vận tải chuy&ecirc;n vận tải nội địa, được th&agrave;nh lập năm 2008 do 03 cổ đ&ocirc;ng s&aacute;ng lập với số vốn điều lệ 25 tỷ đồng. Hoạt động kinh doanh ch&iacute;nh của c&ocirc;ng ty l&agrave; kinh doanh, xuất nhập khẩu v&agrave; cung cấp quặng sắt v&agrave; than cho c&aacute;c nh&agrave; m&aacute;y th&eacute;p v&agrave; nh&agrave; m&aacute;y nhiệt điện, c&ugrave;ng với một số dịch vụ như vận tải, kho b&atilde;i,&hellip;C&ocirc;ng ty l&agrave; nh&agrave; cung cấp nguy&ecirc;n liệu h&agrave;ng đầu của nhiều nh&agrave; m&aacute;y th&eacute;p lớn như H&ograve;a Ph&aacute;t, Gang th&eacute;p Th&aacute;i Nguy&ecirc;n, DONGBU, SAMINA,.. v&agrave; l&agrave; đối t&aacute;c cung cấp than cho c&aacute;c nh&agrave; m&aacute;y nhiệt điện của EVN v&agrave; PVN.&nbsp;C&ocirc;ng ty đ&atilde; mở rộng thị trường nhập khẩu than cốc, quặng sang Nhật Bản, Thụy Sỹ, Singapore với một số đối t&aacute;c như: C&ocirc;ng ty Daichu Corporation, C&ocirc;ng ty Glencore International AG, C&ocirc;ng ty Noble Resources International PTE LTD... Cổ phiếu VPG được giao dịch tại Sở Giao dịch Chứng kho&aacute;n th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE)&nbsp;từ năm 2018</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Văn Bình",
+      "percentage": 0.2579
+    },
+    {
+      "name": "Nguyễn Văn Dũng",
+      "percentage": 0.0472
+    },
+    {
+      "name": "Lê Thị Thanh Lệ",
+      "percentage": 0.0453
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "percentage": 0.0337
+    },
+    {
+      "name": "Mai Quang Hợp",
+      "percentage": 0.01
+    },
+    {
+      "name": "Trần Thị Hường",
+      "percentage": 0.005
+    },
+    {
+      "name": "Ngô Thị Minh Lụa",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Lê Đình Điều",
+      "percentage": 0.0011936
+    },
+    {
+      "name": "Nguyễn Thị Giáng Hương",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Lương Việt Liên",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Thị Mai Hoa",
+      "percentage": 0.0000319
+    },
+    {
+      "name": "Nguyễn Xuân Trường",
+      "percentage": 4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Bình",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2579
+    },
+    {
+      "name": "Lê Thị Thanh Lệ",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0453
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0337
+    },
+    {
+      "name": "Nguyễn Thị Mai Hoa",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000319
+    },
+    {
+      "name": "Phạm Thị Thu Trang",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Khôi",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Trung Kiên",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Vân",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Khải",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:56.787291Z"
+}

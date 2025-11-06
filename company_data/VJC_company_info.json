@@ -1,0 +1,231 @@
+{
+  "symbol": "VJC",
+  "exchange": "HOSE",
+  "industry": "Du lịch & Giải trí",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 109152291123000.0,
+  "current_price": 184500.0,
+  "outstanding_shares": 591611334,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">C&ocirc;ng ty Cổ phần H&agrave;ng kh&ocirc;ng Vietjet (VJC) l&agrave; h&atilde;ng h&agrave;ng kh&ocirc;ng tư nh&acirc;n đầu ti&ecirc;n của Việt Nam được th&agrave;nh lập năm 2007 với 3 cổ đ&ocirc;ng ch&iacute;nh l&agrave; Tập&nbsp;đo&agrave;n T&amp;C, Sovico Holdings v&agrave; HD&nbsp;Bank. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực vận tải h&agrave;ng kh&ocirc;ng.&nbsp;Vietjet c&oacute; mạng lưới đường bay rộng khắp tới c&aacute;c khu vực Đ&ocirc;ng Nam &Aacute; v&agrave; Đ&ocirc;ng Bắc &Aacute; với 125 đường bay nội địa v&agrave; quốc tế.&nbsp;VJC trở th&agrave;nh h&atilde;ng h&agrave;ng kh&ocirc;ng đầu ti&ecirc;n c&oacute; đường bay kết nối Việt Nam với 5 th&agrave;nh phố lớn nhất của Australia. H&atilde;ng cũng l&agrave; h&atilde;ng bay khai th&aacute;c nhiều đường bay nhất giữa Việt Nam v&agrave; Ấn Độ. VJC được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 02/2017.</p>\r\n\r\n<p class=\"MsoNormal\"><!--?xml:namespace prefix = \"o\" ns = \"urn:schemas-microsoft-com:office:office\" /--><o:p></o:p>&nbsp;</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Đầu Tư Hướng Dương Sunny",
+      "percentage": 0.2616
+    },
+    {
+      "name": "Nguyễn Thị Phương Thảo",
+      "percentage": 0.0802
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Sovico",
+      "percentage": 0.0759
+    },
+    {
+      "name": "Công ty Cổ phần Sovico",
+      "percentage": 0.0759
+    },
+    {
+      "name": "Công Ty Cổ Phần Aviation",
+      "percentage": 0.0592
+    },
+    {
+      "name": "Government Of Singapore",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Dynamic & Development",
+      "percentage": 0.0423
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Phát Triển Thành phố Hồ Chí Minh",
+      "percentage": 0.0101
+    },
+    {
+      "name": "Nguyễn Thanh Hùng",
+      "percentage": 0.00989284
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Bắc Hà",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Lưu Đức Khánh",
+      "percentage": 0.00166991
+    },
+    {
+      "name": "Nguyễn Cảnh Sơn",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Đức Thịnh",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đinh Việt Phương",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thanh Hà",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đoàn Thu Hương",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đỗ Kim Thịnh",
+      "percentage": 0.00037
+    },
+    {
+      "name": "Trần Hoài Nam",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Thúy Bình",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Phạm Minh Hà",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Nguyễn Thị Bảo Anh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Đức Tâm",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Tô Việt Thắng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Chu Việt Cường",
+      "percentage": 0.00012555
+    },
+    {
+      "name": "Hoàng Mạnh Hà",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Phước Hùng Anh Victor",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00009535
+    },
+    {
+      "name": "Phạm Văn Đẩu",
+      "percentage": 0.000091
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00005048
+    },
+    {
+      "name": "Đỗ Xuân Quang",
+      "percentage": 0.0000374
+    },
+    {
+      "name": "Lê Việt Anh",
+      "percentage": 3.4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Phương Thảo",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0802
+    },
+    {
+      "name": "Nguyễn Thanh Hùng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00989284
+    },
+    {
+      "name": "Lưu Đức Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00166991
+    },
+    {
+      "name": "Nguyễn Đức Thịnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đinh Việt Phương",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thanh Hà",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Hoài Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thị Thúy Bình",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Tô Việt Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Chu Việt Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00012555
+    },
+    {
+      "name": "Hoàng Mạnh Hà",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Xuân Quang",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000374
+    },
+    {
+      "name": "Phạm Ngọc Thoa",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thế Phúc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Donal Joseph Boylan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Ngọc Yến Phương",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:28.727423Z"
+}

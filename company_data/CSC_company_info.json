@@ -1,0 +1,227 @@
+{
+  "symbol": "CSC",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 781836016000.0,
+  "current_price": 19000.0,
+  "outstanding_shares": 41149264,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n COTANA (CSC) c&oacute;&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH X&acirc;y dựng Th&agrave;nh Nam được th&agrave;nh lập ng&agrave;y 01/06/1993.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực đầu tư dự &aacute;n, kinh doanh bất động sản với địa b&agrave;n kinh doanh tại cả 3 miền tr&ecirc;n to&agrave;n quốc. C&aacute;c dự &aacute;n đ&atilde; ho&agrave;n th&agrave;nh của c&ocirc;ng ty bao gồm: T&ograve;a nh&agrave; Hud Tower - L&ecirc; Văn Lương, H&agrave; Nội với tổng đầu tư 160 tỷ đồng; Khu đ&ocirc; thị mới Đặng X&aacute;, Gia L&acirc;m, H&agrave; Nội với tổng gi&aacute; trị 100 tỷ đồng; K&yacute; t&uacute;c x&aacute; Trường Cao đăng x&acirc;y dựng số 1, H&agrave; Đ&ocirc;ng với tổng gi&aacute; trị dự &aacute;n 23 tỷ đồng...</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Đào Ngọc Thanh",
+      "percentage": 0.29409999
+    },
+    {
+      "name": "Huỳnh Thị Mai Dung",
+      "percentage": 0.1027
+    },
+    {
+      "name": "Đào Thu Thủy",
+      "percentage": 0.0522
+    },
+    {
+      "name": "Nguyễn Thị Hồng Cúc",
+      "percentage": 0.0428
+    },
+    {
+      "name": "TRẦN VĂN NĂM",
+      "percentage": 0.0386
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Châu Á - Thái Bình Dương",
+      "percentage": 0.03145
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán EVS",
+      "percentage": 0.02263
+    },
+    {
+      "name": "Nguyễn Văn Kiên",
+      "percentage": 0.01987
+    },
+    {
+      "name": "Vũ Thị Luyến",
+      "percentage": 0.018414
+    },
+    {
+      "name": "Đoàn Văn Tuấn",
+      "percentage": 0.013491
+    },
+    {
+      "name": "Đinh Thị Minh Hằng",
+      "percentage": 0.0127
+    },
+    {
+      "name": "Phạm Cao Sơn",
+      "percentage": 0.007902
+    },
+    {
+      "name": "Nguyễn Đỗ Đức Lâm",
+      "percentage": 0.007451
+    },
+    {
+      "name": "Đỗ Văn Bình",
+      "percentage": 0.007349
+    },
+    {
+      "name": "Ngô Văn Minh",
+      "percentage": 0.004706
+    },
+    {
+      "name": "Nguyễn Văn Trang",
+      "percentage": 0.004642
+    },
+    {
+      "name": "Hán Công Khanh",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Hoàng Việt Hùng",
+      "percentage": 0.0016008
+    },
+    {
+      "name": "Nguyễn Mạnh Lân",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Đinh Thị Ngọc Minh",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Đinh Văn Nghiệp",
+      "percentage": 0.00078
+    },
+    {
+      "name": "Nguyễn Đỗ Lăng",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "percentage": 0.000597
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Diệp",
+      "percentage": 0.0005
+    },
+    {
+      "name": "TRẦN TRỌNG ĐẠI",
+      "percentage": 0.000496
+    },
+    {
+      "name": "Bùi Minh Trường",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Thái Bình",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Thị Hải Yến",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Đình Ngọc",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Bùi Đình Toản",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Quang Quyền",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Ngô Nguyên Hải",
+      "percentage": 0.0001506
+    },
+    {
+      "name": "Phạm Thị Thu",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Nguyễn Hải Yến",
+      "percentage": 0.000033
+    },
+    {
+      "name": "Trần Hoàng Hiệp",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán MB",
+      "percentage": 4e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đào Ngọc Thanh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.29409999
+    },
+    {
+      "name": "Đào Thu Thủy",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0522
+    },
+    {
+      "name": "TRẦN VĂN NĂM",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0386
+    },
+    {
+      "name": "Đoàn Văn Tuấn",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.013491
+    },
+    {
+      "name": "Đinh Thị Minh Hằng",
+      "position": "Giám đốc Tài chính/Phó Tổng Giám đốc",
+      "percentage": 0.0127
+    },
+    {
+      "name": "Hán Công Khanh",
+      "position": "Trưởng Ban kiểm soát/Trưởng phòng",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Nguyễn Đỗ Lăng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000597
+    },
+    {
+      "name": "TRẦN TRỌNG ĐẠI",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000496
+    },
+    {
+      "name": "Trần Quang Quyền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hải Yến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000033
+    },
+    {
+      "name": "Lê Đình Đạo",
+      "position": "Phó Tổng Giám đốc Đầu tư",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Thanh Lam",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:26.401122Z"
+}

@@ -1,0 +1,216 @@
+{
+  "symbol": "PPH",
+  "exchange": "UPCOM",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2128120393500.0,
+  "current_price": 28500.0,
+  "outstanding_shares": 74670891,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Được th&agrave;nh lập v&agrave;o năm 1964, Tổng C&ocirc;ng ty Cổ Phần Phong Ph&uacute; (PPH), một th&agrave;nh vi&ecirc;n của Tập đo&agrave;n Dệt may Việt Nam, l&agrave; một trong những doanh nghiệp h&agrave;ng đầu trong ng&agrave;nh c&ocirc;ng nghiệp dệt may Việt Nam. Hoạt động kinh doanh chủ yếu của c&ocirc;ng ty l&agrave;: sản xuất v&agrave; kinh doanh c&aacute;c sản phẩm ng&agrave;nh dệt may, (ii) hoạt động kinh doanh trong lĩnh vực bất động sản v&agrave; đầu tư t&agrave;i ch&iacute;nh. L&agrave; một trong những c&ocirc;ng ty sản xuất sợi h&agrave;ng đầu, PPH đ&atilde; trở th&agrave;nh nh&agrave; cung cấp chỉ kh&acirc;u cao cấp cho Coats Group (Tập đo&agrave;n nổi tiếng từ Anh), v&agrave; c&aacute;c th&agrave;nh vi&ecirc;n kh&aacute;c của Vinatex. Với một d&acirc;y chuyền kh&eacute;p k&iacute;n: k&eacute;o sợi - dệt - nhuộm - ho&agrave;n tất, c&aacute;c sản phẩm của PPH đ&atilde; khẳng định vị thế của m&igrave;nh tr&ecirc;n thị trường trong nước v&agrave; quốc tế. Hiện nay, sản phẩm dệt may của c&ocirc;ng ty chiếm lĩnh 40% thị trường trong nước, với c&aacute;c thương hiệu ti&ecirc;u biểu như Mollis, MACIO, Hải V&acirc;n, v&agrave; Văn Cầu. PPH được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 08/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Dệt May Việt Nam",
+      "percentage": 0.501
+    },
+    {
+      "name": "Công ty Cổ Phần Thương Mại Đầu Tư Bất Động Sản Dương Trần",
+      "percentage": 0.0861
+    },
+    {
+      "name": "Công ty CP Phát Triển Đầu Tư An Tâm",
+      "percentage": 0.086
+    },
+    {
+      "name": "Dương Thị Bảo Châu",
+      "percentage": 0.0335
+    },
+    {
+      "name": "Trần Thị Trầm Thanh",
+      "percentage": 0.0107
+    },
+    {
+      "name": "Phạm Minh Hương",
+      "percentage": 0.0081
+    },
+    {
+      "name": "Phạm Xuân Trình",
+      "percentage": 0.0065
+    },
+    {
+      "name": "Trần Quang Sáng",
+      "percentage": 0.0063
+    },
+    {
+      "name": "Bùi Thị Thu",
+      "percentage": 0.00325062
+    },
+    {
+      "name": "Trần Quang Nghị",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Dương  Khuê",
+      "percentage": 0.0022297
+    },
+    {
+      "name": "Trần Ngọc Nga",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Trương Thị Ngọc Phượng",
+      "percentage": 0.0012008
+    },
+    {
+      "name": "Phan Đăng Khoa",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Phan Kim Hằng",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Văn Nhiệm",
+      "percentage": 0.00093745
+    },
+    {
+      "name": "Lý Anh Tài",
+      "percentage": 0.0008371
+    },
+    {
+      "name": "Phạm Thị Sâm",
+      "percentage": 0.00080353
+    },
+    {
+      "name": "Đặng Thanh Phước",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Lệ",
+      "percentage": 0.00055346
+    },
+    {
+      "name": "Phạm Phú Chung",
+      "percentage": 0.00039666
+    },
+    {
+      "name": "Lê Thị Hoàng Trang",
+      "percentage": 0.00034029
+    },
+    {
+      "name": "Trần Liên Hữu",
+      "percentage": 0.00010126
+    },
+    {
+      "name": "Đinh Hồng Tiến",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Tú Anh",
+      "percentage": 0.00005759
+    },
+    {
+      "name": "Vũ Thị Thùy Dương",
+      "percentage": 0.00004018
+    },
+    {
+      "name": "Võ Đình Hùng",
+      "percentage": 0.00003
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Minh Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0081
+    },
+    {
+      "name": "Phạm Xuân Trình",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0065
+    },
+    {
+      "name": "Bùi Thị Thu",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00325062
+    },
+    {
+      "name": "Trần Quang Nghị",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Dương  Khuê",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0022297
+    },
+    {
+      "name": "Trần Ngọc Nga",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Trương Thị Ngọc Phượng",
+      "position": "Kế toán trưởng/Giám đốc Tài chính",
+      "percentage": 0.0012008
+    },
+    {
+      "name": "Phan Kim Hằng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Văn Nhiệm",
+      "position": "Giám đốc điều hành",
+      "percentage": 0.00093745
+    },
+    {
+      "name": "Lý Anh Tài",
+      "position": "Giám đốc điều hành",
+      "percentage": 0.0008371
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Lệ",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00055346
+    },
+    {
+      "name": "Trần Liên Hữu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00010126
+    },
+    {
+      "name": "Đinh Hồng Tiến",
+      "position": "Giám đốc điều hành",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thị Thùy Dương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00004018
+    },
+    {
+      "name": "Lê Thị Ánh Ngọc",
+      "position": "Giám đốc điều hành",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn  Kiên",
+      "position": "Giám đốc điều hành",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Diệu Thúy",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Diệu Thúy",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:32.902871Z"
+}

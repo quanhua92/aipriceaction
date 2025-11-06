@@ -1,0 +1,387 @@
+{
+  "symbol": "TCB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 241640798117400.0,
+  "current_price": 34100.0,
+  "outstanding_shares": 7086240414,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Kỹ thương Việt Nam (TCB) được th&agrave;nh lập v&agrave;o năm 1993. Ng&acirc;n h&agrave;ng hoạt động trong lĩnh vực huy động v&agrave; kinh doanh vốn, v&agrave; cung cấp c&aacute;c dịch vụ t&agrave;i ch&iacute;nh li&ecirc;n quan. Techcombank trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ năm 2007. Năm 2024, so với c&ugrave;ng kỳ, Bi&ecirc;n l&atilde;i thuần (NIM) ở mức 4.21%, tăng 0.19%. Tỷ lệ nợ xấu ở mức 1.12%, giảm 0.03%. Tỷ lệ bao phủ nợ xấu ở mức 113.94%, tăng 11.79%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 21,5 ngh&igrave;n tỷ đồng, tăng 19.55%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 15.61%, tăng 0.77%. Ng&agrave;y 04/06/2018, TCB ch&iacute;nh thức giao dịch tr&ecirc;n Sở giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn Masan",
+      "percentage": 0.1484293
+    },
+    {
+      "name": "Công ty TNHH Mapleleaf",
+      "percentage": 0.04956
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thủy",
+      "percentage": 0.0492948
+    },
+    {
+      "name": "Hồ Anh Minh",
+      "percentage": 0.0487893
+    },
+    {
+      "name": "Hồ Thủy Anh",
+      "percentage": 0.0487893
+    },
+    {
+      "name": "Vesta Vn Investments B.V.",
+      "percentage": 0.04358
+    },
+    {
+      "name": "Cog Investments I B.V.",
+      "percentage": 0.03583
+    },
+    {
+      "name": "Nguyễn Phương Hoa",
+      "percentage": 0.0215065
+    },
+    {
+      "name": "Hồ Minh Anh",
+      "percentage": 0.0203999
+    },
+    {
+      "name": "Nguyễn Hương Liên",
+      "percentage": 0.0197121
+    },
+    {
+      "name": "Morgan Stanley And Co. International Plc",
+      "percentage": 0.01452
+    },
+    {
+      "name": "Hồ Hùng Anh",
+      "percentage": 0.0111282
+    },
+    {
+      "name": "Government Of Singapore",
+      "percentage": 0.01006
+    },
+    {
+      "name": "Nguyễn Thiều Quang",
+      "percentage": 0.0085653
+    },
+    {
+      "name": "Nguyễn Cảnh Sơn Tùng",
+      "percentage": 0.00596
+    },
+    {
+      "name": "Nguyễn Cảnh Sơn",
+      "percentage": 0.005097
+    },
+    {
+      "name": "Phạm Hiền Trang",
+      "percentage": 0.003104
+    },
+    {
+      "name": "Nguyễn Đăng Quang",
+      "percentage": 0.002662
+    },
+    {
+      "name": "Nguyễn Lê Quốc Anh",
+      "percentage": 0.001743
+    },
+    {
+      "name": "Trịnh Bằng",
+      "percentage": 0.001712
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.0013900701
+    },
+    {
+      "name": "Phùng Quang Hưng",
+      "percentage": 0.000878
+    },
+    {
+      "name": "Nguyễn Thu Hiền",
+      "percentage": 0.00087
+    },
+    {
+      "name": "Nguyễn Đăng Thanh",
+      "percentage": 0.0006415554
+    },
+    {
+      "name": "Phan Thanh Sơn",
+      "percentage": 0.0004604
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0004383
+    },
+    {
+      "name": "Nguyễn Thành Long",
+      "percentage": 0.0004309175
+    },
+    {
+      "name": "Đỗ Tuấn Anh",
+      "percentage": 0.000424
+    },
+    {
+      "name": "Phạm Quang Thắng",
+      "percentage": 0.0004103
+    },
+    {
+      "name": "Công ty Cổ phần Eurowindow Holding",
+      "percentage": 0.0003282
+    },
+    {
+      "name": "Nguyễn Thu Lan",
+      "percentage": 0.000321
+    },
+    {
+      "name": "Công ty Cổ Phần Tc Advisors",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Lê Hằng",
+      "percentage": 0.000284
+    },
+    {
+      "name": "Phùng Minh Nguyệt",
+      "percentage": 0.0002342
+    },
+    {
+      "name": "Nguyễn Nhân Nghĩa",
+      "percentage": 0.0002157
+    },
+    {
+      "name": "MACAIRE ALEXANDRE, CHARLES, EMMANUEL",
+      "percentage": 0.000215
+    },
+    {
+      "name": "Tập đoàn Dệt May Việt Nam",
+      "percentage": 0.00017272
+    },
+    {
+      "name": "Nguyễn Thị Lam Hương",
+      "percentage": 0.00017
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng TVAM",
+      "percentage": 0.0001657077
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng Thiên Việt 2",
+      "percentage": 0.0001571366
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001237836
+    },
+    {
+      "name": "Alexandre Charles Emmanuel Macaire",
+      "percentage": 0.0001183
+    },
+    {
+      "name": "Nguyễn Tuấn Minh",
+      "percentage": 0.0001115
+    },
+    {
+      "name": "Nguyễn Thiều Kiên",
+      "percentage": 0.0001107
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư xây dựng và phát triển công nghệ cao",
+      "percentage": 0.000106
+    },
+    {
+      "name": "Đặng Văn Khải",
+      "percentage": 0.000105
+    },
+    {
+      "name": "Jens Lottner",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thiều Quang Anh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Thái Hà Linh",
+      "percentage": 0.0000767
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000656259
+    },
+    {
+      "name": "Nguyễn Thiều Quyên",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Cù Anh Tuấn",
+      "percentage": 0.000056172
+    },
+    {
+      "name": "Quỹ Đầu tư Năng động Eastspring Investments Việt Nam",
+      "percentage": 0.0000526493
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0000505408
+    },
+    {
+      "name": "Kalyanaraman Sivaramakrishnan",
+      "percentage": 0.000047
+    },
+    {
+      "name": "Dư Thị Thu Hương",
+      "percentage": 0.0000393
+    },
+    {
+      "name": "Công ty Cổ phần Eurofinance",
+      "percentage": 0.0000391
+    },
+    {
+      "name": "Nguyễn Dự Hương",
+      "percentage": 0.000039
+    },
+    {
+      "name": "Phùng Thị Thu Hồng",
+      "percentage": 0.0000347
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000245704
+    },
+    {
+      "name": "Hoàng Huy Trung",
+      "percentage": 0.0000163
+    },
+    {
+      "name": "Lê Quang Vinh",
+      "percentage": 0.0000147
+    },
+    {
+      "name": "Bùi Thị Khánh Vân",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thị Trà My",
+      "percentage": 7.5e-6
+    },
+    {
+      "name": "Đặng Ngọc Cảnh",
+      "percentage": 7.4e-6
+    },
+    {
+      "name": "Nguyễn Nhị Hà",
+      "percentage": 4.29e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Hùng Anh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0111282
+    },
+    {
+      "name": "Nguyễn Thiều Quang",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0085653
+    },
+    {
+      "name": "Nguyễn Cảnh Sơn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.005097
+    },
+    {
+      "name": "Nguyễn Đăng Quang",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.002662
+    },
+    {
+      "name": "Trịnh Bằng",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.001712
+    },
+    {
+      "name": "Phùng Quang Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000878
+    },
+    {
+      "name": "Phan Thanh Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004604
+    },
+    {
+      "name": "Đỗ Tuấn Anh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.000424
+    },
+    {
+      "name": "Phạm Quang Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004103
+    },
+    {
+      "name": "Nguyễn Nhân Nghĩa",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0002157
+    },
+    {
+      "name": "Nguyễn Tuấn Minh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0001115
+    },
+    {
+      "name": "Jens Lottner",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Kalyanaraman Sivaramakrishnan",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000047
+    },
+    {
+      "name": "Hoàng Huy Trung",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0000163
+    },
+    {
+      "name": "Bùi Thị Khánh Vân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Saurabh Narayan Agarwal",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lee Boon Huat",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mag Rer Soc Oec Romauch Hannes",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Anh Ngọc",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đoan Hùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Hồng Mai",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:17.262704Z"
+}

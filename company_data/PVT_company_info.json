@@ -1,0 +1,197 @@
+{
+  "symbol": "PVT",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 8458762230000.0,
+  "current_price": 18000.0,
+  "outstanding_shares": 469931235,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>Tổng C&ocirc;ng ty Cổ phần Vận tải Dầu kh&iacute; (PVT)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Vận tải Dầu kh&iacute; được th&agrave;nh lập v&agrave;o năm 2002. Tổng C&ocirc;ng ty hoạt động trong lĩnh vực cung cấp dịch vụ t&agrave;u vận tải dầu kh&iacute;, h&oacute;a chất v&agrave; c&aacute;c loại h&agrave;ng h&oacute;a kh&aacute;c, cho thu&ecirc; v&agrave; quản l&yacute; kho nổi, v&agrave; c&aacute;c dịch vụ hỗ trợ kh&aacute;c. PVT&nbsp;đ&atilde; ph&aacute;t triển&nbsp;đội t&agrave;u vận chuyển c&oacute; quy m&ocirc;&nbsp;58 chiếc với tổng trọng tải gần&nbsp;1,7 triệu&nbsp;DWT, bao gồm 03 t&agrave;u dầu th&ocirc;, 06&nbsp;t&agrave;u dầu sản phẩm, 18 t&agrave;u ho&aacute; chất,&nbsp;01&nbsp;t&agrave;u FSO/FPSO, 12 t&agrave;u h&agrave;ng rời v&agrave; 18 t&agrave;u LPG. Ng&agrave;y 10/12/2007, PVT ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập Đoàn Công Nghiệp – Năng Lượng Quốc Gia Việt Nam",
+      "percentage": 0.51
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0496
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đại chúng Việt Nam",
+      "percentage": 0.04953
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0452
+    },
+    {
+      "name": "Yurie Vietnam Securities Investment Trust",
+      "percentage": 0.03933
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0345
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Á Châu",
+      "percentage": 0.0260403
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VNDIRECT",
+      "percentage": 0.0139059414
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0112
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0072806921
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0028
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Yurie Vietnam Smart Accumulated Target Return Fund",
+      "percentage": 0.00133
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.00101563
+    },
+    {
+      "name": "Phạm Việt Anh",
+      "percentage": 0.0005589
+    },
+    {
+      "name": "Nguyễn Phùng Hưng",
+      "percentage": 0.0002801559
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00012436
+    },
+    {
+      "name": "Đào Mạnh Tiến",
+      "percentage": 0.0001204
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0001090606
+    },
+    {
+      "name": "Nguyễn Anh Minh",
+      "percentage": 0.0001035888
+    },
+    {
+      "name": "Lê Thị Hồng Phương",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Bùi Thọ Mạnh",
+      "percentage": 0.0000117252
+    },
+    {
+      "name": "Trần Tuấn Nam",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Nguyễn Thị Hiên",
+      "percentage": 5.6e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 1e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Việt Anh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0005589
+    },
+    {
+      "name": "Phạm Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Phương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Văn Hưng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kim Kwang Hyuk",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Đình Hiếu",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Linh Giang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Thị Anh Đào",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Duyên Hiếu",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Thanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Đức Hùng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Viết Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Thịnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Khắc Đô",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Mạnh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:58.152972Z"
+}

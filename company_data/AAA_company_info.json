@@ -1,0 +1,188 @@
+{
+  "symbol": "AAA",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3177503831100.0,
+  "current_price": 8070.0,
+  "outstanding_shares": 393742730,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Nhựa An Ph&aacute;t Xanh (AAA) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Anh Hai Duy được th&agrave;nh lập v&agrave;o năm 2002.&nbsp;C&ocirc;ng ty hoạt động&nbsp;ch&iacute;nh trong lĩnh vực&nbsp;sản xuất c&aacute;c loại bao b&igrave; nhựa.&nbsp;C&ocirc;ng ty l&agrave; doanh nghiệp c&oacute; quy m&ocirc; lớn nhất trong ng&agrave;nh với&nbsp;07 nh&agrave; m&aacute;y sản xuất bao b&igrave;&nbsp;c&oacute; tổng c&ocirc;ng suất 108.000 tấn/năm v&agrave; 01 nh&agrave; m&aacute;y sản xuất phụ gia CaCO3 An Ph&aacute;t -&nbsp;Y&ecirc;n B&aacute;i&nbsp;c&oacute; c&ocirc;ng suất 222.000 tấn/năm. So với c&aacute;c doanh nghiệp c&ugrave;ng ng&agrave;nh trong nước kh&aacute;c như C&ocirc;ng ty Cổ phần Nhựa Hưng Y&ecirc;n (c&ocirc;ng suất khoảng 1.000 tấn/th&aacute;ng), C&ocirc;ng ty Cổ phần Nhựa T&uacute; Phương (c&ocirc;ng suất khoảng 800 tấn/th&aacute;ng) v&agrave; một số doanh nghiệp li&ecirc;n doanh kh&aacute;c ở Ph&iacute;a Nam (c&ocirc;ng suất dao động từ 500 &ndash; 700 tấn/th&aacute;ng).&nbsp; AAA được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ cuối năm 2016.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn An Phát Holdings",
+      "percentage": 0.4871
+    },
+    {
+      "name": "Deutsche Asset Management (Asia) Limited",
+      "percentage": 0.06627649
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Công ty TNHH Dương Phạm Investment",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Công ty TNHH Đầu tư Việt và Dương",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Công ty TNHH Đầu tư Trung và Hòa",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Kallang Limited",
+      "percentage": 0.0487
+    },
+    {
+      "name": "Nguyễn Xuân Hà",
+      "percentage": 0.0398
+    },
+    {
+      "name": "Nguyễn Minh Hoa",
+      "percentage": 0.0247474747
+    },
+    {
+      "name": "Intereffekt Investment Funds N.V",
+      "percentage": 0.01224242
+    },
+    {
+      "name": "Siglap Limited",
+      "percentage": 0.01145202
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Dầu khí",
+      "percentage": 0.00845707
+    },
+    {
+      "name": "Trần Thị Thoản",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Hoà Thị Thu Hà",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Nguyễn Thị Tiện",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Nguyễn Đức Dũng",
+      "percentage": 0.0007575757
+    },
+    {
+      "name": "Nguyễn Hồng Thảo",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Nguyễn Lê Thăng Long",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đỗ Thị Thoan",
+      "percentage": 0.0001262626
+    },
+    {
+      "name": "Nguyễn Xuân Cờ",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Đức Duy",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Thị Thùy Vân",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Đặng Thành Khương",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Văn Viện",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Giang",
+      "percentage": 0.00003
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Thị Thoản",
+      "position": "Phó Tổng Giám đốc Thường trực/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Hoà Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc Tài chính - Kế toán",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Nguyễn Thị Tiện",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00173
+    },
+    {
+      "name": "Nguyễn Lê Thăng Long",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thùy Vân",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Thị Giang",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Lâm Thị Hiền",
+      "position": "Phó Tổng Giám đốc Kinh doanh",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Xuân Cường",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Văn Thụ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Việt Khương",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Ánh Dương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Phượng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Văn Thị Lan Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Trung",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:16.982591Z"
+}

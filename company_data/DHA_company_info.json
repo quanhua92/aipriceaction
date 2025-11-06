@@ -1,0 +1,146 @@
+{
+  "symbol": "DHA",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 857300938200.0,
+  "current_price": 56700.0,
+  "outstanding_shares": 15119946,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Ho&aacute; An (DHA) c&oacute; Tiền th&acirc;n l&agrave; X&iacute; nghiệp Đ&aacute; H&oacute;a An được th&agrave;nh lập v&agrave;o năm 1980. C&ocirc;ng ty hoạt động trong lĩnh vực khai th&aacute;c mỏ v&agrave; chế biến đ&aacute; vật liệu x&acirc;y dựng. DHA ch&iacute;nh thức hoạt&nbsp;động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2000.&nbsp;DHA hiện đang quản l&yacute; khai th&aacute;c 03 mỏ đ&aacute;, bao gồm mỏ đ&aacute; N&uacute;i Gi&oacute;, mỏ đ&aacute; T&acirc;n Cang 3 v&agrave; Mỏ đ&aacute; Thạnh Ph&uacute; 2 với tổng c&ocirc;ng suất khai th&aacute;c đạt 1.606.000m3/năm. DHA ch&iacute;nh thức được giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2004.</p>\r\n\r\n<p>&nbsp;</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Vật liệu Xây dựng số 1 - Công ty Cổ phần",
+      "percentage": 0.2373
+    },
+    {
+      "name": "Nguyễn Tấn Lộc",
+      "percentage": 0.075
+    },
+    {
+      "name": "Vương Ngọc Tuyết",
+      "percentage": 0.04918
+    },
+    {
+      "name": "FTIF - Templeton Frontier Markets Fund",
+      "percentage": 0.0476840327
+    },
+    {
+      "name": "Pxp Vietnam Fund Limited",
+      "percentage": 0.0330689011
+    },
+    {
+      "name": "Citgroup Global Markets Limited",
+      "percentage": 0.0282889237
+    },
+    {
+      "name": "Vietnam Emerging Equity Fund Limited",
+      "percentage": 0.0220539808
+    },
+    {
+      "name": "Đinh Lê Chiến",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Nguyễn Văn Lương",
+      "percentage": 0.0091
+    },
+    {
+      "name": "Lại Duy Hồng",
+      "percentage": 0.0056006113
+    },
+    {
+      "name": "Trần Phương Tùng",
+      "percentage": 0.0016930907
+    },
+    {
+      "name": "Công đoàn Công ty Cổ phần Hóa An",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Lê Thị Quyết",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Lê Thị Quyên",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.00143419
+    },
+    {
+      "name": "Trần Sỹ Phúc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phùng Quang Ngọc",
+      "percentage": 0.0009446118
+    },
+    {
+      "name": "Trần Văn Tề",
+      "percentage": 0.0008416984
+    },
+    {
+      "name": "Nguyễn Thị Hòa",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Công Hạnh",
+      "percentage": 0.00014939
+    },
+    {
+      "name": "Phan Văn Quang",
+      "percentage": 0.0000995935
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư và Xây dựng 3-2",
+      "percentage": 3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đinh Lê Chiến",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Nguyễn Văn Lương",
+      "position": "Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0091
+    },
+    {
+      "name": "Đỗ Việt Cường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Thành",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quốc Trung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Tiến Bảy",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Xuân Long",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Thị Cẩm Hường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:16.301516Z"
+}

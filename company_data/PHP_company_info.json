@@ -1,0 +1,201 @@
+{
+  "symbol": "PHP",
+  "exchange": "UPCOM",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 11182032000000.0,
+  "current_price": 34200.0,
+  "outstanding_shares": 326960000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Cảng Hải Ph&ograve;ng (PHP) c&oacute; tiền th&acirc;n l&agrave; Bến S&aacute;u Kho&nbsp;được thực d&acirc;n Ph&aacute;p x&acirc;y dựng v&agrave;o năm 1874. Năm 2014, C&ocirc;ng ty chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh hoạt&nbsp;động l&agrave;&nbsp;một C&ocirc;ng ty Cổ phần.&nbsp;Hoạt động sản xuất ch&iacute;nh của c&ocirc;ng ty l&agrave; (i) Bốc xếp h&agrave;ng h&oacute;a, (ii) Cho thu&ecirc; kho b&atilde;i, văn ph&ograve;ng, v&agrave; (iii) Hoạt động lai dắt, hỗ trợ t&agrave;u biển, kinh doanh dịch vụ (đại l&yacute; t&agrave;u biển, m&ocirc;i giới h&agrave;ng hải, dịch vụ vận tải, c&acirc;n, đếm h&agrave;ng).&nbsp;PHP ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2014. C&ocirc;ng ty&nbsp;dẫn đầu thị trường khu vực ph&iacute;a Bắc (30% thị phần) v&agrave; đứng thứ 2 cả nước (9% thị phần), sau T&acirc;n Cảng S&agrave;i G&ograve;n (SNP). Hiện nay, PHP hiện c&oacute; 03 cảng ch&iacute;nh: Ho&agrave;ng Diệu, Ch&ugrave;a Vẽ v&agrave; T&acirc;n Vũ với tổng diện t&iacute;ch khoảng 2,1 triệu km2 v&agrave; c&oacute; cầu t&agrave;u d&agrave;i nhất (21 cầu t&agrave;u) với tổng chiều d&agrave;i gần 4.000m. To&agrave;n cảng hiện c&oacute; 19 cầu t&agrave;u với tổng chiều d&agrave;i l&agrave; 3.567m, bảo đảm an to&agrave;n với độ s&acirc;u trước bến thiết kế từ -7,5 m đến -9,4m. PHP được&nbsp;giao dịch tại Thị trường UPCoM từ&nbsp;Ng&agrave;y 14/09/2022.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Hàng hải Việt Nam - CTCP",
+      "percentage": 0.9256
+    },
+    {
+      "name": "Công ty Cổ Phần Bảo Hiểm Petrolimex",
+      "percentage": 0.0022633
+    },
+    {
+      "name": "Công đoàn công ty cổ phần Cảng Hải Phòng",
+      "percentage": 0.00214093
+    },
+    {
+      "name": "Nguyễn Hùng Việt",
+      "percentage": 0.00007799
+    },
+    {
+      "name": "Bùi Chiến Thắng",
+      "percentage": 0.0000419
+    },
+    {
+      "name": "Cao Trung Ngoan",
+      "percentage": 0.00003854
+    },
+    {
+      "name": "Phan Anh Tuấn",
+      "percentage": 0.0000305847
+    },
+    {
+      "name": "Cao Thị Thùy Vân",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Phùng Xuân Hà",
+      "percentage": 0.00001101
+    },
+    {
+      "name": "Trương Văn Thái",
+      "percentage": 0.0000104
+    },
+    {
+      "name": "Phạm Thị Thu Hương",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Bích Thủy",
+      "percentage": 9.8e-6
+    },
+    {
+      "name": "Nguyễn Văn Thanh",
+      "percentage": 6.12e-6
+    },
+    {
+      "name": "Phan Tuấn Linh",
+      "percentage": 4.3e-6
+    },
+    {
+      "name": "Nhâm Thị Thanh Hằng",
+      "percentage": 2.7e-6
+    },
+    {
+      "name": "Nguyễn Hùng Cường",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Bùi Thị Thu Hoài",
+      "percentage": 9.2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Cao Trung Ngoan",
+      "position": "Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.00003854
+    },
+    {
+      "name": "Nguyễn Văn Thanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 6.12e-6
+    },
+    {
+      "name": "Phan Tuấn Linh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 4.3e-6
+    },
+    {
+      "name": "Nguyễn Hùng Cường",
+      "position": "Phó phòng Kinh doanh",
+      "percentage": 1.8e-6
+    },
+    {
+      "name": "Phạm Hồng Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tường Anh",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hằng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Vũ Hào",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "position": "Phó Giám đốc Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hà Phương",
+      "position": "Thư ký Hội đồng Quản Trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Hoàn",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Tuấn Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Văn Thạch",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Thị Thu Hà",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Vũ Hà",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chu Minh Hoàng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thanh Hải",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Trung Hiếu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đồng Xuân Khanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Minh Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Đình Quang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chu Tất Đạt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:07.085828Z"
+}

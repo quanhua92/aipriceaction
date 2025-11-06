@@ -1,0 +1,262 @@
+{
+  "symbol": "HAH",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10283647810800.0,
+  "current_price": 60900.0,
+  "outstanding_shares": 168861212,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty cổ phần Vận tải v&agrave; Xếp dỡ Hải An (HAH)&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Vận tải v&agrave; Xếp dỡ Hải An được th&agrave;nh lập năm 2009. C&ocirc;ng ty hoạt động ch&iacute;nh tr&ecirc;n lĩnh khai th&aacute;c cảng v&agrave; vận tải. C&ocirc;ng ty hiện đang sở hữu đội t&agrave;u với sức chứa gần 16.000 TEUs.&nbsp;Địa b&agrave;n kinh doanh của c&ocirc;ng ty bao gồm c&aacute;c tỉnh, th&agrave;nh phố lớn như H&agrave; Nội, Hải Ph&ograve;ng, Th&agrave;nh phố Hồ Ch&iacute; Minh, Đ&agrave; Nẵng, B&agrave; Rịa- Vũng T&agrave;u.&nbsp;Cảng Hải An được đ&aacute;nh gi&aacute; l&agrave; c&oacute; lợi thế cạnh tranh do vị tr&iacute; của cảng nằm ở hạ lưu s&ocirc;ng Cấm, mớn nước s&acirc;u hơn, n&ecirc;n đường v&agrave;o cảng rất rộng, mực nước s&acirc;u n&ecirc;n c&oacute; lợi thế trong việc đ&oacute;n c&aacute;c t&agrave;u c&oacute; trọng tải lớn l&ecirc;n tới 20.000DWT. Năm 2015, c&ocirc;ng ty ch&iacute;nh thức được ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Và Vận Tải Hải Hà",
+      "percentage": 0.15726
+    },
+    {
+      "name": "Công ty Cổ phần Container Việt Nam",
+      "percentage": 0.12663
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0798
+    },
+    {
+      "name": "Công ty TNHH Vận Tải Và Đại Lý Vận Tải Đa Phương Thức",
+      "percentage": 0.05352
+    },
+    {
+      "name": "Công Ty Cổ Phần Quản Lý Quỹ Leadvisors ",
+      "percentage": 0.0462
+    },
+    {
+      "name": "Công ty Cổ Phần Hàng Hải Macs",
+      "percentage": 0.0448
+    },
+    {
+      "name": "Công ty TNHH Đầu tư TM",
+      "percentage": 0.0441
+    },
+    {
+      "name": "Samarang Ucits - Samarang Asian Prosperity",
+      "percentage": 0.0431
+    },
+    {
+      "name": "Công ty Cổ phần Hàng Hải Nam Dương",
+      "percentage": 0.0377
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.030749
+    },
+    {
+      "name": "Vũ Ngọc Sơn",
+      "percentage": 0.0288168
+    },
+    {
+      "name": "Công ty Cổ phần MHC",
+      "percentage": 0.02799
+    },
+    {
+      "name": "Ssiam Ucits",
+      "percentage": 0.0232
+    },
+    {
+      "name": "Andbanc Investments Sif-Vietnam Value And Income Portfolio",
+      "percentage": 0.0232
+    },
+    {
+      "name": "Công Ty Tnhh Một Thành Viên Dịch Vụ Cảng Xanh",
+      "percentage": 0.01503
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.014642
+    },
+    {
+      "name": "Công ty Cổ phần Hải Minh",
+      "percentage": 0.012
+    },
+    {
+      "name": "Công Ty Tnhh Một Thành Viên Trung Tâm Logistics Xanh",
+      "percentage": 0.0111
+    },
+    {
+      "name": "Trần Quang Tiến",
+      "percentage": 0.0101
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Macstar",
+      "percentage": 0.00948
+    },
+    {
+      "name": "Vũ Hải Trường",
+      "percentage": 0.0082
+    },
+    {
+      "name": "Nguyễn Linh Chi",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.003204
+    },
+    {
+      "name": "Phùng Văn Quang",
+      "percentage": 0.00309
+    },
+    {
+      "name": "Tạ Mạnh Cường",
+      "percentage": 0.00301
+    },
+    {
+      "name": "Nguyễn Thị Thiên Hương",
+      "percentage": 0.00296
+    },
+    {
+      "name": "Vũ Thanh Hải",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Đỗ Thành Đĩnh",
+      "percentage": 0.00189
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.001756
+    },
+    {
+      "name": "Vũ Doãn Hạnh",
+      "percentage": 0.00141
+    },
+    {
+      "name": "Công ty Cổ phần Transimex",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Nhữ Thị Thúy",
+      "percentage": 0.00104
+    },
+    {
+      "name": "Nguyễn Ngọc Tuấn",
+      "percentage": 0.00098
+    },
+    {
+      "name": "Nguyễn Thị Vân",
+      "percentage": 0.00054
+    },
+    {
+      "name": "Nguyễn Thị Thanh Tú",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Phạm Quang Khánh",
+      "percentage": 0.00049
+    },
+    {
+      "name": "Trần Thị Thanh Hảo",
+      "percentage": 0.00049
+    },
+    {
+      "name": "Phùng Vĩnh Khánh",
+      "percentage": 0.00038
+    },
+    {
+      "name": "Phùng Đình Phúc",
+      "percentage": 0.00036
+    },
+    {
+      "name": "Nguyễn Xuân Lộc",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Nguyễn Thanh Long",
+      "percentage": 0.000245
+    },
+    {
+      "name": "Trần Đình Trung",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Trần Thị Thơm",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Ngọc Minh",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trần Thị Hải Yến",
+      "percentage": 0.00002
+    },
+    {
+      "name": "BÙI VIỆT PHƯƠNG",
+      "percentage": 0.00002
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Ngọc Sơn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0288168
+    },
+    {
+      "name": "Trần Quang Tiến",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0101
+    },
+    {
+      "name": "Vũ Thanh Hải",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Ngọc Tuấn",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.00098
+    },
+    {
+      "name": "Nguyễn Thị Vân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00054
+    },
+    {
+      "name": "Nguyễn Thị Thanh Tú",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Trần Thị Thanh Hảo",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.00049
+    },
+    {
+      "name": "Nguyễn Xuân Lộc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Trần Thị Thơm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Ngọc Minh",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trần Thị Hải Yến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Phạm Thị Hồng Nhung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:26.813018Z"
+}

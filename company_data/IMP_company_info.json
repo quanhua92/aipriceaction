@@ -1,0 +1,234 @@
+{
+  "symbol": "IMP",
+  "exchange": "HOSE",
+  "industry": "Dược phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 7524988923700.0,
+  "current_price": 48850.0,
+  "outstanding_shares": 154042762,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Dược phẩm Imexpharm (IMP) được th&agrave;nh lập từ năm 1983, với tiền th&acirc;n của c&ocirc;ng ty&nbsp;l&agrave; X&iacute; Nghiệp Li&ecirc;n hiệp Dược Đồng Th&aacute;p. Năm 2001, C&ocirc;ng ty chuyển đổi v&agrave; hoạt động dưới h&igrave;nh thức c&ocirc;ng ty cổ phần.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực&nbsp;sản xuất kinh doanh, xuất nhập khẩu sản phẩm t&acirc;n dược, dụng cụ y tế, nguy&ecirc;n phụ liệu ng&agrave;nh. C&ocirc;ng ty c&oacute; 2 nh&agrave; m&aacute;y sản xuất ch&iacute;nh đặt tại khu trụ sở thuộc tỉnh Đồng Th&aacute;p đạt ti&ecirc;u chuẩn GMP - ASEAN, hệ thống kho đạt ti&ecirc;u chuẩn GSP - ASEAN v&agrave; Ph&ograve;ng th&iacute; nghiệm đạt ti&ecirc;u chuẩn GLP - ASEAN. IMP được cấp visa Ch&acirc;u &Acirc;u cho sản phẩm thuốc Cephalexin 500mg v&agrave; việc được cấp giấy chứng nhận WHO-GMP cho nh&agrave; m&aacute;y sản xuất Thực phẩm bảo vệ sức khỏe.&nbsp;Sản phẩm sản xuất tập trung c&aacute;c nh&oacute;m hạ sốt giảm đau, kh&aacute;ng sinh, vitamin, thực phẩm chức năng. Về mạng lưới thị trường, C&ocirc;ng ty hiện c&oacute; 20 chi nh&aacute;nh phụ tr&aacute;ch b&aacute;n h&agrave;ng tr&ecirc;n to&agrave;n quốc. C&ocirc;ng ty c&ograve;n hợp t&aacute;c với c&aacute;c c&ocirc;ng ty dược phẩm kh&aacute;c để trở th&agrave;nh đại l&yacute; độc quyền ph&acirc;n phối. IMP ch&iacute;nh thức&nbsp;ni&ecirc;m yết tr&ecirc;n s&agrave;n HOSE từ ng&agrave;y&nbsp;04/12/2006.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Sk Investment Vina Iii Pte.ltd",
+      "percentage": 0.4769
+    },
+    {
+      "name": "Tổng Công ty Dược Việt Nam - CTCP",
+      "percentage": 0.2204
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Bình Minh Kim",
+      "percentage": 0.0975
+    },
+    {
+      "name": "Công Ty Cổ Phần Đầu Tư Kba",
+      "percentage": 0.0737
+    },
+    {
+      "name": "FTIF - Templeton Frontier Markets Fund",
+      "percentage": 0.02443
+    },
+    {
+      "name": "Công ty Cổ phần Giải pháp Phân phối và Bán lẻ PHANO",
+      "percentage": 0.02155
+    },
+    {
+      "name": "Quỹ Đầu tư Chứng khoán Y tế Bản Việt",
+      "percentage": 0.0121
+    },
+    {
+      "name": "TGIT-Templeton Emerging Markets Small Cap Fund",
+      "percentage": 0.00916
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.00718
+    },
+    {
+      "name": "J.P. Morgan Whitefriars Inc.",
+      "percentage": 0.0065
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.0053068843
+    },
+    {
+      "name": "Nguyễn Quốc Định",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Trần Thị Đào",
+      "percentage": 0.0044
+    },
+    {
+      "name": "TGIT-Templeton Frontier Markets Fund",
+      "percentage": 0.0043
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Ngô Minh Tuấn",
+      "percentage": 0.002
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.00179
+    },
+    {
+      "name": "Nguyễn Quý Sơn",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Trần Thái Hoàng",
+      "percentage": 0.0016722728
+    },
+    {
+      "name": "Lê Văn Nhã Phương",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ VinaCapital",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Kiêm Phương",
+      "percentage": 0.0012092881
+    },
+    {
+      "name": "Huỳnh Văn Nhung",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phan Hoàng Minh Trí",
+      "percentage": 0.0010040547
+    },
+    {
+      "name": "Hoàng Thị Huệ",
+      "percentage": 0.001
+    },
+    {
+      "name": "Trương Viết Vũ",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Đức Tuấn",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lưu Thị Hạnh",
+      "percentage": 0.0006391951
+    },
+    {
+      "name": "Nguyễn Thị Thu Hồng",
+      "percentage": 0.0006319394
+    },
+    {
+      "name": "Hoàng Thọ Phồn",
+      "percentage": 0.0005016818
+    },
+    {
+      "name": "Kiwoom Vietnam Tomorrow Securities Master Fund",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Thị Kim Chung",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.0002227291
+    },
+    {
+      "name": "Dương Hoàng Vũ",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn An Duy",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 8e-8
+    },
+    {
+      "name": "Võ Hữu Tuấn",
+      "percentage": 4e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Quốc Định",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Trần Thị Đào",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Ngô Minh Tuấn",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.002
+    },
+    {
+      "name": "Lê Văn Nhã Phương",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Huỳnh Văn Nhung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Đức Tuấn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lê Thị Kim Chung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Hoài Hạnh",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Thanh Thúy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hàn Thị Khánh Vinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Minh Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:01.337755Z"
+}

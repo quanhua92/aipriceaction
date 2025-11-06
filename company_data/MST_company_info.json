@@ -1,0 +1,161 @@
+{
+  "symbol": "MST",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 468183632000.0,
+  "current_price": 5600.0,
+  "outstanding_shares": 83604220,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty cổ phần&nbsp;Đầu tư&nbsp;MST&nbsp;(MST) được th&agrave;nh lập v&agrave;o năm 2009. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực x&acirc;y dựng, đầu tư v&agrave; kinh doanh bất động sản.&nbsp;MST trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ năm 2015. Một&nbsp;số&nbsp;c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu C&ocirc;ng ty đ&atilde; tham gia thi c&ocirc;ng x&acirc;y lắp: khu phức hợp c&ocirc;ng vi&ecirc;n hải dương học v&agrave; vui chơi giải tr&iacute; Sầm Sơn, Tower Quy Nhơn, trung t&acirc;m thương mại- dịch vụ- logistics Nội B&agrave;i. MST được ni&ecirc;m yết&nbsp;v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2016.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Thanh Tuyên",
+      "percentage": 0.083
+    },
+    {
+      "name": "Tạ Ngọc Phúc",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Nguyễn Trọng Huy",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Phan Hoàng Thắng",
+      "percentage": 0.0472
+    },
+    {
+      "name": "Nguyễn Trường Phi",
+      "percentage": 0.047
+    },
+    {
+      "name": "Nguyễn Văn Dung",
+      "percentage": 0.045
+    },
+    {
+      "name": "Trần Tuấn Anh",
+      "percentage": 0.0439
+    },
+    {
+      "name": "Trần Thị Minh Phương",
+      "percentage": 0.0439
+    },
+    {
+      "name": "Phan Thị Thanh Hoài",
+      "percentage": 0.0395
+    },
+    {
+      "name": "Phạm Bá Quang",
+      "percentage": 0.0365
+    },
+    {
+      "name": "Nguyễn Huy Quang",
+      "percentage": 0.0341
+    },
+    {
+      "name": "Tạ Thị Dinh",
+      "percentage": 0.0307
+    },
+    {
+      "name": "Trần Hoàng Anh",
+      "percentage": 0.0254
+    },
+    {
+      "name": "Nguyễn Tất Phú",
+      "percentage": 0.0252
+    },
+    {
+      "name": "Nguyễn Quang Nguyên",
+      "percentage": 0.0093
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.003
+    },
+    {
+      "name": "Phan Duy Dũng",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Nguyễn Đăng Kiên",
+      "percentage": 0.002
+    },
+    {
+      "name": "Hoàng Văn Minh",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Ngô Xuân Dũng",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Giang Nam",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Văn Lâm",
+      "percentage": 0.0004
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Huy Quang",
+      "position": "Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.0341
+    },
+    {
+      "name": "Phan Duy Dũng",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Nguyễn Đăng Kiên",
+      "position": "Kế toán trưởng",
+      "percentage": 0.002
+    },
+    {
+      "name": "Hoàng Văn Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phan Thị Làn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tống Thế Thuận",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Văn Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trung Khìn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Anh Dũng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Việt Hậu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phùng Xuân Nam",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:41.073472Z"
+}

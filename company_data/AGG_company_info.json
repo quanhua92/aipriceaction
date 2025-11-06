@@ -1,0 +1,141 @@
+{
+  "symbol": "AGG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2657334124350.0,
+  "current_price": 16350.0,
+  "outstanding_shares": 162528081,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư v&agrave; Ph&aacute;t triển Bất động sản An Gia (AGG) được th&agrave;nh lập&nbsp;v&agrave;o năm 2012. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực đầu tư ph&aacute;t triển v&agrave; kinh doanh&nbsp;c&aacute;c c&ocirc;ng tr&igrave;nh nh&agrave; ở. AGG trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ th&aacute;ng 11/2019. C&ocirc;ng ty đ&atilde; đầu tư ph&aacute;t triển một số dự &aacute;n nh&agrave; ở ti&ecirc;u biểu tại khu vực th&agrave;nh phố Hồ Ch&iacute; Minh v&agrave; Vũng T&agrave;u như: Dự &aacute;n The Star tại quận B&igrave;nh T&acirc;n, dự &aacute;n The Garden tại quận T&acirc;n Ph&uacute; , dự &aacute;n Skyline, Riverside, River City, cụm dự &aacute;n Lacasa (River Panorama 1, River Panorama 2, Sky 89 v&agrave; Signial tại quận 7, v&agrave; The S&oacute;ng tại th&agrave;nh phố Vũng T&agrave;u. AGG lần lượt được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ cuối năm 2019 v&agrave; đầu năm 2020.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Bá Sáng",
+      "percentage": 0.3397494
+    },
+    {
+      "name": "Nguyễn Thị Kim Hoa",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Nguyễn Thị Bích Thủy",
+      "percentage": 0.049
+    },
+    {
+      "name": "Võ Ngọc Mai Trang",
+      "percentage": 0.0485
+    },
+    {
+      "name": "Nguyễn Hương Giang",
+      "percentage": 0.034
+    },
+    {
+      "name": "Nguyễn Thành Châu",
+      "percentage": 0.0287751
+    },
+    {
+      "name": "KIM Vietnam IPO Balanced Fund",
+      "percentage": 0.0266
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.023142
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.019819
+    },
+    {
+      "name": "Nguyễn Quỳnh Giang",
+      "percentage": 0.0171
+    },
+    {
+      "name": "Nguyễn Mai Giang",
+      "percentage": 0.015
+    },
+    {
+      "name": "KIM KOIC Vietnam IPO Private Fund",
+      "percentage": 0.014
+    },
+    {
+      "name": "Hồ Thị Nguyệt Anh",
+      "percentage": 0.0093
+    },
+    {
+      "name": "Phạm Thị Trà My",
+      "percentage": 0.00502642
+    },
+    {
+      "name": "Nguyễn Trung Tín",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.004109
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.004
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.001926
+    },
+    {
+      "name": "Huỳnh Thị Kim Ánh",
+      "percentage": 0.0016
+    },
+    {
+      "name": "MASAKAZU YAMAGUCHI",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Ngọc Tú",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Hourai Consulting Ltd",
+      "percentage": 5e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Bá Sáng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.3397494
+    },
+    {
+      "name": "Nguyễn Thành Châu",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0287751
+    },
+    {
+      "name": "Nguyễn Trung Tín",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Huỳnh Thị Kim Ánh",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0016
+    },
+    {
+      "name": "MASAKAZU YAMAGUCHI",
+      "position": "Thành viên Hội đồng Quản trị/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.001
+    },
+    {
+      "name": "VŨ QUANG THỊNH",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Lê Hùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:36.456965Z"
+}

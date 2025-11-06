@@ -1,0 +1,116 @@
+{
+  "symbol": "VTK",
+  "exchange": "UPCOM",
+  "industry": "Tư vấn & Hỗ trợ Kinh doanh",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 485112991000.0,
+  "current_price": 51700.0,
+  "outstanding_shares": 9383230,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tư vấn v&agrave; Dịch vụ Viettel (VTK) c&oacute; tiền th&acirc;n l&agrave; X&iacute; nghiệp Khảo s&aacute;t Thiết kế được th&agrave;nh lập v&agrave;o năm 1995. C&ocirc;ng ty&nbsp;hoạt động trong lĩnh vực tư vấn thiết kế hạ tầng viễn th&ocirc;ng, d&acirc;n dụng.&nbsp;VTK ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần&nbsp;từ năm 2010. VTK l&agrave; c&ocirc;ng ty số 1 Việt Nam trong lĩnh vực tư vấn đầu tư x&acirc;y dựng hạ tầng viễn th&ocirc;ng v&agrave; l&agrave; đơn vị thiết kế h&agrave;ng đầu tại c&aacute;c thị trường nước ngo&agrave;i m&agrave; Viettel đầu tư. B&ecirc;m cạnh thị trường trong nước, VTK đ&atilde; tiến h&agrave;nh thực hiện tư vấn&nbsp;thiết kế x&acirc;y dựng c&aacute;c dự &aacute;n ti&ecirc;u biểu như: 1.400 trạm BTS v&agrave; 2.000 km truyền dẫn c&aacute;p quang tại Campuchia, 22 tuyến truyền dẫn c&aacute;p quang đường trục, 3.500 km c&aacute;p quang c&aacute;c tuyến nh&aacute;nh v&agrave; 2.000 trạm BTS tại L&agrave;o, 2.200 trạm BTS v&agrave; c&aacute;c trạm viba SDH tại Mozambique, 1.500 trạm BTS tại Cameroon. VTK được giao dịch tr&ecirc;n thị trường UPCOM&nbsp;từ th&aacute;ng 12/2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Công nghiệp - Viễn thông Quân đội",
+      "percentage": 0.63844
+    },
+    {
+      "name": "Công Đoàn Công ty Cổ Phần Tư Vấn Và Dịch Vụ Viettel",
+      "percentage": 0.0291
+    },
+    {
+      "name": "Vũ Tiến Duy",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Nguyễn  Viết  Thắng",
+      "percentage": 0.00691201
+    },
+    {
+      "name": "Lê Văn Chí",
+      "percentage": 0.005
+    },
+    {
+      "name": "Đào Nguyễn Hữu Đức",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Hữu Đức",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Đăng Hùng",
+      "percentage": 0.0036978
+    },
+    {
+      "name": "Nguyễn Hữu Hải",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Nguyễn  Thị Hồng  Nhung",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phan Thế Trường",
+      "percentage": 0.0004216
+    },
+    {
+      "name": "Lê Tuấn Anh",
+      "percentage": 0.0001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Tiến Duy",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0096
+    },
+    {
+      "name": "Nguyễn Hữu Đức",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Đăng Hùng",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0036978
+    },
+    {
+      "name": "Nguyễn Hữu Hải",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Phan Thế Trường",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0004216
+    },
+    {
+      "name": "Trương Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Địch Tuấn Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Cường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Minh Phương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Văn Chinh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:12.550213Z"
+}

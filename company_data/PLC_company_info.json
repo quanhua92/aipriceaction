@@ -1,0 +1,165 @@
+{
+  "symbol": "PLC",
+  "exchange": "HNX",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2181568653000.0,
+  "current_price": 27000.0,
+  "outstanding_shares": 80798839,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>Tổng C&ocirc;ng ty Ho&aacute; dầu Petrolimex - C&ocirc;ng ty Cổ phần (PLC)&nbsp;tiền th&acirc;n l&agrave; C&ocirc;ng ty Dầu nhờn th&agrave;nh lập năm 1994. Petrolimex chuy&ecirc;n kinh doanh c&aacute;c sản phẩm h&oacute;a dầu: Dầu mỡ nhờn, Nhựa đường, Dung m&ocirc;i h&oacute;a chất. C&ocirc;ng ty đ&atilde; tự nhập khẩu nguy&ecirc;n vật liệu v&agrave; sản xuất ra c&aacute;c sản phẩm mang thương hiệu PETROLIMEX - PLC đ&aacute;p ứng nhu cầu thị trường trong nước. Hiện nay c&ocirc;ng ty c&oacute; 2 nh&agrave; m&aacute;y sản xuất dầu nhờn c&oacute; tổng c&ocirc;ng suất l&agrave; 50.000 MT/năm, 5 kho nhựa đường c&oacute; c&oacute; sức chứa 17.000 m3, 2 kho h&oacute;a chất c&oacute; sức chứa 16.000 m3 được ph&acirc;n bổ trải đều từ Hải ph&ograve;ng, Đ&agrave; nẵng, Quy nhơn, S&agrave;i g&ograve;n, Cần thơ.&nbsp;C&ocirc;ng ty đang từng bước mở rộng xuất khẩu sang c&aacute;c nước như: L&agrave;o, Campuchia, Trung Quốc, Hong Kong, Đ&agrave;i Loan, Philippin. Ng&agrave;y 27/12/2006, PLC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Xăng dầu Việt Nam",
+      "percentage": 0.7907
+    },
+    {
+      "name": "PHEIM AIZAWA TRUST",
+      "percentage": 0.0077728702
+    },
+    {
+      "name": "Trần Nguyễn Ngọc Linh",
+      "percentage": 0.00751436
+    },
+    {
+      "name": "Vũ Văn Chiến",
+      "percentage": 0.004951
+    },
+    {
+      "name": "Nguyễn Văn Đức",
+      "percentage": 0.001879
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "percentage": 0.00107091
+    },
+    {
+      "name": "Ngô Đức Giang",
+      "percentage": 0.000625
+    },
+    {
+      "name": "Trần Thị Minh Hà",
+      "percentage": 0.000461
+    },
+    {
+      "name": "Hà Thanh Tuấn",
+      "percentage": 0.00034
+    },
+    {
+      "name": "NGUYỄN VĂN KHÁNH",
+      "percentage": 0.000248
+    },
+    {
+      "name": "Phương Thảo Hiền",
+      "percentage": 0.000233
+    },
+    {
+      "name": "Hà Thị Cúc",
+      "percentage": 0.0001458831
+    },
+    {
+      "name": "Nguyễn Quang Tuấn",
+      "percentage": 0.0001245087
+    },
+    {
+      "name": "Trần Thị Thu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Thị Tuyến",
+      "percentage": 0.000081438
+    },
+    {
+      "name": "LÊ QUANG TUẤN",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Tống Văn Hải",
+      "percentage": 0.000062
+    },
+    {
+      "name": "Trương Thị Quỳnh Giang",
+      "percentage": 0.0000603978
+    },
+    {
+      "name": "Trần Ngọc Năm",
+      "percentage": 0.0000457934
+    },
+    {
+      "name": "Nguyễn Đức Long",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Trần Diễm Hồng",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Phạm Tuấn Phương",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Phạm Bá Nhuân",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hà Thanh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00034
+    },
+    {
+      "name": "Phương Thảo Hiền",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.000233
+    },
+    {
+      "name": "LÊ QUANG TUẤN",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Phạm Tuấn Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Đoàn Hồng Sáng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thị Ngọc Anh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Thị Kiều Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Tuấn Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "ĐỖ HỮU TẠO",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Khương",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hà Trung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:04:15.010999Z"
+}

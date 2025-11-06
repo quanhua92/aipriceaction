@@ -1,0 +1,183 @@
+{
+  "symbol": "SIP",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 13534113513700.0,
+  "current_price": 55900.0,
+  "outstanding_shares": 242112943,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư S&agrave;i G&ograve;n VRG (SIP)&nbsp;được th&agrave;nh lập&nbsp;v&agrave;o năm 2007&nbsp;bởi 4 cổ đ&ocirc;ng s&aacute;ng lập, bao gồm Tập đo&agrave;n C&ocirc;ng nghiệp Cao su Việt Nam, C&ocirc;ng ty Cổ phần Cao su Phước H&ograve;a, C&ocirc;ng ty Cổ phần Đầu tư X&acirc;y dựng Cao su v&agrave; &ocirc;ng Trần C&ocirc;ng Kha. C&ocirc;ng ty hoạt động trong lĩnh vực đầu tư, x&acirc;y dựng v&agrave; kinh doanh hạ tầng khu c&ocirc;ng&nbsp;nghiệp v&agrave; khu d&acirc;n cư. SIP trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng từ th&aacute;ng 01/2019.&nbsp;C&ocirc;ng ty&nbsp;hiện&nbsp;đang&nbsp;đầu tư ph&aacute;t triển v&agrave; kinh doanh hạ tầng&nbsp;Khu c&ocirc;ng nghiệp Đ&ocirc;ng Nam&nbsp;c&oacute; diện t&iacute;ch&nbsp;286,76 ha&nbsp;v&agrave; Khu C&ocirc;ng nghiệp L&ecirc; Minh Xu&acirc;n III với diện t&iacute;ch 220 ha tại th&agrave;nh phố Hồ Ch&iacute; Minh, v&agrave;&nbsp;Khu c&ocirc;ng nghiệp Phước Đ&ocirc;ng với&nbsp;diện t&iacute;ch 2.190 ha tại T&acirc;y Ninh. Ngo&agrave;i ra, C&ocirc;ng ty đ&atilde; g&oacute;p vốn v&agrave;o C&ocirc;ng ty&nbsp;Long Th&agrave;nh VRG&nbsp;để&nbsp;đầu tư ph&aacute;t&nbsp;triển Khu c&ocirc;ng nghiệp Lộc An - B&igrave;nh Sơn với quy m&ocirc; 336,05 ha. Ng&agrave;y 08/08/2023, SIP ch&iacute;nh thức giao dịch tr&ecirc;n Sở giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Và Phát Triển Đô Thị An Lộc",
+      "percentage": 0.1979
+    },
+    {
+      "name": "Công ty Cổ phần Khu Công nghiệp Nam Tân Uyên",
+      "percentage": 0.09
+    },
+    {
+      "name": "Trần Mạnh Hùng",
+      "percentage": 0.0864
+    },
+    {
+      "name": "Lư Thanh Nhã",
+      "percentage": 0.0717
+    },
+    {
+      "name": "Trần Ngọc Xuân Trang",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Phạm Hồng Hải",
+      "percentage": 0.0218
+    },
+    {
+      "name": "Phạm Thị Hồng Hạnh",
+      "percentage": 0.0217
+    },
+    {
+      "name": "Tập đoàn Công nghiệp Cao su Việt Nam - Công ty Cổ phần",
+      "percentage": 0.0176
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "percentage": 0.0141
+    },
+    {
+      "name": "Trần Lê An",
+      "percentage": 0.0095
+    },
+    {
+      "name": "Lê Hồng Cẩm",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Trần Như Hùng",
+      "percentage": 0.006
+    },
+    {
+      "name": "Nguyễn Trường Khôi",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Phan Quốc Thắng",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Trần Ngọc Vân",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Bạch Vân Nhạn",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Huỳnh Như Ngọc",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Đặng Ánh Hào",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Phạm Văn Đông",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Trần Ngọc Nhân",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Nguyễn Thành Đạt",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Huỳnh Hữu Tín",
+      "percentage": 0.000076
+    },
+    {
+      "name": "Đinh Thị Kim Hiếu",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Tăng  Đông Lai",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Lê Tiến Luận",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Mạnh Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0962
+    },
+    {
+      "name": "Lư Thanh Nhã",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0717
+    },
+    {
+      "name": "Phạm Hồng Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0218
+    },
+    {
+      "name": "Nguyễn Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0141
+    },
+    {
+      "name": "Phan Quốc Thắng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Trần Ngọc Vân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Bạch Vân Nhạn",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Đặng Ánh Hào",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Phạm Văn Đông",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Huỳnh Như Ngọc",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Thành Đạt",
+      "position": "Kế toán trưởng/Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Huỳnh Hữu Tín",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000076
+    },
+    {
+      "name": "Lê Tiến Luận",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:49.048036Z"
+}

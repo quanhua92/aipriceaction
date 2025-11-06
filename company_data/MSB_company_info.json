@@ -1,0 +1,285 @@
+{
+  "symbol": "MSB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 38064000000000.0,
+  "current_price": 12200.0,
+  "outstanding_shares": 3120000000,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần H&agrave;ng Hải Việt Nam (MSB)&nbsp;được th&agrave;nh lập v&agrave;o năm 1991 theo Giấy ph&eacute;p hoạt động số 0001/NH-GP của Thống đốc Ng&acirc;n h&agrave;ng Nh&agrave; nước Việt Nam. Ng&acirc;n h&agrave;ng hoạt động trong lĩnh vực huy động, cấp t&iacute;n dụng&nbsp;v&agrave; c&aacute;c&nbsp;dịch vụ t&agrave;i ch&iacute;nh li&ecirc;n quan. Tại Việt Nam, MSB l&agrave; ng&acirc;n h&agrave;ng&nbsp;đầu ti&ecirc;n&nbsp;xin được giấy ph&eacute;p thanh to&aacute;n quốc tế v&agrave; l&agrave; ng&acirc;n h&agrave;ng đầu ti&ecirc;n ứng dụng mạng m&aacute;y t&iacute;nh LAN v&agrave; WAN nhằm r&uacute;t ngắn thời gian chuyển tiền. MSB thuộc nh&oacute;m đầu ng&agrave;nh c&oacute; tỷ lệ tiền gửi kh&ocirc;ng kỳ hạn (CASA) tr&ecirc;n tổng tiền gửi cao nhất hệ thống, đặc biệt nguồn CASA được đ&oacute;ng g&oacute;p lớn từ tệp kh&aacute;ch h&agrave;ng chiến lược của ng&acirc;n h&agrave;ng (kh&aacute;ch h&agrave;ng b&aacute;n lẻ v&agrave; doanh nghiệp vừa v&agrave; nhỏ - SME).&nbsp;MSB&nbsp;ch&iacute;nh thức giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 12/2020.&nbsp;</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Chứng khoán AGRIBANK",
+      "percentage": 0.15
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Quân đội",
+      "percentage": 0.1441374
+    },
+    {
+      "name": "Công ty TNHH Đầu tư Phúc Tiến",
+      "percentage": 0.0652
+    },
+    {
+      "name": "Tập Đoàn Bưu Chính Viễn Thông Việt Nam",
+      "percentage": 0.0605
+    },
+    {
+      "name": "Tổng Công ty Hàng hải Việt Nam - CTCP",
+      "percentage": 0.053
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Ricohomes",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Công ty Xây Dựng Và Kinh Doanh Cơ Sở Hạ Tầng Khu Công Nghiệp Hà Nội-đài Tư",
+      "percentage": 0.0498
+    },
+    {
+      "name": "Công ty TNHH Thành Phố Công Nghệ Xanh Hà Nội",
+      "percentage": 0.0497
+    },
+    {
+      "name": "Công ty TNHH Khu Nghỉ Dưỡng Bãi Dài",
+      "percentage": 0.0496
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Phát Triển Bất Động Sản Thành Vinh",
+      "percentage": 0.04665
+    },
+    {
+      "name": "Nilesh Ratilal Banglorewala",
+      "percentage": 0.0332
+    },
+    {
+      "name": "Công ty Cổ phần May - Diêm Sài Gòn",
+      "percentage": 0.0284
+    },
+    {
+      "name": "Công ty Cổ phần Gemadept",
+      "percentage": 0.024
+    },
+    {
+      "name": "BUENAVISTA HOLDINGS LIMITED",
+      "percentage": 0.0237
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Xây dựng Gen Cons Việt Nam",
+      "percentage": 0.0189
+    },
+    {
+      "name": "Công ty Cổ phần Rox Key Holdings",
+      "percentage": 0.015
+    },
+    {
+      "name": "Công ty Cổ Phần Sapphire Invest",
+      "percentage": 0.012
+    },
+    {
+      "name": "Công ty CP Đầu Tư Tiến An",
+      "percentage": 0.0111
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư và Cho thuê Tài sản TNL",
+      "percentage": 0.0108
+    },
+    {
+      "name": "Công ty Cổ Phần Rox Living",
+      "percentage": 0.009987
+    },
+    {
+      "name": "Trần Anh Tuấn",
+      "percentage": 0.0084236
+    },
+    {
+      "name": "Công Ty Cổ Phần Đầu Tư Và Quản Lý Bất Động Sản Tn Property Management",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.00204
+    },
+    {
+      "name": "Công Đoàn Ngân Hàng Tmcp Hàng Hải Việt Nam",
+      "percentage": 0.00145
+    },
+    {
+      "name": "Lê Cẩm Thuý",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lại Thanh Mai",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Thị Liên",
+      "percentage": 0.0003185
+    },
+    {
+      "name": "Công ty TNHH Mua bán nợ Việt Nam",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Phạm Anh Quân",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Nguyễn Hoàng Linh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hoàng An",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Xuân Quảng",
+      "percentage": 0.0001278
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Hạnh",
+      "percentage": 0.000127
+    },
+    {
+      "name": "Lê Thanh Hà",
+      "percentage": 0.0001193
+    },
+    {
+      "name": "Phạm Thị Thành",
+      "percentage": 0.0001176
+    },
+    {
+      "name": "Chu Thị Đàm",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Tạ Ngọc Đa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đinh Thị Tố Uyên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Hương Loan",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thu Trang",
+      "percentage": 0.00005236
+    },
+    {
+      "name": "Nguyễn Thị Thiên Hương",
+      "percentage": 0.0000461
+    },
+    {
+      "name": "Nguyễn Tiến Sang",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Phạm Thị Hà Thủy",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Phùng Thùy Nhung",
+      "percentage": 0.0000203
+    },
+    {
+      "name": "Lê Thị Thanh Huyền",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Thế Minh",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Vũ Thanh Sơn",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Lê Việt Hưng",
+      "percentage": 2.6e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Anh Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0084236
+    },
+    {
+      "name": "Lê Thị Liên",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0003185
+    },
+    {
+      "name": "Nguyễn Hoàng Linh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Hoàng An",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Xuân Quảng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001278
+    },
+    {
+      "name": "Lê Thanh Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001193
+    },
+    {
+      "name": "Phạm Thị Thành",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0001176
+    },
+    {
+      "name": "Nguyễn Hương Loan",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Thị Đàm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Thiên Hương",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0000461
+    },
+    {
+      "name": "Phùng Thùy Nhung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000203
+    },
+    {
+      "name": "Nguyễn Thế Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Đặng  Thị Hoài Thu",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Oliver Schwarzhaupt",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quý Hải",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:28.060625Z"
+}

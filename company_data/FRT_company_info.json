@@ -1,0 +1,182 @@
+{
+  "symbol": "FRT",
+  "exchange": "HOSE",
+  "industry": "Bán lẻ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 24353155255000.0,
+  "current_price": 143000.0,
+  "outstanding_shares": 170301785,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ Phần B&aacute;n Lẻ Kỹ Thuật Số FPT (FRT)&nbsp;c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH b&aacute;n lẻ FPT,&nbsp;được th&agrave;nh lập v&agrave;o năm 2007. C&ocirc;ng ty hoạt động trong lĩnh vưc ph&acirc;n phối&nbsp;b&aacute;n lẻ sản phẩm điện thoại, laptop, m&aacute;y t&iacute;nh bảng, phụ kiện&nbsp;v&agrave; c&aacute;c sản phẩm&nbsp;điện tử&nbsp;kh&aacute;c. FRT ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2012. T&iacute;nh đến thời điểm hiện tại, FPT Shop l&agrave; chuỗi b&aacute;n lẻ lớn thứ hai tr&ecirc;n thị trường b&aacute;n lẻ h&agrave;ng c&ocirc;ng nghệ, FPT Long Ch&acirc;u l&agrave; chuỗi b&aacute;n lẻ dược phẩm c&oacute; số lượng&nbsp;nh&agrave; thuốc lớn nhất Việt Nam.&nbsp;FRT được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ cuối th&aacute;ng 04/2018.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần FPT",
+      "percentage": 0.4654
+    },
+    {
+      "name": "Dragon Capital",
+      "percentage": 0.2
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ VinaCapital",
+      "percentage": 0.15
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.049177
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.0478
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.012811
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.012463
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.01182
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.011018
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.006655
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.005566
+    },
+    {
+      "name": "Nguyễn Bạch Điệp",
+      "percentage": 0.0049506
+    },
+    {
+      "name": "Trịnh Hoa Giang",
+      "percentage": 0.0029248
+    },
+    {
+      "name": "Nguyễn Việt Anh",
+      "percentage": 0.0018228
+    },
+    {
+      "name": "Vietnam Co-Investment Fund",
+      "percentage": 0.001393
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000881
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.00084
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.00025
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Danang Investments Limited",
+      "percentage": 0.00022
+    },
+    {
+      "name": "Vũ Thanh Huyền",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Bạch Dương",
+      "percentage": 5.5e-7
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 4e-7
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 1e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Bạch Điệp",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0049506
+    },
+    {
+      "name": "Trịnh Hoa Giang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0029248
+    },
+    {
+      "name": "Nguyễn Việt Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0018228
+    },
+    {
+      "name": "Lê Hồng Việt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Huyền",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Hùng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần  Khương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Nga",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Duy Hoàng Nam",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thị Minh Huệ",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đắc Việt Dũng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Trung Kiên",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:46.476745Z"
+}

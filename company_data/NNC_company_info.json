@@ -1,0 +1,133 @@
+{
+  "symbol": "NNC",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1137648000000.0,
+  "current_price": 51900.0,
+  "outstanding_shares": 21920000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đ&aacute; N&uacute;i Nhỏ (NNC) c&oacute; tiền th&acirc;n l&agrave;&nbsp;X&iacute; nghiệp Khai th&aacute;c Đ&aacute; số 3 trực thuộc&nbsp;C&ocirc;ng ty Vật liệu v&agrave; X&acirc;y dựng B&igrave;nh Dương, được tiếp quản từ năm 1975. Từ năm&nbsp;2006, C&ocirc;ng ty tiến h&agrave;nh cổ phần h&oacute;a v&agrave; chuyển sang hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực khai th&aacute;c chế biến v&agrave; kinh doanh đ&aacute;, đất s&eacute;t, vật liệu x&acirc;y dựng. C&ocirc;ng ty hiện&nbsp;đang khai th&aacute;c đ&aacute; ở&nbsp;mỏ Mũi T&agrave;u (T&acirc;n Lập, B&igrave;nh Phước) v&agrave; Ph&acirc;n xưởng c&aacute;t T&acirc;n Ba (B&igrave;nh Dương). Sản phẩm đ&aacute; của C&ocirc;ng ty cung cấp hầu hết cho c&aacute;c tỉnh miền Đ&ocirc;ng v&agrave; miền T&acirc;y Nam Bộ. Đối thủ cạnh tranh ch&iacute;nh của C&ocirc;ng ty l&agrave; C&ocirc;ng ty Cổ phần Đ&aacute; H&oacute;a An, C&ocirc;ng ty Cổ phần Đầu tư X&acirc;y dựng 3/2,&nbsp;C&ocirc;ng ty TNHH Ngọc Qu&yacute;, C&ocirc;ng ty Trung Th&agrave;nh v&agrave; c&aacute;c C&ocirc;ng ty khai th&aacute;c đ&aacute; ở khu vực Bi&ecirc;n H&ograve;a. Năm 2010, NNC&nbsp;ch&iacute;nh thức được giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Vật liệu và Xây dựng Bình Dương",
+      "percentage": 0.4355
+    },
+    {
+      "name": "Ctcp Đầu Tư Thái Bình",
+      "percentage": 0.1593
+    },
+    {
+      "name": "Nguyễn Thị Mai Phương",
+      "percentage": 0.0702
+    },
+    {
+      "name": "Pxp Vietnam Fund Limited",
+      "percentage": 0.0594
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0494
+    },
+    {
+      "name": "PXP Vietnam Emerging Equity Fund",
+      "percentage": 0.03410885
+    },
+    {
+      "name": "Lâm Thị Mai",
+      "percentage": 0.0337966
+    },
+    {
+      "name": "Vũ Quang Hưng",
+      "percentage": 0.0082327
+    },
+    {
+      "name": "Nguyễn Như Song",
+      "percentage": 0.00618145
+    },
+    {
+      "name": "Trần Minh Tâm",
+      "percentage": 0.0020210973
+    },
+    {
+      "name": "Nguyễn Văn Chối",
+      "percentage": 0.002
+    },
+    {
+      "name": "Đào Thị Mỹ Hạnh",
+      "percentage": 0.0005033355
+    },
+    {
+      "name": "Phạm Tuấn Kiệt",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đoàn Văn Kình",
+      "percentage": 0.0003238986
+    },
+    {
+      "name": "Nguyễn Hồng Châu",
+      "percentage": 0.0003
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lâm Thị Mai",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0337966
+    },
+    {
+      "name": "Nguyễn Văn Chối",
+      "position": "Phó Giám đốc",
+      "percentage": 0.002
+    },
+    {
+      "name": "Phạm Tuấn Kiệt",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Văn Hải",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Bình",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lâm Thành Lâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tuấn Vũ",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Viết Châu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Minh Quang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quốc Long",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Văn Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:13.933013Z"
+}

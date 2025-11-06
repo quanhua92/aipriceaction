@@ -1,0 +1,279 @@
+{
+  "symbol": "BVH",
+  "exchange": "HOSE",
+  "industry": "Bảo hiểm nhân thọ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 40456590638000.0,
+  "current_price": 54500.0,
+  "outstanding_shares": 742322764,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p align=\"left\">Tập đo&agrave;n Bảo Việt (BVH) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Bảo hiểm Việt Nam được th&agrave;nh lập năm 1964. Từ năm 2008 đi v&agrave;o hoạt động theo m&ocirc; h&igrave;nh Tập đo&agrave;n. Tập đo&agrave;n Bảo Việt hoạt động&nbsp;hầu hết tất cả c&aacute;c lĩnh vực trong ng&agrave;nh t&agrave;i ch&iacute;nh như bảo hiểm, ng&acirc;n h&agrave;ng, chứng kho&aacute;n, quản l&yacute; quỹ, đầu tư bất động sản. Trong đ&oacute; bảo hiểm vẫn l&agrave; ng&agrave;nh nghề kinh doanh chủ đạo của Tập đo&agrave;n. Tại Việt Nam, BVH hiện giữ vị tr&iacute; số 1 tr&ecirc;n thị trường&nbsp;bảo hiểm nh&acirc;n thọ&nbsp;v&agrave; thị trường bảo hiểm phi nh&acirc;n thọ. BVH cung cấp cho kh&aacute;ch h&agrave;ng&nbsp;danh mục sản phẩm đa dạng với&nbsp;80 sản phẩm bảo hiểm phi nh&acirc;n thọ, v&agrave;&nbsp;55 sản phẩm bảo hiểm nh&acirc;n thọ. BVH ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ ng&agrave;y 25/06/2009.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Bộ Tài Chính",
+      "percentage": 0.65
+    },
+    {
+      "name": "Sumitomo Life Insurance Company",
+      "percentage": 0.22085
+    },
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.02984
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0064
+    },
+    {
+      "name": "Smallcap World Fund Incoporation",
+      "percentage": 0.0060803228
+    },
+    {
+      "name": "Seafarer Overseas Growth and Income Fund",
+      "percentage": 0.006
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Target Value Fund",
+      "percentage": 0.0055
+    },
+    {
+      "name": "New World Fund Incorporation",
+      "percentage": 0.0043079398
+    },
+    {
+      "name": "Wasatch Frontier Emerging Small Countries Fund",
+      "percentage": 0.0041
+    },
+    {
+      "name": "Citigroup Global Markets Ltd",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Goldman Shachs International Company",
+      "percentage": 0.0028
+    },
+    {
+      "name": "JF Vietnam Opportunities Fund",
+      "percentage": 0.0027806163
+    },
+    {
+      "name": "Morgan Stanley And Co. International Plc",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Matthews Asian Selections Funds PLC",
+      "percentage": 0.0026848092
+    },
+    {
+      "name": "Lionglobal Vietnam Fund",
+      "percentage": 0.0017
+    },
+    {
+      "name": "J.P. Morgan Whitefriars Inc.",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Prusik Asia Fund Public Limited Company",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Wasatch Frontier Emerging Small Countries Cit Fund",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Công Đoàn Tập Đoàn Bảo Việt",
+      "percentage": 0.0003292
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00012173
+    },
+    {
+      "name": "Lương Thị Bích Ngọc",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Nguyễn Xuân Việt",
+      "percentage": 0.0001131
+    },
+    {
+      "name": "Đào Đình Thi",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.00008518
+    },
+    {
+      "name": "Ông Tiến Hùng",
+      "percentage": 0.0000492
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Bảo Việt",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Ngọc Thụy",
+      "percentage": 0.000034
+    },
+    {
+      "name": "Nguyễn Duy Khánh",
+      "percentage": 0.000027
+    },
+    {
+      "name": "Nguyễn Thị Phúc Lâm",
+      "percentage": 0.0000199494
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00001719
+    },
+    {
+      "name": "Nguyễn Đình An",
+      "percentage": 0.0000134
+    },
+    {
+      "name": "Hoàng Việt Hà",
+      "percentage": 4.7202e-6
+    },
+    {
+      "name": "Nguyễn Đức Tuấn",
+      "percentage": 4.7e-6
+    },
+    {
+      "name": "Nguyễn Trung Thực",
+      "percentage": 4.2617e-6
+    },
+    {
+      "name": "Lê Quang Bình",
+      "percentage": 4.1485e-6
+    },
+    {
+      "name": "Trần Trọng Phúc",
+      "percentage": 3.0317e-6
+    },
+    {
+      "name": "Dương Đức Chuyển",
+      "percentage": 2.5526e-6
+    },
+    {
+      "name": "Nguyễn Quang Phi",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Nguyễn Thanh Hải",
+      "percentage": 1.9104e-6
+    },
+    {
+      "name": "Lê Hải Phong",
+      "percentage": 1.7546e-6
+    },
+    {
+      "name": "Trần Minh Thái",
+      "percentage": 1.5959e-6
+    },
+    {
+      "name": "Phan Kim Bằng",
+      "percentage": 7.3e-7
+    },
+    {
+      "name": "Trần Nguyên Đán",
+      "percentage": 1.4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lương Thị Bích Ngọc",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Nguyễn Xuân Việt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001131
+    },
+    {
+      "name": "Đào Đình Thi",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Ông Tiến Hùng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000492
+    },
+    {
+      "name": "Nguyễn Đình An",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000134
+    },
+    {
+      "name": "Thân Hiền Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Diệu Hằng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thanh Hải",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Hoài Linh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thụy Anh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Hoa",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phí Thị Quỳnh Nga",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Hòa",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Ngọc Tú",
+      "position": "Phó Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Teruo Shimmen",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Trường Minh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kazuhiko Arai",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:41.611074Z"
+}

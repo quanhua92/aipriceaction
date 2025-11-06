@@ -1,0 +1,247 @@
+{
+  "symbol": "BWE",
+  "exchange": "HOSE",
+  "industry": "Nước & Khí đốt",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10347642700200.0,
+  "current_price": 47050.0,
+  "outstanding_shares": 219928644,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần - Tổng C&ocirc;ng ty Nước - M&ocirc;i trường B&igrave;nh Dương (BWE), c&oacute; tiền th&acirc;n l&agrave; Trung t&acirc;m Cấp thủy B&igrave;nh Dương, được th&agrave;nh lập từ trước năm 1975. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực&nbsp;khai th&aacute;c, xử l&yacute; v&agrave; cung cấp nước sạch phục vụ sinh hoạt đ&ocirc; thị v&agrave; c&ocirc;ng nghiệp. Ngo&agrave;i ra,&nbsp;BWE cũng tham gia cung cấp dịch vụ&nbsp;thu gom v&agrave; xử l&yacute; r&aacute;c thải.&nbsp; C&ocirc;ng ty ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2016. BWE hiện đang quản l&yacute; vận h&agrave;nh c&aacute;c hệ thống cấp nước v&agrave; nh&agrave; m&aacute;y nước với tổng c&ocirc;ng suất cấp nước&nbsp;l&agrave; 480.000 m3/ng&agrave;y đ&ecirc;m, v&agrave;&nbsp;c&ocirc;ng suất xử l&yacute; r&aacute;c thải l&ecirc;n đến 1.000 tấn/ng&agrave;y. BWE được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 07/2017.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Nước Thủ Dầu Một",
+      "percentage": 0.3742
+    },
+    {
+      "name": "Tập đoàn Đầu tư và Phát triển Công nghiệp Becamex - CTCP",
+      "percentage": 0.1944
+    },
+    {
+      "name": "Nguyễn Văn Thiền",
+      "percentage": 0.04645
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.024526
+    },
+    {
+      "name": "Nguyễn Thanh Phong",
+      "percentage": 0.0136408
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.0114667
+    },
+    {
+      "name": "Trần Chiến Công",
+      "percentage": 0.0105
+    },
+    {
+      "name": "Lê Ngọc Lan Thảo",
+      "percentage": 0.0077
+    },
+    {
+      "name": "Ban chấp hành Công đoàn Công ty Cổ phần - Tổng Công ty Nước- Môi trường Bình Dương",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Nguyễn Thị Diên",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Nguyễn Đỗ Ngọc Bảo",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Aquila Spc Ltd",
+      "percentage": 0.004033
+    },
+    {
+      "name": "Trần Tấn Đức",
+      "percentage": 0.00352
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.003333
+    },
+    {
+      "name": "Vietnam Co-Investment Fund",
+      "percentage": 0.002747
+    },
+    {
+      "name": "Trần Tuyết Lan",
+      "percentage": 0.00207
+    },
+    {
+      "name": "Dương Hoàng Sơn",
+      "percentage": 0.0016644
+    },
+    {
+      "name": "Dương Anh Thư",
+      "percentage": 0.001622
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Thanh",
+      "percentage": 0.00122
+    },
+    {
+      "name": "Tạ Trọng Hiệp",
+      "percentage": 0.0010367
+    },
+    {
+      "name": "Phạm Thanh Hùng",
+      "percentage": 0.0005899
+    },
+    {
+      "name": "Ngô Văn Lui",
+      "percentage": 0.0005583
+    },
+    {
+      "name": "Nguyễn Thị Thu Vân",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Mai Song Hào",
+      "percentage": 0.0003945
+    },
+    {
+      "name": "Lê Văn Gòn",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Ngọc Hồ",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Tăng Tố Vân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu MB",
+      "percentage": 0.0001134667
+    },
+    {
+      "name": "Nguyễn Kim Liên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Công ty Cổ phần Xây Lắp - Điện Biwase",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thành Đông",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Trần Thị Kim Oanh",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Đức Bảo",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Thị Thu Trang",
+      "percentage": 0.0000259
+    },
+    {
+      "name": "Nguyễn Thị Mộng Thường",
+      "percentage": 0.0000259
+    },
+    {
+      "name": "Công Ty TNHH Thương Mại N.T.P",
+      "percentage": 0.000023
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Thiền",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.04645
+    },
+    {
+      "name": "Nguyễn Thanh Phong",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0136408
+    },
+    {
+      "name": "Trần Chiến Công",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0105
+    },
+    {
+      "name": "Lê Ngọc Lan Thảo",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0077
+    },
+    {
+      "name": "Nguyễn Thị Diên",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Trần Tấn Đức",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00352
+    },
+    {
+      "name": "Dương Hoàng Sơn",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0016644
+    },
+    {
+      "name": "Dương Anh Thư",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.001622
+    },
+    {
+      "name": "Tạ Trọng Hiệp",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0010367
+    },
+    {
+      "name": "Phạm Thanh Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0005899
+    },
+    {
+      "name": "Ngô Văn Lui",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0005583
+    },
+    {
+      "name": "Nguyễn Thị Thu Vân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Kim Liên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Thị Kim Oanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Đức Bảo",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Nguyễn Văn Trí",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm  Thanh Vũ",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:49.054170Z"
+}

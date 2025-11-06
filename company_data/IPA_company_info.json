@@ -1,0 +1,84 @@
+{
+  "symbol": "IPA",
+  "exchange": "HNX",
+  "industry": "Tư vấn & Hỗ trợ Kinh doanh",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4127030457500.0,
+  "current_price": 19300.0,
+  "outstanding_shares": 213835775,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Đầu tư I.P.A (IPA), tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty TNHH&nbsp;Đầu tư v&agrave; T&agrave;i ch&iacute;nh IPA, được th&agrave;nh lập năm 1998.&nbsp;Năm 2007,&nbsp;Cổ phần h&oacute;a v&agrave; đổi t&ecirc;n th&agrave;nh C&ocirc;ng ty Cổ phần Tập đo&agrave;n Đầu tư IPA C&ocirc;ng ty hoạt động ch&iacute;nh trong 2 lĩnh vực: (i) Dịch vụ t&agrave;i ch&iacute;nh c&aacute; nh&acirc;n v&agrave; (ii) B&aacute;n điện thương phẩm. Một trong những c&ocirc;ng ty th&agrave;nh vi&ecirc;n ti&ecirc;u biểu c&oacute; thể kể đến C&ocirc;ng ty CP Chứng kho&aacute;n VNDIRECT,c&ocirc;ng ty chứng kho&aacute;n b&aacute;n lẻ thuộc top 4 h&agrave;ng đầu Việt Nam hoạt động trong lĩnh vực dịch vụ t&agrave;i ch&iacute;nh. Trong lĩnh vực điện thương phẩm, IPA sở hữu nh&agrave; m&aacute;y thủy điện Nậm Ph&agrave;ng với c&ocirc;ng suất 36MW tại tỉnh L&agrave;o Cai. H&agrave;ng năm thủy điện Nậm Ph&agrave;ng h&ograve;a v&agrave;o lưới điện quốc gia với c&ocirc;ng suất b&igrave;nh qu&acirc;n 146 triệu KWh/năm. Ngo&agrave;i 2 ng&agrave;nh kinh doanh ch&iacute;nh, C&ocirc;ng ty hiện đang đầu tư v&agrave;o c&aacute;c lĩnh vực: ph&aacute;t triển bất động sản, cung cấp giải ph&aacute;p c&ocirc;ng nghệ v&agrave; chế biến, khai th&aacute;c kho&aacute;ng sản. Năm 2021, IPA ch&iacute;nh thức được ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Quản Lý Đầu Tư H&H",
+      "percentage": 0.5545
+    },
+    {
+      "name": "Lương Thu Hằng",
+      "percentage": 0.0525
+    },
+    {
+      "name": "Vũ Hiền",
+      "percentage": 0.0099312
+    },
+    {
+      "name": "Phạm Minh Hương",
+      "percentage": 0.0001515
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Hiền",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0099312
+    },
+    {
+      "name": "Phạm Minh Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001515
+    },
+    {
+      "name": "Vương Văn Tường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Nam Hương",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hồng Khánh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hương Thảo",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Thanh",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Hoàng Hà",
+      "position": "Trưởng Ban Kiểm toán nội bộ /Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Kim Ngọc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:04.704233Z"
+}

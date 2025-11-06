@@ -1,0 +1,201 @@
+{
+  "symbol": "MHC",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 547801606800.0,
+  "current_price": 12600.0,
+  "outstanding_shares": 43476318,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần MHC (MHC), tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần H&agrave;ng hải H&agrave; Nội được th&agrave;nh lập theo Giấy ph&eacute;p số 3829/GP-UB do UBND Th&agrave;nh phố H&agrave; Nội cấp ng&agrave;y 17 th&aacute;ng 11 năm 1998, ch&iacute;nh thức đi v&agrave;o hoạt động l&agrave; năm 1999. MHC&nbsp;l&agrave; một trong những đơn vị h&agrave;ng đầu về thị phần vận tải đặc biệt dịch vụ vận tải đa phương thức. Cơ cấu hoạt động C&ocirc;ng ty chủ yếu tập trung v&agrave;o 2 mảng: kinh doanh dịch vụ vận tải đa phương thức v&agrave; kinh doanh cao ốc văn ph&ograve;ng cho thu&ecirc; (t&ograve;a nh&agrave; Ocean Park Building). So với c&aacute;c doanh nghiệp kh&aacute;c c&ugrave;ng ng&agrave;nh, C&ocirc;ng ty l&agrave; một trong những doanh nghiệp h&agrave;ng đầu về thị phần vận tải.&nbsp;C&ugrave;ng với hệ thống vận chuyển: Hơn 1000 container 20 feet v&agrave; h&agrave;ng trăm đầu k&eacute;o, đ&acirc;y l&agrave; điều kiện cần v&agrave; c&oacute; cho MHC thực hiện hoạt động kinh doanh của m&igrave;nh. Ng&agrave;y 21/03/2005, MHC ch&iacute;nh thức&nbsp;giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Thương mại và Đầu tư HT Đông Nam Á",
+      "percentage": 0.189
+    },
+    {
+      "name": "Công ty TNHH Đầu tư và Thương mại Phong Sơn",
+      "percentage": 0.1886
+    },
+    {
+      "name": "Công ty Cổ Phần Bất Động Sản Peaceful Land",
+      "percentage": 0.1636
+    },
+    {
+      "name": "Võ Trung Cương",
+      "percentage": 0.0646251964
+    },
+    {
+      "name": "Quỹ Đầu Tư Japan Asia Mb Capital - Jambf",
+      "percentage": 0.0553
+    },
+    {
+      "name": "Bùi Thu Nga",
+      "percentage": 0.0518
+    },
+    {
+      "name": "Công ty Cổ phần SCI",
+      "percentage": 0.05
+    },
+    {
+      "name": "Nguyễn Chiến Thắng",
+      "percentage": 0.0484
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Mic",
+      "percentage": 0.0475744
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 0.0475
+    },
+    {
+      "name": "Trần Hoàng Anh",
+      "percentage": 0.0472
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ đầu tư MB",
+      "percentage": 0.0447
+    },
+    {
+      "name": "Dương Thị Hồng Hạnh",
+      "percentage": 0.03348
+    },
+    {
+      "name": "Quỹ Đầu tư Khám Phá Giá trị Ngân Hàng Công Thương Việt Nam",
+      "percentage": 0.0284557
+    },
+    {
+      "name": "Phạm Bá Huy",
+      "percentage": 0.0242
+    },
+    {
+      "name": "Bùi Đình Quý",
+      "percentage": 0.0212568517
+    },
+    {
+      "name": "Đặng Tiến Thành",
+      "percentage": 0.0211
+    },
+    {
+      "name": "Nguyễn Hữu Vinh",
+      "percentage": 0.0210713167
+    },
+    {
+      "name": "Đỗ Hồng Thái",
+      "percentage": 0.0206
+    },
+    {
+      "name": "Nguyễn Quốc Dũng",
+      "percentage": 0.0184430271
+    },
+    {
+      "name": "Hoàng Hà",
+      "percentage": 0.0129181047
+    },
+    {
+      "name": "Dương Thị Hồng Anh",
+      "percentage": 0.0087
+    },
+    {
+      "name": "Vũ Thanh Hải",
+      "percentage": 0.008589754
+    },
+    {
+      "name": "Công ty Cổ phần Vận tải biển và Hợp tác lao động Quốc Tế",
+      "percentage": 0.0085897159
+    },
+    {
+      "name": "Công ty Cổ phần Thương mại Dịch vụ và Truyền thông Marina",
+      "percentage": 0.0061
+    },
+    {
+      "name": "Nguyễn Minh Lợi",
+      "percentage": 0.0008263131
+    },
+    {
+      "name": "Nguyễn Quang Phúc",
+      "percentage": 0.000747599
+    },
+    {
+      "name": "Đỗ Thành Đĩnh",
+      "percentage": 0.0006203434
+    },
+    {
+      "name": "Nguyễn Thị Lan Anh",
+      "percentage": 0.00035
+    },
+    {
+      "name": "Công ty Cổ phần Container Phía Nam",
+      "percentage": 0.0003230802
+    },
+    {
+      "name": "Vũ Công Tường",
+      "percentage": 0.0001478009
+    },
+    {
+      "name": "Nguyễn Văn Dũng",
+      "percentage": 0.0001383213
+    },
+    {
+      "name": "Trần Thị Hải Yến",
+      "percentage": 0.0001282884
+    },
+    {
+      "name": "Phạm Thị Minh Thảo",
+      "percentage": 0.0000737713
+    },
+    {
+      "name": "Nguyễn Trung Dũng",
+      "percentage": 0.0000368856
+    },
+    {
+      "name": "Hoàng Duy Anh",
+      "percentage": 3.319e-7
+    },
+    {
+      "name": "Nguyễn Thị Minh Ngọc",
+      "percentage": 2.581e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Bá Huy",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0242
+    },
+    {
+      "name": "Nguyễn Thị Thùy Linh",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Việt Dũng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thơm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thúy Nga",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Huy Quảng",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng/Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Nhiên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:19.627390Z"
+}

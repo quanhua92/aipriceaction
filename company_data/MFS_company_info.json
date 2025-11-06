@@ -1,0 +1,99 @@
+{
+  "symbol": "MFS",
+  "exchange": "UPCOM",
+  "industry": "Viễn thông di động",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 277575074700.0,
+  "current_price": 39300.0,
+  "outstanding_shares": 7062979,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">C&ocirc;ng ty Cổ phần Dịch vụ Kỹ thuật Mobifone (MFS) được th&agrave;nh lập năm 2008 với 5 cổ đ&ocirc;ng s&aacute;ng lập lớn: VNPT, Mobifone, C&ocirc;ng ty TNHH Thi&ecirc;n Việt, C&ocirc;ng ty T&agrave;i ch&iacute;nh TNHH MTV&nbsp;Bưu&nbsp; điện (PTF) v&agrave; C&ocirc;ng ty Cổ phần Dịch vụ Kỹ thuật Viễn th&ocirc;ng (TST). C&ocirc;ng ty chuy&ecirc;n cung cấp c&aacute;c dịch vụ li&ecirc;n quan đến tổng đ&agrave;i (dịch vụ trả lời, chăm s&oacute;c kh&aacute;ch h&agrave;ng qua điện thoại) v&agrave; cho thu&ecirc; trạm ph&aacute;t s&oacute;ng.&nbsp;MFS&nbsp;l&agrave;&nbsp;c&ocirc;ng ty cung cấp dịch vụ truyền dẫn Viba dung lượng cao với c&ocirc;ng nghệ mới Full IP tr&ecirc;n mạng truyền dẫn của MobiFone với c&aacute;c d&ograve;ng thiết bị Viba của nh&agrave; cung cấp h&agrave;ng đầu thế giới NEC gồm 1000 HOPs Viba.&nbsp;C&aacute;c đối t&aacute;c của MobifoneService đều l&agrave; những tập đo&agrave;n, doanh nghiệp lớn như Mobifone, VNPT. Alcatel Lucent, Huawei, ANZ Bank, Tien Phong Bank, Prudential.&nbsp;Ng&agrave;y 16/04/2019, MFS ch&iacute;nh thức được giao dịch tr&ecirc;n thị trường UPCOM.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Viễn thông MobiFone",
+      "percentage": 0.3126
+    },
+    {
+      "name": "Nguyễn Duy Hưng",
+      "percentage": 0.048
+    },
+    {
+      "name": "Lê Dũng",
+      "percentage": 0.0348
+    },
+    {
+      "name": "Nguyễn Văn Chiến",
+      "percentage": 0.032649
+    },
+    {
+      "name": "Phan Tiến Dũng",
+      "percentage": 0.0098
+    },
+    {
+      "name": "Trần Minh Đức",
+      "percentage": 0.000586
+    },
+    {
+      "name": "Phan Tuấn Anh",
+      "percentage": 0.000344
+    },
+    {
+      "name": "Tường Duy Phúc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Tống Thị Thanh Giang",
+      "percentage": 0.000236
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Chiến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.032649
+    },
+    {
+      "name": "Phan Tiến Dũng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0098
+    },
+    {
+      "name": "Trần Minh Đức",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.000586
+    },
+    {
+      "name": "Phan Tuấn Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000344
+    },
+    {
+      "name": "Tường Duy Phúc",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Cao Thành Chung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Đức Mạnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Tú",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Quang Hải",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:16.905712Z"
+}

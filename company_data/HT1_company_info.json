@@ -1,0 +1,256 @@
+{
+  "symbol": "HT1",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6181756558200.0,
+  "current_price": 16200.0,
+  "outstanding_shares": 381589911,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Xi măng VICEM H&agrave; Ti&ecirc;n (HT1) c&oacute; tiền th&acirc;n l&agrave; Nh&agrave; m&aacute;y Xi măng H&agrave; Ti&ecirc;n được khởi c&ocirc;ng x&acirc;y dựng từ năm 1960.&nbsp;C&ocirc;ng ty chuy&ecirc;n sản xuất v&agrave; kinh doanh Clinker CPC50, clinker bền sulfat, Xi măng PCB40, Xi măng hỗn hợp PCB40, Xi măng MS-PCB40, Xi măng x&aacute; v&agrave; jumbo. HT1 giữ vị thế&nbsp;l&agrave; đơn vị sản xuất xi măng h&agrave;ng đầu tại thị trường ph&iacute;a Nam Việt Nam. C&ocirc;ng ty c&oacute; 05 đơn vị sản xuất xi măng gồm c&oacute; 02 nh&agrave; m&aacute;y sản xuất clinker, xi măng v&agrave; 03 trạm nghiền xi măng với nhiệm vụ sản xuất, cung cấp v&agrave; ph&acirc;n phối xi măng cho c&aacute;c tỉnh, th&agrave;nh ở ph&iacute;a Nam, Đ&ocirc;ng Nam Bộ, T&acirc;y Nam Bộ, T&acirc;y Nguy&ecirc;n, Duy&ecirc;n hải Nam Trung Bộ đến Mũi C&agrave; Mau. HT1 được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2007.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Xi măng Việt Nam",
+      "percentage": 0.7969
+    },
+    {
+      "name": "Hoàng Kim Cường",
+      "percentage": 0.1000252
+    },
+    {
+      "name": "Trần Hoàng Việt Anh",
+      "percentage": 0.0279
+    },
+    {
+      "name": "Lê Phương Thúy",
+      "percentage": 0.027
+    },
+    {
+      "name": "Công ty TNHH Chứng khoán ACB",
+      "percentage": 0.02375567
+    },
+    {
+      "name": "Trần Thị Ngọc Anh",
+      "percentage": 0.0183
+    },
+    {
+      "name": "Công ty TNHH Bảo Hiểm Nhân Thọ Cathay Việt Nam",
+      "percentage": 0.0112
+    },
+    {
+      "name": "Nguyễn Văn Chuyền",
+      "percentage": 0.00951
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán BIDV",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Galileo - Vietnam Fund",
+      "percentage": 0.0075
+    },
+    {
+      "name": "E.I. Sturdza Funds Public Limited Company",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Công ty TNHH Quản lý quỹ đầu tư chứng khoán Vietcombank",
+      "percentage": 0.0062
+    },
+    {
+      "name": "Trần Phi Hùng",
+      "percentage": 0.0055
+    },
+    {
+      "name": "Lionglobal Vietnam Fund",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Nguyễn Xuân Lộc",
+      "percentage": 0.0044
+    },
+    {
+      "name": "Nguyễn Thị Tươi",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Đoàn Thị Thanh Vân",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Văn Phương",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Công đoàn Công ty Cổ phần Vận tải Hà Tiên",
+      "percentage": 0.0011708
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Vietcap",
+      "percentage": 0.00116264
+    },
+    {
+      "name": "Nguyễn Ngọc Anh",
+      "percentage": 0.000459
+    },
+    {
+      "name": "Đoàn Thị Thảo Loan",
+      "percentage": 0.000414
+    },
+    {
+      "name": "Tô Hải",
+      "percentage": 0.000198
+    },
+    {
+      "name": "Trần Thị Hồng Thanh",
+      "percentage": 0.000144
+    },
+    {
+      "name": "Mai Văn Yên",
+      "percentage": 0.00012
+    },
+    {
+      "name": "Cái Hồng Thu",
+      "percentage": 0.00006944
+    },
+    {
+      "name": "Trần Duy Sơn",
+      "percentage": 0.0000108506
+    },
+    {
+      "name": "Trần Việt Thắng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Ngô Minh Lãng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Ngô Minh Lăng",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Tạ Thị Kim Oanh",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Võ Văn Vân",
+      "percentage": 9.5e-6
+    },
+    {
+      "name": "Vy Thùy Vân",
+      "percentage": 9.4353e-6
+    },
+    {
+      "name": "Lý Tân Huệ",
+      "percentage": 8.3345e-6
+    },
+    {
+      "name": "Phạm Đình Nhật Cường",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Nguyễn Đức Diện",
+      "percentage": 5e-6
+    },
+    {
+      "name": "Phạm Thế Nghĩa",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Thị Kim Dung",
+      "percentage": 2.3588e-6
+    },
+    {
+      "name": "Nguyễn Tiến Toán",
+      "percentage": 1.6e-6
+    },
+    {
+      "name": "Mai Thanh Sơn",
+      "percentage": 1.1888e-6
+    },
+    {
+      "name": "Nguyễn Ngọc Minh",
+      "percentage": 1.0504e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 1e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Văn Chuyền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00951
+    },
+    {
+      "name": "Phạm Đình Nhật Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Trần Thị Bích Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Phúc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lưu Đình Cường",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Lập",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Cảnh Nguyễn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Xuân Hiệu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Quang Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Nguyên Quỳnh",
+      "position": "Kế toán trưởng/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Kiến Phương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Thu Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trung Thị Tâm Thanh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thị Phương Thơ",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:00:23.917048Z"
+}

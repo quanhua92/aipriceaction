@@ -1,0 +1,208 @@
+{
+  "symbol": "SGT",
+  "exchange": "HOSE",
+  "industry": "Phần mềm & Dịch vụ Máy tính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2501259454200.0,
+  "current_price": 16900.0,
+  "outstanding_shares": 148003518,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần C&ocirc;ng nghệ Viễn th&ocirc;ng S&agrave;i G&ograve;n (SGT)&nbsp;được th&agrave;nh lập năm 2002. SGT&nbsp;l&agrave; th&agrave;nh vi&ecirc;n của nh&oacute;m SaigonInvest - Một trong những c&ocirc;ng ty th&agrave;nh c&ocirc;ng nhất với việc đầu tư v&agrave; quản l&yacute; những lĩnh vực kinh doanh kh&aacute;c nhau tại Việt Nam như: ng&acirc;n h&agrave;ng, đ&agrave;o tạo dạy nghề, kinh doanh dịch vụ c&aacute;c khu c&ocirc;ng nghiệp &amp; khu chế xuất, c&ocirc;ng nghệ th&ocirc;ng tin. S&agrave;i G&ograve;n Telecom cũng cung cấp nhiều dịch vụ gia tăng tr&ecirc;n nền Internet như: E-mail, Hosting, VPN v&agrave; l&agrave; l&agrave; đối t&aacute;c của c&aacute;c h&atilde;ng h&agrave;ng đầu thế giới về CNTT v&agrave; viễn th&ocirc;ng: Cisco, Oracle, Microsoft, IBM, HP, EMC, SUN, Alcatel, Juniper.&nbsp;SGT l&agrave; doanh nghiệp dẫn đầu trong lĩnh vực đầu tư, x&acirc;y dựng v&agrave; kinh doanh cơ sở hạ tầng cao ốc th&ocirc;ng minh, khu c&ocirc;ng nghệ ICT, khu c&ocirc;ng nghiệp CNC (Science Park) v&agrave; thu h&uacute;t được nhiều tập đo&agrave;n sản xuất c&ocirc;ng nghệ cao h&agrave;ng đầu thế giới cũng như c&aacute;c doanh nghiệp lớn của Việt Nam v&agrave;o hoạt động. C&ocirc;ng ty cũng cung cấp dịch vụ Internet, dịch vụ tư vấn v&agrave; lắp đặt c&aacute;c thiết bị th&ocirc;ng tin viễn th&ocirc;ng. C&aacute;c hoạt động kinh doanh kh&aacute;c của c&ocirc;ng ty bao gồm quản l&yacute; v&agrave; vận h&agrave;nh tr&ograve; chơi trực tuyến, ph&acirc;n phối c&aacute;c c&ocirc;ng cụ viễn th&ocirc;ng v&agrave; dịch vụ đ&agrave;o tạo. Ng&agrave;y 18/01/2008, SGT&nbsp;ch&iacute;nh thức giao dịch cổ phiếu tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Phát triển Đô thị Kinh Bắc",
+      "percentage": 0.2148
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Phát Triển Dtt",
+      "percentage": 0.1689
+    },
+    {
+      "name": "Đặng Thanh Tâm",
+      "percentage": 0.0679765
+    },
+    {
+      "name": "Quỹ Đầu Tư Hạ Tầng PVI",
+      "percentage": 0.0676
+    },
+    {
+      "name": "Đặng Thị Hoàng Phượng",
+      "percentage": 0.0504
+    },
+    {
+      "name": "Nguyễn Thị Kim Xuân",
+      "percentage": 0.0503515
+    },
+    {
+      "name": "Phạm Thị Lệ",
+      "percentage": 0.0503185579
+    },
+    {
+      "name": "Nguyễn Thanh Hải",
+      "percentage": 0.0487
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Sài Gòn",
+      "percentage": 0.036
+    },
+    {
+      "name": "Công ty Cổ phần Mỹ phẩm Sài Gòn",
+      "percentage": 0.0275557737
+    },
+    {
+      "name": "Nguyễn Sơn",
+      "percentage": 0.01597
+    },
+    {
+      "name": "Nguyễn Thị Kim Thanh",
+      "percentage": 0.0148906
+    },
+    {
+      "name": "Lê Thị Kim Nhung",
+      "percentage": 0.011391
+    },
+    {
+      "name": "Nguyễn Vĩnh Thọ",
+      "percentage": 0.00222225
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý Quỹ PVI",
+      "percentage": 0.0017
+    },
+    {
+      "name": "Tổng Công ty Du lịch Sài Gòn - TNHH MTV",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Lê Nguyễn Hoàng Anh",
+      "percentage": 0.0005555
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "percentage": 0.00044445
+    },
+    {
+      "name": "Đặng Nhứt",
+      "percentage": 0.0004444498
+    },
+    {
+      "name": "Huỳnh Ngọc Huy",
+      "percentage": 0.0004040452
+    },
+    {
+      "name": "HOÀNG SĨ HÓA",
+      "percentage": 0.0003555598
+    },
+    {
+      "name": "Đào Hùng Tiến",
+      "percentage": 0.0003513437
+    },
+    {
+      "name": "Ngô Thị Phương Thủy",
+      "percentage": 0.00028889
+    },
+    {
+      "name": "Nguyễn Minh Tuyên",
+      "percentage": 0.0002354003
+    },
+    {
+      "name": "Nguyễn Đồng",
+      "percentage": 0.0002229681
+    },
+    {
+      "name": "Nguyễn Minh Hoàng",
+      "percentage": 0.0001939417
+    },
+    {
+      "name": "Chung Trí Phong",
+      "percentage": 0.0001777799
+    },
+    {
+      "name": "Lê Thị Mỹ Hạnh",
+      "percentage": 0.0001777799
+    },
+    {
+      "name": "Hồ Thị Kim Oanh",
+      "percentage": 0.0000874
+    },
+    {
+      "name": "Lê Thị Anh",
+      "percentage": 0.0000444449
+    },
+    {
+      "name": "Sầm Thị Hường",
+      "percentage": 0.00002568
+    },
+    {
+      "name": "Nguyễn Văn Xuân",
+      "percentage": 0.0000110943
+    },
+    {
+      "name": "Lê Chí Cường",
+      "percentage": 0.0000110943
+    },
+    {
+      "name": "Trần Thị Huyền Anh",
+      "percentage": 2.4323e-6
+    },
+    {
+      "name": "Đinh Minh Dũng",
+      "percentage": 1.35e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Thanh Tâm",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0679765
+    },
+    {
+      "name": "Nguyễn Thị Kim Thanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0148906
+    },
+    {
+      "name": "Lê Thị Kim Nhung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.011391
+    },
+    {
+      "name": "Lê Nguyễn Hoàng Anh",
+      "position": "Phó Tổng Giám đốc/Kế toán trưởng/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0005555
+    },
+    {
+      "name": "Hồ Thị Kim Oanh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0000874
+    },
+    {
+      "name": "Sú Ngọc Bích",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Thuận",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Ngọc Ánh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Cẩm Phương",
+      "position": "Thành viên Hội đồng Quản trị/Phụ trách Công bố thông tin/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Thái",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:39.483049Z"
+}

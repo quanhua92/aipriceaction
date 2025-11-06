@@ -1,0 +1,137 @@
+{
+  "symbol": "MCH",
+  "exchange": "UPCOM",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 199538317427400.0,
+  "current_price": 186900.0,
+  "outstanding_shares": 1067620746,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần H&agrave;ng Ti&ecirc;u D&ugrave;ng MaSan (MCH) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần C&ocirc;ng nghiệp -&nbsp;Thương mại Masan được th&agrave;nh lập&nbsp;v&agrave;o năm 2000. C&ocirc;ng ty sản xuất v&agrave; kinh doanh c&aacute;c loại thực phẩm v&agrave; đồ uống bao gồm nước mắm, nước tương, tương ớt, m&igrave; ăn liền, ch&aacute;o ăn liền, c&agrave; ph&ecirc; h&ograve;a tan, ngũ cốc dinh dưỡng v&agrave; đồ uống đ&oacute;ng chai với c&aacute;c thương hiệu mạnh như: Omachi, Chinsu, Kokomi, Vinacafe, Wake-up, Tam Th&aacute;i Tử, Nam Ngư, Wake-up 247. C&ocirc;ng ty&nbsp;đ&atilde; x&acirc;y dựng&nbsp;một trong những hệ thống ph&acirc;n phối thực phẩm v&agrave; đồ uống lớn nhất tại Việt Nam&nbsp;với gần 180.000 điểm b&aacute;n lẻ sản phẩm thực phẩm, 160.000&nbsp;điểm b&aacute;n lẻ sản&nbsp;phẩm&nbsp;đồ uống, 3 trung t&acirc;m ph&acirc;n phối tại Miền Nam, Miền Trung v&agrave; Miền Bắc. MCH được giao dịch tr&ecirc;n thị trường UPCOM từ đầu năm 2017.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH MasanConsumerHoldings",
+      "percentage": 0.69712
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Masan",
+      "percentage": 0.568
+    },
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "percentage": 0.001549
+    },
+    {
+      "name": "Phạm Hồng Sơn",
+      "percentage": 0.000786
+    },
+    {
+      "name": "Nguyễn Anh Nguyên",
+      "percentage": 0.00063
+    },
+    {
+      "name": "Lê Trung Thành",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Huỳnh Việt Thăng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thiều Quang",
+      "percentage": 0.000201
+    },
+    {
+      "name": "Đinh Kim Nhung",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Phương Bắc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Seokhee Won",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trương Công Thắng",
+      "percentage": 0.000181
+    },
+    {
+      "name": "Phan Thị Thúy Hoa",
+      "percentage": 0.000077
+    },
+    {
+      "name": "Phạm Đình Toại",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Nguyễn Đăng Quang",
+      "percentage": 0.000042
+    },
+    {
+      "name": "Nguyễn Quý Định",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Hoàng Yến",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.001549
+    },
+    {
+      "name": "Phạm Hồng Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000786
+    },
+    {
+      "name": "Huỳnh Việt Thăng",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Thiều Quang",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị",
+      "percentage": 0.000201
+    },
+    {
+      "name": "Trương Công Thắng",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.000181
+    },
+    {
+      "name": "Phan Thị Thúy Hoa",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thu Hiền",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thu Hiền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Hoàng Yến",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "DANNY LE",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:11.363867Z"
+}

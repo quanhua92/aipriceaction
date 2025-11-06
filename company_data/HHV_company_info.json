@@ -1,0 +1,170 @@
+{
+  "symbol": "HHV",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 7013805342300.0,
+  "current_price": 14100.0,
+  "outstanding_shares": 497433003,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Hạ tầng giao th&ocirc;ng Đ&egrave;o Cả (HHV) c&oacute; tiền th&acirc;n l&agrave; Xưởng Thống Nhất được th&agrave;nh lập v&agrave;o năm 1974. C&ocirc;ng ty hoạt&nbsp;động trong lĩnh vực quản l&yacute;, vận h&agrave;nh, duy tu v&agrave; bảo dưỡng hầm đường bộ Hải V&acirc;n. Ngo&agrave;i ra, C&ocirc;ng ty c&ograve;n được ph&eacute;p cung cấp dịch vụ vận chuyển xe m&aacute;y v&agrave; người đi bộ qua hầm Hải V&acirc;n v&agrave; tham gia sản xuất nhựa đường. Hiện nay, C&ocirc;ng ty đang quản l&yacute; vận h&agrave;nh 03 nh&agrave; m&aacute;y sản xuất nhựa đường tại Đ&agrave; Nẵng, B&igrave;nh Định v&agrave; Long An. Ng&agrave;y 20/01/2022, HHV ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Quốc Ánh",
+      "percentage": 0.1764
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Hải Thạch B.O.T",
+      "percentage": 0.1609
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Hạ tầng Miền Bắc",
+      "percentage": 0.0495
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Thương Mại Quốc Tế Hà Thành",
+      "percentage": 0.040515
+    },
+    {
+      "name": "Lưu Xuân Thủy",
+      "percentage": 0.0385
+    },
+    {
+      "name": "Phạm Đình Thắng",
+      "percentage": 0.0325
+    },
+    {
+      "name": "Trần Thị Ngoan",
+      "percentage": 0.0162
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Đèo Cả",
+      "percentage": 0.0135
+    },
+    {
+      "name": "Hoàng Thị Hải Oanh",
+      "percentage": 0.0059
+    },
+    {
+      "name": "HỒ MINH HOÀNG",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Hồ Minh Hoàng",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Quang Huy",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Trần Thị Hồng Lam",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Cao Bá Giang",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Tấn Đông",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Thị Thu Hiền",
+      "percentage": 0.000235
+    },
+    {
+      "name": "Lê Châu Thắng",
+      "percentage": 9.2e-6
+    },
+    {
+      "name": "Võ Ngọc Trung",
+      "percentage": 8e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Hồ Minh Hoàng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Nguyễn Quang Huy",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Tấn Đông",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Võ Ngọc Trung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Trần Chủng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Văn Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quỳnh Mai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Ân",
+      "position": "Kế toán trưởng/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cam Thị Minh Hải",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thị Mai",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Thế",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Giang",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Cảnh Tỉnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Trang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Thụy Linh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:59.198495Z"
+}

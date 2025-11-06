@@ -1,0 +1,157 @@
+{
+  "symbol": "HTN",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 808285847770.0,
+  "current_price": 9070.0,
+  "outstanding_shares": 89116411,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Hưng Thịnh Incons (HTN) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Thiết kế - X&acirc;y dựng Hưng Thịnh được th&agrave;nh lập v&agrave;o năm 2007.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực thiết kế v&agrave; x&acirc;y dựng c&ocirc;ng tr&igrave;nh,&nbsp;cung ứng vật tư, thiết bị x&acirc;y dựng. HTN ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2010. Với năng lực của m&igrave;nh, Hưng Thịnh Incons thường tham gia v&agrave;o c&aacute;c dự &aacute;n x&acirc;y dựng c&oacute; quy m&ocirc; lớn với vai tr&ograve; tổng thầu. Một số c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu C&ocirc;ng ty đ&atilde; tham gia thực hiện như C&ocirc;ng tr&igrave;nh Thi&ecirc;n Nam Apartment - Quận 10 - Th&agrave;nh phố Hồ Ch&iacute; Minh, Căn hộ 27 Trường Chinh - Phường T&acirc;n Thới Nhất - Quận 12 - Th&agrave;nh phố Hồ Ch&iacute; Minh, Chung cư cao tầng tại 91 Phạm Văn Hai, Căn hộ 8X Plus - Trường Ch&iacute;nh - Quận 12 - Th&agrave;nh phố Hồ Ch&iacute; Minh. HTN được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Tập Đoàn Hưng Thịnh",
+      "percentage": 0.1844
+    },
+    {
+      "name": "Nguyễn Đình Trung",
+      "percentage": 0.1683
+    },
+    {
+      "name": "Công ty Cổ phần Hưng Thịnh Investment",
+      "percentage": 0.129
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0507
+    },
+    {
+      "name": "Trần Tựu",
+      "percentage": 0.04686
+    },
+    {
+      "name": "Trần Thục Oanh",
+      "percentage": 0.0443
+    },
+    {
+      "name": "Lê Hồng Việt",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Văn Cường",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Nguyễn Thế Hùng",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Phan Thị Hà",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Huỳnh Thanh Thùy",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Chân Tâm",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Huỳnh Thanh Thi",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Văn Bằng",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Thiệu Lê Bình",
+      "percentage": 0.000016
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Đình Trung",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1683
+    },
+    {
+      "name": "Nguyễn Văn Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.003
+    },
+    {
+      "name": "Lê Hồng Việt",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.003
+    },
+    {
+      "name": "Hồ  Minh Hoàng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Kim Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Huy Hiệu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "HUỲNH THANH TỨ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Võ Văn Thư",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hải Phong",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Loan Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Xuân",
+      "position": "Giám đốc Tài chính/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Văn Việt",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Tiến Thanh",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Khuất Tùng Phong",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quỳnh Mai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:00:27.732899Z"
+}

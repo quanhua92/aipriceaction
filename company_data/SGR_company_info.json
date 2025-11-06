@@ -1,0 +1,182 @@
+{
+  "symbol": "SGR",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1502312500000.0,
+  "current_price": 21500.0,
+  "outstanding_shares": 69875000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tổng C&ocirc;ng ty Cổ phần Địa ốc S&agrave;i G&ograve;n (SGR), được th&agrave;nh lập năm 2000 tr&ecirc;n cơ sở cổ phần h&oacute;a C&ocirc;ng ty X&acirc;y dựng Kinh doanh nh&agrave; Gia Định, hoạt động trong lĩnh vực bất động sản. Năm 1999, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. C&aacute;c mảng hoạt động kinh doanh ch&iacute;nh của c&ocirc;ng ty l&agrave; (i) đầu tư v&agrave; kinh doanh bất động sản, (ii) m&ocirc;i giới bất động sản v&agrave; (iii) g&oacute;p vốn đầu tư, li&ecirc;n doanh li&ecirc;n kết. Với&nbsp;hơn 30 năm h&igrave;nh th&agrave;nh v&agrave; li&ecirc;n tục ph&aacute;t triển, SGR đ&atilde; đầu tư, x&acirc;y dựng nhiều c&ocirc;ng tr&igrave;nh với quy m&ocirc; lớn đ&aacute;p ứng nhu cầu về nh&agrave; ở của x&atilde; hội. C&ocirc;ng ty đ&atilde; khẳng định vị thế của m&igrave;nh bởi tr&igrave;nh độ c&ocirc;ng nghệ v&agrave; chất lượng c&ocirc;ng tr&igrave;nh th&ocirc;ng qua c&aacute;c dự &aacute;n ti&ecirc;u biểu như Cao ốc An Lạc, Saigonres Tower, Cao ốc An B&igrave;nh, Saigonres Plaza. Ng&agrave;y 15/01/2018, SGR ch&iacute;nh thức&nbsp;giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Phạm  Thu",
+      "percentage": 0.2982
+    },
+    {
+      "name": "Công ty Cổ phần Cơ điện Lạnh",
+      "percentage": 0.2886511
+    },
+    {
+      "name": "Công ty TNHH Bất Động Sản Ree",
+      "percentage": 0.2184
+    },
+    {
+      "name": "Phạm Đình Thành",
+      "percentage": 0.053183
+    },
+    {
+      "name": "Đỗ Thị Kim Thúy",
+      "percentage": 0.0529
+    },
+    {
+      "name": "Trần Thị Ga",
+      "percentage": 0.036068
+    },
+    {
+      "name": "Đặng Văn Phúc",
+      "percentage": 0.013784
+    },
+    {
+      "name": "Trần Quí Thanh",
+      "percentage": 0.0120828787
+    },
+    {
+      "name": "Đỗ Thị Trang",
+      "percentage": 0.0118177272
+    },
+    {
+      "name": "Trần Thị Tuyết Mai",
+      "percentage": 0.0113637
+    },
+    {
+      "name": "Nguyễn Hồng Phát",
+      "percentage": 0.001224
+    },
+    {
+      "name": "Hoàng Thị Hương",
+      "percentage": 0.0007918181
+    },
+    {
+      "name": "Phạm Thao",
+      "percentage": 0.0003487
+    },
+    {
+      "name": "Lương Hồng Thế Huân",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Thái Quốc Dương",
+      "percentage": 0.000186
+    },
+    {
+      "name": "Trần Ngọc Mỹ Trang",
+      "percentage": 0.000186
+    },
+    {
+      "name": "Trần Thị Hiên",
+      "percentage": 0.000121
+    },
+    {
+      "name": "Đinh Thị Nguyệt",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Trần Văn Chường",
+      "percentage": 0.000072
+    },
+    {
+      "name": "Trần Hữu Đức",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Lê Xuân Khương",
+      "percentage": 4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm  Thu",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2982
+    },
+    {
+      "name": "Phạm Tuấn",
+      "position": "Giám đốc đầu tư/Thành viên Hội đồng Quản trị/Giám đốc khối",
+      "percentage": 0.058692
+    },
+    {
+      "name": "Phạm Đình Thành",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.053183
+    },
+    {
+      "name": "Trần Thị Ga",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.036068
+    },
+    {
+      "name": "Đặng Văn Phúc",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.013784
+    },
+    {
+      "name": "Thái Quốc Dương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.000186
+    },
+    {
+      "name": "Lê Xuân Khương",
+      "position": "Giám đốc khối",
+      "percentage": 4e-7
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Oanh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trọng Giáp",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kiều Minh Long",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Võ Thăng Long",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Thanh Hải",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Quý",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Khoa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Bích Đào",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:36.675982Z"
+}

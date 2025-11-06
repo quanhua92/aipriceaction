@@ -1,0 +1,121 @@
+{
+  "symbol": "NTC",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3820796816000.0,
+  "current_price": 159200.0,
+  "outstanding_shares": 23999980,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Khu c&ocirc;ng nghiệp Nam T&acirc;n Uy&ecirc;n (NTC)&nbsp;được th&agrave;nh lập năm 2005. Hoạt động sản xuất ch&iacute;nh của C&ocirc;ng ty l&agrave; đầu tư x&acirc;y dựng kinh doanh kết cấu hạ tầng kỹ thuật&nbsp;khu c&ocirc;ng nghiệp, v&agrave; x&acirc;y dựng c&ocirc;ng tr&igrave;nh c&ocirc;ng nghiệp, d&acirc;n dụng, thủy lợi, giao th&ocirc;ng, san lấp mặt bằng. NTC hiện đang đầu tư, quản l&yacute; 3 khu c&ocirc;ng nghiệp tr&ecirc;n địa b&agrave;n th&agrave;nh phố T&acirc;n Uy&ecirc;n với tổng diện t&iacute;ch 966,5 ha. Ngo&agrave;i ra, NTC c&ograve;n tham gia đầu tư v&agrave;o c&aacute;c dự &aacute;n trong c&ugrave;ng lĩnh vực kinh doanh như Khu c&ocirc;ng nghiệp B&igrave;nh Long, Khu c&ocirc;ng nghiệp Đức H&ograve;a III, Khu c&ocirc;ng nghiệp Bắc Đồng Ph&uacute;, v&agrave; c&aacute;c dự &aacute;n ngo&agrave;i ng&agrave;nh. Ng&agrave;y 28/10/2025, NTC ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Cao su Phước Hòa",
+      "percentage": 0.328535
+    },
+    {
+      "name": "Tập đoàn Công nghiệp Cao su Việt Nam - Công ty Cổ phần",
+      "percentage": 0.2042
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Sài Gòn VRG",
+      "percentage": 0.1995
+    },
+    {
+      "name": "Phan Thị Long",
+      "percentage": 0.0215
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Và Phát Triển Vrg Long Thành",
+      "percentage": 0.02
+    },
+    {
+      "name": "Huỳnh Trung Trực",
+      "percentage": 0.0107
+    },
+    {
+      "name": "Nguyễn Minh Hùng",
+      "percentage": 0.0082
+    },
+    {
+      "name": "Công ty Cổ phần Xây dựng - Địa ốc Cao su",
+      "percentage": 0.00675
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.00076875
+    },
+    {
+      "name": "Nguyễn Kim Phượng Các",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Huỳnh Thoại Hưng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Huỳnh Hữu Tín",
+      "percentage": 0.0001875
+    }
+  ],
+  "officers": [
+    {
+      "name": "Huỳnh Hữu Tín",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001875
+    },
+    {
+      "name": "Đỗ Hữu Phước",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Phú Nguyên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Hoàng Giang",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Phi Nga",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Trọng Bình",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Diệu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Thế Sơn",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Bính",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bồ Thanh Tuấn",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Triều Tiên",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:22.821579Z"
+}

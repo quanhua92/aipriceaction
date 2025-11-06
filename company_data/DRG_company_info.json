@@ -1,0 +1,101 @@
+{
+  "symbol": "DRG",
+  "exchange": "UPCOM",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 13930560000.0,
+  "current_price": 8400.0,
+  "outstanding_shares": 1658400,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Cao su Đắk Lắk (DRG), tiền th&acirc;n l&agrave; C&ocirc;ng ty Cao su Đắk Lắk, được th&agrave;nh lập năm 1993. Đ&ecirc;n năm 2018, C&ocirc;ng ty chuyển đổi m&ocirc; h&igrave;nh kinh doanh hoạt động l&agrave; C&ocirc;ng ty Cổ phần. Vốn điều lệ hiện tại l&agrave; 1.558 tỷ đồng. Lĩnh vực kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave;: Trồng c&acirc;y, chế biến, mua b&aacute;n mủ cao su; Chế biến gỗ với c&aacute;c sản phẩm: Mộc d&acirc;n dụng, sản xuất pallets l&agrave;m bao b&igrave;; Kinh doanh dịch vụ kh&aacute;ch sạn, nh&agrave; nghỉ, khu du lịch...C&ocirc;ng ty c&oacute; tổ hợp Kh&aacute;ch sạn Dakruco được x&acirc;y dựng tr&ecirc;n tổng diện t&iacute;ch đất 2.7 ha bao gồm: Kh&aacute;ch sạn 4 sao, 11 tầng, quy m&ocirc; 114 ph&ograve;ng, kh&aacute;ch sạn 3 sao, 3 tầng, quy m&ocirc; 31 ph&ograve;ng, nh&agrave; h&agrave;ng tiệc cưới 2 tầng, sức chứa 1.000 kh&aacute;ch, c&aacute;c tiện &iacute;ch giải tr&iacute; kh&aacute;c gồm: hồ bơi, s&acirc;n tenis...Hiện&nbsp;tại c&ocirc;ng ty&nbsp;đang quản l&yacute; tr&ecirc;n 13 ng&agrave;n ha cao su (trong đ&oacute; c&oacute; tr&ecirc;n 07 ng&agrave;n ha cao su kinh doanh). Ng&agrave;y 11/12/2019, DRG ch&iacute;nh thức giao dịch tr&ecirc;n thị trường UPCOM.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ủy Ban Nhân Dân Tỉnh Đắk Lắk",
+      "percentage": 0.9894
+    },
+    {
+      "name": "Bùi Quang Ninh",
+      "percentage": 0.00004236
+    },
+    {
+      "name": "Nguyễn Viết Tượng",
+      "percentage": 0.0000321
+    },
+    {
+      "name": "Nguyễn Độ",
+      "percentage": 0.0000302
+    },
+    {
+      "name": "Nguyễn Văn Cúc",
+      "percentage": 0.0000225
+    },
+    {
+      "name": "Nguyễn Thị Mai Quyên",
+      "percentage": 0.0000141
+    },
+    {
+      "name": "Trần Văn Đức",
+      "percentage": 5.1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Quang Ninh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.00004236
+    },
+    {
+      "name": "Nguyễn Viết Tượng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0000321
+    },
+    {
+      "name": "Nguyễn Độ",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0000302
+    },
+    {
+      "name": "Nguyễn Văn Cúc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000225
+    },
+    {
+      "name": "Nguyễn Thạc Hoành",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Phan Thanh Tân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Trần Giang",
+      "position": "Trưởng phòng Tài chính - Kế toán/Thành viên Hội đồng Quản trị/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Bích Thảo",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Thảo",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Nam",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Văn Định",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:46.353976Z"
+}

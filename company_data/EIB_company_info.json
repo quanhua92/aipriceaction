@@ -1,0 +1,359 @@
+{
+  "symbol": "EIB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 41674476536100.0,
+  "current_price": 22300.0,
+  "outstanding_shares": 1868810607,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Ng&acirc;n h&agrave;ng TMCP Xuất nhập khẩu Việt Nam (EIB) được th&agrave;nh lập v&agrave;o năm&nbsp;1989. Ng&acirc;n h&agrave;ng hoạt động trong lĩnh vực huy động v&agrave; kinh doanh vốn, v&agrave; cung cấp c&aacute;c dịch vụ t&agrave;i ch&iacute;nh li&ecirc;n quan. EIB l&agrave; ng&acirc;n h&agrave;ng đầu ti&ecirc;n&nbsp;tại&nbsp;Việt&nbsp;Nam&nbsp;ph&aacute;t h&agrave;nh thẻ ghi nợ quốc tế Visa Debit.&nbsp;EIB được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2009. Năm 2024, so với c&ugrave;ng kỳ, Bi&ecirc;n l&atilde;i thuần (NIM) ở mức 2.78%, tăng 0.31%. Tỷ lệ nợ xấu ở mức 2.53%, giảm 0.12%. Tỷ lệ bao phủ nợ xấu ở mức 42.32%, tăng 1.11%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 3,3 ngh&igrave;n tỷ đồng, tăng 53.66%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 13.99%, tăng 3.91%.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn Gelex",
+      "percentage": 0.1
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán VIX",
+      "percentage": 0.0455
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Ngoại thương Việt Nam",
+      "percentage": 0.0451
+    },
+    {
+      "name": "Sumitomo Mitsui Banking Corpration",
+      "percentage": 0.0427
+    },
+    {
+      "name": "Công ty Cổ Phần Thắng Phương",
+      "percentage": 0.0307
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.0146
+    },
+    {
+      "name": "Lương Thị Cẩm Tú",
+      "percentage": 0.0112243
+    },
+    {
+      "name": "Lê Thị Mai Loan",
+      "percentage": 0.0103057
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Á Châu",
+      "percentage": 0.00739991
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Tài chính Sài Gòn Á Châu",
+      "percentage": 0.00636666
+    },
+    {
+      "name": "Tổng Công ty Du lịch Sài Gòn - TNHH MTV",
+      "percentage": 0.0059278261
+    },
+    {
+      "name": "Tổng Công ty Thương mại Kỹ thuật và Đầu tư - Công ty Cổ phần",
+      "percentage": 0.0052144901
+    },
+    {
+      "name": "Công đoàn Ngân hàng Thương mại Cổ phần Xuất nhập khẩu Việt Nam",
+      "percentage": 0.0032178076
+    },
+    {
+      "name": "Phạm Hữu Phú",
+      "percentage": 0.0020188917
+    },
+    {
+      "name": "Công ty Cổ phần Sóng Việt",
+      "percentage": 0.0015710101
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.0009993551
+    },
+    {
+      "name": "Công ty Cổ phần TIE",
+      "percentage": 0.00064567
+    },
+    {
+      "name": "Nguyễn Văn Trữ",
+      "percentage": 0.0004473607
+    },
+    {
+      "name": "Công ty Cổ phần Nhựa Tân Đại Hưng",
+      "percentage": 0.0004312724
+    },
+    {
+      "name": "Nguyễn Hữu Thọ",
+      "percentage": 0.0003028835
+    },
+    {
+      "name": "Trương Văn Phước",
+      "percentage": 0.0002167039
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 0.0001769596
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001618714
+    },
+    {
+      "name": "Nguyễn Thị Phụng",
+      "percentage": 0.0001119963
+    },
+    {
+      "name": "Nguyễn Quang Thông",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Hoàng Tuấn Khải",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Minh Khởi",
+      "percentage": 0.0000951658
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0000911152
+    },
+    {
+      "name": "Nguyễn Thành Long",
+      "percentage": 0.0000902464
+    },
+    {
+      "name": "Võ Tấn Phong",
+      "percentage": 0.0000868205
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000858201
+    },
+    {
+      "name": "Đặng Phước Dừa",
+      "percentage": 0.00007735
+    },
+    {
+      "name": "Đặng Hữu Tiến",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Bốn",
+      "percentage": 0.0000611054
+    },
+    {
+      "name": "Nguyễn Thanh Nhung",
+      "percentage": 0.0000541737
+    },
+    {
+      "name": "Trịnh Công Lý",
+      "percentage": 0.0000496163
+    },
+    {
+      "name": "Bùi Đỗ Bích Vân",
+      "percentage": 0.00004255
+    },
+    {
+      "name": "Đặng Anh Mai",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Quốc Hương",
+      "percentage": 0.00003386
+    },
+    {
+      "name": "Nguyễn Thị Phương Thảo",
+      "percentage": 0.0000272
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000244015
+    },
+    {
+      "name": "Nguyễn Hồ Hoàng Vũ",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Đinh Thị Thu Thảo",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Gia Định",
+      "percentage": 0.0000192926
+    },
+    {
+      "name": "Lê Thị Hoa",
+      "percentage": 0.0000146408
+    },
+    {
+      "name": "Ngô Hữu Quỳ",
+      "percentage": 0.000012
+    },
+    {
+      "name": "Nguyễn Bình Quý",
+      "percentage": 0.0000115231
+    },
+    {
+      "name": "Đào Hồng Châu",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Tạ Thị Vân Anh",
+      "percentage": 7.31e-6
+    },
+    {
+      "name": "Trần Như Hoa",
+      "percentage": 4.76e-6
+    },
+    {
+      "name": "Tô Nghị",
+      "percentage": 1.9033e-6
+    },
+    {
+      "name": "Nguyễn Quang Triết",
+      "percentage": 1.11e-6
+    },
+    {
+      "name": "Nguyễn Ngọc Chung",
+      "percentage": 8.4e-7
+    },
+    {
+      "name": "Nguyễn Thị Minh",
+      "percentage": 6.9e-7
+    },
+    {
+      "name": "Nguyễn Khắc Tuân",
+      "percentage": 3.5e-7
+    },
+    {
+      "name": "Nguyễn Văn Thuỷ",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Bùi Đỗ Đan Thanh",
+      "percentage": 9e-8
+    },
+    {
+      "name": "Nguyễn Hồng Long",
+      "percentage": 1.3e-8
+    },
+    {
+      "name": "Nguyễn Văn Hào",
+      "percentage": 1e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lương Thị Cẩm Tú",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0112243
+    },
+    {
+      "name": "Nguyễn Quang Thông",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Hoàng Tuấn Khải",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đặng Hữu Tiến",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Đặng Anh Mai",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Hồ Hoàng Vũ",
+      "position": "Phó Tổng Giám đốc/Giám đốc Tài chính",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Đinh Thị Thu Thảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đào Hồng Châu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Nguyễn Đình Đại",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hướng Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Tấn Lộc",
+      "position": "Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Mai Phương",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lã Quang Trung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Bảo Quốc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Minh Quốc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Dũng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Văn Thái Bảo Nhi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Xuân Ninh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Quyết",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Yasuhiro Saitoh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:58:15.193660Z"
+}

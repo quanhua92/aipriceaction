@@ -1,0 +1,188 @@
+{
+  "symbol": "C69",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 741599664000.0,
+  "current_price": 12000.0,
+  "outstanding_shares": 61799972,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần X&acirc;y dựng 1369 (C69) được th&agrave;nh lập v&agrave;o th&aacute;ng 08/2003. Lĩnh vực hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave;: Nh&agrave; thầu x&acirc;y dựng; Hoạt động kiến tr&uacute;c v&agrave; tư vấn kỹ thuật, tư vấn quản l&yacute; dự &aacute;n; Khai th&aacute;c, sản xuất, kinh doanh, xuất khẩu kho&aacute;ng sản; Bốc x&uacute;c, vận tải h&agrave;ng ho&aacute; bằng đường bộ... C69 đ&atilde; trở th&agrave;nh c&ocirc;ng ty đại ch&uacute;ng v&agrave;o năm 2016. C69 l&agrave; nh&agrave; thầu ch&iacute;nh thiết kế thi c&ocirc;ng c&aacute;c c&ocirc;ng tr&igrave;nh x&acirc;y dựng c&ocirc;ng nghiệp, nh&agrave; xưởng v&agrave; lắp đặt c&aacute;c thiết bị k&egrave;m theo với một số c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu như C&ocirc;ng tr&igrave;nh hạ tầng Khu đ&ocirc; thị Cầu Sến U&ocirc;ng B&iacute; tỉnh Quảng Ninh, Nh&agrave; m&aacute;y xi măng trắng Ph&uacute;c Đạt, Nh&agrave; m&aacute;y gạch ng&oacute;i Kim Th&agrave;nh. Ngo&agrave;i ra, C69 c&ograve;n tiến h&agrave;nh x&acirc;y dựng một số c&ocirc;ng tr&igrave;nh như nh&agrave; xưởng Việt Nhật, Trạm nghiền Quảng B&igrave;nh, Showroom &ocirc; t&ocirc; Mitsubishi Hải Dương&hellip;.B&ecirc;n cạnh đ&oacute;,&nbsp;C69 cũng tham gia khai th&aacute;c đ&aacute; l&agrave;m vật liệu x&acirc;y dựng tại Th&ocirc;n Đồng Vải - Quảng Ninh, sản lượng khai th&aacute;c đạt 3.500m3/th&aacute;ng. Ng&agrave;y 21/04/2017, C69 ch&iacute;nh thức giao dịch tại Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Bá Dũng",
+      "percentage": 0.0833
+    },
+    {
+      "name": "Mai Hồng Ngọc",
+      "percentage": 0.0629
+    },
+    {
+      "name": "Lưu Bảo Trung",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Vũ Hồng Quân",
+      "percentage": 0.0483
+    },
+    {
+      "name": "Vũ Thị Thu Chung",
+      "percentage": 0.0476
+    },
+    {
+      "name": "Nguyễn Thị Tuyết",
+      "percentage": 0.0466
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Và Thương Mại Nam Phương",
+      "percentage": 0.0453
+    },
+    {
+      "name": "Phạm Anh Đức",
+      "percentage": 0.0442
+    },
+    {
+      "name": "Lê Minh Tân",
+      "percentage": 0.0333
+    },
+    {
+      "name": "Lê Thị Thùy Linh",
+      "percentage": 0.0256117
+    },
+    {
+      "name": "Vương Quốc Thắng",
+      "percentage": 0.0183
+    },
+    {
+      "name": "Đào Thị Đầm",
+      "percentage": 0.0175
+    },
+    {
+      "name": "Tiêu Thị Bạch Dương",
+      "percentage": 0.0166667
+    },
+    {
+      "name": "Phạm Tiến Quỳnh",
+      "percentage": 0.0152
+    },
+    {
+      "name": "Phạm Văn Tùng",
+      "percentage": 0.0097087
+    },
+    {
+      "name": "Vương Anh Tuấn",
+      "percentage": 0.0093
+    },
+    {
+      "name": "Phạm Thị Thế",
+      "percentage": 0.0085483
+    },
+    {
+      "name": "Lê Anh Luân",
+      "percentage": 0.0079167
+    },
+    {
+      "name": "NGUYỄN VĂN MIÊNG",
+      "percentage": 0.006
+    },
+    {
+      "name": "TRẦN XUÂN BẢN",
+      "percentage": 0.005
+    },
+    {
+      "name": "Cao Thị Trang",
+      "percentage": 0.0015
+    },
+    {
+      "name": "PHẠM VĂN THỤ",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Lê Thị Dung",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Phạm Thị Doan",
+      "percentage": 0.0000333
+    },
+    {
+      "name": "Cao Hà Linh",
+      "percentage": 0.00003
+    }
+  ],
+  "officers": [
+    {
+      "name": "LÊ TUẤN NGHĨA",
+      "position": "Người phụ trách quản trị công ty/Giám đốc",
+      "percentage": 0.0836625
+    },
+    {
+      "name": "Lê Minh Tân",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0333
+    },
+    {
+      "name": "Đào Thị Đầm",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0175
+    },
+    {
+      "name": "Tiêu Thị Bạch Dương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0166667
+    },
+    {
+      "name": "Phạm Tiến Quỳnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0152
+    },
+    {
+      "name": "Vương Anh Tuấn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0093
+    },
+    {
+      "name": "PHẠM VĂN THỤ",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Phạm Thị Doan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000333
+    },
+    {
+      "name": "Cao Hà Linh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Vũ Thị Thắm",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hải Vinh",
+      "position": "Phó Tổng Giám đốc Kinh doanh",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "position": "Phó Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Tuyết",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Mến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:58.457965Z"
+}

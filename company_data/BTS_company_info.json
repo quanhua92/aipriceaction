@@ -1,0 +1,139 @@
+{
+  "symbol": "BTS",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 654867247400.0,
+  "current_price": 5300.0,
+  "outstanding_shares": 123559858,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Xi măng B&uacute;t Sơn tiền th&acirc;n l&agrave; Ban quản l&iacute; c&ocirc;ng tr&igrave;nh x&acirc;y dựng Nh&agrave; m&aacute;y Xi măng B&uacute;t Sơn th&agrave;nh lập năm 1997 v&agrave; chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần năm 2005. Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; sản xuất v&agrave; kinh doanh xi măng với c&aacute;c sản phẩm chủ đạo Xi măng Pooclăng PCB 30; Xi măng PC40, clinker mang thương hiệu B&uacute;t Sơn. Sản phẩm Xi măng B&uacute;t Sơn được sản xuất tr&ecirc;n d&acirc;y chuyển d&acirc;y chuyền c&ocirc;ng nghệ đồng bộ, hiện đại, c&ocirc;ng suất 2,6 triệu tấn clinker/năm. Sản phẩm của C&ocirc;ng ty được ti&ecirc;u thụ tại Hưng Y&ecirc;n, Th&aacute;i B&igrave;nh, Vĩnh Ph&uacute;c, &nbsp;T&acirc;y Nguy&ecirc;n, H&agrave; Nội, Nam Định v&agrave; H&agrave; Nam.&nbsp;Xi măng B&uacute;t Sơn đ&atilde; gắn liền với c&aacute;c c&ocirc;ng tr&igrave;nh trọng điểm quốc gia như Đường Hồ Ch&iacute; Minh, đường d&acirc;y 110KV Bắc Nam, thủy điện Tuy&ecirc;n Quang, Sơn La, cầu T&acirc;n Đệ, cầu Thanh Tr&igrave;, Trung t&acirc;m Hội nghị quốc gia, c&ocirc;ng tr&igrave;nh thủy điện PlayKrong Kon Tum, thủy điện Ba Hạ Ph&uacute; Y&ecirc;n. BTS được ni&ecirc;m yết tại Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2006.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Xi măng Việt Nam",
+      "percentage": 0.795153
+    },
+    {
+      "name": "Công ty TNHH Chứng khoán ACB",
+      "percentage": 0.0561
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Á Châu",
+      "percentage": 0.050952
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Tài Chính Á Châu Hà Nội",
+      "percentage": 0.0317
+    },
+    {
+      "name": "Công ty Cổ Phần Địa Ốc A.c.b",
+      "percentage": 0.0011
+    },
+    {
+      "name": "Trương Quốc Huy",
+      "percentage": 0.00012654
+    },
+    {
+      "name": "Nguyễn Huy Quế",
+      "percentage": 0.0000261333
+    },
+    {
+      "name": "Phan Trọng Lập",
+      "percentage": 0.000022007
+    },
+    {
+      "name": "Lê Thị Khanh",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Lê Trung Tiến",
+      "percentage": 0.0000188
+    },
+    {
+      "name": "Lưu Đình Cường",
+      "percentage": 0.0000183
+    },
+    {
+      "name": "Phạm Đức Cường",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Tạ Quốc Luận",
+      "percentage": 9.1695e-6
+    },
+    {
+      "name": "Nguyễn Văn Duyệt",
+      "percentage": 2.7508e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Thị Khanh",
+      "position": "Thành viên Hội đồng Quản trị/Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Phạm Anh Tuấn",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thế Hà",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Văn",
+      "position": "Người phụ trách quản trị công ty/Thư ký Hội đồng Quản Trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thế Hùng",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Việt Hồng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Huy Quân",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Tuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Tiến Trình",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Doãn Hữu Phong",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Ngọc Hải",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Văn Hải",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Vũ Hải",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:37.843335Z"
+}

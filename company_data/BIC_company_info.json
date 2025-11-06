@@ -1,0 +1,151 @@
+{
+  "symbol": "BIC",
+  "exchange": "HOSE",
+  "industry": "Bảo hiểm phi nhân thọ",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4960746249350.0,
+  "current_price": 24550.0,
+  "outstanding_shares": 202067057,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Tổng C&ocirc;ng ty Cổ phần Bảo hiểm Ng&acirc;n h&agrave;ng Đầu tư v&agrave; Ph&aacute;t triển Việt Nam (BIC) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Li&ecirc;n doanh Bảo hiểm Việt &Uacute;c được th&agrave;nh lập v&agrave;o năm 1999 tr&ecirc;n cơ sở hợp t&aacute;c giữa Ng&acirc;n h&agrave;ng Đầu tư v&agrave; Ph&aacute;t triển Việt Nam (BIDV) v&agrave; C&ocirc;ng ty Bảo hiểm Quốc tế QBE (&Uacute;c). Tổng C&ocirc;ng ty hoạt&nbsp;động ch&iacute;nh trong lĩnh vực kinh doanh bảo hiểm phi nh&acirc;n thọ, t&aacute;i bảo hiểm v&agrave; đầu tư t&agrave;i ch&iacute;nh. Năm 2024, BIC năm trong top 5 thị trường về thị phần doanh thu ph&iacute; bảo hiểm gốc, đồng thời duy tr&igrave; vị tr&iacute; Top 3 nh&agrave; bảo hiểm phi nh&acirc;n thọ c&oacute; tỷ suất sinh lời cao nhất thị trường. BIC l&agrave; c&ocirc;ng ty dẫn đầu thị trường về ph&aacute;t triển k&ecirc;nh Bancassurance v&agrave; c&aacute;c k&ecirc;nh bảo hiểm trực tuyến (E-business). BIC cũng l&agrave; c&ocirc;ng ty bảo hiểm đầu ti&ecirc;n c&oacute; mạng lưới hoạt động tr&ecirc;n cả 03 nước&nbsp;Đ&ocirc;ng Dương.&nbsp;BIC được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 09/2011.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đầu tư và Phát triển Việt Nam",
+      "percentage": 0.51
+    },
+    {
+      "name": "Fairfax Asia Limited",
+      "percentage": 0.35
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0732
+    },
+    {
+      "name": "Nguyễn Văn Thường",
+      "percentage": 0.0026236396
+    },
+    {
+      "name": "Phạm Quang Tùng",
+      "percentage": 0.002157
+    },
+    {
+      "name": "Tôn Lâm Tùng",
+      "percentage": 0.00183947
+    },
+    {
+      "name": "Nguyễn Diễm Phương Khanh",
+      "percentage": 0.000865801
+    },
+    {
+      "name": "Đào Chí Cương",
+      "percentage": 0.0002112029
+    },
+    {
+      "name": "Nguyễn Thị Thanh Vân",
+      "percentage": 0.0001443001
+    },
+    {
+      "name": "Phạm Đức Hậu",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Cao Cự Trí",
+      "percentage": 9e-6
+    },
+    {
+      "name": "Trần Hoài An",
+      "percentage": 3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trần Hoài An",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Vũ Minh Hải",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Vân Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Việt Dũng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ramaswamy Athappan",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Mai",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Xuân Hoàng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Gobinath Arvind Athappan",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Tú",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Huỳnh Quốc Việt",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trung Tính",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lại Ngân Giang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ravishankar Wickneswaran",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thành Trung",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Osith Ramanathan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đoàn Thị Thu Huyền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:11.486370Z"
+}

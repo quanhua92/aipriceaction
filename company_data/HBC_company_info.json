@@ -1,0 +1,339 @@
+{
+  "symbol": "HBC",
+  "exchange": "UPCOM",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2222164928000.0,
+  "current_price": 6400.0,
+  "outstanding_shares": 347213270,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần X&acirc;y dựng v&agrave; Kinh doanh Địa ốc Ho&agrave; B&igrave;nh (HBC) tiền th&acirc;n l&agrave; Văn ph&ograve;ng X&acirc;y dựng H&ograve;a B&igrave;nh được th&agrave;nh lập v&agrave;o năm 1987. C&ocirc;ng ty hoạt động kinh doanh ch&iacute;nh x&acirc;y dựng d&acirc;n dụng v&agrave; c&ocirc;ng nghiệp. Ngo&agrave;i ra C&ocirc;ng ty c&ograve;n sản xuất v&agrave; kinh doanh sơn Hodastone, th&agrave;nh phẩm mộc, trang tr&iacute; nội thất, nh&ocirc;m k&iacute;nh, kinh doanh mua b&aacute;n vật liệu x&acirc;y dựng v&agrave; địa ốc, x&acirc;y dựng v&agrave; thiết kế c&aacute;c c&ocirc;ng tr&igrave;nh cầu đường, cơ sở hạ tầng v&agrave; điện nươc. C&ocirc;ng ty được C&ocirc;ng ty Li&ecirc;n Doanh Ph&uacute; Mỹ Hưng, C&ocirc;ng ty Vạn Ph&aacute;t Hưng, C&ocirc;ng ty Bitexco Land, Tổng C&ocirc;ng ty Vật liệu X&acirc;y dựng Fico t&iacute;n nhiệm chọn l&agrave;m nh&agrave; thầu ch&iacute;nh. C&ocirc;ng ty đ&atilde; thi c&ocirc;ng c&aacute;c c&ocirc;ng tr&igrave;nh ti&ecirc;u biểu như Saigon Sky Garden Apartments, Stamford Court, Riverside Apartment, Legend Hotel, Melinh Point Tower, Ocean Place. C&ocirc;ng ty&nbsp;l&agrave; nh&agrave; thầu ch&iacute;nh dự &aacute;n Vietinbank Tower (H&agrave; Nội) &ndash; c&ocirc;ng tr&igrave;nh cao nhất Việt Nam (cao 363m) v&agrave; dự &aacute;n Saigon Centre (TP.HCM) &ndash; c&ocirc;ng tr&igrave;nh s&acirc;u nhất Việt Nam với 6 tầng hầm (s&acirc;u 28m) tại thời điểm thi c&ocirc;ng. Ng&agrave;y 18/09/2024, HBC ch&iacute;nh thức giao dịch tr&ecirc;n thị trường UPCOM.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê Viết Hải",
+      "percentage": 0.1353
+    },
+    {
+      "name": "Hyundai Elevators Co., Ltd.",
+      "percentage": 0.0664
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0473
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0472
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0466
+    },
+    {
+      "name": "Lucerne Enterprise Ltd",
+      "percentage": 0.0457
+    },
+    {
+      "name": "Chip Eng Seng Corporation Ltd.",
+      "percentage": 0.0433
+    },
+    {
+      "name": "Sanei Architecture Planning Co., Ltd",
+      "percentage": 0.0187
+    },
+    {
+      "name": "Bùi Ngọc Mai",
+      "percentage": 0.0137
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ Ngân hàng TMCP Đại chúng Việt nam",
+      "percentage": 0.0116583968
+    },
+    {
+      "name": "UBS AG London Branch",
+      "percentage": 0.0067043894
+    },
+    {
+      "name": "Lê Thị Anh Thư",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Trương Quang Nhật",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Lê Viết Hiếu",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Lê Viết Hưng",
+      "percentage": 0.0039
+    },
+    {
+      "name": "Lê Viết Hà",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Nguyễn Lê Tân",
+      "percentage": 0.0030621762
+    },
+    {
+      "name": "Phương Công Thắng",
+      "percentage": 0.003
+    },
+    {
+      "name": "Trần Quang Đại",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Huỳnh Anh Vũ",
+      "percentage": 0.0019212232
+    },
+    {
+      "name": "Nguyễn Tấn Thọ",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Phan Ngọc Thạnh",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán BIDV",
+      "percentage": 0.0014766954
+    },
+    {
+      "name": "Hồ Ngọc Phương",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Phân Phối Sa Ti Co",
+      "percentage": 0.0012805651
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Dương Đình Thanh",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Le Thi Tinh Thuy",
+      "percentage": 0.00116189
+    },
+    {
+      "name": "Le Hao Viet",
+      "percentage": 0.00116189
+    },
+    {
+      "name": "Nguyễn Văn Tịnh",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Hùng Cường",
+      "percentage": 0.001
+    },
+    {
+      "name": "Lê Thị Kim Thoa",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lê Thị Bích Chi",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Le Cam Tu Thi",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Brander Thi Dieu Tinh",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Thị Nguyên Thủy",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Võ Đắc Khôi",
+      "percentage": 0.0008112311
+    },
+    {
+      "name": "Hoàng Quang Huy",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Lâm Quỳnh Trâm",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Thị Quỳnh Trâm",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Văn An",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đinh Văn Thanh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lê Thị Thúy Minh",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lê Quang Vũ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Satoru Matsuda",
+      "percentage": 0.0001621925
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001335656
+    },
+    {
+      "name": "Nguyễn Thái Dương",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Lê Thị Cát Tường",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Cao Thị Diễm Châu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phan Ngọc Kha",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Khánh Hoàng",
+      "percentage": 0.0000398
+    },
+    {
+      "name": "Vũ Thị Mai",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Văn Quang Huy",
+      "percentage": 1.6e-7
+    },
+    {
+      "name": "Nguyễn Lê Minh Thao",
+      "percentage": 1.4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Viết Hải",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.1353
+    },
+    {
+      "name": "Trương Quang Nhật",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Lê Viết Hiếu",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Phương Công Thắng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.003
+    },
+    {
+      "name": "Phan Ngọc Thạnh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Tấn Thọ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Dương Đình Thanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Văn Tịnh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Hùng Cường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001
+    },
+    {
+      "name": "Nguyễn Thị Nguyên Thủy",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Đinh Văn Thanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Tường Bảo",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trí Gia Nguyễn (Michael Trần)",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Doãn Kiên",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Hồng Anh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Park Seok Bae",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Công Phú",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quốc Duy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Văn Hùng",
+      "position": "Thành viên Ban Kiểm toán nội bộ/Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trung Thành",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Thanh Huyền",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:35.451759Z"
+}

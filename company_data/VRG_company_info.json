@@ -1,0 +1,177 @@
+{
+  "symbol": "VRG",
+  "exchange": "UPCOM",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 442802242800.0,
+  "current_price": 17100.0,
+  "outstanding_shares": 25894868,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty cổ phần ph&aacute;t triển đ&ocirc; thị v&agrave; khu c&ocirc;ng nghiệp Cao su Việt Nam (VRG) l&agrave; đơn vị th&agrave;nh vi&ecirc;n của Tập đo&agrave;n c&ocirc;ng nghiệp cao su Việt Nam được th&agrave;nh lập năm 2005. Ng&agrave;nh nghề ch&iacute;nh của c&ocirc;ng ty l&agrave; đầu tư x&acirc;y dựng cơ sở hạ tầng v&agrave; kinh doanh khu c&ocirc;ng nghiệp; x&acirc;y dựng nh&agrave; ở, căn hộ, văn ph&ograve;ng v&agrave; c&aacute;c c&ocirc;ng tr&igrave;nh giao th&ocirc;ng, thủy lợi; cho thu&ecirc; đất, kho b&atilde;i. B&ecirc;n cạnh đ&oacute; c&ocirc;ng ty c&ograve;n ph&aacute;t triển ng&agrave;nh khai th&aacute;c v&agrave; chế biến c&aacute;c loại kho&aacute;ng sản. VRG ch&iacute;nh thức được&nbsp;giao dịch tr&ecirc;n thị trường UPCOM từ&nbsp;Ng&agrave;y 10/11/2014.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ Phần Xây Dựng Incontec",
+      "percentage": 0.1995
+    },
+    {
+      "name": "Tập đoàn Công nghiệp Cao su Việt Nam - Công ty Cổ phần",
+      "percentage": 0.1509
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Và Phát Triển Đô Thị An Lộc",
+      "percentage": 0.0823
+    },
+    {
+      "name": "Công ty Cổ phần Cao su Tây Ninh",
+      "percentage": 0.0682
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Tổng Công Ty Cao Su Đồng Nai",
+      "percentage": 0.0553
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0499
+    },
+    {
+      "name": "Công ty CP Đầu Tư Và Tư Vấn Xây Dựng Phú An Thành",
+      "percentage": 0.0489
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Cao Su Phú Riềng",
+      "percentage": 0.0463
+    },
+    {
+      "name": "Công Ty Trách Nhiệm Hữu Hạn Tb.group Việt Nam",
+      "percentage": 0.046
+    },
+    {
+      "name": "Công ty TNHH MTV Cao su Bình Long",
+      "percentage": 0.0297
+    },
+    {
+      "name": "Công ty Cổ phần Cao su Tân Biên",
+      "percentage": 0.018
+    },
+    {
+      "name": "Công ty TNHH MTV Cao Su Lộc Ninh",
+      "percentage": 0.0172
+    },
+    {
+      "name": "Công ty Cổ Phần Xây Dựng Và Phát Triển Thế Hệ Mới",
+      "percentage": 0.0135
+    },
+    {
+      "name": "Lê Đình Bửu",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Phạm Ngọc Thảo",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Thị Tuyết",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Tiến Vượng",
+      "percentage": 0.0002237
+    },
+    {
+      "name": "Dương Văn Hồi",
+      "percentage": 0.0002109
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đoàn Kim Chung",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Mai Viết Xuân",
+      "percentage": 0.000077
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thế Phương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Lương",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thanh Ngọc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thế Nghĩa",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Thu Hà",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Thành",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Minh Quốc Sang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Văn Đức",
+      "position": "Phó Tổng Giám đốc Xây dựng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Trọng Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Huỳnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Văn Thiệu",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Trung Thái",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thanh Bình",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Mai Thế Thư",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Gia Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:06.848358Z"
+}

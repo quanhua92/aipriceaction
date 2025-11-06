@@ -1,0 +1,203 @@
+{
+  "symbol": "NVL",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 26813937397500.0,
+  "current_price": 13750.0,
+  "outstanding_shares": 1950104538,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Đầu tư Địa ốc Nova (Novaland) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Thương mại&nbsp;Th&agrave;nh Nhơn,&nbsp;được th&agrave;nh lập năm 1992. Hoạt&nbsp;động ch&iacute;nh của&nbsp;Novaland l&agrave; đầu tư, thi c&ocirc;ng x&acirc;y dựng v&agrave; kinh doanh bất&nbsp;động sản.&nbsp;Tập đo&agrave;n đ&atilde; v&agrave; đang triển khai hơn 40 dự &aacute;n nh&agrave;&nbsp;ở v&agrave;&nbsp;hơn 5&nbsp;dự&nbsp;&aacute;n&nbsp;bất&nbsp;động sản du lịch nghỉ dưỡng&nbsp;tại c&aacute;c vị tr&iacute; chiến lược của hầu hết c&aacute;c quận, huyện tại Th&agrave;nh phố Hồ Ch&iacute; Minh v&agrave; c&aacute;c tỉnh l&acirc;n cận. Novaland được ni&ecirc;m yết v&agrave; giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) v&agrave;o th&aacute;ng 12/2016.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "BÙI THÀNH NHƠN",
+      "percentage": 0.4962
+    },
+    {
+      "name": "Công ty Cổ Phần Novagroup",
+      "percentage": 0.17194
+    },
+    {
+      "name": "Công ty CP Diamond Properties",
+      "percentage": 0.08079
+    },
+    {
+      "name": "Bùi Thành Nhơn",
+      "percentage": 0.0496208
+    },
+    {
+      "name": "Nguyễn Như Pho",
+      "percentage": 0.0418
+    },
+    {
+      "name": "Bùi Cao Nhật Quân",
+      "percentage": 0.03862
+    },
+    {
+      "name": "Thái Ngọc Quý",
+      "percentage": 0.0374
+    },
+    {
+      "name": "Cao Thị Ngọc Sương",
+      "percentage": 0.02468
+    },
+    {
+      "name": "Lê Thanh Liêm",
+      "percentage": 0.0246
+    },
+    {
+      "name": "Bùi Xuân Huy",
+      "percentage": 0.017333
+    },
+    {
+      "name": "Nguyễn Hiếu Liêm",
+      "percentage": 0.01154
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Trần Thị Thanh Vân",
+      "percentage": 0.00873
+    },
+    {
+      "name": "Dương Văn Bắc",
+      "percentage": 0.00718
+    },
+    {
+      "name": "Cao Trần Duy Nam",
+      "percentage": 0.00512
+    },
+    {
+      "name": "Bùi Cao Ngọc Quỳnh",
+      "percentage": 0.00397
+    },
+    {
+      "name": "Hoàng Thu Châu",
+      "percentage": 0.0020815
+    },
+    {
+      "name": "Công Đoàn Cơ Sở Công ty Cổ Phần Tập Đoàn Đầu Tư Địa Ốc No Va",
+      "percentage": 0.00202
+    },
+    {
+      "name": "Bùi Đạt Chương",
+      "percentage": 0.00148
+    },
+    {
+      "name": "Phan Lê Hòa",
+      "percentage": 0.00056
+    },
+    {
+      "name": "Võ Thị Cao Ly",
+      "percentage": 0.00034106
+    },
+    {
+      "name": "Nguyễn Thị Xuân Dung",
+      "percentage": 0.00033
+    },
+    {
+      "name": "Huỳnh Minh Lâm",
+      "percentage": 0.00031088
+    },
+    {
+      "name": "Phan Thành Huy",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0000667068
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000353384
+    },
+    {
+      "name": "Nguyễn Thị Minh Thanh",
+      "percentage": 0.000023
+    },
+    {
+      "name": "Dương Thị Thu Thủy",
+      "percentage": 0.00001109
+    },
+    {
+      "name": "Nguyễn Thuỳ Xuân Mai",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Ngọc Huyên",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Bùi Thị Lệ Thu",
+      "percentage": 8e-6
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 7.22e-6
+    },
+    {
+      "name": "Nguyễn Đức Dũng",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Huỳnh Văn Phước",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Phạm Tiến Vân",
+      "percentage": 5.1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Thành Nhơn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0496208
+    },
+    {
+      "name": "Bùi Xuân Huy",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.017333
+    },
+    {
+      "name": "Hoàng Thu Châu",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.00293
+    },
+    {
+      "name": "Hoàng Thu Châu",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0020815
+    },
+    {
+      "name": "Nguyễn Thị Xuân Dung",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.00033
+    },
+    {
+      "name": "Huỳnh Minh Lâm",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00031088
+    },
+    {
+      "name": "Phạm Tiến Vân",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 5.1e-6
+    },
+    {
+      "name": "Lê Quốc Hùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Mỹ Hạnh",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:36.150605Z"
+}

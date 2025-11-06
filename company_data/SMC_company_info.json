@@ -1,0 +1,243 @@
+{
+  "symbol": "SMC",
+  "exchange": "HOSE",
+  "industry": "Kim loại",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 909930549450.0,
+  "current_price": 12350.0,
+  "outstanding_shares": 73678587,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Đầu tư Thương mại SMC (SMC),&nbsp;tiền th&acirc;n l&agrave; Cửa h&agrave;ng Vật Liệu X&acirc;y Dựng số 1 được th&agrave;nh lập v&agrave;o năm 1988. Năm 2004, chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần. Sản phẩm kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; c&aacute;c loại th&eacute;p gồm th&eacute;p x&acirc;y dựng, th&eacute;p h&igrave;nh, th&eacute;p tấm, v&agrave; c&aacute;c loại vật liệu x&acirc;y dựng kh&aacute;c.&nbsp;C&ocirc;ng ty&nbsp;l&agrave; nh&agrave; ph&acirc;n phối chiến lược của c&aacute;c nh&agrave; sản xuất th&eacute;p lớn trong v&agrave; ngo&agrave;i nước như Pomina, Vinakyoei, th&eacute;p T&acirc;y Đ&ocirc;, th&eacute;p tấm l&aacute; Ph&uacute; Mỹ, t&ocirc;n Phương Nam v&agrave; Posco, với thị phần chiếm khoảng 5% so với cả nước v&agrave; khoảng 17% so với khu vực ph&iacute;a Nam. Hệ thống đại l&yacute;, cửa h&agrave;ng ph&acirc;n phối của C&ocirc;ng ty phủ khắp tr&ecirc;n địa b&agrave;n Th&agrave;nh phố Hồ Ch&iacute; Minh, H&agrave; Nội, B&igrave;nh Dương. Đ&agrave; Nẵng, Cần Thơ v&agrave; c&aacute;c tỉnh l&acirc;n cận, c&aacute;c cửa h&agrave;ng trong th&agrave;nh phố đa số nằm ở những vị tr&iacute; thuận lợi. Sản phẩm th&eacute;p của c&ocirc;ng ty gắn liền với c&aacute;c c&ocirc;ng tr&igrave;nh trọng điểm quốc gia như: Nh&agrave; m&aacute;y điện Ph&uacute; Mỹ, Thủy điện H&agrave;m Thuận-Đami, Cầu Mỹ Thuận, Nh&agrave; ga quốc tế T&acirc;n Sơn Nhất, Khu đ&ocirc; thị Ph&uacute; Mỹ Hưng. Ng&agrave;y 30/10/2006, SMC&nbsp;ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Hanwa Company Limited",
+      "percentage": 0.1957
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Loan",
+      "percentage": 0.1424
+    },
+    {
+      "name": "Nguyễn Ngọc Anh",
+      "percentage": 0.1402
+    },
+    {
+      "name": "Nguyễn Cẩm Hà",
+      "percentage": 0.0495
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0491
+    },
+    {
+      "name": "Nguyễn Hữu Kinh Luân",
+      "percentage": 0.0476
+    },
+    {
+      "name": "Nguyễn Ngọc Ý Nhi",
+      "percentage": 0.032
+    },
+    {
+      "name": "Nguyễn Thị Tánh",
+      "percentage": 0.0236
+    },
+    {
+      "name": "Nguyễn Quốc Thắng",
+      "percentage": 0.0234
+    },
+    {
+      "name": "Nguyễn Nghĩa Dũng",
+      "percentage": 0.0231
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.022359
+    },
+    {
+      "name": "Công ty Tài Chính TNHH MTV Bưu Điện",
+      "percentage": 0.0157604617
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "percentage": 0.0135
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0117
+    },
+    {
+      "name": "Nguyễn Ngọc Đăng Khoa",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Võ Hoàng Vũ",
+      "percentage": 0.0085
+    },
+    {
+      "name": "Nguyễn Thụy Như Quỳnh",
+      "percentage": 0.0071
+    },
+    {
+      "name": "Nguyễn Văn Tiến",
+      "percentage": 0.00457
+    },
+    {
+      "name": "Nguyễn Ngọc Lan",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hương",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Đặng Huy Hiệp",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Đức Dũng",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Bình Trọng",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Đào Việt Thắng",
+      "percentage": 0.0013711876
+    },
+    {
+      "name": "Nguyễn Thị Kim Hồng Châu",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Nguyễn Văn Lâm",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Ngọc Thắm",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Hồ Thị Ngọc Tuyết",
+      "percentage": 0.00021957
+    },
+    {
+      "name": "Lê Thị Cẩm Tú",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Thị Thu Trang",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Huy Hiển",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Võ Thị Tố Ngân",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Vũ Thị Kim Lan",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đoàn Thị Mỹ Lệ",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Tuấn Dũng Hùng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Ma Đức Tú",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Doãn Thành Công",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Thụy Bích Hân",
+      "percentage": 0.00007749
+    },
+    {
+      "name": "Võ Hữu Tuấn",
+      "percentage": 0.00006777
+    },
+    {
+      "name": "Vũ Thị Thanh Quyên",
+      "percentage": 0.0000338849
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Ngọc Loan",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.1424
+    },
+    {
+      "name": "Nguyễn Hữu Kinh Luân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0476
+    },
+    {
+      "name": "Nguyễn Ngọc Ý Nhi",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.032
+    },
+    {
+      "name": "Nguyễn Văn Tiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00457
+    },
+    {
+      "name": "Đặng Huy Hiệp",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Nguyễn Bình Trọng",
+      "position": "Phụ trách Công bố thông tin/Phó Tổng Giám đốc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Văn Lâm",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Thị Cẩm Tú",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Đặng Thị Thu Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Võ Thị Tố Ngân",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trương Văn Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Kishimoto  Hideki",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Anh Nguyên",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:57.805542Z"
+}

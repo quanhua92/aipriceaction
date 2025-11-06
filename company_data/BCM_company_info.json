@@ -1,0 +1,176 @@
+{
+  "symbol": "BCM",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 69552000000000.0,
+  "current_price": 67200.0,
+  "outstanding_shares": 1035000000,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Tập đo&agrave;n Đầu tư v&agrave; Ph&aacute;t triển C&ocirc;ng nghiệp Becamex - CTCP (BCM) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Thương Nghiệp Tổng Hợp Bến C&aacute;t (Becamex), được th&agrave;nh lập&nbsp;v&agrave;o năm 1976. Tổng c&ocirc;ng ty hoạt động trong lĩnh vực đầu tư ph&aacute;t triển c&ocirc;ng nghiệp - đ&ocirc; thị, x&acirc;y dựng d&acirc;n dụng - c&ocirc;ng nghiệp - giao th&ocirc;ng. BCM&nbsp;mang đến cho c&aacute;c nh&agrave; đầu tư m&ocirc; h&igrave;nh c&ocirc;ng nghiệp h&oacute;a ti&ecirc;n tiến th&ocirc;ng qua Khu c&ocirc;ng nghiệp Khoa học v&agrave; C&ocirc;ng nghệ (Science and Technology Industrial Park &ndash; STIP) 21 KCN, hiện diện tại 15 tỉnh th&agrave;nh cả nước, với mạng lưới 26 doanh nghiệp th&agrave;nh vi&ecirc;n trong nhiều lĩnh vực (Y tế, gi&aacute;o dục, viễn th&ocirc;ng, năng lượng, hạ tầng&hellip;). BCM được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ cuối th&aacute;ng 07/2020.</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Ủy Ban Nhân Dân Tỉnh Bình Dương",
+      "percentage": 0.954401
+    },
+    {
+      "name": "NGUYỄN VĂN HÙNG",
+      "percentage": 0.0060087
+    },
+    {
+      "name": "Nguyễn Phú Thịnh",
+      "percentage": 0.0011676
+    },
+    {
+      "name": "Phạm Ngọc Thuận",
+      "percentage": 0.0010657
+    },
+    {
+      "name": "Giang Quốc Dũng",
+      "percentage": 0.00058
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nhàn",
+      "percentage": 0.000555
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "percentage": 0.0005195
+    },
+    {
+      "name": "Nguyễn Danh Tùng",
+      "percentage": 0.0005098
+    },
+    {
+      "name": "Nguyễn Văn Hiền Phúc",
+      "percentage": 0.00041
+    },
+    {
+      "name": "Nguyễn Văn Thanh Huy",
+      "percentage": 0.000371
+    },
+    {
+      "name": "Nguyễn Việt Long",
+      "percentage": 0.0002
+    },
+    {
+      "name": "HỒ HỒNG THẠCH",
+      "percentage": 0.0001332
+    },
+    {
+      "name": "Nguyễn Tấn Lợi",
+      "percentage": 0.000103
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "percentage": 0.0000855
+    },
+    {
+      "name": "Nguyễn Thị Thanh An",
+      "percentage": 0.0000552
+    },
+    {
+      "name": "Trần Thị Hồng Minh",
+      "percentage": 0.000054
+    },
+    {
+      "name": "Trần Ngọc Yến",
+      "percentage": 0.0000483
+    },
+    {
+      "name": "Nguyễn Thị Yến Trúc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Hoàn Vũ",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Phan Thị Mỹ Kim",
+      "percentage": 0.0000114
+    },
+    {
+      "name": "Nguyễn Thị Thanh Hòa",
+      "percentage": 8.41e-6
+    },
+    {
+      "name": "Huỳnh Thị Quế Anh",
+      "percentage": 3e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "NGUYỄN VĂN HÙNG",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0060087
+    },
+    {
+      "name": "Nguyễn Phú Thịnh",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0011676
+    },
+    {
+      "name": "Phạm Ngọc Thuận",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0010657
+    },
+    {
+      "name": "Giang Quốc Dũng",
+      "position": "Người phụ trách quản trị công ty/Phó Tổng Giám đốc",
+      "percentage": 0.00058
+    },
+    {
+      "name": "Nguyễn Thị Thanh Nhàn",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000555
+    },
+    {
+      "name": "Quảng Văn Viết Cương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0005195
+    },
+    {
+      "name": "Nguyễn Danh Tùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0005098
+    },
+    {
+      "name": "Nguyễn Văn Hiền Phúc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00041
+    },
+    {
+      "name": "Nguyễn Văn Thanh Huy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000371
+    },
+    {
+      "name": "Nguyễn Thị Thùy Dương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0000855
+    },
+    {
+      "name": "Nguyễn Hoàn Vũ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Huỳnh Thị Quế Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Huỳnh Vĩnh Thành",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Hoàng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:05.433431Z"
+}

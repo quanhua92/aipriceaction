@@ -1,0 +1,264 @@
+{
+  "symbol": "DRC",
+  "exchange": "HOSE",
+  "industry": "Ô tô và phụ tùng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2378210958200.0,
+  "current_price": 15400.0,
+  "outstanding_shares": 154429283,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Cao su Đ&agrave; Nẵng (DRC) tiền th&acirc;n l&agrave; Xưởng đắp vỏ xe &ocirc; t&ocirc; th&agrave;nh lập năm 1975. Năm 2006 c&ocirc;ng ty chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần.&nbsp;C&ocirc;ng ty&nbsp;chuy&ecirc;n sản xuất, kinh doanh, xuất nhập khẩu c&aacute;c loại sản phẩm v&agrave; vật tư thiết bị cho ng&agrave;nh c&ocirc;ng nghiệp cao su với sản phẩm ch&iacute;nh l&agrave; c&aacute;c loại săm lốp cao su &ocirc;t&ocirc;, xe đạp v&agrave; c&aacute;c loại săm lốp chuy&ecirc;n dụng kh&aacute;c.&nbsp;D&acirc;y chuyền sản xuất của&nbsp;c&ocirc;ng ty&nbsp;hiện tại c&oacute; c&ocirc;ng suất: lốp &ocirc; t&ocirc; đạt 589.000 bộ/năm; lốp xe đạp đạt 4.300.000 bộ/năm; lốp &ocirc; t&ocirc; đặc chủng đạt 800 bộ/năm. DRC c&oacute; hệ thống ph&acirc;n phối rộng khắp Việt Nam, trải khắp cả nước với hơn 2000 đại l&yacute; cấp 1 v&agrave; cấp 2.&nbsp;Hầu hết c&aacute;c c&ocirc;ng tr&igrave;nh trọng điểm quốc gia (thủy điện Sơn La, Bản Vẽ, S&ocirc;ng Ba Hạ, Bun Cốp, Bl&acirc;y Kr&ocirc;ng, Sena M&aacute;ng 3, C&ocirc;ng tr&igrave;nh khai th&aacute;c quặng b&ocirc; x&iacute;t ở L&acirc;m Đồng) đều sử dụng c&aacute;c sản phẩm săm lốp &ocirc; t&ocirc; của c&ocirc;ng ty. Sản phẩm của c&ocirc;ng ty được xuất khẩu sang hơn 35 nước như&nbsp;Ấn Độ, Argentina, Hồng K&ocirc;ng, Indonesia, Singapore, Brazil, Chile.&nbsp;DRC được&nbsp;ni&ecirc;m yết&nbsp;tại HOSE từ&nbsp;ng&agrave;y 29/12/2006.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Hóa chất Việt Nam",
+      "percentage": 0.5051
+    },
+    {
+      "name": "Vietnam Holding Ltd",
+      "percentage": 0.0491
+    },
+    {
+      "name": "KWE Beteiligungen AG",
+      "percentage": 0.047
+    },
+    {
+      "name": "PXP Vietnam Emerging Equity Fund",
+      "percentage": 0.04239378
+    },
+    {
+      "name": "FTIF - Templeton Frontier Markets Fund",
+      "percentage": 0.037153424
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellschaft",
+      "percentage": 0.034444363
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 0.0331769
+    },
+    {
+      "name": "Phạm Thị Hồng Hội",
+      "percentage": 0.0305
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0249453
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.0213
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 0.0193275655
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 0.0097
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.0069
+    },
+    {
+      "name": "LÊ HOÀNG KHÁNH NHỰT",
+      "percentage": 0.005
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0041868788
+    },
+    {
+      "name": "Đinh Ngọc Đạm",
+      "percentage": 0.0041584699
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Deutche Asset Management (Asia) Ltd.",
+      "percentage": 0.0026810023
+    },
+    {
+      "name": "PXP Vietnam Smaller Companies Fund Limited",
+      "percentage": 0.00204
+    },
+    {
+      "name": "Nguyễn Mạnh Tuấn",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Phạm Ngọc Phú",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Hà Phước Lộc",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Phạm Quang Vinh",
+      "percentage": 0.0006256182
+    },
+    {
+      "name": "Nguyễn Mạnh Sơn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Thị Vân Hoa",
+      "percentage": 0.0005
+    },
+    {
+      "name": "VietNam Infrastructure Holding Limited",
+      "percentage": 0.0004103742
+    },
+    {
+      "name": "Phạm Ngọc Bách",
+      "percentage": 0.0003290873
+    },
+    {
+      "name": "Nguyễn Thị Hồng",
+      "percentage": 0.00029
+    },
+    {
+      "name": "Vũ Nhất Tâm",
+      "percentage": 0.0002188662
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0001238783
+    },
+    {
+      "name": "Nguyễn Thị Bích Thủy",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Minh Thu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Văn Hiệu",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Thị Thu Hà",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Dương Minh Hoa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Quang Tuấn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00008418
+    },
+    {
+      "name": "Hoàng Mạnh Thắng",
+      "percentage": 0.000084
+    },
+    {
+      "name": "Nguyễn Văn Thiệu",
+      "percentage": 0.0000700372
+    },
+    {
+      "name": "Võ Đình Thanh",
+      "percentage": 0.0000605055
+    },
+    {
+      "name": "Phạm Phong Thịnh",
+      "percentage": 0.0000421
+    },
+    {
+      "name": "Nguyễn Đức Minh",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Phạm Thị Thoa",
+      "percentage": 5.9969e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "LÊ HOÀNG KHÁNH NHỰT",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.005
+    },
+    {
+      "name": "Hà Phước Lộc",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Nguyễn Thị Vân Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Thị Minh Thu",
+      "position": "Phó Tổng Giám đốc Tài chính",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Bích Thủy",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Quang Tuấn",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Văn Hiệu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Phong Thịnh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0000421
+    },
+    {
+      "name": "Trần Đình Quyền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Huy Hiếu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trương Thị Hồng Hoa",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Mỹ Lệ",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Quỳnh Nga",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Xuân Bắc",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:57:43.594680Z"
+}

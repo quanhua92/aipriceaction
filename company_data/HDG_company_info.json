@@ -1,0 +1,245 @@
+{
+  "symbol": "HDG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 11431857781500.0,
+  "current_price": 30900.0,
+  "outstanding_shares": 369963035,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n H&agrave; Đ&ocirc; (HDG)&nbsp;tiền th&acirc;n l&agrave; x&iacute; nghiệp x&acirc;y dựng của Bộ Quốc ph&ograve;ng được th&agrave;nh lập năm 1990. Năm 2004 c&ocirc;ng ty chuyển đổi sang m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần. Sản phẩm ch&iacute;nh của c&ocirc;ng ty bao gồm nh&agrave; biệt thự, nh&agrave; liền kề, chung cư cao cấp tại c&aacute;c dự &aacute;n khu đ&ocirc; thị tại H&agrave; Nội v&agrave; th&agrave;nh phố Hồ Ch&iacute; Minh, cao ốc văn ph&ograve;ng cho thu&ecirc;, kh&aacute;ch sạn v&agrave; x&acirc;y dựng c&ocirc;ng tr&igrave;nh d&acirc;n dụng, giao th&ocirc;ng. Doanh thu từ hoạt động kinh doanh nh&agrave;, x&acirc;y dựng khu&nbsp;đ&ocirc; thị&nbsp;chiếm hơn 90% doanh thu&nbsp;của c&ocirc;ng ty. C&ocirc;ng ty hiện đang sở hữu khoảng 67 ha đất với khoảng 11 dự &aacute;n đang v&agrave; sẽ triển khai. C&aacute;c dự &aacute;n n&agrave;y tập trung ở những vị tr&iacute; đẹp của th&agrave;nh phố H&agrave; Nội, Hồ Ch&iacute; Minh v&agrave; đều l&agrave; đất sạch. Phần quỹ đất c&oacute; nguồn gốc từ Bộ Quốc Ph&ograve;ng chiếm khoảng 50% tổng quỹ đất, phần đất kh&ocirc;ng c&oacute; nguồn gốc từ Bộ Quốc Ph&ograve;ng đều l&agrave; đất sạch. Ng&agrave;y 02/02/2010, HDG ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Trọng Thông",
+      "percentage": 0.3183
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0935
+    },
+    {
+      "name": "Nguyễn Văn Tô",
+      "percentage": 0.0805
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.048568
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Vietcap",
+      "percentage": 0.0485
+    },
+    {
+      "name": "Nguyễn Phương Đông",
+      "percentage": 0.0477
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.037112
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "percentage": 0.0280595922
+    },
+    {
+      "name": "Hoàng Thị Phương Điểu",
+      "percentage": 0.0276
+    },
+    {
+      "name": "Venner Group Limited",
+      "percentage": 0.018483
+    },
+    {
+      "name": "Phan Quang Bình",
+      "percentage": 0.0132
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.012755
+    },
+    {
+      "name": "Nguyễn Trọng Minh",
+      "percentage": 0.0118
+    },
+    {
+      "name": "Nguyễn Đức Toàn",
+      "percentage": 0.009380236
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.007373
+    },
+    {
+      "name": "Trần Thu Hoài",
+      "percentage": 0.0035
+    },
+    {
+      "name": "The CH/SE Asia Investment Holdings (Singapore) Private Limited",
+      "percentage": 0.0030696407
+    },
+    {
+      "name": "Nguyễn Trọng Hiếu",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Đào Hữu Khanh",
+      "percentage": 0.00177
+    },
+    {
+      "name": "Nguyễn Thị Xuân Lan",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Lê Thanh Hiền",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Hoàng Trung",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.001596
+    },
+    {
+      "name": "Chế Đình Tương",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Đỗ Văn Bình",
+      "percentage": 0.0012
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.001047
+    },
+    {
+      "name": "Phan Viết Tài",
+      "percentage": 0.0008688854
+    },
+    {
+      "name": "Hoàng Đình Hùng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Bùi Văn Dục",
+      "percentage": 0.000171794
+    },
+    {
+      "name": "Trần Tiến Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Trọng Khiêm",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Xuân Long",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đào Hữu Tùng",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Trọng Thông",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.3183
+    },
+    {
+      "name": "Nguyễn Văn Tô",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0805
+    },
+    {
+      "name": "Nguyễn Trọng Minh",
+      "position": "Phụ trách Công bố thông tin/Phó Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0118
+    },
+    {
+      "name": "Nguyễn Trọng Hiếu",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Đào Hữu Khanh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00177
+    },
+    {
+      "name": "Hoàng Đình Hùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Trọng Khiêm",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Xuân Long",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Tạ Thị Lương",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Thị Chinh",
+      "position": "Trưởng phòng Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Đình Dũng",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "PHẠM HỒNG HIẾU",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Văn Võ",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hữu Vinh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "CHU TUẤN ANH",
+      "position": "Người phụ trách quản trị công ty/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Trung Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Xuân Quyền",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Cao Thị Tâm",
+      "position": "Trưởng Ban Kiểm toán nội bộ ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thúy Hà",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:53.470526Z"
+}

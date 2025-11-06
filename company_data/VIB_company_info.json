@@ -1,0 +1,375 @@
+{
+  "symbol": "VIB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 63825107062500.0,
+  "current_price": 18750.0,
+  "outstanding_shares": 3404005710,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Quốc tế Việt Nam (VIB) được th&agrave;nh lập v&agrave;o năm 1996.&nbsp;VIB hoạt động chủ yếu&nbsp;trong lĩnh vực huy động vốn, cho vay&nbsp;t&iacute;n dụng. Ngo&agrave;i ra, Ng&acirc;n h&agrave;ng c&ograve;n tham gia c&aacute;c hoạt động thanh to&aacute;n quốc tế, kinh doanh ngoại hối, đầu tư t&agrave;i ch&iacute;nh, quản l&yacute; rủi ro v&agrave; bảo to&agrave;n vốn. Năm 2024, so với c&ugrave;ng kỳ, Bi&ecirc;n l&atilde;i thuần (NIM) ở mức 3.75%, giảm 0.96%. Tỷ lệ nợ xấu ở mức 3.51%, tăng 0.37%. Tỷ lệ bao phủ nợ xấu ở mức 50.06%, giảm 0.93%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 7,2 ngh&igrave;n tỷ đồng, giảm 15.87%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 18.06%, giảm 6.21%.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal><quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Đầu tư và Thương mại Hệ thống Quốc tế (NETTRA)",
+      "percentage": 0.149
+    },
+    {
+      "name": "Đỗ Xuân Hoàng",
+      "percentage": 0.04931
+    },
+    {
+      "name": "Trần Thị Thảo Hiền",
+      "percentage": 0.0491
+    },
+    {
+      "name": "Nguyễn Thị Nhất Thảo",
+      "percentage": 0.049
+    },
+    {
+      "name": "Vũ Huy Hoàng",
+      "percentage": 0.04815
+    },
+    {
+      "name": "Commonwealth Bank Of Australia",
+      "percentage": 0.047064
+    },
+    {
+      "name": "Công ty Cổ Phần Beston",
+      "percentage": 0.04663
+    },
+    {
+      "name": "Công ty CP Funderra",
+      "percentage": 0.04662
+    },
+    {
+      "name": "Công ty Cổ phần UNICAP",
+      "percentage": 0.03465
+    },
+    {
+      "name": "Tống Ngọc Mỹ Trâm",
+      "percentage": 0.03288
+    },
+    {
+      "name": "Đặng Thị Thu Hà",
+      "percentage": 0.03145882
+    },
+    {
+      "name": "Vũ Hương Giang",
+      "percentage": 0.0273
+    },
+    {
+      "name": "Công ty Cổ phần Uniben",
+      "percentage": 0.02617
+    },
+    {
+      "name": "Nguyễn Thuỳ Nga",
+      "percentage": 0.02584
+    },
+    {
+      "name": "Nguyễn Thị Thu Trang",
+      "percentage": 0.02556
+    },
+    {
+      "name": "Công ty Cổ phần Cơ điện Lạnh",
+      "percentage": 0.01994
+    },
+    {
+      "name": "Đặng Thu Hương",
+      "percentage": 0.01935
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.01935
+    },
+    {
+      "name": "Trần Đức Quý",
+      "percentage": 0.01319
+    },
+    {
+      "name": "Đỗ Xuân Sơn",
+      "percentage": 0.01272453
+    },
+    {
+      "name": "Đỗ Xuân Việt",
+      "percentage": 0.01272453
+    },
+    {
+      "name": "Đỗ Xuân Thụ",
+      "percentage": 0.01250882
+    },
+    {
+      "name": "Nguyễn Thị Bích Hạnh",
+      "percentage": 0.00982
+    },
+    {
+      "name": "Hồ Vân Long",
+      "percentage": 0.00963
+    },
+    {
+      "name": "Trần Thị Thu Hương",
+      "percentage": 0.00653
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Phát Triển Quang Kim",
+      "percentage": 0.00577
+    },
+    {
+      "name": "Đặng Văn Sơn",
+      "percentage": 0.00374
+    },
+    {
+      "name": "Lê Thị Phiệt",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Loic Faussier",
+      "percentage": 0.0036
+    },
+    {
+      "name": "Đặng Minh Ngọc",
+      "percentage": 0.0029396
+    },
+    {
+      "name": "Đỗ Thu Giang",
+      "percentage": 0.00277583
+    },
+    {
+      "name": "Hàn Ngọc Vũ",
+      "percentage": 0.00216
+    },
+    {
+      "name": "Đỗ Xuân Hà",
+      "percentage": 0.00213772
+    },
+    {
+      "name": "Trần Nhất Minh",
+      "percentage": 0.00192
+    },
+    {
+      "name": "Lê Ngọc Bích",
+      "percentage": 0.00186
+    },
+    {
+      "name": "Đặng Minh Trang",
+      "percentage": 0.00164948
+    },
+    {
+      "name": "Ân Thanh Sơn",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Từ Anh Hào",
+      "percentage": 0.00153
+    },
+    {
+      "name": "Thạch Lê Anh",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Lê Thị Huệ",
+      "percentage": 0.00102517
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Hà",
+      "percentage": 0.00101
+    },
+    {
+      "name": "Phạm Thu Hà",
+      "percentage": 0.00094
+    },
+    {
+      "name": "Hàn Mai Hương",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Lê Diệu Linh",
+      "percentage": 0.00081
+    },
+    {
+      "name": "Hà Hoàng Dũng",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Trần Tuấn Minh",
+      "percentage": 0.000496
+    },
+    {
+      "name": "Nguyễn Xuân Dũng",
+      "percentage": 0.00032
+    },
+    {
+      "name": "Phạm Thị Kim Ngọc",
+      "percentage": 0.00023
+    },
+    {
+      "name": "Đặng Thị Phương Diễm",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phạm Thị Minh Huệ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trịnh Thanh Bình",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Phan Đặng Như Hoa",
+      "percentage": 0.00019087
+    },
+    {
+      "name": "Trần Thị Thanh Huyền",
+      "percentage": 0.00019
+    },
+    {
+      "name": "Nguyễn Thị Mộng Tường",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Hoàng Linh",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Vương Thị Huyền",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thùy Linh",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Minh Huệ",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Trương Lê Ngọc Trâm",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Nguyễn Thanh Huy Võ",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Thị Thu Hiền",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Đào Quang Ngọc",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Lê Thục Khanh",
+      "percentage": 4e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đặng Khắc Vỹ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.04931
+    },
+    {
+      "name": "Đỗ Xuân Hoàng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.04931
+    },
+    {
+      "name": "Hồ Vân Long",
+      "position": "Giám đốc Tài chính/Phó Tổng Giám đốc",
+      "percentage": 0.00963
+    },
+    {
+      "name": "Trần Thị Thu Hương",
+      "position": "Giám đốc khối",
+      "percentage": 0.00653
+    },
+    {
+      "name": "Đặng Văn Sơn",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.00374
+    },
+    {
+      "name": "Trần Nhất Minh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00192
+    },
+    {
+      "name": "Ân Thanh Sơn",
+      "position": "Người phụ trách quản trị công ty/Phó Tổng Giám đốc/Phụ trách Công bố thông tin",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Nguyễn Thị Tuyết Hà",
+      "position": "Giám đốc",
+      "percentage": 0.00101
+    },
+    {
+      "name": "Hà Hoàng Dũng",
+      "position": "Giám đốc khối",
+      "percentage": 0.00051
+    },
+    {
+      "name": "Trần Tuấn Minh",
+      "position": "Giám đốc",
+      "percentage": 0.000496
+    },
+    {
+      "name": "Nguyễn Xuân Dũng",
+      "position": "Giám đốc khối",
+      "percentage": 0.00032
+    },
+    {
+      "name": "Phạm Thị Minh Huệ",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thùy Linh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Nguyễn Lương Thị Bích Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Nguyễn Thanh Huy Võ",
+      "position": "Giám đốc",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Đào Quang Ngọc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Tăng  Hoàng Quốc Thái",
+      "position": "Giám đốc Marketing và truyền thông",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Quang Trung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hoàng Hải",
+      "position": "Giám đốc khối",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Việt Cường",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hàn Ngọc Vũ",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:10.330835Z"
+}

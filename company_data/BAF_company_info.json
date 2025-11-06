@@ -1,0 +1,69 @@
+{
+  "symbol": "BAF",
+  "exchange": "HOSE",
+  "industry": "Sản xuất thực phẩm",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 9804697954500.0,
+  "current_price": 32250.0,
+  "outstanding_shares": 304021642,
+  "company_profile": "<p>C&ocirc;ng ty cổ phần N&ocirc;ng nghiệp BAF Việt Nam (BAF) l&agrave; một doanh nghiệp được h&igrave;nh từ năm 2017. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực chăn nu&ocirc;i, ph&acirc;n phối giống vật nu&ocirc;i, kinh doanh n&ocirc;ng sản v&agrave; chế biến thức ăn gia s&uacute;c.&nbsp;Hoạt động kinh doanh của BAF được thực hiện theo m&ocirc; h&igrave;nh kh&eacute;p k&iacute;n 3F bao gồm thức ăn, trang trại v&agrave; chế biến. Hiện tại, C&ocirc;ng ty c&oacute; 1 nh&agrave; m&aacute;y sản xuất thức ăn gia s&uacute;c với c&ocirc;ng suất 4.500 tấn/th&aacute;ng, thực hiện&nbsp;cung cấp thức ăn chăn nu&ocirc;i cho c&aacute;c trang trại của BAF.&nbsp;BaF đ&atilde; sở hữu hệ thống 28 trại nu&ocirc;i heo n&aacute;i v&agrave; heo thịt, bao gồm 17 trại đ&atilde; vận h&agrave;nh v&agrave; 11 trại đang ph&aacute;t triển tr&ecirc;n cả nước. Trong số đ&oacute; c&oacute; 13 trang trại được x&acirc;y dựng tại T&acirc;y Ninh.C&aacute;c sản phẩm của BAF được ph&acirc;n phối th&ocirc;ng qua c&aacute;c k&ecirc;nh truyền thống v&agrave; hệ thống si&ecirc;u thị.&nbsp;Ng&agrave;y 03/12/2021, BAF&nbsp;ch&iacute;nh thức giao dịch tại&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Siba Holdings",
+      "percentage": 0.2817
+    },
+    {
+      "name": "Bùi Hương Giang",
+      "percentage": 0.0235
+    },
+    {
+      "name": "Nguyễn Anh Tuấn",
+      "percentage": 0.02013
+    },
+    {
+      "name": "Ngô Cao Cường",
+      "percentage": 0.0004934
+    },
+    {
+      "name": "Nguyễn Thanh Hải",
+      "percentage": 0.00026
+    },
+    {
+      "name": "Hoàng Thị Thu Hiền",
+      "percentage": 0.000127
+    },
+    {
+      "name": "LÊ XUÂN THỌ",
+      "percentage": 0.0000987
+    },
+    {
+      "name": "Nguyễn Thị Quỳnh Như",
+      "percentage": 0.0000987
+    },
+    {
+      "name": "Trương Anh Tuấn",
+      "percentage": 0.0000658
+    },
+    {
+      "name": "NGUYỄN THỊ NGỌC THÚY",
+      "percentage": 0.000042
+    },
+    {
+      "name": "Trần Thị Thanh Trà",
+      "percentage": 0.0000395
+    },
+    {
+      "name": "Lương Xuân Hải",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Đặng Minh Duy",
+      "percentage": 0.0000197
+    }
+  ],
+  "officers": [],
+  "created_at": "2025-11-06T01:54:56.626288Z"
+}

@@ -1,0 +1,180 @@
+{
+  "symbol": "TNT",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 408000000000.0,
+  "current_price": 8000.0,
+  "outstanding_shares": 51000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n TNT&nbsp;(TNT), tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty TNHH Dương Qu&acirc;n, được th&agrave;nh lập từ năm 2006. Năm 2007 c&ocirc;ng ty chuyển sang hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần. Hoạt động kinh doanh của c&ocirc;ng ty gồm hai lĩnh vực ch&iacute;nh l&agrave; kho&aacute;ng sản v&agrave; bất động sản. Hiện tại c&ocirc;ng ty&nbsp;đang thực hiện dự&nbsp;&aacute;n khai th&aacute;c quặng ch&igrave;, kẽm tại&nbsp;tỉnh&nbsp;Điện Bi&ecirc;n với c&ocirc;ng suất 150 tấn quặng nguy&ecirc;n khai/ng&agrave;y. Sản phẩm của c&ocirc;ng ty ngo&agrave;i việc ti&ecirc;u thụ nội địa c&ograve;n được xuất khẩu sang Trung Quốc (tỷ trọng 60-70%). Một số dự &aacute;n lớn m&agrave; c&ocirc;ng ty đ&atilde; v&agrave; đang tham gia x&acirc;y dựng v&agrave; đầu tư: Dự &aacute;n khu nh&agrave; ở v&agrave; văn ph&ograve;ng l&agrave;m việc cao cấp Nh&acirc;n Ch&iacute;nh với diện t&iacute;ch gần 10.000m2, tổng vốn đầu tư tr&ecirc;n 1.000 tỷ đồng; Dự &aacute;n Khu nh&agrave; ở Đ&ocirc; thị tại Huyện Gia L&acirc;m với diện t&iacute;ch gần 20ha, tổng vốn đầu tư khoảng 1.500 tỷ đồng... Ng&agrave;y 21/05/2010, TNT ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Gia Long",
+      "percentage": 0.2254906
+    },
+    {
+      "name": "Trần Công Minh",
+      "percentage": 0.0528
+    },
+    {
+      "name": "Đặng Hồng Nhung",
+      "percentage": 0.04958
+    },
+    {
+      "name": "Zheng Lan Ying",
+      "percentage": 0.0476482
+    },
+    {
+      "name": "Zhang Hua",
+      "percentage": 0.0452941
+    },
+    {
+      "name": "Phan Đăng Khoa",
+      "percentage": 0.0413117647
+    },
+    {
+      "name": "Lê Quốc Toản",
+      "percentage": 0.0242
+    },
+    {
+      "name": "Lê Quốc Hưng",
+      "percentage": 0.0223529411
+    },
+    {
+      "name": "Công Ty Cổ Phần Tập Đoàn Đầu Tư Thời Cơ Việt Nam",
+      "percentage": 0.01961
+    },
+    {
+      "name": "Hoàng Anh Tuấn",
+      "percentage": 0.00731
+    },
+    {
+      "name": "Nguyễn Bá Huấn",
+      "percentage": 0.0058628
+    },
+    {
+      "name": "Vũ Tuấn Hoàng",
+      "percentage": 0.0030255
+    },
+    {
+      "name": "Lưu Quang Minh",
+      "percentage": 0.0019608
+    },
+    {
+      "name": "Đoàn Năng Tuân",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Gia Khoa",
+      "percentage": 0.00037255
+    },
+    {
+      "name": "Chu Thị Thanh Vân",
+      "percentage": 0.0002352941
+    },
+    {
+      "name": "Trần Trọng Thủy",
+      "percentage": 0.0002352941
+    },
+    {
+      "name": "Tạ Quang Huy",
+      "percentage": 0.00023529
+    },
+    {
+      "name": "Đoàn Văn Tú",
+      "percentage": 0.000117647
+    },
+    {
+      "name": "Phạm Thị Thu Hoài",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Nguyễn Thị Hoàn",
+      "percentage": 0.00003922
+    },
+    {
+      "name": "Nguyễn Bá Thắng",
+      "percentage": 0.00003922
+    },
+    {
+      "name": "Nguyễn Bá Đạt",
+      "percentage": 0.00003922
+    },
+    {
+      "name": "Nguyễn Thị Điểm",
+      "percentage": 0.00003922
+    },
+    {
+      "name": "Nguyễn Gia Minh",
+      "percentage": 0.0000392
+    },
+    {
+      "name": "Nguyễn Thị Liên",
+      "percentage": 0.00001961
+    },
+    {
+      "name": "Trần Thị Trâm",
+      "percentage": 0.0000157
+    },
+    {
+      "name": "NGUYỄN THỊ ÁNH TUYẾT",
+      "percentage": 4e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Gia Long",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2254906
+    },
+    {
+      "name": "Nguyễn Bá Huấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0058628
+    },
+    {
+      "name": "Vũ Tuấn Hoàng",
+      "position": "Phó Tổng Giám đốc/Người phụ trách quản trị công ty/Phụ trách Công bố thông tin/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0030255
+    },
+    {
+      "name": "Lưu Quang Minh",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0019608
+    },
+    {
+      "name": "Nguyễn Gia Minh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000392
+    },
+    {
+      "name": "Trần Thị Trâm",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000157
+    },
+    {
+      "name": "Vũ Thị Hồng Nhung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Huyền Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Sang",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Giáp",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:57.816732Z"
+}

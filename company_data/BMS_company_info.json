@@ -1,0 +1,90 @@
+{
+  "symbol": "BMS",
+  "exchange": "UPCOM",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1026124476000.0,
+  "current_price": 13000.0,
+  "outstanding_shares": 78932652,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p style=\"text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n Bảo Minh (BMS) được th&agrave;nh lập v&agrave;o năm 2008 bởi Tổng C&ocirc;ng ty Cổ phần Bảo Minh. C&ocirc;ng ty hoạt&nbsp;động trong lĩnh vực cung cấp c&aacute;c dịch vụ&nbsp;m&ocirc;i giới chứng kho&aacute;n, tự doanh chứng kho&aacute;n, tư vấn doanh nghiệp, bảo l&atilde;nh ph&aacute;t h&agrave;nh, lưu k&yacute; chứng kho&aacute;n v&agrave; c&aacute;c dịch vụ li&ecirc;n quan kh&aacute;c. Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 25,67 tỷ đồng. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 2.66%, tăng 2.19%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 118,04 tỷ đồng, giảm 36.44% v&agrave; đ&oacute;ng g&oacute;p 68.11% tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 101,29 tỷ đồng, giảm 4.06%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 9.86%, giảm 1.34%.&nbsp;BMS được giao dịch tr&ecirc;n thị trường UPCOM từ th&aacute;ng 08/2018.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công Ty Cổ Phần Rồng Ngọc",
+      "percentage": 0.24
+    },
+    {
+      "name": "Công ty Cổ Phần Long An Solar Park",
+      "percentage": 0.2302
+    },
+    {
+      "name": "Trương Thị Mỹ An",
+      "percentage": 0.23
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Đông Nam Á",
+      "percentage": 0.05
+    },
+    {
+      "name": "Lê Thanh Trí",
+      "percentage": 0.0034266666
+    },
+    {
+      "name": "Nguyễn Thế Năng",
+      "percentage": 0.0010966666
+    },
+    {
+      "name": "Lê Anh Tuấn",
+      "percentage": 0.0003333333
+    },
+    {
+      "name": "Đinh Hoàng Hà",
+      "percentage": 0.00014
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thị Cúc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thủy",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Thị Thanh Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Thọ",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Văn Chiêu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Văn Thắng",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Thị Thu Hương",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thùy Trang",
+      "position": "Trưởng phòng Tài chính - Kế toán",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:55:28.974674Z"
+}

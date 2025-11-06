@@ -1,0 +1,281 @@
+{
+  "symbol": "OCB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 33155000935800.0,
+  "current_price": 12450.0,
+  "outstanding_shares": 2663052284,
+  "company_profile": "<div style=\"font-family: Arial; font-size: 10pt; text-align: justify;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Phương Đ&ocirc;ng (OCB) được th&agrave;nh lập v&agrave;o năm 1996. Ng&acirc;n h&agrave;ng hoạt động trong lĩnh vực huy động, cấp t&iacute;n dụng&nbsp;v&agrave; c&aacute;c&nbsp;dịch vụ t&agrave;i ch&iacute;nh li&ecirc;n quan. OCB được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 12/2020.&nbsp;Năm 2024, so với c&ugrave;ng kỳ, Bi&ecirc;n l&atilde;i thuần (NIM) ở mức 3.45%, tăng 0.15%. Tỷ lệ nợ xấu ở mức 3.17%, tăng 0.51%. Tỷ lệ bao phủ nợ xấu ở mức 47.14%, giảm 16.96%. Lợi nhuận sau thuế c&oacute; gi&aacute; trị bằng 3,2 ngh&igrave;n tỷ đồng, giảm 3.93%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 10.54%, giảm 1.74%.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Aozora Bank Limited",
+      "percentage": 0.15
+    },
+    {
+      "name": "Công ty Cổ phần Greenwave Capital",
+      "percentage": 0.04966
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Bình An House",
+      "percentage": 0.04965
+    },
+    {
+      "name": "Tổng Công ty Bến Thành - TNHH MTV",
+      "percentage": 0.04964
+    },
+    {
+      "name": "Trịnh Văn Tuấn",
+      "percentage": 0.04434
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư HVR",
+      "percentage": 0.04403
+    },
+    {
+      "name": "Công ty Cp Đầu Tư Và Xây Lắp Điện Số 8 Bình Thuận",
+      "percentage": 0.04245
+    },
+    {
+      "name": "Công ty Cổ Phần Năng Lượng Tái Tạo Hve",
+      "percentage": 0.04134
+    },
+    {
+      "name": "Nguyễn Đức Toàn",
+      "percentage": 0.04043
+    },
+    {
+      "name": "Văn phòng Thành Uỷ Thành phố Hồ Chí Minh",
+      "percentage": 0.0365
+    },
+    {
+      "name": "Công ty Cổ phần Next Green Capital",
+      "percentage": 0.03468
+    },
+    {
+      "name": "Công ty Cổ phần Dịch vụ tổng hợp Sài Gòn",
+      "percentage": 0.03418944
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.03344
+    },
+    {
+      "name": "Công ty Cổ Phần Phát Triển Hạ Tầng Khu Công Nghiệp Tây Ninh",
+      "percentage": 0.03247
+    },
+    {
+      "name": "Cao Thị Quế Anh",
+      "percentage": 0.03213
+    },
+    {
+      "name": "Portal Global Limited",
+      "percentage": 0.03026
+    },
+    {
+      "name": "Trịnh Thị Mai Anh",
+      "percentage": 0.0294
+    },
+    {
+      "name": "Phan Trung",
+      "percentage": 0.02556
+    },
+    {
+      "name": "Trịnh Mai Linh",
+      "percentage": 0.0184
+    },
+    {
+      "name": "Công Ty TNHH Đầu Tư TQA",
+      "percentage": 0.01132
+    },
+    {
+      "name": "Trịnh Mai Vân",
+      "percentage": 0.010077
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Xây Dựng Kinh Doanh Nhà Bến Thành",
+      "percentage": 0.00870515
+    },
+    {
+      "name": "Ngô Hà Bắc",
+      "percentage": 0.00627
+    },
+    {
+      "name": "Nguyễn Văn Bá",
+      "percentage": 0.0045207393
+    },
+    {
+      "name": "Phan Đăng Song Anh",
+      "percentage": 0.003
+    },
+    {
+      "name": "Trần Thị Thu Nguyệt",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Văn Tuấn",
+      "percentage": 0.00183
+    },
+    {
+      "name": "Nguyễn Việt Triều",
+      "percentage": 0.00167
+    },
+    {
+      "name": "Chu Đức Huy",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Đình Tùng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trịnh Văn Dũng",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Lý Hoài Văn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Văn Hương",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trương Đình Long",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Huỳnh Lê Mai",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Thúy Minh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đào Minh Anh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Thành Nam",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Phạm Hồng Hải",
+      "percentage": 0.000098
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Văn Hải",
+      "percentage": 6e-6
+    },
+    {
+      "name": "Hoàng Thị Tuyết Hạnh",
+      "percentage": 6e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Trịnh Văn Tuấn",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.04434
+    },
+    {
+      "name": "Trịnh Thị Mai Anh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0294
+    },
+    {
+      "name": "Phan Trung",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.02556
+    },
+    {
+      "name": "Ngô Hà Bắc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00627
+    },
+    {
+      "name": "Nguyễn Đình Tùng",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trương Đình Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Lý Hoài Văn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thúy Minh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đào Minh Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trương Thành Nam",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Huỳnh Lê Mai",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "position": "Kế toán trưởng/Giám đốc Tài chính",
+      "percentage": 0.00001
+    },
+    {
+      "name": "PHAM TRI NGUYEN",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Minh Đức",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Anirban Roy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ito Takeshi",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đặng Thị Quý",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Quang Vinh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Yoshizawa Toshiki",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:39.016360Z"
+}

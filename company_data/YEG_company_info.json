@@ -1,0 +1,220 @@
+{
+  "symbol": "YEG",
+  "exchange": "HOSE",
+  "industry": "Truyền thông",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 2339984827000.0,
+  "current_price": 12200.0,
+  "outstanding_shares": 191802035,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Tập đo&agrave;n Yeah1 (YEG) c&oacute; tiền th&acirc;n l&agrave; trang th&ocirc;ng tin điện tử <a href=\"http://www.yeah1.com\">www.yeah1.com</a>&nbsp;được th&agrave;nh lập v&agrave;o năm 2006. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực cung cấp dịch vụ quảng c&aacute;o&nbsp;truyền h&igrave;nh, dịch vụ quảng c&aacute;o tr&ecirc;n nền tảng kỹ thuật số, đại l&yacute; mua b&aacute;n quảng c&aacute;o v&agrave; bản quyền phim truyền h&igrave;nh, đầu tư, sản xuất hoặc marketing cho c&aacute;c bộ phim chiếu rạp. YEG hiện sở hữu v&agrave; vận h&agrave;nh 4 k&ecirc;nh truyền h&igrave;nh trả tiền phủ s&oacute;ng cả nước l&agrave; Yeah1 TV, Yeah1 Family, iMovie TV v&agrave; UNI Channel. B&ecirc;n cạnh đ&oacute;, C&ocirc;ng ty c&ograve;n đ&oacute;ng vai tr&ograve; l&agrave; đại l&yacute; mua b&aacute;n c&aacute;c quảng c&aacute;o v&agrave; bản quyền phim cho 16 đ&agrave;i truyền h&igrave;nh quốc gia, địa phương v&agrave; c&aacute;c k&ecirc;nh truyền h&igrave;nh tư nh&acirc;n ở Việt Nam.&nbsp;YEG được ni&ecirc;m yết v&agrave;&nbsp;giao dịch&nbsp;tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 06/2018.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0835
+    },
+    {
+      "name": "Ancla Asset Limited",
+      "percentage": 0.0786
+    },
+    {
+      "name": "Lê Phương Thảo",
+      "percentage": 0.0576
+    },
+    {
+      "name": "Chế Đoàn Viên",
+      "percentage": 0.04988
+    },
+    {
+      "name": "Nguyễn Viết Cường",
+      "percentage": 0.0497
+    },
+    {
+      "name": "Đào Phúc Trí",
+      "percentage": 0.0459
+    },
+    {
+      "name": "Macquarie Bank Limited Obu",
+      "percentage": 0.0458
+    },
+    {
+      "name": "Hồ Ngọc Tấn",
+      "percentage": 0.0308
+    },
+    {
+      "name": "Nguyễn Thị Khánh Hoà",
+      "percentage": 0.0289
+    },
+    {
+      "name": "Phạm Minh Tiến",
+      "percentage": 0.0217
+    },
+    {
+      "name": "Ngô Thị Vân Hạnh",
+      "percentage": 0.008
+    },
+    {
+      "name": "Nguyễn Hữu Thanh",
+      "percentage": 0.0079
+    },
+    {
+      "name": "Lê Văn Lãnh",
+      "percentage": 0.0064
+    },
+    {
+      "name": "Võ Thái Phong",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Nguyễn Thị Trúc Mai",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Nguyễn Hoàng Linh",
+      "percentage": 0.002378
+    },
+    {
+      "name": "Công đoàn Công ty Cổ phần Tập đoàn Yeah1",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Nguyễn Ngọc Hưng",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Phạm Minh Hồng",
+      "percentage": 0.00049
+    },
+    {
+      "name": "Nguyễn Thị Khánh Trang",
+      "percentage": 0.00037
+    },
+    {
+      "name": "Nguyễn Vũ Nghị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Thị Mỹ Duyên",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Phạm Lê Anh Thư",
+      "percentage": 0.00028
+    },
+    {
+      "name": "Đặng Phương Dung",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Vương Hồ Trí Dũng",
+      "percentage": 0.000184
+    },
+    {
+      "name": "Nguyễn Văn Nam",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Loh Yean Wei Jason",
+      "percentage": 0.000046
+    },
+    {
+      "name": "Nguyễn Anh Vũ",
+      "percentage": 2.4e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đào Phúc Trí",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0459
+    },
+    {
+      "name": "Võ Thái Phong",
+      "position": "Phó Tổng Giám đốc Tài chính",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Nguyễn Ngọc Hưng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Nguyễn Vũ Nghị",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Thị Mỹ Duyên",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Văn Nam",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.00011
+    },
+    {
+      "name": "Lâm Quốc Thái",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ảnh Nhượng Tống",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đặng Quỳnh Anh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Văn Cang",
+      "position": "Phó Tổng Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Vinh",
+      "position": "Thành viên Hội đồng Quản trị độc lập/Phó Giám đốc Điều hành/Phó Tổng Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Punnya Niraan De Silva",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Nữ",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hoàng Đức Trung",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Don Di Lam",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Dũng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lý Trường Chiến",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Quốc Bảo",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:09:21.419371Z"
+}

@@ -1,0 +1,129 @@
+{
+  "symbol": "APH",
+  "exchange": "HOSE",
+  "industry": "Hàng công nghiệp",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1560859315200.0,
+  "current_price": 6400.0,
+  "outstanding_shares": 243884268,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n An Ph&aacute;t Holdings (APH), được th&agrave;nh lập năm 2017. Lĩnh vực kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; Sản xuất, b&aacute;n v&agrave; kinh doanh thương mại sản phẩm nhựa; Sản xuất sản phẩm v&agrave; nguy&ecirc;n liệu sinh học ph&acirc;n hủy ho&agrave;n to&agrave;n; Sản xuất bao b&igrave; v&agrave; hạt nhựa; Kinh doanh nh&agrave; xưởng, cho thu&ecirc; đất v&agrave; hạ tầng khu c&ocirc;ng nghiệp...An Ph&aacute;t hiện l&agrave; doanh nghiệp c&oacute; quy m&ocirc; lớn nhất trong lĩnh vực sản xuất sản phẩm nhựa tại Việt Nam. Trong số c&aacute;c doanh nghiệp sản xuất sản phẩm t&uacute;i nilong trong cả nước vừa phục vụ xuất khẩu vừa phục vụ thị trường nội địa, An Ph&aacute;t l&agrave; doanh nghiệp c&oacute; quy m&ocirc; lớn nhất với sản lượng sản xuất hơn 8.000 tấn/th&aacute;ng. Ng&agrave;y 28/07/2020, APH ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty TNHH Igg Usa Việt Nam",
+      "percentage": 0.2702
+    },
+    {
+      "name": "Nguyễn Lê Trung",
+      "percentage": 0.022808
+    },
+    {
+      "name": "Phạm Hoàng Việt",
+      "percentage": 0.01768257
+    },
+    {
+      "name": "PHẠM HOÀNG VIỆT",
+      "percentage": 0.017
+    },
+    {
+      "name": "Phạm Ánh Dương",
+      "percentage": 0.0151
+    },
+    {
+      "name": "Phạm Đỗ Huy Cường",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Nirav Sudhir Patel",
+      "percentage": 0.00071345
+    },
+    {
+      "name": "Nguyễn Thị Tiện",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Lê Thăng Long",
+      "percentage": 3.1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Lê Trung",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.022808
+    },
+    {
+      "name": "Phạm Ánh Dương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0151
+    },
+    {
+      "name": "Đinh Xuân Cường",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0099
+    },
+    {
+      "name": "Phạm Đỗ Huy Cường",
+      "position": "Giám đốc Tài chính/Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0046
+    },
+    {
+      "name": "Nirav Sudhir Patel",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.00071345
+    },
+    {
+      "name": "Nguyễn Thị Tiện",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Lê Thăng Long",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 3.1e-6
+    },
+    {
+      "name": "Phạm Thị Hoa",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thúy Nga",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm  Văn Tuấn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Thị Hòe",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Ngọc Hoàng Anh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Lê Thăng Long",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lim Heon Young",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:54:48.070558Z"
+}

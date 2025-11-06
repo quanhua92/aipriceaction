@@ -1,0 +1,248 @@
+{
+  "symbol": "GIL",
+  "exchange": "HOSE",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1584961029600.0,
+  "current_price": 15600.0,
+  "outstanding_shares": 101600066,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Sản xuất Kinh doanh Xuất nhập khẩu B&igrave;nh Thạnh (GIL)&nbsp;c&oacute; tiền th&acirc;n l&agrave;&nbsp;C&ocirc;ng ty Cung ứng h&agrave;ng xuất khẩu quận B&igrave;nh Thạnh, được th&agrave;nh lập v&agrave;o ng&agrave;y 19/03/1982. GIL chuy&ecirc;n sản xuất v&agrave; xuất khẩu h&agrave;ng gia dụng v&agrave; h&agrave;ng may mặc.C&ocirc;ng ty hiện&nbsp;đang quản l&yacute; v&agrave; vận h&agrave;nh 52 d&acirc;y chuyền may của Nh&agrave; m&aacute;y may B&igrave;nh Thạnh, Nh&agrave; M&aacute;y may&nbsp;Thạnh Mỹ, Nh&agrave; m&aacute;y tại Huế.&nbsp;Đối với mặt h&agrave;ng gia dụng,&nbsp;GIL c&oacute; Nh&agrave; m&aacute;y sản xuất thiết bị chiếu s&aacute;ng v&agrave; chao&nbsp;đ&egrave;n với c&ocirc;ng suất 8.000 sản phẩm/ng&agrave;y v&agrave; 3.000 sản phẩm&nbsp;đ&egrave;n/ng&agrave;y. Thị trường xuất khẩu chủ yếu của c&ocirc;ng ty&nbsp;l&agrave; Ch&acirc;u &Acirc;u v&agrave;&nbsp;Mỹ.</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Lê Hùng",
+      "percentage": 0.0891
+    },
+    {
+      "name": "Công ty Cổ phần Xuất nhập khẩu Thủy sản Bến Tre",
+      "percentage": 0.0752840945
+    },
+    {
+      "name": "Lê Anh Thư",
+      "percentage": 0.0706
+    },
+    {
+      "name": "Lê Thị Kim Oanh",
+      "percentage": 0.049777
+    },
+    {
+      "name": "Pxp Vietnam Fund Limited",
+      "percentage": 0.0493730945
+    },
+    {
+      "name": "Lê Thị Diệu Chi",
+      "percentage": 0.0487
+    },
+    {
+      "name": "Nguyễn Phương Đông",
+      "percentage": 0.0465
+    },
+    {
+      "name": "Đoàn Thị Hồng Thúy",
+      "percentage": 0.0449686554
+    },
+    {
+      "name": "Nguyễn Minh Châu",
+      "percentage": 0.0443373979
+    },
+    {
+      "name": "Công ty Tài Chính TNHH MTV Bưu Điện",
+      "percentage": 0.0433808167
+    },
+    {
+      "name": "Hà Thị Phương Thảo",
+      "percentage": 0.0328
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán SSI",
+      "percentage": 0.0301
+    },
+    {
+      "name": "Công ty TNHH Ndh Việt Nam",
+      "percentage": 0.0291
+    },
+    {
+      "name": "Nguyễn Hữu Phúc",
+      "percentage": 0.0286756
+    },
+    {
+      "name": "Công ty CP May Hàng Gia Dụng Gilimex-ppj",
+      "percentage": 0.028
+    },
+    {
+      "name": "Công ty TNHH Nguyễn Sài Gòn",
+      "percentage": 0.02518
+    },
+    {
+      "name": "Công Ty Cổ Phần Xuất Nhập Khẩu Và Đầu Tư Thừa Thiên Huế",
+      "percentage": 0.02154462
+    },
+    {
+      "name": "Vietnam Emerging Equity Fund Limited",
+      "percentage": 0.0199370351
+    },
+    {
+      "name": "Nguyễn Băng Tâm",
+      "percentage": 0.014852
+    },
+    {
+      "name": "Phan Quang Đài",
+      "percentage": 0.0146713137
+    },
+    {
+      "name": "Nguyễn Việt Cường",
+      "percentage": 0.0139
+    },
+    {
+      "name": "Tổng Công ty Bến Thành - TNHH MTV",
+      "percentage": 0.0137064019
+    },
+    {
+      "name": "LION Capital Việt Nam Fund",
+      "percentage": 0.0110999334
+    },
+    {
+      "name": "Nguyễn Hồ Trung",
+      "percentage": 0.0105109034
+    },
+    {
+      "name": "Võ Văn Hảo",
+      "percentage": 0.0073161949
+    },
+    {
+      "name": "Nguyễn Thị Minh Hiếu",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Đặng Vũ Hùng",
+      "percentage": 0.0039498475
+    },
+    {
+      "name": "Quỹ Đầu Tư Thành Viên SSI",
+      "percentage": 0.0016862258
+    },
+    {
+      "name": "Phạm Văn Tàu",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Phạm Phú Hữu",
+      "percentage": 0.0011939311
+    },
+    {
+      "name": "Nguyễn Đình Quang Minh",
+      "percentage": 0.0007181541
+    },
+    {
+      "name": "Lê Việt Mỹ",
+      "percentage": 0.0005461561
+    },
+    {
+      "name": "Hoàng Tiến Đạt",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "percentage": 0.0004389
+    },
+    {
+      "name": "Phạm Thị Ánh Nguyệt",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đào Sỹ Trung",
+      "percentage": 0.00035951
+    },
+    {
+      "name": "Nguyễn Văn Luân",
+      "percentage": 0.00035908
+    },
+    {
+      "name": "Nguyễn Mạnh Hùng",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Trần Nhân Quí Trát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "percentage": 0.000176
+    },
+    {
+      "name": "Nguyễn Thị Thu Vân",
+      "percentage": 0.0001077231
+    },
+    {
+      "name": "Nguyễn Nam Thanh",
+      "percentage": 0.0000718154
+    },
+    {
+      "name": "Đinh Thị Hậu",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Công đoàn Công ty Cổ phần Sản xuất Kinh doanh Xuất nhập khẩu Bình Thạnh",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Gia Vinh",
+      "percentage": 3.59e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Lê Hùng",
+      "position": "Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.0891
+    },
+    {
+      "name": "Nguyễn Hữu Phúc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0286756
+    },
+    {
+      "name": "Nguyễn Việt Cường",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0139
+    },
+    {
+      "name": "Nguyễn Thị Minh Hiếu",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0047
+    },
+    {
+      "name": "Phạm Văn Tàu",
+      "position": "Giám đốc",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004389
+    },
+    {
+      "name": "Trần Nhân Quí Trát",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.000176
+    },
+    {
+      "name": "Đinh Thị Hậu",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Trần Thanh Tùng",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:12.785153Z"
+}

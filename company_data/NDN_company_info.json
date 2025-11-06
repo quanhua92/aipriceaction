@@ -1,0 +1,157 @@
+{
+  "symbol": "NDN",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 881392612800.0,
+  "current_price": 12300.0,
+  "outstanding_shares": 71657936,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần Đầu tư Ph&aacute;t triển Nh&agrave; Đ&agrave; Nẵng (NDN), tiền th&acirc;n l&agrave; C&ocirc;ng ty Sửa chữa Nh&agrave; Đ&agrave; Nẵng được th&agrave;nh lập năm 1992. Năm 2010, C&ocirc;ng ty chuyển&nbsp;đổi m&ocirc; h&igrave;nh kinh doanh hoạt&nbsp;động dưới dạng l&agrave; C&ocirc;ng ty Cổ phần. Hoạt động sản xuất kinh doanh của C&ocirc;ng ty l&agrave; X&acirc;y dựng, nhận thầu thi c&ocirc;ng c&aacute;c C&ocirc;ng tr&igrave;nh v&agrave; cung ứng vật liệu x&acirc;y dựng v&agrave; dịch vụ xe m&aacute;y thi c&ocirc;ng, X&acirc;y dựng c&ocirc;ng tr&igrave;nh cấp tho&aacute;t nước đ&ocirc; thị. X&acirc;y dựng c&ocirc;ng tr&igrave;nh bưu ch&iacute;nh viễn th&ocirc;ng, Sản xuất kinh doanh vật liệu x&acirc;y dựng. Khai th&aacute;c chế biến kho&aacute;ng sản. Một số dự &aacute;n C&ocirc;ng ty đ&atilde; tham x&acirc;y dựng c&oacute; tổng mức đầu tư lớn như: Bệnh viện Đa khoa 600 giường mới (130 tỷ), Chung cư thu nhập thấp 576 căn hộ (66 tỷ), Trung t&acirc;m Hội chợ Triển l&atilde;m (22 tỷ), Trung t&acirc;m ph&aacute;t thanh truyền h&igrave;nh DRT (30 tỷ)...C&ocirc;ng ty l&agrave; doanh nghiệp ti&ecirc;n phong trong lĩnh vực x&acirc;y dựng c&aacute;c khu t&aacute;i định cư của Đ&agrave; Nẵng. Hiện tại, C&ocirc;ng ty đang điều h&agrave;nh dự &aacute;n HTKT KDC Khu E ph&iacute;a Nam cầu Cẩm Lệ v&agrave; KDC Qu&aacute; Gi&aacute;ng... Ng&agrave;y 21/04/2011, NDN ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "NGUYỄN QUANG TRUNG",
+      "percentage": 0.0848
+    },
+    {
+      "name": "Evli Emerging Frontier Fund",
+      "percentage": 0.04020965
+    },
+    {
+      "name": "Ngân Hàng Thương Mại Cổ phần Sài Gòn",
+      "percentage": 0.0397830608
+    },
+    {
+      "name": "Tổng Công ty Đầu Tư Và Kinh Doanh Vốn Nhà Nước - Công ty TNHH",
+      "percentage": 0.0397830608
+    },
+    {
+      "name": "Nguyễn Quang Trung",
+      "percentage": 0.03743939
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0373
+    },
+    {
+      "name": "Nguyễn Đình Minh Huy",
+      "percentage": 0.0226
+    },
+    {
+      "name": "Nguyễn Quang Minh Khoa",
+      "percentage": 0.0214
+    },
+    {
+      "name": "Nguyễn Quang Minh Văn",
+      "percentage": 0.0172
+    },
+    {
+      "name": "Mai Thị Thi",
+      "percentage": 0.0168
+    },
+    {
+      "name": "Nguyễn Quang Minh Khánh",
+      "percentage": 0.014
+    },
+    {
+      "name": "Công Đoàn Công ty Cổ Phần Đầu Tư Phát Triển Nhà Đà Nẵng",
+      "percentage": 0.0056
+    },
+    {
+      "name": "Công Ty Cổ Phần Đầu Tư Phương Trang",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Lương Thanh Viên",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Lâm Phụng Tiên",
+      "percentage": 0.001656081
+    },
+    {
+      "name": "Lưu Thị Quý Hương",
+      "percentage": 0.0008880766
+    },
+    {
+      "name": "Nguyễn Văn Nam",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Trần Viết Em",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Bùi Lê Duy",
+      "percentage": 0.000045
+    },
+    {
+      "name": "Đào Thị Phước",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Mai Trương Tú Oanh",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "NGUYỄN QUANG TRUNG",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0848
+    },
+    {
+      "name": "Nguyễn Quang Minh Khoa",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0214
+    },
+    {
+      "name": "Lương Thanh Viên",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Lâm Phụng Tiên",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.001656081
+    },
+    {
+      "name": "Trần Viết Em",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Bùi Lê Duy",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.000045
+    },
+    {
+      "name": "Đào Thị Phước",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Cao Thái Hùng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Nhật Thảo",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Thị Anh Trúc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Dương Thị Thanh Hải",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:56.542954Z"
+}

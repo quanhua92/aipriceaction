@@ -1,0 +1,469 @@
+{
+  "symbol": "GMD",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 28575172303000.0,
+  "current_price": 67000.0,
+  "outstanding_shares": 426495109,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Gemadept (GMD) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Đại l&yacute; Li&ecirc;n hiệp Vận chuyển,&nbsp;được th&agrave;nh lập v&agrave;o năm 1990. C&ocirc;ng ty hoạt động ch&iacute;nh trong lĩnh vực khai th&aacute;c cảng v&agrave; logistics. GMD ch&iacute;nh thức hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 1993. C&ocirc;ng ty sở hữu hệ thống Cảng v&agrave; hạ tầng Logistics trải d&agrave;i từ Bắc v&agrave;o Nam v&agrave; vươn sang c&aacute;c quốc gia l&acirc;n cận như Singapore, Hong Kong, Trung Quốc, Campuchia... GMD l&agrave; một trong số &iacute;t c&aacute;c c&ocirc;ng ty logistics Việt Nam c&oacute; thể cung cấp dịch vụ logistics trọn g&oacute;i nhờ sở hữu hệ thống dịch vụ kh&eacute;p k&iacute;n, từ cảng biển, kho h&agrave;ng v&agrave; c&aacute;c phương tiện vận tải nằm tại c&aacute;c vị tr&iacute; kinh tế trọng điểm tr&ecirc;n cả ba miền Bắc, Trung, Nam. GMD được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2002.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công Ty TNHH Ssj Consulting (việt Nam)",
+      "percentage": 0.0717
+    },
+    {
+      "name": "Quỹ ETF DCVFMVN DIAMOND",
+      "percentage": 0.0543
+    },
+    {
+      "name": "Lê Thúy Hương",
+      "percentage": 0.0496
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0477
+    },
+    {
+      "name": "Recollection Private Limited",
+      "percentage": 0.0459
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0224
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.02000885
+    },
+    {
+      "name": "Deutsche Bank Aktiengesellchaft, London Branch",
+      "percentage": 0.0196495214
+    },
+    {
+      "name": "Ngân hàng Deutsche Aktiengesellschaft",
+      "percentage": 0.0196495214
+    },
+    {
+      "name": "Citgroup Global Markets Limited",
+      "percentage": 0.01960371
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0188
+    },
+    {
+      "name": "Trần Doãn Phi Anh",
+      "percentage": 0.0183
+    },
+    {
+      "name": "Nguyễn Thị Hồng",
+      "percentage": 0.0177
+    },
+    {
+      "name": "VOF Investment Limited",
+      "percentage": 0.017303
+    },
+    {
+      "name": "Công ty Quản lý quỹ đầu tư Dragon Capital",
+      "percentage": 0.01372182
+    },
+    {
+      "name": "Đỗ Văn Nhân",
+      "percentage": 0.008
+    },
+    {
+      "name": "Forum One - VinaCapital Vietnam Fund",
+      "percentage": 0.005909
+    },
+    {
+      "name": "Preston Pacific Limited",
+      "percentage": 0.005245
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0052
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 0.00519
+    },
+    {
+      "name": "Chu Đức Khang",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Asia Value Investment Limited",
+      "percentage": 0.004478
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.00409
+    },
+    {
+      "name": "Nguyễn Thế Dũng",
+      "percentage": 0.0039
+    },
+    {
+      "name": "Trần Kiều Minh",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Đỗ Công Khanh",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Kinh tế hiện đại VinaCapital",
+      "percentage": 0.003523
+    },
+    {
+      "name": "Nguyễn Minh Nguyệt",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Vũ Ninh",
+      "percentage": 0.003
+    },
+    {
+      "name": "Hoàng Thị Thanh",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Phạm Tiến Tịnh",
+      "percentage": 0.0026
+    },
+    {
+      "name": "Đỗ Nhật Tân",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Nguyễn Quốc Khánh",
+      "percentage": 0.0022300195
+    },
+    {
+      "name": "Huỳnh Thị Ái Vân",
+      "percentage": 0.0021
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.002
+    },
+    {
+      "name": "Phạm Quốc Long",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Bùi Thị Thu Hương",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Trần Quang Tiến",
+      "percentage": 0.0016
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.001468
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ VinaCapital",
+      "percentage": 0.00145
+    },
+    {
+      "name": "Phạm Hồng Hải",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Đỗ Lộc",
+      "percentage": 0.001
+    },
+    {
+      "name": "KIM PMAA Vietnam Securities Investment Trust 1(Equity)",
+      "percentage": 0.001
+    },
+    {
+      "name": "Lê Ngọc Quang",
+      "percentage": 0.0009023748
+    },
+    {
+      "name": "Trần Thị Thủy",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Đỗ Việt Thành",
+      "percentage": 0.00086
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.0008119897
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Thị Hồng Nga",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Trần Đức Thuận",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đỗ Minh Châu",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Tô Hải",
+      "percentage": 0.00064578
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Cổ tức Năng động VinaCapital",
+      "percentage": 0.000606
+    },
+    {
+      "name": "Lâm Đình Dụ",
+      "percentage": 0.0006
+    },
+    {
+      "name": "Lindisfarne One Ltd",
+      "percentage": 0.000563
+    },
+    {
+      "name": "Trần Vĩnh Nguyên Bảo",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Khoa Năng Lưu",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Đỗ Văn Minh",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 0.000418759
+    },
+    {
+      "name": "Vũ Thị Hoàng Bắc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Công ty TNHH Quản Lý Quỹ Kim Việt Nam",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lưu Tường Giai",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Công ty Cổ phần Quản Lý Quỹ Đầu Tư Dragon Capital Việt Nam",
+      "percentage": 0.00037025
+    },
+    {
+      "name": "Winstar Resources Limited",
+      "percentage": 0.000369
+    },
+    {
+      "name": "Công ty TNHH Bảo hiểm nhân thọ Generali Việt Nam",
+      "percentage": 0.000359
+    },
+    {
+      "name": "Trần Thị Thanh Thảo",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0002317932
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Chu Thu Thảo",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Kim Cúc",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.0001619938
+    },
+    {
+      "name": "Nguyễn Viết Quảng",
+      "percentage": 0.0001450171
+    },
+    {
+      "name": "Công ty TNHH bảo hiểm Hanwha Life Việt Nam",
+      "percentage": 0.000134
+    },
+    {
+      "name": "Công ty TNHH Bảo hiểm nhân thọ CHUBB Việt Nam",
+      "percentage": 0.000115
+    },
+    {
+      "name": "Bùi Hữu Ánh",
+      "percentage": 0.0001033253
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thị Yên",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đỗ Thị Nga",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Chu Đức Trung",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000841964
+    },
+    {
+      "name": "Nguyễn Thanh Hải",
+      "percentage": 0.000048
+    },
+    {
+      "name": "Deutsche Asset Management (Asia) Limited",
+      "percentage": 0.00004305
+    },
+    {
+      "name": "Đỗ Thị Hồng Hạnh",
+      "percentage": 0.000025
+    },
+    {
+      "name": "Phạm Đình Tánh",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Nguyễn Quốc Hưng",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Vũ Thị Hoàng Hà",
+      "percentage": 1e-6
+    },
+    {
+      "name": "VanEck Vietnam ETF",
+      "percentage": 5.16e-8
+    },
+    {
+      "name": "Tổng Công ty Hàng hải Việt Nam - CTCP",
+      "percentage": 8.6e-9
+    }
+  ],
+  "officers": [
+    {
+      "name": "Đỗ Văn Nhân",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.008
+    },
+    {
+      "name": "Chu Đức Khang",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Nguyễn Thế Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0039
+    },
+    {
+      "name": "Đỗ Công Khanh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0037
+    },
+    {
+      "name": "Nguyễn Minh Nguyệt",
+      "position": "Thành viên Hội đồng Quản trị/Kế toán trưởng",
+      "percentage": 0.0035
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Vũ Ninh",
+      "position": "Người phụ trách quản trị công ty/Thành viên Hội đồng Quản trị",
+      "percentage": 0.003
+    },
+    {
+      "name": "Bùi Thị Thu Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Phạm Quốc Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Trần Đức Thuận",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Đỗ Văn Minh",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Vũ Thị Hoàng Bắc",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lưu Tường Giai",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Trần Hoàng Ngọc Uyên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bolat Duisenov",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "David Do",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tsuyoshi Kato",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hà Thu Hiền",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Cẩm Ly",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:17.316814Z"
+}

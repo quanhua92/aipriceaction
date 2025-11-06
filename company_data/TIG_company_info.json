@@ -1,0 +1,169 @@
+{
+  "symbol": "TIG",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1529489019500.0,
+  "current_price": 7900.0,
+  "outstanding_shares": 193606205,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Tập đo&agrave;n Đầu tư Thăng Long (TIG), tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần Văn h&oacute;a Th&ocirc;ng tin Thăng Long,&nbsp;được th&agrave;nh lập năm 2001.&nbsp;Hoạt động chủ yếu của c&ocirc;ng ty l&agrave;: Đầu tư, kinh doanh, tư vấn, m&ocirc;i giới, quản l&yacute; s&agrave;n giao dịch bất động sản; Tư vấn, thiết kế, khảo s&aacute;t, gi&aacute;m s&aacute;t, thi c&ocirc;ng x&acirc;y lắp v&agrave; quản l&yacute; dự &aacute;n c&aacute;c c&ocirc;ng tr&igrave;nh d&acirc;n dụng, c&ocirc;ng nghiệp, giao th&ocirc;ng; Kinh doanh dịch vụ kh&aacute;ch sạn, nh&agrave; h&agrave;ng, lưu tr&uacute;, vui chơi giải tr&iacute;...C&aacute;c dự &aacute;n đều được&nbsp;c&ocirc;ng ty&nbsp;v&agrave; c&aacute;c c&ocirc;ng ty con trực tiếp ph&aacute;t triển từ đầu, kh&ocirc;ng qua trung gian n&ecirc;n c&oacute; gi&aacute; th&agrave;nh dự &aacute;n rất thấp. Đ&acirc;y l&agrave; lợi thế của TIG trong việc cạnh tranh về gi&aacute; b&aacute;n đối với c&aacute;c dự &aacute;n tương tự. Với gần 15 năm kinh nghiệm hoạt động trong lĩnh vực đầu tư bất động sản, hiện TIG đang quản l&yacute;, sở hữu v&agrave; hợp t&aacute;c đầu tư nhiều dự &aacute;n bất động sản với quỹ đất h&agrave;ng trăm h&eacute;c - ta c&oacute; vị tr&iacute; đẹp ở Thủ đ&ocirc; H&agrave; Nội v&agrave; c&aacute;c địa phương... Ng&agrave;y 08/10/2010, TIG ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Phúc Long",
+      "percentage": 0.19679999
+    },
+    {
+      "name": "Park Jin Ku",
+      "percentage": 0.0913
+    },
+    {
+      "name": "Nguyễn Văn Nghĩa",
+      "percentage": 0.0851
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Xây dựng và Quản lý Kinh doanh Bất động sản Thăng Long",
+      "percentage": 0.0718778077
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Tòa Nhà Công Nghệ Xanh Tig - Hde",
+      "percentage": 0.0592991913
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Hde Holdings",
+      "percentage": 0.0539083557
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0488
+    },
+    {
+      "name": "Asean Deep Value Fund",
+      "percentage": 0.0431
+    },
+    {
+      "name": "Asean Small Cap Fund",
+      "percentage": 0.0393
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Xuất Nhập Khẩu Đông Đô",
+      "percentage": 0.0294
+    },
+    {
+      "name": "Hồ Thanh Hương",
+      "percentage": 0.0175
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Đầu tư Tài chính Việt Nam",
+      "percentage": 0.0165
+    },
+    {
+      "name": "Công ty Cổ Phần Đầu Tư Bất Động Sản Hà Thành",
+      "percentage": 0.0071878
+    },
+    {
+      "name": "Phạm Thị Hồng Nhung",
+      "percentage": 0.0041321
+    },
+    {
+      "name": "Nguyễn Xuân Biểu",
+      "percentage": 0.0026954177
+    },
+    {
+      "name": "Phạm Quang Tiến",
+      "percentage": 0.0026954177
+    },
+    {
+      "name": "Hồ Ngọc Hải",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Nguyễn Văn Thương",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Nguyễn Thị Minh Châu",
+      "percentage": 0.0021
+    },
+    {
+      "name": "Trần Hải Văn",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Nguyễn Thị Việt",
+      "percentage": 0.00014825
+    },
+    {
+      "name": "Vũ Thu Thủy",
+      "percentage": 0.0001357
+    },
+    {
+      "name": "Nguyễn Hồng Minh",
+      "percentage": 5.9299e-6
+    },
+    {
+      "name": "Hồ Thị Thu Hà",
+      "percentage": 1e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Phúc Long",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.19679999
+    },
+    {
+      "name": "Phạm Thị Hồng Nhung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0041321
+    },
+    {
+      "name": "Hồ Ngọc Hải",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0023
+    },
+    {
+      "name": "Hồ Thị Thu Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 1e-6
+    },
+    {
+      "name": "Nguyễn Thị Ánh Tuyết",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Quân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đào Thị Thanh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc/Giám đốc Tài chính",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Viết Việt",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Mạnh Đức",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Văn Châu",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Xuân Đại Thắng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:06:40.921641Z"
+}

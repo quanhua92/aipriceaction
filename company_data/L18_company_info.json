@@ -1,0 +1,255 @@
+{
+  "symbol": "L18",
+  "exchange": "HNX",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1193808597300.0,
+  "current_price": 26100.0,
+  "outstanding_shares": 45739793,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">C&ocirc;ng ty Cổ phần Đầu tư v&agrave; X&acirc;y dựng số 18 (L18) tiền th&acirc;n l&agrave; C&ocirc;ng ty Kiến tr&uacute;c U&ocirc;ng B&iacute; được th&agrave;nh lập năm 1961.&nbsp;C&ocirc;ng ty&nbsp;được&nbsp;cổ phần h&oacute;a v&agrave;o năm 2006. C&ocirc;ng ty chuy&ecirc;n hoạt động trong lĩnh vực x&acirc;y lắp c&aacute;c c&ocirc;ng tr&igrave;nh d&acirc;n dụng, c&ocirc;ng nghiệp, giao th&ocirc;ng v&agrave; thủy lợi. Hoạt động thi c&ocirc;ng x&acirc;y lắp l&agrave; lĩnh vực cốt l&otilde;i của c&ocirc;ng ty, chiếm tới 90% tổng gi&aacute; trị sản lượng trong những năm gần đ&acirc;y.&nbsp;C&ocirc;ng ty l&agrave;&nbsp;một trong số &iacute;t&nbsp;doanh nghiệp hoạt&nbsp;động trong lĩnh vực&nbsp;x&acirc;y lắp c&oacute; đội ngũ c&ocirc;ng nh&acirc;n kỹ thuật cao với đội ngũ c&ocirc;ng nh&acirc;n trẻ&nbsp;l&agrave;nh nghề, đủ năng lực thi c&ocirc;ng c&aacute;c c&ocirc;ng tr&igrave;nh trọng điểm, hiện đại nhất Việt Nam. Trải qua&nbsp;50 năm hoạt động, c&ocirc;ng ty đ&atilde; thi c&ocirc;ng hơn 800 c&ocirc;ng tr&igrave;nh trong đ&oacute; c&oacute; nhiều c&ocirc;ng tr&igrave;nh&nbsp;đạt huy chương v&agrave;ng chất lượng. Kể từ năm 2018, c&ocirc;ng ty đ&atilde; được Bộ X&acirc;y dựng xếp hạng năng lực hoạt động x&acirc;y dựng: Thi c&ocirc;ng x&acirc;y dựng c&ocirc;ng tr&igrave;nh hạng I; Hạ tầng kỹ thuật hạng III...Ng&agrave;y 23/04/2008, L18 ch&iacute;nh thức giao dịch tr&ecirc;n Sở giao dịch chứng kho&aacute;n H&agrave; Nội (HNX)</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "BÙI THANH TUYÊN",
+      "percentage": 0.5064
+    },
+    {
+      "name": "Công ty Cổ phần Phát triển Hạ tầng Vĩnh Phúc",
+      "percentage": 0.0905
+    },
+    {
+      "name": "VĂN PHỤNG HÀ",
+      "percentage": 0.0755
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "percentage": 0.0423
+    },
+    {
+      "name": "Tổng Công ty LICOGI - Công ty Cổ phần",
+      "percentage": 0.0417
+    },
+    {
+      "name": "Nguyễn Đình Thủy",
+      "percentage": 0.0237
+    },
+    {
+      "name": "ĐẶNG VĂN GIANG",
+      "percentage": 0.01978
+    },
+    {
+      "name": "Nguyễn Thị Thúy",
+      "percentage": 0.0149
+    },
+    {
+      "name": "Phạm Văn Nhạ",
+      "percentage": 0.0139444444
+    },
+    {
+      "name": "Đặng Văn Long",
+      "percentage": 0.0129629629
+    },
+    {
+      "name": "Ngô Văn Nam",
+      "percentage": 0.01261
+    },
+    {
+      "name": "Đỗ Thị Nhung",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Nguyễn Thị Kim Xinh",
+      "percentage": 0.0095
+    },
+    {
+      "name": "Nguyễn Xuân Hưng",
+      "percentage": 0.00905
+    },
+    {
+      "name": "Trịnh Việt Dũng",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Đào Đình Chiến",
+      "percentage": 0.0061851851
+    },
+    {
+      "name": "Lê Văn Tiến",
+      "percentage": 0.004537037
+    },
+    {
+      "name": "Nguyễn Duy Trung",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Long Điền",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Bùi Thị Nguyên Hạnh",
+      "percentage": 0.0023148148
+    },
+    {
+      "name": "Hoàng Thị Mết",
+      "percentage": 0.0022314814
+    },
+    {
+      "name": "Đào Đức Tài",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Văn Vũ",
+      "percentage": 0.0018518518
+    },
+    {
+      "name": "Trần Quang Miến",
+      "percentage": 0.0018518518
+    },
+    {
+      "name": "Bùi Văn Tiến",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Lưu Bá Thái",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Nguyễn Quang Khuê",
+      "percentage": 0.001
+    },
+    {
+      "name": "Dương Quốc Khánh",
+      "percentage": 0.00087
+    },
+    {
+      "name": "Bùi Công Phách",
+      "percentage": 0.0008
+    },
+    {
+      "name": "Nguyễn Anh Dũng",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Vũ Xuân Vụ",
+      "percentage": 0.0005185185
+    },
+    {
+      "name": "Đỗ Thị Hoan",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đào Văn Nội",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Đặng Long Diệp",
+      "percentage": 0.0004
+    },
+    {
+      "name": "NGUYỄN NGỌC CHUNG",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Vũ Thị Tuyết",
+      "percentage": 0.0002
+    },
+    {
+      "name": "Vũ Thị Thu Thủy",
+      "percentage": 0.00018
+    },
+    {
+      "name": "Bùi  Thị Thuần",
+      "percentage": 0.0001
+    }
+  ],
+  "officers": [
+    {
+      "name": "BÙI THANH TUYÊN",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.5064
+    },
+    {
+      "name": "Nguyễn Đình Thủy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0237
+    },
+    {
+      "name": "ĐẶNG VĂN GIANG",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.01978
+    },
+    {
+      "name": "Đỗ Thị Nhung",
+      "position": "Kế toán trưởng/Phụ trách Công bố thông tin",
+      "percentage": 0.0102
+    },
+    {
+      "name": "Nguyễn Thị Kim Xinh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0095
+    },
+    {
+      "name": "Nguyễn Xuân Hưng",
+      "position": "Chủ tịch Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.00905
+    },
+    {
+      "name": "Trịnh Việt Dũng",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0078
+    },
+    {
+      "name": "Nguyễn Long Điền",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0028
+    },
+    {
+      "name": "Đào Đức Tài",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Lưu Bá Thái",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Dương Quốc Khánh",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00087
+    },
+    {
+      "name": "Bùi Công Phách",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0008
+    },
+    {
+      "name": "NGUYỄN NGỌC CHUNG",
+      "position": "Phó Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0003
+    },
+    {
+      "name": "HÀ HỒNG QUANG",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Thân Thị Len",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Lan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Hữu Nghĩa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:01:41.341035Z"
+}

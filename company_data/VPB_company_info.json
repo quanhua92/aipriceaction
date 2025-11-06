@@ -1,0 +1,423 @@
+{
+  "symbol": "VPB",
+  "exchange": "HOSE",
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 232067265329250.0,
+  "current_price": 29250.0,
+  "outstanding_shares": 7933923601,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Ng&acirc;n h&agrave;ng Thương mại Cổ phần Việt Nam Thịnh Vượng (VPBank) c&oacute; tiền th&acirc;n l&agrave; Ng&acirc;n h&agrave;ng Thương mại Cổ phần Doanh nghiệp tư nh&acirc;n Việt Nam,&nbsp;được th&agrave;nh lập&nbsp;v&agrave;o năm 1993. Ng&acirc;n h&agrave;ng hoạt động chủ yếu&nbsp;trong lĩnh vực huy động vốn v&agrave; cho vay&nbsp;t&iacute;n dụng. B&ecirc;n cạnh đ&oacute;,&nbsp;VPBank c&ograve;n tham gia c&aacute;c hoạt động thanh to&aacute;n quốc tế, kinh doanh ngoại hối, đầu tư t&agrave;i ch&iacute;nh, quản l&yacute; rủi ro v&agrave; bảo to&agrave;n vốn. VPBank được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 08/2017. Năm 2024, so với c&ugrave;ng kỳ, Bi&ecirc;n l&atilde;i thuần (NIM) ở mức 5.83%, tăng 0.24%. Tỷ lệ nợ xấu ở mức 4.2%, giảm 0.82%. Tỷ lệ bao phủ nợ xấu ở mức 56.17%, tăng 4.12%. Lợi nhuận sau thuế c&ocirc;ng ty mẹ c&oacute; gi&aacute; trị bằng 15,8 ngh&igrave;n tỷ đồng, tăng 58.2%. Tỷ suất lợi nhuận tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 11.41%, tăng 2.79%.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Sumitomo Mitsui Banking Corporation",
+      "percentage": 0.15005
+    },
+    {
+      "name": "Công ty Cổ phần Diera Corp",
+      "percentage": 0.043957
+    },
+    {
+      "name": "Ngô Chí Dũng",
+      "percentage": 0.0414113
+    },
+    {
+      "name": "Hoàng Anh Minh",
+      "percentage": 0.0411843
+    },
+    {
+      "name": "Vũ Thị Quyên",
+      "percentage": 0.0410754
+    },
+    {
+      "name": "Trần Ngọc Lan",
+      "percentage": 0.039051
+    },
+    {
+      "name": "Trần Ngọc Trung",
+      "percentage": 0.038454
+    },
+    {
+      "name": "Nguyễn Phương Hoa",
+      "percentage": 0.03759
+    },
+    {
+      "name": "Kim Ngọc Cẩm Ly",
+      "percentage": 0.0361239
+    },
+    {
+      "name": "Lý Thị Thu Hà",
+      "percentage": 0.0355597
+    },
+    {
+      "name": "Lê Việt Anh",
+      "percentage": 0.035325
+    },
+    {
+      "name": "Lê Minh Anh",
+      "percentage": 0.027061
+    },
+    {
+      "name": "Nguyễn Thu Thủy",
+      "percentage": 0.0256304
+    },
+    {
+      "name": "Công ty TNHH Thương Mại Kỹ Thuật Việt Hải",
+      "percentage": 0.0226
+    },
+    {
+      "name": "Bùi Hải Quân",
+      "percentage": 0.0197039
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Việt Hải",
+      "percentage": 0.0197
+    },
+    {
+      "name": "Composite Capital Master Fund Lp.",
+      "percentage": 0.017029
+    },
+    {
+      "name": "Nguyễn Mạnh Cường",
+      "percentage": 0.014464
+    },
+    {
+      "name": "Nguyễn Đức Vinh",
+      "percentage": 0.0132223
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.012839
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.011494
+    },
+    {
+      "name": "Tianhong Vietnamese Market Equity Launched QDII Fund",
+      "percentage": 0.011479
+    },
+    {
+      "name": "Ngô Chí Trung Johnny",
+      "percentage": 0.0088229
+    },
+    {
+      "name": "Công ty TNHH MTV Effexi",
+      "percentage": 0.007792
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.006644
+    },
+    {
+      "name": "Trần Ngọc Bê",
+      "percentage": 0.0065075
+    },
+    {
+      "name": "Phạm Thị Nhung",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Đỗ Quỳnh Ngân",
+      "percentage": 0.0055068
+    },
+    {
+      "name": "Công ty TNHH MTV Rostra",
+      "percentage": 0.004425
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.004138
+    },
+    {
+      "name": "Lương Phan Sơn",
+      "percentage": 0.0038
+    },
+    {
+      "name": "Nguyễn Đức Giang",
+      "percentage": 0.0034242
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.003128
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.0031
+    },
+    {
+      "name": "Bùi Hải Ngân",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Bùi Cẩm Thi",
+      "percentage": 0.0025
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNFIN LEAD",
+      "percentage": 0.001653452
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.001601
+    },
+    {
+      "name": "Ngô Minh Phương",
+      "percentage": 0.0013612
+    },
+    {
+      "name": "Lưu Thị Thảo",
+      "percentage": 0.0012477
+    },
+    {
+      "name": "Công Đoàn Ngân Hàng Tmcp Việt Nam Thịnh Vượng Hội Sở",
+      "percentage": 0.00107
+    },
+    {
+      "name": "Lô Bằng Giang",
+      "percentage": 0.0010398
+    },
+    {
+      "name": "Balestrand Limited",
+      "percentage": 0.000615
+    },
+    {
+      "name": "Grinling International Limited",
+      "percentage": 0.000597
+    },
+    {
+      "name": "Lô Hải Yến Ngọc",
+      "percentage": 0.0005516
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.000517
+    },
+    {
+      "name": "Saigon Investments Limited",
+      "percentage": 0.000321
+    },
+    {
+      "name": "Dương Thị Thu Thủy",
+      "percentage": 0.000272
+    },
+    {
+      "name": "Nguyễn Thị Ngọc Anh",
+      "percentage": 0.00024956
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000216
+    },
+    {
+      "name": "Đinh Văn Nho",
+      "percentage": 0.0002052
+    },
+    {
+      "name": "Danang Investments Limited",
+      "percentage": 0.000201
+    },
+    {
+      "name": "Phùng Duy Khương",
+      "percentage": 0.0001617
+    },
+    {
+      "name": "Phan Ngọc Hòa",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00013331
+    },
+    {
+      "name": "Nguyễn Hưng",
+      "percentage": 0.0001269185
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.0001205
+    },
+    {
+      "name": "Phạm Phú Khôi",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.00007068
+    },
+    {
+      "name": "Nguyễn Thành Long",
+      "percentage": 0.00005502
+    },
+    {
+      "name": "Vũ Hồng Cao",
+      "percentage": 0.0000478
+    },
+    {
+      "name": "Lê Hoàng Khánh An",
+      "percentage": 0.0000439
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00003979
+    },
+    {
+      "name": "Kim Ly Huyền",
+      "percentage": 0.000034
+    },
+    {
+      "name": "Dương Thị Thủy",
+      "percentage": 0.0000319168
+    },
+    {
+      "name": "Nguyễn Thị Mai Trinh",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 0.00002872
+    },
+    {
+      "name": "Trịnh Thị Thanh Hằng",
+      "percentage": 0.00002072
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Lê Lan Kim",
+      "percentage": 5.3e-6
+    },
+    {
+      "name": "Nguyễn Thanh Bắc",
+      "percentage": 4e-6
+    },
+    {
+      "name": "Bùi Minh Ngọc",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Nguyễn Thị Bích Hợi",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Trịnh Thị Hải Yến",
+      "percentage": 8e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Manulife",
+      "percentage": 2.9e-9
+    }
+  ],
+  "officers": [
+    {
+      "name": "Ngô Chí Dũng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0414113
+    },
+    {
+      "name": "Bùi Hải Quân",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0197039
+    },
+    {
+      "name": "Nguyễn Đức Vinh",
+      "position": "Tổng Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0132223
+    },
+    {
+      "name": "Phạm Thị Nhung",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0058
+    },
+    {
+      "name": "Lưu Thị Thảo",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0012477
+    },
+    {
+      "name": "Lô Bằng Giang",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0010398
+    },
+    {
+      "name": "Dương Thị Thu Thủy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000272
+    },
+    {
+      "name": "Đinh Văn Nho",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0002052
+    },
+    {
+      "name": "Phùng Duy Khương",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001617
+    },
+    {
+      "name": "Phan Ngọc Hòa",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00015
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0001205
+    },
+    {
+      "name": "Phạm Phú Khôi",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00009
+    },
+    {
+      "name": "Nguyễn Thành Long",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00005502
+    },
+    {
+      "name": "Vũ Hồng Cao",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0000478
+    },
+    {
+      "name": "Lê Hoàng Khánh An",
+      "position": "Giám đốc khối",
+      "percentage": 0.0000439
+    },
+    {
+      "name": "Kim Ly Huyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000034
+    },
+    {
+      "name": "Nguyễn Thị Mai Trinh",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trịnh Thị Thanh Hằng",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.00002072
+    },
+    {
+      "name": "Nguyễn Thị Thu Hằng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Lê Lan Kim",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 5.3e-6
+    },
+    {
+      "name": "Nguyễn Văn Phúc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:53.823485Z"
+}

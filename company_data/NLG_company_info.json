@@ -1,0 +1,349 @@
+{
+  "symbol": "NLG",
+  "exchange": "HOSE",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 14478831430400.0,
+  "current_price": 37600.0,
+  "outstanding_shares": 385075304,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty cổ phần Đầu tư Nam Long (NLG) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty TNHH Nam Long&nbsp;được th&agrave;nh lập năm 1992.&nbsp;C&ocirc;ng ty hoạt động trong lĩnh vực đầu tư, ph&aacute;t triển v&agrave; kinh doanh c&aacute;c dự &aacute;n bất động nh&agrave; ở, khu đ&ocirc; thị. NLG chuyển sang hoạt động theo m&ocirc; h&igrave;nh c&ocirc;ng ty cổ phần từ năm 2005.&nbsp;NLG hiện sở hữu 681ha đất sạch trải khắp c&aacute;c tỉnh miền Nam, chủ yếu tập trung trong c&aacute;c khu đ&ocirc; thị v&agrave; d&acirc;n cư trọng điểm của Th&agrave;nh phố Hồ Ch&iacute; Minh, B&igrave;nh Dương, Cần Thơ, Long An, Đồng Nai&nbsp;v&agrave; Hải Ph&ograve;ng. Một số dự &aacute;n ti&ecirc;u biểu m&agrave; Nam Long tham gia đầu tư, ph&aacute;t triển v&agrave; kinh doanh bất động sản: Khu đ&ocirc; thị Mizuki Park-Q.B&igrave;nh Ch&aacute;nh, Th&agrave;nh phố Hồ Ch&iacute; Minh (26ha), Khu đ&ocirc; thị Kikyo Residences -&nbsp;Quận 9, Th&agrave;nh phố Hồ Ch&iacute; Minh&nbsp;(18ha), Khu đ&ocirc; thị Fuji Residences - Quận 9, Th&agrave;nh phố Hồ Ch&iacute; Minh (5ha), Khu biệt thự Thảo Nguy&ecirc;n S&agrave;i Gòn - District 9,Th&agrave;nh phố Hồ Ch&iacute; Minh (7,7ha), Khu d&acirc;n cư Dalia Garden - Cần Thơ (15ha). NLG được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;sở Giao dịch Chứng&nbsp;kho&aacute;n Hồ Ch&iacute; Minh&nbsp;(HOSE) từ năm 2013.</p>\r\n</div>\r\n<quillbot-extension-portal></quillbot-extension-portal>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Nguyễn Xuân Quang",
+      "percentage": 0.0869
+    },
+    {
+      "name": "Ibeworth Pte. Ltd.",
+      "percentage": 0.0764
+    },
+    {
+      "name": "Công ty Tài Chính Quốc Tế",
+      "percentage": 0.0494
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0449
+    },
+    {
+      "name": "Ctcp Đầu Tư Thái Bình",
+      "percentage": 0.0447
+    },
+    {
+      "name": "Công Ty Cổ Phần Đầu Tư Thái Bình",
+      "percentage": 0.0441
+    },
+    {
+      "name": "CTBC Vietnam Equity Fund",
+      "percentage": 0.04348
+    },
+    {
+      "name": "Công ty Cổ phần Tư vấn Đầu tư Hướng Việt",
+      "percentage": 0.0423812148
+    },
+    {
+      "name": "Trần Thanh Phong",
+      "percentage": 0.0408
+    },
+    {
+      "name": "Matthews Emerging Asia Fund",
+      "percentage": 0.0364
+    },
+    {
+      "name": "Nam Viet Limited",
+      "percentage": 0.034
+    },
+    {
+      "name": "Lâm Xuân Hoàng Lan",
+      "percentage": 0.0332999235
+    },
+    {
+      "name": "Swift Current Offshore Ltd.",
+      "percentage": 0.0255410391
+    },
+    {
+      "name": "Vietnam Enterprise Investments Limited",
+      "percentage": 0.020957
+    },
+    {
+      "name": "Nguyễn Thị Bích Ngọc",
+      "percentage": 0.0207
+    },
+    {
+      "name": "Công ty Cổ phần Đầu Tư Và Xây Dựng Tây Hồ",
+      "percentage": 0.0205158772
+    },
+    {
+      "name": "Nguyễn Thị Hương",
+      "percentage": 0.0170838818
+    },
+    {
+      "name": "Mekong Holdings Inc",
+      "percentage": 0.0162461323
+    },
+    {
+      "name": "Swiftcurrent Partners, L.P",
+      "percentage": 0.015921916
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0128
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.008734
+    },
+    {
+      "name": "Nguyễn Hiệp",
+      "percentage": 0.0087
+    },
+    {
+      "name": "Cao Tấn Thạch",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Matthews Asia Small Companies Fund",
+      "percentage": 0.0074
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán Thành phố Hồ Chí Minh",
+      "percentage": 0.0070635358
+    },
+    {
+      "name": "Nguyễn Nam",
+      "percentage": 0.007
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.00496
+    },
+    {
+      "name": "Chu Chee Kwang",
+      "percentage": 0.00398
+    },
+    {
+      "name": "Cao Duy Thông",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Đỗ Ngọc Minh",
+      "percentage": 0.0029
+    },
+    {
+      "name": "Hanoi Investments Holdings Limited",
+      "percentage": 0.002887
+    },
+    {
+      "name": "Quỹ Đầu tư Bất động sản Techcom Việt Nam",
+      "percentage": 0.00198531
+    },
+    {
+      "name": "Ngô Thị Ngọc Liễu",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Châu Quang Phúc",
+      "percentage": 0.001343
+    },
+    {
+      "name": "Matthews Asia ESG Fund",
+      "percentage": 0.0013
+    },
+    {
+      "name": "Trần  Xuân Ngọc",
+      "percentage": 0.00126
+    },
+    {
+      "name": "Samsung Vietnam Securities Master Investment Trust",
+      "percentage": 0.001215
+    },
+    {
+      "name": "KB Vietnam Focus Balanced Fund",
+      "percentage": 0.000724
+    },
+    {
+      "name": "Bùi Đức Khang",
+      "percentage": 0.0007
+    },
+    {
+      "name": "Wareham Group Limited",
+      "percentage": 0.000623
+    },
+    {
+      "name": "Quỹ Đầu tư Cân bằng Bản Việt",
+      "percentage": 0.0005355
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Trần Trương Đoan Thục",
+      "percentage": 0.00043
+    },
+    {
+      "name": "Vương Thị Kim Liên",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn Vĩnh Trân",
+      "percentage": 0.000337305
+    },
+    {
+      "name": "Lương Thị Kim Thoa",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Châu Ngọc Ánh Nguyệt",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Chad Ryan Ovel",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00011432
+    },
+    {
+      "name": "Nguyễn Quang Đức",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Thị Phượng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Kenneth Michael Atkinson",
+      "percentage": 0.0000561
+    },
+    {
+      "name": "Văn Viết Sơn",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.00004018
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thảo",
+      "percentage": 0.000036
+    },
+    {
+      "name": "Phạm Thị Tố Sương",
+      "percentage": 0.0000289
+    },
+    {
+      "name": "Nguyễn Thanh Huyền",
+      "percentage": 0.000018
+    },
+    {
+      "name": "Phạm Đình Huy",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Công ty TNHH MTV Đầu tư Xây dựng Phát triển Nam Khang",
+      "percentage": 1e-7
+    },
+    {
+      "name": "Lâm Ngọc Minh",
+      "percentage": 5e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 2e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Trái phiếu SSI",
+      "percentage": 1e-8
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Techcom",
+      "percentage": 1e-8
+    },
+    {
+      "name": "Nguyễn Thị Tơ",
+      "percentage": 1e-8
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Xuân Quang",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0869
+    },
+    {
+      "name": "Trần Thanh Phong",
+      "position": "Phó Chủ tịch Hội đồng Quản trị/Phụ trách Công bố thông tin",
+      "percentage": 0.0408
+    },
+    {
+      "name": "Cao Tấn Thạch",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Châu Quang Phúc",
+      "position": "Giám đốc Tài chính",
+      "percentage": 0.001343
+    },
+    {
+      "name": "Trần  Xuân Ngọc",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.00126
+    },
+    {
+      "name": "Nguyễn Thanh Sơn",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0005
+    },
+    {
+      "name": "Châu Ngọc Ánh Nguyệt",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.00024
+    },
+    {
+      "name": "Chad Ryan Ovel",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.00013
+    },
+    {
+      "name": "Nguyễn Quang Đức",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Kenneth Michael Atkinson",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0000561
+    },
+    {
+      "name": "Phạm Đình Huy",
+      "position": "Giám đốc đầu tư",
+      "percentage": 2e-6
+    },
+    {
+      "name": "Joseph Low Kar Yew",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngian Siew Siong",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đức Thuấn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ziang Tony Ngo",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:03:11.192793Z"
+}

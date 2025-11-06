@@ -1,0 +1,207 @@
+{
+  "symbol": "HAP",
+  "exchange": "HOSE",
+  "industry": "Lâm nghiệp và Giấy",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 755464849600.0,
+  "current_price": 6800.0,
+  "outstanding_shares": 111097772,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p class=\"MsoNormal\">C&ocirc;ng ty Cổ phần Hapaco (HAP)&nbsp;tiền th&acirc;n l&agrave; X&iacute; nghiệp giấy b&igrave;a Đồng Tiến th&agrave;nh lập v&agrave;o năm 1960. Năm 1999 chuyển sang hoạt động theo m&ocirc; h&igrave;nh cổ phần.&nbsp;Tập đo&agrave;n Hapaco chuy&ecirc;n sản xuất kinh doanh v&agrave; gia c&ocirc;ng c&aacute;c sản phẩm giấy ti&ecirc;u d&ugrave;ng trong nước v&agrave; xuất khẩu, sản phẩm chế biến từ l&acirc;m sản, sản phẩm bao b&igrave;. Ngo&agrave;i ra c&ocirc;ng ty c&ograve;n xuất nhập khẩu c&aacute;c sản phẩm v&agrave; thiết bị m&aacute;y m&oacute;c, vật tư, nguy&ecirc;n liệu v&agrave; ho&aacute; chất. Khoảng 80% sản phẩm của C&ocirc;ng ty sản xuất ra d&ugrave;ng để xuất khẩu, chiếm thị phần cao nhất l&agrave; xuất khẩu giấy đế sang thị trường Đ&agrave;i Loan (chiếm 70% thị phần giấy đế xuất khẩu). Tập đo&agrave;n Hapaco l&agrave;&nbsp;doanh nghiệp sản xuất giấy lớn thứ 2 trong ng&agrave;nh c&ocirc;ng nghiệp giấy miền Bắc c&oacute; tổng c&ocirc;ng suất tr&ecirc;n 60.000 tấn/năm. HAP được&nbsp;giao dịch tr&ecirc;n Sở giao dịch chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh từ ng&agrave;y 06/09/2021.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Vũ Dương Hiền",
+      "percentage": 0.2235
+    },
+    {
+      "name": "Phạm Anh Đào",
+      "percentage": 0.05
+    },
+    {
+      "name": "Phạm Thị Tuyết Lan",
+      "percentage": 0.05
+    },
+    {
+      "name": "Phạm Thị Kim Nhung",
+      "percentage": 0.05
+    },
+    {
+      "name": "Vũ Xuân Thủy",
+      "percentage": 0.0442634
+    },
+    {
+      "name": "Vũ Xuân Thịnh",
+      "percentage": 0.0430773
+    },
+    {
+      "name": "VŨ XUÂN CƯỜNG",
+      "percentage": 0.0373574
+    },
+    {
+      "name": "Asiavantage Global Limited",
+      "percentage": 0.0198888646
+    },
+    {
+      "name": "Khổng Văn Oanh",
+      "percentage": 0.0180274
+    },
+    {
+      "name": "Trần Tiểu Phụng",
+      "percentage": 0.0138
+    },
+    {
+      "name": "Nguyễn Thị Bích Ngọc",
+      "percentage": 0.0049
+    },
+    {
+      "name": "Trần Mỹ Linh",
+      "percentage": 0.0032034021
+    },
+    {
+      "name": "Đoàn Đức Luyện",
+      "percentage": 0.0017
+    },
+    {
+      "name": "NGUYỄN ĐỨC HẬU",
+      "percentage": 0.001349
+    },
+    {
+      "name": "Phạm Thị Nguyệt",
+      "percentage": 0.0010576121
+    },
+    {
+      "name": "Vũ Thị Xếp",
+      "percentage": 0.0010408
+    },
+    {
+      "name": "Vũ Thị Thanh Chung",
+      "percentage": 0.0009911
+    },
+    {
+      "name": "Võ Văn Tính",
+      "percentage": 0.0007106
+    },
+    {
+      "name": "Trần Thị Vân Anh",
+      "percentage": 0.0007102
+    },
+    {
+      "name": "Bùi Đức Thống",
+      "percentage": 0.0005756085
+    },
+    {
+      "name": "Cao Thị Thúy Lan",
+      "percentage": 0.0004754
+    },
+    {
+      "name": "Nguyễn Văn Hưởng",
+      "percentage": 0.00015764
+    },
+    {
+      "name": "Nguyễn Tuấn Dũng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Thị Hiến",
+      "percentage": 0.0000535386
+    },
+    {
+      "name": "Nguyễn Thị Bích Phượng",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Lê Như Tiến",
+      "percentage": 0.000019
+    },
+    {
+      "name": "Trần Thị Thu Hằng",
+      "percentage": 0.000015
+    },
+    {
+      "name": "Chu Thị Mai Ngọc",
+      "percentage": 0.00001
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Trang",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Vũ Xuân Anh",
+      "percentage": 4e-7
+    },
+    {
+      "name": "Nguyễn Lệ Thủy",
+      "percentage": 2e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Dương Hiền",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2235
+    },
+    {
+      "name": "Vũ Xuân Thủy",
+      "position": "Tổng Giám đốc/Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0442634
+    },
+    {
+      "name": "Vũ Xuân Thịnh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0430773
+    },
+    {
+      "name": "VŨ XUÂN CƯỜNG",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0373574
+    },
+    {
+      "name": "Đoàn Đức Luyện",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0017
+    },
+    {
+      "name": "NGUYỄN ĐỨC HẬU",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.001349
+    },
+    {
+      "name": "Nguyễn Văn Hưởng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.00015764
+    },
+    {
+      "name": "Nguyễn Thị Mỹ Trang",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 3e-6
+    },
+    {
+      "name": "Phạm Đức Phiên",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phí Trọng Phúc",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Doãn Nhân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Khoa Thị Thanh Huyền",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Tuấn Anh",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:29.852187Z"
+}

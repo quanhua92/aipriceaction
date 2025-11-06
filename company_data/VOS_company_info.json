@@ -1,0 +1,256 @@
+{
+  "symbol": "VOS",
+  "exchange": "HOSE",
+  "industry": "Vận tải",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1820000000000.0,
+  "current_price": 13000.0,
+  "outstanding_shares": 140000000,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần Vận tải Biển Việt Nam (VOS) tiền th&acirc;n l&agrave; C&ocirc;ng ty Vận tải biển Việt Nam được th&agrave;nh lập năm 1970. Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty bao gồm vận tải đường biển v&agrave; c&aacute;c dịch vụ h&agrave;ng hải kh&aacute;c như: đại k&yacute; t&agrave;u biển, đại l&yacute; vận tải đa phương thức, huấn luyện - đ&agrave;o tạo, cung ứng xuất khẩu thuyền vi&ecirc;n. C&ocirc;ng ty&nbsp;sở hữu đội t&agrave;u 11&nbsp;chiếc với tổng tải trọng 358.101 DWT. Vận tải h&agrave;ng kh&ocirc; l&agrave; sở trường v&agrave; thế mạnh của C&ocirc;ng ty. Mặt h&agrave;ng chuy&ecirc;n chở của C&ocirc;ng ty bao&nbsp;gồm gạo, than, n&ocirc;ng sản, xi măng, clinker, ph&acirc;n b&oacute;n, vật tư sắt th&eacute;p xuất khẩu của Việt Nam v&agrave; thế giới, đặc biệt l&agrave; c&aacute;c nước Đ&ocirc;ng Nam &Aacute;, Trung Đ&ocirc;ng v&agrave; Ch&acirc;u Phi. VOS ch&iacute;nh thức được ni&ecirc;m yết v&agrave; giao dịch tại Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh từ năm 2010.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Hàng hải Việt Nam - CTCP",
+      "percentage": 0.51
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0494
+    },
+    {
+      "name": "Ngân hàng Thương mại Cổ phần Á Châu",
+      "percentage": 0.0486
+    },
+    {
+      "name": "Tổng Công ty Lương thực Miền Nam - Công ty Cổ phần",
+      "percentage": 0.0207142857
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.01928571
+    },
+    {
+      "name": "Quỹ Đầu Tư Chứng Khoán Bảo Việt",
+      "percentage": 0.0160937142
+    },
+    {
+      "name": "Nguyễn Trung Kiên",
+      "percentage": 0.01
+    },
+    {
+      "name": "Tập đoàn Bảo Việt",
+      "percentage": 0.0071428571
+    },
+    {
+      "name": "Credit Suise (Hong Kong) Limited",
+      "percentage": 0.0014407857
+    },
+    {
+      "name": "Nguyễn Thị Thu Hà",
+      "percentage": 0.00071
+    },
+    {
+      "name": "Nguyễn Hoàng Dũng",
+      "percentage": 0.00050143
+    },
+    {
+      "name": "Lê Thị Thanh Hưng",
+      "percentage": 0.00046
+    },
+    {
+      "name": "Vũ Hữu Chinh",
+      "percentage": 0.0003764285
+    },
+    {
+      "name": "Bùi Việt Hoài",
+      "percentage": 0.000327
+    },
+    {
+      "name": "Lê Thị Hải Yến",
+      "percentage": 0.000321
+    },
+    {
+      "name": "Croesus Global Equity Limited",
+      "percentage": 0.0002857142
+    },
+    {
+      "name": "Nguyễn Thị Tám",
+      "percentage": 0.0002857
+    },
+    {
+      "name": "New-S Securities Company Limited",
+      "percentage": 0.0002627857
+    },
+    {
+      "name": "Lê Ngọc Minh",
+      "percentage": 0.0002357142
+    },
+    {
+      "name": "Lê Việt Tiến",
+      "percentage": 0.000156
+    },
+    {
+      "name": "Nguyễn Thị Thủy",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Trần Văn Đăng",
+      "percentage": 0.0001235
+    },
+    {
+      "name": "Nguyễn Duy Nhì",
+      "percentage": 0.0001071428
+    },
+    {
+      "name": "Bùi Hoàng Việt",
+      "percentage": 0.000107
+    },
+    {
+      "name": "Nguyễn Minh Hoa",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Châu Quang Khải",
+      "percentage": 0.0000714285
+    },
+    {
+      "name": "Phạm Thị Tuất",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Aizawa Securities Company Limited",
+      "percentage": 0.0000464285
+    },
+    {
+      "name": "Trần Thị Kim Yến",
+      "percentage": 0.000039
+    },
+    {
+      "name": "Bùi Lê Phước Thảo",
+      "percentage": 0.000036
+    },
+    {
+      "name": "Đào Văn Long",
+      "percentage": 0.0000357142
+    },
+    {
+      "name": "Nguyễn Thị Ánh Tuyết",
+      "percentage": 0.0000357142
+    },
+    {
+      "name": "Hoàng Việt",
+      "percentage": 0.000035
+    },
+    {
+      "name": "Nguyễn Quang Duy",
+      "percentage": 0.000035
+    },
+    {
+      "name": "Lê Thị Thu Hạnh",
+      "percentage": 0.000035
+    },
+    {
+      "name": "Nguyễn Bá Trường",
+      "percentage": 0.0000279
+    },
+    {
+      "name": "Lê Duy Dương",
+      "percentage": 0.00002
+    },
+    {
+      "name": "Vũ Thị Toan",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Bùi Thị Vân Hương",
+      "percentage": 0.000013
+    },
+    {
+      "name": "Đặng Hồng Trường",
+      "percentage": 7.1e-6
+    },
+    {
+      "name": "Hoàng Hữu Hùng",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Sbi Securities Company Limited",
+      "percentage": 2.1428e-6
+    }
+  ],
+  "officers": [
+    {
+      "name": "Cao Minh Tuấn",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0005357
+    },
+    {
+      "name": "Lê Việt Tiến",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000156
+    },
+    {
+      "name": "Nguyễn Bá Trường",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0000279
+    },
+    {
+      "name": "Vũ Thị Toan",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.000014
+    },
+    {
+      "name": "Đặng Hồng Trường",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 7.1e-6
+    },
+    {
+      "name": "Hoàng Hữu Hùng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 7e-6
+    },
+    {
+      "name": "Nguyễn Thị Yến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Châu Thành",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Quang Minh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Thị Anh Thư",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Trường Thọ",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Tú",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Tuấn Nam",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Minh Thu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:08:49.645659Z"
+}

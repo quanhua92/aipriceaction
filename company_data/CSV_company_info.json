@@ -1,0 +1,162 @@
+{
+  "symbol": "CSV",
+  "exchange": "HOSE",
+  "industry": "Hóa chất",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 3513897138000.0,
+  "current_price": 31800.0,
+  "outstanding_shares": 110499910,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">C&ocirc;ng ty Cổ phần H&oacute;a chất Cơ bản miền Nam (CSV), tiền th&acirc;n l&agrave; C&ocirc;ng ty H&oacute;a chất Cơ bản miền Nam được th&agrave;nh lập năm 1976 bởi Tổng Cục H&oacute;a Chất. Hoạt động kinh doanh ch&iacute;nh của C&ocirc;ng ty l&agrave; sản xuất h&oacute;a chất trong lĩnh lực c&ocirc;ng nghiệp phục vụ&nbsp;nhu cầu của c&aacute;c ng&agrave;nh c&ocirc;ng nghiệp như thực phẩm, dược phẩm, xử l&yacute; nước sinh hoạt, xử l&yacute; nước thải, sản xuất giấy, dầu kh&iacute;. Hiện nay, C&ocirc;ng ty l&agrave; một trong những doanh nghiệp sản xuất h&oacute;a chất cơ bản h&agrave;ng đầu tại Việt Nam. C&aacute;c sản phẩm của C&ocirc;ng ty ti&ecirc;u thụ rộng khắp ở c&aacute;c tỉnh miền Trung - T&acirc;y Nguy&ecirc;n đến c&aacute;c tỉnh miền T&acirc;y Nam Bộ v&agrave; Th&agrave;nh phố Hồ Ch&iacute; Minh. Với kinh nghiệm hơn 37 năm tồn tại v&agrave; ph&aacute;t triển, C&ocirc;ng ty đ&atilde; đầu tư d&acirc;y chuyền sản xuất ti&ecirc;n tiến, đảm bảo chất lượng sản phẩm v&agrave; m&ocirc;i trường sinh th&aacute;i. CSV&nbsp;được ni&ecirc;m yết v&agrave; giao dịch tr&ecirc;n&nbsp;Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ năm 2015.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tập đoàn Hóa chất Việt Nam",
+      "percentage": 0.65
+    },
+    {
+      "name": "Công ty TNHH Đầu Tư Ndh",
+      "percentage": 0.11777
+    },
+    {
+      "name": "Vietnam Investment Property Holdings Limited",
+      "percentage": 0.0487
+    },
+    {
+      "name": "America Limited Liability Company",
+      "percentage": 0.0385
+    },
+    {
+      "name": "Vietnam Enterprise Limited",
+      "percentage": 0.0143
+    },
+    {
+      "name": "Công đoàn CTCP Hóa chất cơ bản miền Nam",
+      "percentage": 0.00361991
+    },
+    {
+      "name": "Vietnam Investment Limited",
+      "percentage": 0.0022
+    },
+    {
+      "name": "Nguyễn Hữu Thọ",
+      "percentage": 0.00120814
+    },
+    {
+      "name": "Nguyễn Kim Thảo Vân",
+      "percentage": 0.00057
+    },
+    {
+      "name": "Nguyễn Hoài Phú",
+      "percentage": 0.00052262
+    },
+    {
+      "name": "Ngô Tuấn Anh",
+      "percentage": 0.00045
+    },
+    {
+      "name": "Đoàn Thanh Tân",
+      "percentage": 0.00045
+    },
+    {
+      "name": "Phạm Thị Thu Hằng",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Văn Trung Hà",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "percentage": 0.000136
+    },
+    {
+      "name": "Trịnh Hồng Vân",
+      "percentage": 0.00008
+    },
+    {
+      "name": "Huỳnh Thị Ngọc Tuyết",
+      "percentage": 0.00007
+    },
+    {
+      "name": "Lê Văn Hải",
+      "percentage": 0.000065
+    },
+    {
+      "name": "Lê Văn Hùng",
+      "percentage": 0.00006
+    },
+    {
+      "name": "Hoàng Minh Đức",
+      "percentage": 0.00004299
+    },
+    {
+      "name": "Lê Thanh Bình",
+      "percentage": 0.00004
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phạm Thị Thu Hằng",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00014
+    },
+    {
+      "name": "Nguyễn Thanh Bình",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.000136
+    },
+    {
+      "name": "Lê Thanh Bình",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Võ Đình Thùy",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Tùng Lâm",
+      "position": "Người phụ trách quản trị công ty/Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Trung Hiếu",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Minh Trí",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Minh Hà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Hoàng",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Thị Thoa",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Vũ Minh Ngọc",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lê Phương Đông",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:32.054661Z"
+}

@@ -1,0 +1,232 @@
+{
+  "symbol": "SHS",
+  "exchange": "HNX",
+  "industry": "Dịch vụ tài chính",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 20214846172000.0,
+  "current_price": 22600.0,
+  "outstanding_shares": 894462220,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p style=\"text-align: justify;\">C&ocirc;ng ty Cổ phần Chứng kho&aacute;n S&agrave;i G&ograve;n - H&agrave; Nội (SHS)&nbsp;được&nbsp;th&agrave;nh lập&nbsp;v&agrave;o năm 2007.&nbsp;C&ocirc;ng ty&nbsp;được cấp ph&eacute;p hoạt động tất cả c&aacute;c nghiệp vụ đối với một c&ocirc;ng ty chứng kho&aacute;n tr&ecirc;n Thị trường chứng kho&aacute;n Việt Nam. C&aacute;c lĩnh vực hoạt động ch&iacute;nh của C&ocirc;ng ty bao gồm: M&ocirc;i giới chứng kho&aacute;n; Đầu tư; Tư vấn Đầu tư; Tư vấn T&agrave;i ch&iacute;nh Doanh nghiệp v&agrave; bảo l&atilde;nh ph&aacute;t h&agrave;nh, lưu k&yacute; Chứng kho&aacute;n.&nbsp;Năm 2024, Doanh thu nghiệp vụ m&ocirc;i giới chứng kho&aacute;n c&oacute; gi&aacute; trị bằng 237.96 tỷ đồng, tăng 7.02% so với c&ugrave;ng kỳ. Nợ vay k&yacute; quỹ/Vốn chủ sở hữu ở mức 36.38%, tăng 0.76%. Lợi nhuận từ FVTPL c&oacute; gi&aacute; trị bằng 921.71 tỷ đồng v&agrave; đ&oacute;ng g&oacute;p 64.67 % tổng lợi nhuận hoạt động. Lợi nhuận trước thuế c&oacute; gi&aacute; trị bằng 1,239.29 tỷ đồng, tăng 81.14%. Tỷ lệ sinh lời tr&ecirc;n vốn chủ sở hữu (ROE) ở mức 9.46%, tăng 3.78%.&nbsp;SHS được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX) từ năm 2009.</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Tập đoàn T&T",
+      "percentage": 0.056
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.049
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Thép Tiến Lên",
+      "percentage": 0.042982
+    },
+    {
+      "name": "Citigroup Global Markets Ltd",
+      "percentage": 0.0429075
+    },
+    {
+      "name": "Yurie Vietnam Securities Investment Trust",
+      "percentage": 0.03123
+    },
+    {
+      "name": "Vũ Đức Tiến",
+      "percentage": 0.0247
+    },
+    {
+      "name": "Công ty Cổ phần Đầu tư Công nghiệp An Sinh",
+      "percentage": 0.020545
+    },
+    {
+      "name": "Nguyễn Thị Thanh Thảo",
+      "percentage": 0.020113
+    },
+    {
+      "name": "Ngô Thị Bích Diệu",
+      "percentage": 0.019779
+    },
+    {
+      "name": "Bùi Minh Lực",
+      "percentage": 0.0155
+    },
+    {
+      "name": "Nguyễn Thanh Hiền",
+      "percentage": 0.013692
+    },
+    {
+      "name": "Nguyễn Duy Kiên",
+      "percentage": 0.0115
+    },
+    {
+      "name": "Đỗ Quang Vinh",
+      "percentage": 0.01118
+    },
+    {
+      "name": "Công ty Cổ phần Phát triển Đô thị và Khu Công nghiệp Cao Su Việt Nam",
+      "percentage": 0.01059733
+    },
+    {
+      "name": "Công ty TNHH Tổng Công ty Hoà Bình Minh",
+      "percentage": 0.0105
+    },
+    {
+      "name": "Nguyễn Thị Hiền",
+      "percentage": 0.0057
+    },
+    {
+      "name": "Đỗ Quang Hiển",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Bùi Quanh Minh",
+      "percentage": 0.0042
+    },
+    {
+      "name": "Vũ Đức Trung",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Thế Minh",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn Hòa Bình Minh",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Yurie Vietnam Smart Accumulated Target Return Fund",
+      "percentage": 0.002
+    },
+    {
+      "name": "Hoàng Đình Lợi",
+      "percentage": 0.000793
+    },
+    {
+      "name": "Nguyễn Chí Thành",
+      "percentage": 0.000698
+    },
+    {
+      "name": "Bùi Thị Minh Tâm",
+      "percentage": 0.000609
+    },
+    {
+      "name": "Mai Xuân Sơn",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Uông Vân Hạnh",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Đỗ Thị Thu Hà",
+      "percentage": 0.00016
+    },
+    {
+      "name": "Lê Đăng Khoa",
+      "percentage": 0.0001062
+    },
+    {
+      "name": "Nguyễn Diệu Trinh",
+      "percentage": 0.0000894
+    },
+    {
+      "name": "Phạm Thị Thanh Hảo",
+      "percentage": 0.000057
+    },
+    {
+      "name": "Trần Thị Vân",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Doãn Thị Như Quỳnh",
+      "percentage": 0.000026
+    },
+    {
+      "name": "Phạm Hồng Thái",
+      "percentage": 0.00002348
+    },
+    {
+      "name": "Đào Ngọc Dũng",
+      "percentage": 0.000022
+    },
+    {
+      "name": "Phạm Anh Quân",
+      "percentage": 0.00001
+    }
+  ],
+  "officers": [
+    {
+      "name": "Vũ Đức Tiến",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.0247
+    },
+    {
+      "name": "Đỗ Quang Hiển",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0054
+    },
+    {
+      "name": "Vũ Đức Trung",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Chí Thành",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.000698
+    },
+    {
+      "name": "Nguyễn Diệu Trinh",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Mai Xuân Sơn",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Lê Đăng Khoa",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0001062
+    },
+    {
+      "name": "Doãn Thị Như Quỳnh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.000026
+    },
+    {
+      "name": "Phạm Thị Bích Hồng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Lương Thị Lựu",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "TRẦN THỊ THU THANH",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Sỹ Tiến",
+      "position": "Phó Tổng Giám đốc/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thủy Hạnh Mai",
+      "position": "Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan Thùy Linh",
+      "position": "Thành viên Ban Kiểm toán nội bộ",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:05:45.258325Z"
+}

@@ -1,0 +1,121 @@
+{
+  "symbol": "HLD",
+  "exchange": "HNX",
+  "industry": "Bất động sản",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 1017499278500.0,
+  "current_price": 18500.0,
+  "outstanding_shares": 54999961,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty CP Đầu tư v&agrave; Ph&aacute;t triển Bất động sản HUDLAND (HLD)&nbsp;l&agrave; một đơn vị th&agrave;nh vi&ecirc;n của Tổng c&ocirc;ng ty Đầu tư Ph&aacute;t triển Nh&agrave; v&agrave; Đ&ocirc; thị (HUD). HUDLAND được ch&iacute;nh thức th&agrave;nh lập v&agrave;o th&aacute;ng 08 năm 2007. C&ocirc;ng ty hoạt động chủ yếu trong lĩnh vực kinh doanh bất động sản.&nbsp;Thương hiệu HUDLAND gắn liền với nhiều dự &aacute;n như dự &aacute;n Khu đ&ocirc; thị mới đường L&ecirc; Th&aacute;i Tổ - Th&agrave;nh phố Bắc Ninh - Bắc Ninh, dự &aacute;n Khu đ&ocirc; thị mới Việt Hưng - Long Bi&ecirc;n - H&agrave; Nội, dự &aacute;n BT08 v&agrave; LK27 tại Khu đ&ocirc; thị mới V&acirc;n Canh - Ho&agrave;i Đức - H&agrave; Nội. Với sự gi&uacute;p đỡ từ c&ocirc;ng ty mẹ Tổng c&ocirc;ng ty đầu tư Ph&aacute;t triển nh&agrave; v&agrave; đ&ocirc; thị (HUD), đ&atilde; gi&uacute;p HLD thực hiện được những dự &aacute;n bất động sản, mở rộng th&ecirc;m quy m&ocirc; kh&aacute;ch h&agrave;ng. Ng&agrave;y 23/03/2013, HLD ch&iacute;nh thức giao dịch tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n H&agrave; Nội (HNX).</p>\r\n</div>",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Tổng Công ty Đầu tư Phát triển Nhà và Đô thị - Công ty TNHH",
+      "percentage": 0.51
+    },
+    {
+      "name": "Phạm Thị Linh",
+      "percentage": 0.05065
+    },
+    {
+      "name": "Kenneth Rudy Kamon",
+      "percentage": 0.0414
+    },
+    {
+      "name": "Công ty Cổ phần Tập đoàn COTANA",
+      "percentage": 0.0315
+    },
+    {
+      "name": "Đỗ Hoàng Phúc",
+      "percentage": 0.03132
+    },
+    {
+      "name": "Nguyễn Thanh Hương",
+      "percentage": 0.0144
+    },
+    {
+      "name": "Công ty TNHH Quản lý Quỹ Bảo Việt",
+      "percentage": 0.0042
+    },
+    {
+      "name": "Phạm Cao Sơn",
+      "percentage": 0.003
+    },
+    {
+      "name": "Bùi Hoàng Kiều",
+      "percentage": 0.00291
+    },
+    {
+      "name": "Vũ Tuấn Linh",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Đặng Thanh Bình",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Văn Hường",
+      "percentage": 0.00018
+    }
+  ],
+  "officers": [
+    {
+      "name": "Nguyễn Thanh Hương",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0124
+    },
+    {
+      "name": "Phạm Cao Sơn",
+      "position": "Phụ trách Công bố thông tin/Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.003
+    },
+    {
+      "name": "Vũ Tuấn Linh",
+      "position": "Thành viên Hội đồng Quản trị/Phó Giám đốc",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Đặng Thanh Bình",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Lê Quốc Chung",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Nam Cường",
+      "position": "Phó Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Đình Thắng",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Thị Minh Hằng",
+      "position": "Phó Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phạm Duy Long",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thanh Tú",
+      "position": "Giám đốc/Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Ngô Thị Hạnh",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:00:05.471199Z"
+}

@@ -1,0 +1,398 @@
+{
+  "symbol": "CTD",
+  "exchange": "HOSE",
+  "industry": "Xây dựng và Vật liệu",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 10031699664800.0,
+  "current_price": 96800.0,
+  "outstanding_shares": 103633261,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p>C&ocirc;ng ty Cổ phần X&acirc;y dựng Coteccons (CTD) c&oacute; tiền th&acirc;n l&agrave; C&ocirc;ng ty Cổ phần X&acirc;y dựng Cotec được th&agrave;nh lập&nbsp;v&agrave;o năm 2004. C&ocirc;ng ty&nbsp;hoạt động&nbsp;trong lĩnh vực thi c&ocirc;ng, x&acirc;y lắp c&aacute;c c&ocirc;ng tr&igrave;nh d&acirc;n dụng, c&ocirc;ng nghiệp,&nbsp;cơ sở hạ tầng. C&ocirc;ng ty đ&atilde; tham gia thi c&ocirc;ng c&aacute;c c&ocirc;ng tr&igrave;nh lớn như: Nh&agrave; m&aacute;y bia S&agrave;i G&ograve;n - Củ Chi, trung t&acirc;m hội chợ triển l&atilde;m S&agrave;i G&ograve;n, Khu nghỉ dưỡng v&agrave; kh&aacute;ch sạn cao cấp Nam Hải Resort, Life Resort Quy Nhơn, Life Resort Hội An, Sanctuary Hồ Tr&agrave;m Resort, c&ocirc;ng tr&igrave;nh Khu căn hộ cao cấp Avalon, Khu căn hộ c&ocirc;ng vi&ecirc;n Nguyễn Du, The Manor TP HCM, The Manor H&agrave; Nội, Chung cư cao cấp Everrich, chung cư cao cấp River Garden, cao ốc văn ph&ograve;ng Center Point, cao ốc văn ph&ograve;ng Gemadept... Hiện tại c&ocirc;ng ty đang triển khai g&oacute;p vốn c&ugrave;ng một số đối t&aacute;c để thực hiện c&aacute;c dự &aacute;n đầu tư kinh doanh bất động sản như The Ocean Villas (Đ&agrave; Nẵng), Khu căn hộ cao cấp BOTANIC II, Khu phức hợp Saigon Airport Plaza, Khu căn hộ phức hợp tại quận 2 v&agrave; quận B&igrave;nh Thạnh, Khu du lịch Quảng Trọng. CTD được ni&ecirc;m yết tr&ecirc;n Sở Giao dịch Chứng kho&aacute;n Th&agrave;nh phố Hồ Ch&iacute; Minh (HOSE) từ th&aacute;ng 12/2009.</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Kustocem Pte Ltd",
+      "percentage": 0.179
+    },
+    {
+      "name": "Công Ty TNHH Một Thành Viên Kinh Doanh Và Đầu Tư Thành Công",
+      "percentage": 0.142
+    },
+    {
+      "name": "The 8th Pte., Ltd.",
+      "percentage": 0.106
+    },
+    {
+      "name": "Indochina Capital Vietnam Holdings Ltd.",
+      "percentage": 0.0693593507
+    },
+    {
+      "name": "The Ton Poh Fund",
+      "percentage": 0.0432
+    },
+    {
+      "name": "Red River Holding",
+      "percentage": 0.0428796384
+    },
+    {
+      "name": "Nguyễn Bá Dương",
+      "percentage": 0.042
+    },
+    {
+      "name": "Công ty TNHH Thương mại Ánh Sáng",
+      "percentage": 0.0361764501
+    },
+    {
+      "name": "Preston Pacific Limited",
+      "percentage": 0.0351
+    },
+    {
+      "name": "Vietnam Dragon Fund Limited",
+      "percentage": 0.0346796753
+    },
+    {
+      "name": "Amersham Industries Limited",
+      "percentage": 0.02541789
+    },
+    {
+      "name": "KIM Vietnam Growth Equity Fund",
+      "percentage": 0.0245
+    },
+    {
+      "name": "Vinacapital Vietnam Opportunity Fund Ltd.",
+      "percentage": 0.0243
+    },
+    {
+      "name": "Kitmc Vietnam Growth Fund",
+      "percentage": 0.0215
+    },
+    {
+      "name": "Công ty TNHH Đầu tư Xây dựng và Phát triển Tân Việt",
+      "percentage": 0.0212242387
+    },
+    {
+      "name": "Talgat  Turumbayev",
+      "percentage": 0.0204
+    },
+    {
+      "name": "Norges Bank",
+      "percentage": 0.0197482949
+    },
+    {
+      "name": "Tmam Vietnam Equity Mother Fund",
+      "percentage": 0.0191
+    },
+    {
+      "name": "Bolat  Duisenov",
+      "percentage": 0.0157
+    },
+    {
+      "name": "Trần Quang Quân",
+      "percentage": 0.0149
+    },
+    {
+      "name": "Nguyễn Sỹ Công",
+      "percentage": 0.0149
+    },
+    {
+      "name": "PXP Vietnam Emerging Equity Fund",
+      "percentage": 0.01145481
+    },
+    {
+      "name": "Phan Huy Vĩnh",
+      "percentage": 0.0106
+    },
+    {
+      "name": "KITMC Worldwide Vietnam RSP Balanced Fund",
+      "percentage": 0.0104
+    },
+    {
+      "name": "Vietnam Property Fund Limited",
+      "percentage": 0.0095981781
+    },
+    {
+      "name": "Trần Quang Tuấn",
+      "percentage": 0.0095
+    },
+    {
+      "name": "Vũ Thị Hồng Hạnh",
+      "percentage": 0.008
+    },
+    {
+      "name": "Dragon Capital Vietnam Fund",
+      "percentage": 0.0057799458
+    },
+    {
+      "name": "Hà Tiểu Anh",
+      "percentage": 0.0055741
+    },
+    {
+      "name": "DC Developing Markets Strategies Public Limited Company",
+      "percentage": 0.004865096
+    },
+    {
+      "name": "Mekong Portfolio Investments Limited",
+      "percentage": 0.0043233995
+    },
+    {
+      "name": "Huỳnh Hồng Mai",
+      "percentage": 0.0034756357
+    },
+    {
+      "name": "Lê Miên Thụy",
+      "percentage": 0.0034
+    },
+    {
+      "name": "Nguyễn Thị Phúc Long",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Xuân Đạo",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Từ Đại Phúc",
+      "percentage": 0.0033
+    },
+    {
+      "name": "Nguyễn Trình Thuỳ Trang",
+      "percentage": 0.003
+    },
+    {
+      "name": "Nguyễn Chí Thiện",
+      "percentage": 0.0027
+    },
+    {
+      "name": "Kim Investment Funds - Kim Vietnam Growth Fund",
+      "percentage": 0.0024
+    },
+    {
+      "name": "Võ Hoàng Lâm",
+      "percentage": 0.002
+    },
+    {
+      "name": "Trần Văn Chính",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Võ Thanh Liêm",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Trần Ngọc Hải",
+      "percentage": 0.0018
+    },
+    {
+      "name": "Hồ Văn Chí Thành",
+      "percentage": 0.0017459917
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Hưng Thịnh Vinacapital",
+      "percentage": 0.0015
+    },
+    {
+      "name": "KIM PMAA Vietnam Securities Investment Trust 1(Equity)",
+      "percentage": 0.0015
+    },
+    {
+      "name": "Nguyễn Văn Đua",
+      "percentage": 0.0014
+    },
+    {
+      "name": "Nguyễn Thị Huyền Nga",
+      "percentage": 0.001
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Tiếp Cận Thị Trường VinaCapital",
+      "percentage": 0.0009
+    },
+    {
+      "name": "Đặng Hoài Nam",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Nguyễn  Ngọc Lân",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Cao Thị Mai Lê",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Công ty Cổ phần Quản lý quỹ VinaCapital",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Kitmc Worldwide China Vietnam Fund",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Võ Thanh Cang",
+      "percentage": 0.0004
+    },
+    {
+      "name": "KITMC Worldwide Vietnam Fund II",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Phạm Quân Lực",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Nguyễn Quốc Văn",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Minh Hoàng",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Nguyễn Đức Cảnh",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Trần Thị Thanh Vân",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Đinh Thị Hồng Thắm",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Vũ Duy Lam",
+      "percentage": 0.0001
+    },
+    {
+      "name": "Quỹ ETF SSIAM VNX50",
+      "percentage": 0.00008651
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Manulife",
+      "percentage": 0.00008022
+    },
+    {
+      "name": "Quỹ Đầu tư Tăng trưởng DFVN",
+      "percentage": 0.0000786446
+    },
+    {
+      "name": "Phạm Thị Bích Ngọc",
+      "percentage": 0.00005
+    },
+    {
+      "name": "Quỹ Đầu tư Cổ phiếu Năng động Bảo Việt",
+      "percentage": 0.0000454828
+    },
+    {
+      "name": "Công đoàn Cơ sở Công ty Cổ phần Xây dựng Coteccons",
+      "percentage": 0.00004
+    },
+    {
+      "name": "Hà Giang Anh",
+      "percentage": 0.000026
+    }
+  ],
+  "officers": [
+    {
+      "name": "Talgat  Turumbayev",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0204
+    },
+    {
+      "name": "Bolat  Duisenov",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0157
+    },
+    {
+      "name": "Võ Hoàng Lâm",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.002
+    },
+    {
+      "name": "Trần Văn Chính",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Võ Thanh Liêm",
+      "position": "Tổng Giám đốc",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Nguyễn  Ngọc Lân",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Cao Thị Mai Lê",
+      "position": "Kế toán trưởng",
+      "percentage": 0.0004
+    },
+    {
+      "name": "Phạm Quân Lực",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0003
+    },
+    {
+      "name": "Tống Văn Nga",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Herwig Guido H. Van Hove",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tan Ching Tiong",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Yerkin Tatishev",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn  Thức",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Ngọc Hiến",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trịnh Quỳnh Giao",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Văn Thức",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 0.0
+    },
+    {
+      "name": "Tran Tri Gia Nguyen",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Anh Vũ",
+      "position": "Người phụ trách quản trị công ty/Phụ trách Công bố thông tin",
+      "percentage": 0.0
+    },
+    {
+      "name": "Chris  Senekki",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Phan  Hữu Duy Quốc",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:56:35.095782Z"
+}

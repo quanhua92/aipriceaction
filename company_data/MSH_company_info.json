@@ -1,0 +1,141 @@
+{
+  "symbol": "MSH",
+  "exchange": "HOSE",
+  "industry": "Hàng cá nhân",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 4275798760000.0,
+  "current_price": 38000.0,
+  "outstanding_shares": 112521020,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">Được th&agrave;nh lập v&agrave;o năm 1988, C&ocirc;ng ty May S&ocirc;ng Hồng Cổ phần (MSH) l&agrave; một doanh nghiệp lớn trong ng&agrave;nh c&ocirc;ng nghiệp dệt may Việt Nam. Hoạt động kinh doanh chủ yếu của MSH gồm: (i) sản xuất, xuất khẩu c&aacute;c sản phẩm may mặc v&agrave; c&aacute;c sản phẩm chăn, ga, gối đệm với thương hiệu S&ocirc;ng Hồng v&agrave; (ii) gia c&ocirc;ng sản phẩm cho c&aacute;c thương hiệu nổi tiếng. C&ocirc;ng ty l&agrave; nh&agrave; sản xuất theo hợp đồng của c&aacute;c thương hiệu h&agrave;ng đầu quốc tế như GAP, NYCO, Brinkman, Fleet Street v&agrave; Columbia. Sản phẩm dệt may với t&ecirc;n thương hiệu S&ocirc;ng Hồng đ&atilde; được c&ocirc;ng nhận ở cả hai thị trường trong nước v&agrave; quốc tế. Ng&agrave;y 28/11/2018, MSH ch&iacute;nh thức giao dịch tr&ecirc;n s&agrave;n HOSE.</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Bùi Đức Thịnh",
+      "percentage": 0.2391
+    },
+    {
+      "name": "Công ty Cổ phần Chứng khoán FPT",
+      "percentage": 0.11728
+    },
+    {
+      "name": "Phạm Thành Dương",
+      "percentage": 0.114
+    },
+    {
+      "name": "Phạm Văn Dương",
+      "percentage": 0.114
+    },
+    {
+      "name": "Bùi Việt Quang",
+      "percentage": 0.1135
+    },
+    {
+      "name": "Bùi Thu Hà",
+      "percentage": 0.0772
+    },
+    {
+      "name": "Bùi Hải Yến",
+      "percentage": 0.05
+    },
+    {
+      "name": "Phạm Thị Sông Ngân",
+      "percentage": 0.0493
+    },
+    {
+      "name": "Vũ Mạnh Tường",
+      "percentage": 0.0204
+    },
+    {
+      "name": "Nguyễn Mạnh Tường",
+      "percentage": 0.0173
+    },
+    {
+      "name": "Nguyễn Thị Đào",
+      "percentage": 0.0086
+    },
+    {
+      "name": "Quỹ Đầu tư Lợi Thế Cạnh Tranh Bền Vững SSI",
+      "percentage": 0.0061908361
+    },
+    {
+      "name": "Nguyễn Thị Thu Hương",
+      "percentage": 0.00554
+    },
+    {
+      "name": "Lê Thị Hồng Yến",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Triệu Công Trứ",
+      "percentage": 0.0019
+    },
+    {
+      "name": "Lê Anh Thái",
+      "percentage": 0.0012
+    },
+    {
+      "name": "Lê Văn Quang",
+      "percentage": 0.00003
+    }
+  ],
+  "officers": [
+    {
+      "name": "Bùi Đức Thịnh",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.2391
+    },
+    {
+      "name": "Phạm Văn Dương",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.114
+    },
+    {
+      "name": "Bùi Việt Quang",
+      "position": "Thành viên Hội đồng Quản trị/Tổng Giám đốc",
+      "percentage": 0.1135
+    },
+    {
+      "name": "Nguyễn Mạnh Tường",
+      "position": "Thành viên Hội đồng Quản trị/Phó Tổng Giám đốc",
+      "percentage": 0.0173
+    },
+    {
+      "name": "Lê Thị Hồng Yến",
+      "position": "Thành viên Hội đồng Quản trị/Giám đốc Tài chính",
+      "percentage": 0.0045
+    },
+    {
+      "name": "Lê Văn Quang",
+      "position": "Kế toán trưởng",
+      "percentage": 0.00003
+    },
+    {
+      "name": "Trần Chí Dũng",
+      "position": "Phó Tổng Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đinh Tràng Thi",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Ninh",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bernard Szeto W.K",
+      "position": "Thành viên Hội đồng Quản trị độc lập",
+      "percentage": 0.0
+    },
+    {
+      "name": "NGUYỄN THỊ HẠNH",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T02:02:30.886579Z"
+}

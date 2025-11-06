@@ -1,0 +1,117 @@
+{
+  "symbol": "HHS",
+  "exchange": "HOSE",
+  "industry": "Ô tô và phụ tùng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 6350193729600.0,
+  "current_price": 14700.0,
+  "outstanding_shares": 431985968,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial; FONT-SIZE: 10pt;\">\r\n<p align=\"left\">C&ocirc;ng ty Cổ phần đầu tư dịch vụ Ho&agrave;ng Huy (HHS)&nbsp;l&agrave; một th&agrave;nh vi&ecirc;n của Tập đo&agrave;n Ho&agrave;ng Huy (trước l&agrave; Cổ phần đầu tư dịch vụ t&agrave;i ch&iacute;nh Ho&agrave;ng Huy), c&oacute; lĩnh vực hoạt động ch&iacute;nh l&agrave;: nhập khẩu, ph&acirc;n phối &ocirc; t&ocirc; tải v&agrave; phụ t&ugrave;ng đi k&egrave;m. Ngo&agrave;i ra, c&ocirc;ng ty cũng tham gia kinh doanh bất động sản v&agrave; cho thu&ecirc; văn ph&ograve;ng. C&ocirc;ng ty l&agrave; nh&agrave; ph&acirc;n phối độc quyền sản phẩm &ocirc; t&ocirc; tải của nh&atilde;n hiệu Dongfeng &ndash; Hồ Bắc Trung Quốc, l&agrave; nh&agrave; sản xuất &ocirc; t&ocirc; c&oacute; doanh thu lớn thứ ba ở Trung Quốc. Sản phẩm ch&iacute;nh của c&ocirc;ng ty l&agrave; d&ograve;ng xe tải hạng trung v&agrave; hạng nặng nh&atilde;n hiệu Dongfeng, đặc biệt l&agrave; &ocirc; t&ocirc; tải 300 v&agrave; 375 m&atilde; lực, c&aacute;c loại xe &ocirc; t&ocirc; tải th&ugrave;ng phục vụ cho thị trường trong nước.&nbsp;Ng&agrave;y 15/02/2012, HHS ch&iacute;nh thức ni&ecirc;m yết cổ phiếu tr&ecirc;n Sở giao dịch Th&agrave;nh phố Hồ&nbsp;Ch&iacute; Minh (HOSE).</p>\r\n</div>\r\n",
+  "website": null,
+  "shareholders": [
+    {
+      "name": "Công ty Cổ phần Đầu tư Dịch vụ Tài chính Hoàng Huy",
+      "percentage": 0.5831
+    },
+    {
+      "name": "The Ton Poh Fund",
+      "percentage": 0.0488037552
+    },
+    {
+      "name": "PYN Elite Fund",
+      "percentage": 0.0466
+    },
+    {
+      "name": "Nguyễn Phương Đông",
+      "percentage": 0.0459
+    },
+    {
+      "name": "Công ty TNHH Xuất nhập khẩu Hùng Hưng",
+      "percentage": 0.0412
+    },
+    {
+      "name": "Công ty TNHH Thành Trung",
+      "percentage": 0.0367
+    },
+    {
+      "name": "Công ty TNHH Thương mại và Xe tải Quốc tế",
+      "percentage": 0.0361
+    },
+    {
+      "name": "Nguyễn Trọng Cường",
+      "percentage": 8.9e-6
+    },
+    {
+      "name": "Phùng Thị Thu Hương",
+      "percentage": 8.9e-6
+    },
+    {
+      "name": "Hồ Thị Xuân Hòa",
+      "percentage": 4.5e-6
+    },
+    {
+      "name": "Bùi Thị Trà",
+      "percentage": 9e-7
+    }
+  ],
+  "officers": [
+    {
+      "name": "Phùng Thị Thu Hương",
+      "position": "Trưởng Ban kiểm soát",
+      "percentage": 8.9e-6
+    },
+    {
+      "name": "Nguyễn Trọng Cường",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 8.9e-6
+    },
+    {
+      "name": "Bùi Thị Trà",
+      "position": "Thành viên Ban kiểm soát",
+      "percentage": 9e-7
+    },
+    {
+      "name": "Nguyễn Thị Thu Trang",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thế Hùng",
+      "position": "Giám đốc",
+      "percentage": 0.0
+    },
+    {
+      "name": "Nguyễn Thị Hà",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Bùi Thị Hằng Nga",
+      "position": "Người phụ trách quản trị công ty",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Hữu Hậu",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Đỗ Hữu Hạ",
+      "position": "Chủ tịch Hội đồng Quản trị",
+      "percentage": 0.0
+    },
+    {
+      "name": "Hồ Thị Xuân Hòa",
+      "position": "Phụ trách Công bố thông tin/Kế toán trưởng",
+      "percentage": 0.0
+    },
+    {
+      "name": "Trần Mạnh Luân",
+      "position": "Thành viên Hội đồng Quản trị",
+      "percentage": 0.0
+    }
+  ],
+  "created_at": "2025-11-06T01:59:56.220526Z"
+}
