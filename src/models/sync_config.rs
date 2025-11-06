@@ -2,6 +2,16 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+// Adaptive resume configuration constants
+/// Start with small resume window for minute data (fast path)
+pub const MIN_MINUTE_RESUME_DAYS: i64 = 2;
+/// First expansion if overlap not found
+pub const MID_MINUTE_RESUME_DAYS: i64 = 4;
+/// Maximum expansion before falling back to default
+pub const MAX_MINUTE_RESUME_DAYS: i64 = 7;
+/// Skip tickers that haven't traded in this many days (likely delisted/suspended)
+pub const STALE_TICKER_THRESHOLD_DAYS: i64 = 30;
+
 /// Interval types for market data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Interval {
@@ -196,6 +206,33 @@ impl SyncConfig {
             }
         }
     }
+
+    /// Get dynamic batch size based on date range
+    ///
+    /// For minute data, use larger batches when date range is small:
+    /// - <= 2 days: 20 tickers/batch (fast path for recent data)
+    /// - <= 7 days: 10 tickers/batch (medium range)
+    /// - > 7 days:  3 tickers/batch (safe for large ranges)
+    pub fn get_dynamic_batch_size(&self, interval: Interval, date_range_days: i64) -> usize {
+        if self.force_full {
+            return 2; // Smaller batches for full downloads
+        }
+
+        match interval {
+            Interval::Daily => 50,   // Daily is always lightweight
+            Interval::Hourly => 20,  // Hourly is moderate
+            Interval::Minute => {
+                // Dynamic sizing based on date range
+                if date_range_days <= MIN_MINUTE_RESUME_DAYS {
+                    20  // Small range = big batch (fast!) - sweet spot
+                } else if date_range_days <= MAX_MINUTE_RESUME_DAYS {
+                    10  // Medium range
+                } else {
+                    3   // Large range (safe default)
+                }
+            }
+        }
+    }
 }
 
 /// Categorization of tickers by data needs
@@ -207,6 +244,10 @@ pub struct TickerCategory {
 
     /// Tickers needing full history (new or insufficient data)
     pub full_history_tickers: Vec<String>,
+
+    /// Tickers skipped due to stale data (for minute interval only)
+    /// Each tuple contains (ticker, last_date, days_old)
+    pub skipped_stale_tickers: Vec<(String, String, i64)>,
 }
 
 impl TickerCategory {

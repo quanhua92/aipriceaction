@@ -79,28 +79,37 @@ impl DataSync {
 
         let batch_size = self.config.get_batch_size(interval);
 
-        // Batch fetch resume tickers using adaptive date (min of all last dates)
+        // Batch fetch resume tickers using adaptive date
         let batch_start = Instant::now();
         let resume_results = if !category.resume_tickers.is_empty() {
             let resume_ticker_names = category.get_resume_ticker_names();
 
-            // Try adaptive mode first (read from CSV dates)
-            let (fetch_start_date, is_adaptive) = match category.get_min_resume_date() {
-                Some(date) => {
-                    (date, true) // ✅ Adaptive: using actual CSV dates
-                }
-                None => {
-                    (self.config.get_effective_start_date(interval), false) // ⚠️ Fallback: using fixed days (respects interval minimums)
+            // For minute interval: use smart date range (2 days default, not oldest ticker date)
+            let fetch_start_date = if interval == Interval::Minute {
+                use crate::models::MIN_MINUTE_RESUME_DAYS;
+                use chrono::{Utc, Duration};
+                (Utc::now() - Duration::days(MIN_MINUTE_RESUME_DAYS))
+                    .format("%Y-%m-%d")
+                    .to_string()
+            } else {
+                // For daily/hourly: use min date from all tickers (original adaptive behavior)
+                match category.get_min_resume_date() {
+                    Some(date) => date,
+                    None => self.config.get_effective_start_date(interval),
                 }
             };
 
-            // if is_adaptive {
-            //     println!("\n⚡ Batch processing {} tickers using ADAPTIVE resume mode...", resume_ticker_names.len());
-            //     println!("   📅 Fetching from {} (earliest last date from CSV files)", fetch_start_date);
-            // } else {
-            //     println!("\n⚠️  Batch processing {} tickers using FALLBACK mode (CSV read failed)...", resume_ticker_names.len());
-            //     println!("   📅 Fetching from {} (using {} day fallback)", fetch_start_date, interval.default_resume_days());
-            // }
+            // Calculate date range for dynamic batch sizing
+            let date_range_days = if interval == Interval::Minute {
+                use crate::models::MIN_MINUTE_RESUME_DAYS;
+                MIN_MINUTE_RESUME_DAYS
+            } else {
+                // For other intervals, use config's resume days
+                self.config.resume_days.unwrap_or(interval.default_resume_days() as u32) as i64
+            };
+
+            // Get dynamic batch size based on date range
+            let dynamic_batch_size = self.config.get_dynamic_batch_size(interval, date_range_days);
 
             self.fetcher
                 .batch_fetch(
@@ -108,7 +117,7 @@ impl DataSync {
                     &fetch_start_date,
                     &self.config.end_date,
                     interval,
-                    batch_size,
+                    dynamic_batch_size,
                     self.config.concurrent_batches,
                 )
                 .await?
@@ -274,17 +283,26 @@ impl DataSync {
         if is_resume {
             // Resume mode: fetch from last date in file
             let fetch_start = ticker_last_date.unwrap();
-            // eprintln!("DEBUG [{}:process_ticker]: Resume mode, fetching from {}", ticker, fetch_start);
-            let recent_data = self
-                .fetcher
-                .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)
-                .await?;
 
-            // eprintln!("DEBUG [{}:process_ticker]: Fetched {} rows for resume", ticker, recent_data.len());
-            // if !recent_data.is_empty() {
-            //     eprintln!("DEBUG [{}:process_ticker]: Resume first row: {}", ticker, recent_data.first().unwrap().time);
-            //     eprintln!("DEBUG [{}:process_ticker]: Resume last row: {}", ticker, recent_data.last().unwrap().time);
-            // }
+            // For minute interval, use progressive resume with overlap detection
+            let recent_data = if interval == Interval::Minute {
+                // Read existing data for overlap verification
+                let file_path = self.get_ticker_file_path(ticker, interval);
+                let existing_data = if file_path.exists() {
+                    self.read_existing_data(&file_path).unwrap_or_default()
+                } else {
+                    vec![]
+                };
+
+                // Use progressive fetch (2 days -> 4 days -> 7 days -> fallback)
+                self.progressive_resume_fetch(ticker, &fetch_start, interval, &existing_data)
+                    .await?
+            } else {
+                // For daily/hourly: standard resume
+                self.fetcher
+                    .fetch_full_history(ticker, &fetch_start, &self.config.end_date, interval)
+                    .await?
+            };
 
             self.smart_dividend_check_and_merge(ticker, &recent_data, interval)
                 .await
@@ -304,6 +322,66 @@ impl DataSync {
 
             Ok(data)
         }
+    }
+
+    /// Progressive resume with adaptive date range expansion for minute interval
+    /// Starts with small window (2 days), expands if overlap not found
+    async fn progressive_resume_fetch(
+        &mut self,
+        ticker: &str,
+        ticker_last_date: &str,
+        interval: Interval,
+        existing_data: &[OhlcvData],
+    ) -> Result<Vec<OhlcvData>, Error> {
+        use crate::models::{MIN_MINUTE_RESUME_DAYS, MID_MINUTE_RESUME_DAYS, MAX_MINUTE_RESUME_DAYS};
+        use chrono::{Duration, Utc};
+
+        // Only use progressive resume for minute interval
+        if interval != Interval::Minute {
+            // For other intervals, use standard resume
+            return self.fetcher
+                .fetch_full_history(ticker, ticker_last_date, &self.config.end_date, interval)
+                .await;
+        }
+
+        // Try progressive expansion: 2 days -> 4 days -> 7 days -> fallback
+        let resume_attempts = vec![
+            MIN_MINUTE_RESUME_DAYS,
+            MID_MINUTE_RESUME_DAYS,
+            MAX_MINUTE_RESUME_DAYS,
+        ];
+
+        let today = Utc::now().format("%Y-%m-%d").to_string();
+
+        for (attempt_num, &days_back) in resume_attempts.iter().enumerate() {
+            let fetch_start = (Utc::now() - Duration::days(days_back))
+                .format("%Y-%m-%d")
+                .to_string();
+
+            // Fetch data for this window
+            let new_data = self.fetcher
+                .fetch_full_history(ticker, &fetch_start, &today, interval)
+                .await?;
+
+            // Check overlap
+            if self.verify_overlap(existing_data, &new_data) {
+                // Good overlap found!
+                if attempt_num > 0 {
+                    println!("   ✅ Overlap found with {}-day window", days_back);
+                }
+                return Ok(new_data);
+            } else if attempt_num < resume_attempts.len() - 1 {
+                // No overlap, try next expansion
+                println!("   ⚠️  Gap detected with {}-day window, expanding to {} days...",
+                    days_back, resume_attempts[attempt_num + 1]);
+            }
+        }
+
+        // All attempts failed, use default fallback (fetch from ticker's last date)
+        println!("   ⚠️  Using fallback: fetch from ticker last date ({})", ticker_last_date);
+        self.fetcher
+            .fetch_full_history(ticker, ticker_last_date, &today, interval)
+            .await
     }
 
     /// Smart dividend detection and data merging (OPTIMIZED - no extra API call!)
@@ -379,6 +457,24 @@ impl DataSync {
 
         self.stats.updated += 1;
         Ok(merged_data)
+    }
+
+    /// Verify overlap between existing and new data
+    /// Returns true if data is continuous (no gap), false if gap detected
+    fn verify_overlap(&self, existing: &[OhlcvData], new: &[OhlcvData]) -> bool {
+        if existing.is_empty() || new.is_empty() {
+            return true; // No gap possible
+        }
+
+        // Get latest time from existing data
+        let latest_existing = existing.iter().map(|d| d.time).max().unwrap();
+
+        // Get earliest time from new data
+        let earliest_new = new.iter().map(|d| d.time).min().unwrap();
+
+        // Check if there's overlap or continuity
+        // New data should start at or before the latest existing timestamp
+        earliest_new <= latest_existing
     }
 
     /// Merge existing data with new data (update last row + append new)

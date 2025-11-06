@@ -26,7 +26,11 @@ pub use ohlcv::Ohlcv;
 pub use stock_data::StockData;
 pub use ticker_group::TickerGroups;
 pub use timeframe::Timeframe;
-pub use sync_config::{Interval, SyncConfig, TickerCategory, FetchProgress, SyncStats};
+pub use sync_config::{
+    Interval, SyncConfig, TickerCategory, FetchProgress, SyncStats,
+    MIN_MINUTE_RESUME_DAYS, MID_MINUTE_RESUME_DAYS, MAX_MINUTE_RESUME_DAYS,
+    STALE_TICKER_THRESHOLD_DAYS,
+};
 
 use std::collections::HashMap;
 

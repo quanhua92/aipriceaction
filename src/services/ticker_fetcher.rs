@@ -95,6 +95,25 @@ impl TickerFetcher {
                 // File exists - read last date and use resume mode
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
+                        // Skip stale tickers for minute interval (likely delisted/suspended)
+                        if interval == Interval::Minute {
+                            use chrono::NaiveDate;
+                            use crate::models::STALE_TICKER_THRESHOLD_DAYS;
+
+                            if let Ok(last_date_parsed) = NaiveDate::parse_from_str(&last_date, "%Y-%m-%d") {
+                                let today = chrono::Utc::now().date_naive();
+                                let days_old = (today - last_date_parsed).num_days();
+
+                                if days_old > STALE_TICKER_THRESHOLD_DAYS {
+                                    if should_print {
+                                        println!("   ⏭️  {} - Skipping: last trade {} days ago ({})", ticker, days_old, last_date);
+                                    }
+                                    category.skipped_stale_tickers.push((ticker.clone(), last_date.clone(), days_old));
+                                    continue; // Skip this ticker
+                                }
+                            }
+                        }
+
                         if should_print {
                             println!("   📄 {} - Resume from: {}", ticker, last_date);
                         }
@@ -127,6 +146,13 @@ impl TickerFetcher {
             "   Full history tickers: {}",
             category.full_history_tickers.len()
         );
+        if !category.skipped_stale_tickers.is_empty() {
+            println!(
+                "   Skipped stale tickers: {} (last trade >{} days ago)",
+                category.skipped_stale_tickers.len(),
+                crate::models::STALE_TICKER_THRESHOLD_DAYS
+            );
+        }
 
         // Show min/max dates for resume tickers
         if let Some(min_date) = category.get_min_resume_date() {
