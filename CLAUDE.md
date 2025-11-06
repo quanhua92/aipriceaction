@@ -62,7 +62,9 @@ cargo build --release
 
 ### Docker
 
-**Important:** Use `docker-compose.local.yml` for local development (has absolute path to market_data).
+**Important:** Use `docker-compose.local.yml` for local development (absolute path to market_data).
+
+**⚠️ WARNING:** Never run CLI and Docker simultaneously - causes CSV corruption. Stop Docker before running CLI commands.
 
 ```bash
 # Start server (local development with existing data)
@@ -324,14 +326,22 @@ The codebase uses `fs2` for cross-process file locking:
 
 ## Performance Notes
 
-- **Resume sync** (daily): 1-2 minutes for 290 tickers
-- **Full sync** (daily): 6-8 minutes for 290 tickers
-- **Hourly sync**: 2.5-4 hours (chunked by year)
-- **Minute sync**: 30-50 hours (chunked by month)
-- **Memory usage**: ~2.8GB for 282 tickers (1 year daily data)
+- **Full sync**: Daily 6-8min | Hourly 2.5-4hrs | Minute 30-50hrs (for 282 tickers)
+- **Resume sync**: Daily 4-6s | Hourly 20-25s | Minute 50-60s (CLI) / 90-100s (Docker)
+- **Memory**: ~32MB (Docker) / ~19MB (daily data cache)
 - **API throughput**: ~30 requests/minute (VCI rate limit)
+- **Optimization (v0.3.1)**: Smart buffer slicing (200 records + cutoff) → 43% faster minute sync
 
 ## Common Issues
+
+### Concurrent Access (CLI + Docker)
+
+**⚠️ CRITICAL:** Never run CLI and Docker simultaneously - both write to `market_data/` causing CSV corruption (race conditions, file locking conflicts). Always stop Docker before running CLI commands:
+```bash
+docker compose -f docker-compose.local.yml down
+./target/release/aipriceaction pull --intervals 1m
+docker compose -f docker-compose.local.yml up -d
+```
 
 ### Docker Volume Mounting
 
