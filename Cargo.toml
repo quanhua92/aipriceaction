@@ -21,6 +21,7 @@ axum = "0.8.4"
 axum-extra = { version = "0.10.1", features = ["query"] }
 tower = "0.5.2"
 tower-http = { version = "0.6.2", features = ["cors", "fs"] }
+fs2 = "0.4"
 
 [dev-dependencies]
 tempfile = "3.13"

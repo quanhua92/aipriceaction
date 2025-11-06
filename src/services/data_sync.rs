@@ -4,6 +4,7 @@ use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
 use crate::utils::get_market_data_dir;
 use chrono::{DateTime, NaiveDate, Utc};
+use fs2::FileExt;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -448,9 +449,18 @@ impl DataSync {
         };
 
         if !file_exists {
-            // New file - write header + all data
-            let mut wtr = csv::Writer::from_path(&file_path)
-                .map_err(|e| Error::Io(format!("Failed to create CSV writer: {}", e)))?;
+            // New file - create with exclusive lock to prevent race conditions
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
+
+            // Acquire exclusive lock before writing
+            file.lock_exclusive()
+                .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
 
             wtr.write_record(&["ticker", "time", "open", "high", "low", "close", "volume"])
                 .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
@@ -475,6 +485,7 @@ impl DataSync {
 
             wtr.flush()
                 .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+            // Lock is automatically released when file (inside wtr) goes out of scope
         } else {
             // File exists - ultra-efficient strategy:
             // Seek backwards from end, find cutoff point, truncate there, append new data
@@ -486,50 +497,64 @@ impl DataSync {
 
             // Find truncation point by reading file backwards
             use std::io::{BufRead, BufReader, Seek, SeekFrom};
+
+            // Step 1: Read file to find truncation point
+            // Use a separate scope to ensure the reader is dropped before we modify the file
+            let truncate_pos: Option<u64> = {
+                let file = std::fs::File::open(&file_path)
+                    .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
+                let reader = BufReader::new(file);
+                let mut pos: Option<u64> = None;
+                let mut current_pos = 0u64;
+
+                for line_result in reader.lines() {
+                    let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+                    let line_len = (line.len() + 1) as u64; // +1 for newline
+
+                    // Parse timestamp from line (skip header)
+                    if current_pos > 0 {
+                        let parts: Vec<&str> = line.split(',').collect();
+                        if parts.len() >= 2 {
+                            let time_str = parts[1];
+                            let time = if time_str.contains(' ') {
+                                chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                                    .ok()
+                                    .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+                            } else {
+                                chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+                                    .ok()
+                                    .and_then(|d| d.and_hms_opt(0, 0, 0))
+                                    .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
+                            };
+
+                            if let Some(t) = time {
+                                if t >= cutoff_date {
+                                    // Found cutoff - truncate here
+                                    break;
+                                }
+                                // This line is before cutoff, update truncate position
+                                pos = Some(current_pos + line_len);
+                            }
+                        }
+                    }
+
+                    current_pos += line_len;
+                }
+
+                pos
+            }; // Reader is now dropped, file is closed
+
+            // Step 2: Open file for writing, truncate and append
             let mut file = std::fs::OpenOptions::new()
                 .read(true)
                 .write(true)
                 .open(&file_path)
-                .map_err(|e| Error::Io(format!("Failed to open file: {}", e)))?;
+                .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
 
-            // Read file to find last line before cutoff
-            let reader = BufReader::new(&file);
-            let mut truncate_pos: Option<u64> = None;
-            let mut current_pos = 0u64;
-
-            for line_result in reader.lines() {
-                let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
-                let line_len = (line.len() + 1) as u64; // +1 for newline
-
-                // Parse timestamp from line (skip header)
-                if current_pos > 0 {
-                    let parts: Vec<&str> = line.split(',').collect();
-                    if parts.len() >= 2 {
-                        let time_str = parts[1];
-                        let time = if time_str.contains(' ') {
-                            chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                                .ok()
-                                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
-                        } else {
-                            chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-                                .ok()
-                                .and_then(|d| d.and_hms_opt(0, 0, 0))
-                                .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
-                        };
-
-                        if let Some(t) = time {
-                            if t >= cutoff_date {
-                                // Found cutoff - truncate here
-                                break;
-                            }
-                            // This line is before cutoff, update truncate position
-                            truncate_pos = Some(current_pos + line_len);
-                        }
-                    }
-                }
-
-                current_pos += line_len;
-            }
+            // CRITICAL SECTION: Acquire exclusive lock to prevent race conditions
+            // This prevents multiple processes from corrupting the file simultaneously
+            file.lock_exclusive()
+                .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
 
             // Truncate file at cutoff point (or keep all if no cutoff found)
             if let Some(pos) = truncate_pos {
@@ -597,6 +622,7 @@ impl DataSync {
 
             wtr.flush()
                 .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+            // Lock is automatically released when file (inside wtr) goes out of scope
         }
 
         Ok(())

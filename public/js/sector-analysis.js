@@ -16,7 +16,15 @@ async function loadSectorAnalysis() {
     const groupsResponse = await fetch(buildApiUrl('/tickers/group'));
     const groups = await groupsResponse.json();
 
-    const tickersResponse = await fetch(buildApiUrl('/tickers', { interval: '1D' }));
+    // Fetch last 30 days to ensure we get data with MA scores
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const tickersResponse = await fetch(buildApiUrl('/tickers', {
+      interval: '1D',
+      start_date: startDate.toISOString().split('T')[0]
+    }));
     const tickersData = await tickersResponse.json();
 
     // Analyze each sector
@@ -26,11 +34,21 @@ async function loadSectorAnalysis() {
 
       for (const ticker of tickers) {
         if (tickersData[ticker] && tickersData[ticker].length > 0) {
-          const latest = tickersData[ticker][tickersData[ticker].length - 1];
-          const ma20 = latest.ma20_score || 0;
-          const ma50 = latest.ma50_score || 0;
+          // Find the most recent record that has MA scores
+          let latest = null;
+          for (let i = tickersData[ticker].length - 1; i >= 0; i--) {
+            const record = tickersData[ticker][i];
+            if (record.ma20_score !== undefined && record.ma20_score !== null &&
+                record.ma50_score !== undefined && record.ma50_score !== null) {
+              latest = record;
+              break;
+            }
+          }
 
-          if (ma20 !== null && ma50 !== null) {
+          if (latest) {
+            const ma20 = latest.ma20_score;
+            const ma50 = latest.ma50_score;
+
             sectorScores.push({
               ticker,
               close: latest.close,
