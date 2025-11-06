@@ -36,7 +36,7 @@ async function loadSectorAnalysis() {
               close: latest.close,
               ma20,
               ma50,
-              combined: ma20 + ma50,
+              combined: (ma20 + ma50) / 2,
               volume: latest.volume || 0
             });
           }
@@ -52,7 +52,7 @@ async function loadSectorAnalysis() {
         sectors[sectorName] = {
           avgMa20,
           avgMa50,
-          avgCombined: avgMa20 + avgMa50,
+          avgCombined: (avgMa20 + avgMa50) / 2,
           count: sectorScores.length,
           aboveMa20,
           aboveMa50,
@@ -126,27 +126,28 @@ function populateSectorHeatmap() {
 
   const html = sectorAnalysisData.map(([sector, stats]) => {
     const combined = stats.avgCombined;
-    const barLength = Math.min(Math.abs(combined) * 2, 50);
+    const percentage = Math.min(Math.abs(combined) * 5, 100); // Scale to 0-100%
 
-    let barHtml;
+    let barColor, bgColor;
     if (combined >= 0) {
-      const barColor = combined > 5 ? 'text-green-600' : combined > 2 ? 'text-green-500' : 'text-green-400';
-      const bar = '█'.repeat(barLength);
-      barHtml = `<span class="${barColor}">${bar}</span>`;
+      barColor = combined > 5 ? 'bg-green-600' : combined > 2 ? 'bg-green-500' : 'bg-green-400';
+      bgColor = 'bg-green-50';
     } else {
-      const barColor = combined < -10 ? 'text-red-600' : combined < -5 ? 'text-red-500' : 'text-red-400';
-      const spaces = '\xa0'.repeat(Math.max(0, 50 - barLength));
-      const bar = '█'.repeat(barLength);
-      barHtml = `${spaces}<span class="${barColor}">${bar}</span>`;
+      barColor = combined < -10 ? 'bg-red-600' : combined < -5 ? 'bg-red-500' : 'bg-red-400';
+      bgColor = 'bg-red-50';
     }
 
     const scoreColor = combined >= 0 ? 'text-green-600' : 'text-red-600';
 
     return `
-      <div class="flex items-center gap-2">
-        <span class="w-32 text-gray-700 font-medium text-xs">${sector}</span>
-        <span class="w-16 ${scoreColor} text-right">${combined.toFixed(2)}%</span>
-        <span class="flex-1">${barHtml}</span>
+      <div class="mb-2">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-gray-700 font-medium text-xs md:text-sm truncate flex-1">${sector}</span>
+          <span class="ml-2 ${scoreColor} text-xs md:text-sm font-semibold whitespace-nowrap">${combined.toFixed(2)}%</span>
+        </div>
+        <div class="w-full ${bgColor} rounded-full h-2 md:h-3">
+          <div class="${barColor} h-2 md:h-3 rounded-full transition-all duration-300" style="width: ${percentage}%"></div>
+        </div>
       </div>
     `;
   }).join('');
@@ -177,7 +178,7 @@ function populateSectorQuadrant() {
 function populateSectorBreadth() {
   const tbody = document.getElementById('sector-breadth-table');
 
-  const html = sectorAnalysisData.slice(0, 15).map(([sector, stats]) => {
+  const html = sectorAnalysisData.map(([sector, stats]) => {
     const breadthAvg = (stats.breadthMa20 + stats.breadthMa50) / 2;
     const avgScoreColor = stats.avgCombined > 0 ? 'text-green-600' : 'text-red-600';
 
@@ -198,25 +199,35 @@ function populateSectorBreadth() {
 function populateSectorDetails() {
   const container = document.getElementById('sector-details-container');
 
-  const html = sectorAnalysisData.slice(0, 10).map(([sector, stats]) => `
-    <div class="border border-gray-200 rounded-lg overflow-hidden">
-      <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b">
-        <div class="flex justify-between items-center">
-          <h3 class="font-bold text-gray-800">${sector}</h3>
-          <div class="flex gap-4 text-xs">
-            <span class="text-gray-600">MA20: <span class="${stats.avgMa20 > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">${stats.avgMa20.toFixed(2)}%</span></span>
-            <span class="text-gray-600">MA50: <span class="${stats.avgMa50 > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">${stats.avgMa50.toFixed(2)}%</span></span>
-            <span class="text-gray-600">Combined: <span class="${stats.avgCombined > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">${stats.avgCombined.toFixed(2)}%</span></span>
+  const html = sectorAnalysisData.map(([sector, stats]) => `
+    <div class="border border-gray-200 rounded-lg overflow-hidden mb-3">
+      <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 border-b">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-sm md:text-base font-bold text-gray-800">${sector}</h3>
+          <span class="${stats.avgCombined > 0 ? 'text-green-600' : 'text-red-600'} font-bold text-sm md:text-base">${stats.avgCombined.toFixed(2)}%</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-xs">
+          <div class="bg-white rounded px-2 py-1">
+            <div class="text-gray-500 text-xs">MA20</div>
+            <div class="${stats.avgMa20 > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">${stats.avgMa20.toFixed(2)}%</div>
+          </div>
+          <div class="bg-white rounded px-2 py-1">
+            <div class="text-gray-500 text-xs">MA50</div>
+            <div class="${stats.avgMa50 > 0 ? 'text-green-600' : 'text-red-600'} font-semibold">${stats.avgMa50.toFixed(2)}%</div>
+          </div>
+          <div class="bg-white rounded px-2 py-1">
+            <div class="text-gray-500 text-xs">Breadth</div>
+            <div class="font-semibold text-gray-700">${stats.breadthMa20.toFixed(0)}%</div>
           </div>
         </div>
       </div>
-      <div class="px-4 py-3">
-        <div class="text-xs text-gray-600 mb-2">Top 5 Stocks:</div>
-        <div class="grid grid-cols-5 gap-2 text-xs">
-          ${stats.scores.slice(0, 5).map(stock => `
-            <div class="bg-gray-50 rounded p-2">
-              <div class="font-semibold text-gray-800">${stock.ticker}</div>
-              <div class="${stock.combined > 0 ? 'text-green-600' : 'text-red-600'}">${stock.combined.toFixed(1)}%</div>
+      <div class="px-3 py-2">
+        <div class="text-xs text-gray-600 mb-2">Top 10 Stocks</div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
+          ${stats.scores.slice(0, 10).map(stock => `
+            <div class="bg-gray-50 rounded p-1.5 text-center">
+              <div class="font-semibold text-xs text-gray-800">${stock.ticker}</div>
+              <div class="${stock.combined > 0 ? 'text-green-600' : 'text-red-600'} text-xs font-medium">${stock.combined.toFixed(1)}%</div>
             </div>
           `).join('')}
         </div>

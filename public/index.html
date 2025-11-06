@@ -15,98 +15,98 @@
   <body class="bg-gray-50 min-h-screen">
     <!-- Header -->
     <header class="bg-blue-600 text-white shadow-lg">
-      <div class="container mx-auto px-4 py-6">
-        <h1 class="text-2xl md:text-3xl font-bold">AI Price Action</h1>
-        <p class="text-blue-100 text-sm md:text-base mt-1">API Explorer & Debug Tool</p>
+      <div class="container mx-auto px-4 py-4 md:py-6">
+        <h1 class="text-xl md:text-3xl font-bold">AI Price Action</h1>
+        <p class="text-blue-100 text-xs md:text-base mt-1">API Explorer & Debug Tool</p>
       </div>
     </header>
 
     <!-- Main Content -->
-    <main class="container mx-auto px-4 py-6 space-y-6">
+    <main class="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
 
       <!-- API Overview Section -->
-      <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-6 border border-blue-200">
-        <h2 class="text-xl font-bold text-gray-800 mb-3">📊 API Overview</h2>
-        <div class="grid md:grid-cols-3 gap-4 text-sm">
-          <div class="bg-white rounded p-4 shadow-sm">
-            <div class="text-gray-600 font-medium mb-1">Available Endpoints</div>
-            <div class="text-2xl font-bold text-blue-600">4</div>
+      <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-4 md:p-6 border border-blue-200">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3">📊 API Overview</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-sm">
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Available Endpoints</div>
+            <div class="text-xl md:text-2xl font-bold text-blue-600">4</div>
             <div class="text-xs text-gray-500 mt-1">/tickers, /health, /tickers/group, /raw/*</div>
           </div>
-          <div class="bg-white rounded p-4 shadow-sm">
-            <div class="text-gray-600 font-medium mb-1">Supported Formats</div>
-            <div class="text-2xl font-bold text-green-600">2</div>
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Supported Formats</div>
+            <div class="text-xl md:text-2xl font-bold text-green-600">2</div>
             <div class="text-xs text-gray-500 mt-1">JSON, CSV</div>
           </div>
-          <div class="bg-white rounded p-4 shadow-sm">
-            <div class="text-gray-600 font-medium mb-1">Time Intervals</div>
-            <div class="text-2xl font-bold text-purple-600">3</div>
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Time Intervals</div>
+            <div class="text-xl md:text-2xl font-bold text-purple-600">3</div>
             <div class="text-xs text-gray-500 mt-1">1D (Daily), 1H (Hourly), 1m (Minute)</div>
           </div>
         </div>
       </section>
 
       <!-- System Health Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">🏥 System Health & Performance</h2>
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">🏥 System Health & Performance</h2>
           <button
             onclick="fetchHealth()"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
             Check Health
           </button>
         </div>
-        <div class="text-sm text-gray-600 mb-3">
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
           Monitor system status, cache performance, and data availability. This endpoint provides real-time insights into the API's health.
         </div>
-        <div id="health-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
-          <pre class="text-sm overflow-x-auto"></pre>
+        <div id="health-result" class="mt-4 p-3 md:p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-xs md:text-sm overflow-x-auto"></pre>
         </div>
       </section>
 
       <!-- Ticker Groups Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">📋 Available Tickers</h2>
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📋 Available Tickers</h2>
           <button
             onclick="fetchGroups()"
-            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
             Load Groups
           </button>
         </div>
-        <div class="text-sm text-gray-600 mb-3">
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
           Browse all available stock symbols organized by category. See which tickers have data for different time intervals.
         </div>
-        <div id="groups-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
-          <pre class="text-sm overflow-x-auto"></pre>
+        <div id="groups-result" class="mt-4 p-3 md:p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-xs md:text-sm overflow-x-auto"></pre>
         </div>
       </section>
 
       <!-- Ticker Data Explorer Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">🔍 Ticker Data Explorer</h2>
-        <div class="text-sm text-gray-600 mb-4">
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🔍 Ticker Data Explorer</h2>
+        <div class="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
           Query historical price data with flexible date ranges and formats. Perfect for backtesting and analysis.
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3 md:space-y-4">
           <!-- Symbol Input -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Symbol</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Symbol</label>
             <input
               type="text"
               id="symbol"
               value="VCB"
               placeholder="e.g., VCB, FPT, VIC"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
           </div>
 
           <!-- Interval Select -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Interval</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Interval</label>
             <select
               id="interval"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
               <option value="1D">1 Day (1D)</option>
               <option value="1H">1 Hour (1H)</option>
               <option value="1m">1 Minute (1m)</option>
@@ -115,34 +115,34 @@
 
           <!-- Start Date Input -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date (optional)</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Start Date (optional)</label>
             <input
               type="date"
               id="start_date"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
           </div>
 
           <!-- Format Select -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Format</label>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Format</label>
             <select
               id="format"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
               <option value="json">JSON</option>
               <option value="csv">CSV</option>
             </select>
           </div>
 
           <!-- Action Buttons -->
-          <div class="flex flex-col sm:flex-row gap-3">
+          <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
             <button
               onclick="fetchTicker()"
-              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
               Fetch Data
             </button>
             <button
               onclick="copyApiUrl()"
-              class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+              class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
               Copy API URL
             </button>
           </div>
@@ -165,12 +165,12 @@
       </section>
 
       <!-- Quick Examples Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">⚡ Quick Examples</h2>
-        <div class="text-sm text-gray-600 mb-3">
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">⚡ Quick Examples</h2>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
           Try these pre-configured queries to quickly explore different data ranges and intervals.
         </div>
-        <div class="grid md:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
           <button
             onclick="quickFetch('VCB', '1D', '2024-11-01')"
             class="text-left px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded border border-blue-200 transition duration-200">
@@ -199,16 +199,16 @@
       </section>
 
       <!-- Market Overview & Top Performers -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">📈 Market Overview & Top Performers</h2>
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📈 Market Overview & Top Performers</h2>
           <button
             onclick="loadMarketOverview()"
-            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
             Load Market Data
           </button>
         </div>
-        <div class="text-sm text-gray-600 mb-3">
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
           View real-time market leaders, top gainers/losers, and performance metrics across all tracked stocks.
         </div>
 
@@ -219,36 +219,36 @@
         </div>
 
         <!-- Market Stats -->
-        <div id="market-stats" class="hidden grid md:grid-cols-4 gap-3 mb-4">
-          <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+        <div id="market-stats" class="hidden grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">
+          <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2 md:p-3 border border-blue-200">
             <div class="text-xs text-gray-600">Total Tickers</div>
-            <div id="stat-total" class="text-2xl font-bold text-blue-700">--</div>
+            <div id="stat-total" class="text-xl md:text-2xl font-bold text-blue-700">--</div>
           </div>
-          <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+          <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-2 md:p-3 border border-green-200">
             <div class="text-xs text-gray-600">Gainers (24h)</div>
-            <div id="stat-gainers" class="text-2xl font-bold text-green-700">--</div>
+            <div id="stat-gainers" class="text-xl md:text-2xl font-bold text-green-700">--</div>
           </div>
-          <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-3 border border-red-200">
+          <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-2 md:p-3 border border-red-200">
             <div class="text-xs text-gray-600">Losers (24h)</div>
-            <div id="stat-losers" class="text-2xl font-bold text-red-700">--</div>
+            <div id="stat-losers" class="text-xl md:text-2xl font-bold text-red-700">--</div>
           </div>
-          <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200">
+          <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-2 md:p-3 border border-purple-200">
             <div class="text-xs text-gray-600">Avg Volume</div>
-            <div id="stat-volume" class="text-2xl font-bold text-purple-700">--</div>
+            <div id="stat-volume" class="text-xl md:text-2xl font-bold text-purple-700">--</div>
           </div>
         </div>
 
         <!-- Date Picker -->
         <div id="market-date-picker" class="hidden mb-4">
-          <div class="flex items-center gap-3">
-            <label class="text-sm font-medium text-gray-700">Analysis Date:</label>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <label class="text-xs md:text-sm font-medium text-gray-700">Analysis Date:</label>
             <input
               type="date"
               id="market-analysis-date"
-              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+              class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs md:text-sm w-full sm:w-auto">
             <button
               onclick="refreshMarketData()"
-              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-xs md:text-sm w-full sm:w-auto">
               Refresh
             </button>
             <span class="text-xs text-gray-500">Last updated: <span id="last-update-time">--</span></span>
@@ -257,18 +257,18 @@
 
         <!-- Tabs for different views -->
         <div id="market-tabs" class="hidden mb-4">
-          <div class="border-b border-gray-200">
-            <nav class="flex space-x-4" aria-label="Tabs">
-              <button onclick="showMarketTab('by-sector')" class="market-tab active-tab px-3 py-2 text-sm font-medium border-b-2">
+          <div class="border-b border-gray-200 overflow-x-auto">
+            <nav class="flex space-x-2 md:space-x-4 min-w-max md:min-w-0" aria-label="Tabs">
+              <button onclick="showMarketTab('by-sector')" class="market-tab active-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 whitespace-nowrap">
                 🏢 By Sector
               </button>
-              <button onclick="showMarketTab('top-gainers')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+              <button onclick="showMarketTab('top-gainers')" class="market-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
                 🚀 Top Gainers
               </button>
-              <button onclick="showMarketTab('top-losers')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+              <button onclick="showMarketTab('top-losers')" class="market-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
                 📉 Top Losers
               </button>
-              <button onclick="showMarketTab('top-ma')" class="market-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
+              <button onclick="showMarketTab('top-ma')" class="market-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
                 📊 MA Scores
               </button>
             </nav>
@@ -347,16 +347,16 @@
       </section>
 
       <!-- Sector Analysis & Visualization Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold text-gray-800">📊 Sector Analysis & Momentum</h2>
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📊 Sector Analysis & Momentum</h2>
           <button
             onclick="loadSectorAnalysis()"
-            class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200">
+            class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
             Analyze Sectors
           </button>
         </div>
-        <div class="text-sm text-gray-600 mb-3">
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
           Compare sector performance using MA20 and MA50 scores. Identify sector rotation and momentum shifts across the market.
         </div>
 
@@ -367,26 +367,26 @@
         </div>
 
         <!-- Sector Summary Stats -->
-        <div id="sector-summary" class="hidden mb-6">
-          <div class="grid md:grid-cols-4 gap-3">
-            <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-3 border border-green-200">
+        <div id="sector-summary" class="hidden mb-4 md:mb-6">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+            <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-2 md:p-3 border border-green-200">
               <div class="text-xs text-gray-600">Strong Sectors</div>
-              <div id="strong-sectors-count" class="text-2xl font-bold text-green-700">--</div>
+              <div id="strong-sectors-count" class="text-xl md:text-2xl font-bold text-green-700">--</div>
               <div class="text-xs text-gray-500">Combined > 0</div>
             </div>
-            <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-3 border border-red-200">
+            <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-2 md:p-3 border border-red-200">
               <div class="text-xs text-gray-600">Weak Sectors</div>
-              <div id="weak-sectors-count" class="text-2xl font-bold text-red-700">--</div>
+              <div id="weak-sectors-count" class="text-xl md:text-2xl font-bold text-red-700">--</div>
               <div class="text-xs text-gray-500">Combined < 0</div>
             </div>
-            <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200">
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2 md:p-3 border border-blue-200">
               <div class="text-xs text-gray-600">Best Sector</div>
-              <div id="best-sector" class="text-xl font-bold text-blue-700">--</div>
+              <div id="best-sector" class="text-sm md:text-xl font-bold text-blue-700 truncate">--</div>
               <div id="best-sector-score" class="text-xs text-gray-500">--</div>
             </div>
-            <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-3 border border-orange-200">
+            <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-2 md:p-3 border border-orange-200">
               <div class="text-xs text-gray-600">Worst Sector</div>
-              <div id="worst-sector" class="text-xl font-bold text-orange-700">--</div>
+              <div id="worst-sector" class="text-sm md:text-xl font-bold text-orange-700 truncate">--</div>
               <div id="worst-sector-score" class="text-xs text-gray-500">--</div>
             </div>
           </div>
@@ -394,19 +394,19 @@
 
         <!-- Sector Visualization Tabs -->
         <div id="sector-tabs" class="hidden mb-4">
-          <div class="border-b border-gray-200">
-            <nav class="flex space-x-4" aria-label="Sector Tabs">
-              <button onclick="showSectorTab('heatmap')" class="sector-tab active-tab px-3 py-2 text-sm font-medium border-b-2">
+          <div class="border-b border-gray-200 overflow-x-auto">
+            <nav class="flex space-x-2 md:space-x-4 min-w-max md:min-w-0" aria-label="Sector Tabs">
+              <button onclick="showSectorTab('heatmap')" class="sector-tab active-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 whitespace-nowrap">
                 🔥 Heatmap
               </button>
-              <button onclick="showSectorTab('quadrant')" class="sector-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
-                📍 Quadrant Analysis
+              <button onclick="showSectorTab('quadrant')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📍 Quadrant
               </button>
-              <button onclick="showSectorTab('breadth')" class="sector-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
-                📊 Breadth Analysis
+              <button onclick="showSectorTab('breadth')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📊 Breadth
               </button>
-              <button onclick="showSectorTab('details')" class="sector-tab px-3 py-2 text-sm font-medium border-b-2 border-transparent">
-                📋 Detailed View
+              <button onclick="showSectorTab('details')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📋 Details
               </button>
             </nav>
           </div>
@@ -414,9 +414,14 @@
 
         <!-- Heatmap Tab -->
         <div id="sector-tab-heatmap" class="sector-tab-content">
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">Sector Strength (Combined MA20 + MA50 Score)</h3>
-            <div id="sector-heatmap" class="space-y-1 text-xs font-mono">
+          <div class="bg-gray-50 rounded-lg p-3 md:p-4">
+            <h3 class="text-xs md:text-sm font-semibold text-gray-700 mb-2">Sector Strength (Average of MA20 & MA50 Scores)</h3>
+            <p class="text-xs text-gray-600 mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+              <strong>How it works:</strong> Each sector's score is the average of all stocks' MA20 and MA50 positions.
+              Positive (green) = trading above moving averages (bullish), Negative (red) = below averages (bearish).
+              Larger bars indicate stronger trends.
+            </p>
+            <div id="sector-heatmap" class="space-y-2">
               <!-- Populated by JS -->
             </div>
           </div>
@@ -424,45 +429,45 @@
 
         <!-- Quadrant Analysis Tab -->
         <div id="sector-tab-quadrant" class="sector-tab-content hidden">
-          <div class="grid md:grid-cols-2 gap-4 mb-4">
-            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-2 border-green-300">
-              <div class="font-bold text-green-800 mb-2">Q-I: STRONG UPTREND</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4 mb-3 md:mb-4">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 md:p-4 border-2 border-green-300">
+              <div class="text-sm md:text-base font-bold text-green-800 mb-1 md:mb-2">Q-I: STRONG UPTREND</div>
               <div class="text-xs text-gray-600 mb-2">MA20 > 0 & MA50 > 0</div>
               <div id="q1-sectors" class="space-y-1 text-xs">--</div>
             </div>
-            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-2 border-yellow-300">
-              <div class="font-bold text-yellow-800 mb-2">Q-II: LOSING MOMENTUM</div>
+            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 md:p-4 border-2 border-yellow-300">
+              <div class="text-sm md:text-base font-bold text-yellow-800 mb-1 md:mb-2">Q-II: LOSING MOMENTUM</div>
               <div class="text-xs text-gray-600 mb-2">MA20 < 0 & MA50 > 0</div>
               <div id="q2-sectors" class="space-y-1 text-xs">--</div>
             </div>
-            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border-2 border-red-300">
-              <div class="font-bold text-red-800 mb-2">Q-III: STRONG DOWNTREND</div>
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 md:p-4 border-2 border-red-300">
+              <div class="text-sm md:text-base font-bold text-red-800 mb-1 md:mb-2">Q-III: STRONG DOWNTREND</div>
               <div class="text-xs text-gray-600 mb-2">MA20 < 0 & MA50 < 0</div>
               <div id="q3-sectors" class="space-y-1 text-xs">--</div>
             </div>
-            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-300">
-              <div class="font-bold text-blue-800 mb-2">Q-IV: GAINING MOMENTUM</div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 md:p-4 border-2 border-blue-300">
+              <div class="text-sm md:text-base font-bold text-blue-800 mb-1 md:mb-2">Q-IV: GAINING MOMENTUM</div>
               <div class="text-xs text-gray-600 mb-2">MA20 > 0 & MA50 < 0</div>
               <div id="q4-sectors" class="space-y-1 text-xs">--</div>
             </div>
           </div>
-          <div class="text-xs text-gray-500 mt-2">
+          <div class="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded">
             💡 <strong>Tip:</strong> Q-I sectors show consistent strength. Q-IV sectors may be early reversals or breakouts.
           </div>
         </div>
 
         <!-- Breadth Analysis Tab -->
         <div id="sector-tab-breadth" class="sector-tab-content hidden">
-          <div class="bg-gray-50 rounded-lg p-4">
-            <h3 class="text-sm font-semibold text-gray-700 mb-3">Sector Breadth (% of Stocks Above MAs)</h3>
-            <div class="overflow-x-auto">
+          <div class="bg-gray-50 rounded-lg p-3 md:p-4">
+            <h3 class="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3">Sector Breadth (% of Stocks Above MAs)</h3>
+            <div class="overflow-x-auto -mx-3 md:mx-0">
               <table class="min-w-full text-xs">
                 <thead class="bg-gray-100">
                   <tr>
-                    <th class="px-3 py-2 text-left font-semibold">Sector</th>
-                    <th class="px-3 py-2 text-right font-semibold">Above MA20</th>
-                    <th class="px-3 py-2 text-right font-semibold">Above MA50</th>
-                    <th class="px-3 py-2 text-right font-semibold">Avg Score</th>
+                    <th class="px-2 md:px-3 py-2 text-left font-semibold">Sector</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">MA20</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">MA50</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">Avg</th>
                   </tr>
                 </thead>
                 <tbody id="sector-breadth-table" class="divide-y divide-gray-200">
@@ -483,9 +488,9 @@
       </section>
 
       <!-- API Documentation Section -->
-      <section class="bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">📚 API Reference</h2>
-        <div class="space-y-4">
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📚 API Reference</h2>
+        <div class="space-y-3 md:space-y-4">
           <!-- /tickers endpoint -->
           <div class="border border-gray-200 rounded-lg p-4">
             <div class="flex items-center gap-2 mb-2">
@@ -554,9 +559,9 @@
       </section>
 
       <!-- Tips & Best Practices Section -->
-      <section class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg shadow-md p-6 border border-green-200">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">💡 Tips & Best Practices</h2>
-        <div class="grid md:grid-cols-2 gap-4 text-sm">
+      <section class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg shadow-md p-4 md:p-6 border border-green-200">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">💡 Tips & Best Practices</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
           <div class="bg-white rounded-lg p-4 shadow-sm">
             <div class="font-semibold text-gray-800 mb-2">🚀 Performance</div>
             <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
