@@ -273,8 +273,10 @@ impl DataSync {
 
         // Show minimal summary - just one line per sync
         let interval_time = interval_start_time.elapsed();
+        let now = Utc::now().format("%Y-%m-%d %H:%M:%S");
         println!(
-            "✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
+            "[{}] ✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
+            now,
             self.interval_name(interval),
             total_tickers,
             interval_time.as_secs(),
