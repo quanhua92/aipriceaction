@@ -20,6 +20,9 @@ pub enum AppError {
     #[error("Not found: {0}")]
     NotFound(String),
 
+    #[error("Skip ticker: {0}")]
+    SkipTicker(String),
+
     #[error("{0}")]
     Other(String),
 }

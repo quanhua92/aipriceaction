@@ -67,3 +67,8 @@ pub const MIN_RECORDS_FOR_ANALYSIS: usize = 1500;
 /// List of index tickers (not individual stocks)
 /// These indices should NOT be scaled when using legacy price format
 pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
+
+/// Batch API failure tracking threshold
+/// Only fall back to individual fetches after batch API fails continuously for this many minutes
+/// During temporary API issues, iterations will be skipped rather than triggering expensive fallback
+pub const BATCH_FAILURE_THRESHOLD_MINUTES: i64 = 15;

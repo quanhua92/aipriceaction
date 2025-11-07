@@ -1,3 +1,4 @@
+use crate::constants::BATCH_FAILURE_THRESHOLD_MINUTES;
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
@@ -17,6 +18,8 @@ pub struct DataSync {
     config: SyncConfig,
     fetcher: TickerFetcher,
     stats: SyncStats,
+    /// Tracks first failure time for each interval to implement smart fallback
+    batch_failure_times: HashMap<Interval, Option<DateTime<Utc>>>,
 }
 
 impl DataSync {
@@ -28,7 +31,30 @@ impl DataSync {
             config,
             fetcher,
             stats: SyncStats::new(),
+            batch_failure_times: HashMap::new(),
         })
+    }
+
+    /// Check if we should fallback to individual fetches based on failure duration
+    /// Returns true if batch has been failing for >= BATCH_FAILURE_THRESHOLD_MINUTES
+    fn should_fallback_to_individual(&self, interval: Interval) -> bool {
+        if let Some(Some(first_failure)) = self.batch_failure_times.get(&interval) {
+            let duration_minutes = (Utc::now() - *first_failure).num_minutes();
+            duration_minutes >= BATCH_FAILURE_THRESHOLD_MINUTES
+        } else {
+            // No failure recorded yet, don't fallback
+            false
+        }
+    }
+
+    /// Record batch failure time for an interval (only if not already recorded)
+    fn record_batch_failure(&mut self, interval: Interval) {
+        self.batch_failure_times.entry(interval).or_insert(Some(Utc::now()));
+    }
+
+    /// Clear batch failure time for an interval (call when batch succeeds)
+    fn clear_batch_failure(&mut self, interval: Interval) {
+        self.batch_failure_times.insert(interval, None);
     }
 
     /// Synchronize all intervals for all tickers
@@ -126,6 +152,21 @@ impl DataSync {
         };
         // println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
 
+        // Track batch API success/failure for smart fallback
+        if !category.resume_tickers.is_empty() {
+            // Check if batch fetch was successful (has at least one ticker with data)
+            let batch_has_data = resume_results.values()
+                .any(|result| matches!(result, Some(data) if !data.is_empty()));
+
+            if batch_has_data {
+                // Batch succeeded, clear failure time
+                self.clear_batch_failure(interval);
+            } else {
+                // Batch failed (empty or all None), record failure time
+                self.record_batch_failure(interval);
+            }
+        }
+
         // Fetch full history tickers individually (single-ticker API for complete data)
         let full_history_start = Instant::now();
         let mut full_history_results = HashMap::new();
@@ -218,8 +259,14 @@ impl DataSync {
                     // println!(); // New line after progress
                 }
                 Err(e) => {
-                    self.stats.failed += 1;
-                    println!("\r❌ {} | FAILED: {}", progress.format_compact(), e);
+                    // Handle SkipTicker error differently - don't count as failure
+                    if matches!(e, Error::SkipTicker(_)) {
+                        // Skip silently, don't increment failed counter
+                        // This is expected during batch API temporary unavailability
+                    } else {
+                        self.stats.failed += 1;
+                        println!("\r❌ {} | FAILED: {}", progress.format_compact(), e);
+                    }
                 }
             }
         }
@@ -277,8 +324,19 @@ impl DataSync {
             }
         }
 
-        // No batch result - fetch individually
-        println!("   🔄 Batch not available for {}, fetching individually...", ticker);
+        // No batch result - check if we should fallback to individual fetch
+        // Only fallback after batch has been failing for BATCH_FAILURE_THRESHOLD_MINUTES
+        if !self.should_fallback_to_individual(interval) {
+            // Batch just started failing, skip this iteration
+            return Err(Error::SkipTicker(format!(
+                "Batch API unavailable for {}, waiting for {} minutes before fallback",
+                ticker, BATCH_FAILURE_THRESHOLD_MINUTES
+            )));
+        }
+
+        // Batch has been failing for >= 15 minutes, fallback to individual fetch
+        println!("   🔄 Batch not available for {} ({}min), fetching individually...",
+                 ticker, BATCH_FAILURE_THRESHOLD_MINUTES);
 
         if is_resume {
             // Resume mode: fetch from last date in file
