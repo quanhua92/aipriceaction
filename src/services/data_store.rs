@@ -307,19 +307,7 @@ impl DataStore {
         self.load_interval(interval, Some(cutoff_date)).await
     }
 
-    /// Get data for specific tickers and interval
-    /// - Daily: Read from memory
-    /// - Hourly/Minute: Read from disk on-demand
-    pub async fn get_data(
-        &self,
-        tickers: Vec<String>,
-        interval: Interval,
-        start_date: Option<DateTime<Utc>>,
-        end_date: Option<DateTime<Utc>>,
-    ) -> HashMap<String, Vec<StockData>> {
-        self.get_data_with_cache(tickers, interval, start_date, end_date, true).await
-    }
-
+  
     /// Get data with cache control option
     /// Smart caching: if cache doesn't have requested range or is expired, automatically read from disk
     pub async fn get_data_with_cache(

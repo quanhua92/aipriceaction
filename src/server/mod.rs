@@ -1,5 +1,6 @@
 pub mod api;
 pub mod legacy;
+pub mod analysis;
 
 use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
@@ -89,6 +90,8 @@ pub async fn serve(
     tracing::info!("  GET /tickers?symbol=VCB&interval=1D&start_date=2024-01-01");
     tracing::info!("  GET /health");
     tracing::info!("  GET /tickers/group");
+    tracing::info!("  GET /analysis/top-performers?sort_by=close_change_percent&limit=10");
+    tracing::info!("  GET /analysis/ma-scores-by-sector?ma_period=20");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
@@ -98,6 +101,7 @@ pub async fn serve(
         .route("/tickers", get(api::get_tickers_handler))
         .route("/health", get(api::health_handler))
         .route("/tickers/group", get(api::get_ticker_groups_handler))
+        .nest("/analysis", analysis_routes())
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
         .nest_service("/public", ServeDir::new(public_dir))
         .layer(cors)
@@ -114,4 +118,11 @@ pub async fn serve(
     .await?;
 
     Ok(())
+}
+
+/// Analysis routes configuration
+fn analysis_routes() -> Router<AppState> {
+    Router::new()
+        .route("/top-performers", get(analysis::top_performers_handler))
+        .route("/ma-scores-by-sector", get(analysis::ma_scores_by_sector_handler))
 }
