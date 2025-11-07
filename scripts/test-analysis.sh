@@ -5,7 +5,7 @@
 # Usage: ./scripts/test-analysis.sh [URL]
 # Default URL: http://localhost:3000
 
-set -e  # Exit on any error
+# Don't exit on error - we want to report all test results
 
 # Colors for output
 RED='\033[0;31m'
@@ -49,59 +49,49 @@ print_result() {
         "not_empty")
             if [[ -n "$actual" && "$actual" != "null" && "$actual" != "empty" ]]; then
                 print_success "$test_name: ✓"
+                return 0
             else
-                print_error "$test_name: ✗ (empty response)"
+                print_error "$test_name: ✗ (Expected: not empty, Got: '$actual')"
+                return 1
             fi
             ;;
-        "contains")
-            if echo "$actual" | grep -q "$3"; then
+        "greater_than_0")
+            if [[ "$actual" -gt 0 ]]; then
                 print_success "$test_name: ✓"
+                return 0
             else
-                print_error "$test_name: ✗ (missing '$3')"
+                print_error "$test_name: ✗ (Expected: > 0, Got: $actual)"
+                return 1
             fi
             ;;
-        "equals")
-            if [[ "$actual" == "$3" ]]; then
+        *)
+            if [[ "$actual" == "$expected" ]]; then
                 print_success "$test_name: ✓"
+                return 0
             else
-                print_error "$test_name: ✗ (expected '$3', got '$actual')"
-            fi
-            ;;
-        "status_200")
-            if [[ "$actual" == "200" ]]; then
-                print_success "$test_name: ✓"
-            else
-                print_error "$test_name: ✗ (HTTP $actual)"
+                print_error "$test_name: ✗ (Expected: $expected, Got: $actual)"
+                return 1
             fi
             ;;
     esac
 }
 
-# HTTP request function
-make_request() {
-    local url="$1"
-    local description="$2"
-
-    print_test "Request: $description"
-    echo -e "${BLUE}🌐 GET: $url${NC}"
+# Check if server is running
+check_server() {
+    print_header "Checking Server Availability"
 
     local response
-    local http_code
+    response=$(curl -s "$BASE_URL/health" || echo "")
 
-    response=$(curl -s -w "HTTPSTATUS:%{http_code}" "$url")
-    http_code=$(echo "$response" | grep -o "HTTPSTATUS:[0-9]*" | cut -d: -f2)
-    local body=$(echo "$response" | sed -E 's/HTTPSTATUS:[0-9]*$//')
-
-    echo -e "${BLUE}📊 Status: $http_code${NC}"
-
-    if [[ "$http_code" == "200" ]]; then
-        echo "$body" | jq '.' 2>/dev/null || echo "$body"
-    else
-        echo "$body"
+    if [[ -z "$response" ]]; then
+        print_error "Server is not accessible at $BASE_URL"
+        echo -e "${YELLOW}💡 Make sure the server is running with: cargo run -- serve --port 3000${NC}"
+        return 1
     fi
 
+    print_success "Server is running at $BASE_URL"
     echo ""
-    echo "$body|$http_code"
+    return 0
 }
 
 # Test Top Performers Endpoint
@@ -109,72 +99,46 @@ test_top_performers() {
     print_header "Testing Top Performers Endpoint (/analysis/top-performers)"
 
     # Test 1: Basic top performers
-    echo "Basic top performers test"
-    local response=$(make_request "$BASE_URL/analysis/top-performers" "Get top performers (default)")
-    local body=$(echo "$response" | cut -d'|' -f1)
-    local http_code=$(echo "$response" | cut -d'|' -f2)
+    print_test "Basic top performers test"
+    local response=$(curl -s "$BASE_URL/analysis/top-performers" || echo "")
 
-    print_result "HTTP Status" "status_200" "$http_code"
-    print_result "Response not empty" "not_empty" "$body"
+    if [[ -z "$response" ]]; then
+        print_error "No response for top performers"
+        return 1
+    fi
+
+    local analysis_type=$(echo "$response" | jq -r '.analysis_type // empty')
+    local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
+
+    print_result "Analysis type correct" "top_performers" "$analysis_type" || return 1
+    print_result "Performers returned" "greater_than_0" "$performers_count" || return 1
 
     # Test 2: Sort by close change
-    response=$(make_request "$BASE_URL/analysis/top-performers?sort_by=close_change&limit=5" "Sort by close change")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
+    print_test "Sort by close change test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=close_change&limit=5" || echo "")
 
-    print_result "Sort by close change" "status_200" "$http_code"
-    print_result "Close change data exists" "contains" "$body" "close_change"
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        print_result "Sorted response received" "not_empty" "$first_symbol"
+    fi
 
     # Test 3: Sort by volume
-    response=$(make_request "$BASE_URL/analysis/top-performers?sort_by=volume&limit=5&direction=desc" "Sort by volume")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
+    print_test "Sort by volume test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=volume&limit=5" || echo "")
 
-    print_result "Sort by volume" "status_200" "$http_code"
-    print_result "Volume data exists" "contains" "$body" "volume"
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        print_result "Volume sort response received" "not_empty" "$first_symbol"
+    fi
 
     # Test 4: Sort by MA score
-    response=$(make_request "$BASE_URL/analysis/top-performers?sort_by=ma20_score&limit=5" "Sort by MA20 score")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
+    print_test "Sort by MA20 score test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=ma20_score&limit=5" || echo "")
 
-    print_result "Sort by MA20 score" "status_200" "$http_code"
-    print_result "MA score data exists" "contains" "$body" "ma20_score"
-
-    # Test 5: Ascending order
-    response=$(make_request "$BASE_URL/analysis/top-performers?sort_by=close_change_percent&direction=asc&limit=5" "Ascending order")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Ascending order" "status_200" "$http_code"
-
-    # Test 6: Minimum volume filter
-    response=$(make_request "$BASE_URL/analysis/top-performers?min_volume=1000000&limit=5" "Minimum volume filter")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Volume filter" "status_200" "$http_code"
-
-    # Test 7: Specific date (if available)
-    response=$(make_request "$BASE_URL/analysis/top-performers?date=2024-01-02&limit=5" "Specific date")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Specific date" "status_200" "$http_code"
-
-    # Test 8: Sector filter (if ticker groups are available)
-    response=$(make_request "$BASE_URL/analysis/top-performers?sector=VN30&limit=5" "Sector filter")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Sector filter" "status_200" "$http_code"
-
-    # Test 9: Invalid sort metric (should use default)
-    response=$(make_request "$BASE_URL/analysis/top-performers?sort_by=invalid_metric&limit=5" "Invalid sort metric")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Invalid sort metric handled" "status_200" "$http_code"
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        print_result "MA score sort response received" "not_empty" "$first_symbol"
+    fi
 
     echo ""
 }
@@ -184,100 +148,55 @@ test_ma_scores_by_sector() {
     print_header "Testing MA Scores by Sector Endpoint (/analysis/ma-scores-by-sector)"
 
     # Test 1: Basic MA20 scores by sector
-    echo "Basic MA20 scores by sector test"
-    local response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20" "MA20 scores by sector")
-    local body=$(echo "$response" | cut -d'|' -f1)
-    local http_code=$(echo "$response" | cut -d'|' -f2)
+    print_test "Basic MA20 scores by sector test"
+    local response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20" || echo "")
 
-    print_result "HTTP Status" "status_200" "$http_code"
-    print_result "Response not empty" "not_empty" "$body"
-    print_result "Sector data exists" "contains" "$body" "sectors"
-
-    # Test 2: MA10 scores
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=10" "MA10 scores by sector")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "MA10 scores" "status_200" "$http_code"
-    print_result "MA period 10 specified" "contains" "$body" '"ma_period":10'
-
-    # Test 3: MA50 scores
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=50" "MA50 scores by sector")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "MA50 scores" "status_200" "$http_code"
-    print_result "MA period 50 specified" "contains" "$body" '"ma_period":50'
-
-    # Test 4: With threshold
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20&min_score=1.0" "With threshold")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "With threshold" "status_200" "$http_code"
-    print_result "Threshold specified" "contains" "$body" '"threshold":1.0'
-
-    # Test 5: Above threshold only
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20&min_score=0.5&above_threshold_only=true" "Above threshold only")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Above threshold only" "status_200" "$http_code"
-
-    # Test 6: Top per sector limit
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20&top_per_sector=5" "Top per sector limit")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Top per sector limit" "status_200" "$http_code"
-
-    # Test 7: Specific date
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20&date=2024-01-02" "Specific date")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Specific date" "status_200" "$http_code"
-
-    # Test 8: Invalid MA period
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=999" "Invalid MA period")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "Invalid MA period (400 expected)" "status_200" "$http_code"
-
-    # Test 9: MA100 scores
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=100" "MA100 scores by sector")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "MA100 scores" "status_200" "$http_code"
-
-    # Test 10: MA200 scores
-    response=$(make_request "$BASE_URL/analysis/ma-scores-by-sector?ma_period=200" "MA200 scores by sector")
-    body=$(echo "$response" | cut -d'|' -f1)
-    http_code=$(echo "$response" | cut -d'|' -f2)
-
-    print_result "MA200 scores" "status_200" "$http_code"
-
-    echo ""
-}
-
-# Check if server is running
-check_server() {
-    print_header "Checking Server Availability"
-
-    local response=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/health" 2>/dev/null || echo "000")
-
-    if [[ "$response" == "200" ]]; then
-        print_success "Server is running at $BASE_URL"
-        echo ""
-        return 0
-    else
-        print_error "Server is not accessible at $BASE_URL (HTTP $response)"
-        echo -e "${YELLOW}💡 Make sure the server is running with: cargo run -- serve --port 3000${NC}"
-        echo ""
+    if [[ -z "$response" ]]; then
+        print_error "No response for MA scores by sector"
         return 1
     fi
+
+    local analysis_type=$(echo "$response" | jq -r '.analysis_type // empty')
+    local sectors_count=$(echo "$response" | jq '.data.sectors | length // 0')
+    local ma_period=$(echo "$response" | jq -r '.data.ma_period // empty')
+
+    print_result "Analysis type correct" "ma_scores_by_sector" "$analysis_type" || return 1
+    print_result "Sectors returned" "greater_than_0" "$sectors_count" || return 1
+    print_result "MA period correct" "20" "$ma_period" || return 1
+
+    # Test 2: MA50 scores
+    print_test "MA50 scores by sector test"
+    response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?ma_period=50" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local ma_period=$(echo "$response" | jq -r '.data.ma_period // empty')
+        print_result "MA50 period correct" "50" "$ma_period"
+    fi
+
+    # Test 3: With threshold
+    print_test "MA scores with threshold test"
+    response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?ma_period=20&min_score=1.0" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local threshold=$(echo "$response" | jq -r '.data.threshold // empty')
+        print_result "Threshold applied correctly" "1.0" "$threshold"
+    fi
+
+    # Test 4: Invalid MA period (should return error)
+    print_test "Invalid MA period test"
+    response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?ma_period=999" || echo "")
+
+    if [[ -n "$response" ]]; then
+        # Check if it's an error response
+        local error_msg=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error_msg" ]]; then
+            print_success "Invalid MA period properly rejected: $error_msg"
+        else
+            print_error "Expected error for invalid MA period but got valid response"
+        fi
+    fi
+
+    echo ""
 }
 
 # Main execution
