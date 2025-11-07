@@ -277,11 +277,15 @@ impl DataStore {
                 stock_data.ma10 = record.get(csv_column::MA10).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.ma20 = record.get(csv_column::MA20).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.ma50 = record.get(csv_column::MA50).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma100 = record.get(csv_column::MA100).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma200 = record.get(csv_column::MA200).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
 
                 // Parse MA scores
                 stock_data.ma10_score = record.get(csv_column::MA10_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.ma20_score = record.get(csv_column::MA20_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.ma50_score = record.get(csv_column::MA50_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma100_score = record.get(csv_column::MA100_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+                stock_data.ma200_score = record.get(csv_column::MA200_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
 
                 // Parse change indicators (percentage change from previous row)
                 stock_data.close_changed = record.get(csv_column::CLOSE_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });

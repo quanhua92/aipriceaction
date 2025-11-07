@@ -99,14 +99,9 @@ impl DataSync {
         let interval_start_time = Instant::now();
 
         // Categorize tickers (resume vs full history)
-        let categorize_start = Instant::now();
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
-        // println!("⏱️  Categorization took: {:.2}s", categorize_start.elapsed().as_secs_f64());
-
-        let batch_size = self.config.get_batch_size(interval);
 
         // Batch fetch resume tickers using adaptive date
-        let batch_start = Instant::now();
         let resume_results = if !category.resume_tickers.is_empty() {
             let resume_ticker_names = category.get_resume_ticker_names();
 
@@ -168,7 +163,6 @@ impl DataSync {
         }
 
         // Fetch full history tickers individually (single-ticker API for complete data)
-        let full_history_start = Instant::now();
         let mut full_history_results = HashMap::new();
 
         if !category.full_history_tickers.is_empty() {
@@ -210,9 +204,6 @@ impl DataSync {
         batch_results.extend(full_history_results);
 
         // Process each ticker with fallback strategy
-        // println!("\n🔄 Processing individual tickers with fallback strategy...");
-        let processing_start = Instant::now();
-
         let total_tickers = tickers.len();
 
         for (i, ticker) in tickers.iter().enumerate() {
@@ -241,9 +232,7 @@ impl DataSync {
                     // }
 
                     // Enhance and save to CSV (single write)
-                    let save_start = Instant::now();
                     self.enhance_and_save_ticker_data(ticker, &data, interval)?;
-                    let save_elapsed = save_start.elapsed();
 
                     self.stats.successful += 1;
                     self.stats.files_written += 1;
@@ -752,7 +741,7 @@ impl DataSync {
     }
 
     /// Print final summary
-    fn print_final_summary(&self, total_time: std::time::Duration) {
+    fn print_final_summary(&self, _total_time: std::time::Duration) {
         // println!("\n{}", "=".repeat(70));
         // println!("🎉 SYNC COMPLETE!");
         // println!("{}", "=".repeat(70));

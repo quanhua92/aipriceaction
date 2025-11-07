@@ -283,8 +283,8 @@ test_indicators_completeness() {
     local data=$(echo "$response" | jq ".$ticker[0] // {}")
     local has_all_indicators=true
 
-    # Check for key indicators
-    local indicators=("ma10" "ma20" "ma50" "ma10_score" "ma20_score" "ma50_score" "money_flow" "dollar_flow" "trend_score")
+    # Check for current v0.3.0 indicators (12 technical indicators)
+    local indicators=("ma10" "ma20" "ma50" "ma100" "ma200" "ma10_score" "ma20_score" "ma50_score" "ma100_score" "ma200_score" "close_changed" "volume_changed")
     local present_count=0
 
     for indicator in "${indicators[@]}"; do
@@ -294,14 +294,14 @@ test_indicators_completeness() {
         fi
     done
 
-    print_success "Indicators present: $present_count/9"
+    print_success "Indicators present: $present_count/12"
 
-    # At least some indicators should be present (allowing for edge cases)
-    if [[ $present_count -ge 3 ]]; then
+    # At least 10 indicators should be present (allowing for edge cases where MA100/200 need more data)
+    if [[ $present_count -ge 10 ]]; then
         print_success "Sufficient indicators available"
         return 0
     else
-        print_error "Insufficient indicators ($present_count/9)"
+        print_error "Insufficient indicators ($present_count/12, expected at least 10)"
         return 1
     fi
 }
