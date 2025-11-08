@@ -134,9 +134,11 @@ pub async fn ma_scores_by_sector_handler(
                 continue;
             }
 
-            // Find analysis date and latest record
-            let _analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
-            let current_record = super::find_latest_record(&stock_data);
+            // Find analysis date and record on or before that date
+            let analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
+            let current_record = stock_data.iter()
+                .filter(|d| d.time <= analysis_date)
+                .max_by_key(|d| d.time);
 
             if let Some(current) = current_record {
                 // Get the MA value and score based on the requested period
