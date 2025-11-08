@@ -9,7 +9,9 @@ on:
         default: 'latest'
         type: string
   push:
-    tags: [ '*.*.*' ]
+    tags:
+      - 'v*.*.*'  # Match v0.1.0, v1.0.0, etc.
+      - '*.*.*'   # Also match 0.1.0 without v prefix
 
 env:
   REGISTRY: docker.io
@@ -49,7 +51,7 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=raw,value=latest,enable={{is_default_branch}}
-          type=sha,prefix={{branch}}-,format=short
+          type=sha,prefix=,format=short,enable={{is_default_branch}}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
