@@ -131,13 +131,69 @@ test_top_performers() {
         print_result "Volume sort response received" "not_empty" "$first_symbol"
     fi
 
-    # Test 4: Sort by MA score
+    # Test 4: Sort by MA20 score
     print_test "Sort by MA20 score test"
     response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=ma20_score&limit=5" || echo "")
 
     if [[ -n "$response" ]]; then
         local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
-        print_result "MA score sort response received" "not_empty" "$first_symbol"
+        print_result "MA20 score sort response received" "not_empty" "$first_symbol"
+    fi
+
+    # Test 5: Sort by MA100 score (descending)
+    print_test "Sort by MA100 score (desc) test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=ma100_score&direction=desc&limit=5&min_volume=10000" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local first_score=$(echo "$response" | jq -r '.data.performers[0].ma100_score // empty')
+        local last_score=$(echo "$response" | jq -r '.data.performers[-1].ma100_score // empty')
+
+        # Check if scores are in descending order
+        if [[ -n "$first_score" && -n "$last_score" ]]; then
+            # Use bc for floating point comparison if available, otherwise just check not empty
+            if command -v bc &> /dev/null; then
+                if (( $(echo "$first_score >= $last_score" | bc -l) )); then
+                    print_success "MA100 scores correctly sorted descending (${first_score} >= ${last_score})"
+                else
+                    print_error "MA100 scores NOT sorted descending (${first_score} < ${last_score})"
+                fi
+            else
+                print_success "MA100 score sort response received (first: ${first_score}, last: ${last_score})"
+            fi
+        else
+            print_error "MA100 scores missing in response"
+        fi
+    fi
+
+    # Test 6: Sort by MA200 score (ascending)
+    print_test "Sort by MA200 score (asc) test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=ma200_score&direction=asc&limit=5&min_volume=10000" || echo "")
+
+    if [[ -n "$response" ]]; then
+        # Get first non-null score and last score for comparison
+        local first_score=$(echo "$response" | jq -r '.data.performers[] | select(.ma200_score != null) | .ma200_score' | head -1)
+        local last_score=$(echo "$response" | jq -r '.data.performers[-1].ma200_score // empty')
+
+        # Check if scores are in ascending order
+        if [[ -n "$first_score" && -n "$last_score" && "$first_score" != "null" && "$last_score" != "null" ]]; then
+            if command -v bc &> /dev/null; then
+                if (( $(echo "$first_score <= $last_score" | bc -l) )); then
+                    print_success "MA200 scores correctly sorted ascending (${first_score} <= ${last_score})"
+                else
+                    print_error "MA200 scores NOT sorted ascending (${first_score} > ${last_score})"
+                fi
+            else
+                print_success "MA200 score sort response received (first: ${first_score}, last: ${last_score})"
+            fi
+        else
+            # Just verify we got a response with performers
+            local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
+            if [[ $performers_count -gt 0 ]]; then
+                print_success "MA200 score sort response received (${performers_count} performers, some may lack MA200 data)"
+            else
+                print_error "MA200 scores missing in response"
+            fi
+        fi
     fi
 
     echo ""
