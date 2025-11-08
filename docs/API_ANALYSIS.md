@@ -150,10 +150,12 @@ Provides moving average analysis grouped by stock sectors, showing sector perfor
         "top_stocks": [
           {
             "symbol": "VCB",
-            "current_price": 60300.0,
+            "close": 60300.0,
+            "volume": 1234567,
             "ma_value": 58800.0,
             "ma_score": 2.55,
-            "price_vs_ma_percent": 2.55
+            "close_changed": 1.25,
+            "volume_changed": 15.5
           }
         ]
       }
@@ -171,10 +173,12 @@ Provides moving average analysis grouped by stock sectors, showing sector perfor
 - `stocks_above_threshold`: Stocks meeting the minimum score requirement
 - `average_score`: Average MA score across all stocks in sector
 - `top_stocks`: Top performing stocks in this sector (sorted by score)
-- `current_price`: Current closing price in full VND
+- `close`: Current closing price in full VND
+- `volume`: Trading volume
 - `ma_value`: Moving average value for the specified period
-- `ma_score`: Moving average momentum score
-- `price_vs_ma_percent`: Percentage difference between price and MA
+- `ma_score`: Moving average momentum score (percentage distance from MA)
+- `close_changed`: Percentage change from previous close
+- `volume_changed`: Percentage change from previous volume
 
 #### MA Score Interpretation
 
