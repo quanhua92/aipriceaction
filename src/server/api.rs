@@ -1,6 +1,6 @@
 use crate::constants::INDEX_TICKERS;
-use crate::models::Interval;
-use crate::services::{SharedDataStore, SharedHealthStats};
+use crate::models::{AggregatedInterval, Interval};
+use crate::services::{Aggregator, SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
 use axum::{
     extract::{State, Json},
@@ -108,18 +108,28 @@ pub async fn get_tickers_handler(
     debug!("Received request for tickers with params: {:?}", params);
 
     // Parse interval (default to daily)
-    let interval = match params.interval.as_deref() {
-        Some("1D") | Some("daily") | None => Interval::Daily,
-        Some("1H") | Some("hourly") => Interval::Hourly,
-        Some("1m") | Some("minute") => Interval::Minute,
-        Some(other) => {
-            warn!(interval = %other, "Invalid interval parameter");
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": "Invalid interval. Valid values: 1D, 1H, 1m (or daily, hourly, minute)"
-                }))
-            ).into_response();
+    // First check if it's an aggregated interval (5m, 15m, 30m, 1W, 2W, 1M)
+    let aggregated_interval = params.interval.as_deref()
+        .and_then(|s| AggregatedInterval::from_str(s));
+
+    let interval = if let Some(agg) = aggregated_interval {
+        // Use the base interval for aggregated intervals
+        agg.base_interval()
+    } else {
+        // Parse regular intervals
+        match params.interval.as_deref() {
+            Some("1D") | Some("daily") | None => Interval::Daily,
+            Some("1H") | Some("hourly") => Interval::Hourly,
+            Some("1m") | Some("minute") => Interval::Minute,
+            Some(other) => {
+                warn!(interval = %other, "Invalid interval parameter");
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Invalid interval. Valid values: 1D, 1H, 1m, 5m, 15m, 30m, 1W, 2W, 1M (or daily, hourly, minute)"
+                    }))
+                ).into_response();
+            }
         }
     };
 
@@ -215,6 +225,30 @@ pub async fn get_tickers_handler(
         end_date_filter,
         params.cache
     ).await;
+
+    // Apply aggregation if needed
+    if let Some(agg_interval) = aggregated_interval {
+        debug!("Aggregating data to {}", agg_interval);
+        result_data = result_data
+            .into_iter()
+            .map(|(ticker, records)| {
+                let aggregated = match agg_interval {
+                    AggregatedInterval::Minutes5
+                    | AggregatedInterval::Minutes15
+                    | AggregatedInterval::Minutes30 => {
+                        Aggregator::aggregate_minute_data(records, agg_interval)
+                    }
+                    AggregatedInterval::Week
+                    | AggregatedInterval::Week2
+                    | AggregatedInterval::Month => {
+                        Aggregator::aggregate_daily_data(records, agg_interval)
+                    }
+                };
+                (ticker, aggregated)
+            })
+            .collect();
+        info!("Applied {} aggregation", agg_interval);
+    }
 
     // Apply limit if provided and start_date is not specified
     // Limit works with end_date to get N rows back in history

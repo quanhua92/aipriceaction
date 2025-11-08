@@ -1,3 +1,4 @@
+pub mod aggregator;
 mod csv_parser;
 mod importer;
 pub mod market_stats;
@@ -9,6 +10,7 @@ pub mod csv_validator;
 pub mod data_store;
 pub mod trading_hours;
 
+pub use aggregator::Aggregator;
 pub use importer::import_legacy;
 pub use market_stats::{get_market_stats, get_ticker_info, is_index, MarketStats, TickerInfo, TimeframeInfo};
 pub use vci::{VciClient, VciError, OhlcvData, CompanyInfo};

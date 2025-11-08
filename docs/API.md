@@ -48,7 +48,7 @@ Query stock data with optional filters.
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `symbol` | string[] | No | All tickers | Ticker symbols to query. Can be repeated: `symbol=VCB&symbol=FPT` |
-| `interval` | string | No | `1D` | Time interval: `1D` (daily), `1H` (hourly), `1m` (minute) |
+| `interval` | string | No | `1D` | Time interval: **Base intervals:** `1D` (daily), `1H` (hourly), `1m` (minute). **Aggregated intervals:** `5m`, `15m`, `30m` (minute aggregations), `1W` (weekly), `2W` (bi-weekly), `1M` (monthly) |
 | `start_date` | string | No | Yesterday | Start date filter (YYYY-MM-DD format) |
 | `end_date` | string | No | Today | End date filter (YYYY-MM-DD format) |
 | `limit` | number | No | None | Limit number of records to return (works with `end_date` to get N rows back in history). Ignored if `start_date` is provided |
@@ -100,8 +100,39 @@ Query stock data with optional filters.
 | `1D` (daily) | `YYYY-MM-DD` | `2025-11-05` |
 | `1H` (hourly) | `YYYY-MM-DD HH:MM:SS` | `2025-11-05 09:30:00` |
 | `1m` (minute) | `YYYY-MM-DD HH:MM:SS` | `2025-11-05 09:30:00` |
+| `5m` (5-minute) | `YYYY-MM-DD HH:MM:SS` | `2025-11-05 09:30:00` |
+| `15m` (15-minute) | `YYYY-MM-DD HH:MM:SS` | `2025-11-05 09:30:00` |
+| `30m` (30-minute) | `YYYY-MM-DD HH:MM:SS` | `2025-11-05 09:30:00` |
+| `1W` (weekly) | `YYYY-MM-DD` | `2025-11-04` (Monday) |
+| `2W` (bi-weekly) | `YYYY-MM-DD` | `2025-11-04` (Monday) |
+| `1M` (monthly) | `YYYY-MM-DD` | `2025-11-01` (1st day) |
 
 **Note:** All times are in UTC timezone.
+
+#### Aggregated Intervals
+
+Aggregated intervals provide OHLCV data computed from base intervals:
+
+**Minute-based aggregations** (computed from 1m data):
+- `5m`: 5-minute candles (5 × 1m records per candle)
+- `15m`: 15-minute candles (15 × 1m records per candle)
+- `30m`: 30-minute candles (30 × 1m records per candle)
+
+**Day-based aggregations** (computed from 1D data):
+- `1W`: Weekly candles (Monday to Sunday, ~5-7 trading days)
+- `2W`: Bi-weekly candles (even/odd week grouping)
+- `1M`: Monthly candles (calendar month boundaries)
+
+**Aggregation logic:**
+- **Time**: Bucket start time (5m/15m/30m boundaries, Monday for weeks, 1st for months)
+- **Open**: First record's open price in the bucket
+- **High**: Maximum high across all records
+- **Low**: Minimum low across all records
+- **Close**: Last record's close price in the bucket
+- **Volume**: Sum of volumes across all records
+- **MA indicators**: Last record's values (end-of-period state)
+- **MA scores**: Last record's values
+- **close_changed / volume_changed**: Set to `null` (not applicable for aggregated data)
 
 #### Legacy Price Format
 
@@ -151,6 +182,21 @@ curl "http://localhost:3000/tickers?symbol=VCB&end_date=2024-06-15&limit=5"
 **Get last 10 trading days (using limit with today's date):**
 ```bash
 curl "http://localhost:3000/tickers?symbol=VCB&limit=10"
+```
+
+**Get 5-minute candles:**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&interval=5m&limit=20"
+```
+
+**Get weekly candles (last 10 weeks):**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1W&limit=10"
+```
+
+**Get monthly candles for 2024:**
+```bash
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1M&start_date=2024-01-01&end_date=2024-12-31"
 ```
 
 **Get data in legacy price format:**
@@ -465,7 +511,7 @@ Invalid query parameters.
 
 ```json
 {
-  "error": "Invalid interval. Valid values: 1D, 1H, 1m (or daily, hourly, minute)"
+  "error": "Invalid interval. Valid values: 1D, 1H, 1m, 5m, 15m, 30m, 1W, 2W, 1M (or daily, hourly, minute)"
 }
 ```
 

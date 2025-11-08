@@ -6,9 +6,18 @@
 // ===== Enums =====
 
 export enum Interval {
+  // Base intervals
   Daily = "1D",
   Hourly = "1H",
   Minute = "1m",
+  // Aggregated intervals (minute-based, computed from 1m)
+  Minutes5 = "5m",
+  Minutes15 = "15m",
+  Minutes30 = "30m",
+  // Aggregated intervals (day-based, computed from 1D)
+  Weekly = "1W",
+  BiWeekly = "2W",
+  Monthly = "1M",
 }
 
 export enum ResponseFormat {

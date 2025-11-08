@@ -15,6 +15,7 @@
 //!
 //! **Rule**: Only multiply by 1000 for stock tickers, NOT for indices.
 
+mod aggregated_interval;
 mod ohlcv;
 mod stock_data;
 mod timeframe;
@@ -22,6 +23,7 @@ mod ticker_group;
 pub mod indicators;
 pub mod sync_config;
 
+pub use aggregated_interval::AggregatedInterval;
 pub use ohlcv::Ohlcv;
 pub use stock_data::StockData;
 pub use ticker_group::TickerGroups;
