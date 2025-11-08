@@ -52,12 +52,106 @@ cargo build --release
 ```
 
 ### Testing
-```bash
-# Run integration tests (requires server running on localhost:3000)
-./scripts/test-integration.sh
 
-# Run integration tests against custom URL
+Complete test flow covering all aspects of the system:
+
+#### Quick Test Flow (Recommended)
+```bash
+# 1. Start server
+./target/release/aipriceaction serve --port 3000
+
+# 2. Run all tests (in another terminal)
+./scripts/test-integration.sh    # 13 integration tests
+./scripts/test-analysis.sh        # 10 analysis API tests
+./scripts/test-aggregated.sh      # 27 aggregated interval tests
+
+# 3. Run all SDK examples
+cd sdk/aipriceaction-js
+pnpx tsx examples/01-basic-tickers.ts
+pnpx tsx examples/02-health-check.ts
+pnpx tsx examples/03-ticker-groups.ts
+pnpx tsx examples/04-top-performers.ts
+pnpx tsx examples/05-ma-scores-by-sector.ts
+pnpx tsx examples/06-csv-export.ts
+pnpx tsx examples/07-error-handling.ts
+pnpx tsx examples/08-batch-requests.ts
+pnpx tsx examples/09-analysis-dashboard.ts
+pnpx tsx examples/10-aggregated-intervals.ts
+```
+
+#### One-Liner Test All SDK Examples
+```bash
+cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" && pnpx tsx "$file" || exit 1; done
+```
+
+#### Test Details
+
+**Integration Tests** (`./scripts/test-integration.sh`):
+- ✅ Server health check
+- ✅ Basic tickers API (cache=true/false)
+- ✅ Multiple tickers API
+- ✅ Ticker groups API
+- ✅ Cache behavior
+- ✅ Error handling (invalid ticker, invalid date)
+- ✅ Raw GitHub proxy (legacy endpoint)
+- ✅ Indicators completeness (VCB, VIC)
+- ✅ CSV export performance (1D, 1m single/multiple)
+- ✅ Limit parameter behavior
+- ✅ Historical data range (2023-2024)
+- **Total: 13 tests**
+
+**Analysis API Tests** (`./scripts/test-analysis.sh`):
+- ✅ Top performers endpoint (basic, sort by close/volume/MA scores)
+- ✅ MA scores by sector (basic, MA50, threshold, invalid period)
+- ✅ Response format validation
+- ✅ Sorting validation (descending/ascending)
+- **Total: 10 tests**
+
+**Aggregated Intervals Tests** (`./scripts/test-aggregated.sh`):
+- ✅ 5m, 15m, 30m interval aggregation
+- ✅ 1W, 2W, 1M interval aggregation
+- ✅ Multiple tickers aggregation
+- ✅ Date range filtering
+- ✅ Limit parameter
+- ✅ CSV export for aggregated data
+- **Total: 27 tests**
+
+**SDK Examples** (10 TypeScript examples):
+1. `01-basic-tickers.ts` - Single/multiple tickers, historical data, hourly data
+2. `02-health-check.ts` - Server status, memory, disk cache, worker stats
+3. `03-ticker-groups.ts` - Sector groups, sector data fetching
+4. `04-top-performers.ts` - Top/bottom performers, volume leaders, MA momentum
+5. `05-ma-scores-by-sector.ts` - Sector analysis, MA periods, thresholds
+6. `06-csv-export.ts` - CSV format export, legacy format, parsing
+7. `07-error-handling.ts` - Validation errors, network errors, graceful handling
+8. `08-batch-requests.ts` - Parallel requests, concurrency control, caching
+9. `09-analysis-dashboard.ts` - Complete market analysis workflow
+10. `10-aggregated-intervals.ts` - Aggregated intervals (5m, 15m, 30m, 1W, 2W, 1M)
+
+#### Custom Test URLs
+```bash
+# Test against different server URL
 ./scripts/test-integration.sh http://localhost:3001
+./scripts/test-analysis.sh http://api.aipriceaction.com
+./scripts/test-aggregated.sh https://api.aipriceaction.com
+```
+
+#### Expected Results
+- **Integration**: 13/13 tests passed
+- **Analysis**: 10/10 tests passed
+- **Aggregated**: 27/27 tests passed
+- **SDK Examples**: All 10 examples run successfully without errors
+
+#### Troubleshooting Tests
+```bash
+# If tests fail due to server not running
+./target/release/aipriceaction serve --port 3000
+
+# If SDK examples fail, rebuild the SDK
+cd sdk/aipriceaction-js && pnpm build
+
+# If CSV format errors occur
+cargo run -- doctor
 ```
 
 ### Docker
