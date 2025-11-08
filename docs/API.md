@@ -132,7 +132,10 @@ Aggregated intervals provide OHLCV data computed from base intervals:
 - **Volume**: Sum of volumes across all records
 - **MA indicators**: Last record's values (end-of-period state)
 - **MA scores**: Last record's values
-- **close_changed / volume_changed**: Set to `null` (not applicable for aggregated data)
+- **close_changed / volume_changed**: Calculated between consecutive aggregated candles
+  - Formula: `((current - previous) / previous) * 100`
+  - First record: `null` (no previous candle to compare)
+  - Example: 5m candle at 07:15 compared to 5m candle at 07:10
 
 #### Legacy Price Format
 

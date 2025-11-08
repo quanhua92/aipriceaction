@@ -36,7 +36,7 @@ async function main() {
       console.log(`     Low: ${first.low.toLocaleString()}, Close: ${first.close.toLocaleString()}`);
       console.log(`     Volume: ${first.volume.toLocaleString()}`);
       console.log(`     MA20: ${first.ma20?.toFixed(2) || "N/A"}`);
-      console.log(`   Note: close_changed and volume_changed are null for aggregated data`);
+      console.log(`     close_changed: ${first.close_changed?.toFixed(2) || "null"}, volume_changed: ${first.volume_changed?.toFixed(2) || "null"}`);
     }
     console.log();
 
@@ -178,7 +178,8 @@ async function main() {
     console.log("   • Day aggregations (1W, 2W, 1M) are computed from 1D base data");
     console.log("   • OHLCV: open=first, high=max, low=min, close=last, volume=sum");
     console.log("   • MA indicators: taken from last record (end-of-period state)");
-    console.log("   • close_changed and volume_changed: set to null (not applicable)");
+    console.log("   • close_changed and volume_changed: calculated between consecutive candles");
+    console.log("   • First candle: change indicators are null (no previous candle)");
     console.log("   • Weekly candles start on Monday (ISO 8601)");
     console.log("   • Monthly candles start on 1st day of month");
   } catch (error) {
