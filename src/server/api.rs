@@ -244,10 +244,12 @@ pub async fn get_tickers_handler(
                         Aggregator::aggregate_daily_data(records, agg_interval)
                     }
                 };
-                (ticker, aggregated)
+                // Calculate close_changed and volume_changed for aggregated data
+                let with_changes = Aggregator::calculate_changes(aggregated);
+                (ticker, with_changes)
             })
             .collect();
-        info!("Applied {} aggregation", agg_interval);
+        info!("Applied {} aggregation with change indicators", agg_interval);
     }
 
     // Apply limit if provided and start_date is not specified

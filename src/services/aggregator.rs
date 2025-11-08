@@ -258,10 +258,46 @@ impl Aggregator {
             ma50_score: last.ma50_score,
             ma100_score: last.ma100_score,
             ma200_score: last.ma200_score,
-            // Change indicators not applicable for aggregated data
+            // Change indicators will be calculated after aggregation
             close_changed: None,
             volume_changed: None,
         }
+    }
+
+    /// Calculate close_changed and volume_changed for aggregated data
+    ///
+    /// Computes percentage changes between consecutive aggregated records:
+    /// - close_changed = ((curr_close - prev_close) / prev_close) * 100
+    /// - volume_changed = ((curr_volume - prev_volume) / prev_volume) * 100
+    ///
+    /// # Arguments
+    /// * `data` - Vector of aggregated stock data (must be sorted by time)
+    ///
+    /// # Returns
+    /// Same vector with close_changed and volume_changed calculated
+    ///
+    /// # Note
+    /// - First record keeps None (no previous record)
+    /// - Division by zero returns None
+    pub fn calculate_changes(mut data: Vec<StockData>) -> Vec<StockData> {
+        // Calculate changes for records starting from index 1
+        for i in 1..data.len() {
+            let prev_close = data[i - 1].close;
+            let prev_volume = data[i - 1].volume;
+            let curr = &mut data[i];
+
+            // Close changed: ((curr - prev) / prev) * 100
+            if prev_close > 0.0 {
+                curr.close_changed = Some(((curr.close - prev_close) / prev_close) * 100.0);
+            }
+
+            // Volume changed: ((curr - prev) / prev) * 100
+            if prev_volume > 0 {
+                curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
+            }
+        }
+
+        data
     }
 }
 

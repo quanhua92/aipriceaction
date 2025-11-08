@@ -54,8 +54,11 @@ test_aggregation_details() {
 
     echo -e "${BLUE}Testing $interval ($description)${NC}"
 
-    # Fetch data
-    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=$interval&limit=5")
+    # Fetch data (no limit to get the true first record)
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=$interval")
+
+    # Also fetch limited data for display
+    response_limited=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=$interval&limit=5")
 
     # Check if we got data (API returns {"VCB": [...]} format)
     if ! echo "$response" | jq -e '.VCB | length > 0' >/dev/null 2>&1; then
@@ -90,15 +93,28 @@ test_aggregation_details() {
         ((test_failed++))
     fi
 
-    # Verify close_changed and volume_changed are null for aggregated data
-    close_changed=$(echo "$first_record" | jq '.close_changed')
-    volume_changed=$(echo "$first_record" | jq '.volume_changed')
+    # Verify change indicators: first record should be null, others should have numeric values
+    first_close_changed=$(echo "$response" | jq '.VCB[0].close_changed')
+    first_volume_changed=$(echo "$response" | jq '.VCB[0].volume_changed')
+    second_close_changed=$(echo "$response" | jq '.VCB[1].close_changed')
+    second_volume_changed=$(echo "$response" | jq '.VCB[1].volume_changed')
 
-    if [ "$close_changed" = "null" ] && [ "$volume_changed" = "null" ]; then
-        echo -e "${GREEN}✓ Change indicators correctly set to null${NC}"
+    # First record should have null change indicators (no previous record)
+    if [ "$first_close_changed" = "null" ] && [ "$first_volume_changed" = "null" ]; then
+        echo -e "${GREEN}✓ First record change indicators correctly null${NC}"
         ((test_passed++))
     else
-        echo -e "${RED}✗ Change indicators should be null (got close_changed=$close_changed, volume_changed=$volume_changed)${NC}"
+        echo -e "${RED}✗ First record should have null changes (got close_changed=$first_close_changed, volume_changed=$first_volume_changed)${NC}"
+        ((test_failed++))
+    fi
+
+    # Second record should have numeric change indicators
+    if [ "$second_close_changed" != "null" ] && [ "$second_volume_changed" != "null" ]; then
+        echo -e "${GREEN}✓ Subsequent records have change indicators${NC}"
+        ((test_passed++))
+        echo "  → Record 2 changes: close_changed=$second_close_changed%, volume_changed=$second_volume_changed%"
+    else
+        echo -e "${RED}✗ Subsequent records should have numeric changes (got close_changed=$second_close_changed, volume_changed=$second_volume_changed)${NC}"
         ((test_failed++))
     fi
 
