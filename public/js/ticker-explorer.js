@@ -4,22 +4,37 @@ function getFormValues() {
     symbol: document.getElementById('symbol').value,
     interval: document.getElementById('interval').value,
     start_date: document.getElementById('start_date').value,
+    end_date: document.getElementById('end_date').value,
+    limit: document.getElementById('limit').value,
     format: document.getElementById('format').value
   };
 }
 
 // Build ticker API URL from form
 function buildTickerUrl() {
-  const { symbol, interval, start_date, format } = getFormValues();
+  const { symbol, interval, start_date, end_date, limit, format } = getFormValues();
 
-  const params = {
-    symbol,
-    interval,
-    format
-  };
+  const params = {};
 
+  // Always add symbol, interval, and format
+  if (symbol) params.symbol = symbol;
+  if (interval) params.interval = interval;
+  if (format) params.format = format;
+
+  // Add start_date if provided
   if (start_date) {
     params.start_date = start_date;
+  }
+
+  // Add end_date if provided
+  if (end_date) {
+    params.end_date = end_date;
+  }
+
+  // Add limit if provided and start_date is not provided
+  // (limit is ignored when start_date is present per API spec)
+  if (limit && !start_date) {
+    params.limit = limit;
   }
 
   return buildApiUrl('/tickers', params);
@@ -94,12 +109,14 @@ async function fetchTicker() {
   }
 }
 
-// Quick fetch with preset values
+// Quick fetch with preset values (backward compatible)
 function quickFetch(symbol, interval, startDate) {
   document.getElementById('symbol').value = symbol;
   document.getElementById('interval').value = interval;
-  document.getElementById('start_date').value = startDate;
-  document.getElementById('format').value = 'json';
+  document.getElementById('start_date').value = startDate || '';
+  document.getElementById('end_date').value = '';
+  document.getElementById('limit').value = '';
+  document.getElementById('format').value = 'csv';
 
   fetchTicker();
 
@@ -110,4 +127,29 @@ function quickFetch(symbol, interval, startDate) {
       block: 'nearest'
     });
   }, 100);
+}
+
+// Quick fetch with all parameters (new function)
+function quickFetchWithParams(symbol, interval, startDate, endDate, limit) {
+  document.getElementById('symbol').value = symbol;
+  document.getElementById('interval').value = interval;
+  document.getElementById('start_date').value = startDate || '';
+  document.getElementById('end_date').value = endDate || '';
+  document.getElementById('limit').value = limit || '';
+  document.getElementById('format').value = 'csv';
+
+  fetchTicker();
+
+  // Scroll to results
+  setTimeout(() => {
+    document.getElementById('ticker-result').scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
+    });
+  }, 100);
+}
+
+// Clear date field
+function clearDate(fieldId) {
+  document.getElementById(fieldId).value = '';
 }

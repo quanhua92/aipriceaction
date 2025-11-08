@@ -5,7 +5,10 @@ const API_BASE = window.location.origin;
 function buildApiUrl(endpoint, params = {}) {
   const url = new URL(endpoint, API_BASE);
   Object.entries(params).forEach(([key, value]) => {
-    if (value) url.searchParams.append(key, value);
+    // Only skip null, undefined, and empty strings
+    if (value !== null && value !== undefined && value !== '') {
+      url.searchParams.append(key, value);
+    }
   });
   return url.toString();
 }
