@@ -58,7 +58,7 @@ async function main() {
       bankingSector.top_stocks.slice(0, 5).forEach((stock, index) => {
         console.log(
           `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
-            `${stock.current_price.toLocaleString().padStart(10)} VND  ` +
+            `${stock.close.toLocaleString().padStart(10)} VND  ` +
             `MA20: ${stock.ma_value.toLocaleString().padStart(10)}  ` +
             `Score: ${stock.ma_score >= 0 ? "+" : ""}${stock.ma_score.toFixed(2)}%`
         );

@@ -109,7 +109,7 @@ async function main() {
       sector.top_stocks.slice(0, 3).forEach((stock) => {
         console.log(
           `   • ${stock.symbol.padEnd(6)} ${stock.ma_score >= 0 ? "+" : ""}${stock.ma_score.toFixed(2)}%  ` +
-            `${stock.current_price.toLocaleString().padStart(10)} VND`
+            `${stock.close.toLocaleString().padStart(10)} VND`
         );
       });
     });

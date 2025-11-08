@@ -125,10 +125,12 @@ export interface PerformerData {
  */
 export interface MAStockScore {
   symbol: string;
-  current_price: number;
+  close: number;
+  volume: number;
   ma_value: number;
   ma_score: number;
-  price_vs_ma_percent: number;
+  close_changed?: number | null;
+  volume_changed?: number | null;
 }
 
 /**
