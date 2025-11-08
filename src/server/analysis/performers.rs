@@ -14,7 +14,6 @@ use crate::{
 };
 use super::{
     AnalysisResponse, validate_limit, parse_analysis_date,
-    find_latest_record, find_previous_record, calculate_price_change,
     load_ticker_groups, get_ticker_sector,
 };
 
@@ -135,26 +134,30 @@ pub async fn top_performers_handler(
             continue;
         }
 
-        // Find analysis date and previous record
+        // Find analysis date and record
         let analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
-        let current_record = find_latest_record(&stock_data);
-        let previous_record = find_previous_record(&stock_data, analysis_date);
 
-        if let (Some(current), Some(previous)) = (current_record, previous_record) {
+        // Find the record on or before the analysis date
+        let current_record = stock_data.iter()
+            .filter(|d| d.time <= analysis_date)
+            .max_by_key(|d| d.time);
+
+        if let Some(current) = current_record {
             // Apply minimum volume filter
             let min_volume = params.min_volume.unwrap_or(10000);
             if current.volume < min_volume {
                 continue;
             }
 
-            // Calculate price changes
-            let (close_change, close_change_percent) =
-                calculate_price_change(current.close, previous.close);
+            // Use the pre-calculated close_changed and volume_changed from CSV
+            let close_change_percent = current.close_changed.unwrap_or(0.0);
+            let volume_change = current.volume_changed;
 
-            let volume_change = if previous.volume > 0 {
-                Some((current.volume as f64 - previous.volume as f64) / previous.volume as f64 * 100.0)
+            // Calculate absolute change from percentage
+            let close_change = if close_change_percent != 0.0 {
+                current.close * close_change_percent / (100.0 + close_change_percent)
             } else {
-                None
+                0.0
             };
 
             // Get sector information
