@@ -69,10 +69,12 @@ pub struct SectorMaAnalysis {
 #[derive(Debug, Serialize)]
 pub struct StockMaInfo {
     pub symbol: String,
-    pub current_price: f64,
+    pub close: f64,
+    pub volume: u64,
     pub ma_value: f64,
     pub ma_score: f64,
-    pub price_vs_ma_percent: f64,
+    pub close_changed: Option<f64>,
+    pub volume_changed: Option<f64>,
 }
 
 /// Handler for MA scores by sector analysis endpoint
@@ -152,13 +154,6 @@ pub async fn ma_scores_by_sector_handler(
                 };
 
                 if let (Some(ma_val), Some(ma_scr)) = (ma_value, ma_score) {
-                    // Calculate percentage difference from MA
-                    let price_vs_ma_percent = if ma_val != 0.0 {
-                        ((current.close - ma_val) / ma_val) * 100.0
-                    } else {
-                        0.0
-                    };
-
                     // Check if above threshold
                     let above_threshold = ma_scr >= params.min_score;
                     if above_threshold {
@@ -175,10 +170,12 @@ pub async fn ma_scores_by_sector_handler(
 
                     let stock_info = StockMaInfo {
                         symbol: ticker,
-                        current_price: current.close,
+                        close: current.close,
+                        volume: current.volume,
                         ma_value: ma_val,
                         ma_score: ma_scr,
-                        price_vs_ma_percent,
+                        close_changed: current.close_changed,
+                        volume_changed: current.volume_changed,
                     };
 
                     sector_stocks.push(stock_info);
