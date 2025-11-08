@@ -61,8 +61,8 @@ async function main() {
     topGainers.data.performers.forEach((stock, i) => {
       console.log(
         `   ${i + 1}. ${stock.symbol.padEnd(6)} ` +
-          `+${stock.close_change_percent.toFixed(2)}%  ` +
-          `${stock.close_price.toLocaleString().padStart(10)} VND`
+          `+${(stock.close_changed ?? 0).toFixed(2)}%  ` +
+          `${stock.close.toLocaleString().padStart(10)} VND`
       );
     });
 
@@ -70,8 +70,8 @@ async function main() {
     topLosers.data.performers.forEach((stock, i) => {
       console.log(
         `   ${i + 1}. ${stock.symbol.padEnd(6)} ` +
-          `${stock.close_change_percent.toFixed(2)}%  ` +
-          `${stock.close_price.toLocaleString().padStart(10)} VND`
+          `${(stock.close_changed ?? 0).toFixed(2)}%  ` +
+          `${stock.close.toLocaleString().padStart(10)} VND`
       );
     });
 
@@ -80,7 +80,7 @@ async function main() {
       console.log(
         `   ${i + 1}. ${stock.symbol.padEnd(6)} ` +
           `${(stock.volume / 1_000_000).toFixed(2)}M  ` +
-          `${stock.close_price.toLocaleString().padStart(10)} VND`
+          `${stock.close.toLocaleString().padStart(10)} VND`
       );
     });
     console.log();
@@ -200,16 +200,16 @@ async function main() {
     });
 
     const above2Percent = allPerformers.data.performers.filter(
-      (s) => s.close_change_percent >= 2
+      (s) => (s.close_changed ?? 0) >= 2
     ).length;
     const above1Percent = allPerformers.data.performers.filter(
-      (s) => s.close_change_percent >= 1
+      (s) => (s.close_changed ?? 0) >= 1
     ).length;
     const below1Percent = allPerformers.data.performers.filter(
-      (s) => s.close_change_percent <= -1
+      (s) => (s.close_changed ?? 0) <= -1
     ).length;
     const below2Percent = allPerformers.data.performers.filter(
-      (s) => s.close_change_percent <= -2
+      (s) => (s.close_changed ?? 0) <= -2
     ).length;
 
     console.log(`Stocks +2% or more:   ${above2Percent}`);

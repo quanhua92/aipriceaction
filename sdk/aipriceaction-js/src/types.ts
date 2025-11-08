@@ -102,11 +102,10 @@ export interface StockData {
  */
 export interface PerformerData {
   symbol: string;
-  close_price: number;
-  close_change: number;
-  close_change_percent: number;
+  close: number;
   volume: number;
-  volume_change: number | null;
+  close_changed?: number | null;
+  volume_changed?: number | null;
   ma10?: number | null;
   ma20?: number | null;
   ma50?: number | null;

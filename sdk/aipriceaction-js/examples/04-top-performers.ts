@@ -29,11 +29,11 @@ async function main() {
     console.log(`   Total Analyzed: ${topPerformers.total_analyzed} stocks\n`);
 
     topPerformers.data.performers.forEach((stock, index) => {
-      const changeSign = stock.close_change_percent >= 0 ? "+" : "";
+      const changeSign = (stock.close_changed ?? 0) >= 0 ? "+" : "";
       console.log(
         `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
-          `${stock.close_price.toLocaleString().padStart(10)} VND  ` +
-          `${changeSign}${stock.close_change_percent.toFixed(2)}%  ` +
+          `${stock.close.toLocaleString().padStart(10)} VND  ` +
+          `${changeSign}${(stock.close_changed ?? 0).toFixed(2)}%  ` +
           `Vol: ${(stock.volume / 1000).toFixed(0)}K`
       );
     });
@@ -50,8 +50,8 @@ async function main() {
     bottomPerformers.data.performers.forEach((stock, index) => {
       console.log(
         `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
-          `${stock.close_price.toLocaleString().padStart(10)} VND  ` +
-          `${stock.close_change_percent.toFixed(2)}%`
+          `${stock.close.toLocaleString().padStart(10)} VND  ` +
+          `${(stock.close_changed ?? 0).toFixed(2)}%`
       );
     });
     console.log();
@@ -68,7 +68,7 @@ async function main() {
       console.log(
         `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
           `Vol: ${(stock.volume / 1_000_000).toFixed(2)}M  ` +
-          `Price: ${stock.close_price.toLocaleString()} VND`
+          `Price: ${stock.close.toLocaleString()} VND`
       );
     });
     console.log();
@@ -84,7 +84,7 @@ async function main() {
       console.log(
         `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
           `MA20 Score: ${stock.ma20_score?.toFixed(2)}%  ` +
-          `Price: ${stock.close_price.toLocaleString()} VND`
+          `Price: ${stock.close.toLocaleString()} VND`
       );
     });
     console.log();
@@ -98,10 +98,10 @@ async function main() {
     });
 
     bankingPerformers.data.performers.forEach((stock, index) => {
-      const changeSign = stock.close_change_percent >= 0 ? "+" : "";
+      const changeSign = (stock.close_changed ?? 0) >= 0 ? "+" : "";
       console.log(
         `   ${(index + 1).toString().padStart(2)}. ${stock.symbol.padEnd(6)} ` +
-          `${changeSign}${stock.close_change_percent.toFixed(2)}%  ` +
+          `${changeSign}${(stock.close_changed ?? 0).toFixed(2)}%  ` +
           `Sector: ${stock.sector || "N/A"}`
       );
     });

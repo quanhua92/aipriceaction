@@ -288,7 +288,7 @@ main() {
 
     echo ""
     echo -e "${BLUE}📚 API Documentation:${NC}"
-    echo -e "${BLUE}  - Top Performers: GET /analysis/top-performers?sort_by=close_change_percent&limit=10${NC}"
+    echo -e "${BLUE}  - Top Performers: GET /analysis/top-performers?sort_by=close_changed&limit=10${NC}"
     echo -e "${BLUE}  - MA Scores by Sector: GET /analysis/ma-scores-by-sector?ma_period=20${NC}"
     echo ""
     echo -e "${GREEN}🔍 Test completed successfully!${NC}"

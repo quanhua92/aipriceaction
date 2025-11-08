@@ -108,13 +108,13 @@ Get top/bottom performing stocks.
 ```typescript
 // Top 10 by percentage change
 const top = await client.getTopPerformers({
-  sort_by: 'close_change_percent',
+  sort_by: 'close_changed',
   limit: 10
 });
 
 // Bottom 5 performers
 const bottom = await client.getTopPerformers({
-  sort_by: 'close_change_percent',
+  sort_by: 'close_changed',
   direction: 'asc',
   limit: 5
 });

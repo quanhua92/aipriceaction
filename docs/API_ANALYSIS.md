@@ -43,10 +43,9 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 
 | Metric | Description | Use Case |
 |--------|-------------|----------|
-| `close_change` | Absolute price change in VND | Find largest price movers |
-| `close_change_percent` | Percentage price change | Find best/worst percentage performers |
+| `close_changed` | Percentage price change from previous close | Find best/worst percentage performers |
 | `volume` | Trading volume | Find most actively traded stocks |
-| `volume_change` | Volume change percentage | Find unusual volume activity |
+| `volume_changed` | Volume change percentage from previous volume | Find unusual volume activity |
 | `ma10_score` | 10-day moving average score | Short-term momentum analysis |
 | `ma20_score` | 20-day moving average score | Medium-term momentum |
 | `ma50_score` | 50-day moving average score | Long-term trend analysis |
@@ -64,11 +63,10 @@ Returns top/bottom performing stocks based on various metrics with customizable 
     "performers": [
       {
         "symbol": "VCB",
-        "close_price": 60300.0,
-        "close_change": 1500.0,
-        "close_change_percent": 2.55,
+        "close": 60300.0,
         "volume": 1500000,
-        "volume_change": 15.2,
+        "close_changed": 2.55,
+        "volume_changed": 15.2,
         "ma10": 59500.0,
         "ma20": 58800.0,
         "ma50": 57500.0,
@@ -89,11 +87,10 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 #### Field Descriptions
 
 - `symbol`: Stock ticker symbol
-- `close_price`: Closing price in full VND
-- `close_change`: Absolute price change in VND
-- `close_change_percent`: Percentage price change
+- `close`: Closing price in full VND
 - `volume`: Trading volume
-- `volume_change`: Volume change percentage (null if previous volume was 0)
+- `close_changed`: Percentage price change from previous close (null if no previous data)
+- `volume_changed`: Percentage volume change from previous volume (null if previous volume was 0)
 - `ma*`: Moving average values (null if insufficient data)
 - `ma*_score`: Moving average momentum score
 - `sector`: Sector name from ticker group mapping
@@ -102,10 +99,10 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 
 ```bash
 # Top 10 performers by percentage change
-GET /analysis/top-performers?sort_by=close_change_percent&limit=10
+GET /analysis/top-performers?sort_by=close_changed&limit=10
 
 # Bottom 5 performers (ascending order)
-GET /analysis/top-performers?sort_by=close_change_percent&direction=asc&limit=5
+GET /analysis/top-performers?sort_by=close_changed&direction=asc&limit=5
 
 # Top volume leaders with minimum 1M volume
 GET /analysis/top-performers?sort_by=volume&min_volume=1000000&limit=10
@@ -114,7 +111,7 @@ GET /analysis/top-performers?sort_by=volume&min_volume=1000000&limit=10
 GET /analysis/top-performers?sector=VN30&sort_by=ma20_score&limit=10
 
 # Historical analysis for specific date
-GET /analysis/top-performers?date=2024-01-10&sort_by=close_change_percent&limit=10
+GET /analysis/top-performers?date=2024-01-10&sort_by=close_changed&limit=10
 ```
 
 ---
@@ -316,7 +313,7 @@ The test script covers:
 
 3. **Volume Analysis**: Identify unusual volume activity
    ```bash
-   GET /analysis/top-performers?sort_by=volume_change&min_volume=500000
+   GET /analysis/top-performers?sort_by=volume_changed&min_volume=500000
    ```
 
 4. **Trend Confirmation**: Long-term trend analysis

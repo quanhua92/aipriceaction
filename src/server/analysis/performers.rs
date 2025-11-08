@@ -59,11 +59,10 @@ pub struct TopPerformersResponse {
 #[derive(Debug, Serialize)]
 pub struct PerformerInfo {
     pub symbol: String,
-    pub close_price: f64,
-    pub close_change: f64,
-    pub close_change_percent: f64,
+    pub close: f64,
     pub volume: u64,
-    pub volume_change: Option<f64>,
+    pub close_changed: Option<f64>,
+    pub volume_changed: Option<f64>,
     pub ma10: Option<f64>,
     pub ma20: Option<f64>,
     pub ma50: Option<f64>,
@@ -149,27 +148,15 @@ pub async fn top_performers_handler(
                 continue;
             }
 
-            // Use the pre-calculated close_changed and volume_changed from CSV
-            let close_change_percent = current.close_changed.unwrap_or(0.0);
-            let volume_change = current.volume_changed;
-
-            // Calculate absolute change from percentage
-            let close_change = if close_change_percent != 0.0 {
-                current.close * close_change_percent / (100.0 + close_change_percent)
-            } else {
-                0.0
-            };
-
             // Get sector information
             let sector = get_ticker_sector(&ticker, &ticker_groups);
 
             let performer = PerformerInfo {
                 symbol: ticker,
-                close_price: current.close,
-                close_change,
-                close_change_percent,
+                close: current.close,
                 volume: current.volume,
-                volume_change,
+                close_changed: current.close_changed,
+                volume_changed: current.volume_changed,
                 ma10: current.ma10,
                 ma20: current.ma20,
                 ma50: current.ma50,
@@ -191,18 +178,18 @@ pub async fn top_performers_handler(
     let direction_desc = params.direction.to_lowercase() != "asc";
 
     match params.sort_by.to_lowercase().as_str() {
-        "close_change" => performers.sort_by(|a, b| {
-            if direction_desc {
-                b.close_change.partial_cmp(&a.close_change).unwrap_or(std::cmp::Ordering::Equal)
-            } else {
-                a.close_change.partial_cmp(&b.close_change).unwrap_or(std::cmp::Ordering::Equal)
-            }
-        }),
-        "close_change_percent" => performers.sort_by(|a, b| {
-            if direction_desc {
-                b.close_change_percent.partial_cmp(&a.close_change_percent).unwrap_or(std::cmp::Ordering::Equal)
-            } else {
-                a.close_change_percent.partial_cmp(&b.close_change_percent).unwrap_or(std::cmp::Ordering::Equal)
+        "close_changed" | "close_change_percent" => performers.sort_by(|a, b| {
+            match (a.close_changed, b.close_changed) {
+                (Some(a_val), Some(b_val)) => {
+                    if direction_desc {
+                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
+                    } else {
+                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                }
+                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
+                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
+                (None, None) => std::cmp::Ordering::Equal,
             }
         }),
         "volume" => performers.sort_by(|a, b| {
@@ -212,13 +199,13 @@ pub async fn top_performers_handler(
                 a.volume.cmp(&b.volume)
             }
         }),
-        "volume_change" => performers.sort_by(|a, b| {
-            match (a.volume_change, b.volume_change) {
-                (Some(a_change), Some(b_change)) => {
+        "volume_changed" | "volume_change" => performers.sort_by(|a, b| {
+            match (a.volume_changed, b.volume_changed) {
+                (Some(a_val), Some(b_val)) => {
                     if direction_desc {
-                        b_change.partial_cmp(&a_change).unwrap_or(std::cmp::Ordering::Equal)
+                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
                     } else {
-                        a_change.partial_cmp(&b_change).unwrap_or(std::cmp::Ordering::Equal)
+                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
                     }
                 }
                 (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
@@ -297,12 +284,19 @@ pub async fn top_performers_handler(
             }
         }),
         _ => {
-            // Default sorting by close_change_percent
+            // Default sorting by close_changed
             performers.sort_by(|a, b| {
-                if direction_desc {
-                    b.close_change_percent.partial_cmp(&a.close_change_percent).unwrap_or(std::cmp::Ordering::Equal)
-                } else {
-                    a.close_change_percent.partial_cmp(&b.close_change_percent).unwrap_or(std::cmp::Ordering::Equal)
+                match (a.close_changed, b.close_changed) {
+                    (Some(a_val), Some(b_val)) => {
+                        if direction_desc {
+                            b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
+                        } else {
+                            a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
+                        }
+                    }
+                    (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
+                    (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
             });
         }

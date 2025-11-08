@@ -340,10 +340,9 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
               <select id="analysis-sort-by" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                <option value="close_change_percent" selected>Close Change %</option>
-                <option value="close_change">Close Change (VND)</option>
+                <option value="close_changed" selected>Close Change %</option>
                 <option value="volume">Volume</option>
-                <option value="volume_change">Volume Change %</option>
+                <option value="volume_changed">Volume Change %</option>
                 <option value="ma10_score">MA10 Score</option>
                 <option value="ma20_score">MA20 Score</option>
                 <option value="ma50_score">MA50 Score</option>
@@ -821,8 +820,8 @@
                 <span class="font-semibold text-gray-700 w-24">Parameters:</span>
                 <div class="flex-1">
                   <div><code>date</code> - Analysis date YYYY-MM-DD (optional, defaults to latest)</div>
-                  <div><code>sort_by</code> - Metric to sort by (optional, default: close_change_percent)</div>
-                  <div class="ml-4 text-gray-600">Options: close_change, close_change_percent, volume, volume_change, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score</div>
+                  <div><code>sort_by</code> - Metric to sort by (optional, default: close_changed)</div>
+                  <div class="ml-4 text-gray-600">Options: close_changed, volume, volume_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score</div>
                   <div><code>direction</code> - Sort direction: asc, desc (optional, default: desc)</div>
                   <div><code>limit</code> - Number of results (optional, default: 10, max: 100)</div>
                   <div><code>sector</code> - Filter by sector name (optional)</div>
