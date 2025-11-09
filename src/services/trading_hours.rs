@@ -73,6 +73,18 @@ pub fn get_sync_interval(trading_interval: Duration, non_trading_interval: Durat
     }
 }
 
+/// Get appropriate cache control max-age based on trading hours
+///
+/// During trading hours: 30 seconds (fresh data for active trading)
+/// Outside trading hours: 120 seconds (reduced server load when market is closed)
+pub fn get_cache_max_age() -> u32 {
+    if is_trading_hours() {
+        30  // 30 seconds during trading hours
+    } else {
+        120 // 2 minutes during off-trading hours
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

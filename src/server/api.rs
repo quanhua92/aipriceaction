@@ -2,6 +2,7 @@ use crate::constants::INDEX_TICKERS;
 use crate::models::{AggregatedInterval, Interval};
 use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::services::data_store::QueryParameters;
+use crate::services::trading_hours::get_cache_max_age;
 use crate::utils::get_public_dir;
 use axum::{
     extract::{State, Json},
@@ -132,7 +133,13 @@ pub async fn get_tickers_handler(
     );
 
     let mut headers = HeaderMap::new();
-    headers.insert(CACHE_CONTROL, "max-age=30".parse().unwrap());
+    let cache_max_age = get_cache_max_age();
+    headers.insert(CACHE_CONTROL, format!("max-age={}", cache_max_age).parse().unwrap());
+
+    debug!(
+        cache_max_age = cache_max_age,
+        "Applied cache control header based on trading hours"
+    );
 
     // Check format parameter
     if params.format == "csv" {
