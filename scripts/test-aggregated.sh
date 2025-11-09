@@ -172,9 +172,10 @@ fi
 echo ""
 
 echo "Comparing 1D vs 1W record counts (1W should have ~1/5-1/7 the records):"
-count_1d=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=1D&limit=100" | jq '.VCB | length')
-count_1w=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=1W&limit=100" | jq '.VCB | length')
-echo "  → 1D: $count_1d records, 1W: $count_1w records"
+# Note: Using limit=365 to get ~1 year of data to compare aggregation ratios
+count_1d=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=1D&limit=365" | jq '.VCB | length')
+count_1w=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=1W&limit=52" | jq '.VCB | length')
+echo "  → 1D (limit=365): $count_1d records, 1W (limit=52): $count_1w records"
 
 if [ "$count_1w" -lt "$count_1d" ]; then
     echo -e "${GREEN}✓ Aggregation reduces record count as expected${NC}"
@@ -186,7 +187,92 @@ fi
 echo ""
 
 echo "=========================================="
-echo "4. CSV FORMAT SUPPORT"
+echo "4. LIMIT PARAMETER WITH AGGREGATED INTERVALS"
+echo "=========================================="
+echo ""
+
+# Test limit parameter with various aggregated intervals
+echo "Testing 15m with limit=100 (should return exactly 100 15m records):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=15m&limit=100")
+count=$(echo "$response" | jq '.VCB | length')
+echo "  → Requested: 100 records, Got: $count records"
+if [ "$count" -eq 100 ]; then
+    echo -e "${GREEN}✓ 15m limit=100 returns exactly 100 records${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Expected 100 records, got $count${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "Testing 30m with limit=50 (should return exactly 50 30m records):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=30m&limit=50")
+count=$(echo "$response" | jq '.VCB | length')
+echo "  → Requested: 50 records, Got: $count records"
+if [ "$count" -eq 50 ]; then
+    echo -e "${GREEN}✓ 30m limit=50 returns exactly 50 records${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Expected 50 records, got $count${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "Testing 5m with limit=200 (should return exactly 200 5m records):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=5m&limit=200")
+count=$(echo "$response" | jq '.VCB | length')
+echo "  → Requested: 200 records, Got: $count records"
+if [ "$count" -eq 200 ]; then
+    echo -e "${GREEN}✓ 5m limit=200 returns exactly 200 records${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Expected 200 records, got $count${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "Testing 1W with limit=100 (should return exactly 100 weekly records):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=1W&limit=100")
+count=$(echo "$response" | jq '.VCB | length')
+echo "  → Requested: 100 records, Got: $count records"
+if [ "$count" -eq 100 ]; then
+    echo -e "${GREEN}✓ 1W limit=100 returns exactly 100 records${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Expected 100 records, got $count${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "Testing multiple tickers with 15m limit=50:"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&symbol=FPT&interval=15m&limit=50")
+vcb_count=$(echo "$response" | jq '.VCB | length')
+fpt_count=$(echo "$response" | jq '.FPT | length')
+echo "  → VCB: $vcb_count records, FPT: $fpt_count records"
+if [ "$vcb_count" -eq 50 ] && [ "$fpt_count" -eq 50 ]; then
+    echo -e "${GREEN}✓ Multiple tickers with limit=50 returns 50 records each${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Expected 50 records for each ticker, got VCB=$vcb_count, FPT=$fpt_count${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "Testing aggregated interval with start_date (limit should be ignored):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=15m&start_date=2025-01-01&end_date=2025-01-10&limit=10")
+count=$(echo "$response" | jq '.VCB | length')
+echo "  → With start_date=2025-01-01, end_date=2025-01-10, limit=10: Got $count records"
+if [ "$count" -gt 10 ]; then
+    echo -e "${GREEN}✓ Limit correctly ignored when start_date is provided (got $count records > limit 10)${NC}"
+    ((test_passed++))
+else
+    echo -e "${RED}✗ Limit should be ignored with start_date, got only $count records${NC}"
+    ((test_failed++))
+fi
+echo ""
+
+echo "=========================================="
+echo "5. CSV FORMAT SUPPORT"
 echo "=========================================="
 echo ""
 

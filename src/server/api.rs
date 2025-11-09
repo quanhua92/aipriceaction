@@ -218,13 +218,32 @@ pub async fn get_tickers_handler(
         None => data_state.get_all_ticker_names().await, // All tickers
     };
 
+    // Adjust limit for aggregated intervals
+    // For aggregated intervals, we need to fetch more base records to ensure we get
+    // enough data after aggregation. The adjustment factor is the aggregation ratio.
+    let adjusted_limit = if let Some(agg_interval) = aggregated_interval {
+        params.limit.map(|limit| {
+            let multiplier = match agg_interval {
+                AggregatedInterval::Minutes5 => 5,
+                AggregatedInterval::Minutes15 => 15,
+                AggregatedInterval::Minutes30 => 30,
+                AggregatedInterval::Week => 7,
+                AggregatedInterval::Week2 => 14,
+                AggregatedInterval::Month => 30, // Approximate trading days in a month
+            };
+            limit * multiplier
+        })
+    } else {
+        params.limit
+    };
+
     // Query data using DataStore with cache control
     let mut result_data = data_state.get_data_with_cache(
         symbols_to_query,
         interval,
         start_date_filter,
         end_date_filter,
-        params.limit,
+        adjusted_limit,
         params.cache
     ).await;
 
@@ -252,9 +271,27 @@ pub async fn get_tickers_handler(
             })
             .collect();
         info!("Applied {} aggregation with change indicators", agg_interval);
+
+        // Re-apply original limit to aggregated data
+        // The DataStore layer applied adjusted_limit to base data, but we need to
+        // ensure the final aggregated output respects the user's requested limit
+        if let Some(original_limit) = params.limit {
+            if start_date_filter.is_none() {
+                result_data = result_data
+                    .into_iter()
+                    .map(|(ticker, mut records)| {
+                        // Sort by time descending, take limit, sort back to ascending
+                        records.sort_by(|a, b| b.time.cmp(&a.time));
+                        records.truncate(original_limit);
+                        records.sort_by(|a, b| a.time.cmp(&b.time));
+                        (ticker, records)
+                    })
+                    .collect();
+            }
+        }
     }
 
-    // Note: Limit parameter is now handled by DataStore layer (get_data_with_cache)
+    // Note: Limit parameter for non-aggregated intervals is handled by DataStore layer
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
