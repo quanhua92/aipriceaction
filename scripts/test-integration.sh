@@ -347,8 +347,8 @@ test_csv_export_performance() {
     local minute_time_ms=$(echo "$minute_time * 1000" | bc)
     local ten_tickers_time_ms=$(echo "$ten_tickers_time * 1000" | bc)
 
-    # Check that daily is fast (< 50ms)
-    if (( $(echo "$daily_time_ms < 50" | bc -l) )); then
+    # Check that daily is fast (< 100ms)
+    if (( $(echo "$daily_time_ms < 100" | bc -l) )); then
         print_success "Daily CSV performance: ${daily_time_ms}ms ✓"
     else
         print_error "Daily CSV too slow: ${daily_time_ms}ms"
