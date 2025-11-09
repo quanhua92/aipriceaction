@@ -316,11 +316,12 @@ impl DataStore {
         interval: Interval,
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
+        limit: Option<usize>,
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
         // For hourly/minute data or when cache=false explicitly requested, always use disk
         if interval == Interval::Hourly || interval == Interval::Minute || !use_cache {
-            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
+            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
         }
 
         // For daily data with cache=true: check if cache is expired (TTL)
@@ -328,7 +329,31 @@ impl DataStore {
         if cache_expired {
             tracing::info!("In-memory cache expired (TTL: {}s), reading from disk", CACHE_TTL_SECONDS);
             // Cache expired - read from disk for all tickers
-            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date).await;
+            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
+        }
+
+        // If limit is provided and potentially exceeds cache capacity, check if we should read from disk
+        if let Some(limit_count) = limit {
+            if start_date.is_none() && limit_count > DATA_RETENTION_DAYS as usize {
+                // Limit exceeds 1 year cache capacity - check if cache has enough records
+                let store = self.data.lock().await;
+                let cache_insufficient = tickers.iter().any(|ticker| {
+                    store.get(ticker)
+                        .and_then(|td| td.get(&interval))
+                        .map(|data| data.len() < limit_count)
+                        .unwrap_or(true) // No data in cache = insufficient
+                });
+                drop(store);
+
+                if cache_insufficient {
+                    tracing::info!(
+                        "Limit ({}) exceeds cache capacity, reading from disk for {} tickers",
+                        limit_count,
+                        tickers.len()
+                    );
+                    return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
+                }
+            }
         }
 
         // Cache is fresh - try cache first, fall back to disk if insufficient
@@ -416,10 +441,28 @@ impl DataStore {
                 interval,
                 start_date,
                 end_date,
+                limit,
             ).await;
 
             // Merge disk data into result
             result.extend(disk_data);
+        }
+
+        // Apply limit if provided and start_date is None
+        if let Some(limit_count) = limit {
+            if start_date.is_none() && limit_count > 0 {
+                result = result
+                    .into_iter()
+                    .map(|(ticker, mut records)| {
+                        // Sort descending by time and take last N records
+                        records.sort_by(|a, b| b.time.cmp(&a.time));
+                        records.truncate(limit_count);
+                        // Sort back to ascending order for consistency
+                        records.sort_by(|a, b| a.time.cmp(&b.time));
+                        (ticker, records)
+                    })
+                    .collect();
+            }
         }
 
         result
@@ -433,6 +476,7 @@ impl DataStore {
         interval: Interval,
         start_date: Option<DateTime<Utc>>,
         end_date: Option<DateTime<Utc>>,
+        limit: Option<usize>,
     ) -> HashMap<String, Vec<StockData>> {
         let mut result = HashMap::new();
 
@@ -522,6 +566,23 @@ impl DataStore {
 
             if !filtered.is_empty() {
                 result.insert(ticker.clone(), filtered);
+            }
+        }
+
+        // Apply limit if provided and start_date is None
+        if let Some(limit_count) = limit {
+            if start_date.is_none() && limit_count > 0 {
+                result = result
+                    .into_iter()
+                    .map(|(ticker, mut records)| {
+                        // Sort descending by time and take last N records
+                        records.sort_by(|a, b| b.time.cmp(&a.time));
+                        records.truncate(limit_count);
+                        // Sort back to ascending order for consistency
+                        records.sort_by(|a, b| a.time.cmp(&b.time));
+                        (ticker, records)
+                    })
+                    .collect();
             }
         }
 

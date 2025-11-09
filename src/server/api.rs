@@ -186,6 +186,7 @@ pub async fn get_tickers_handler(
                 interval,
                 None,
                 None,
+                None,
                 params.cache
             ).await;
 
@@ -223,6 +224,7 @@ pub async fn get_tickers_handler(
         interval,
         start_date_filter,
         end_date_filter,
+        params.limit,
         params.cache
     ).await;
 
@@ -252,24 +254,7 @@ pub async fn get_tickers_handler(
         info!("Applied {} aggregation with change indicators", agg_interval);
     }
 
-    // Apply limit if provided and start_date is not specified
-    // Limit works with end_date to get N rows back in history
-    if let Some(limit) = params.limit {
-        if params.start_date.is_none() && limit > 0 {
-            result_data = result_data
-                .into_iter()
-                .map(|(ticker, mut records)| {
-                    // Sort by time descending and take last N records
-                    records.sort_by(|a, b| b.time.cmp(&a.time));
-                    records.truncate(limit);
-                    // Sort back to ascending order for response
-                    records.sort_by(|a, b| a.time.cmp(&b.time));
-                    (ticker, records)
-                })
-                .collect();
-            debug!(limit, "Applied limit to results");
-        }
-    }
+    // Note: Limit parameter is now handled by DataStore layer (get_data_with_cache)
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();

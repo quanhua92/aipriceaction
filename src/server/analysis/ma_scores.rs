@@ -123,6 +123,7 @@ pub async fn ma_scores_by_sector_handler(
             Interval::Daily,
             None, // start_date
             None, // end_date
+            None, // limit
             true, // use_cache
         ).await;
 

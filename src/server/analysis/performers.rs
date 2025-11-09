@@ -123,6 +123,7 @@ pub async fn top_performers_handler(
         Interval::Daily,
         None, // start_date
         None, // end_date
+        None, // limit
         true, // use_cache
     ).await;
 

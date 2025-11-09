@@ -428,6 +428,62 @@ test_limit_parameter() {
     fi
     print_success "Limit ignored when start_date provided: got $record_count records"
 
+    # Test 4: Large limit (500) with cache=true (should auto-read from disk)
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&limit=500&cache=true" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for large limit test"
+        return 1
+    fi
+
+    record_count=$(echo "$response" | jq '.VCB | length // 0')
+    if [[ "$record_count" != "500" ]]; then
+        print_error "Limit=500 returned $record_count records (expected exactly 500)"
+        return 1
+    fi
+
+    local first_date=$(echo "$response" | jq -r '.VCB[0].time // empty')
+    local last_date=$(echo "$response" | jq -r '.VCB[-1].time // empty')
+    print_success "Limit=500 auto-read from disk: 500 records from $first_date to $last_date"
+
+    # Test 5: Very large limit (1000) to verify deep historical data access
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&limit=1000" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for very large limit test"
+        return 1
+    fi
+
+    record_count=$(echo "$response" | jq '.VCB | length // 0')
+    if [[ "$record_count" != "1000" ]]; then
+        print_error "Limit=1000 returned $record_count records (expected exactly 1000)"
+        return 1
+    fi
+
+    first_date=$(echo "$response" | jq -r '.VCB[0].time // empty')
+    last_date=$(echo "$response" | jq -r '.VCB[-1].time // empty')
+    print_success "Limit=1000 returns exactly 1000 records from $first_date to $last_date"
+
+    # Test 6: Multiple tickers with large limit
+    response=$(curl -s "$BASE_URL/tickers?symbol=VCB&symbol=FPT&limit=500" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "No response for multiple tickers large limit test"
+        return 1
+    fi
+
+    local vcb_count=$(echo "$response" | jq '.VCB | length // 0')
+    local fpt_count=$(echo "$response" | jq '.FPT | length // 0')
+
+    if [[ "$vcb_count" != "500" ]]; then
+        print_error "VCB limit=500 returned $vcb_count records (expected 500)"
+        return 1
+    fi
+
+    if [[ "$fpt_count" != "500" ]]; then
+        print_error "FPT limit=500 returned $fpt_count records (expected 500)"
+        return 1
+    fi
+
+    print_success "Multiple tickers with limit=500: VCB=500, FPT=500 ✓"
+
     print_success "Limit parameter test passed"
     return 0
 }
