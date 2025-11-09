@@ -1,6 +1,7 @@
 use crate::constants::INDEX_TICKERS;
 use crate::models::{AggregatedInterval, Interval};
-use crate::services::{Aggregator, SharedDataStore, SharedHealthStats};
+use crate::services::{SharedDataStore, SharedHealthStats};
+use crate::services::data_store::QueryParameters;
 use crate::utils::get_public_dir;
 use axum::{
     extract::{State, Json},
@@ -53,7 +54,7 @@ pub struct StockDataResponse {
 }
 
 /// Query parameters for /tickers endpoint
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TickerQuery {
     /// Ticker symbols to query (can be repeated: symbol=VCB&symbol=FPT)
     pub symbol: Option<Vec<String>>,
@@ -107,192 +108,14 @@ pub async fn get_tickers_handler(
 ) -> impl IntoResponse {
     debug!("Received request for tickers with params: {:?}", params);
 
-    // Parse interval (default to daily)
-    // First check if it's an aggregated interval (5m, 15m, 30m, 1W, 2W, 1M)
-    let aggregated_interval = params.interval.as_deref()
-        .and_then(|s| AggregatedInterval::from_str(s));
-
-    let interval = if let Some(agg) = aggregated_interval {
-        // Use the base interval for aggregated intervals
-        agg.base_interval()
-    } else {
-        // Parse regular intervals
-        match params.interval.as_deref() {
-            Some("1D") | Some("daily") | None => Interval::Daily,
-            Some("1H") | Some("hourly") => Interval::Hourly,
-            Some("1m") | Some("minute") => Interval::Minute,
-            Some(other) => {
-                warn!(interval = %other, "Invalid interval parameter");
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "error": "Invalid interval. Valid values: 1D, 1H, 1m, 5m, 15m, 30m, 1W, 2W, 1M (or daily, hourly, minute)"
-                    }))
-                ).into_response();
-            }
-        }
+    // Parse and validate parameters
+    let query_params = match parse_query_parameters(params.clone(), &data_state).await {
+        Ok(params) => params,
+        Err(error_response) => return error_response,
     };
 
-    // Get ticker symbols (optional - if not provided, return all tickers)
-    let symbols_filter = params.symbol.filter(|s| !s.is_empty());
-
-    // Parse date filters
-    let start_date_filter = match &params.start_date {
-        Some(date_str) => {
-            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                Ok(date) => Some(date.and_hms_opt(0, 0, 0).unwrap().and_utc()),
-                Err(_) => {
-                    warn!(start_date = %date_str, "Invalid start_date format");
-                    return (
-                        StatusCode::BAD_REQUEST,
-                        Json(serde_json::json!({
-                            "error": "Invalid start_date format. Expected YYYY-MM-DD"
-                        }))
-                    ).into_response();
-                }
-            }
-        }
-        None => None,
-    };
-
-    let end_date_filter = match &params.end_date {
-        Some(date_str) => {
-            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
-                Ok(date) => Some(date.and_hms_opt(23, 59, 59).unwrap().and_utc()),
-                Err(_) => {
-                    warn!(end_date = %date_str, "Invalid end_date format");
-                    return (
-                        StatusCode::BAD_REQUEST,
-                        Json(serde_json::json!({
-                            "error": "Invalid end_date format. Expected YYYY-MM-DD"
-                        }))
-                    ).into_response();
-                }
-            }
-        }
-        None => None,
-    };
-
-    // Default behavior: if no dates specified
-    let (start_date_filter, end_date_filter) = if start_date_filter.is_none() && end_date_filter.is_none() {
-        // If limit is provided, don't restrict to just today - let limit parameter control the range
-        if params.limit.is_some() {
-            debug!("Limit provided without dates - will fetch all data and apply limit");
-            (None, None)
-        } else {
-            // Query VNINDEX to find the last trading day
-            let vnindex_data = data_state.get_data_with_cache(
-                vec!["VNINDEX".to_string()],
-                interval,
-                None,
-                None,
-                None,
-                params.cache
-            ).await;
-
-            if let Some(vnindex_records) = vnindex_data.get("VNINDEX") {
-                if let Some(last_record) = vnindex_records.last() {
-                    let last_day = last_record.time;
-                    let start = last_day.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
-                    let end = last_day.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
-                    debug!("Using last trading day from VNINDEX: {}", last_day.format("%Y-%m-%d"));
-                    (Some(start), Some(end))
-                } else {
-                    // Fallback: last 1 day if VNINDEX has no data
-                    let now = Utc::now();
-                    (Some(now - chrono::Duration::days(1)), Some(now))
-                }
-            } else {
-                // Fallback: last 1 day if VNINDEX not found
-                let now = Utc::now();
-                (Some(now - chrono::Duration::days(1)), Some(now))
-            }
-        }
-    } else {
-        (start_date_filter, end_date_filter)
-    };
-
-    // Determine which symbols to query
-    let symbols_to_query: Vec<String> = match &symbols_filter {
-        Some(symbols) => symbols.clone(),
-        None => data_state.get_all_ticker_names().await, // All tickers
-    };
-
-    // Adjust limit for aggregated intervals
-    // For aggregated intervals, we need to fetch more base records to ensure we get
-    // enough data after aggregation. The adjustment factor is the aggregation ratio.
-    let adjusted_limit = if let Some(agg_interval) = aggregated_interval {
-        params.limit.map(|limit| {
-            let multiplier = match agg_interval {
-                AggregatedInterval::Minutes5 => 5,
-                AggregatedInterval::Minutes15 => 15,
-                AggregatedInterval::Minutes30 => 30,
-                AggregatedInterval::Week => 7,
-                AggregatedInterval::Week2 => 14,
-                AggregatedInterval::Month => 30, // Approximate trading days in a month
-            };
-            limit * multiplier
-        })
-    } else {
-        params.limit
-    };
-
-    // Query data using DataStore with cache control
-    let mut result_data = data_state.get_data_with_cache(
-        symbols_to_query,
-        interval,
-        start_date_filter,
-        end_date_filter,
-        adjusted_limit,
-        params.cache
-    ).await;
-
-    // Apply aggregation if needed
-    if let Some(agg_interval) = aggregated_interval {
-        debug!("Aggregating data to {}", agg_interval);
-        result_data = result_data
-            .into_iter()
-            .map(|(ticker, records)| {
-                let aggregated = match agg_interval {
-                    AggregatedInterval::Minutes5
-                    | AggregatedInterval::Minutes15
-                    | AggregatedInterval::Minutes30 => {
-                        Aggregator::aggregate_minute_data(records, agg_interval)
-                    }
-                    AggregatedInterval::Week
-                    | AggregatedInterval::Week2
-                    | AggregatedInterval::Month => {
-                        Aggregator::aggregate_daily_data(records, agg_interval)
-                    }
-                };
-                (ticker, aggregated)
-            })
-            .collect();
-
-        // Enhance aggregated data with technical indicators (MA, scores, changes)
-        result_data = Aggregator::enhance_aggregated_data(result_data);
-        info!("Applied {} aggregation with full technical indicators", agg_interval);
-
-        // Re-apply original limit to aggregated data
-        // The DataStore layer applied adjusted_limit to base data, but we need to
-        // ensure the final aggregated output respects the user's requested limit
-        if let Some(original_limit) = params.limit {
-            if start_date_filter.is_none() {
-                result_data = result_data
-                    .into_iter()
-                    .map(|(ticker, mut records)| {
-                        // Sort by time descending, take limit, sort back to ascending
-                        records.sort_by(|a, b| b.time.cmp(&a.time));
-                        records.truncate(original_limit);
-                        records.sort_by(|a, b| a.time.cmp(&b.time));
-                        (ticker, records)
-                    })
-                    .collect();
-            }
-        }
-    }
-
-    // Note: Limit parameter for non-aggregated intervals is handled by DataStore layer
+    // Smart data retrieval - DataStore handles all the complexity
+    let result_data = data_state.get_data_smart(query_params.clone()).await;
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
@@ -300,11 +123,11 @@ pub async fn get_tickers_handler(
     info!(
         ticker_count,
         total_records,
-        interval = %interval.to_filename(),
-        symbols = ?symbols_filter,
-        legacy_prices = params.legacy,
-        format = %params.format,
-        use_cache = params.cache,
+        interval = %query_params.interval.to_filename(),
+        symbols = ?query_params.tickers,
+        legacy_prices = query_params.legacy_prices,
+        format = params.format,
+        use_cache = query_params.use_cache,
         "Returning ticker data"
     );
 
@@ -314,26 +137,21 @@ pub async fn get_tickers_handler(
     // Check format parameter
     if params.format == "csv" {
         // Generate CSV format
-        return generate_csv_response(result_data, interval, params.legacy, headers);
+        return generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, headers);
     }
-
-    // Helper function to check if ticker is a market index
-    let is_index = |ticker: &str| -> bool {
-        INDEX_TICKERS.contains(&ticker)
-    };
 
     // Return JSON format - use BTreeMap for alphabetically sorted keys
     let response_data: BTreeMap<String, Vec<StockDataResponse>> = result_data
         .into_iter()
         .map(|(ticker, data)| {
             let records = data.into_iter().map(|d| {
-                let time_str = match interval {
+                let time_str = match query_params.interval {
                     Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
                     Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%d %H:%M:%S").to_string(),
                 };
 
                 // Apply legacy price format if requested (divide by 1000 for stocks only)
-                let price_divisor = if params.legacy && !is_index(&ticker) { 1000.0 } else { 1.0 };
+                let price_divisor = if query_params.legacy_prices && !INDEX_TICKERS.contains(&ticker.as_str()) { 1000.0 } else { 1.0 };
 
                 StockDataResponse {
                     time: time_str,
@@ -362,6 +180,90 @@ pub async fn get_tickers_handler(
         .collect();
 
     (StatusCode::OK, headers, Json(response_data)).into_response()
+}
+
+/// Parse and validate query parameters into a QueryParameters struct
+async fn parse_query_parameters(
+    params: TickerQuery,
+    data_state: &SharedDataStore,
+) -> Result<QueryParameters, Response> {
+    // Parse interval and detect aggregation
+    let aggregated_interval = params.interval.as_deref()
+        .and_then(|s| AggregatedInterval::from_str(s));
+
+    let interval = if let Some(agg) = aggregated_interval {
+        agg.base_interval()
+    } else {
+        match params.interval.as_deref() {
+            Some("1D") | Some("daily") | None => Interval::Daily,
+            Some("1H") | Some("hourly") => Interval::Hourly,
+            Some("1m") | Some("minute") => Interval::Minute,
+            Some(other) => {
+                warn!(interval = %other, "Invalid interval parameter");
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "Invalid interval. Valid values: 1D, 1H, 1m, 5m, 15m, 30m, 1W, 2W, 1M (or daily, hourly, minute)"
+                    }))
+                ).into_response());
+            }
+        }
+    };
+
+    // Parse date filters
+    let start_date_filter = match &params.start_date {
+        Some(date_str) => {
+            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                Ok(date) => Some(date.and_hms_opt(0, 0, 0).unwrap().and_utc()),
+                Err(_) => {
+                    warn!(start_date = %date_str, "Invalid start_date format");
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({
+                            "error": "Invalid start_date format. Expected YYYY-MM-DD"
+                        }))
+                    ).into_response());
+                }
+            }
+        }
+        None => None,
+    };
+
+    let end_date_filter = match &params.end_date {
+        Some(date_str) => {
+            match NaiveDate::parse_from_str(date_str, "%Y-%m-%d") {
+                Ok(date) => Some(date.and_hms_opt(23, 59, 59).unwrap().and_utc()),
+                Err(_) => {
+                    warn!(end_date = %date_str, "Invalid end_date format");
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({
+                            "error": "Invalid end_date format. Expected YYYY-MM-DD"
+                        }))
+                    ).into_response());
+                }
+            }
+        }
+        None => None,
+    };
+
+    // Determine which symbols to query
+    let symbols_to_query: Vec<String> = match params.symbol.filter(|s| !s.is_empty()) {
+        Some(symbols) => symbols,
+        None => data_state.get_all_ticker_names().await, // All tickers
+    };
+
+    // Create QueryParameters with all the logic
+    Ok(QueryParameters::new(
+        symbols_to_query,
+        interval,
+        aggregated_interval,
+        start_date_filter,
+        end_date_filter,
+        params.limit,
+        params.cache,
+        params.legacy,
+    ))
 }
 
 /// Generate CSV response from stock data

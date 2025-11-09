@@ -1,6 +1,7 @@
 use crate::constants::csv_column;
 use crate::error::Error;
-use crate::models::{Interval, StockData};
+use crate::models::{Interval, StockData, AggregatedInterval};
+use tracing::{debug, info};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -109,6 +110,76 @@ impl Default for HealthStats {
 }
 
 pub type SharedHealthStats = Arc<Mutex<HealthStats>>;
+
+/// Query parameters for the smart data store method
+#[derive(Debug, Clone)]
+pub struct QueryParameters {
+    /// Ticker symbols to query
+    pub tickers: Vec<String>,
+    /// Interval (1D, 1H, 1m) - parsed from request
+    pub interval: Interval,
+    /// Aggregated interval if specified (5m, 15m, 30m, 1W, 2W, 1M)
+    pub aggregated_interval: Option<AggregatedInterval>,
+    /// Start date filter
+    pub start_date: Option<DateTime<Utc>>,
+    /// End date filter
+    pub end_date: Option<DateTime<Utc>>,
+    /// Limit number of records (defaults to 365 if None)
+    pub limit: usize,
+    /// Use memory cache (default: true)
+    pub use_cache: bool,
+    /// Apply legacy price scaling
+    pub legacy_prices: bool,
+}
+
+impl QueryParameters {
+    /// Create new query parameters with defaults
+    pub fn new(
+        tickers: Vec<String>,
+        interval: Interval,
+        aggregated_interval: Option<AggregatedInterval>,
+        start_date: Option<DateTime<Utc>>,
+        end_date: Option<DateTime<Utc>>,
+        limit: Option<usize>,
+        use_cache: bool,
+        legacy_prices: bool,
+    ) -> Self {
+        Self {
+            tickers,
+            interval,
+            aggregated_interval,
+            start_date,
+            end_date,
+            limit: limit.unwrap_or(252), // Default to 252 trading days per year
+            use_cache,
+            legacy_prices,
+        }
+    }
+
+    /// Calculate the effective limit for base interval data fetching
+    /// For aggregated intervals, we need extra records for MA200 calculation
+    pub fn effective_limit(&self) -> usize {
+        if let Some(agg_interval) = self.aggregated_interval {
+            // For aggregated intervals, we need: (requested_records * multiplier) + MA200_buffer
+            let multiplier = match agg_interval {
+                AggregatedInterval::Minutes5 => 5,
+                AggregatedInterval::Minutes15 => 15,
+                AggregatedInterval::Minutes30 => 30,
+                AggregatedInterval::Week => 7,
+                AggregatedInterval::Week2 => 14,
+                AggregatedInterval::Month => 30,
+            };
+            (self.limit * multiplier) + (200 * multiplier) // MA200 buffer on top of requested records
+        } else {
+            self.limit // No buffer needed for regular intervals
+        }
+    }
+
+    /// Determine if we need to fetch more than the requested limit
+    pub fn needs_extra_buffer(&self) -> bool {
+        self.aggregated_interval.is_some()
+    }
+}
 
 /// Data store for managing in-memory stock data
 pub struct DataStore {
@@ -308,6 +379,85 @@ impl DataStore {
     }
 
   
+    /// Smart data retrieval with aggregation awareness and centralized logic
+    /// This method handles all query complexity internally
+    pub async fn get_data_smart(
+        &self,
+        params: QueryParameters,
+    ) -> HashMap<String, Vec<StockData>> {
+        // Use existing method but with smart parameter handling
+        let effective_limit = Some(params.effective_limit());
+        let result = self.get_data_with_cache(
+            params.tickers.clone(),
+            params.interval,
+            params.start_date,
+            params.end_date,
+            effective_limit,
+            params.use_cache,
+        ).await;
+
+        // Apply aggregation if needed
+        let mut aggregated_result = if let Some(agg_interval) = params.aggregated_interval {
+            debug!("Applying {} aggregation with MA200 buffer", agg_interval);
+            let mut result = result
+                .into_iter()
+                .map(|(ticker, records)| {
+                    let aggregated = match agg_interval {
+                        AggregatedInterval::Minutes5
+                        | AggregatedInterval::Minutes15
+                        | AggregatedInterval::Minutes30 => {
+                            crate::services::Aggregator::aggregate_minute_data(records, agg_interval)
+                        }
+                        AggregatedInterval::Week
+                        | AggregatedInterval::Week2
+                        | AggregatedInterval::Month => {
+                            crate::services::Aggregator::aggregate_daily_data(records, agg_interval)
+                        }
+                    };
+                    (ticker, aggregated)
+                })
+                .collect();
+
+            // Enhance aggregated data with technical indicators (MA, scores, changes)
+            // BEFORE applying limit so we have enough data for MA calculations
+            result = crate::services::Aggregator::enhance_aggregated_data(result);
+            info!("Applied {} aggregation with full technical indicators", agg_interval);
+
+            result
+        } else {
+            result
+        };
+
+        // Apply final limit AFTER enhancement to return only requested number of records
+        let final_result = self.apply_final_limit(aggregated_result, params.limit, params.start_date);
+
+        final_result
+    }
+
+    /// Apply final limit to results, trimming any buffer records that were fetched for MA calculations
+    fn apply_final_limit(
+        &self,
+        mut data: HashMap<String, Vec<StockData>>,
+        limit: usize,
+        start_date: Option<DateTime<Utc>>,
+    ) -> HashMap<String, Vec<StockData>> {
+        // If no start date specified, limit to the most recent N records
+        if start_date.is_none() && limit > 0 {
+            data = data
+                .into_iter()
+                .map(|(ticker, mut records)| {
+                    // Sort descending by time and take latest records
+                    records.sort_by(|a, b| b.time.cmp(&a.time));
+                    records.truncate(limit);
+                    // Sort back to ascending order for consistency
+                    records.sort_by(|a, b| a.time.cmp(&b.time));
+                    (ticker, records)
+                })
+                .collect();
+        }
+        data
+    }
+
     /// Get data with cache control option
     /// Smart caching: if cache doesn't have requested range or is expired, automatically read from disk
     pub async fn get_data_with_cache(
