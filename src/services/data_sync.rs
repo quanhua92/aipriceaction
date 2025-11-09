@@ -191,9 +191,61 @@ impl DataSync {
             // println!("⏱️  Full history fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
         }
 
+        // Fetch partial history tickers individually (gap > 2 days, batch API won't work)
+        let mut partial_history_results = HashMap::new();
+
+        if !category.partial_history_tickers.is_empty() {
+            println!(
+                "\n📥 Processing {} tickers with partial history (gap > 2 days)...",
+                category.partial_history_tickers.len()
+            );
+
+            for (ticker, start_date) in &category.partial_history_tickers {
+                println!("   📥 {} - Fetching from {}...", ticker, start_date);
+                match self.fetcher
+                    .fetch_full_history(
+                        ticker,
+                        start_date,  // Use CSV last date instead of min_start_date
+                        &self.config.end_date,
+                        interval,
+                    )
+                    .await
+                {
+                    Ok(data) => {
+                        println!("   ✅ {}: {} records", ticker, data.len());
+                        if !data.is_empty() && (ticker == "VCB" || ticker == "STB" || ticker == "AAA") {
+                            println!("      [DEBUG] VCI returned for {}: {} records", ticker, data.len());
+                            println!("      [DEBUG] First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                            println!("      [DEBUG] Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                            for (i, record) in data.iter().enumerate() {
+                                println!("      [DEBUG] Record {}: {}", i+1, record.time.format("%Y-%m-%d %H:%M:%S"));
+                            }
+                        }
+                        partial_history_results.insert(ticker.clone(), Some(data));
+                    }
+                    Err(e) => {
+                        println!("   ❌ {}: Failed - {}", ticker, e);
+                        partial_history_results.insert(ticker.clone(), None);
+                    }
+                }
+            }
+        }
+
         // Combine batch results
         let mut batch_results = resume_results;
         batch_results.extend(full_history_results);
+        batch_results.extend(partial_history_results);
+
+        // [DEBUG] Log first ticker in batch results
+        if let Some(data_opt) = batch_results.get("VCB").or_else(|| batch_results.get("AAA")) {
+            if let Some(data) = data_opt {
+                println!("[DEBUG] Batch results for first ticker: {} records", data.len());
+                if !data.is_empty() {
+                    println!("[DEBUG]   First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                    println!("[DEBUG]   Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                }
+            }
+        }
 
         // Process each ticker with fallback strategy
         let total_tickers = tickers.len();
@@ -214,14 +266,14 @@ impl DataSync {
 
             match result {
                 Ok(data) => {
-                    // DEBUG: Log data details
-                    // if std::env::var("DEBUG").is_ok() || std::env::var("RUST_LOG").is_ok() {
-                    //     eprintln!("DEBUG [{}:{}]: API returned {} rows", ticker, interval.to_filename(), data.len());
-                    //     if !data.is_empty() {
-                    //         eprintln!("DEBUG [{}:{}]: First API row: {}", ticker, interval.to_filename(), data[0].time);
-                    //         eprintln!("DEBUG [{}:{}]: Last API row: {}", ticker, interval.to_filename(), data[data.len()-1].time);
-                    //     }
-                    // }
+                    // [DEBUG] Log data before saving
+                    if ticker == "VCB" || ticker == "AAA" {
+                        println!("[DEBUG] {} process_ticker returned {} records", ticker, data.len());
+                        if !data.is_empty() {
+                            println!("[DEBUG]   First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                            println!("[DEBUG]   Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                        }
+                    }
 
                     // Enhance and save to CSV (single write)
                     self.enhance_and_save_ticker_data(ticker, &data, interval)?;
@@ -559,19 +611,40 @@ impl DataSync {
         data: &[OhlcvData],
         interval: Interval,
     ) -> Result<(), Error> {
-        // eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Received {} rows to enhance and save", ticker, data.len());
-        // if !data.is_empty() {
-        //     eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input first row: {}", ticker, data.first().unwrap().time);
-        //     eprintln!("DEBUG [{}:enhance_and_save_ticker_data]: Input last row: {}", ticker, data.last().unwrap().time);
-        // }
+        // [DEBUG] Log enhance and save
+        if ticker == "VCB" || ticker == "AAA" {
+            println!("[DEBUG] enhance_and_save_ticker_data: {} received {} records", ticker, data.len());
+            if !data.is_empty() {
+                println!("[DEBUG]   Input first: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                println!("[DEBUG]   Input last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+            }
+        }
 
         if data.is_empty() {
             return Err(Error::InvalidInput("No data to save".to_string()));
         }
 
-        // Calculate cutoff date based on resume_days (default 2 days)
+        // Calculate cutoff date based on LAST CSV DATE minus resume_days
+        // This ensures we save all gap-filling data, not just recent data
         let resume_days = self.config.resume_days.unwrap_or(2) as i64;
-        let cutoff_date = Utc::now() - chrono::Duration::days(resume_days);
+        let file_path = self.get_ticker_file_path(ticker, interval);
+        let cutoff_date = if file_path.exists() {
+            // Read last date from CSV
+            if let Ok(existing_data) = self.read_existing_data(&file_path) {
+                if let Some(last_record) = existing_data.last() {
+                    last_record.time - chrono::Duration::days(resume_days)
+                } else {
+                    // Empty CSV - save everything
+                    chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+                }
+            } else {
+                // Failed to read - save everything to be safe
+                chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+            }
+        } else {
+            // No CSV file - save everything (new ticker)
+            chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+        };
 
         // Find cutoff index: where data.time >= cutoff_date
         let cutoff_index = data.iter()
@@ -594,10 +667,27 @@ impl DataSync {
         // Enhance only the sliced portion (massive performance gain for minute data)
         let enhanced = enhance_data(ticker_data);
 
+        // [DEBUG] Log enhanced data before saving
+        if ticker == "VCB" || ticker == "AAA" {
+            if let Some(stock_data) = enhanced.get(ticker) {
+                println!("[DEBUG] After enhancement: {} has {} records", ticker, stock_data.len());
+                if !stock_data.is_empty() {
+                    println!("[DEBUG]   Enhanced first: {}", stock_data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                    println!("[DEBUG]   Enhanced last:  {}", stock_data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                }
+                println!("[DEBUG]   Cutoff date: {}", cutoff_date.format("%Y-%m-%d %H:%M:%S"));
+            }
+        }
+
         // Save enhanced data to CSV with smart cutoff strategy and file locking
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
             save_enhanced_csv(ticker, stock_data, interval, cutoff_date)?;
+
+            // [DEBUG] Confirm save completed
+            if ticker == "VCB" || ticker == "AAA" {
+                println!("[DEBUG] save_enhanced_csv completed for {}", ticker);
+            }
         }
 
         Ok(())

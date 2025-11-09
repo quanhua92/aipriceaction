@@ -467,3 +467,4 @@ VCI API limits: ~30 requests/minute
 Cache TTL is 60 seconds. To force refresh:
 - Add `cache=false` query parameter: `/tickers?symbol=VCB&cache=false`
 - Or restart the server to clear memory cache
+- run pull without filtering in background so we can check shell outputs

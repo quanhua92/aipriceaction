@@ -245,6 +245,10 @@ pub struct TickerCategory {
     /// Tickers needing full history (new or insufficient data)
     pub full_history_tickers: Vec<String>,
 
+    /// Tickers needing full history but from a custom start date (gap > 2 days)
+    /// Each tuple contains (ticker, start_date_from_csv)
+    pub partial_history_tickers: Vec<(String, String)>,
+
     /// Tickers skipped due to stale data (for minute interval only)
     /// Each tuple contains (ticker, last_date, days_old)
     pub skipped_stale_tickers: Vec<(String, String, i64)>,
@@ -256,7 +260,7 @@ impl TickerCategory {
     }
 
     pub fn total_count(&self) -> usize {
-        self.resume_tickers.len() + self.full_history_tickers.len()
+        self.resume_tickers.len() + self.full_history_tickers.len() + self.partial_history_tickers.len()
     }
 
     /// Get the minimum (earliest) last date from all resume tickers

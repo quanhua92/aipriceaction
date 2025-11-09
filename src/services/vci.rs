@@ -417,9 +417,21 @@ impl VciClient {
             "countBack": count_back
         });
 
+        println!("[DEBUG] VCI Batch API Request:");
+        println!("[DEBUG]   URL: {}", url);
+        println!("[DEBUG]   Interval: {} (value={})", interval, interval_value);
+        println!("[DEBUG]   Start date: {}", start);
+        println!("[DEBUG]   End date: {:?}", end);
+        println!("[DEBUG]   To timestamp: {}", end_timestamp);
+        println!("[DEBUG]   Original countBack: {}", original_count_back);
+        println!("[DEBUG]   Actual countBack: {} (2x)", count_back);
+        println!("[DEBUG]   Symbols count: {}", symbols.len());
+        println!("[DEBUG]   First 3 symbols: {:?}", &symbols[..symbols.len().min(3)]);
+        println!("[DEBUG]   FULL PAYLOAD: {}", serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "failed".to_string()));
+
         tracing::debug!("VCI API request: interval={}, start={}, end={:?}, original_count_back={}, count_back={} (2x), to_timestamp={}",
             interval, start, end, original_count_back, count_back, end_timestamp);
-        
+
         tracing::debug!("VCI API payload: {}", serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "failed to serialize".to_string()));
 
         let response_data = self.make_request(&url, &payload).await?;
@@ -429,11 +441,13 @@ impl VciClient {
         }
 
         let response_array = response_data.as_array().unwrap();
-
+        println!("[DEBUG] VCI Batch API Response:");
+        println!("[DEBUG]   Response array length: {}", response_array.len());
 
         let mut results = HashMap::new();
         let start_date = NaiveDate::parse_from_str(start, "%Y-%m-%d").expect("Invalid start date");
 
+        println!("[DEBUG]   Filtering with start_date: {}, end_date: {:?}", start_date, end);
         tracing::debug!("VCI filtering with start_date: {}, end_date: {:?}", start_date, end);
 
         // Create a mapping from response data using symbol field
@@ -540,8 +554,17 @@ impl VciClient {
                 }
             }
 
-            tracing::debug!("Symbol {}: VCI returned {} data points, filtered to {} (start_date: {})", 
+            tracing::debug!("Symbol {}: VCI returned {} data points, filtered to {} (start_date: {})",
                 symbol, total_data_points, filtered_data_points, start_date);
+
+            if symbol == "VCB" || symbol == "STB" {
+                println!("[DEBUG]   Symbol {}: VCI returned {} data points, filtered to {} (start_date: {})",
+                    symbol, total_data_points, filtered_data_points, start_date);
+                if !symbol_data.is_empty() {
+                    println!("[DEBUG]     First record: {}", symbol_data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                    println!("[DEBUG]     Last record: {}", symbol_data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
+                }
+            }
 
             symbol_data.sort_by(|a, b| a.time.cmp(&b.time));
             

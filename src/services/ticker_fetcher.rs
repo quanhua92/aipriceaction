@@ -114,10 +114,40 @@ impl TickerFetcher {
                             }
                         }
 
-                        if should_print {
-                            println!("   📄 {} - Resume from: {}", ticker, last_date);
+                        // Check if gap is > 30 days - if so, use partial history instead of batch resume
+                        // Can be disabled with DISABLE_PARTIAL_HISTORY=1 for debugging
+                        use chrono::NaiveDate;
+                        let gap_threshold_days = 30;
+                        let disable_partial = std::env::var("DISABLE_PARTIAL_HISTORY").is_ok();
+
+                        if let Ok(last_date_parsed) = NaiveDate::parse_from_str(&last_date, "%Y-%m-%d") {
+                            let today = chrono::Utc::now().date_naive();
+                            let days_gap = (today - last_date_parsed).num_days();
+
+                            if days_gap > gap_threshold_days && !disable_partial {
+                                // Gap too large - batch API won't work, use partial history
+                                if should_print {
+                                    println!("   📥 {} - Partial history from: {} ({} days gap)", ticker, last_date, days_gap);
+                                }
+                                category.partial_history_tickers.push((ticker.clone(), last_date));
+                            } else {
+                                // Gap small enough for batch resume (or partial history disabled)
+                                if should_print {
+                                    if disable_partial && days_gap > gap_threshold_days {
+                                        println!("   📄 {} - Resume from: {} ({} days gap, PARTIAL_HISTORY_DISABLED)", ticker, last_date, days_gap);
+                                    } else {
+                                        println!("   📄 {} - Resume from: {}", ticker, last_date);
+                                    }
+                                }
+                                category.resume_tickers.push((ticker.clone(), last_date));
+                            }
+                        } else {
+                            // Can't parse date, default to resume
+                            if should_print {
+                                println!("   📄 {} - Resume from: {}", ticker, last_date);
+                            }
+                            category.resume_tickers.push((ticker.clone(), last_date));
                         }
-                        category.resume_tickers.push((ticker.clone(), last_date));
                     }
                     Ok(None) => {
                         // File exists but no valid data - need full history
@@ -146,6 +176,12 @@ impl TickerFetcher {
             "   Full history tickers: {}",
             category.full_history_tickers.len()
         );
+        if !category.partial_history_tickers.is_empty() {
+            println!(
+                "   Partial history tickers: {} (gap > 2 days)",
+                category.partial_history_tickers.len()
+            );
+        }
         if !category.skipped_stale_tickers.is_empty() {
             println!(
                 "   Skipped stale tickers: {} (last trade >{} days ago)",
