@@ -105,28 +105,20 @@ impl DataSync {
         let resume_results = if !category.resume_tickers.is_empty() {
             let resume_ticker_names = category.get_resume_ticker_names();
 
-            // For minute interval: use smart date range (2 days default, not oldest ticker date)
-            let fetch_start_date = if interval == Interval::Minute {
-                use crate::models::MIN_MINUTE_RESUME_DAYS;
-                use chrono::{Utc, Duration};
-                (Utc::now() - Duration::days(MIN_MINUTE_RESUME_DAYS))
-                    .format("%Y-%m-%d")
-                    .to_string()
-            } else {
-                // For daily/hourly: use min date from all tickers (original adaptive behavior)
-                match category.get_min_resume_date() {
-                    Some(date) => date,
-                    None => self.config.get_effective_start_date(interval),
-                }
+            // Always use actual last date from CSV files for adaptive resume
+            let fetch_start_date = match category.get_min_resume_date() {
+                Some(date) => date,  // Resume from actual last CSV date
+                None => self.config.get_effective_start_date(interval),  // New ticker fallback
             };
 
-            // Calculate date range for dynamic batch sizing
-            let date_range_days = if interval == Interval::Minute {
-                use crate::models::MIN_MINUTE_RESUME_DAYS;
-                MIN_MINUTE_RESUME_DAYS
-            } else {
-                // For other intervals, use config's resume days
-                self.config.resume_days.unwrap_or(interval.default_resume_days() as u32) as i64
+            // Calculate actual date range for dynamic batch sizing
+            let date_range_days = {
+                use chrono::NaiveDate;
+                let start = NaiveDate::parse_from_str(&fetch_start_date, "%Y-%m-%d")
+                    .unwrap_or_else(|_| chrono::Utc::now().naive_utc().date());
+                let end = NaiveDate::parse_from_str(&self.config.end_date, "%Y-%m-%d")
+                    .unwrap_or_else(|_| chrono::Utc::now().naive_utc().date());
+                (end - start).num_days().max(1)
             };
 
             // Get dynamic batch size based on date range
