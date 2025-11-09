@@ -213,14 +213,6 @@ impl DataSync {
                 {
                     Ok(data) => {
                         println!("   ✅ {}: {} records", ticker, data.len());
-                        if !data.is_empty() && (ticker == "VCB" || ticker == "STB" || ticker == "AAA") {
-                            println!("      [DEBUG] VCI returned for {}: {} records", ticker, data.len());
-                            println!("      [DEBUG] First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                            println!("      [DEBUG] Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                            for (i, record) in data.iter().enumerate() {
-                                println!("      [DEBUG] Record {}: {}", i+1, record.time.format("%Y-%m-%d %H:%M:%S"));
-                            }
-                        }
                         partial_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
@@ -235,17 +227,6 @@ impl DataSync {
         let mut batch_results = resume_results;
         batch_results.extend(full_history_results);
         batch_results.extend(partial_history_results);
-
-        // [DEBUG] Log first ticker in batch results
-        if let Some(data_opt) = batch_results.get("VCB").or_else(|| batch_results.get("AAA")) {
-            if let Some(data) = data_opt {
-                println!("[DEBUG] Batch results for first ticker: {} records", data.len());
-                if !data.is_empty() {
-                    println!("[DEBUG]   First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                    println!("[DEBUG]   Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                }
-            }
-        }
 
         // Process each ticker with fallback strategy
         let total_tickers = tickers.len();
@@ -266,15 +247,6 @@ impl DataSync {
 
             match result {
                 Ok(data) => {
-                    // [DEBUG] Log data before saving
-                    if ticker == "VCB" || ticker == "AAA" {
-                        println!("[DEBUG] {} process_ticker returned {} records", ticker, data.len());
-                        if !data.is_empty() {
-                            println!("[DEBUG]   First: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                            println!("[DEBUG]   Last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                        }
-                    }
-
                     // Enhance and save to CSV (single write)
                     self.enhance_and_save_ticker_data(ticker, &data, interval)?;
 
@@ -611,15 +583,6 @@ impl DataSync {
         data: &[OhlcvData],
         interval: Interval,
     ) -> Result<(), Error> {
-        // [DEBUG] Log enhance and save
-        if ticker == "VCB" || ticker == "AAA" {
-            println!("[DEBUG] enhance_and_save_ticker_data: {} received {} records", ticker, data.len());
-            if !data.is_empty() {
-                println!("[DEBUG]   Input first: {}", data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                println!("[DEBUG]   Input last:  {}", data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-            }
-        }
-
         if data.is_empty() {
             return Err(Error::InvalidInput("No data to save".to_string()));
         }
@@ -667,27 +630,10 @@ impl DataSync {
         // Enhance only the sliced portion (massive performance gain for minute data)
         let enhanced = enhance_data(ticker_data);
 
-        // [DEBUG] Log enhanced data before saving
-        if ticker == "VCB" || ticker == "AAA" {
-            if let Some(stock_data) = enhanced.get(ticker) {
-                println!("[DEBUG] After enhancement: {} has {} records", ticker, stock_data.len());
-                if !stock_data.is_empty() {
-                    println!("[DEBUG]   Enhanced first: {}", stock_data.first().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                    println!("[DEBUG]   Enhanced last:  {}", stock_data.last().unwrap().time.format("%Y-%m-%d %H:%M:%S"));
-                }
-                println!("[DEBUG]   Cutoff date: {}", cutoff_date.format("%Y-%m-%d %H:%M:%S"));
-            }
-        }
-
         // Save enhanced data to CSV with smart cutoff strategy and file locking
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
             save_enhanced_csv(ticker, stock_data, interval, cutoff_date)?;
-
-            // [DEBUG] Confirm save completed
-            if ticker == "VCB" || ticker == "AAA" {
-                println!("[DEBUG] save_enhanced_csv completed for {}", ticker);
-            }
         }
 
         Ok(())
