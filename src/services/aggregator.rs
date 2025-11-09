@@ -1,4 +1,5 @@
 use crate::models::{AggregatedInterval, StockData};
+use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use std::collections::HashMap;
 use tracing::debug;
@@ -247,17 +248,17 @@ impl Aggregator {
             low,
             close,
             volume,
-            // Technical indicators taken from last record (end-of-period state)
-            ma10: last.ma10,
-            ma20: last.ma20,
-            ma50: last.ma50,
-            ma100: last.ma100,
-            ma200: last.ma200,
-            ma10_score: last.ma10_score,
-            ma20_score: last.ma20_score,
-            ma50_score: last.ma50_score,
-            ma100_score: last.ma100_score,
-            ma200_score: last.ma200_score,
+            // Technical indicators will be calculated after aggregation
+            ma10: None,
+            ma20: None,
+            ma50: None,
+            ma100: None,
+            ma200: None,
+            ma10_score: None,
+            ma20_score: None,
+            ma50_score: None,
+            ma100_score: None,
+            ma200_score: None,
             // Change indicators will be calculated after aggregation
             close_changed: None,
             volume_changed: None,
@@ -294,6 +295,78 @@ impl Aggregator {
             // Volume changed: ((curr - prev) / prev) * 100
             if prev_volume > 0 {
                 curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
+            }
+        }
+
+        data
+    }
+
+    /// Enhance aggregated data with technical indicators (MA and scores)
+    ///
+    /// This function applies the same logic as csv_enhancer.rs but on aggregated data.
+    /// It calculates moving averages and scores based on the aggregated data's own history.
+    ///
+    /// # Arguments
+    /// * `data` - HashMap of ticker to aggregated StockData vectors (must be sorted by time)
+    ///
+    /// # Returns
+    /// Same HashMap with technical indicators calculated
+    pub fn enhance_aggregated_data(
+        mut data: HashMap<String, Vec<StockData>>,
+    ) -> HashMap<String, Vec<StockData>> {
+        for (_ticker, stock_data) in data.iter_mut() {
+            if stock_data.is_empty() {
+                continue;
+            }
+
+            // Calculate moving averages based on aggregated close prices
+            let closes: Vec<f64> = stock_data.iter().map(|d| d.close).collect();
+            let ma10_values = calculate_sma(&closes, 10);
+            let ma20_values = calculate_sma(&closes, 20);
+            let ma50_values = calculate_sma(&closes, 50);
+            let ma100_values = calculate_sma(&closes, 100);
+            let ma200_values = calculate_sma(&closes, 200);
+
+            // Update StockData with MA values and scores
+            for (i, stock) in stock_data.iter_mut().enumerate() {
+                // Set MA values and calculate scores
+                if ma10_values[i] > 0.0 {
+                    stock.ma10 = Some(ma10_values[i]);
+                    stock.ma10_score = Some(calculate_ma_score(stock.close, ma10_values[i]));
+                }
+                if ma20_values[i] > 0.0 {
+                    stock.ma20 = Some(ma20_values[i]);
+                    stock.ma20_score = Some(calculate_ma_score(stock.close, ma20_values[i]));
+                }
+                if ma50_values[i] > 0.0 {
+                    stock.ma50 = Some(ma50_values[i]);
+                    stock.ma50_score = Some(calculate_ma_score(stock.close, ma50_values[i]));
+                }
+                if ma100_values[i] > 0.0 {
+                    stock.ma100 = Some(ma100_values[i]);
+                    stock.ma100_score = Some(calculate_ma_score(stock.close, ma100_values[i]));
+                }
+                if ma200_values[i] > 0.0 {
+                    stock.ma200 = Some(ma200_values[i]);
+                    stock.ma200_score = Some(calculate_ma_score(stock.close, ma200_values[i]));
+                }
+            }
+
+            // Calculate close_changed and volume_changed in a second pass
+            for i in 1..stock_data.len() {
+                let prev_close = stock_data[i - 1].close;
+                let prev_volume = stock_data[i - 1].volume;
+                let curr = &mut stock_data[i];
+
+                // Close changed: ((curr - prev) / prev) * 100
+                if prev_close > 0.0 {
+                    curr.close_changed = Some(((curr.close - prev_close) / prev_close) * 100.0);
+                }
+
+                // Volume changed: ((curr - prev) / prev) * 100
+                if prev_volume > 0 {
+                    curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
+                }
             }
         }
 

@@ -265,12 +265,13 @@ pub async fn get_tickers_handler(
                         Aggregator::aggregate_daily_data(records, agg_interval)
                     }
                 };
-                // Calculate close_changed and volume_changed for aggregated data
-                let with_changes = Aggregator::calculate_changes(aggregated);
-                (ticker, with_changes)
+                (ticker, aggregated)
             })
             .collect();
-        info!("Applied {} aggregation with change indicators", agg_interval);
+
+        // Enhance aggregated data with technical indicators (MA, scores, changes)
+        result_data = Aggregator::enhance_aggregated_data(result_data);
+        info!("Applied {} aggregation with full technical indicators", agg_interval);
 
         // Re-apply original limit to aggregated data
         // The DataStore layer applied adjusted_limit to base data, but we need to
