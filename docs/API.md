@@ -130,8 +130,10 @@ Aggregated intervals provide OHLCV data computed from base intervals:
 - **Low**: Minimum low across all records
 - **Close**: Last record's close price in the bucket
 - **Volume**: Sum of volumes across all records
-- **MA indicators**: Last record's values (end-of-period state)
-- **MA scores**: Last record's values
+- **MA indicators**: Calculated from the aggregated data's own historical data
+  - 5m MA20 = Average of previous 20 five-minute candles (not from 1m data)
+  - 1W MA50 = Average of previous 50 weekly candles (not from daily data)
+- **MA scores**: Calculated based on the aggregated MAs ((close - ma) / ma * 100)
 - **close_changed / volume_changed**: Calculated between consecutive aggregated candles
   - Formula: `((current - previous) / previous) * 100`
   - First record: `null` (no previous candle to compare)
