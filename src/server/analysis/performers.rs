@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use crate::{
     services::data_store::SharedDataStore,
     models::Interval,
+    constants::INDEX_TICKERS,
 };
 use super::{
     AnalysisResponse, validate_limit, parse_analysis_date,
@@ -301,11 +302,18 @@ pub async fn top_performers_handler(
     };
 
     // Determine tickers to analyze
-    let tickers = if let Some(sector_filter) = &params.sector {
+    let tickers: Vec<String> = if let Some(sector_filter) = &params.sector {
+        // Get sector tickers, excluding market indices
         super::get_tickers_in_sector(sector_filter, &ticker_groups)
+            .into_iter()
+            .filter(|ticker| !INDEX_TICKERS.contains(&ticker.as_str()))
+            .collect()
     } else {
-        // Get all available tickers from data store
+        // Get all available tickers from data store, excluding market indices
         data_state.get_all_ticker_names().await
+            .into_iter()
+            .filter(|ticker| !INDEX_TICKERS.contains(&ticker.as_str()))
+            .collect()
     };
 
     if tickers.is_empty() {

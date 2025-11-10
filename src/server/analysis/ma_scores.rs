@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     services::data_store::SharedDataStore,
     models::Interval,
+    constants::INDEX_TICKERS,
 };
 use super::{
     AnalysisResponse, parse_analysis_date,
@@ -111,7 +112,10 @@ pub async fn ma_scores_by_sector_handler(
 
     // Analyze each sector
     for sector_name in ticker_groups.keys() {
-        let sector_tickers = get_tickers_in_sector(sector_name, &ticker_groups);
+        let sector_tickers: Vec<String> = get_tickers_in_sector(sector_name, &ticker_groups)
+            .into_iter()
+            .filter(|ticker| !INDEX_TICKERS.contains(&ticker.as_str()))
+            .collect();
 
         if sector_tickers.is_empty() {
             continue;

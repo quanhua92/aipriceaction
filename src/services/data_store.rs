@@ -364,6 +364,12 @@ impl DataStore {
 
                 // Parse total money changed if present (enhanced CSV format)
                 stock_data.total_money_changed = record.get(csv_column::TOTAL_MONEY_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+
+                // Set total_money_changed to 0 for market indices (VNINDEX, VN30)
+                // Market indices don't have money flow like individual stocks
+                if crate::constants::INDEX_TICKERS.contains(&stock_data.ticker.as_str()) {
+                    stock_data.total_money_changed = Some(0.0);
+                }
             }
 
             data.push(stock_data);
