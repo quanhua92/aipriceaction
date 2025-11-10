@@ -46,6 +46,7 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 | `close_changed` | Percentage price change from previous close | Find best/worst percentage performers |
 | `volume` | Trading volume | Find most actively traded stocks |
 | `volume_changed` | Volume change percentage from previous volume | Find unusual volume activity |
+| `total_money_changed` | Total money changed from previous row (price_change × volume) in VND | Find biggest money inflows/outflows |
 | `ma10_score` | 10-day moving average score | Short-term momentum analysis |
 | `ma20_score` | 20-day moving average score | Medium-term momentum |
 | `ma50_score` | 50-day moving average score | Long-term trend analysis |
@@ -67,6 +68,7 @@ Returns top/bottom performing stocks based on various metrics with customizable 
         "volume": 1500000,
         "close_changed": 2.55,
         "volume_changed": 15.2,
+        "total_money_changed": 38250000000,
         "ma10": 59500.0,
         "ma20": 58800.0,
         "ma50": 57500.0,
@@ -78,6 +80,27 @@ Returns top/bottom performing stocks based on various metrics with customizable 
         "ma100_score": 7.29,
         "ma200_score": 10.04,
         "sector": "BANKING"
+      }
+    ],
+    "worst_performers": [
+      {
+        "symbol": "FPT",
+        "close": 95000.0,
+        "volume": 2000000,
+        "close_changed": -3.12,
+        "volume_changed": -25.5,
+        "total_money_changed": -62400000000,
+        "ma10": 96000.0,
+        "ma20": 97000.0,
+        "ma50": 98500.0,
+        "ma100": 99000.0,
+        "ma200": 100000.0,
+        "ma10_score": -1.04,
+        "ma20_score": -2.06,
+        "ma50_score": -3.55,
+        "ma100_score": -4.04,
+        "ma200_score": -5.00,
+        "sector": "TECHNOLOGY"
       }
     ]
   }
@@ -91,6 +114,7 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 - `volume`: Trading volume
 - `close_changed`: Percentage price change from previous close (null if no previous data)
 - `volume_changed`: Percentage volume change from previous volume (null if previous volume was 0)
+- `total_money_changed`: Total money changed from previous row (price_change × volume) in VND
 - `ma*`: Moving average values (null if insufficient data)
 - `ma*_score`: Moving average momentum score
 - `sector`: Sector name from ticker group mapping
@@ -109,6 +133,9 @@ GET /analysis/top-performers?sort_by=volume&min_volume=1000000&limit=10
 
 # VN30 sector top performers by MA20 score
 GET /analysis/top-performers?sector=VN30&sort_by=ma20_score&limit=10
+
+# Top and worst performers by total money changed
+GET /analysis/top-performers?sort_by=total_money_changed&limit=10
 
 # Historical analysis for specific date
 GET /analysis/top-performers?date=2024-01-10&sort_by=close_changed&limit=10

@@ -53,10 +53,11 @@ fn default_direction() -> String {
 #[derive(Debug, Serialize)]
 pub struct TopPerformersResponse {
     pub performers: Vec<PerformerInfo>,
+    pub worst_performers: Vec<PerformerInfo>,
 }
 
 /// Individual performer information
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PerformerInfo {
     pub symbol: String,
     pub close: f64,
@@ -113,6 +114,7 @@ pub async fn top_performers_handler(
                 total_analyzed: 0,
                 data: TopPerformersResponse {
                     performers: vec![],
+                    worst_performers: vec![],
                 },
             }),
         ).into_response();
@@ -177,153 +179,189 @@ pub async fn top_performers_handler(
         }
     }
 
-    // Sort performers based on the requested metric and direction
-    let direction_desc = params.direction.to_lowercase() != "asc";
+    
+    let limit = validate_limit(params.limit);
 
+    // Clone performers for sorting in opposite direction
+    let mut performers_asc = performers.clone();
+    let mut performers_desc = performers.clone();
+
+    // Sort descending for top performers
     match params.sort_by.to_lowercase().as_str() {
-        "close_changed" => performers.sort_by(|a, b| {
-            match (a.close_changed, b.close_changed) {
-                (Some(a_val), Some(b_val)) => {
-                    if direction_desc {
-                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+        "close_changed" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.close_changed, b.close_changed) {
+                    (Some(a_val), Some(b_val)) => b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "volume" => performers.sort_by(|a, b| {
-            if direction_desc {
-                b.volume.cmp(&a.volume)
-            } else {
-                a.volume.cmp(&b.volume)
-            }
-        }),
-        "volume_changed" => performers.sort_by(|a, b| {
-            match (a.volume_changed, b.volume_changed) {
-                (Some(a_val), Some(b_val)) => {
-                    if direction_desc {
-                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.close_changed, b.close_changed) {
+                    (Some(a_val), Some(b_val)) => a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "ma10_score" => performers.sort_by(|a, b| {
-            match (a.ma10_score, b.ma10_score) {
-                (Some(a_score), Some(b_score)) => {
-                    if direction_desc {
-                        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+        },
+        "volume" => {
+            performers_desc.sort_by(|a, b| b.volume.cmp(&a.volume));
+            performers_asc.sort_by(|a, b| a.volume.cmp(&b.volume));
+        },
+        "volume_changed" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.volume_changed, b.volume_changed) {
+                    (Some(a_val), Some(b_val)) => b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "ma20_score" => performers.sort_by(|a, b| {
-            match (a.ma20_score, b.ma20_score) {
-                (Some(a_score), Some(b_score)) => {
-                    if direction_desc {
-                        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.volume_changed, b.volume_changed) {
+                    (Some(a_val), Some(b_val)) => a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "ma50_score" => performers.sort_by(|a, b| {
-            match (a.ma50_score, b.ma50_score) {
-                (Some(a_score), Some(b_score)) => {
-                    if direction_desc {
-                        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+        },
+        "ma10_score" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.ma10_score, b.ma10_score) {
+                    (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "ma100_score" => performers.sort_by(|a, b| {
-            match (a.ma100_score, b.ma100_score) {
-                (Some(a_score), Some(b_score)) => {
-                    if direction_desc {
-                        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.ma10_score, b.ma10_score) {
+                    (Some(a_score), Some(b_score)) => a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "ma200_score" => performers.sort_by(|a, b| {
-            match (a.ma200_score, b.ma200_score) {
-                (Some(a_score), Some(b_score)) => {
-                    if direction_desc {
-                        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+        },
+        "ma20_score" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.ma20_score, b.ma20_score) {
+                    (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
-        "total_money_changed" => performers.sort_by(|a, b| {
-            match (a.total_money_changed, b.total_money_changed) {
-                (Some(a_val), Some(b_val)) => {
-                    if direction_desc {
-                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
-                    } else {
-                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
-                    }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.ma20_score, b.ma20_score) {
+                    (Some(a_score), Some(b_score)) => a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
                 }
-                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
-                (None, None) => std::cmp::Ordering::Equal,
-            }
-        }),
+            });
+        },
+        "ma50_score" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.ma50_score, b.ma50_score) {
+                    (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.ma50_score, b.ma50_score) {
+                    (Some(a_score), Some(b_score)) => a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+        },
+        "ma100_score" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.ma100_score, b.ma100_score) {
+                    (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.ma100_score, b.ma100_score) {
+                    (Some(a_score), Some(b_score)) => a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+        },
+        "ma200_score" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.ma200_score, b.ma200_score) {
+                    (Some(a_score), Some(b_score)) => b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.ma200_score, b.ma200_score) {
+                    (Some(a_score), Some(b_score)) => a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+        },
+        "total_money_changed" => {
+            performers_desc.sort_by(|a, b| {
+                match (a.total_money_changed, b.total_money_changed) {
+                    (Some(a_val), Some(b_val)) => b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.total_money_changed, b.total_money_changed) {
+                    (Some(a_val), Some(b_val)) => a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+        },
         _ => {
             // Default sorting by close_changed
-            performers.sort_by(|a, b| {
+            performers_desc.sort_by(|a, b| {
                 match (a.close_changed, b.close_changed) {
-                    (Some(a_val), Some(b_val)) => {
-                        if direction_desc {
-                            b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
-                        } else {
-                            a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
-                        }
-                    }
-                    (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
-                    (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
+                    (Some(a_val), Some(b_val)) => b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                }
+            });
+            performers_asc.sort_by(|a, b| {
+                match (a.close_changed, b.close_changed) {
+                    (Some(a_val), Some(b_val)) => a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal),
+                    (Some(_), None) => std::cmp::Ordering::Greater,
+                    (None, Some(_)) => std::cmp::Ordering::Less,
                     (None, None) => std::cmp::Ordering::Equal,
                 }
             });
         }
     }
 
-    // Apply limit
-    let limit = validate_limit(params.limit);
-    performers.truncate(limit);
+    // Take top performers (best) from descending sort and worst performers from ascending sort
+    let top_performers = performers_desc.into_iter().take(limit).collect::<Vec<_>>();
+    let worst_performers = performers_asc.into_iter().take(limit).collect::<Vec<_>>();
 
-    let total_analyzed = performers.len();
+    let total_analyzed = top_performers.len() + worst_performers.len();
 
     (
         StatusCode::OK,
@@ -332,7 +370,8 @@ pub async fn top_performers_handler(
             analysis_type: "top_performers".to_string(),
             total_analyzed,
             data: TopPerformersResponse {
-                performers,
+                performers: top_performers.to_vec(),
+                worst_performers: worst_performers.to_vec(),
             },
         }),
     ).into_response()

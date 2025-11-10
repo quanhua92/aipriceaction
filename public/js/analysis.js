@@ -80,9 +80,16 @@ async function fetchTopPerformers() {
 
     const data = await response.json();
 
-    // Count performers
-    const count = data.data?.performers?.length || 0;
-    countSpan.textContent = `${count} performers | Total analyzed: ${data.total_analyzed || 0}`;
+    // Count performers and worst performers
+    const performersCount = data.data?.performers?.length || 0;
+    const worstPerformersCount = data.data?.worst_performers?.length || 0;
+    const totalCount = performersCount + worstPerformersCount;
+
+    if (worstPerformersCount > 0) {
+      countSpan.textContent = `${performersCount} top, ${worstPerformersCount} worst | Total analyzed: ${data.total_analyzed || 0}`;
+    } else {
+      countSpan.textContent = `${performersCount} performers | Total analyzed: ${data.total_analyzed || 0}`;
+    }
 
     pre.textContent = formatJson(data);
     pre.className = 'text-sm overflow-x-auto max-h-96 overflow-y-auto text-green-800';

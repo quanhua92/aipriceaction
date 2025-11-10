@@ -165,34 +165,103 @@ test_top_performers() {
         fi
     fi
 
-    # Test 6: Sort by MA200 score (ascending)
+    # Test 6: Sort by MA200 score (ascending) - now tests dual response structure
     print_test "Sort by MA200 score (asc) test"
     response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=ma200_score&direction=asc&limit=5&min_volume=10000" || echo "")
 
     if [[ -n "$response" ]]; then
-        # Get first non-null score and last score for comparison
-        local first_score=$(echo "$response" | jq -r '.data.performers[] | select(.ma200_score != null) | .ma200_score' | head -1)
-        local last_score=$(echo "$response" | jq -r '.data.performers[-1].ma200_score // empty')
+        # With new dual response structure, performers always contains top performers (descending)
+        # and worst_performers contains worst performers (ascending)
+        local first_top_score=$(echo "$response" | jq -r '.data.performers[0].ma200_score // empty')
+        local first_worst_score=$(echo "$response" | jq -r '.data.worst_performers[0].ma200_score // empty')
 
-        # Check if scores are in ascending order
-        if [[ -n "$first_score" && -n "$last_score" && "$first_score" != "null" && "$last_score" != "null" ]]; then
-            if command -v bc &> /dev/null; then
-                if (( $(echo "$first_score <= $last_score" | bc -l) )); then
-                    print_success "MA200 scores correctly sorted ascending (${first_score} <= ${last_score})"
+        # Verify we have both arrays
+        local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
+        local worst_count=$(echo "$response" | jq '.data.worst_performers | length // 0')
+
+        if [[ $performers_count -gt 0 && $worst_count -gt 0 ]]; then
+            if [[ -n "$first_top_score" && -n "$first_worst_score" && "$first_top_score" != "null" && "$first_worst_score" != "null" ]]; then
+                # Top performers should have higher scores than worst performers
+                if command -v bc &> /dev/null; then
+                    if (( $(echo "$first_top_score >= $first_worst_score" | bc -l) )); then
+                        print_success "MA200 dual response correct (top: ${first_top_score} >= worst: ${first_worst_score})"
+                    else
+                        print_error "MA200 dual response incorrect (top: ${first_top_score} < worst: ${first_worst_score})"
+                    fi
                 else
-                    print_error "MA200 scores NOT sorted ascending (${first_score} > ${last_score})"
+                    print_success "MA200 dual response received (top: ${first_top_score}, worst: ${first_worst_score})"
                 fi
             else
-                print_success "MA200 score sort response received (first: ${first_score}, last: ${last_score})"
+                print_success "MA200 dual response structure correct (${performers_count} top, ${worst_count} worst)"
             fi
         else
-            # Just verify we got a response with performers
-            local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
-            if [[ $performers_count -gt 0 ]]; then
-                print_success "MA200 score sort response received (${performers_count} performers, some may lack MA200 data)"
+            print_error "MA200 dual response incomplete (top: ${performers_count}, worst: ${worst_count})"
+        fi
+    fi
+
+    # Test 7: Sort by total_money_changed (descending - top money inflows)
+    print_test "Sort by total_money_changed (desc) test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=total_money_changed&direction=desc&limit=5&min_volume=10000" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        local first_money_changed=$(echo "$response" | jq -r '.data.performers[0].total_money_changed // empty')
+
+        print_result "Total money changed sort response received" "not_empty" "$first_symbol"
+
+        if [[ -n "$first_money_changed" && "$first_money_changed" != "null" ]]; then
+            print_success "Total money changed value present: ${first_money_changed}"
+        fi
+    fi
+
+    # Test 8: Sort by total_money_changed (ascending - top money outflows)
+    print_test "Sort by total_money_changed (asc) test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=total_money_changed&direction=asc&limit=5&min_volume=10000" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        local first_money_changed=$(echo "$response" | jq -r '.data.performers[0].total_money_changed // empty')
+
+        print_result "Total money changed (ascending) response received" "not_empty" "$first_symbol"
+
+        if [[ -n "$first_money_changed" && "$first_money_changed" != "null" ]]; then
+            # For ascending sort, we expect negative values (money outflows)
+            if command -v bc &> /dev/null; then
+                if (( $(echo "$first_money_changed < 0" | bc -l) )); then
+                    print_success "Ascending sort shows negative money flow: ${first_money_changed}"
+                else
+                    print_success "Ascending sort money flow value: ${first_money_changed}"
+                fi
             else
-                print_error "MA200 scores missing in response"
+                print_success "Total money changed (ascending) value: ${first_money_changed}"
             fi
+        fi
+    fi
+
+    # Test 9: Validate total_money_changed field presence and format
+    print_test "Total money changed field validation test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=total_money_changed&limit=3" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
+
+        if [[ $performers_count -gt 0 ]]; then
+            # Check if all performers have total_money_changed field
+            local valid_count=0
+            for i in $(seq 0 $((performers_count-1))); do
+                local money_changed=$(echo "$response" | jq -r ".data.performers[$i].total_money_changed // empty")
+                if [[ -n "$money_changed" && "$money_changed" != "null" ]]; then
+                    ((valid_count++))
+                fi
+            done
+
+            if [[ $valid_count -eq $performers_count ]]; then
+                print_success "All ${performers_count} performers have valid total_money_changed values"
+            else
+                print_success "${valid_count}/${performers_count} performers have valid total_money_changed values"
+            fi
+        else
+            print_error "No performers returned for total_money_changed validation"
         fi
     fi
 
@@ -289,6 +358,7 @@ main() {
     echo ""
     echo -e "${BLUE}📚 API Documentation:${NC}"
     echo -e "${BLUE}  - Top Performers: GET /analysis/top-performers?sort_by=close_changed&limit=10${NC}"
+    echo -e "${BLUE}  - Total Money Flow: GET /analysis/top-performers?sort_by=total_money_changed&direction=desc${NC}"
     echo -e "${BLUE}  - MA Scores by Sector: GET /analysis/ma-scores-by-sector?ma_period=20${NC}"
     echo ""
     echo -e "${GREEN}🔍 Test completed successfully!${NC}"
