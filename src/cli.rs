@@ -78,6 +78,20 @@ pub enum Commands {
         #[arg(long)]
         cache_days: Option<i64>,
     },
+    /// Rebuild CSV files with updated technical indicators
+    RebuildCsv {
+        /// Intervals to rebuild: all, daily, hourly, minute (comma-separated)
+        #[arg(short, long, default_value = "all")]
+        intervals: String,
+
+        /// Specific tickers to rebuild (comma-separated, rebuild all if not specified)
+        #[arg(short, long)]
+        tickers: Option<String>,
+
+        /// Verbose output
+        #[arg(long)]
+        verbose: bool,
+    },
 }
 
 pub fn run() {
@@ -118,6 +132,12 @@ pub fn run() {
                     .collect::<Vec<String>>()
             });
             commands::company::run(ticker_list, force, cache_days);
+        }
+        Commands::RebuildCsv { intervals, tickers, verbose } => {
+            if let Err(e) = commands::rebuild_csv::run(intervals, tickers, verbose) {
+                eprintln!("❌ CSV rebuild failed: {}", e);
+                std::process::exit(1);
+            }
         }
     }
 }

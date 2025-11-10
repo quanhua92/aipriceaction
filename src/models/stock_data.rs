@@ -94,6 +94,11 @@ pub struct StockData {
     /// Volume percentage change from previous row: ((curr_volume - prev_volume) / prev_volume) * 100
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volume_changed: Option<f64>,
+
+    /// Total money changed from previous row: (price_change × volume) in VND
+    /// This represents the absolute money flow in Vietnamese Dong
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_money_changed: Option<f64>,
 }
 
 impl StockData {
@@ -127,6 +132,7 @@ impl StockData {
             ma200_score: None,
             close_changed: None,
             volume_changed: None,
+            total_money_changed: None,
         }
     }
 

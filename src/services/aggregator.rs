@@ -262,6 +262,7 @@ impl Aggregator {
             // Change indicators will be calculated after aggregation
             close_changed: None,
             volume_changed: None,
+            total_money_changed: None,
         }
     }
 
@@ -296,6 +297,11 @@ impl Aggregator {
             if prev_volume > 0 {
                 curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
             }
+
+            // Total money changed: (price_change × volume) in VND
+            // This represents the absolute money flow in Vietnamese Dong
+            let price_change = curr.close - prev_close;  // Absolute price change in VND
+            curr.total_money_changed = Some(price_change * curr.volume as f64);  // Total money in VND
         }
 
         data
@@ -367,6 +373,11 @@ impl Aggregator {
                 if prev_volume > 0 {
                     curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
                 }
+
+                // Total money changed: (price_change × volume) in VND
+                // This represents the absolute money flow in Vietnamese Dong
+                let price_change = curr.close - prev_close;  // Absolute price change in VND
+                curr.total_money_changed = Some(price_change * curr.volume as f64);  // Total money in VND
             }
         }
 

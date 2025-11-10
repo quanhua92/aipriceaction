@@ -23,8 +23,8 @@ pub const CSV_BASIC_COLUMNS: usize = 7;
 /// - 7 basic OHLCV columns
 /// - 5 moving averages (ma10, ma20, ma50, ma100, ma200)
 /// - 5 MA scores (ma10_score, ma20_score, ma50_score, ma100_score, ma200_score)
-/// - 2 change indicators (close_changed, volume_changed)
-pub const CSV_ENHANCED_COLUMNS: usize = 19;
+/// - 3 change indicators (close_changed, volume_changed, total_money_changed)
+pub const CSV_ENHANCED_COLUMNS: usize = 20;
 
 /// Column indices for enhanced CSV format (0-indexed)
 pub mod csv_column {
@@ -37,7 +37,7 @@ pub mod csv_column {
     pub const CLOSE: usize = 5;
     pub const VOLUME: usize = 6;
 
-    // Technical indicator columns (7-18)
+    // Technical indicator columns (7-19)
     pub const MA10: usize = 7;
     pub const MA20: usize = 8;
     pub const MA50: usize = 9;
@@ -50,6 +50,7 @@ pub mod csv_column {
     pub const MA200_SCORE: usize = 16;
     pub const CLOSE_CHANGED: usize = 17;
     pub const VOLUME_CHANGED: usize = 18;
+    pub const TOTAL_MONEY_CHANGED: usize = 19;
 }
 
 /// Minimum number of records required to calculate MA50

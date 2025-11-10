@@ -95,6 +95,11 @@ pub fn enhance_data(
             if prev_volume > 0 {
                 curr.volume_changed = Some(((curr.volume as f64 - prev_volume as f64) / prev_volume as f64) * 100.0);
             }
+
+            // Total money changed: (price_change × volume) in VND
+            // This represents the absolute money flow in Vietnamese Dong
+            let price_change = curr.close - prev_close;  // Absolute price change in VND
+            curr.total_money_changed = Some(price_change * curr.volume as f64);  // Total money in VND
         }
 
         enhanced.insert(ticker, stock_data);
@@ -142,12 +147,12 @@ pub fn save_enhanced_csv(
 
         let mut wtr = csv::Writer::from_writer(file);
 
-        // Write 19-column header
+        // Write 20-column header
         wtr.write_record(&[
             "ticker", "time", "open", "high", "low", "close", "volume",
             "ma10", "ma20", "ma50", "ma100", "ma200",
             "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
-            "close_changed", "volume_changed"
+            "close_changed", "volume_changed", "total_money_changed"
         ])
         .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
 
@@ -230,7 +235,7 @@ pub fn save_enhanced_csv(
     Ok(())
 }
 
-/// Write a single StockData row to CSV (11 columns)
+/// Write a single StockData row to CSV (20 columns)
 fn write_stock_data_row(
     wtr: &mut Writer<std::fs::File>,
     stock_data: &StockData,
@@ -262,6 +267,7 @@ fn write_stock_data_row(
         &stock_data.ma200_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.close_changed.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.volume_changed.map_or(String::new(), |v| format!("{:.4}", v)),
+        &stock_data.total_money_changed.map_or(String::new(), |v| format!("{:.0}", v)),
     ])
     .map_err(|e| Error::Io(format!("Failed to write row: {}", e)))?;
 

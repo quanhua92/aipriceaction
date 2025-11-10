@@ -23,7 +23,7 @@ pub struct TopPerformersQuery {
     /// Date to analyze (YYYY-MM-DD format, default: latest trading day)
     pub date: Option<String>,
 
-    /// Metric to sort by: close_changed, volume, volume_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score
+    /// Metric to sort by: close_changed, volume, volume_changed, total_money_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score
     #[serde(default = "default_sort_by")]
     pub sort_by: String,
 
@@ -74,6 +74,7 @@ pub struct PerformerInfo {
     pub ma100_score: Option<f64>,
     pub ma200_score: Option<f64>,
     pub sector: Option<String>,
+    pub total_money_changed: Option<f64>,
 }
 
 /// Handler for top performers analysis endpoint
@@ -169,6 +170,7 @@ pub async fn top_performers_handler(
                 ma100_score: current.ma100_score,
                 ma200_score: current.ma200_score,
                 sector,
+                total_money_changed: current.total_money_changed,
             };
 
             performers.push(performer);
@@ -277,6 +279,20 @@ pub async fn top_performers_handler(
                         b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
                     } else {
                         a_score.partial_cmp(&b_score).unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                }
+                (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
+                (None, Some(_)) => if direction_desc { std::cmp::Ordering::Greater } else { std::cmp::Ordering::Less },
+                (None, None) => std::cmp::Ordering::Equal,
+            }
+        }),
+        "total_money_changed" => performers.sort_by(|a, b| {
+            match (a.total_money_changed, b.total_money_changed) {
+                (Some(a_val), Some(b_val)) => {
+                    if direction_desc {
+                        b_val.partial_cmp(&a_val).unwrap_or(std::cmp::Ordering::Equal)
+                    } else {
+                        a_val.partial_cmp(&b_val).unwrap_or(std::cmp::Ordering::Equal)
                     }
                 }
                 (Some(_), None) => if direction_desc { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater },
