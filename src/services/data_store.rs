@@ -397,7 +397,7 @@ impl DataStore {
         ).await;
 
         // Apply aggregation if needed
-        let mut aggregated_result = if let Some(agg_interval) = params.aggregated_interval {
+        let aggregated_result = if let Some(agg_interval) = params.aggregated_interval {
             debug!("Applying {} aggregation with MA200 buffer", agg_interval);
             let mut result = result
                 .into_iter()

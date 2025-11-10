@@ -245,7 +245,7 @@ pub struct TickerCategory {
     /// Tickers needing full history (new or insufficient data)
     pub full_history_tickers: Vec<String>,
 
-    /// Tickers needing full history but from a custom start date (gap > 2 days)
+    /// Tickers needing full history but from a custom start date (gap > 3 days)
     /// Each tuple contains (ticker, start_date_from_csv)
     pub partial_history_tickers: Vec<(String, String)>,
 

@@ -191,12 +191,12 @@ impl DataSync {
             // println!("⏱️  Full history fetching took: {:.2}s", full_history_start.elapsed().as_secs_f64());
         }
 
-        // Fetch partial history tickers individually (gap > 2 days, batch API won't work)
+        // Fetch partial history tickers individually (gap > 3 days, batch API won't work)
         let mut partial_history_results = HashMap::new();
 
         if !category.partial_history_tickers.is_empty() {
             println!(
-                "\n📥 Processing {} tickers with partial history (gap > 2 days)...",
+                "\n📥 Processing {} tickers with partial history (gap > 3 days)...",
                 category.partial_history_tickers.len()
             );
 

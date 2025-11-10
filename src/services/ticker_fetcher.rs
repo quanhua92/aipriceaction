@@ -114,10 +114,10 @@ impl TickerFetcher {
                             }
                         }
 
-                        // Check if gap is > 2 days - if so, use partial history instead of batch resume
+                        // Check if gap is > 3 days - if so, use partial history instead of batch resume
                         // Can be disabled with DISABLE_PARTIAL_HISTORY=1 for debugging
                         use chrono::NaiveDate;
-                        let gap_threshold_days = 2;
+                        let gap_threshold_days = 3;
                         let disable_partial = std::env::var("DISABLE_PARTIAL_HISTORY").is_ok();
 
                         if let Ok(last_date_parsed) = NaiveDate::parse_from_str(&last_date, "%Y-%m-%d") {
@@ -178,7 +178,7 @@ impl TickerFetcher {
         );
         if !category.partial_history_tickers.is_empty() {
             println!(
-                "   Partial history tickers: {} (gap > 2 days)",
+                "   Partial history tickers: {} (gap > 3 days)",
                 category.partial_history_tickers.len()
             );
         }
