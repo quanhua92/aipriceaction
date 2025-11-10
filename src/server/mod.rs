@@ -90,7 +90,7 @@ pub async fn serve(
     tracing::info!("  GET /tickers?symbol=VCB&interval=1D&start_date=2024-01-01");
     tracing::info!("  GET /health");
     tracing::info!("  GET /tickers/group");
-    tracing::info!("  GET /analysis/top-performers?sort_by=close_change_percent&limit=10");
+    tracing::info!("  GET /analysis/top-performers?sort_by=close_changed&limit=10");
     tracing::info!("  GET /analysis/ma-scores-by-sector?ma_period=20");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());

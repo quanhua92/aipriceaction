@@ -19,7 +19,7 @@ dependencies = [
 
 [[package]]
 name = "aipriceaction"
-version = "0.1.7"
+version = "0.1.9"
 dependencies = [
  "axum",
  "axum-extra",

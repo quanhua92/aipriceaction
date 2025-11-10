@@ -23,7 +23,7 @@ pub struct TopPerformersQuery {
     /// Date to analyze (YYYY-MM-DD format, default: latest trading day)
     pub date: Option<String>,
 
-    /// Metric to sort by: close_change, close_change_percent, volume, volume_change, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score
+    /// Metric to sort by: close_changed, volume, volume_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score
     #[serde(default = "default_sort_by")]
     pub sort_by: String,
 
@@ -42,7 +42,7 @@ pub struct TopPerformersQuery {
 }
 
 fn default_sort_by() -> String {
-    "close_change_percent".to_string()
+    "close_changed".to_string()
 }
 
 fn default_direction() -> String {
@@ -179,7 +179,7 @@ pub async fn top_performers_handler(
     let direction_desc = params.direction.to_lowercase() != "asc";
 
     match params.sort_by.to_lowercase().as_str() {
-        "close_changed" | "close_change_percent" => performers.sort_by(|a, b| {
+        "close_changed" => performers.sort_by(|a, b| {
             match (a.close_changed, b.close_changed) {
                 (Some(a_val), Some(b_val)) => {
                     if direction_desc {
@@ -200,7 +200,7 @@ pub async fn top_performers_handler(
                 a.volume.cmp(&b.volume)
             }
         }),
-        "volume_changed" | "volume_change" => performers.sort_by(|a, b| {
+        "volume_changed" => performers.sort_by(|a, b| {
             match (a.volume_changed, b.volume_changed) {
                 (Some(a_val), Some(b_val)) => {
                     if direction_desc {

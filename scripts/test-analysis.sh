@@ -115,7 +115,7 @@ test_top_performers() {
 
     # Test 2: Sort by close change
     print_test "Sort by close change test"
-    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=close_change&limit=5" || echo "")
+    response=$(curl -s "$BASE_URL/analysis/top-performers?sort_by=close_changed&limit=5" || echo "")
 
     if [[ -n "$response" ]]; then
         local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')

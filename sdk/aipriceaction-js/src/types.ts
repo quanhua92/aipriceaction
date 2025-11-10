@@ -31,10 +31,9 @@ export enum SortDirection {
 }
 
 export enum SortMetric {
-  CloseChange = "close_change",
-  CloseChangePercent = "close_change_percent",
+  CloseChanged = "close_changed",
   Volume = "volume",
-  VolumeChange = "volume_change",
+  VolumeChanged = "volume_changed",
   MA10Score = "ma10_score",
   MA20Score = "ma20_score",
   MA50Score = "ma50_score",

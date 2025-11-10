@@ -33,7 +33,7 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `date` | string | latest | Analysis date in YYYY-MM-DD format (e.g., "2024-01-15") |
-| `sort_by` | string | "close_change_percent" | Metric to sort by (see available metrics below) |
+| `sort_by` | string | "close_changed" | Metric to sort by (see available metrics below) |
 | `direction` | string | "desc" | Sort direction: "asc" (ascending) or "desc" (descending) |
 | `limit` | number | 10 | Number of results to return (1-100) |
 | `sector` | string | - | Filter by sector name (e.g., "VN30", "BANKING") |
@@ -303,7 +303,7 @@ The test script covers:
 
 1. **Market Overview**: Get top performers by percentage change
    ```bash
-   GET /analysis/top-performers?sort_by=close_change_percent&limit=20
+   GET /analysis/top-performers?sort_by=close_changed&limit=20
    ```
 
 2. **Sector Leadership**: Find sectors with strongest MA20 momentum
