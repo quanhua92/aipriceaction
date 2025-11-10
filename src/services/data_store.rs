@@ -361,6 +361,9 @@ impl DataStore {
                 // Parse change indicators (percentage change from previous row)
                 stock_data.close_changed = record.get(csv_column::CLOSE_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
                 stock_data.volume_changed = record.get(csv_column::VOLUME_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+
+                // Parse total money changed if present (enhanced CSV format)
+                stock_data.total_money_changed = record.get(csv_column::TOTAL_MONEY_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
             }
 
             data.push(stock_data);

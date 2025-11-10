@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use crate::{
     services::data_store::SharedDataStore,
     models::Interval,
@@ -39,6 +40,9 @@ pub struct TopPerformersQuery {
 
     /// Minimum volume filter (default: 10000)
     pub min_volume: Option<u64>,
+
+    /// Include hourly breakdown (default: false)
+    pub with_hour: Option<bool>,
 }
 
 fn default_sort_by() -> String {
@@ -54,6 +58,15 @@ fn default_direction() -> String {
 pub struct TopPerformersResponse {
     pub performers: Vec<PerformerInfo>,
     pub worst_performers: Vec<PerformerInfo>,
+    pub hourly: Option<Vec<HourlyPerformers>>,
+}
+
+/// Hourly performers breakdown
+#[derive(Debug, Serialize)]
+pub struct HourlyPerformers {
+    pub hour: String,                             // Exact CSV timestamp: "2023-09-11 03:00:00"
+    pub performers: Vec<PerformerInfo>,          // Top performers for this hour
+    pub worst_performers: Vec<PerformerInfo>,    // Worst performers for this hour
 }
 
 /// Individual performer information
@@ -78,116 +91,14 @@ pub struct PerformerInfo {
     pub total_money_changed: Option<f64>,
 }
 
-/// Handler for top performers analysis endpoint
-pub async fn top_performers_handler(
-    State(data_state): State<SharedDataStore>,
-    Query(params): Query<TopPerformersQuery>,
-) -> impl IntoResponse {
-    // Load ticker groups for sector mapping
-    let ticker_groups = match load_ticker_groups() {
-        Ok(groups) => groups,
-        Err(e) => {
-            tracing::error!("Failed to load ticker groups: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({
-                    "error": "Failed to load sector information"
-                })),
-            ).into_response();
-        }
-    };
-
-    // Determine tickers to analyze
-    let tickers = if let Some(sector_filter) = &params.sector {
-        super::get_tickers_in_sector(sector_filter, &ticker_groups)
-    } else {
-        // Get all available tickers from data store
-        data_state.get_all_ticker_names().await
-    };
-
-    if tickers.is_empty() {
-        return (
-            StatusCode::OK,
-            Json(AnalysisResponse {
-                analysis_date: params.date.clone().unwrap_or_else(|| "N/A".to_string()),
-                analysis_type: "top_performers".to_string(),
-                total_analyzed: 0,
-                data: TopPerformersResponse {
-                    performers: vec![],
-                    worst_performers: vec![],
-                },
-            }),
-        ).into_response();
-    }
-
-    // Fetch data from DataStore using existing pattern
-    let data = data_state.get_data_with_cache(
-        tickers.clone(),
-        Interval::Daily,
-        None, // start_date
-        None, // end_date
-        None, // limit
-        true, // use_cache
-    ).await;
-
-    let mut performers = Vec::new();
-
-    for (ticker, stock_data) in data {
-        if stock_data.is_empty() {
-            continue;
-        }
-
-        // Find analysis date and record
-        let analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
-
-        // Find the record on or before the analysis date
-        let current_record = stock_data.iter()
-            .filter(|d| d.time <= analysis_date)
-            .max_by_key(|d| d.time);
-
-        if let Some(current) = current_record {
-            // Apply minimum volume filter
-            let min_volume = params.min_volume.unwrap_or(10000);
-            if current.volume < min_volume {
-                continue;
-            }
-
-            // Get sector information
-            let sector = get_ticker_sector(&ticker, &ticker_groups);
-
-            let performer = PerformerInfo {
-                symbol: ticker,
-                close: current.close,
-                volume: current.volume,
-                close_changed: current.close_changed,
-                volume_changed: current.volume_changed,
-                ma10: current.ma10,
-                ma20: current.ma20,
-                ma50: current.ma50,
-                ma100: current.ma100,
-                ma200: current.ma200,
-                ma10_score: current.ma10_score,
-                ma20_score: current.ma20_score,
-                ma50_score: current.ma50_score,
-                ma100_score: current.ma100_score,
-                ma200_score: current.ma200_score,
-                sector,
-                total_money_changed: current.total_money_changed,
-            };
-
-            performers.push(performer);
-        }
-    }
-
-    
-    let limit = validate_limit(params.limit);
-
+/// Helper function to sort performers and return top/worst performers
+fn sort_performers(performers: Vec<PerformerInfo>, sort_by: &str, direction: &str, limit: usize) -> (Vec<PerformerInfo>, Vec<PerformerInfo>) {
     // Clone performers for sorting in opposite direction
     let mut performers_asc = performers.clone();
     let mut performers_desc = performers.clone();
 
     // Sort descending for top performers
-    match params.sort_by.to_lowercase().as_str() {
+    match sort_by.to_lowercase().as_str() {
         "close_changed" => {
             performers_desc.sort_by(|a, b| {
                 match (a.close_changed, b.close_changed) {
@@ -357,9 +268,148 @@ pub async fn top_performers_handler(
         }
     }
 
-    // Take top performers (best) from descending sort and worst performers from ascending sort
-    let top_performers = performers_desc.into_iter().take(limit).collect::<Vec<_>>();
-    let worst_performers = performers_asc.into_iter().take(limit).collect::<Vec<_>>();
+    // Return results based on direction
+    if direction == "asc" {
+        let top_performers = performers_asc.into_iter().take(limit).collect::<Vec<_>>();
+        let worst_performers = performers_desc.into_iter().take(limit).collect::<Vec<_>>();
+        (top_performers, worst_performers)
+    } else {
+        // Default: desc (top performers have highest values)
+        let top_performers = performers_desc.into_iter().take(limit).collect::<Vec<_>>();
+        let worst_performers = performers_asc.into_iter().take(limit).collect::<Vec<_>>();
+        (top_performers, worst_performers)
+    }
+}
+
+/// Handler for top performers analysis endpoint
+pub async fn top_performers_handler(
+    State(data_state): State<SharedDataStore>,
+    Query(params): Query<TopPerformersQuery>,
+) -> impl IntoResponse {
+    // Load ticker groups for sector mapping
+    let ticker_groups = match load_ticker_groups() {
+        Ok(groups) => groups,
+        Err(e) => {
+            tracing::error!("Failed to load ticker groups: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({
+                    "error": "Failed to load sector information"
+                })),
+            ).into_response();
+        }
+    };
+
+    // Determine tickers to analyze
+    let tickers = if let Some(sector_filter) = &params.sector {
+        super::get_tickers_in_sector(sector_filter, &ticker_groups)
+    } else {
+        // Get all available tickers from data store
+        data_state.get_all_ticker_names().await
+    };
+
+    if tickers.is_empty() {
+        return (
+            StatusCode::OK,
+            Json(AnalysisResponse {
+                analysis_date: params.date.clone().unwrap_or_else(|| "N/A".to_string()),
+                analysis_type: "top_performers".to_string(),
+                total_analyzed: 0,
+                data: TopPerformersResponse {
+                    performers: vec![],
+                    worst_performers: vec![],
+                    hourly: None,
+                },
+            }),
+        ).into_response();
+    }
+
+    // Fetch data from DataStore using existing pattern
+    let data = data_state.get_data_with_cache(
+        tickers.clone(),
+        Interval::Daily,
+        None, // start_date
+        None, // end_date
+        None, // limit
+        true, // use_cache
+    ).await;
+
+    // Process daily data
+    let mut daily_performers = Vec::new();
+
+    for (ticker, stock_data) in data {
+        if stock_data.is_empty() {
+            continue;
+        }
+
+        // Find analysis date and record
+        let analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
+
+        // Find the record on or before the analysis date
+        let current_record = stock_data.iter()
+            .filter(|d| d.time <= analysis_date)
+            .max_by_key(|d| d.time);
+
+        if let Some(current) = current_record {
+            // Apply minimum volume filter
+            let min_volume = params.min_volume.unwrap_or(10000);
+            if current.volume < min_volume {
+                continue;
+            }
+
+            // Get sector information
+            let sector = get_ticker_sector(&ticker, &ticker_groups);
+
+            let performer = PerformerInfo {
+                symbol: ticker,
+                close: current.close,
+                volume: current.volume,
+                close_changed: current.close_changed,
+                volume_changed: current.volume_changed,
+                ma10: current.ma10,
+                ma20: current.ma20,
+                ma50: current.ma50,
+                ma100: current.ma100,
+                ma200: current.ma200,
+                ma10_score: current.ma10_score,
+                ma20_score: current.ma20_score,
+                ma50_score: current.ma50_score,
+                ma100_score: current.ma100_score,
+                ma200_score: current.ma200_score,
+                sector,
+                total_money_changed: current.total_money_changed,
+            };
+
+            daily_performers.push(performer);
+        }
+    }
+
+    let limit = validate_limit(params.limit);
+    let (top_performers, worst_performers) = sort_performers(
+        daily_performers,
+        &params.sort_by,
+        &params.direction,
+        limit
+    );
+
+    // Process hourly data if requested
+    let hourly_data = if params.with_hour.unwrap_or(false) {
+        match process_hourly_data(
+            &data_state,
+            &tickers,
+            &ticker_groups,
+            &params,
+            limit
+        ).await {
+            Ok(hourly) => Some(hourly),
+            Err(e) => {
+                tracing::error!("Failed to process hourly data: {}", e);
+                None
+            }
+        }
+    } else {
+        None
+    };
 
     let total_analyzed = top_performers.len() + worst_performers.len();
 
@@ -372,7 +422,103 @@ pub async fn top_performers_handler(
             data: TopPerformersResponse {
                 performers: top_performers.to_vec(),
                 worst_performers: worst_performers.to_vec(),
+                hourly: hourly_data,
             },
         }),
     ).into_response()
+}
+
+/// Process hourly data for top performers analysis
+async fn process_hourly_data(
+    data_state: &SharedDataStore,
+    tickers: &[String],
+    ticker_groups: &std::collections::HashMap<String, Vec<String>>,
+    params: &TopPerformersQuery,
+    limit: usize,
+) -> Result<Vec<HourlyPerformers>, Box<dyn std::error::Error + Send + Sync>> {
+    // Fetch hourly data from DataStore
+    let hourly_data = data_state.get_data_with_cache(
+        tickers.to_vec(),
+        Interval::Hourly,
+        None, // start_date
+        None, // end_date
+        None, // limit
+        true, // use_cache
+    ).await;
+
+    // Group hourly data by exact CSV timestamps
+    let mut hourly_groups: HashMap<String, Vec<PerformerInfo>> = HashMap::new();
+
+    for (ticker, stock_data) in hourly_data {
+        if stock_data.is_empty() {
+            continue;
+        }
+
+        // Find analysis date and record
+        let analysis_date = parse_analysis_date(params.date.clone(), &stock_data);
+
+        // Find records on the analysis date
+        for record in stock_data.iter() {
+            // Check if record is on the analysis date
+            if record.time.date_naive() == analysis_date.date_naive() {
+                // Apply minimum volume filter
+                let min_volume = params.min_volume.unwrap_or(10000);
+                if record.volume < min_volume {
+                    continue;
+                }
+
+                // Get sector information
+                let sector = get_ticker_sector(&ticker, &ticker_groups);
+
+                let performer = PerformerInfo {
+                    symbol: ticker.clone(),
+                    close: record.close,
+                    volume: record.volume,
+                    close_changed: record.close_changed,
+                    volume_changed: record.volume_changed,
+                    ma10: record.ma10,
+                    ma20: record.ma20,
+                    ma50: record.ma50,
+                    ma100: record.ma100,
+                    ma200: record.ma200,
+                    ma10_score: record.ma10_score,
+                    ma20_score: record.ma20_score,
+                    ma50_score: record.ma50_score,
+                    ma100_score: record.ma100_score,
+                    ma200_score: record.ma200_score,
+                    sector,
+                    total_money_changed: record.total_money_changed,
+                };
+
+                // Use exact CSV timestamp format "YYYY-MM-DD HH:MM:SS"
+                let hour_key = record.time.format("%Y-%m-%d %H:%M:%S").to_string();
+                hourly_groups.entry(hour_key).or_insert_with(Vec::new).push(performer);
+            }
+        }
+    }
+
+    // Sort hourly timestamps chronologically
+    let mut sorted_hours: Vec<String> = hourly_groups.keys().cloned().collect();
+    sorted_hours.sort();
+
+    // Process each hour
+    let mut hourly_performers = Vec::new();
+    for hour in sorted_hours {
+        if let Some(performers) = hourly_groups.get(&hour) {
+            let (top_hourly, worst_hourly) = sort_performers(
+                performers.clone(),
+                &params.sort_by,
+                &params.direction,
+                limit
+            );
+
+            hourly_performers.push(HourlyPerformers {
+                hour,
+                performers: top_hourly,
+                worst_performers: worst_hourly,
+            });
+        }
+    }
+
+    Ok(hourly_performers)
 }

@@ -38,6 +38,7 @@ Returns top/bottom performing stocks based on various metrics with customizable 
 | `limit` | number | 10 | Number of results to return (1-100) |
 | `sector` | string | - | Filter by sector name (e.g., "VN30", "BANKING") |
 | `min_volume` | number | 10000 | Minimum trading volume filter |
+| `with_hour` | boolean | false | Include hourly breakdown (returns intraday performers) |
 
 #### Available Sort Metrics
 
@@ -102,10 +103,59 @@ Returns top/bottom performing stocks based on various metrics with customizable 
         "ma200_score": -5.00,
         "sector": "TECHNOLOGY"
       }
+    ],
+    "hourly": [
+      {
+        "hour": "2024-01-15 02:00:00",
+        "performers": [
+          {
+            "symbol": "VCB",
+            "close": 60100.0,
+            "volume": 250000,
+            "close_changed": 1.85,
+            "volume_changed": 12.5,
+            "total_money_changed": 11125000000,
+            "ma10": 59400.0,
+            "ma20": 58700.0,
+            "ma50": 57400.0,
+            "ma100": 56100.0,
+            "ma200": 54700.0,
+            "ma10_score": 1.18,
+            "ma20_score": 2.38,
+            "ma50_score": 4.70,
+            "ma100_score": 7.13,
+            "ma200_score": 9.87,
+            "sector": "BANKING"
+          }
+        ],
+        "worst_performers": [
+          {
+            "symbol": "FPT",
+            "close": 94800.0,
+            "volume": 180000,
+            "close_changed": -2.16,
+            "volume_changed": -18.2,
+            "total_money_changed": -3888000000,
+            "ma10": 95900.0,
+            "ma20": 96900.0,
+            "ma50": 98400.0,
+            "ma100": 98900.0,
+            "ma200": 99900.0,
+            "ma10_score": -1.04,
+            "ma20_score": -2.16,
+            "ma50_score": -3.66,
+            "ma100_score": -4.14,
+            "ma200_score": -5.11,
+            "sector": "TECHNOLOGY"
+          }
+        ]
+      }
     ]
   }
 }
 ```
+
+**Note**: The `hourly` field is only present when `with_hour=true` is specified. It contains an array of hourly breakdowns with exact CSV timestamps (format: "YYYY-MM-DD HH:MM:SS"). Vietnamese trading hours typically produce 5 hourly records: 02:00, 03:00, 04:00, 06:00, 07:00 (no 05:00 due to lunch break).
 
 #### Field Descriptions
 
@@ -139,6 +189,15 @@ GET /analysis/top-performers?sort_by=total_money_changed&limit=10
 
 # Historical analysis for specific date
 GET /analysis/top-performers?date=2024-01-10&sort_by=close_changed&limit=10
+
+# Hourly breakdown - intraday performers by each trading hour
+GET /analysis/top-performers?with_hour=true&sort_by=close_changed&limit=5
+
+# Hourly breakdown by sector with MA momentum
+GET /analysis/top-performers?with_hour=true&sector=BANKING&sort_by=ma20_score&limit=3
+
+# Hourly volume leaders analysis
+GET /analysis/top-performers?with_hour=true&sort_by=volume&min_volume=500000&limit=5
 ```
 
 ---
@@ -357,6 +416,46 @@ curl "http://localhost:3000/analysis/top-performers?sort_by=ma20_score&limit=5"
 # Response shows stocks with strongest MA20 momentum,
 # useful for identifying medium-term trend leaders
 ```
+
+### Intraday Analysis with Hourly Breakdown
+
+```bash
+# Get hourly breakdown of top performers
+curl "http://localhost:3000/analysis/top-performers?with_hour=true&sort_by=close_changed&limit=5"
+
+# Returns:
+# - Daily top performers (same as regular endpoint)
+# - Hourly breakdown for each trading hour (typically 5 hours)
+# - Same fields available for hourly data (OHLCV, MA scores, sector, etc.)
+```
+
+**Use Cases for Hourly Analysis:**
+
+1. **Momentum Tracking**: Monitor which stocks lead during different time periods
+   ```bash
+   GET /analysis/top-performers?with_hour=true&sort_by=ma20_score&limit=3
+   ```
+
+2. **Sector Rotation Analysis**: Identify sectors leading during specific hours
+   ```bash
+   GET /analysis/top-performers?with_hour=true&sector=TECHNOLOGY&sort_by=volume&limit=5
+   ```
+
+3. **Volume Pattern Analysis**: Detect unusual volume activity by hour
+   ```bash
+   GET /analysis/top-performers?with_hour=true&sort_by=volume_changed&min_volume=100000&limit=3
+   ```
+
+4. **Money Flow Analysis**: Track intraday money flow patterns
+   ```bash
+   GET /analysis/top-performers?with_hour=true&sort_by=total_money_changed&limit=5
+   ```
+
+**Hourly Timestamp Format:**
+- Format: "YYYY-MM-DD HH:MM:SS" (exact CSV values)
+- Trading hours: 02:00, 03:00, 04:00, 06:00, 07:00 (UTC)
+- No 05:00 data due to lunch break
+- All 20 data columns available for hourly performers
 
 ---
 
