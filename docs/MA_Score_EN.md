@@ -53,13 +53,13 @@ The system calculates MA scores for 5 periods:
 
 ### Data Format
 
-MA Score is integrated into the system's 19-column CSV format:
+MA Score is integrated into the system's 20-column CSV format:
 
 ```
 ticker,time,open,high,low,close,volume,
 ma10,ma20,ma50,ma100,ma200,
 ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,
-close_changed,volume_changed
+close_changed,volume_changed,total_money_changed
 ```
 
 **Columns 13-17**: MA Scores for each period (calculated as percentages)

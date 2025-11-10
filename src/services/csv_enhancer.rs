@@ -119,6 +119,7 @@ pub fn save_enhanced_csv(
     data: &[StockData],
     interval: Interval,
     cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
 ) -> Result<(), Error> {
     if data.is_empty() {
         return Err(Error::InvalidInput("No data to save".to_string()));
@@ -133,10 +134,11 @@ pub fn save_enhanced_csv(
     let file_path = ticker_dir.join(interval.to_filename());
     let file_exists = file_path.exists();
 
-    if !file_exists {
-        // New file - create with exclusive lock
+    if !file_exists || rewrite_all {
+        // New file or rewrite - create/truncate with exclusive lock
         let file = std::fs::OpenOptions::new()
             .create(true)
+            .truncate(rewrite_all)
             .write(true)
             .open(&file_path)
             .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
@@ -453,7 +455,7 @@ fn write_enhanced_csv(
     let mut total_bytes_written = 0u64;
 
     for (ticker, ticker_data) in data {
-        save_enhanced_csv(ticker, ticker_data, interval, cutoff_date)?;
+        save_enhanced_csv(ticker, ticker_data, interval, cutoff_date, false)?;
 
         total_record_count += ticker_data.len();
 

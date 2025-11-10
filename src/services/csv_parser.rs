@@ -107,7 +107,7 @@ pub fn parse_daily_csv(input_path: &Path) -> Result<usize, Box<dyn std::error::E
         let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
 
         if let Some(stock_data) = enhanced.get(&ticker_name) {
-            save_enhanced_csv(&ticker_name, stock_data, Interval::Daily, cutoff_date)?;
+            save_enhanced_csv(&ticker_name, stock_data, Interval::Daily, cutoff_date, false)?;
         }
     }
 
@@ -182,7 +182,7 @@ pub fn parse_intraday_csv(
         let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
 
         if let Some(stock_data) = enhanced.get(&ticker_name) {
-            save_enhanced_csv(&ticker_name, stock_data, interval, cutoff_date)?;
+            save_enhanced_csv(&ticker_name, stock_data, interval, cutoff_date, false)?;
         }
     }
 

@@ -27,9 +27,9 @@ The `import-legacy` command intelligently imports historical market data from th
    ```
    market_data/
    ├── VCB/
-   │   ├── 1D.csv     (11 columns with indicators)
-   │   ├── 1h.csv     (11 columns with indicators)
-   │   └── 1m.csv     (11 columns with indicators)
+   │   ├── 1D.csv     (20 columns with indicators)
+   │   ├── 1h.csv     (20 columns with indicators)
+   │   └── 1m.csv     (20 columns with indicators)
    ├── FPT/
    │   ├── 1D.csv
    │   ├── 1h.csv

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The CSV enhancement feature automatically adds technical indicator columns to raw OHLCV data **during sync**, transforming data into comprehensive 11-column files with moving averages, MA scores, and percentage change indicators in a **single write operation**.
+The CSV enhancement feature automatically adds technical indicator columns to raw OHLCV data **during sync**, transforming data into comprehensive 20-column files with moving averages, MA scores, and percentage change indicators in a **single write operation**.
 
 ## Quick Start
 
@@ -19,17 +19,18 @@ cargo run -- pull --intervals daily
 
 ## CSV Format
 
-### Enhanced Format (11 columns)
+### Enhanced Format (20 columns)
 ```csv
-ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma10_score,ma20_score,ma50_score,close_changed,volume_changed
-VCB,2025-11-04,59200.00,60400.00,59100.00,60100.00,2952400,59840.00,61160.00,63017.80,0.4345,-1.7332,-4.6301,1.5234,-10.2341
+ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed
+VCB,2025-11-04,59200.00,60400.00,59100.00,60100.00,2952400,59840.00,61160.00,63017.80,64500.00,67800.00,0.4345,-1.7332,-4.6301,-6.8201,-11.3445,1.5234,-10.2341,8955400000
 ```
 
 **Column Breakdown:**
 - **Columns 1-7**: Basic OHLCV data (ticker, time, open, high, low, close, volume)
-- **Columns 8-10**: Moving averages (ma10, ma20, ma50)
-- **Columns 11-13**: MA scores (percentage deviation from MAs)
-- **Columns 14-15**: Percentage changes (close_changed, volume_changed)
+- **Columns 8-12**: Moving averages (ma10, ma20, ma50, ma100, ma200)
+- **Columns 13-17**: MA scores (percentage deviation from MAs)
+- **Columns 18-19**: Percentage changes (close_changed, volume_changed)
+- **Column 20**: Money flow indicator (total_money_changed in VND)
 
 ## Technical Indicators
 
@@ -193,13 +194,13 @@ VNINDEX,2025-11-04,1618.02,1658.93,1600.56,1651.98,1198941757,1664.58,1694.48,16
 ```
 market_data/
 ├── VNINDEX/
-│   ├── 1D.csv     (11 columns)
-│   ├── 1h.csv     (11 columns)
-│   └── 1m.csv     (11 columns)
+│   ├── 1D.csv     (20 columns)
+│   ├── 1h.csv     (20 columns)
+│   └── 1m.csv     (20 columns)
 ├── VCB/
-│   ├── 1D.csv     (11 columns)
-│   ├── 1h.csv     (11 columns)
-│   └── 1m.csv     (11 columns)
+│   ├── 1D.csv     (20 columns)
+│   ├── 1h.csv     (20 columns)
+│   └── 1m.csv     (20 columns)
 └── ...
 ```
 
@@ -352,7 +353,7 @@ pub fn enhance_interval(
 - **v0.2.0** (2025-11-06): **BREAKING CHANGE** - Single-phase enhancement
   - Removed: `money_flow`, `dollar_flow`, `trend_score` (cross-ticker complexity)
   - Added: `close_changed`, `volume_changed` (simple per-row indicators)
-  - Changed: 16 columns → 11 columns
+  - Changed: 16 columns → 20 columns
   - Changed: Double-write → Single-write
   - Changed: Data passed in memory (no intermediate CSV)
 - **v0.1.0** (2025-11-05): Initial implementation

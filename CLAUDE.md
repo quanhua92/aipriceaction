@@ -226,7 +226,7 @@ docker stats aipriceaction
                      ↓
 ┌─────────────────────────────────────────────────────┐
 │  Storage: market_data/{TICKER}/{INTERVAL}.csv       │
-│  - 19-column format with technical indicators       │
+│  - 20-column format with technical indicators       │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -263,7 +263,7 @@ docker stats aipriceaction
 4. Dividend check: Detect price adjustments (daily only)
 5. Merge: Smart merging with existing data
 6. Enhance: Calculate indicators in-memory (single-phase)
-7. Write: Write enhanced CSV once (19 columns)
+7. Write: Write enhanced CSV once (20 columns)
 
 **API Request Flow:**
 1. Request: `GET /tickers?symbol=VCB&interval=1D`
@@ -293,25 +293,34 @@ docker stats aipriceaction
 - Only divide by 1000 when `legacy=true` flag is used (backward compatibility)
 - Index tickers defined in `INDEX_TICKERS` constant in `src/constants.rs`
 
-### CSV Format (19 columns)
+### CSV Format (20 columns)
 
 ```
 ticker,time,open,high,low,close,volume,
 ma10,ma20,ma50,ma100,ma200,
 ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,
-close_changed,volume_changed
+close_changed,volume_changed,total_money_changed
 ```
 
-- All CSV files follow this enhanced format (added in v0.3.0)
+**Column Details:**
+- **Columns 1-7**: OHLCV data (ticker, time, open, high, low, close, volume)
+- **Columns 8-12**: Moving averages (MA10, MA20, MA50, MA100, MA200)
+- **Columns 13-17**: MA scores (percentage deviation from each MA)
+- **Column 18**: `close_changed` - Price change percentage from previous period
+- **Column 19**: `volume_changed` - Volume change percentage from previous period
+- **Column 20**: `total_money_changed` - Money flow in VND: `(price_change × volume)`
+
+- All CSV files follow this enhanced format (added in v0.3.0, updated to 20 columns in v0.3.1)
 - Technical indicators calculated during sync (single-phase enhancement)
 - Time format: "YYYY-MM-DD" (daily) or "YYYY-MM-DD HH:MM:SS" (hourly/minute)
+- `total_money_changed` represents the absolute money flow in Vietnamese Dong
 
 ### File Structure
 
 ```
 market_data/
 ├── VCB/
-│   ├── 1D.csv   # Daily data (19 columns)
+│   ├── 1D.csv   # Daily data (20 columns)
 │   ├── 1h.csv   # Hourly data
 │   └── 1m.csv   # Minute data
 ├── FPT/

@@ -179,7 +179,7 @@ fn rebuild_single_csv(
     // Save enhanced data back to CSV
     // Use cutoff date to only write recent data (2 days ago)
     let cutoff_date = chrono::Utc::now() - chrono::Duration::days(2);
-    save_enhanced_csv(ticker, enhanced_ticker_data, interval, cutoff_date)?;
+    save_enhanced_csv(ticker, enhanced_ticker_data, interval, cutoff_date, true)?;
 
     stats.files_rebuilt += 1;
     stats.records_enhanced += enhanced_ticker_data.len();

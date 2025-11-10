@@ -73,7 +73,7 @@ FPT last date: 2025-10-30  (missed a week, need 6 days)
 
 **Data Flow:**
 ```
-VCI API → OhlcvData → CSV Enhancer (in-memory) → Enhanced 11-column CSV
+VCI API → OhlcvData → CSV Enhancer (in-memory) → Enhanced 20-column CSV
 ```
 
 **What happens:**
@@ -197,14 +197,14 @@ Real-time progress with ETA calculation:
 
 ## Directory Structure
 
-Data is saved in **ticker-first** structure with **enhanced 11-column CSV files**:
+Data is saved in **ticker-first** structure with **enhanced 20-column CSV files**:
 
 ```
 market_data/
 ├── VNINDEX/
-│   ├── 1D.csv         # Enhanced 11-column CSV (OHLCV + indicators)
-│   ├── 1h.csv         # Enhanced 11-column CSV
-│   └── 1m.csv         # Enhanced 11-column CSV
+│   ├── 1D.csv         # Enhanced 20-column CSV (OHLCV + indicators)
+│   ├── 1h.csv         # Enhanced 20-column CSV
+│   └── 1m.csv         # Enhanced 20-column CSV
 ├── VIC/
 │   ├── 1D.csv
 │   ├── 1h.csv
@@ -269,7 +269,7 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
 [001/290] VNINDEX
 ==================================================================
    ✅ Using full history batch result for VNINDEX
-   - Enhancing and saving to: market_data/VNINDEX/1D.csv (11 columns)
+   - Enhancing and saving to: market_data/VNINDEX/1D.csv (20 columns)
    ✅ SUCCESS: VNINDEX - 2707 records saved with indicators
 
 [001/290] VNINDEX | 1.2s | Elapsed: 0.0min | ETA: 5.8min
@@ -332,7 +332,7 @@ Tickers: VNINDEX, VN30, AAA, AAM, AAS, AAT, ABB, ABC, ABI, ABT
    📝 No dividend, merging with existing data...
    - DEBUG: Existing data has 2,707 rows, new data has 30 rows
    - DEBUG: Adding 1 new/updated rows
-   - Enhancing and saving to: market_data/VNINDEX/1D.csv (11 columns)
+   - Enhancing and saving to: market_data/VNINDEX/1D.csv (20 columns)
    ✅ SUCCESS: VNINDEX - 2708 records saved with indicators
 
 [001/290] VNINDEX | 1.5s | Elapsed: 0.0min | ETA: 7.2min

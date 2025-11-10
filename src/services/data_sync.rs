@@ -633,7 +633,7 @@ impl DataSync {
         // Save enhanced data to CSV with smart cutoff strategy and file locking
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
-            save_enhanced_csv(ticker, stock_data, interval, cutoff_date)?;
+            save_enhanced_csv(ticker, stock_data, interval, cutoff_date, false)?;
         }
 
         Ok(())
