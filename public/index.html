@@ -340,10 +340,10 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
               <select id="analysis-sort-by" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                <option value="close_changed" selected>Close Change %</option>
+                <option value="close_changed">Close Change %</option>
                 <option value="volume">Volume</option>
                 <option value="volume_changed">Volume Change %</option>
-                <option value="total_money_changed">Total Money Changed (VND)</option>
+                <option value="total_money_changed" selected>Total Money Changed (VND)</option>
                 <option value="ma10_score">MA10 Score</option>
                 <option value="ma20_score">MA20 Score</option>
                 <option value="ma50_score">MA50 Score</option>
@@ -383,8 +383,8 @@
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Include Hourly Breakdown</label>
               <select id="analysis-with-hour" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                <option value="false" selected>No (Daily Only)</option>
-                <option value="true">Yes (Daily + Hourly)</option>
+                <option value="false">No (Daily Only)</option>
+                <option value="true" selected>Yes (Daily + Hourly)</option>
               </select>
               <p class="text-xs text-gray-500 mt-1">Returns performers for each trading hour (5 hours total)</p>
             </div>

@@ -166,9 +166,15 @@ function renderDailySummary(data) {
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money (VND)</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50 Score</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA100</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA100 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA200</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA200 Score</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
               </tr>
             </thead>
@@ -204,9 +210,15 @@ function renderDailySummary(data) {
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money (VND)</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50 Score</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA100</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA100 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA200</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA200 Score</th>
                 <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sector</th>
               </tr>
             </thead>
@@ -308,15 +320,24 @@ function renderHourContent(hourData, hourIndex) {
               <tr>
                 <th class="px-2 py-1 text-left text-xs font-medium text-green-700">#</th>
                 <th class="px-2 py-1 text-left text-xs font-medium text-green-700">Symbol</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Price</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Change %</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Volume</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Total Money (VND)</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA20</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA20 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA50</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA50 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA100</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA100 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA200</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA200 Score</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
     `;
 
-    hourData.performers.slice(0, 5).forEach((stock, index) => {
+    hourData.performers.forEach((stock, index) => {
       html += renderHourlyStockRow(stock, index + 1, 'top');
     });
 
@@ -339,15 +360,24 @@ function renderHourContent(hourData, hourIndex) {
               <tr>
                 <th class="px-2 py-1 text-left text-xs font-medium text-red-700">#</th>
                 <th class="px-2 py-1 text-left text-xs font-medium text-red-700">Symbol</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Price</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Change %</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Volume</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Total Money (VND)</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA20</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA20 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA50</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA50 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA100</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA100 Score</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA200</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA200 Score</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
     `;
 
-    hourData.worst_performers.slice(0, 5).forEach((stock, index) => {
+    hourData.worst_performers.forEach((stock, index) => {
       html += renderHourlyStockRow(stock, index + 1, 'worst');
     });
 
@@ -368,9 +398,19 @@ function renderStockRow(stock, index, type) {
   const changeClass = (stock.close_changed >= 0) ? 'text-green-600' : 'text-red-600';
   const changeSign = (stock.close_changed >= 0) ? '+' : '';
   const volume = stock.volume ? formatVolume(stock.volume) : 'N/A';
-  const ma20 = stock.ma20_score ? stock.ma20_score.toFixed(1) + '%' : 'N/A';
-  const ma50 = stock.ma50_score ? stock.ma50_score.toFixed(1) + '%' : 'N/A';
-  const ma200 = stock.ma200_score ? stock.ma200_score.toFixed(1) + '%' : 'N/A';
+  const totalMoney = stock.total_money_changed ? formatVolume(Math.abs(stock.total_money_changed)) : 'N/A';
+  const totalMoneySign = stock.total_money_changed >= 0 ? '' : '-';
+  const totalMoneyClass = stock.total_money_changed >= 0 ? 'text-green-600' : 'text-red-600';
+
+  // MA values and scores
+  const ma20 = stock.ma20 ? formatNumber(stock.ma20) : 'N/A';
+  const ma20Score = stock.ma20_score ? stock.ma20_score.toFixed(1) + '%' : 'N/A';
+  const ma50 = stock.ma50 ? formatNumber(stock.ma50) : 'N/A';
+  const ma50Score = stock.ma50_score ? stock.ma50_score.toFixed(1) + '%' : 'N/A';
+  const ma100 = stock.ma100 ? formatNumber(stock.ma100) : 'N/A';
+  const ma100Score = stock.ma100_score ? stock.ma100_score.toFixed(1) + '%' : 'N/A';
+  const ma200 = stock.ma200 ? formatNumber(stock.ma200) : 'N/A';
+  const ma200Score = stock.ma200_score ? stock.ma200_score.toFixed(1) + '%' : 'N/A';
 
   return '<tr class="hover:bg-gray-50">' +
     '<td class="px-3 py-2 text-sm text-gray-900">' + index + '</td>' +
@@ -378,9 +418,15 @@ function renderStockRow(stock, index, type) {
     '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + (stock.close ? formatNumber(stock.close) : 'N/A') + '</td>' +
     '<td class="px-3 py-2 text-sm text-right font-medium ' + changeClass + '">' + changeSign + (stock.close_changed || 0).toFixed(2) + '%</td>' +
     '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + volume + '</td>' +
+    '<td class="px-3 py-2 text-sm text-right font-medium ' + totalMoneyClass + '">' + totalMoneySign + totalMoney + '</td>' +
     '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma20 + '</td>' +
+    '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma20Score + '</td>' +
     '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma50 + '</td>' +
+    '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma50Score + '</td>' +
+    '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma100 + '</td>' +
+    '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma100Score + '</td>' +
     '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma200 + '</td>' +
+    '<td class="px-3 py-2 text-sm text-gray-900 text-right">' + ma200Score + '</td>' +
     '<td class="px-3 py-2 text-sm text-gray-500">' + (stock.sector || 'N/A') + '</td>' +
     '</tr>';
 }
@@ -390,15 +436,36 @@ function renderHourlyStockRow(stock, index, type) {
   const changeClass = (stock.close_changed ?? 0) >= 0 ? 'text-green-600' : 'text-red-600';
   const changeSign = (stock.close_changed ?? 0) >= 0 ? '+' : '';
   const volume = stock.volume ? formatVolume(stock.volume) : 'N/A';
-  const ma20 = stock.ma20_score ? `${stock.ma20_score.toFixed(1)}%` : 'N/A';
+  const totalMoney = stock.total_money_changed ? formatVolume(Math.abs(stock.total_money_changed)) : 'N/A';
+  const totalMoneySign = (stock.total_money_changed ?? 0) >= 0 ? '' : '-';
+  const totalMoneyClass = (stock.total_money_changed ?? 0) >= 0 ? 'text-green-600' : 'text-red-600';
+
+  // MA values and scores
+  const ma20 = stock.ma20 ? formatNumber(stock.ma20) : 'N/A';
+  const ma20Score = stock.ma20_score ? `${stock.ma20_score.toFixed(1)}%` : 'N/A';
+  const ma50 = stock.ma50 ? formatNumber(stock.ma50) : 'N/A';
+  const ma50Score = stock.ma50_score ? `${stock.ma50_score.toFixed(1)}%` : 'N/A';
+  const ma100 = stock.ma100 ? formatNumber(stock.ma100) : 'N/A';
+  const ma100Score = stock.ma100_score ? `${stock.ma100_score.toFixed(1)}%` : 'N/A';
+  const ma200 = stock.ma200 ? formatNumber(stock.ma200) : 'N/A';
+  const ma200Score = stock.ma200_score ? `${stock.ma200_score.toFixed(1)}%` : 'N/A';
 
   return `
     <tr class="hover:bg-gray-50">
       <td class="px-2 py-1 text-xs text-gray-900">${index}</td>
       <td class="px-2 py-1 text-xs font-mono font-semibold text-gray-900">${stock.symbol}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${stock.close ? formatNumber(stock.close) : 'N/A'}</td>
       <td class="px-2 py-1 text-xs text-right font-medium ${changeClass}">${changeSign}${(stock.close_changed ?? 0).toFixed(2)}%</td>
       <td class="px-2 py-1 text-xs text-gray-900 text-right">${volume}</td>
+      <td class="px-2 py-1 text-xs text-right font-medium ${totalMoneyClass}">${totalMoneySign}${totalMoney}</td>
       <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma20}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma20Score}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma50}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma50Score}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma100}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma100Score}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma200}</td>
+      <td class="px-2 py-1 text-xs text-gray-900 text-right">${ma200Score}</td>
     </tr>
   `;
 }
