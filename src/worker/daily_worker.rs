@@ -1,10 +1,8 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
-use crate::utils::get_market_data_dir;
+use crate::utils::{get_market_data_dir, write_with_rotation};
 use chrono::Utc;
-use std::fs::OpenOptions;
-use std::io::Write;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
@@ -177,25 +175,21 @@ fn write_log_entry(
 ) {
     let log_path = get_market_data_dir().join("fast_worker.log");
 
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
-        let status = if success { "OK" } else { "FAIL" };
-        let log_line = format!(
-            "{} | {} | {}s | 1D | {} | ok:{} fail:{} skip:{} upd:{} files:{} recs:{}\n",
-            start_time.format("%Y-%m-%d %H:%M:%S"),
-            end_time.format("%Y-%m-%d %H:%M:%S"),
-            duration_secs,
-            status,
-            stats.successful,
-            stats.failed,
-            stats.skipped,
-            stats.updated,
-            stats.files_written,
-            stats.total_records
-        );
-        let _ = file.write_all(log_line.as_bytes());
-    }
+    let status = if success { "OK" } else { "FAIL" };
+    let log_line = format!(
+        "{} | {} | {}s | 1D | {} | ok:{} fail:{} skip:{} upd:{} files:{} recs:{}\n",
+        start_time.format("%Y-%m-%d %H:%M:%S"),
+        end_time.format("%Y-%m-%d %H:%M:%S"),
+        duration_secs,
+        status,
+        stats.successful,
+        stats.failed,
+        stats.skipped,
+        stats.updated,
+        stats.files_written,
+        stats.total_records
+    );
+
+    // Use log rotation utility
+    let _ = write_with_rotation(&log_path, &log_line);
 }

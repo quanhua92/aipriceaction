@@ -1,6 +1,6 @@
 use crate::constants::INDEX_TICKERS;
 use crate::models::{AggregatedInterval, Interval};
-use crate::services::{SharedDataStore, SharedHealthStats};
+use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
 use crate::utils::get_public_dir;
@@ -8,6 +8,7 @@ use axum::{
     extract::{State, Json},
     http::{HeaderMap, StatusCode, header::{CACHE_CONTROL, CONTENT_TYPE}},
     response::{IntoResponse, Response, Html},
+    body::HttpBody,
 };
 use axum_extra::extract::Query;
 use chrono::{NaiveDate, Utc};
@@ -109,12 +110,28 @@ pub async fn get_tickers_handler(
     State(data_state): State<SharedDataStore>,
     Query(params): Query<TickerQuery>,
 ) -> impl IntoResponse {
+    let start_time = Utc::now();
+    let mut performance_metrics = ApiPerformanceMetrics::new(start_time);
+    performance_metrics.endpoint = "/tickers".to_string();
+    performance_metrics.response_format = params.format.clone();
+
     debug!("Received request for tickers with params: {:?}", params);
 
     // Parse and validate parameters
     let query_params = match parse_query_parameters(params.clone(), &data_state).await {
-        Ok(params) => params,
-        Err(error_response) => return error_response,
+        Ok(params) => {
+            performance_metrics.interval = params.interval.to_filename().to_string();
+            performance_metrics.ticker_count = params.tickers.len();
+            performance_metrics.cache_used = params.use_cache;
+            params
+        },
+        Err(error_response) => {
+            performance_metrics.status = ApiStatus::Fail;
+            performance_metrics.complete();
+            performance_metrics.error_message = Some("Invalid parameters".to_string());
+            write_api_log_entry(&performance_metrics);
+            return error_response;
+        },
     };
 
     // Smart data retrieval - DataStore handles all the complexity
@@ -146,7 +163,15 @@ pub async fn get_tickers_handler(
     // Check format parameter
     if params.format == "csv" {
         // Generate CSV format
-        return generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, headers);
+        let response = generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, headers);
+
+        // Complete performance metrics and log for CSV response
+        performance_metrics.response_size_bytes = response.body().size_hint().lower() as usize;
+        performance_metrics.data_source = determine_data_source(query_params.use_cache, !query_params.use_cache);
+        performance_metrics.complete();
+        write_api_log_entry(&performance_metrics);
+
+        return response;
     }
 
     // Return JSON format - use BTreeMap for alphabetically sorted keys
@@ -188,6 +213,12 @@ pub async fn get_tickers_handler(
             (ticker, records)
         })
         .collect();
+
+    // Complete performance metrics and log
+    performance_metrics.response_size_bytes = response_data.len() * 200; // Approximate size
+    performance_metrics.data_source = determine_data_source(query_params.use_cache, !query_params.use_cache);
+    performance_metrics.complete();
+    write_api_log_entry(&performance_metrics);
 
     (StatusCode::OK, headers, Json(response_data)).into_response()
 }
@@ -388,6 +419,14 @@ pub async fn health_handler(
     State(health_state): State<SharedHealthStats>,
     State(data_state): State<SharedDataStore>,
 ) -> impl IntoResponse {
+    let start_time = Utc::now();
+    let mut performance_metrics = ApiPerformanceMetrics::new(start_time);
+    performance_metrics.endpoint = "/health".to_string();
+    performance_metrics.response_format = "json".to_string();
+    performance_metrics.ticker_count = 0;
+    performance_metrics.interval = "N/A".to_string();
+    performance_metrics.cache_used = false;
+
     debug!("Received request for health stats");
 
     let mut health_stats = health_state.lock().await.clone();
@@ -425,6 +464,12 @@ pub async fn health_handler(
         daily_records = health_stats.daily_records_count,
         "Returning health stats"
     );
+
+    // Complete performance metrics and log for health endpoint
+    performance_metrics.response_size_bytes = 2048; // Approximate health stats size
+    performance_metrics.data_source = DataSource::Cache; // Health stats from memory
+    performance_metrics.complete();
+    write_api_log_entry(&performance_metrics);
 
     (StatusCode::OK, Json(health_stats)).into_response()
 }
