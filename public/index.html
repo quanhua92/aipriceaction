@@ -370,7 +370,7 @@
             <!-- Sector Filter -->
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">Sector <span class="text-gray-500">(optional)</span></label>
-              <input type="text" id="analysis-sector" placeholder="e.g., VN30, BANKING" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <input type="text" id="analysis-sector" placeholder="e.g., VN30, NGAN_HANG" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
             </div>
 
             <!-- Min Volume -->
@@ -623,22 +623,38 @@
               <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
               <code class="text-sm font-mono text-gray-800">/tickers</code>
             </div>
-            <p class="text-sm text-gray-600 mb-3">Retrieve historical price data with technical indicators.</p>
+            <p class="text-sm text-gray-600 mb-3">Retrieve historical price data with 20 technical indicators.</p>
             <div class="text-xs space-y-1">
               <div class="flex gap-2">
                 <span class="font-semibold text-gray-700 w-24">Parameters:</span>
                 <div class="flex-1">
-                  <div><code>symbol</code> - Ticker symbol (optional, defaults to all tickers)</div>
+                  <div><code>symbol</code> - Ticker symbol(s) (optional, repeatable: symbol=VCB&symbol=FPT)</div>
                   <div><code>interval</code> - Time interval (optional, default: 1D)</div>
-                  <div class="ml-4 text-gray-600">Base: 1D, 1H, 1m</div>
-                  <div class="ml-4 text-gray-600">Minute aggregations: 5m, 15m, 30m</div>
-                  <div class="ml-4 text-gray-600">Day aggregations: 1W, 2W, 1M</div>
-                  <div><code>start_date</code> - Start date YYYY-MM-DD (optional)</div>
+                  <div class="ml-4 text-gray-600">Base intervals: 1D, 1H, 1m (raw data)</div>
+                  <div class="ml-4 text-gray-600">Minute aggregations: 5m, 15m, 30m (computed from 1m)</div>
+                  <div class="ml-4 text-gray-600">Day aggregations: 1W, 2W, 1M (computed from 1D)</div>
+                  <div><code>start_date</code> - Start date YYYY-MM-DD (optional, overrides limit)</div>
                   <div><code>end_date</code> - End date YYYY-MM-DD (optional, defaults to today)</div>
-                  <div><code>limit</code> - Number of records to return (optional, ignored if start_date provided)</div>
+                  <div><code>limit</code> - Number of records from end_date (optional, ignored if start_date provided)</div>
                   <div><code>format</code> - Response format: json, csv (default: json)</div>
-                  <div><code>legacy</code> - Legacy price format (divides by 1000) (optional, default: false)</div>
-                  <div><code>cache</code> - Use cache (optional, default: true)</div>
+                  <div><code>legacy</code> - Divide stock prices by 1000 (optional, default: false)</div>
+                  <div class="ml-4 text-orange-600">Note: Legacy format only applies to stocks, not indices</div>
+                  <div><code>cache</code> - Use 60s cache (optional, default: true)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON array with performance metrics or CSV download</div>
+                  <div class="text-gray-600">Includes: response_time_ms, data_source, cache_hit</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Errors:</span>
+                <div class="flex-1">
+                  <div><code>400</code> - Invalid date format or parameters</div>
+                  <div><code>404</code> - Ticker not found</div>
+                  <div><code>500</code> - Server error (JSON: {"error": "message"})</div>
                 </div>
               </div>
             </div>
@@ -665,11 +681,17 @@
               <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
               <code class="text-sm font-mono text-gray-800">/health</code>
             </div>
-            <p class="text-sm text-gray-600 mb-3">Check API health status and cache performance metrics.</p>
+            <p class="text-sm text-gray-600 mb-3">Check API health status and performance metrics.</p>
             <div class="text-xs space-y-1">
               <div class="flex gap-2">
-                <span class="font-semibold text-gray-700 w-24">Returns:</span>
-                <span class="flex-1">System status, cache stats, and data availability</span>
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>System status with performance and cache metrics</div>
+                  <div class="ml-4 text-gray-600">Fields: status, uptime_secs, memory_usage_mb, memory_usage_percent</div>
+                  <div class="ml-4 text-gray-600">Data counts: active_tickers_count, daily_records_count, hourly_records_count, minute_records_count</div>
+                  <div class="ml-4 text-gray-600">Cache: disk_cache_stats {size_mb, hit_rate_percent}</div>
+                  <div class="ml-4 text-gray-600">Workers: last_sync_times {daily, hourly, minute}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -680,18 +702,27 @@
               <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">GET</span>
               <code class="text-sm font-mono text-gray-800">/analysis/top-performers</code>
             </div>
-            <p class="text-sm text-gray-600 mb-3">Get top/bottom performing stocks with customizable sorting.</p>
+            <p class="text-sm text-gray-600 mb-3">Get top/bottom performing stocks with hourly breakdown option.</p>
             <div class="text-xs space-y-1">
               <div class="flex gap-2">
                 <span class="font-semibold text-gray-700 w-24">Parameters:</span>
                 <div class="flex-1">
                   <div><code>date</code> - Analysis date YYYY-MM-DD (optional, defaults to latest)</div>
-                  <div><code>sort_by</code> - Metric to sort by (optional, default: close_changed)</div>
-                  <div class="ml-4 text-gray-600">Options: close_changed, volume, volume_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score</div>
+                  <div><code>sort_by</code> - Sort metric (optional, default: close_changed)</div>
+                  <div class="ml-4 text-gray-600">Options: close_changed, volume, volume_changed, total_money_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score</div>
                   <div><code>direction</code> - Sort direction: asc, desc (optional, default: desc)</div>
                   <div><code>limit</code> - Number of results (optional, default: 10, max: 100)</div>
-                  <div><code>sector</code> - Filter by sector name (optional)</div>
+                  <div><code>sector</code> - Filter by sector name (optional, e.g., VN30, NGAN_HANG)</div>
                   <div><code>min_volume</code> - Minimum trading volume (optional, default: 10000)</div>
+                  <div><code>with_hour</code> - Include hourly breakdown (optional, default: false)</div>
+                  <div class="ml-4 text-gray-600">When true: Returns performers for each trading hour (5 hours total)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON object with daily performers + optional hourly breakdown</div>
+                  <div class="text-gray-600">Structure: {date, performers: [...], hourly_performers: {hour: [...]}}</div>
                 </div>
               </div>
             </div>
@@ -703,7 +734,7 @@
               <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">GET</span>
               <code class="text-sm font-mono text-gray-800">/analysis/ma-scores-by-sector</code>
             </div>
-            <p class="text-sm text-gray-600 mb-3">Moving average analysis grouped by stock sectors.</p>
+            <p class="text-sm text-gray-600 mb-3">Moving average analysis grouped by stock sectors with filtering options.</p>
             <div class="text-xs space-y-1">
               <div class="flex gap-2">
                 <span class="font-semibold text-gray-700 w-24">Parameters:</span>
@@ -713,6 +744,13 @@
                   <div><code>min_score</code> - Minimum MA score threshold (optional, default: 0.0)</div>
                   <div><code>above_threshold_only</code> - Only stocks above threshold (optional, default: false)</div>
                   <div><code>top_per_sector</code> - Max stocks per sector (optional, default: 10, max: 50)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON object with sector-wise MA analysis</div>
+                  <div class="text-gray-600">Structure: {date, ma_period, sectors: [{name, stocks: [...]}]}</div>
                 </div>
               </div>
             </div>
@@ -731,6 +769,114 @@
                 <span class="flex-1 text-orange-600">⚠️ Deprecated - use /tickers endpoint instead</span>
               </div>
             </div>
+          </div>
+
+          <!-- /explorer endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/explorer</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Serves the API Explorer UI (this page).</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Returns:</span>
+                <span class="flex-1">HTML interface for API testing and exploration</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /public/* endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/public/*</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Static assets for the Explorer UI (CSS, JS, images).</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Examples:</span>
+                <span class="flex-1">/public/js/app.js, /public/css/styles.css</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Technical Details Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">⚙️ Technical Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
+          <!-- Performance & Caching -->
+          <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div class="font-semibold text-blue-800 mb-2">⚡ Performance & Caching</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Cache TTL:</strong> 60 seconds for all endpoints</li>
+              <li><strong>Memory Cache:</strong> Last 1 year of daily data (4GB limit)</li>
+              <li><strong>Disk Cache:</strong> Hourly/minute data with LRU eviction (500MB limit)</li>
+              <li><strong>Cache Control:</strong> Use <code>cache=false</code> to force refresh</li>
+              <li><strong>Response Time:</strong> Typically 50-200ms with cache, 500ms-2s without</li>
+            </ul>
+          </div>
+
+          <!-- Rate Limiting & Security -->
+          <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+            <div class="font-semibold text-green-800 mb-2">🔒 Rate Limiting & Security</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>VCI API Rate:</strong> ~30 requests/minute (upstream limit)</li>
+              <li><strong>CORS:</strong> Enabled for subdomains and localhost</li>
+              <li><strong>No Authentication:</strong> Public API (rate-limited by design)</li>
+              <li><strong>Request Size:</strong> No hard limit, practical limit ~100MB</li>
+              <li><strong>Retry Logic:</strong> Exponential backoff, max 5 retries</li>
+            </ul>
+          </div>
+
+          <!-- Data Processing -->
+          <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <div class="font-semibold text-purple-800 mb-2">🔄 Data Processing</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Aggregated Intervals:</strong> Computed on-demand from base data</li>
+              <li><strong>5m/15m/30m:</strong> Derived from 1m data (OHLCV aggregation)</li>
+              <li><strong>1W/2W/1M:</strong> Derived from 1D data (weekly/monthly aggregation)</li>
+              <li><strong>Processing Time:</strong> 100-500ms for aggregated intervals</li>
+              <li><strong>Indicators:</strong> 20 technical indicators calculated during sync</li>
+            </ul>
+          </div>
+
+          <!-- Error Handling -->
+          <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+            <div class="font-semibold text-red-800 mb-2">⚠️ Error Handling</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>400 Bad Request:</strong> Invalid parameters, date format errors</li>
+              <li><strong>404 Not Found:</strong> Ticker symbol not available</li>
+              <li><strong>429 Too Many Requests:</strong> Upstream rate limit exceeded</li>
+              <li><strong>500 Server Error:</strong> Internal processing errors</li>
+              <li><strong>Error Format:</strong> JSON: {"error": "descriptive message"}</li>
+            </ul>
+          </div>
+
+          <!-- CSV Format Details -->
+          <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
+            <div class="font-semibold text-orange-800 mb-2">📊 CSV Format (20 Columns)</div>
+            <div class="text-gray-600 text-xs space-y-1">
+              <div><strong>OHLCV:</strong> ticker,time,open,high,low,close,volume</div>
+              <div><strong>Moving Averages:</strong> ma10,ma20,ma50,ma100,ma200</div>
+              <div><strong>MA Scores:</strong> ma10_score,ma20_score,ma50_score,ma100_score,ma200_score</div>
+              <div><strong>Changes:</strong> close_changed,volume_changed,total_money_changed</div>
+              <div class="text-orange-600"><strong>Note:</strong> All prices stored in full VND (no division)</div>
+            </div>
+          </div>
+
+          <!-- Trading Hours -->
+          <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+            <div class="font-semibold text-teal-800 mb-2">🕐 Trading Hours & Sync</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Market Hours:</strong> 9:00-15:00 ICT (UTC+7) Monday-Friday</li>
+              <li><strong>Daily Sync:</strong> Every 15s (trading), 5min (off-hours)</li>
+              <li><strong>Hourly/Minute Sync:</strong> Every 5min (trading), 30min (off-hours)</li>
+              <li><strong>Weekends:</strong> Reduced sync frequency</li>
+              <li><strong>Time Zone:</strong> All timestamps in ICT (Vietnam time)</li>
+            </ul>
           </div>
         </div>
       </section>
