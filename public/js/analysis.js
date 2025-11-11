@@ -166,7 +166,7 @@ function renderDailySummary(data) {
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money (VND)</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money Changed</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50</th>
@@ -210,7 +210,7 @@ function renderDailySummary(data) {
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Change %</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Volume</th>
-                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money (VND)</th>
+                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total Money Changed</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA20 Score</th>
                 <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">MA50</th>
@@ -323,7 +323,7 @@ function renderHourContent(hourData, hourIndex) {
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Price</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Change %</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Volume</th>
-                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Total Money (VND)</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-green-700">Total Money Changed</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA20</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA20 Score</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-green-700">MA50</th>
@@ -363,7 +363,7 @@ function renderHourContent(hourData, hourIndex) {
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Price</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Change %</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Volume</th>
-                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Total Money (VND)</th>
+                <th class="px-2 py-1 text-right text-xs font-medium text-red-700">Total Money Changed</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA20</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA20 Score</th>
                 <th class="px-2 py-1 text-right text-xs font-medium text-red-700">MA50</th>
