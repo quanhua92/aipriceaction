@@ -181,7 +181,7 @@ pub async fn get_tickers_handler(
             let records = data.into_iter().map(|d| {
                 let time_str = match query_params.interval {
                     Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%dT%H:%M:%S").to_string(),
                 };
 
                 // Apply legacy price format if requested (divide by 1000 for stocks only)
@@ -351,7 +351,7 @@ fn generate_csv_response(
             for record in records {
                 let time_str = match interval {
                     Interval::Daily => record.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => record.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    Interval::Hourly | Interval::Minute => record.time.format("%Y-%m-%dT%H:%M:%S").to_string(),
                 };
 
                 if has_indicators {

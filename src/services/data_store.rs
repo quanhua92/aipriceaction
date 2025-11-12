@@ -319,10 +319,14 @@ impl DataStore {
                     )
                 }
                 Interval::Hourly | Interval::Minute => {
-                    // Hourly/Minute format: "2023-09-10 13:00:00"
-                    let naive_dt = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                        .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?;
-                    DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc)
+                    // Try ISO 8601 format first: "2023-09-10T13:00:00"
+                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S")
+                        .or_else(|_| {
+                            // Fallback to legacy format: "2023-09-10 13:00:00"
+                            chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
+                        })
+                        .map(|naive_dt| DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc))
+                        .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?
                 }
             };
 

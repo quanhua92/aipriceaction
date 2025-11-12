@@ -47,8 +47,11 @@ impl TickerFetcher {
             if parts.len() >= 2 {
                 let date_str = parts[1].trim();
                 // Extract just the date part (YYYY-MM-DD) from datetime strings
+                // Handle both space-separated "YYYY-MM-DD HH:MM:SS" and ISO 8601 "YYYY-MM-DDTHH:MM:SS"
                 let date = if date_str.contains(' ') {
                     date_str.split(' ').next().unwrap_or(date_str)
+                } else if date_str.contains('T') {
+                    date_str.split('T').next().unwrap_or(date_str)
                 } else {
                     date_str
                 };
@@ -711,7 +714,13 @@ impl TickerFetcher {
             let time_str = &record[1];
             let time = chrono::DateTime::parse_from_rfc3339(time_str)
                 .or_else(|_| {
-                    // Try parsing as datetime "YYYY-MM-DD HH:MM:SS"
+                    // Try parsing as ISO 8601 datetime "YYYY-MM-DDTHH:MM:SS"
+                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S")
+                        .map(|dt| dt.and_utc().into())
+                        .map_err(|_| Error::Parse(format!("Invalid datetime: {}", time_str)))
+                })
+                .or_else(|_| {
+                    // Try parsing as datetime "YYYY-MM-DD HH:MM:SS" (legacy format)
                     chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
                         .map(|dt| dt.and_utc().into())
                         .map_err(|_| Error::Parse(format!("Invalid datetime: {}", time_str)))

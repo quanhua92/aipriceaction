@@ -246,7 +246,7 @@ fn write_stock_data_row(
 ) -> Result<(), Error> {
     let time_str = match interval {
         Interval::Daily => stock_data.time.format("%Y-%m-%d").to_string(),
-        Interval::Hourly | Interval::Minute => stock_data.time.format("%Y-%m-%d %H:%M:%S").to_string(),
+        Interval::Hourly | Interval::Minute => stock_data.time.format("%Y-%m-%dT%H:%M:%S").to_string(),
     };
 
     wtr.write_record(&[
@@ -285,7 +285,12 @@ fn parse_time(time_str: &str) -> Result<DateTime<chrono::Utc>, Error> {
         return Ok(dt.with_timezone(&chrono::Utc));
     }
 
-    // Try datetime format "YYYY-MM-DD HH:MM:SS"
+    // Try ISO 8601 datetime format "YYYY-MM-DDTHH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S") {
+        return Ok(dt.and_utc());
+    }
+
+    // Try datetime format "YYYY-MM-DD HH:MM:SS" (legacy format)
     if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
         return Ok(dt.and_utc());
     }

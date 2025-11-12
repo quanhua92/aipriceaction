@@ -498,8 +498,8 @@ async fn process_hourly_data(
                     total_money_changed: record.total_money_changed,
                 };
 
-                // Use exact CSV timestamp format "YYYY-MM-DD HH:MM:SS"
-                let hour_key = record.time.format("%Y-%m-%d %H:%M:%S").to_string();
+                // Use ISO 8601 timestamp format "YYYY-MM-DDTHH:MM:SS"
+                let hour_key = record.time.format("%Y-%m-%dT%H:%M:%S").to_string();
                 hourly_groups.entry(hour_key).or_insert_with(Vec::new).push(performer);
             }
         }
