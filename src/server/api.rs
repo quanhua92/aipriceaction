@@ -429,7 +429,7 @@ pub async fn health_handler(
 
     debug!("Received request for health stats");
 
-    let mut health_stats = health_state.lock().await.clone();
+    let mut health_stats = health_state.read().await.clone();
 
     // Calculate current metrics dynamically using DataStore methods
     let memory_bytes = data_state.estimate_memory_usage().await;

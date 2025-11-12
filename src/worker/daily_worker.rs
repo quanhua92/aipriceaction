@@ -110,7 +110,7 @@ pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
 
         // Step 4: Update health stats
         {
-            let mut health = health_stats.lock().await;
+            let mut health = health_stats.write().await;
             health.daily_last_sync = Some(Utc::now().to_rfc3339());
             health.daily_iteration_count = iteration_count;
             health.is_trading_hours = is_trading;

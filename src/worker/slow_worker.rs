@@ -148,7 +148,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
 
         // Step 3: Update health stats
         {
-            let mut health = health_stats.lock().await;
+            let mut health = health_stats.write().await;
             match interval {
                 Interval::Hourly => {
                     health.hourly_last_sync = Some(Utc::now().to_rfc3339());

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 /// Memory management constants
 pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit for 1 year of data
@@ -109,7 +109,7 @@ impl Default for HealthStats {
     }
 }
 
-pub type SharedHealthStats = Arc<Mutex<HealthStats>>;
+pub type SharedHealthStats = Arc<RwLock<HealthStats>>;
 
 /// Query parameters for the smart data store method
 #[derive(Debug, Clone)]
@@ -183,13 +183,13 @@ impl QueryParameters {
 
 /// Data store for managing in-memory stock data
 pub struct DataStore {
-    data: Mutex<InMemoryData>,
+    data: RwLock<InMemoryData>,
     market_data_dir: PathBuf,
-    cache_last_updated: Mutex<DateTime<Utc>>,
+    cache_last_updated: RwLock<DateTime<Utc>>,
     /// Cache for disk-read data (hourly, minute, and cache=false queries)
-    disk_cache: Mutex<HourlyMinuteCache>,
+    disk_cache: RwLock<HourlyMinuteCache>,
     /// Total size of disk cache in bytes
-    disk_cache_size: Mutex<usize>,
+    disk_cache_size: RwLock<usize>,
     /// Maximum cache size in bytes (configurable via env)
     max_cache_size_bytes: usize,
 }
@@ -212,11 +212,11 @@ impl DataStore {
         );
 
         Self {
-            data: Mutex::new(HashMap::new()),
+            data: RwLock::new(HashMap::new()),
             market_data_dir,
-            cache_last_updated: Mutex::new(Utc::now()),
-            disk_cache: Mutex::new(HashMap::new()),
-            disk_cache_size: Mutex::new(0),
+            cache_last_updated: RwLock::new(Utc::now()),
+            disk_cache: RwLock::new(HashMap::new()),
+            disk_cache_size: RwLock::new(0),
             max_cache_size_bytes,
         }
     }
@@ -234,6 +234,8 @@ impl DataStore {
 
     /// Load data for a specific interval from CSV files
     async fn load_interval(&self, interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<(), Error> {
+        // Step 1: Read all CSV files WITHOUT holding any locks
+        // This prevents file I/O from blocking API requests
         let mut data = HashMap::new();
 
         // Read all ticker directories
@@ -259,7 +261,7 @@ impl DataStore {
                 continue;
             }
 
-            // Read and parse CSV
+            // Read and parse CSV (blocking I/O happens here, NO locks held)
             match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
                 Ok(ticker_data) => {
                     if !ticker_data.is_empty() {
@@ -273,17 +275,20 @@ impl DataStore {
             }
         }
 
-        // Update shared data store for this interval
-        let mut store = self.data.lock().await;
-        for (ticker, ticker_data) in data {
-            store.entry(ticker)
-                .or_insert_with(HashMap::new)
-                .insert(interval, ticker_data);
-        }
-
-        // Update cache timestamp to reflect fresh data
+        // Step 2: Acquire write lock ONLY to update in-memory cache (fast operation)
+        // File I/O is complete, so this lock is held very briefly
         {
-            let mut cache_last_updated = self.cache_last_updated.lock().await;
+            let mut store = self.data.write().await;
+            for (ticker, ticker_data) in data {
+                store.entry(ticker)
+                    .or_insert_with(HashMap::new)
+                    .insert(interval, ticker_data);
+            }
+        } // Write lock released immediately
+
+        // Step 3: Update cache timestamp (separate lock, also fast)
+        {
+            let mut cache_last_updated = self.cache_last_updated.write().await;
             *cache_last_updated = Utc::now();
         }
 
@@ -495,7 +500,7 @@ impl DataStore {
         if let Some(limit_count) = limit {
             if start_date.is_none() && limit_count > DATA_RETENTION_DAYS as usize {
                 // Limit exceeds 1 year cache capacity - check if cache has enough records
-                let store = self.data.lock().await;
+                let store = self.data.read().await;
                 let cache_insufficient = tickers.iter().any(|ticker| {
                     store.get(ticker)
                         .and_then(|td| td.get(&interval))
@@ -516,7 +521,7 @@ impl DataStore {
         }
 
         // Cache is fresh - try cache first, fall back to disk if insufficient
-        let store = self.data.lock().await;
+        let store = self.data.read().await;
         let mut result = HashMap::new();
         let mut need_disk_read: Vec<String> = Vec::new();
 
@@ -644,7 +649,7 @@ impl DataStore {
 
             // Check disk cache first
             let cache_hit = {
-                let disk_cache = self.disk_cache.lock().await;
+                let disk_cache = self.disk_cache.read().await;
                 if let Some(entry) = disk_cache.get(&cache_key) {
                     // Check if cache entry is still valid (TTL)
                     let now = Utc::now();
@@ -756,8 +761,8 @@ impl DataStore {
 
     /// Try to add data to cache, evicting old entries if necessary
     async fn try_add_to_cache(&self, key: (String, Interval), data: Vec<StockData>, size: usize) {
-        let mut disk_cache = self.disk_cache.lock().await;
-        let mut disk_cache_size = self.disk_cache_size.lock().await;
+        let mut disk_cache = self.disk_cache.write().await;
+        let mut disk_cache_size = self.disk_cache_size.write().await;
 
         // Check if we need to evict entries to make room
         while *disk_cache_size + size > self.max_cache_size_bytes && !disk_cache.is_empty() {
@@ -822,13 +827,13 @@ impl DataStore {
 
     /// Estimate memory usage of the data store
     pub async fn estimate_memory_usage(&self) -> usize {
-        let store = self.data.lock().await;
+        let store = self.data.read().await;
         estimate_memory_usage(&*store)
     }
 
     /// Get count of records per interval
     pub async fn get_record_counts(&self) -> (usize, usize, usize) {
-        let store = self.data.lock().await;
+        let store = self.data.read().await;
         let mut daily_count = 0;
         let mut hourly_count = 0;
         let mut minute_count = 0;
@@ -850,26 +855,26 @@ impl DataStore {
 
     /// Get active ticker count (tickers with data)
     pub async fn get_active_ticker_count(&self) -> usize {
-        let store = self.data.lock().await;
+        let store = self.data.read().await;
         store.len()
     }
 
     /// Get all ticker names (from in-memory data)
     pub async fn get_all_ticker_names(&self) -> Vec<String> {
-        let store = self.data.lock().await;
+        let store = self.data.read().await;
         store.keys().cloned().collect()
     }
 
     /// Get disk cache statistics (entries count, size, limit)
     pub async fn get_disk_cache_stats(&self) -> (usize, usize, usize) {
-        let disk_cache = self.disk_cache.lock().await;
-        let disk_cache_size = self.disk_cache_size.lock().await;
+        let disk_cache = self.disk_cache.read().await;
+        let disk_cache_size = self.disk_cache_size.read().await;
         (disk_cache.len(), *disk_cache_size, self.max_cache_size_bytes)
     }
 
     /// Check if in-memory cache has expired based on TTL
     async fn is_cache_expired(&self) -> bool {
-        let cache_last_updated = self.cache_last_updated.lock().await;
+        let cache_last_updated = self.cache_last_updated.read().await;
         let now = Utc::now();
         let cache_age = now.signed_duration_since(*cache_last_updated);
         cache_age.num_seconds() >= CACHE_TTL_SECONDS
@@ -877,7 +882,7 @@ impl DataStore {
 
     /// Update cache timestamp (called after reading fresh data from disk)
     async fn update_cache_timestamp(&self) {
-        let mut cache_last_updated = self.cache_last_updated.lock().await;
+        let mut cache_last_updated = self.cache_last_updated.write().await;
         *cache_last_updated = Utc::now();
     }
 }
