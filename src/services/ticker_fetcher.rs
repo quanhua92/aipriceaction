@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, TickerCategory};
 use crate::services::vci::{OhlcvData, VciClient};
-use crate::utils::get_market_data_dir;
+use crate::utils::{get_market_data_dir, parse_timestamp};
 use chrono::{Datelike, NaiveDate};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -712,33 +712,10 @@ impl TickerFetcher {
             }
 
             let time_str = &record[1];
-            let time = chrono::DateTime::parse_from_rfc3339(time_str)
-                .or_else(|_| {
-                    // Try parsing as ISO 8601 datetime "YYYY-MM-DDTHH:MM:SS"
-                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S")
-                        .map(|dt| dt.and_utc().into())
-                        .map_err(|_| Error::Parse(format!("Invalid datetime: {}", time_str)))
-                })
-                .or_else(|_| {
-                    // Try parsing as datetime "YYYY-MM-DD HH:MM:SS" (legacy format)
-                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                        .map(|dt| dt.and_utc().into())
-                        .map_err(|_| Error::Parse(format!("Invalid datetime: {}", time_str)))
-                })
-                .or_else(|_| {
-                    // Try parsing as date only "YYYY-MM-DD"
-                    let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-                        .map_err(|e| Error::Parse(format!("Invalid date: {}", e)))?;
-                    Ok(date
-                        .and_hms_opt(0, 0, 0)
-                        .ok_or_else(|| Error::Parse("Failed to set time".to_string()))?
-                        .and_utc()
-                        .into())
-                })
-                .map_err(|e: Error| e)?;
+            let time = parse_timestamp(time_str)?;
 
             let ohlcv = OhlcvData {
-                time: time.with_timezone(&chrono::Utc),
+                time,
                 open: record[2]
                     .parse()
                     .map_err(|e| Error::Parse(format!("Invalid open: {}", e)))?,

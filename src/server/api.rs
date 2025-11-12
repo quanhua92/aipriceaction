@@ -3,7 +3,7 @@ use crate::models::{AggregatedInterval, Interval};
 use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
-use crate::utils::get_public_dir;
+use crate::utils::{get_public_dir, format_date, format_timestamp};
 use axum::{
     extract::{State, Json},
     http::{HeaderMap, StatusCode, header::{CACHE_CONTROL, CONTENT_TYPE}},
@@ -180,8 +180,8 @@ pub async fn get_tickers_handler(
         .map(|(ticker, data)| {
             let records = data.into_iter().map(|d| {
                 let time_str = match query_params.interval {
-                    Interval::Daily => d.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => d.time.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                    Interval::Daily => format_date(&d.time),
+                    Interval::Hourly | Interval::Minute => format_timestamp(&d.time),
                 };
 
                 // Apply legacy price format if requested (divide by 1000 for stocks only)
@@ -350,8 +350,8 @@ fn generate_csv_response(
 
             for record in records {
                 let time_str = match interval {
-                    Interval::Daily => record.time.format("%Y-%m-%d").to_string(),
-                    Interval::Hourly | Interval::Minute => record.time.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                    Interval::Daily => format_date(&record.time),
+                    Interval::Hourly | Interval::Minute => format_timestamp(&record.time),
                 };
 
                 if has_indicators {

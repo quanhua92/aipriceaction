@@ -1,7 +1,8 @@
 use crate::models::Interval;
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
 use crate::services::vci::OhlcvData;
-use chrono::{DateTime, NaiveDate, Utc};
+use crate::utils::parse_timestamp;
+use chrono::{DateTime, Utc};
 use csv::Reader;
 use std::collections::HashMap;
 use std::path::Path;
@@ -24,27 +25,7 @@ fn scale_price_legacy(price: f64, ticker: &str) -> f64 {
 
 /// Parse time from string (supports multiple formats)
 fn parse_time(time_str: &str) -> Result<DateTime<Utc>, Box<dyn std::error::Error>> {
-    // Try RFC3339 first
-    if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
-        return Ok(dt.with_timezone(&Utc));
-    }
-
-    // Try ISO 8601 datetime format "YYYY-MM-DDTHH:MM:SS"
-    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S") {
-        return Ok(dt.and_utc());
-    }
-
-    // Try datetime format "YYYY-MM-DD HH:MM:SS" (legacy format)
-    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
-        return Ok(dt.and_utc());
-    }
-
-    // Try date only format "YYYY-MM-DD"
-    let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")?;
-    Ok(date
-        .and_hms_opt(0, 0, 0)
-        .ok_or_else(|| "Failed to set time")?
-        .and_utc())
+    parse_timestamp(time_str).map_err(|e| e.into())
 }
 
 /// Parse and convert a daily CSV file - NEW SINGLE-PHASE APPROACH

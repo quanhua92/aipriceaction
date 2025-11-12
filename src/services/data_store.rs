@@ -1,6 +1,7 @@
 use crate::constants::csv_column;
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
+use crate::utils::parse_timestamp;
 use tracing::{debug, info};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -296,7 +297,7 @@ impl DataStore {
     }
 
     /// Read a single CSV file and return StockData vector
-    fn read_csv_file(&self, csv_path: &Path, ticker: &str, interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
+    fn read_csv_file(&self, csv_path: &Path, ticker: &str, _interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
         let mut reader = csv::ReaderBuilder::new()
             .flexible(true) // Allow 7 or 16 columns
             .from_path(csv_path)?;
@@ -308,27 +309,7 @@ impl DataStore {
 
             // Parse time based on interval format
             let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
-            let time = match interval {
-                Interval::Daily => {
-                    // Daily format: "2025-01-05"
-                    let naive_date = chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-                        .map_err(|e| Error::Io(format!("Invalid date: {}", e)))?;
-                    DateTime::<Utc>::from_naive_utc_and_offset(
-                        naive_date.and_hms_opt(0, 0, 0).unwrap(),
-                        Utc
-                    )
-                }
-                Interval::Hourly | Interval::Minute => {
-                    // Try ISO 8601 format first: "2023-09-10T13:00:00"
-                    chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S")
-                        .or_else(|_| {
-                            // Fallback to legacy format: "2023-09-10 13:00:00"
-                            chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S")
-                        })
-                        .map(|naive_dt| DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc))
-                        .map_err(|e| Error::Io(format!("Invalid datetime: {}", e)))?
-                }
-            };
+            let time = parse_timestamp(time_str)?;
 
             // Skip data older than cutoff
             if let Some(cutoff) = cutoff_date {

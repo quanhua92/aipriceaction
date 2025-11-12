@@ -4,8 +4,8 @@ use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
-use crate::utils::get_market_data_dir;
-use chrono::{DateTime, NaiveDate, Utc};
+use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -278,7 +278,7 @@ impl DataSync {
 
         // Show minimal summary - just one line per sync
         let interval_time = interval_start_time.elapsed();
-        let now = Utc::now().format("%Y-%m-%d %H:%M:%S");
+        let now = format_date(&Utc::now());
         println!(
             "[{}] ✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
             now,
@@ -685,29 +685,7 @@ impl DataSync {
 
     /// Parse time from string (supports multiple formats)
     fn parse_time(&self, time_str: &str) -> Result<DateTime<Utc>, Error> {
-        // Try RFC3339 first
-        if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
-            return Ok(dt.with_timezone(&Utc));
-        }
-
-        // Try ISO 8601 datetime format "YYYY-MM-DDTHH:MM:SS"
-        if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S") {
-            return Ok(dt.and_utc());
-        }
-
-        // Try datetime format "YYYY-MM-DD HH:MM:SS" (legacy format)
-        if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
-            return Ok(dt.and_utc());
-        }
-
-        // Try date only format "YYYY-MM-DD"
-        let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
-            .map_err(|e| Error::Parse(format!("Invalid date format: {}", e)))?;
-
-        Ok(date
-            .and_hms_opt(0, 0, 0)
-            .ok_or_else(|| Error::Parse("Failed to set time".to_string()))?
-            .and_utc())
+        parse_timestamp(time_str)
     }
 
     /// Load tickers from ticker_group.json

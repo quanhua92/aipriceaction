@@ -1,6 +1,6 @@
 use crate::constants::{CSV_BASIC_COLUMNS, CSV_ENHANCED_COLUMNS, MIN_RECORDS_FOR_MA50, MIN_RECORDS_FOR_ANALYSIS};
 use crate::models::Interval;
-use crate::utils::get_market_data_dir;
+use crate::utils::{get_market_data_dir, parse_timestamp};
 use chrono::{NaiveDate, NaiveDateTime};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -302,19 +302,22 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
             // Always update last date
             last_date_str = Some(timestamp_str.to_string());
 
-            // Try to parse as full datetime first (for intraday data)
-            if timestamp_str.contains(' ') {
-                if let Ok(current_ts) = NaiveDateTime::parse_from_str(timestamp_str, "%Y-%m-%d %H:%M:%S") {
+            // Try to parse timestamp using centralized utility
+            if let Ok(parsed_dt) = parse_timestamp(timestamp_str) {
+                let parsed_naive = parsed_dt.naive_utc();
+
+                // Check if it's a datetime or date-only by checking if it has a time component
+                if timestamp_str.contains(' ') || timestamp_str.contains('T') {
+                    // Intraday data with time
                     if let Some(prev_ts) = last_timestamp {
-                        if current_ts <= prev_ts {
+                        if parsed_naive <= prev_ts {
                             time_reversals.push(format!("Time not increasing: {} comes after {}", timestamp_str, prev_ts));
                         }
                     }
-                    last_timestamp = Some(current_ts);
-                }
-            } else {
-                // Daily data - just check dates
-                if let Ok(date) = NaiveDate::parse_from_str(timestamp_str, "%Y-%m-%d") {
+                    last_timestamp = Some(parsed_naive);
+                } else {
+                    // Daily data - just check dates
+                    let date = parsed_naive.date();
                     if let Some(prev_date) = last_date {
                         if date <= prev_date {
                             time_reversals.push(format!("Time not increasing: {} comes after {}", timestamp_str, prev_date));
