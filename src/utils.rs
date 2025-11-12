@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::fs::{OpenOptions, rename, metadata};
 use std::io::{Write, Error as IoError};
+use chrono::{DateTime, NaiveDate, Utc};
+use crate::error::Error;
 
 /// Get market data directory from environment variable or use default
 pub fn get_market_data_dir() -> PathBuf {
@@ -71,6 +73,49 @@ pub fn write_with_rotation(log_path: &Path, content: &str) -> Result<(), IoError
     Ok(())
 }
 
+/// Parse timestamp from string, supporting multiple formats:
+/// - RFC3339: "2025-01-15T10:30:00Z"
+/// - ISO 8601: "2025-01-15T10:30:00"
+/// - Legacy space format: "2025-01-15 10:30:00"
+/// - Date only: "2025-01-15"
+///
+/// This is the centralized datetime parsing function used across the codebase.
+pub fn parse_timestamp(time_str: &str) -> Result<DateTime<Utc>, Error> {
+    // Try RFC3339 first (with timezone)
+    if let Ok(dt) = DateTime::parse_from_rfc3339(time_str) {
+        return Ok(dt.with_timezone(&Utc));
+    }
+
+    // Try ISO 8601 datetime format "YYYY-MM-DDTHH:MM:SS"
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S") {
+        return Ok(dt.and_utc());
+    }
+
+    // Try legacy datetime format "YYYY-MM-DD HH:MM:SS" (for backward compatibility)
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%d %H:%M:%S") {
+        return Ok(dt.and_utc());
+    }
+
+    // Try date only format "YYYY-MM-DD"
+    let date = NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+        .map_err(|e| Error::Parse(format!("Invalid date format '{}': {}", time_str, e)))?;
+
+    Ok(date
+        .and_hms_opt(0, 0, 0)
+        .ok_or_else(|| Error::Parse("Failed to set time".to_string()))?
+        .and_utc())
+}
+
+/// Format timestamp for daily interval (date only): "YYYY-MM-DD"
+pub fn format_date(time: &DateTime<Utc>) -> String {
+    time.format("%Y-%m-%d").to_string()
+}
+
+/// Format timestamp for intraday intervals (ISO 8601): "YYYY-MM-DDTHH:MM:SS"
+pub fn format_timestamp(time: &DateTime<Utc>) -> String {
+    time.format("%Y-%m-%dT%H:%M:%S").to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -102,5 +147,30 @@ mod tests {
         assert!(log_path.exists());
         let content = fs::read_to_string(&log_path).unwrap();
         assert_eq!(content, "test content\n");
+    }
+
+    #[test]
+    fn test_parse_timestamp_iso8601() {
+        let result = parse_timestamp("2025-01-15T10:30:00").unwrap();
+        assert_eq!(result.format("%Y-%m-%dT%H:%M:%S").to_string(), "2025-01-15T10:30:00");
+    }
+
+    #[test]
+    fn test_parse_timestamp_legacy_space() {
+        let result = parse_timestamp("2025-01-15 10:30:00").unwrap();
+        assert_eq!(result.format("%Y-%m-%dT%H:%M:%S").to_string(), "2025-01-15T10:30:00");
+    }
+
+    #[test]
+    fn test_parse_timestamp_date_only() {
+        let result = parse_timestamp("2025-01-15").unwrap();
+        assert_eq!(result.format("%Y-%m-%d").to_string(), "2025-01-15");
+    }
+
+    #[test]
+    fn test_format_functions() {
+        let dt = parse_timestamp("2025-01-15T10:30:00").unwrap();
+        assert_eq!(format_date(&dt), "2025-01-15");
+        assert_eq!(format_timestamp(&dt), "2025-01-15T10:30:00");
     }
 }
