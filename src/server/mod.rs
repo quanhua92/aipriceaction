@@ -8,6 +8,7 @@ use axum::{extract::FromRef, routing::get, Router};
 use std::net::SocketAddr;
 use tower_http::cors::{CorsLayer, Any, AllowOrigin};
 use tower_http::services::ServeDir;
+use tower_http::compression::{CompressionLayer, predicate::DefaultPredicate};
 use axum::http::HeaderValue;
 
 /// Application state shared across all handlers
@@ -104,6 +105,13 @@ pub async fn serve(
         .nest("/analysis", analysis_routes())
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
         .nest_service("/public", ServeDir::new(public_dir))
+        .layer(
+            CompressionLayer::new()
+                .gzip(true)
+                .deflate(true)
+                .br(true)
+                .compress_when(DefaultPredicate::new())
+        )
         .layer(cors)
         .with_state(app_state);
 
