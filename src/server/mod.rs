@@ -8,15 +8,14 @@ use axum::{extract::FromRef, routing::get, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use tower::ServiceBuilder;
 use tower_http::cors::{CorsLayer, Any, AllowOrigin};
 use tower_http::services::ServeDir;
 use tower_http::compression::{CompressionLayer, predicate::DefaultPredicate};
 use tower_http::timeout::TimeoutLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer, key_extractor::SmartIpKeyExtractor};
-use axum::http::{HeaderValue, header};
-use axum::response::{IntoResponse, Response};
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use axum::http::{HeaderValue, HeaderName, header};
+use axum::response::Response;
 use axum::middleware::{self, Next};
 use axum::extract::Request;
 
@@ -116,7 +115,14 @@ pub async fn serve(
             axum::http::Method::POST,
             axum::http::Method::OPTIONS,
         ])
-        .allow_headers(Any);
+        .allow_headers(Any)
+        .expose_headers([
+            HeaderName::from_static("cf-cache-status"),
+            HeaderName::from_static("cf-ray"),
+            HeaderName::from_static("x-ratelimit-limit"),
+            HeaderName::from_static("x-ratelimit-remaining"),
+            HeaderName::from_static("x-ratelimit-reset"),
+        ]);
 
     let public_dir = get_public_dir();
     tracing::info!("Using public directory: {}", public_dir.display());
