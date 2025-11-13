@@ -131,16 +131,16 @@ pub async fn serve(
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
-    // Configure rate limiting: 50 requests/second, burst up to 100
+    // Configure rate limiting: 500 requests/second, burst up to 1000
     let governor_conf = GovernorConfigBuilder::default()
-        .per_second(50)
-        .burst_size(100)
+        .per_second(500)
+        .burst_size(1000)
         .use_headers()
         .finish()
         .unwrap();
 
     tracing::info!("Security middleware enabled:");
-    tracing::info!("  Rate Limit: 50 req/s, burst 100");
+    tracing::info!("  Rate Limit: 500 req/s, burst 1000");
     tracing::info!("  Request Timeout: 30s");
     tracing::info!("  Body Size Limit: 1MB");
     tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
