@@ -28,10 +28,6 @@ FROM chef AS rust-cacher
 WORKDIR /app
 ARG TARGETPLATFORM
 
-# Copy workspace structure for dependency building
-COPY --from=rust-planner /app/recipe.json recipe.json
-COPY ./Cargo.toml ./Cargo.toml
-
 # Add Alpine build dependencies for this stage
 RUN apk add --no-cache \
     musl-dev \
@@ -39,6 +35,8 @@ RUN apk add --no-cache \
     gcc \
     g++ \
     make
+
+COPY --from=rust-planner /app/recipe.json recipe.json
 
 # Use native musl target for the current architecture
 RUN echo "Building for native musl target" && \
