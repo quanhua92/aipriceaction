@@ -19,8 +19,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 futures = "0.3"
 axum = "0.8.4"
 axum-extra = { version = "0.10.1", features = ["query"] }
-tower = "0.5.2"
-tower-http = { version = "0.6.2", features = ["cors", "fs", "compression-gzip", "compression-deflate", "compression-br"] }
+tower = { version = "0.5.2", features = ["util"] }
+tower-http = { version = "0.6.2", features = ["cors", "fs", "compression-gzip", "compression-deflate", "compression-br", "timeout", "limit"] }
+tower_governor = "0.8"
 fs2 = "0.4"
 
 [dev-dependencies]

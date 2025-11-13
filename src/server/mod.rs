@@ -6,10 +6,19 @@ use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
 use axum::{extract::FromRef, routing::get, Router};
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
+use tower::ServiceBuilder;
 use tower_http::cors::{CorsLayer, Any, AllowOrigin};
 use tower_http::services::ServeDir;
 use tower_http::compression::{CompressionLayer, predicate::DefaultPredicate};
-use axum::http::HeaderValue;
+use tower_http::timeout::TimeoutLayer;
+use tower_http::limit::RequestBodyLimitLayer;
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer, key_extractor::SmartIpKeyExtractor};
+use axum::http::{HeaderValue, header};
+use axum::response::{IntoResponse, Response};
+use axum::middleware::{self, Next};
+use axum::extract::Request;
 
 /// Application state shared across all handlers
 #[derive(Clone)]
@@ -29,6 +38,32 @@ impl FromRef<AppState> for SharedHealthStats {
     fn from_ref(app_state: &AppState) -> SharedHealthStats {
         app_state.health_stats.clone()
     }
+}
+
+/// Middleware to add security headers to all responses
+async fn add_security_headers(request: Request, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+
+    // Prevent clickjacking
+    headers.insert(
+        header::HeaderName::from_static("x-frame-options"),
+        header::HeaderValue::from_static("SAMEORIGIN")
+    );
+
+    // Prevent MIME type sniffing
+    headers.insert(
+        header::HeaderName::from_static("x-content-type-options"),
+        header::HeaderValue::from_static("nosniff")
+    );
+
+    // XSS protection
+    headers.insert(
+        header::HeaderName::from_static("x-xss-protection"),
+        header::HeaderValue::from_static("1; mode=block")
+    );
+
+    response
 }
 
 /// Start the axum server
@@ -96,6 +131,20 @@ pub async fn serve(
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
+    // Configure rate limiting: 50 requests/second, burst up to 100
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(50)
+        .burst_size(100)
+        .use_headers()
+        .finish()
+        .unwrap();
+
+    tracing::info!("Security middleware enabled:");
+    tracing::info!("  Rate Limit: 50 req/s, burst 100");
+    tracing::info!("  Request Timeout: 30s");
+    tracing::info!("  Body Size Limit: 1MB");
+    tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
+
     // Build router with routes
     let app = Router::new()
         .route("/explorer", get(api::explorer_handler))
@@ -105,6 +154,12 @@ pub async fn serve(
         .nest("/analysis", analysis_routes())
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
         .nest_service("/public", ServeDir::new(public_dir))
+        .with_state(app_state)
+        // Apply middleware in order (outer → inner)
+        .layer(GovernorLayer::new(Arc::new(governor_conf)))
+        .layer(RequestBodyLimitLayer::new(1024 * 1024))
+        .layer(TimeoutLayer::new(Duration::from_secs(30)))
+        .layer(middleware::from_fn(add_security_headers))
         .layer(
             CompressionLayer::new()
                 .gzip(true)
@@ -112,8 +167,7 @@ pub async fn serve(
                 .br(true)
                 .compress_when(DefaultPredicate::new())
         )
-        .layer(cors)
-        .with_state(app_state);
+        .layer(cors);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!(%addr, "Server listening");
