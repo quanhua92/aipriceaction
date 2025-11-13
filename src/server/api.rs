@@ -1,6 +1,6 @@
 use crate::constants::INDEX_TICKERS;
 use crate::models::{AggregatedInterval, Interval};
-use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
+use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, write_api_log_entry, determine_data_source};
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
 use crate::utils::{get_public_dir, format_date, format_timestamp};
@@ -419,14 +419,6 @@ pub async fn health_handler(
     State(health_state): State<SharedHealthStats>,
     State(data_state): State<SharedDataStore>,
 ) -> impl IntoResponse {
-    let start_time = Utc::now();
-    let mut performance_metrics = ApiPerformanceMetrics::new(start_time);
-    performance_metrics.endpoint = "/health".to_string();
-    performance_metrics.response_format = "json".to_string();
-    performance_metrics.ticker_count = 0;
-    performance_metrics.interval = "N/A".to_string();
-    performance_metrics.cache_used = false;
-
     debug!("Received request for health stats");
 
     let mut health_stats = health_state.read().await.clone();
@@ -465,11 +457,7 @@ pub async fn health_handler(
         "Returning health stats"
     );
 
-    // Complete performance metrics and log for health endpoint
-    performance_metrics.response_size_bytes = 2048; // Approximate health stats size
-    performance_metrics.data_source = DataSource::Cache; // Health stats from memory
-    performance_metrics.complete();
-    write_api_log_entry(&performance_metrics);
+    // No logging for /health endpoint (too noisy)
 
     (StatusCode::OK, Json(health_stats)).into_response()
 }

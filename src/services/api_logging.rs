@@ -91,10 +91,11 @@ pub fn write_api_log_entry(metrics: &ApiPerformanceMetrics) {
     };
 
     let log_line = format!(
-        "{} | {} | {} | API | {} | req:1 tickers:{} interval:{} cache:{} format:{} size:{} source:{}{}\n",
+        "{} | {} | {} | {} | {} | req:1 tickers:{} interval:{} cache:{} format:{} size:{} source:{}{}\n",
         metrics.start_time.format("%Y-%m-%d %H:%M:%S"),
         metrics.end_time.format("%Y-%m-%d %H:%M:%S"),
         duration_str,
+        metrics.endpoint,
         status_str,
         metrics.ticker_count,
         metrics.interval,
