@@ -13,11 +13,65 @@ use tower_http::services::ServeDir;
 use tower_http::compression::{CompressionLayer, predicate::DefaultPredicate};
 use tower_http::timeout::TimeoutLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{
+    governor::GovernorConfigBuilder,
+    GovernorLayer,
+    key_extractor::KeyExtractor,
+};
 use axum::http::{HeaderValue, HeaderName, header};
 use axum::response::Response;
 use axum::middleware::{self, Next};
 use axum::extract::Request;
+
+/// Custom key extractor that prioritizes CF-Connecting-IP header
+/// This ensures rate limiting works correctly behind Cloudflare
+#[derive(Clone, Copy, Debug)]
+pub struct CloudflareKeyExtractor;
+
+impl KeyExtractor for CloudflareKeyExtractor {
+    type Key = String;
+
+    fn extract<T>(&self, req: &axum::http::Request<T>) -> Result<Self::Key, tower_governor::GovernorError> {
+        // 1. Try CF-Connecting-IP (Cloudflare's original client IP)
+        if let Some(cf_ip) = req.headers().get("cf-connecting-ip") {
+            if let Ok(ip_str) = cf_ip.to_str() {
+                tracing::debug!("Rate limit key from CF-Connecting-IP: {}", ip_str);
+                return Ok(ip_str.to_string());
+            }
+        }
+
+        // 2. Fallback to X-Forwarded-For (first IP in the chain)
+        if let Some(forwarded) = req.headers().get("x-forwarded-for") {
+            if let Ok(forwarded_str) = forwarded.to_str() {
+                let first_ip = forwarded_str.split(',').next().unwrap_or("").trim();
+                if !first_ip.is_empty() {
+                    tracing::debug!("Rate limit key from X-Forwarded-For: {}", first_ip);
+                    return Ok(first_ip.to_string());
+                }
+            }
+        }
+
+        // 3. Fallback to X-Real-IP
+        if let Some(real_ip) = req.headers().get("x-real-ip") {
+            if let Ok(ip_str) = real_ip.to_str() {
+                tracing::debug!("Rate limit key from X-Real-IP: {}", ip_str);
+                return Ok(ip_str.to_string());
+            }
+        }
+
+        // 4. Final fallback: use connection info (direct IP)
+        // This should rarely happen when behind Cloudflare
+        tracing::warn!("No client IP headers found, using connection info");
+        let ip = req
+            .extensions()
+            .get::<axum::extract::ConnectInfo<SocketAddr>>()
+            .map(|ci| ci.0.ip().to_string())
+            .unwrap_or_else(|| "unknown".to_string());
+
+        tracing::debug!("Rate limit key from connection info: {}", ip);
+        Ok(ip)
+    }
+}
 
 /// Application state shared across all handlers
 #[derive(Clone)]
@@ -137,16 +191,17 @@ pub async fn serve(
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
-    // Configure rate limiting: 500 requests/second, burst up to 1000
+    // Configure rate limiting: 500 requests/second per IP, burst up to 1000
+    // Uses CF-Connecting-IP header to identify real client behind Cloudflare
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(500)
         .burst_size(1000)
-        .use_headers()
+        .key_extractor(CloudflareKeyExtractor)
         .finish()
         .unwrap();
 
     tracing::info!("Security middleware enabled:");
-    tracing::info!("  Rate Limit: 500 req/s, burst 1000");
+    tracing::info!("  Rate Limit: 500 req/s per IP, burst 1000 (using CF-Connecting-IP)");
     tracing::info!("  Request Timeout: 30s");
     tracing::info!("  Body Size Limit: 1MB");
     tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
