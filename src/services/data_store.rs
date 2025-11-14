@@ -11,9 +11,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Memory management constants
-pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit for 1 year of data
+pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit for 2 years of data
 pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
-pub const DATA_RETENTION_DAYS: i64 = 365; // Keep 1 year of data
+pub const DATA_RETENTION_DAYS: i64 = 730; // Keep 2 years of data (365 * 2)
 
 /// Cache TTL constants
 pub const CACHE_TTL_SECONDS: i64 = 60; // 1 minute TTL for memory cache
@@ -481,10 +481,10 @@ impl DataStore {
             return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
         }
 
-        // If limit is provided and potentially exceeds cache capacity, check if we should read from disk
+        // If limit is provided, check if cache has enough records (regardless of limit size)
         if let Some(limit_count) = limit {
-            if start_date.is_none() && limit_count > DATA_RETENTION_DAYS as usize {
-                // Limit exceeds 1 year cache capacity - check if cache has enough records
+            if start_date.is_none() {
+                // Check if cache has enough records for the requested limit
                 let store = self.data.read().await;
                 let cache_insufficient = tickers.iter().any(|ticker| {
                     store.get(ticker)
@@ -496,7 +496,7 @@ impl DataStore {
 
                 if cache_insufficient {
                     tracing::info!(
-                        "Limit ({}) exceeds cache capacity, reading from disk for {} tickers",
+                        "Cache has insufficient records (limit: {}), reading from disk for {} tickers",
                         limit_count,
                         tickers.len()
                     );
