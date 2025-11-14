@@ -1,5 +1,6 @@
 # Multi-stage production Docker build
 # Optimized for minimal size, security, and fast builds with cargo-chef
+# Uses BuildKit cache mounts for maximum cache efficiency
 
 # Stage 1: Build planner for cargo-chef
 FROM rust:1.91-alpine AS chef
@@ -13,7 +14,10 @@ RUN apk add --no-cache \
     g++ \
     make
 
-RUN cargo install cargo-chef
+# Install cargo-chef with cache mount to speed up installation
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    cargo install cargo-chef --locked
 WORKDIR /app
 
 FROM chef AS rust-planner
@@ -39,7 +43,10 @@ RUN apk add --no-cache \
 COPY --from=rust-planner /app/recipe.json recipe.json
 
 # Use native musl target for the current architecture
-RUN echo "Building for native musl target" && \
+# Cache cargo registry and git checkouts for faster dependency downloads
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    echo "Building for native musl target" && \
     cargo chef cook --release --recipe-path recipe.json
 
 # Stage 3: Build the application
@@ -61,8 +68,10 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./src ./src
 
-# Build for native musl target
-RUN echo "Building binary for native musl target" && \
+# Build for native musl target with cache mounts for faster incremental builds
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    echo "Building binary for native musl target" && \
     cargo build --release && \
     cp target/release/aipriceaction /app/aipriceaction-bin
 

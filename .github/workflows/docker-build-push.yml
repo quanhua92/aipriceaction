@@ -66,6 +66,8 @@ jobs:
           GIT_COMMIT=${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        # Enable BuildKit inline cache for better layer caching
+        outputs: type=image,push=${{ github.event_name != 'pull_request' }}
 
     - name: Test built image
       if: github.event_name != 'pull_request'
