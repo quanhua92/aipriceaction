@@ -197,6 +197,7 @@ pub async fn serve(
         .per_second(500)
         .burst_size(1000)
         .key_extractor(CloudflareKeyExtractor)
+        .use_headers()
         .finish()
         .unwrap();
 
