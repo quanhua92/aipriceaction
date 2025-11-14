@@ -105,7 +105,8 @@
         "SHB",
         "EIB",
         "OCB",
-        "MSB"
+        "MSB",
+        "SSB"
     ],
     "NHUA": ["NTP", "BMP", "AAA", "APH", "NHH", "HCD"],
     "NONG_NGHIEP": ["HAG", "DBC", "PAN", "VLC", "BAF", "NAF", "TSC"],
