@@ -80,7 +80,8 @@
         "ELC",
         "VTK",
         "TTN",
-        "MFS"
+        "MFS",
+        "VNZ"
     ],
     "DAU_KHI": ["GAS", "BSR", "PLX", "PVS", "PVD", "OIL", "CNG", "PVC"],
     "DAU_TU_CONG": ["VCG", "HHV", "C4G", "LCG", "PLC", "FCN", "KSB", "G36"],
@@ -88,7 +89,7 @@
     "HANG_KHONG": ["ACV", "VJC", "HVN", "SCS", "SAS", "NCT", "SGN"],
     "HOA_CHAT": ["DGC", "DCM", "DPM", "LAS", "DDV", "BFC", "CSV"],
     "KHAI_KHOANG": ["CST", "VPG", "NNC", "NBC", "BMC", "TNT"],
-    "NANG_LUONG": ["POW", "HDG", "QTP", "NT2", "GEG", "PPC"],
+    "NANG_LUONG": ["POW", "HDG", "QTP", "NT2", "GEG", "PPC", "GEX", "GEE"],
     "NGAN_HANG": [
         "VCB",
         "BID",
@@ -112,7 +113,6 @@
     "NONG_NGHIEP": ["HAG", "DBC", "PAN", "VLC", "BAF", "NAF", "TSC"],
     "OTHERS": [
         "VEA",
-        "GEX",
         "VCS",
         "BWE",
         "TDM",
@@ -122,7 +122,8 @@
         "TTF",
         "YEG",
         "DSN",
-        "GDT"
+        "GDT",
+        "VPL"
     ],
     "PENNY": [
         "IPA",
