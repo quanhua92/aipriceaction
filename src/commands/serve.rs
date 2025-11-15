@@ -57,20 +57,34 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Spawn daily worker (fast: 15 seconds)
-    println!("⚡ Spawning daily worker (every 15 seconds)...");
-    let daily_data_store = shared_data_store.clone();
-    let daily_health_stats = shared_health_stats.clone();
-    tokio::spawn(async move {
-        worker::run_daily_worker(daily_data_store, daily_health_stats).await;
-    });
+    // Create dedicated runtime for workers (8 threads for heavy I/O batching)
+    // Workers only write CSVs to disk, don't touch memory cache
+    println!("⚙️  Creating dedicated worker runtime (8 threads)...");
+    let worker_health_daily = shared_health_stats.clone();
+    let worker_health_slow = shared_health_stats.clone();
 
-    // Spawn slow worker (hourly + minute: 5 minutes)
-    println!("🐌 Spawning slow worker (every 5 minutes)...");
-    let slow_data_store = shared_data_store.clone();
-    let slow_health_stats = shared_health_stats.clone();
-    tokio::spawn(async move {
-        worker::run_slow_worker(slow_data_store, slow_health_stats).await;
+    std::thread::spawn(move || {
+        let worker_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(8)  // 8 threads for parallel batch API calls + CSV I/O
+            .thread_name("worker-pool")
+            .enable_all()
+            .build()
+            .expect("Failed to create worker runtime");
+
+        worker_runtime.block_on(async {
+            println!("⚡ Spawning daily worker (every 15 seconds)...");
+            tokio::spawn(async move {
+                worker::run_daily_worker(worker_health_daily).await;
+            });
+
+            println!("🐌 Spawning slow worker (every 5 minutes)...");
+            tokio::spawn(async move {
+                worker::run_slow_worker(worker_health_slow).await;
+            });
+
+            // Keep runtime alive
+            tokio::signal::ctrl_c().await.ok();
+        });
     });
 
     // Spawn uptime tracker

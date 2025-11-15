@@ -16,7 +16,7 @@ pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
 pub const DATA_RETENTION_DAYS: i64 = 730; // Keep 2 years of data (365 * 2)
 
 /// Cache TTL constants
-pub const CACHE_TTL_SECONDS: i64 = 60; // 1 minute TTL for memory cache
+pub const CACHE_TTL_SECONDS: i64 = 15; // 15 seconds TTL for memory cache
 
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size

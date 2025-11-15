@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
-use crate::services::{DataSync, SharedDataStore, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
 use crate::utils::{get_market_data_dir, write_with_rotation};
 use chrono::Utc;
 use std::time::Duration;
@@ -12,8 +12,8 @@ use tracing::{info, warn, error, instrument};
 const TRADING_INTERVAL_SECS: u64 = 15;
 const NON_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
 
-#[instrument(skip(data_store, health_stats))]
-pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
+#[instrument(skip(health_stats))]
+pub async fn run(health_stats: SharedHealthStats) {
     info!(
         "Starting daily worker - Trading hours: {}s, Non-trading hours: {}s",
         TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS
@@ -97,18 +97,7 @@ pub async fn run(data_store: SharedDataStore, health_stats: SharedHealthStats) {
             }
         }
 
-        // Step 3: Reload daily data into shared memory
-        info!(iteration = iteration_count, "Daily worker: Reloading into memory");
-        match data_store.reload_interval(Interval::Daily).await {
-            Ok(_) => {
-                info!(iteration = iteration_count, "Daily worker: Reload completed");
-            }
-            Err(e) => {
-                warn!(iteration = iteration_count, error = %e, "Daily worker: Reload failed");
-            }
-        }
-
-        // Step 4: Update health stats
+        // Step 3: Update health stats (memory cache updated lazily by API on cache miss)
         {
             let mut health = health_stats.write().await;
             health.daily_last_sync = Some(Utc::now().to_rfc3339());
