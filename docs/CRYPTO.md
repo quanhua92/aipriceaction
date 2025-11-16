@@ -282,7 +282,61 @@ If `true`, returns ALL available historical data.
 - Unlike per-second/minute limits, cannot wait and retry
 - **Critical**: Must plan sync frequencies to stay within daily budget
 
-**Alternative Solutions**:
+## Our Solution: Two-Tier Sync Strategy
+
+We implemented a **two-tier sync strategy** to balance frequent updates for top cryptos while staying under the 7,500/day API limit.
+
+### Strategy Overview
+
+**Priority Tier (BTC, ETH, XRP)**:
+- Sync **all intervals** (Daily, Hourly, Minute) every **15 minutes**
+- 96 cycles/day × 3 cryptos × 3 intervals = **864 calls/day**
+- Top 3 cryptos by market cap get real-time updates
+
+**Regular Tier (95 other cryptos)**:
+- **Daily**: Every 1 hour (24 syncs/day) → 2,280 calls/day
+- **Hourly**: Every 3 hours (8 syncs/day) → 760 calls/day
+- **Minute**: Every 6 hours (4 syncs/day) → 1,140 calls/day
+- Subtotal: **4,180 calls/day**
+
+**Total Budget**: 864 + 4,180 = **5,044 calls/day** (67% of limit, safe margin)
+
+### Implementation Details
+
+**Worker Configuration** (`src/worker/crypto_worker.rs`):
+```rust
+// Priority cryptos sync every 15 minutes (all intervals)
+const PRIORITY_CRYPTOS: &[&str] = &["BTC", "ETH", "XRP"];
+
+// Regular cryptos use staggered intervals
+const REGULAR_DAILY_SYNC_INTERVAL_SECS: u64 = 3600;   // 1 hour
+const REGULAR_HOURLY_SYNC_INTERVAL_SECS: u64 = 10800; // 3 hours
+const REGULAR_MINUTE_SYNC_INTERVAL_SECS: u64 = 21600; // 6 hours
+```
+
+**Rate Limit Detection** (`src/services/crypto_compare.rs`):
+- Detects API error Type 99 (rate limit)
+- Logs daily usage: "Rate limit exceeded! Daily calls: 8867/7500"
+- Returns `Error::RateLimit` immediately without retry spam
+- Worker stops processing remaining cryptos to avoid wasted API calls
+
+**Early Stop Optimization** (`src/services/crypto_sync.rs`):
+- When first crypto hits rate limit, stops processing remaining cryptos
+- Skips remaining tickers until next iteration
+- Prevents wasting time on 97 failed API calls
+- Example: "Rate limit hit - skipping remaining 95 tickers"
+
+### Benefits
+
+✅ **Frequent updates for top cryptos**: BTC, ETH, XRP updated every 15 minutes
+✅ **Stay under daily limit**: 67% usage leaves 33% buffer for tolerance
+✅ **No retry spam**: Detects rate limit and returns immediately
+✅ **Smart early stop**: Stops processing on first failure
+✅ **Logged API usage**: Clear visibility into daily call consumption
+
+### Alternative Solutions
+
+If the two-tier strategy doesn't meet your needs:
 1. **Reduce crypto count**: Track 50 instead of 98 cryptos (saves 50%)
 2. **Skip minute data**: Only sync daily + hourly (saves 25%)
 3. **Upgrade to paid tier**: Higher limits (50K-500K calls/day, $50-200/month)
