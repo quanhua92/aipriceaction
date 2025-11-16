@@ -74,10 +74,9 @@ market_data/**/*.parquet
 !market_data/VNINDEX/*.csv
 !market_data/VIC/*.csv
 
-# Crypto Data (all except BTC for reference)
-crypto_data/
+# Crypto Data (gitignore all other cryptos, keep BTC)
+crypto_data/*
 !crypto_data/BTC/
-!crypto_data/BTC/*.csv
 
 # Crypto Scraper
 scripts/crypto/node_modules
