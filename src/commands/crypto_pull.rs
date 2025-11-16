@@ -32,17 +32,11 @@ pub fn run(symbol: Option<String>, interval_str: String, full: bool) {
     // Parse interval
     let interval = match interval_str.to_lowercase().as_str() {
         "daily" | "1d" => Interval::Daily,
-        "hourly" | "1h" => {
-            eprintln!("❌ Hourly interval not yet supported (coming in Phase 3)");
-            std::process::exit(1);
-        }
-        "minute" | "1m" => {
-            eprintln!("❌ Minute interval not yet supported (coming in Phase 3)");
-            std::process::exit(1);
-        }
+        "hourly" | "1h" => Interval::Hourly,
+        "minute" | "1m" => Interval::Minute,
         _ => {
             eprintln!("❌ Invalid interval: {}", interval_str);
-            eprintln!("   Valid options: daily (1d)");
+            eprintln!("   Valid options: daily (1d), hourly (1h), minute (1m)");
             std::process::exit(1);
         }
     };
@@ -84,6 +78,64 @@ pub fn run(symbol: Option<String>, interval_str: String, full: bool) {
     }
 }
 
+/// Fetch paginated history for hourly and minute intervals
+///
+/// CryptoCompare limits to 2000 records per request, so we need to paginate
+/// using the `toTs` parameter to get older data.
+async fn fetch_paginated_history(
+    client: &mut CryptoCompareClient,
+    symbol: &str,
+    start_date: &str,
+    interval: Interval,
+) -> Result<Vec<OhlcvData>, Error> {
+    let mut all_data = Vec::new();
+    let mut to_ts: Option<i64> = None;
+    let limit = 2000; // CryptoCompare max
+
+    loop {
+        let batch = client
+            .get_history(symbol, start_date, to_ts, interval, Some(limit), false)
+            .await
+            .map_err(|e| Error::Network(format!("Pagination request failed: {}", e)))?;
+
+        if batch.is_empty() {
+            println!("   📭 No more data available");
+            break;
+        }
+
+        let batch_len = batch.len();
+        let oldest = batch.first().unwrap().time;
+        let newest = batch.last().unwrap().time;
+
+        // Set toTs to the oldest timestamp for next batch
+        to_ts = Some(oldest.timestamp());
+
+        all_data.extend(batch);
+
+        println!(
+            "   📦 Fetched {} records (total: {}, range: {} to {})",
+            batch_len,
+            all_data.len(),
+            oldest.format("%Y-%m-%d %H:%M"),
+            newest.format("%Y-%m-%d %H:%M")
+        );
+
+        // If we got less than limit, we've reached the end
+        if batch_len < limit {
+            println!("   ✅ Reached oldest available data");
+            break;
+        }
+
+        // Rate limit: wait 200ms between requests (5 calls/sec)
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+    }
+
+    // Sort by time (oldest first)
+    all_data.sort_by_key(|d| d.time);
+
+    Ok(all_data)
+}
+
 /// Fetch cryptocurrency data and save to CSV
 async fn fetch_and_save(
     symbol: &str,
@@ -96,19 +148,46 @@ async fn fetch_and_save(
     let mut client = CryptoCompareClient::new(None)
         .map_err(|e| Error::Network(format!("Failed to create CryptoCompare client: {}", e)))?;
 
-    // Fetch data
+    // Fetch data based on interval
     println!("📡 Calling CryptoCompare API...");
 
-    let start_date = "2010-01-01"; // Bitcoin genesis: 2009-01-03, but trading started 2010
+    let ohlcv_data = match interval {
+        Interval::Daily => {
+            if full {
+                // Use allData=true for full history in one call
+                println!("   Using allData=true for full daily history...");
+                client.get_history(symbol, "2010-01-01", None, interval, None, true).await
+                    .map_err(|e| Error::Network(format!("API request failed: {}", e)))?
+            } else {
+                // TODO: Resume mode for daily
+                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+            }
+        }
+        Interval::Hourly => {
+            if full {
+                // Paginate from 2010 to today (limit=2000 per request)
+                println!("   Fetching full hourly history with pagination (limit=2000)...");
+                fetch_paginated_history(&mut client, symbol, "2010-07-17", interval).await?
+            } else {
+                // TODO: Resume mode for hourly
+                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+            }
+        }
+        Interval::Minute => {
+            // CryptoCompare only keeps 7 days of minute data
+            let start_date = (chrono::Utc::now() - chrono::Duration::days(7))
+                .format("%Y-%m-%d")
+                .to_string();
 
-    let ohlcv_data = if interval == Interval::Daily && full {
-        // Phase 2: Use allData=true for full history in one call
-        println!("   Using allData=true for full daily history...");
-        client.get_history(symbol, start_date, None, interval, None, true).await
-            .map_err(|e| Error::Network(format!("API request failed: {}", e)))?
-    } else {
-        // Future: Resume mode or hourly/minute intervals
-        return Err(Error::Other("Resume mode not yet implemented".to_string()));
+            if full {
+                println!("   Fetching last 7 days of minute data (CryptoCompare limitation)...");
+                println!("   Start date: {}", start_date);
+                fetch_paginated_history(&mut client, symbol, &start_date, interval).await?
+            } else {
+                // TODO: Resume mode for minute
+                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+            }
+        }
     };
 
     println!("✅ Received {} records from API", ohlcv_data.len());

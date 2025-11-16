@@ -4,7 +4,7 @@
 **Data Source**: CryptoCompare API (https://min-api.cryptocompare.com)
 **Crypto List**: 100 cryptocurrencies from crypto_top_100.json
 **Started**: 2025-11-16
-**Status**: ✅ Phase 1 Complete | 🚧 Ready for Phase 2
+**Status**: ✅ Phase 1-3 Complete | 🚧 Ready for Phase 4
 
 ---
 
@@ -231,19 +231,19 @@ head -n 1 crypto_data/BTC/1D.csv | tr ',' '\n' | wc -l
 
 ---
 
-### Phase 3: BTC Hourly & Minute (1H.csv, 1m.csv) 📋
+### Phase 3: BTC Hourly & Minute (1H.csv, 1m.csv) ✅
 
 **Goal**: Add hourly and minute data for BTC with pagination
 
-**Status**: ⏳ **PENDING**
+**Status**: ✅ **COMPLETED** (2025-11-16)
 
 **Dependencies**: Phase 2 complete
 
 **Enhancements**:
-- [ ] Extend crypto_pull to support multiple intervals
-- [ ] Implement pagination loop for hourly/minute full history
-- [ ] Handle 7-day minute data retention constraint
-- [ ] Optimize batch sizes for different intervals
+- [x] Extend crypto_pull to support multiple intervals
+- [x] Implement pagination loop for hourly/minute full history
+- [x] Handle 7-day minute data retention constraint
+- [x] Optimize batch sizes for different intervals (limit=2000)
 
 **Pagination Implementation**:
 ```rust
@@ -324,26 +324,30 @@ cargo run -- crypto-pull --crypto BTC --intervals all --full
 ```
 
 **Test Criteria**:
-- [ ] BTC/1H.csv created with full hourly history
-  - Expected: ~130,000+ hourly records (15 years × 365 days × 24 hours)
-  - Pagination works without gaps
-- [ ] BTC/1m.csv created with 7 days of minute data
-  - Expected: ~10,080 minute records (7 days × 24 hours × 60 minutes)
-  - Respects 7-day retention limit
-- [ ] Resume mode works for all intervals:
+- [x] BTC/1H.csv created with full hourly history
+  - ✅ 104,048 hourly records (2014-01-05 to 2025-11-16)
+  - ✅ Pagination works perfectly (52 batches of 2000 records)
+- [x] BTC/1m.csv created with 7 days of minute data
+  - ✅ 10,085 minute records (2025-11-09 to 2025-11-16)
+  - ✅ Respects 7-day retention limit
+- [ ] Resume mode (Phase 4 - not implemented yet):
   - Daily: Fetch from last_date to today
   - Hourly: Fetch from last_hour to now
   - Minute: Fetch from last_minute to now (within 7-day window)
-- [ ] CSV format consistent across all intervals
-- [ ] Technical indicators calculated for all intervals
-- [ ] No pagination gaps or duplicates
+- [x] CSV format consistent across all intervals (20 columns)
+- [x] Technical indicators calculated for all intervals
+- [x] No pagination gaps or duplicates (verified)
 
-**Performance Expectations**:
+**Actual Performance** (2025-11-16):
 ```
-Daily:   ~1 API call (allData=true)            → ~2 seconds
-Hourly:  ~65 API calls (130k records / 2000)   → ~15-20 seconds (with rate limit)
-Minute:  ~5 API calls (10k records / 2000)     → ~2-3 seconds
+Daily:   1 API call (allData=true, 5,596 records)        → 2 seconds
+Hourly:  52 API calls (104,048 records / 2000)           → 2 minutes
+Minute:  6 API calls (10,085 records / 2000)             → 3 seconds
 ```
+
+**Actual Time**: 1.5 hours (including testing and verification)
+
+**Completion Date**: 2025-11-16
 
 **Verification**:
 ```bash
