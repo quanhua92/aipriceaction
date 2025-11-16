@@ -166,7 +166,13 @@ impl CryptoFetcher {
                 self.crypto_client
                     .get_history(symbol, start_date, None, interval, None, true)
                     .await
-                    .map_err(|e| Error::Network(format!("Failed to fetch daily data: {}", e)))
+                    .map_err(|e| {
+                        if e.to_string().contains("Rate limit exceeded") {
+                            Error::RateLimit
+                        } else {
+                            Error::Network(format!("Failed to fetch daily data: {}", e))
+                        }
+                    })
             }
             Interval::Hourly | Interval::Minute => {
                 // Use pagination for hourly and minute
@@ -201,7 +207,13 @@ impl CryptoFetcher {
             let batch = self.crypto_client
                 .get_history(symbol, start_date, to_ts, interval, Some(limit), false)
                 .await
-                .map_err(|e| Error::Network(format!("Pagination request failed: {}", e)))?;
+                .map_err(|e| {
+                    if e.to_string().contains("Rate limit exceeded") {
+                        Error::RateLimit
+                    } else {
+                        Error::Network(format!("Pagination request failed: {}", e))
+                    }
+                })?;
 
             if batch.is_empty() {
                 break;

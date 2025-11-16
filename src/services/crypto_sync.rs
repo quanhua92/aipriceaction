@@ -103,6 +103,15 @@ impl CryptoSync {
                         }
                     }
                     Err(e) => {
+                        // Check if rate limit error - stop processing remaining tickers
+                        if matches!(e, Error::RateLimit) {
+                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", resume_list.len() - idx);
+                            // Add remaining tickers to failed list
+                            for (remaining_symbol, _) in resume_list.iter().skip(idx) {
+                                failed_cryptos.push(remaining_symbol.clone());
+                            }
+                            break;
+                        }
                         eprintln!("❌ Fetch failed: {}", e);
                         failed_cryptos.push(symbol.clone());
                     }
@@ -140,6 +149,15 @@ impl CryptoSync {
                         }
                     }
                     Err(e) => {
+                        // Check if rate limit error - stop processing remaining tickers
+                        if matches!(e, Error::RateLimit) {
+                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", full_list.len() - idx);
+                            // Add remaining tickers to failed list
+                            for remaining_symbol in full_list.iter().skip(idx) {
+                                failed_cryptos.push(remaining_symbol.clone());
+                            }
+                            break;
+                        }
                         eprintln!("❌ Fetch failed: {}", e);
                         failed_cryptos.push(symbol.clone());
                     }

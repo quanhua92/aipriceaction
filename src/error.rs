@@ -23,6 +23,9 @@ pub enum AppError {
     #[error("Skip ticker: {0}")]
     SkipTicker(String),
 
+    #[error("Rate limit exceeded")]
+    RateLimit,
+
     #[error("{0}")]
     Other(String),
 }
