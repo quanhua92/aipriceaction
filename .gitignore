@@ -84,3 +84,4 @@ scripts/crypto/node_modules
 # Reference projects (external git repos)
 references/
 market_data.tar.gz
+crypto_data.tar.gz
