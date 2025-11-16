@@ -414,6 +414,7 @@ mod tests {
                 ma200_score: None,
                 close_changed: None,
                 volume_changed: None,
+                total_money_changed: None,
             })
             .collect()
     }

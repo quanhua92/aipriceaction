@@ -10,6 +10,7 @@ pub mod csv_validator;
 pub mod data_store;
 pub mod trading_hours;
 pub mod api_logging;
+pub mod crypto_compare;
 
 pub use aggregator::Aggregator;
 pub use importer::import_legacy;
@@ -22,3 +23,4 @@ pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
 pub use trading_hours::{is_trading_hours, get_sync_interval};
 pub use api_logging::{ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
+pub use crypto_compare::{CryptoCompareClient, CryptoError};

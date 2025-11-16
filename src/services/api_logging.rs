@@ -18,7 +18,7 @@ pub struct ApiPerformanceMetrics {
     pub error_message: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ApiStatus {
     Success,
     Fail,
