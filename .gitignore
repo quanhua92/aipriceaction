@@ -74,6 +74,9 @@ market_data/**/*.parquet
 !market_data/VNINDEX/*.csv
 !market_data/VIC/*.csv
 
+# Crypto Scraper
+scripts/crypto/node_modules
+
 # Reference projects (external git repos)
 references/
 market_data.tar.gz
