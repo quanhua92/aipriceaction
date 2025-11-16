@@ -86,7 +86,7 @@ impl std::fmt::Display for CryptoError {
 
 impl std::error::Error for CryptoError {}
 
-/// CryptoCompare API response structure
+/// CryptoCompare API response structure (for errors and success)
 #[derive(Debug, Deserialize)]
 struct CryptoCompareResponse {
     #[serde(rename = "Response")]
@@ -100,7 +100,37 @@ struct CryptoCompareResponse {
     #[allow(dead_code)]
     response_type: i32,
     #[serde(rename = "Data")]
-    data: Option<CryptoCompareData>,
+    #[serde(default)]
+    data: Option<serde_json::Value>,  // Use Value to handle both CryptoCompareData and {}
+    #[serde(rename = "RateLimit")]
+    #[serde(default)]
+    rate_limit: Option<RateLimitInfo>,
+}
+
+/// Rate limit information from CryptoCompare API
+#[derive(Debug, Deserialize)]
+struct RateLimitInfo {
+    #[serde(rename = "calls_made")]
+    calls_made: CallStats,
+    #[serde(rename = "max_calls")]
+    #[allow(dead_code)]
+    max_calls: Option<CallStats>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CallStats {
+    #[serde(default)]
+    second: i32,
+    #[serde(default)]
+    minute: i32,
+    #[serde(default)]
+    hour: i32,
+    #[serde(default)]
+    day: i32,
+    #[serde(default)]
+    month: i32,
+    #[serde(default)]
+    total_calls: i32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -254,27 +284,67 @@ impl CryptoCompareClient {
             let status = response.status();
 
             if status.is_success() {
+                // Get response body as text first (for better error logging)
+                let body = match response.text().await {
+                    Ok(text) => text,
+                    Err(e) => {
+                        warn!("Failed to read response body (attempt {}): {}", attempt + 1, e);
+                        continue;
+                    }
+                };
+
                 // Parse JSON response
-                match response.json::<CryptoCompareResponse>().await {
+                match serde_json::from_str::<CryptoCompareResponse>(&body) {
                     Ok(data) => {
                         // Check API response status
                         if data.response == "Success" {
                             return Ok(data);
-                        } else {
-                            // API returned error
+                        } else if data.response == "Error" {
+                            // Check for rate limit error (Type 99)
+                            if data.response_type == 99 || data.message.contains("rate limit") {
+                                // Log rate limit info if available
+                                if let Some(ref rate_limit) = data.rate_limit {
+                                    warn!(
+                                        "Rate limit exceeded! Daily calls: {}/7500",
+                                        rate_limit.calls_made.day
+                                    );
+                                } else {
+                                    warn!("Rate limit exceeded: {}", data.message);
+                                }
+                                // Return immediately - do NOT retry on rate limit
+                                return Err(CryptoError::RateLimit);
+                            }
+
+                            // Other API errors
                             if data.message.contains("invalid symbol") || data.message.contains("market does not exist") {
                                 return Err(CryptoError::InvalidSymbol(data.message));
                             }
+
                             warn!("API error: {}", data.message);
                             if attempt < MAX_RETRIES - 1 {
                                 continue; // Retry
                             } else {
                                 return Err(CryptoError::InvalidResponse(data.message));
                             }
+                        } else {
+                            // Unknown response type
+                            warn!("Unknown API response: {}", data.response);
+                            if attempt < MAX_RETRIES - 1 {
+                                continue;
+                            } else {
+                                return Err(CryptoError::InvalidResponse(data.response));
+                            }
                         }
                     }
                     Err(e) => {
+                        // Log the first 500 chars of response body for debugging
+                        let body_preview = if body.len() > 500 {
+                            format!("{}... (truncated)", &body[..500])
+                        } else {
+                            body.clone()
+                        };
                         warn!("JSON parse error (attempt {}): {}", attempt + 1, e);
+                        warn!("Response body: {}", body_preview);
                         continue; // Retry
                     }
                 }
@@ -357,7 +427,9 @@ impl CryptoCompareClient {
         let response = self.make_request(&url).await?;
 
         // Parse data
-        let data = response.data.ok_or(CryptoError::NoData)?;
+        let data_value = response.data.ok_or(CryptoError::NoData)?;
+        let data: CryptoCompareData = serde_json::from_value(data_value)
+            .map_err(|e| CryptoError::Serialization(e))?;
 
         // Convert to OhlcvData
         let mut ohlcv_data: Vec<OhlcvData> = data

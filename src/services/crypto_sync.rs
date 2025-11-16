@@ -1,13 +1,11 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, SyncStats};
-use crate::services::crypto_fetcher::{CryptoCategory, CryptoFetcher};
+use crate::services::crypto_fetcher::CryptoFetcher;
 use crate::services::vci::OhlcvData;
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir};
 use crate::utils::get_crypto_data_dir;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 use std::time::Instant;
 
 /// High-level cryptocurrency data synchronization orchestrator

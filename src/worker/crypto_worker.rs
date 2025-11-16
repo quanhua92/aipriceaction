@@ -10,7 +10,6 @@ use tracing::{info, warn, error, instrument};
 
 // Priority cryptos sync every 15 minutes (all intervals)
 const PRIORITY_CRYPTOS: &[&str] = &["BTC", "ETH", "XRP"];
-const PRIORITY_SYNC_INTERVAL_SECS: u64 = 900; // 15 minutes
 
 // Regular cryptos use staggered intervals to manage rate limits
 const REGULAR_DAILY_SYNC_INTERVAL_SECS: u64 = 3600;   // 1 hour

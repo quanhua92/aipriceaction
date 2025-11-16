@@ -10,7 +10,6 @@
 //! - All cryptos: `crypto-pull --symbol all --interval daily`
 //! - Default (all cryptos, all intervals): `crypto-pull`
 
-use crate::error::Error;
 use crate::models::{Interval, SyncConfig, load_crypto_symbols, get_default_crypto_list_path};
 use crate::services::CryptoSync;
 use crate::constants::IGNORED_CRYPTOS;
