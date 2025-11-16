@@ -248,7 +248,7 @@ If `true`, returns ALL available historical data.
 - 5 calls per second
 - 300 calls per minute
 - 3,000 calls per hour
-- 7,500 calls per day
+- **7,500 calls per day** ⚠️ **PRIMARY CONSTRAINT**
 - 50,000 calls per month
 
 **Rate Limit Strategy**:
@@ -256,6 +256,37 @@ If `true`, returns ALL available historical data.
 - Monitor `RateLimit` object in error responses
 - Implement exponential backoff on rate limit errors
 - Consider upgrading to paid tier for higher limits
+
+### Daily Limit Implications for Crypto Worker
+
+**Problem**: With 98 cryptocurrencies and 3 intervals (Daily, Hourly, Minute), frequent syncing quickly exhausts the 7,500 daily limit.
+
+**API Call Calculations**:
+
+| Sync Frequency | Daily Calls/Crypto | Hourly Calls/Crypto | Minute Calls/Crypto | Total Calls/Day | Status |
+|----------------|-------------------|---------------------|---------------------|-----------------|--------|
+| Every 15 min (96×/day) | 96 × 98 = 9,408 | 96 × 98 = 9,408 | 96 × 98 × 3 = 28,224 | 47,040 | ❌ 6.3x OVER |
+| Every 1 hour (24×/day) | 24 × 98 = 2,352 | 8 × 98 = 784 | 4 × 98 × 3 = 1,176 | 4,312 | ✅ 57% used |
+| Every 2 hours (12×/day) | 12 × 98 = 1,176 | 6 × 98 = 588 | 2 × 98 × 3 = 588 | 2,352 | ✅ 31% used |
+
+**Recommended Crypto Worker Frequencies** (to stay under 7,500/day):
+- **Daily**: Every 1 hour (24 syncs/day) - Daily candles don't change frequently
+- **Hourly**: Every 3 hours (8 syncs/day) - Good balance for trend tracking
+- **Minute**: Every 6 hours (4 syncs/day) - Minute data less critical for crypto analysis
+
+**Total**: ~4,312 calls/day (57% of free tier limit, safe buffer)
+
+**Why the Limit Matters**:
+- CryptoCompare returns error after exceeding daily limit
+- No more data fetches until next day (resets at midnight UTC)
+- Unlike per-second/minute limits, cannot wait and retry
+- **Critical**: Must plan sync frequencies to stay within daily budget
+
+**Alternative Solutions**:
+1. **Reduce crypto count**: Track 50 instead of 98 cryptos (saves 50%)
+2. **Skip minute data**: Only sync daily + hourly (saves 25%)
+3. **Upgrade to paid tier**: Higher limits (50K-500K calls/day, $50-200/month)
+4. **Use alternative APIs**: CoinGecko, Binance (different rate limits)
 
 ## Data Retention
 
