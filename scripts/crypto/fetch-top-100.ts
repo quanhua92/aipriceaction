@@ -18,6 +18,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Cryptos to ignore (no reliable CryptoCompare API data)
+const IGNORED_CRYPTOS = ['MNT', 'IOTA'];
+
 interface Crypto {
   rank: number;
   name: string;
@@ -203,11 +206,21 @@ async function main() {
       throw new Error('No data extracted. The page structure may have changed.');
     }
 
+    // Filter out ignored cryptos
+    const originalCount = cryptos.length;
+    const filteredCryptos = cryptos.filter(c => !IGNORED_CRYPTOS.includes(c.symbol));
+    const ignoredCount = originalCount - filteredCryptos.length;
+
+    if (ignoredCount > 0) {
+      const ignoredSymbols = IGNORED_CRYPTOS.filter(s => cryptos.some(c => c.symbol === s));
+      console.log(`\nℹ️  Filtered out ${ignoredCount} ignored crypto(s) (${ignoredSymbols.join(', ')}) - no reliable CryptoCompare API data`);
+    }
+
     // Prepare output
     const output = {
       fetched_at: new Date().toISOString(),
-      count: cryptos.length,
-      data: cryptos
+      count: filteredCryptos.length,
+      data: filteredCryptos
     };
 
     // Save to JSON file in project root (two levels up from scripts/crypto/)
@@ -217,14 +230,14 @@ async function main() {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
 
     console.log('\n📊 Summary:');
-    console.log(`   Total cryptocurrencies: ${cryptos.length}`);
+    console.log(`   Total cryptocurrencies: ${filteredCryptos.length}`);
     console.log(`   Time taken: ${elapsed}s`);
     console.log(`   Output file: ${outputPath}`);
     console.log('\n🎉 Done!\n');
 
     // Print top 10 preview
     console.log('Top 10 Preview:');
-    cryptos.slice(0, 10).forEach(crypto => {
+    filteredCryptos.slice(0, 10).forEach(crypto => {
       console.log(`${crypto.rank}. ${crypto.name} (${crypto.symbol}) - ${crypto.price} (${crypto.change_24h})`);
     });
 
