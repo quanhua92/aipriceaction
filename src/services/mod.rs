@@ -18,7 +18,7 @@ pub use market_stats::{get_market_stats, get_ticker_info, is_index, MarketStats,
 pub use vci::{VciClient, VciError, OhlcvData, CompanyInfo};
 pub use ticker_fetcher::TickerFetcher;
 pub use data_sync::DataSync;
-pub use csv_enhancer::{enhance_interval, EnhancementStats};
+pub use csv_enhancer::{enhance_interval, enhance_data, EnhancementStats, save_enhanced_csv_to_dir};
 pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
 pub use trading_hours::{is_trading_hours, get_sync_interval};

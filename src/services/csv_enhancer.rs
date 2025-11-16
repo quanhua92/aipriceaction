@@ -121,12 +121,24 @@ pub fn save_enhanced_csv(
     cutoff_date: DateTime<chrono::Utc>,
     rewrite_all: bool,
 ) -> Result<(), Error> {
+    save_enhanced_csv_to_dir(ticker, data, interval, cutoff_date, rewrite_all, &get_market_data_dir())
+}
+
+/// Save enhanced CSV to a specific directory (for crypto_data support)
+pub fn save_enhanced_csv_to_dir(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+    base_dir: &Path,
+) -> Result<(), Error> {
     if data.is_empty() {
         return Err(Error::InvalidInput("No data to save".to_string()));
     }
 
     // Create ticker directory
-    let ticker_dir = get_market_data_dir().join(ticker);
+    let ticker_dir = base_dir.join(ticker);
     std::fs::create_dir_all(&ticker_dir)
         .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
 
@@ -425,7 +437,7 @@ fn read_and_enhance_interval(
     Ok(enhance_data(data))
 }
 
-/// Write enhanced data back to per-ticker CSV files (11 columns)
+/// Write enhanced data back to per-ticker CSV files (20 columns)
 fn write_enhanced_csv(
     data: &HashMap<String, Vec<StockData>>,
     interval: Interval,
@@ -436,7 +448,7 @@ fn write_enhanced_csv(
     let mut total_bytes_written = 0u64;
 
     for (ticker, ticker_data) in data {
-        save_enhanced_csv(ticker, ticker_data, interval, cutoff_date, false)?;
+        save_enhanced_csv_to_dir(ticker, ticker_data, interval, cutoff_date, false, market_data_dir)?;
 
         total_record_count += ticker_data.len();
 

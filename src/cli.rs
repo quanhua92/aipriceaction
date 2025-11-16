@@ -92,6 +92,20 @@ pub enum Commands {
         #[arg(long)]
         verbose: bool,
     },
+    /// Pull cryptocurrency data from CryptoCompare API (Phase 2: BTC daily only)
+    CryptoPull {
+        /// Cryptocurrency symbol (default: BTC)
+        #[arg(short, long)]
+        symbol: Option<String>,
+
+        /// Interval: daily (1d) - only daily supported in Phase 2
+        #[arg(short, long, default_value = "daily")]
+        interval: String,
+
+        /// Force full download from 2010-01-01 (default: resume mode)
+        #[arg(long)]
+        full: bool,
+    },
 }
 
 pub fn run() {
@@ -138,6 +152,9 @@ pub fn run() {
                 eprintln!("❌ CSV rebuild failed: {}", e);
                 std::process::exit(1);
             }
+        }
+        Commands::CryptoPull { symbol, interval, full } => {
+            commands::crypto_pull::run(symbol, interval, full);
         }
     }
 }

@@ -136,19 +136,19 @@ cargo test --lib test_rate_limiting
 
 ---
 
-### Phase 2: BTC Daily (1D.csv) 📋
+### Phase 2: BTC Daily (1D.csv) ✅
 
 **Goal**: Get BTC daily data working perfectly end-to-end
 
-**Status**: ⏳ **PENDING**
+**Status**: ✅ **COMPLETED** (2025-11-16)
 
-**Files to Create**:
-- [ ] `src/commands/crypto_pull.rs` - crypto-pull command (initial version, ~150 lines)
-- [ ] Update `src/commands/mod.rs` - Register crypto_pull
-- [ ] Update `src/main.rs` - Add crypto-pull CLI command
-- [ ] Update `Cargo.toml` - Add dependencies if needed
-- [ ] Create `crypto_data/` directory
-- [ ] Create `.gitignore` for crypto_data (except BTC)
+**Files Created**:
+- [x] `src/commands/crypto_pull.rs` - crypto-pull command (191 lines)
+- [x] `src/commands/mod.rs` - Registered crypto_pull module
+- [x] `src/cli.rs` - Added CryptoPull CLI command
+- [x] `src/services/csv_enhancer.rs` - Added save_enhanced_csv_to_dir() for crypto_data support
+- [x] `src/services/mod.rs` - Exported enhance_data and save_enhanced_csv_to_dir
+- [x] `.gitignore` - Added crypto_data/ (except BTC for reference)
 
 **Implementation Steps**:
 1. Create minimal crypto_pull command (daily interval only, BTC only)
@@ -177,21 +177,21 @@ cargo run -- crypto-pull --crypto BTC --intervals daily
 ```
 
 **Test Criteria**:
-- [ ] BTC/1D.csv created successfully
-- [ ] Full history from 2010-07-17 (when BTC price first recorded at $0.04951)
-- [ ] ~5,600+ daily records
-- [ ] 20-column CSV format matches market_data format
-- [ ] Header: ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed
-- [ ] Technical indicators calculated correctly:
-  - MA10, MA20, MA50, MA100, MA200
-  - MA scores (percentage deviation)
-  - close_changed, volume_changed percentages
-  - total_money_changed in USD
-- [ ] Resume mode works:
+- [x] BTC/1D.csv created successfully in crypto_data/BTC/
+- [x] Full history from 2010-07-17 (BTC price started at $0.04951)
+- [x] 5,596 daily records (2010-07-17 to 2025-11-16)
+- [x] 20-column CSV format matches market_data format perfectly
+- [x] Header: ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed
+- [x] Technical indicators calculated correctly:
+  - MA10, MA20, MA50, MA100, MA200 ✓
+  - MA scores (percentage deviation) ✓
+  - close_changed, volume_changed percentages ✓
+  - total_money_changed in USD ✓
+- [ ] Resume mode (Phase 3 - not implemented yet):
   - Reads last date from BTC/1D.csv
   - Fetches only new data from last_date to today
   - Appends to existing CSV (no full rewrite)
-- [ ] File locking prevents corruption during concurrent access
+- [x] File locking via save_enhanced_csv_to_dir() prevents corruption
 
 **Verification Commands**:
 ```bash
@@ -211,15 +211,23 @@ tail -n 5 crypto_data/BTC/1D.csv
 head -n 1 crypto_data/BTC/1D.csv | tr ',' '\n' | wc -l
 ```
 
-**Expected Output**:
+**Actual Results** (2025-11-16):
 ```
-BTC,2010-07-17,0.05,0.05,0.05,0.05,20,,,,,,,,,,,,,
-BTC,2010-07-18,0.05,0.09,0.05,0.09,75.01,,,,,,,,,,,,,
-...
-BTC,2025-11-16,95555.28,96171.87,94813.18,95929.23,4361.49,102304.79,104721.32,...
+✅ 5,597 lines (5,596 records + header)
+✅ First record: BTC,2010-07-17,0.05,0.05,0.05,0.05,20,,,,,,,,,,,,,
+✅ Last record: BTC,2025-11-16,95555.28,96171.87,94813.18,95926.43,4724,100666.75,104075.44,110356.17,112145.95,110492.05,-4.7089,-7.8299,-13.0756,-14.4629,-13.1825,0.3884,-74.5666,1753313
+✅ All 20 columns present in header and every row
 ```
 
-**Estimated Time**: 2-3 hours
+**Actual Time**: 3 hours
+
+**Completion Date**: 2025-11-16
+
+**Key Implementation**:
+- Used `enhance_data()` to calculate all technical indicators in-memory
+- Created `save_enhanced_csv_to_dir()` to support crypto_data/ directory (not hardcoded to market_data/)
+- Direct CSV write with rewrite_all=true ensures clean 20-column format from start
+- No temporary files or workarounds needed
 
 ---
 
