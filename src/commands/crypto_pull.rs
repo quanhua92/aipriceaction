@@ -76,7 +76,13 @@ pub fn run(symbol: Option<String>, interval_str: String, full: bool) {
     // Create sync config
     let config = SyncConfig {
         intervals: intervals.clone(),
-        start_date: "2010-01-01".to_string(), // BTC inception
+        // Use 2-day window for resume mode, unless --full flag is set
+        // CryptoSync will categorize each crypto:
+        // - If CSV exists: resume from last date
+        // - If CSV missing or --full: fetch full history from BTC inception
+        start_date: (chrono::Utc::now() - chrono::Duration::days(2))
+            .format("%Y-%m-%d")
+            .to_string(),
         end_date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
         force_full: full,
         ..Default::default()

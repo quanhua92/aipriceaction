@@ -48,8 +48,10 @@ pub struct HealthStats {
     pub daily_last_sync: Option<String>,
     pub hourly_last_sync: Option<String>,
     pub minute_last_sync: Option<String>,
+    pub crypto_last_sync: Option<String>,
     pub daily_iteration_count: u64,
     pub slow_iteration_count: u64,
+    pub crypto_iteration_count: u64,
 
     // Trading hours info
     pub is_trading_hours: bool,
@@ -86,8 +88,10 @@ impl Default for HealthStats {
             daily_last_sync: None,
             hourly_last_sync: None,
             minute_last_sync: None,
+            crypto_last_sync: None,
             daily_iteration_count: 0,
             slow_iteration_count: 0,
+            crypto_iteration_count: 0,
             is_trading_hours: false,
             trading_hours_timezone: "Asia/Ho_Chi_Minh".to_string(),
             memory_usage_bytes: 0,

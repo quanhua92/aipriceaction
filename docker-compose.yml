@@ -9,7 +9,9 @@ services:
     volumes:
       # Mount market_data directory for persistent storage
       - ./market_data:/app/market_data
-      # ticker_group.json is already copied in Dockerfile
+      # Mount crypto_data directory for cryptocurrency data
+      - ./crypto_data:/app/crypto_data
+      # ticker_group.json and crypto_top_100.json are already copied in Dockerfile
     environment:
       - RUST_LOG=info
       - PORT=3000
@@ -31,7 +33,9 @@ services:
   #     - "3000:3000"
   #   volumes:
   #     - ./market_data:/app/market_data
+  #     - ./crypto_data:/app/crypto_data
   #     - ./ticker_group.json:/app/ticker_group.json:ro
+  #     - ./crypto_top_100.json:/app/crypto_top_100.json:ro
   #   environment:
   #     - RUST_LOG=info
   #     - PORT=3000

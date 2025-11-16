@@ -95,6 +95,7 @@ ENV BUILD_DATE="${BUILD_DATE}"
 ENV GIT_COMMIT="${GIT_COMMIT}"
 ENV PORT=3000
 ENV MARKET_DATA_DIR="/app/market_data"
+ENV CRYPTO_DATA_DIR="/app/crypto_data"
 ENV PUBLIC_DIR="/app/public"
 
 # Copy the compiled binary from rust-builder stage
@@ -103,11 +104,17 @@ COPY --from=rust-builder /app/aipriceaction-bin ./aipriceaction
 # Copy ticker group configuration file
 COPY ./ticker_group.json ./ticker_group.json
 
+# Copy crypto top 100 list
+COPY ./crypto_top_100.json ./crypto_top_100.json
+
 # Copy public directory for static files
 COPY ./public ./public
 
 # Create market_data directory for CSV storage
 RUN mkdir -p /app/market_data && chown -R appuser:appgroup /app/market_data
+
+# Create crypto_data directory for cryptocurrency CSV storage
+RUN mkdir -p /app/crypto_data && chown -R appuser:appgroup /app/crypto_data
 
 # Change ownership to non-root user
 RUN chown -R appuser:appgroup /app

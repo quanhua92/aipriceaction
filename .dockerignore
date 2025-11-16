@@ -26,6 +26,7 @@ tests/
 
 # Large data files (mount as volume instead)
 market_data/
+crypto_data/
 
 # Environment files
 .env

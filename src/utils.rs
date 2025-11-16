@@ -11,6 +11,13 @@ pub fn get_market_data_dir() -> PathBuf {
         .unwrap_or_else(|_| PathBuf::from("market_data"))
 }
 
+/// Get crypto data directory from environment variable or use default
+pub fn get_crypto_data_dir() -> PathBuf {
+    std::env::var("CRYPTO_DATA_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| PathBuf::from("crypto_data"))
+}
+
 /// Get public directory from environment variable or use default
 pub fn get_public_dir() -> PathBuf {
     std::env::var("PUBLIC_DIR")

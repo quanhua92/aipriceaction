@@ -3,6 +3,7 @@ use crate::models::{Interval, SyncConfig, SyncStats};
 use crate::services::crypto_fetcher::{CryptoCategory, CryptoFetcher};
 use crate::services::vci::OhlcvData;
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir};
+use crate::utils::get_crypto_data_dir;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::fs;
@@ -222,7 +223,7 @@ impl CryptoSync {
         let stock_data = enhanced_data.get(symbol)
             .ok_or_else(|| Error::Other("Failed to enhance data".to_string()))?;
 
-        let crypto_data_dir = PathBuf::from("crypto_data");
+        let crypto_data_dir = get_crypto_data_dir();
 
         // Determine if this is resume mode or full mode
         let is_resume = !last_date.is_empty() && !self.config.force_full;

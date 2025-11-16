@@ -247,8 +247,9 @@ docker stats aipriceaction
   - `GET /health` - System health/stats
   - `GET /tickers/group` - Ticker groupings
 - **Background Workers** (`worker/`):
-  - `daily_worker`: Syncs daily data (15s trading hours, 5min off-hours)
-  - `slow_worker`: Syncs hourly/minute (5min trading, 30min off-hours)
+  - `daily_worker`: Syncs daily stock data (15s trading hours, 5min off-hours)
+  - `slow_worker`: Syncs hourly/minute stock data (5min trading, 30min off-hours)
+  - `crypto_worker`: Syncs all crypto intervals sequentially (15min, 24/7)
 
 **Models (`src/models/`)**
 - **StockData**: OHLCV + 10 technical indicators (ma10-200, scores, changes)
@@ -273,7 +274,7 @@ docker stats aipriceaction
 5. Transform: Apply legacy scaling if needed
 6. Response: JSON or CSV format
 
-**Background Worker Flow:**
+**Background Worker Flow (Stock Workers):**
 1. Check trading hours (9:00-15:00 ICT)
 2. Validate CSV files (auto-repair corruption)
 3. Sync data via DataSync
@@ -281,6 +282,15 @@ docker stats aipriceaction
 5. Reload into memory cache
 6. Update health stats
 7. Sleep until next iteration
+
+**Crypto Worker Flow:**
+1. Load crypto symbols from crypto_top_100.json (filter ignored cryptos)
+2. For each interval (Daily → Hourly → Minute):
+   - Sync all 98 cryptos via CryptoSync (resume mode)
+   - Enhance CSVs with technical indicators
+3. Update health stats (crypto_last_sync, crypto_iteration_count)
+4. Write log to crypto_data/crypto_worker.log
+5. Sleep 15 minutes (fixed interval, 24/7)
 
 ## Critical Implementation Details
 

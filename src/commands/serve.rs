@@ -62,6 +62,7 @@ pub async fn run(port: u16) {
     println!("⚙️  Creating dedicated worker runtime (8 threads)...");
     let worker_health_daily = shared_health_stats.clone();
     let worker_health_slow = shared_health_stats.clone();
+    let worker_health_crypto = shared_health_stats.clone();
 
     std::thread::spawn(move || {
         let worker_runtime = tokio::runtime::Builder::new_multi_thread()
@@ -80,6 +81,11 @@ pub async fn run(port: u16) {
             println!("🐌 Spawning slow worker (every 5 minutes)...");
             tokio::spawn(async move {
                 worker::run_slow_worker(worker_health_slow).await;
+            });
+
+            println!("🪙 Spawning crypto worker (every 15 minutes)...");
+            tokio::spawn(async move {
+                worker::run_crypto_worker(worker_health_crypto).await;
             });
 
             // Keep runtime alive
