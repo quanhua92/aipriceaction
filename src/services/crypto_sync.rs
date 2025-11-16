@@ -68,13 +68,24 @@ impl CryptoSync {
         let mut success_count = 0;
         let mut failed_cryptos: Vec<String> = Vec::new();
 
-        if !category.resume_cryptos.is_empty() && !self.config.force_full {
-            println!("\n🔄 Processing {} resume cryptos...", category.resume_cryptos.len());
+        // If force_full, treat resume cryptos as full history cryptos
+        let (resume_list, full_list) = if self.config.force_full {
+            // force_full=true: all cryptos get full history download
+            let mut all_full = category.full_history_cryptos.clone();
+            all_full.extend(category.resume_cryptos.iter().map(|(s, _)| s.clone()));
+            (Vec::new(), all_full)
+        } else {
+            // Normal mode: respect categorization
+            (category.resume_cryptos.clone(), category.full_history_cryptos.clone())
+        };
 
-            for (idx, (symbol, last_date)) in category.resume_cryptos.iter().enumerate() {
+        if !resume_list.is_empty() {
+            println!("\n🔄 Processing {} resume cryptos...", resume_list.len());
+
+            for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
                 print!("   [{}/{}] {} (from {})... ",
                     idx + 1,
-                    category.resume_cryptos.len(),
+                    resume_list.len(),
                     symbol,
                     last_date
                 );
@@ -104,15 +115,15 @@ impl CryptoSync {
         }
 
         // Process full history cryptos
-        if !category.full_history_cryptos.is_empty() {
-            println!("\n📥 Processing {} full history cryptos...", category.full_history_cryptos.len());
+        if !full_list.is_empty() {
+            println!("\n📥 Processing {} full history cryptos...", full_list.len());
 
             let start_date = self.get_start_date_for_interval(interval);
 
-            for (idx, symbol) in category.full_history_cryptos.iter().enumerate() {
+            for (idx, symbol) in full_list.iter().enumerate() {
                 print!("   [{}/{}] {} (full)... ",
                     idx + 1,
-                    category.full_history_cryptos.len(),
+                    full_list.len(),
                     symbol
                 );
 

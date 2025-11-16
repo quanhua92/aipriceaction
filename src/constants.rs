@@ -73,3 +73,7 @@ pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
 /// Only fall back to individual fetches after batch API fails continuously for this many minutes
 /// During temporary API issues, iterations will be skipped rather than triggering expensive fallback
 pub const BATCH_FAILURE_THRESHOLD_MINUTES: i64 = 15;
+
+/// Cryptocurrencies to ignore during sync (no data available from CryptoCompare API)
+/// These symbols consistently fail with "Max retries exceeded" errors
+pub const IGNORED_CRYPTOS: &[&str] = &["MNT", "IOTA"];
