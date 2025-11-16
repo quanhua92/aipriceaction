@@ -532,9 +532,18 @@ if is_resume {
 
 ---
 
-### Phase 4b: CryptoFetcher & CryptoSync (DEFERRED) 📋
+### Phase 4b: CryptoFetcher & CryptoSync ✅
 
-**Note**: This was the original Phase 4 plan. Deferred to later phase as resume mode implementation was more critical and practical.
+**Goal**: Create orchestration layer for batch crypto operations and scalability
+
+**Status**: ✅ **COMPLETED** (2025-11-16)
+
+**Dependencies**: Phase 4 complete
+
+**Files Created**:
+- [x] `src/services/crypto_fetcher.rs` - Crypto fetcher with categorization (300+ lines)
+- [x] `src/services/crypto_sync.rs` - Crypto sync orchestrator (280+ lines)
+- [x] `src/services/mod.rs` - Registered and exported new modules
 
 **CryptoFetcher Architecture** (analog to TickerFetcher):
 ```rust
@@ -689,16 +698,38 @@ runtime.block_on(async {
 })
 ```
 
-**Test Criteria**:
-- [ ] CryptoFetcher correctly categorizes cryptos (resume vs full)
-- [ ] Sequential fetching works with rate limiting
-- [ ] CryptoSync processes all cryptos without errors
-- [ ] Smart cutoff optimization works (verify enhancement performance)
-- [ ] File locking prevents CSV corruption
-- [ ] Statistics tracking accurate
-- [ ] Error recovery works (one crypto failure doesn't stop others)
+**Implementation Highlights**:
 
-**Estimated Time**: 4-6 hours
+**CryptoFetcher** (`src/services/crypto_fetcher.rs`):
+- [x] `categorize_cryptos()` - Pre-scans CSV files to categorize resume vs full history
+- [x] `fetch_full_history()` - Full history download with pagination (daily uses allData=true)
+- [x] `fetch_recent()` - Resume mode fetching from last_date
+- [x] `fetch_paginated_history()` - Pagination logic for hourly/minute intervals
+- [x] `sequential_fetch()` - Sequential processing of multiple cryptos with rate limiting
+- [x] `read_last_date()` - Reads last timestamp from CSV files
+- [x] Error recovery: Individual crypto failures don't stop batch processing
+
+**CryptoSync** (`src/services/crypto_sync.rs`):
+- [x] `sync_all_intervals()` - Main orchestration entry point
+- [x] `sync_interval()` - Process all cryptos for single interval
+- [x] `process_crypto()` - Process single crypto (enhance + save)
+- [x] `enhance_and_save_crypto_data()` - Reuses csv_enhancer for technical indicators
+- [x] Smart cutoff strategy for resume mode (append vs rewrite)
+- [x] Progress tracking with detailed logging
+- [x] Summary statistics after each interval
+
+**Key Features Implemented**:
+- [x] Categorization (resume vs full history) by reading CSV last dates
+- [x] Sequential fetching with 200ms rate limit delays
+- [x] Smart cutoff strategy (append new data in resume mode)
+- [x] File locking via save_enhanced_csv_to_dir()
+- [x] Progress logging for long operations
+- [x] Error recovery (continue on individual failures)
+- [x] Statistics tracking (success/failed counts, duration)
+
+**Actual Time**: 2 hours (implementation + testing)
+
+**Completion Date**: 2025-11-16
 
 ---
 
