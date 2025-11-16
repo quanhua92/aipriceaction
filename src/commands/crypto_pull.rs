@@ -14,6 +14,7 @@ use crate::services::csv_enhancer::enhance_data;
 use std::fs;
 use std::path::PathBuf;
 use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
 
 /// Run crypto-pull command
 ///
@@ -76,6 +77,49 @@ pub fn run(symbol: Option<String>, interval_str: String, full: bool) {
             std::process::exit(1);
         }
     }
+}
+
+/// Read the last timestamp from an existing CSV file
+///
+/// Returns the timestamp of the last record, or None if file doesn't exist or is empty
+fn get_last_timestamp_from_csv(csv_path: &PathBuf) -> Option<chrono::DateTime<chrono::Utc>> {
+    if !csv_path.exists() {
+        return None;
+    }
+
+    let file = fs::File::open(csv_path).ok()?;
+    let reader = BufReader::new(file);
+
+    // Read all lines and get the last non-empty one
+    let lines: Vec<String> = reader.lines().filter_map(|l| l.ok()).collect();
+
+    if lines.len() <= 1 {
+        // Only header or empty file
+        return None;
+    }
+
+    // Get last line (skip header)
+    let last_line = lines.last()?;
+
+    // Parse CSV: ticker,time,open,high,low,close,volume,...
+    let parts: Vec<&str> = last_line.split(',').collect();
+    if parts.len() < 2 {
+        return None;
+    }
+
+    let time_str = parts[1];
+
+    // Try parsing as date or datetime
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(time_str, "%Y-%m-%dT%H:%M:%S") {
+        return Some(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc));
+    }
+
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d") {
+        let dt = date.and_hms_opt(0, 0, 0)?;
+        return Some(chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc));
+    }
+
+    None
 }
 
 /// Fetch paginated history for hourly and minute intervals
@@ -151,41 +195,68 @@ async fn fetch_and_save(
     // Fetch data based on interval
     println!("📡 Calling CryptoCompare API...");
 
+    // Determine start date for fetching
+    let csv_path = crypto_data_dir.join(symbol).join(interval.to_filename());
+    let last_timestamp = get_last_timestamp_from_csv(&csv_path);
+
     let ohlcv_data = match interval {
         Interval::Daily => {
-            if full {
-                // Use allData=true for full history in one call
+            if full || last_timestamp.is_none() {
+                // Full history mode
                 println!("   Using allData=true for full daily history...");
                 client.get_history(symbol, "2010-01-01", None, interval, None, true).await
                     .map_err(|e| Error::Network(format!("API request failed: {}", e)))?
             } else {
-                // TODO: Resume mode for daily
-                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+                // Resume mode: fetch from last date to now
+                let last_date = last_timestamp.unwrap();
+                println!("   📅 Resume mode: Last date in CSV: {}", last_date.format("%Y-%m-%d"));
+                println!("   📥 Fetching new daily data from {} to now...", last_date.format("%Y-%m-%d"));
+
+                // Use pagination from last date (will get recent data)
+                let start_date = last_date.format("%Y-%m-%d").to_string();
+                fetch_paginated_history(&mut client, symbol, &start_date, interval).await?
             }
         }
         Interval::Hourly => {
-            if full {
-                // Paginate from 2010 to today (limit=2000 per request)
+            if full || last_timestamp.is_none() {
+                // Full history mode
                 println!("   Fetching full hourly history with pagination (limit=2000)...");
                 fetch_paginated_history(&mut client, symbol, "2010-07-17", interval).await?
             } else {
-                // TODO: Resume mode for hourly
-                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+                // Resume mode: fetch from last hour to now
+                let last_hour = last_timestamp.unwrap();
+                println!("   📅 Resume mode: Last hour in CSV: {}", last_hour.format("%Y-%m-%d %H:%M"));
+                println!("   📥 Fetching new hourly data from {} to now...", last_hour.format("%Y-%m-%d %H:%M"));
+
+                let start_date = last_hour.format("%Y-%m-%d").to_string();
+                fetch_paginated_history(&mut client, symbol, &start_date, interval).await?
             }
         }
         Interval::Minute => {
             // CryptoCompare only keeps 7 days of minute data
-            let start_date = (chrono::Utc::now() - chrono::Duration::days(7))
-                .format("%Y-%m-%d")
-                .to_string();
+            let seven_days_ago = chrono::Utc::now() - chrono::Duration::days(7);
 
-            if full {
+            if full || last_timestamp.is_none() {
+                // Full history mode (last 7 days)
+                let start_date = seven_days_ago.format("%Y-%m-%d").to_string();
                 println!("   Fetching last 7 days of minute data (CryptoCompare limitation)...");
                 println!("   Start date: {}", start_date);
                 fetch_paginated_history(&mut client, symbol, &start_date, interval).await?
             } else {
-                // TODO: Resume mode for minute
-                return Err(Error::Other("Resume mode not yet implemented".to_string()));
+                // Resume mode: fetch from last minute (but respect 7-day limit)
+                let last_minute = last_timestamp.unwrap();
+
+                // If last data is older than 7 days, fetch full 7 days
+                let start_date = if last_minute < seven_days_ago {
+                    println!("   ⚠️  Last data is older than 7 days, fetching full 7-day window");
+                    seven_days_ago.format("%Y-%m-%d").to_string()
+                } else {
+                    println!("   📅 Resume mode: Last minute in CSV: {}", last_minute.format("%Y-%m-%d %H:%M"));
+                    println!("   📥 Fetching new minute data from {} to now...", last_minute.format("%Y-%m-%d %H:%M"));
+                    last_minute.format("%Y-%m-%d").to_string()
+                };
+
+                fetch_paginated_history(&mut client, symbol, &start_date, interval).await?
             }
         }
     };
@@ -210,22 +281,44 @@ async fn fetch_and_save(
 
     println!("✅ Calculated indicators for {} records", stock_data.len());
 
-    // Save enhanced CSV directly (20 columns, rewrite_all=true)
+    // Save enhanced CSV (rewrite if full mode, append if resume mode)
     let symbol_dir = crypto_data_dir.join(symbol);
     fs::create_dir_all(&symbol_dir)
         .map_err(|e| Error::Io(format!("Failed to create {}: {}", symbol_dir.display(), e)))?;
 
-    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(365 * 20); // Far in past = rewrite all
-    save_enhanced_csv_to_dir(
-        symbol,
-        stock_data,
-        interval,
-        cutoff_date,
-        true, // rewrite_all
-        crypto_data_dir
-    )?;
+    let is_resume = last_timestamp.is_some() && !full;
 
-    println!("✅ Saved enhanced CSV to crypto_data/{}/{}", symbol, interval.to_filename());
+    if is_resume {
+        // Resume mode: use cutoff strategy (will append new data)
+        let cutoff_date = last_timestamp.unwrap();
+        println!("📝 Appending {} new records to existing CSV...", stock_data.len());
+
+        save_enhanced_csv_to_dir(
+            symbol,
+            stock_data,
+            interval,
+            cutoff_date,
+            false, // Don't rewrite all, use append logic
+            crypto_data_dir
+        )?;
+
+        println!("✅ Appended to crypto_data/{}/{}", symbol, interval.to_filename());
+    } else {
+        // Full mode: rewrite entire file
+        println!("📝 Writing full CSV with {} records...", stock_data.len());
+
+        let cutoff_date = chrono::Utc::now() - chrono::Duration::days(365 * 20); // Far in past = rewrite all
+        save_enhanced_csv_to_dir(
+            symbol,
+            stock_data,
+            interval,
+            cutoff_date,
+            true, // rewrite_all
+            crypto_data_dir
+        )?;
+
+        println!("✅ Saved enhanced CSV to crypto_data/{}/{}", symbol, interval.to_filename());
+    }
 
     Ok(stock_data.len())
 }
