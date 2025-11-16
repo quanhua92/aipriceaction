@@ -45,9 +45,9 @@ pub fn run(symbol: Option<String>, interval_str: String, full: bool) {
     println!("🪙 Fetching {} {} data from CryptoCompare...", symbol, interval.to_filename());
 
     if full {
-        println!("📅 Full history mode: Using allData=true");
+        println!("📅 Full history mode: Downloading complete history");
     } else {
-        println!("📅 Resume mode: Fetching only new data (not yet implemented, using full)");
+        println!("📅 Resume mode: Fetching only new data since last sync");
     }
 
     // Create crypto_data directory if it doesn't exist
