@@ -1,6 +1,6 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
-use crate::utils::get_market_data_dir;
+use crate::utils::{get_market_data_dir, get_crypto_data_dir};
 use crate::worker;
 use crate::server;
 use std::sync::Arc;
@@ -10,11 +10,17 @@ use tokio::sync::RwLock;
 pub async fn run(port: u16) {
     println!("🚀 Starting aipriceaction server on port {}", port);
 
-    // Create data store
+    // Create VN stock data store
     let market_data_dir = get_market_data_dir();
-    println!("📁 Using market data directory: {}", market_data_dir.display());
-    let data_store = DataStore::new(market_data_dir.clone());
-    let shared_data_store = Arc::new(data_store);
+    println!("📁 VN stocks directory: {}", market_data_dir.display());
+    let data_store_vn = DataStore::new(market_data_dir.clone());
+    let shared_data_store_vn = Arc::new(data_store_vn);
+
+    // Create crypto data store
+    let crypto_data_dir = get_crypto_data_dir();
+    println!("📁 Crypto directory: {}", crypto_data_dir.display());
+    let data_store_crypto = DataStore::new(crypto_data_dir.clone());
+    let shared_data_store_crypto = Arc::new(data_store_crypto);
 
     // Initialize health stats
     let start_time = Instant::now();
@@ -25,23 +31,23 @@ pub async fn run(port: u16) {
     let shared_health_stats = Arc::new(RwLock::new(health_stats));
 
     // Load only daily data into memory (hourly/minute read from disk on-demand)
-    println!("📊 Loading daily data into memory (hourly/minute served from disk)...");
+    println!("📊 Loading VN daily data into memory...");
     let load_intervals = vec![Interval::Daily];
 
-    match shared_data_store.load_last_year(load_intervals).await {
+    match shared_data_store_vn.load_last_year(load_intervals.clone()).await {
         Ok(_) => {
-            let (daily_count, hourly_count, minute_count) = shared_data_store.get_record_counts().await;
-            let active_tickers = shared_data_store.get_active_ticker_count().await;
-            let memory_mb = shared_data_store.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
+            let (daily_count, hourly_count, minute_count) = shared_data_store_vn.get_record_counts().await;
+            let active_tickers = shared_data_store_vn.get_active_ticker_count().await;
+            let memory_mb = shared_data_store_vn.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
 
-            println!("✅ Data loaded successfully:");
+            println!("✅ VN data loaded successfully:");
             println!("   📈 Active tickers: {}", active_tickers);
             println!("   📅 Daily records:  {}", daily_count);
             println!("   ⏰ Hourly records: {}", hourly_count);
             println!("   ⏱️  Minute records: {}", minute_count);
             println!("   💾 Memory usage:   {:.2} MB", memory_mb);
 
-            // Update initial health stats
+            // Update initial VN health stats
             let mut health = shared_health_stats.write().await;
             health.active_tickers_count = active_tickers;
             health.daily_records_count = daily_count;
@@ -52,8 +58,33 @@ pub async fn run(port: u16) {
             health.total_tickers_count = active_tickers;
         }
         Err(e) => {
-            eprintln!("⚠️  Warning: Failed to load data into memory: {}", e);
+            eprintln!("⚠️  Warning: Failed to load VN data into memory: {}", e);
             eprintln!("   Server will start with empty cache. Workers will populate data.");
+        }
+    }
+
+    // Load crypto daily data into memory
+    println!("📊 Loading crypto daily data into memory...");
+    match shared_data_store_crypto.load_last_year(load_intervals).await {
+        Ok(_) => {
+            let (daily_count, hourly_count, minute_count) = shared_data_store_crypto.get_record_counts().await;
+            let active_tickers = shared_data_store_crypto.get_active_ticker_count().await;
+            let memory_mb = shared_data_store_crypto.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
+
+            println!("✅ Crypto data loaded successfully:");
+            println!("   📈 Active cryptos: {}", active_tickers);
+            println!("   📅 Daily records:  {}", daily_count);
+            println!("   ⏰ Hourly records: {}", hourly_count);
+            println!("   ⏱️  Minute records: {}", minute_count);
+            println!("   💾 Memory usage:   {:.2} MB", memory_mb);
+
+            // Update crypto health stats (we'll add separate fields later)
+            let mut health = shared_health_stats.write().await;
+            health.total_tickers_count += active_tickers;
+        }
+        Err(e) => {
+            eprintln!("⚠️  Warning: Failed to load crypto data into memory: {}", e);
+            eprintln!("   Server will start with empty crypto cache. Crypto worker will populate data.");
         }
     }
 
@@ -106,7 +137,7 @@ pub async fn run(port: u16) {
     // Start axum server (blocking)
     println!("🌐 Starting HTTP server...");
     println!();
-    if let Err(e) = server::serve(shared_data_store, shared_health_stats, port).await {
+    if let Err(e) = server::serve(shared_data_store_vn, shared_data_store_crypto, shared_health_stats, port).await {
         eprintln!("❌ Server error: {}", e);
         std::process::exit(1);
     }

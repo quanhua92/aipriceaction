@@ -1,5 +1,6 @@
 use crate::constants::INDEX_TICKERS;
-use crate::models::{AggregatedInterval, Interval};
+use crate::models::{AggregatedInterval, Interval, Mode};
+use crate::server::AppState;
 use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, write_api_log_entry, determine_data_source};
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
@@ -87,6 +88,10 @@ pub struct TickerQuery {
     /// Use memory cache (default: true) - set to false to force disk read
     #[serde(default = "default_cache")]
     pub cache: bool,
+
+    /// Market mode: vn (default) or crypto
+    #[serde(default)]
+    pub mode: Mode,
 }
 
 fn default_format() -> String {
@@ -100,14 +105,15 @@ fn default_cache() -> bool {
 /// GET /tickers - Query stock data from in-memory store or disk
 ///
 /// Examples:
-/// - /tickers?symbol=VCB (default to daily, uses cache)
+/// - /tickers?symbol=VCB (default to daily, uses cache, vn mode)
 /// - /tickers?symbol=VCB&interval=1H
 /// - /tickers?symbol=VCB&interval=1D&start_date=2024-01-01&end_date=2024-12-31
 /// - /tickers?symbol=VCB&end_date=2024-06-15&limit=5 (get 5 rows back from June 15, 2024)
 /// - /tickers?symbol=VCB&cache=false (force disk read, bypass memory cache)
-#[instrument(skip(data_state))]
+/// - /tickers?symbol=BTC&mode=crypto (query crypto data)
+#[instrument(skip(app_state))]
 pub async fn get_tickers_handler(
-    State(data_state): State<SharedDataStore>,
+    State(app_state): State<AppState>,
     Query(params): Query<TickerQuery>,
 ) -> impl IntoResponse {
     let start_time = Utc::now();
@@ -117,8 +123,11 @@ pub async fn get_tickers_handler(
 
     debug!("Received request for tickers with params: {:?}", params);
 
+    // Get DataStore based on mode
+    let data_state = app_state.get_data_store(params.mode);
+
     // Parse and validate parameters
-    let query_params = match parse_query_parameters(params.clone(), &data_state).await {
+    let query_params = match parse_query_parameters(params.clone(), data_state).await {
         Ok(params) => {
             performance_metrics.interval = params.interval.to_filename().to_string();
             performance_metrics.ticker_count = params.tickers.len();
@@ -163,7 +172,7 @@ pub async fn get_tickers_handler(
     // Check format parameter
     if params.format == "csv" {
         // Generate CSV format
-        let response = generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, headers);
+        let response = generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, params.mode, headers);
 
         // Complete performance metrics and log for CSV response
         performance_metrics.response_size_bytes = response.body().size_hint().lower() as usize;
@@ -184,8 +193,12 @@ pub async fn get_tickers_handler(
                     Interval::Hourly | Interval::Minute => format_timestamp(&d.time),
                 };
 
-                // Apply legacy price format if requested (divide by 1000 for stocks only)
-                let price_divisor = if query_params.legacy_prices && !INDEX_TICKERS.contains(&ticker.as_str()) { 1000.0 } else { 1.0 };
+                // Apply legacy price format if requested (divide by 1000 for VN stocks only, not indices or crypto)
+                let price_divisor = if params.mode == Mode::Vn && query_params.legacy_prices && !INDEX_TICKERS.contains(&ticker.as_str()) {
+                    1000.0
+                } else {
+                    1.0
+                };
 
                 StockDataResponse {
                     time: time_str,
@@ -312,6 +325,7 @@ fn generate_csv_response(
     data: HashMap<String, Vec<crate::models::StockData>>,
     interval: Interval,
     legacy_prices: bool,
+    mode: Mode,
     mut headers: HeaderMap,
 ) -> Response {
     // Helper function to check if ticker is a market index
@@ -345,8 +359,8 @@ fn generate_csv_response(
 
     for ticker in tickers {
         if let Some(records) = data.get(&ticker) {
-            // Determine price divisor for this ticker
-            let price_divisor = if legacy_prices && !is_index(&ticker) { 1000.0 } else { 1.0 };
+            // Determine price divisor for this ticker (only for VN mode stocks, not indices or crypto)
+            let price_divisor = if mode == Mode::Vn && legacy_prices && !is_index(&ticker) { 1000.0 } else { 1.0 };
 
             for record in records {
                 let time_str = match interval {
@@ -462,42 +476,96 @@ pub async fn health_handler(
     (StatusCode::OK, Json(health_stats)).into_response()
 }
 
-/// GET /tickers/group - Get ticker groups from ticker_group.json
+/// Query parameters for /tickers/group endpoint
+#[derive(Debug, Deserialize)]
+pub struct TickerGroupQuery {
+    /// Market mode: vn (default) or crypto
+    #[serde(default)]
+    pub mode: Mode,
+}
+
+/// GET /tickers/group - Get ticker groups from ticker_group.json or crypto_top_100.json
+///
+/// Examples:
+/// - /tickers/group (VN mode by default)
+/// - /tickers/group?mode=vn (VN stocks grouped by sector)
+/// - /tickers/group?mode=crypto (All cryptos in a single group)
 #[instrument]
-pub async fn get_ticker_groups_handler() -> impl IntoResponse {
-    debug!("Received request for ticker groups");
+pub async fn get_ticker_groups_handler(
+    Query(params): Query<TickerGroupQuery>,
+) -> impl IntoResponse {
+    debug!("Received request for ticker groups with mode: {:?}", params.mode);
 
-    let ticker_groups_path = "ticker_group.json";
+    match params.mode {
+        Mode::Vn => {
+            // Read VN ticker groups from ticker_group.json
+            let ticker_groups_path = "ticker_group.json";
 
-    match std::fs::read_to_string(ticker_groups_path) {
-        Ok(content) => {
-            match serde_json::from_str::<HashMap<String, Vec<String>>>(&content) {
-                Ok(groups) => {
-                    let group_count = groups.len();
-                    let group_names: Vec<_> = groups.keys().cloned().collect();
+            match std::fs::read_to_string(ticker_groups_path) {
+                Ok(content) => {
+                    match serde_json::from_str::<HashMap<String, Vec<String>>>(&content) {
+                        Ok(groups) => {
+                            let group_count = groups.len();
+                            let group_names: Vec<_> = groups.keys().cloned().collect();
 
-                    info!(group_count, groups = ?group_names, "Returning ticker groups");
-                    (StatusCode::OK, Json(groups)).into_response()
+                            info!(group_count, groups = ?group_names, mode = "vn", "Returning ticker groups");
+                            (StatusCode::OK, Json(groups)).into_response()
+                        }
+                        Err(e) => {
+                            warn!(error = %e, "Failed to parse ticker_group.json");
+                            (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                Json(serde_json::json!({
+                                    "error": "Failed to parse ticker groups"
+                                }))
+                            ).into_response()
+                        }
+                    }
                 }
                 Err(e) => {
-                    warn!(error = %e, "Failed to parse ticker_group.json");
+                    warn!(error = %e, "Failed to read ticker_group.json");
                     (
-                        StatusCode::INTERNAL_SERVER_ERROR,
+                        StatusCode::NOT_FOUND,
                         Json(serde_json::json!({
-                            "error": "Failed to parse ticker groups"
+                            "error": "Ticker groups file not found"
                         }))
                     ).into_response()
                 }
             }
         }
-        Err(e) => {
-            warn!(error = %e, "Failed to read ticker_group.json");
-            (
-                StatusCode::NOT_FOUND,
-                Json(serde_json::json!({
-                    "error": "Ticker groups file not found"
-                }))
-            ).into_response()
+        Mode::Crypto => {
+            // Read crypto list from crypto_top_100.json and format as a single group
+            use crate::models::load_crypto_metadata;
+
+            let crypto_list_path = "crypto_top_100.json";
+
+            match load_crypto_metadata(crypto_list_path) {
+                Ok(crypto_metadata) => {
+                    // Extract symbols in rank order (already sorted in JSON)
+                    let symbols: Vec<String> = crypto_metadata
+                        .iter()
+                        .map(|c| c.symbol.clone())
+                        .collect();
+
+                    let count = symbols.len();
+
+                    // Create a single group with all cryptos
+                    let mut groups = HashMap::new();
+                    groups.insert("CRYPTO_TOP_100".to_string(), symbols);
+
+                    info!(count, mode = "crypto", "Returning crypto groups");
+                    (StatusCode::OK, Json(groups)).into_response()
+                }
+                Err(e) => {
+                    warn!(error = %e, "Failed to load crypto_top_100.json");
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({
+                            "error": format!("Failed to load crypto groups: {}", e)
+                        }))
+                    ).into_response()
+                }
+            }
         }
     }
 }

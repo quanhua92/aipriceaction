@@ -2,6 +2,7 @@ pub mod api;
 pub mod legacy;
 pub mod analysis;
 
+use crate::models::Mode;
 use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
 use axum::{extract::FromRef, routing::get, Router};
@@ -76,14 +77,25 @@ impl KeyExtractor for CloudflareKeyExtractor {
 /// Application state shared across all handlers
 #[derive(Clone)]
 pub struct AppState {
-    pub data: SharedDataStore,
+    pub data_vn: SharedDataStore,
+    pub data_crypto: SharedDataStore,
     pub health_stats: SharedHealthStats,
+}
+
+impl AppState {
+    /// Get DataStore by mode
+    pub fn get_data_store(&self, mode: Mode) -> &SharedDataStore {
+        match mode {
+            Mode::Vn => &self.data_vn,
+            Mode::Crypto => &self.data_crypto,
+        }
+    }
 }
 
 // FromRef implementations to extract specific state components
 impl FromRef<AppState> for SharedDataStore {
     fn from_ref(app_state: &AppState) -> SharedDataStore {
-        app_state.data.clone()
+        app_state.data_vn.clone() // Default to VN for backward compatibility
     }
 }
 
@@ -121,7 +133,8 @@ async fn add_security_headers(request: Request, next: Next) -> Response {
 
 /// Start the axum server
 pub async fn serve(
-    shared_data: SharedDataStore,
+    shared_data_vn: SharedDataStore,
+    shared_data_crypto: SharedDataStore,
     shared_health_stats: SharedHealthStats,
     port: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -137,7 +150,8 @@ pub async fn serve(
     tracing::info!("Starting aipriceaction server");
 
     let app_state = AppState {
-        data: shared_data,
+        data_vn: shared_data_vn,
+        data_crypto: shared_data_crypto,
         health_stats: shared_health_stats,
     };
 

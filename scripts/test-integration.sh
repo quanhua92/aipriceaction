@@ -567,6 +567,87 @@ test_historical_data_range() {
     return 0
 }
 
+# Test 14: Crypto mode - basic query
+test_crypto_mode_basic() {
+    print_test "Test 14: Crypto mode - basic query"
+
+    local response=$(curl -s "$BASE_URL/tickers?symbol=BTC&mode=crypto&interval=1D&limit=2")
+    local btc_data=$(echo "$response" | jq -r '.BTC')
+    local record_count=$(echo "$btc_data" | jq -r 'length')
+    local first_symbol=$(echo "$btc_data" | jq -r '.[0].symbol')
+
+    print_result "BTC data" "not_empty" "$btc_data"
+    print_result "Record count" "2" "$record_count"
+    print_result "Symbol field" "BTC" "$first_symbol"
+
+    print_success "Crypto mode basic test passed"
+    return 0
+}
+
+# Test 15: Crypto mode - ticker groups
+test_crypto_mode_groups() {
+    print_test "Test 15: Crypto mode - ticker groups"
+
+    local response=$(curl -s "$BASE_URL/tickers/group?mode=crypto")
+    local group_name=$(echo "$response" | jq -r 'keys[0]')
+    local crypto_count=$(echo "$response" | jq -r '.CRYPTO_TOP_100 | length')
+
+    print_result "Group name" "CRYPTO_TOP_100" "$group_name"
+
+    if (( crypto_count >= 90 && crypto_count <= 100 )); then
+        print_success "Crypto count: $crypto_count (expected 90-100)"
+    else
+        print_error "Unexpected crypto count: $crypto_count (expected 90-100)"
+        return 1
+    fi
+
+    print_success "Crypto ticker groups test passed"
+    return 0
+}
+
+# Test 16: Crypto mode - CSV format
+test_crypto_mode_csv() {
+    print_test "Test 16: Crypto mode - CSV format"
+
+    local response=$(curl -s "$BASE_URL/tickers?symbol=ETH&mode=crypto&interval=1D&limit=2&format=csv")
+    local line_count=$(echo "$response" | wc -l)
+    local header=$(echo "$response" | head -1)
+
+    # Should have header + 2 data rows = 3 lines
+    print_result "CSV line count" "3" "$line_count"
+
+    if echo "$header" | grep -q "symbol,time,open,high,low,close,volume"; then
+        print_success "CSV header correct"
+    else
+        print_error "CSV header incorrect: $header"
+        return 1
+    fi
+
+    print_success "Crypto CSV format test passed"
+    return 0
+}
+
+# Test 17: Crypto mode - multiple tickers
+test_crypto_mode_multiple_tickers() {
+    print_test "Test 17: Crypto mode - multiple tickers"
+
+    local response=$(curl -s "$BASE_URL/tickers?symbol=BTC&symbol=ETH&symbol=XRP&mode=crypto&interval=1D&limit=1")
+    local ticker_count=$(echo "$response" | jq -r 'keys | length')
+
+    print_result "Ticker count" "3" "$ticker_count"
+
+    local has_btc=$(echo "$response" | jq -r 'has("BTC")')
+    local has_eth=$(echo "$response" | jq -r 'has("ETH")')
+    local has_xrp=$(echo "$response" | jq -r 'has("XRP")')
+
+    print_result "Has BTC" "true" "$has_btc"
+    print_result "Has ETH" "true" "$has_eth"
+    print_result "Has XRP" "true" "$has_xrp"
+
+    print_success "Crypto multiple tickers test passed"
+    return 0
+}
+
 
 # Main test execution
 main() {
@@ -622,6 +703,19 @@ main() {
 
     ((TOTAL_TESTS++))
     test_historical_data_range || true
+
+    # Crypto mode tests
+    ((TOTAL_TESTS++))
+    test_crypto_mode_basic || true
+
+    ((TOTAL_TESTS++))
+    test_crypto_mode_groups || true
+
+    ((TOTAL_TESTS++))
+    test_crypto_mode_csv || true
+
+    ((TOTAL_TESTS++))
+    test_crypto_mode_multiple_tickers || true
 
     # Final results
     echo ""

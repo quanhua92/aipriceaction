@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**aipriceaction** is a Vietnamese stock market data management system that fetches, stores, and serves market data from the VCI (Vietcap) API. It provides both a CLI for data synchronization and a REST API server with in-memory caching.
+**aipriceaction** is a dual-mode market data management system that:
+- **VN Mode (default)**: Fetches, stores, and serves Vietnamese stock market data from the VCI (Vietcap) API
+- **Crypto Mode**: Fetches, stores, and serves cryptocurrency data from CoinDesk API
+
+It provides both a CLI for data synchronization and a REST API server with dual in-memory caching (VN + Crypto).
 
 ## Build & Development Commands
 
@@ -61,7 +65,7 @@ Complete test flow covering all aspects of the system:
 ./target/release/aipriceaction serve --port 3000
 
 # 2. Run all tests (in another terminal)
-./scripts/test-integration.sh    # 13 integration tests
+./scripts/test-integration.sh    # 17 integration tests (13 VN + 4 crypto)
 ./scripts/test-analysis.sh        # 10 analysis API tests
 ./scripts/test-aggregated.sh      # 27 aggregated interval tests
 
@@ -98,7 +102,11 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 - ✅ CSV export performance (1D, 1m single/multiple)
 - ✅ Limit parameter behavior
 - ✅ Historical data range (2023-2024)
-- **Total: 13 tests**
+- ✅ Crypto mode - basic query (BTC)
+- ✅ Crypto mode - ticker groups
+- ✅ Crypto mode - CSV format
+- ✅ Crypto mode - multiple tickers
+- **Total: 17 tests**
 
 **Analysis API Tests** (`./scripts/test-analysis.sh`):
 - ✅ Top performers endpoint (basic, sort by close/volume/MA scores)
@@ -137,7 +145,7 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 ```
 
 #### Expected Results
-- **Integration**: 13/13 tests passed
+- **Integration**: 17/17 tests passed (13 VN + 4 crypto)
 - **Analysis**: 10/10 tests passed
 - **Aggregated**: 27/27 tests passed
 - **SDK Examples**: All 10 examples run successfully without errors
@@ -201,6 +209,77 @@ docker stats aipriceaction
 ./scripts/fix_corrupted_csvs.sh
 ```
 
+## API Usage Examples
+
+### Mode Parameter
+
+The API supports two modes via the `mode` query parameter:
+- **`vn`** (default): Vietnamese stocks (market_data/)
+- **`crypto`**: Cryptocurrencies (crypto_data/)
+
+### VN Mode (Vietnamese Stocks)
+
+```bash
+# Get VN stock data (default mode)
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&limit=10"
+
+# Explicit VN mode
+curl "http://localhost:3000/tickers?symbol=VCB&mode=vn&interval=1D&limit=10"
+
+# VN ticker groups
+curl "http://localhost:3000/tickers/group"
+curl "http://localhost:3000/tickers/group?mode=vn"
+# Returns: {"BANKING": ["VCB", "BID", "CTG"], "TECH": ["FPT", "CMG"], ...}
+```
+
+### Crypto Mode
+
+```bash
+# Get crypto data
+curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&interval=1D&limit=10"
+
+# Multiple cryptos
+curl "http://localhost:3000/tickers?symbol=BTC&symbol=ETH&symbol=XRP&mode=crypto&interval=1D&limit=5"
+
+# Crypto ticker groups
+curl "http://localhost:3000/tickers/group?mode=crypto"
+# Returns: {"CRYPTO_TOP_100": ["BTC", "ETH", "USDT", ...]}
+
+# CSV format
+curl "http://localhost:3000/tickers?symbol=ETH&mode=crypto&interval=1D&limit=100&format=csv"
+```
+
+### Common Parameters (Both Modes)
+
+```bash
+# Interval options: 1D (daily), 1H (hourly), 1m (minute)
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1H&limit=24"
+
+# Date range filtering
+curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&start_date=2024-01-01&end_date=2024-12-31"
+
+# CSV format (both modes)
+curl "http://localhost:3000/tickers?symbol=VCB&format=csv&limit=100"
+
+# Force disk read (bypass cache)
+curl "http://localhost:3000/tickers?symbol=VCB&cache=false"
+
+# Aggregated intervals (5m, 15m, 30m, 1W, 2W, 1M)
+curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&interval=5m&limit=100"
+```
+
+### Legacy Price Format (VN Mode Only)
+
+```bash
+# Legacy format: divide VN stock prices by 1000 (ignored for crypto)
+curl "http://localhost:3000/tickers?symbol=VCB&legacy=true"
+# VCB close: 60.3 (instead of 60300)
+
+# Crypto mode ignores legacy parameter
+curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&legacy=true"
+# BTC price: 95555.28 (unchanged)
+```
+
 ## Architecture
 
 ### 4-Layer Structure
@@ -235,17 +314,18 @@ docker stats aipriceaction
 **Services (`src/services/`)**
 - **VciClient** (`vci.rs`): VCI API client with rate limiting (30 req/min), retry logic, batch fetching
 - **DataSync** (`data_sync.rs`): Orchestrates syncing - batch fetching, dividend detection, data merging
-- **DataStore** (`data_store.rs`): Dual-layer cache:
-  - Memory cache: Last 1 year daily data (4GB limit, 60s TTL)
-  - Disk cache: LRU cache for hourly/minute (500MB limit, 60s TTL)
+- **DataStore** (`data_store.rs`): Dual-layer cache with dual-mode support:
+  - **VN DataStore**: Memory cache for last 2 years daily data (~40MB), disk cache for hourly/minute (500MB limit, 15s TTL)
+  - **Crypto DataStore**: Memory cache for last 2 years daily data (~23MB), disk cache for hourly/minute (500MB limit, 15s TTL)
+  - Total memory: ~63MB for daily data, 1GB disk cache (500MB per mode)
 - **TickerFetcher** (`ticker_fetcher.rs`): Handles API calls, categorizes tickers (resume vs full)
 - **CSV Enhancer** (`csv_enhancer.rs`): Adds technical indicators during sync (single-phase enhancement)
 
 **Server (`src/server/`)**
-- **API** (`api.rs`): Axum REST API
-  - `GET /tickers` - Query stock data
-  - `GET /health` - System health/stats
-  - `GET /tickers/group` - Ticker groupings
+- **API** (`api.rs`): Axum REST API with mode parameter support
+  - `GET /tickers?mode=vn|crypto` - Query stock/crypto data
+  - `GET /health` - System health/stats (separate VN + crypto stats)
+  - `GET /tickers/group?mode=vn|crypto` - Ticker/crypto groupings
 - **Background Workers** (`worker/`):
   - `daily_worker`: Syncs daily stock data (15s trading hours, 5min off-hours)
   - `slow_worker`: Syncs hourly/minute stock data (5min trading, 30min off-hours)
@@ -328,11 +408,11 @@ close_changed,volume_changed,total_money_changed
 ### File Structure
 
 ```
-market_data/
+market_data/                # VN stocks (282 tickers)
 ├── VCB/
-│   ├── 1D.csv   # Daily data (20 columns)
-│   ├── 1h.csv   # Hourly data
-│   └── 1m.csv   # Minute data
+│   ├── 1D.csv             # Daily data (20 columns)
+│   ├── 1h.csv             # Hourly data
+│   └── 1m.csv             # Minute data
 ├── FPT/
 │   ├── 1D.csv
 │   ├── 1h.csv
@@ -341,7 +421,23 @@ market_data/
     ├── 1D.csv
     ├── 1h.csv
     └── 1m.csv
+
+crypto_data/                # Cryptocurrencies (98 cryptos)
+├── BTC/
+│   ├── 1D.csv             # Daily data (20 columns, same format)
+│   ├── 1H.csv             # Hourly data
+│   └── 1m.csv             # Minute data
+├── ETH/
+│   ├── 1D.csv
+│   ├── 1H.csv
+│   └── 1m.csv
+└── XRP/
+    ├── 1D.csv
+    ├── 1H.csv
+    └── 1m.csv
 ```
+
+**Note:** Both `market_data/` and `crypto_data/` use identical 20-column CSV format, enabling 95%+ code reuse.
 
 ### Adaptive Resume Mode
 
