@@ -1,10 +1,11 @@
 use crate::constants::{CSV_BASIC_COLUMNS, CSV_ENHANCED_COLUMNS, MIN_RECORDS_FOR_MA50, MIN_RECORDS_FOR_ANALYSIS};
 use crate::models::Interval;
-use crate::utils::{get_market_data_dir, parse_timestamp};
+use crate::utils::{get_market_data_dir, get_crypto_data_dir, parse_timestamp};
 use chrono::{NaiveDate, NaiveDateTime};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 struct TickerReport {
@@ -28,27 +29,51 @@ struct FileReport {
     time_reversals: Vec<String>,
     first_date: Option<String>,
     last_date: Option<String>,
+    duplicate_timestamps: HashMap<String, usize>, // timestamp -> count
 }
 
 pub fn run() {
-    println!("🔍 Running health check on market_data...\n");
+    println!("🔍 Running health check on market data directories...\n");
 
+    let mut has_any_issues = false;
+
+    // Check both market_data and crypto_data
     let market_data_dir = get_market_data_dir();
-    if !market_data_dir.exists() {
-        eprintln!("❌ Error: market_data directory not found");
-        std::process::exit(1);
+    let crypto_data_dir = get_crypto_data_dir();
+
+    if market_data_dir.exists() {
+        println!("📂 Checking market_data (VN stocks)...\n");
+        let has_issues = check_directory(&market_data_dir, "VN Stocks");
+        has_any_issues = has_any_issues || has_issues;
+        println!();
+    } else {
+        println!("⚠️  market_data directory not found\n");
     }
 
+    if crypto_data_dir.exists() {
+        println!("📂 Checking crypto_data (Cryptocurrencies)...\n");
+        let has_issues = check_directory(&crypto_data_dir, "Crypto");
+        has_any_issues = has_any_issues || has_issues;
+    } else {
+        println!("⚠️  crypto_data directory not found\n");
+    }
+
+    if has_any_issues {
+        std::process::exit(1);
+    }
+}
+
+fn check_directory(data_dir: &PathBuf, data_type: &str) -> bool {
     let mut ticker_reports: Vec<TickerReport> = Vec::new();
     let mut total_tickers = 0;
     let mut total_issues = 0;
 
     // Get all ticker directories
-    let entries = match std::fs::read_dir(market_data_dir) {
+    let entries = match std::fs::read_dir(data_dir) {
         Ok(entries) => entries,
         Err(e) => {
-            eprintln!("❌ Failed to read market_data directory: {}", e);
-            std::process::exit(1);
+            eprintln!("❌ Failed to read {} directory: {}", data_type, e);
+            return true; // Has issues
         }
     };
 
@@ -148,6 +173,34 @@ pub fn run() {
                         ticker_issues.push(format!("  ❌ {} - {}", interval.to_filename(), reversal));
                     }
                 }
+
+                // Check for duplicate timestamps (like the 512x bug)
+                let duplicates: Vec<(&String, usize)> = report.duplicate_timestamps
+                    .iter()
+                    .filter(|(_, count)| **count > 1)
+                    .map(|(ts, count)| (ts, *count))
+                    .collect();
+
+                if !duplicates.is_empty() {
+                    // Find the worst duplicate
+                    let mut max_count = 0;
+                    let mut max_timestamp = String::new();
+                    for (ts, count) in &duplicates {
+                        if *count > max_count {
+                            max_count = *count;
+                            max_timestamp = (*ts).clone();
+                        }
+                    }
+                    let total_dup_timestamps = duplicates.len();
+                    ticker_issues.push(format!(
+                        "  ❌ {} - CRITICAL: {} timestamps duplicated! Max: {} appears {}x (file bloated {}x)",
+                        interval.to_filename(),
+                        total_dup_timestamps,
+                        max_timestamp,
+                        max_count,
+                        max_count
+                    ));
+                }
             }
         }
 
@@ -183,8 +236,8 @@ pub fn run() {
     println!();
 
     if ticker_reports.is_empty() {
-        println!("✅ All tickers are healthy! No issues found.");
-        return;
+        println!("✅ All {} tickers are healthy! No issues found.", data_type);
+        return false; // No issues
     }
 
     // Print detailed issues
@@ -197,8 +250,7 @@ pub fn run() {
         println!();
     }
 
-    // Exit with error code if issues found
-    std::process::exit(1);
+    true // Has issues
 }
 
 fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileReport {
@@ -216,6 +268,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
             time_reversals: Vec::new(),
             first_date: None,
             last_date: None,
+            duplicate_timestamps: HashMap::new(),
         };
     }
 
@@ -235,6 +288,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
                 time_reversals: Vec::new(),
                 first_date: None,
                 last_date: None,
+                duplicate_timestamps: HashMap::new(),
             }
         }
     };
@@ -252,6 +306,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
     let mut time_reversals = Vec::new();
     let mut first_date_str: Option<String> = None;
     let mut last_date_str: Option<String> = None;
+    let mut duplicate_timestamps: HashMap<String, usize> = HashMap::new();
 
     for (line_num, line_result) in reader.lines().enumerate() {
         total_lines += 1;
@@ -294,6 +349,9 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         // Check time sequence (field 1 is the timestamp)
         if fields.len() >= 2 {
             let timestamp_str = fields[1];
+
+            // Track duplicate timestamps
+            *duplicate_timestamps.entry(timestamp_str.to_string()).or_insert(0) += 1;
 
             // Capture first date
             if first_date_str.is_none() {
@@ -347,6 +405,7 @@ fn check_csv_file(_ticker: &str, csv_path: &Path, interval: Interval) -> FileRep
         time_reversals,
         first_date: first_date_str,
         last_date: last_date_str,
+        duplicate_timestamps,
     }
 }
 
