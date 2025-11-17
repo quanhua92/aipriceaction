@@ -12,6 +12,7 @@ use std::time::Instant;
 pub struct CryptoSync {
     config: SyncConfig,
     fetcher: CryptoFetcher,
+    #[allow(dead_code)]
     stats: SyncStats,
 }
 
