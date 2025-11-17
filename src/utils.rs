@@ -3,6 +3,8 @@ use std::fs::{OpenOptions, rename, metadata};
 use std::io::{Write, Error as IoError};
 use chrono::{DateTime, NaiveDate, Utc};
 use crate::error::Error;
+use crate::services::vci::OhlcvData;
+use crate::models::StockData;
 
 /// Get market data directory from environment variable or use default
 pub fn get_market_data_dir() -> PathBuf {
@@ -121,6 +123,120 @@ pub fn format_date(time: &DateTime<Utc>) -> String {
 /// Format timestamp for intraday intervals (ISO 8601): "YYYY-MM-DDTHH:MM:SS"
 pub fn format_timestamp(time: &DateTime<Utc>) -> String {
     time.format("%Y-%m-%dT%H:%M:%S").to_string()
+}
+
+/// Deduplicate OHLCV data by timestamp, favoring the last occurrence
+///
+/// When duplicates exist (same timestamp), this function keeps the LAST duplicate
+/// and removes earlier ones. This is the correct behavior because:
+/// - Latest data is most accurate (corrections/adjustments)
+/// - CSV enhancement may have been run multiple times
+/// - API may have returned updated data for same timestamp
+///
+/// Algorithm:
+/// 1. Iterate through sorted data
+/// 2. Keep only records where timestamp differs from previous
+/// 3. When duplicates found, the last one is kept
+///
+/// Time complexity: O(n)
+/// Space complexity: O(1) in-place deduplication
+///
+/// # Arguments
+/// * `data` - Mutable reference to vector of OHLCV data (must be sorted by time)
+///
+/// # Returns
+/// Number of duplicates removed
+///
+/// # Example
+/// ```
+/// let mut data = vec![
+///     OhlcvData { time: t1, ... },
+///     OhlcvData { time: t1, ... },  // duplicate - will be removed
+///     OhlcvData { time: t2, ... },
+/// ];
+/// let removed = deduplicate_ohlcv_by_time(&mut data);
+/// assert_eq!(removed, 1);
+/// assert_eq!(data.len(), 2);
+/// ```
+pub fn deduplicate_ohlcv_by_time(data: &mut Vec<OhlcvData>) -> usize {
+    let original_len = data.len();
+
+    if original_len <= 1 {
+        return 0;  // No duplicates possible
+    }
+
+    // Deduplicate in-place: keep last occurrence of each timestamp
+    // Since data is sorted, we scan forward and keep the LAST of consecutive duplicates
+    let mut write_idx = 0;
+
+    for read_idx in 0..data.len() {
+        // Check if this is the last occurrence of this timestamp
+        let is_last_occurrence = if read_idx + 1 < data.len() {
+            // Not last element - check if next is different
+            data[read_idx].time != data[read_idx + 1].time
+        } else {
+            // Last element - always keep
+            true
+        };
+
+        if is_last_occurrence {
+            if write_idx != read_idx {
+                data[write_idx] = data[read_idx].clone();
+            }
+            write_idx += 1;
+        }
+    }
+
+    // Truncate to remove duplicates
+    data.truncate(write_idx);
+
+    let removed = original_len - data.len();
+    removed
+}
+
+/// Deduplicate StockData by timestamp, favoring the last occurrence
+///
+/// Similar to deduplicate_ohlcv_by_time() but works with StockData (enhanced data).
+/// This is used by the API serving layer to ensure deduplicated responses.
+///
+/// # Arguments
+/// * `data` - Mutable reference to vector of StockData (must be sorted by time)
+///
+/// # Returns
+/// Number of duplicates removed
+pub fn deduplicate_stock_data_by_time(data: &mut Vec<StockData>) -> usize {
+    let original_len = data.len();
+
+    if original_len <= 1 {
+        return 0;  // No duplicates possible
+    }
+
+    // Deduplicate in-place: keep last occurrence of each timestamp
+    let mut write_idx = 0;
+
+    for read_idx in 0..data.len() {
+        // Check if this is the last occurrence of this timestamp
+        let is_last_occurrence = if read_idx + 1 < data.len() {
+            // Not last element - check if next is different
+            data[read_idx].time != data[read_idx + 1].time
+        } else {
+            // Last element - always keep
+            true
+        };
+
+        if is_last_occurrence {
+            if write_idx != read_idx {
+                data[write_idx] = data[read_idx].clone();
+            }
+            write_idx += 1;
+        }
+    }
+
+    // Truncate to remove duplicates
+    data.truncate(write_idx);
+
+    let removed = original_len - data.len();
+    removed
 }
 
 #[cfg(test)]

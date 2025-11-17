@@ -6,8 +6,8 @@
 
 use crate::error::Error;
 use crate::models::Interval;
-use crate::services::{csv_enhancer::{enhance_data, save_enhanced_csv}, OhlcvData};
-use crate::utils::{get_market_data_dir, parse_timestamp};
+use crate::services::{csv_enhancer::{enhance_data, save_enhanced_csv_to_dir}, OhlcvData};
+use crate::utils::{get_market_data_dir, get_crypto_data_dir, parse_timestamp, deduplicate_ohlcv_by_time};
 use chrono::DateTime;
 use std::collections::HashMap;
 use std::path::Path;
@@ -54,12 +54,27 @@ impl RebuildStats {
 pub fn run(
     intervals_arg: String,
     tickers_arg: Option<String>,
+    data_dir_arg: Option<String>,
     verbose: bool,
 ) -> Result<(), Error> {
     let start_time = std::time::Instant::now();
 
+    // Determine which data directory to use
+    let (data_dir, data_type) = match data_dir_arg.as_deref() {
+        Some("crypto") => (get_crypto_data_dir(), "crypto"),
+        Some("market") | None => (get_market_data_dir(), "market"),
+        Some(other) => {
+            return Err(Error::InvalidInput(format!(
+                "Invalid data-dir '{}'. Must be 'market' or 'crypto'",
+                other
+            )));
+        }
+    };
+
     if verbose {
         println!("🔧 Starting CSV rebuild process...");
+        println!("  Data type: {}", data_type);
+        println!("  Directory: {:?}", data_dir);
         println!("  Intervals: {}", intervals_arg);
         if let Some(ref tickers) = tickers_arg {
             println!("  Tickers: {}", tickers);
@@ -79,18 +94,17 @@ pub fn run(
     // Parse target tickers
     let target_tickers = parse_tickers(tickers_arg)?;
 
-    // Get market data directory
-    let market_data_dir = get_market_data_dir();
-    if !market_data_dir.exists() {
+    // Check data directory exists
+    if !data_dir.exists() {
         return Err(Error::Io(format!(
-            "Market data directory not found: {:?}",
-            market_data_dir
+            "{} data directory not found: {:?}",
+            data_type, data_dir
         )));
     }
 
     // Process all ticker directories
     let mut stats = RebuildStats::new();
-    let entries = std::fs::read_dir(&market_data_dir)
+    let entries = std::fs::read_dir(&data_dir)
         .map_err(|e| Error::Io(format!("Failed to read market_data directory: {}", e)))?;
 
     for entry in entries {
@@ -116,7 +130,7 @@ pub fn run(
 
         // Process each interval for this ticker
         for interval in &intervals {
-            if let Err(e) = rebuild_single_csv(&ticker, *interval, &market_data_dir, verbose, &mut stats) {
+            if let Err(e) = rebuild_single_csv(&ticker, *interval, &data_dir, verbose, &mut stats) {
                 let error_msg = format!("{} {}: {}", ticker, interval.to_filename(), e);
                 warn!("{}", error_msg);
                 stats.errors.push(error_msg);
@@ -143,11 +157,11 @@ pub fn run(
 fn rebuild_single_csv(
     ticker: &str,
     interval: Interval,
-    market_data_dir: &Path,
+    data_dir: &Path,
     verbose: bool,
     stats: &mut RebuildStats,
 ) -> Result<(), Error> {
-    let csv_path = market_data_dir.join(ticker).join(interval.to_filename());
+    let csv_path = data_dir.join(ticker).join(interval.to_filename());
 
     // Check if file exists
     if !csv_path.exists() {
@@ -166,6 +180,8 @@ fn rebuild_single_csv(
         return Ok(());
     }
 
+    let original_count = ticker_data.len();
+
     // Enhance the data (this will calculate all indicators including value_changed)
     let mut data_map = HashMap::new();
     data_map.insert(ticker.to_string(), ticker_data);
@@ -176,10 +192,19 @@ fn rebuild_single_csv(
         Error::Io(format!("Failed to enhance data for {}", ticker))
     })?;
 
+    let enhanced_count = enhanced_ticker_data.len();
+    let duplicates_removed = original_count - enhanced_count;
+
+    if verbose && duplicates_removed > 0 {
+        println!("   🔄 {} {} - Removed {} duplicates ({} → {} records)",
+            ticker, interval.to_filename(), duplicates_removed, original_count, enhanced_count);
+    }
+
     // Save enhanced data back to CSV
-    // Use cutoff date to only write recent data (2 days ago)
-    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(2);
-    save_enhanced_csv(ticker, enhanced_ticker_data, interval, cutoff_date, true)?;
+    // Use a cutoff date far in the past to rewrite entire file (removes all duplicates)
+    // This ensures all historical duplicates are removed
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(365 * 50); // 50 years ago
+    save_enhanced_csv_to_dir(ticker, enhanced_ticker_data, interval, cutoff_date, true, data_dir)?;
 
     stats.files_rebuilt += 1;
     stats.records_enhanced += enhanced_ticker_data.len();
@@ -255,6 +280,17 @@ fn read_csv_for_rebuild(csv_path: &Path, ticker: &str) -> Result<Vec<OhlcvData>,
 
     // Sort by time (oldest first)
     data.sort_by_key(|d| d.time);
+
+    // Deduplicate by timestamp (favor last duplicate)
+    let duplicates_removed = deduplicate_ohlcv_by_time(&mut data);
+    if duplicates_removed > 0 {
+        info!(
+            ticker = ticker,
+            duplicates_removed = duplicates_removed,
+            records_remaining = data.len(),
+            "Deduplicated CSV data during rebuild"
+        );
+    }
 
     Ok(data)
 }

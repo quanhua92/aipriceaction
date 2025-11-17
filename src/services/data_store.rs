@@ -1,7 +1,7 @@
 use crate::constants::csv_column;
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
-use crate::utils::parse_timestamp;
+use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time};
 use tracing::{debug, info};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
@@ -371,6 +371,17 @@ impl DataStore {
 
         // Sort by time
         data.sort_by(|a, b| a.time.cmp(&b.time));
+
+        // Deduplicate by timestamp (favor last duplicate)
+        let duplicates_removed = deduplicate_stock_data_by_time(&mut data);
+        if duplicates_removed > 0 {
+            debug!(
+                path = ?csv_path,
+                duplicates_removed = duplicates_removed,
+                records_remaining = data.len(),
+                "Deduplicated CSV data during read"
+            );
+        }
 
         Ok(data)
     }

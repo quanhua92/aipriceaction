@@ -88,6 +88,10 @@ pub enum Commands {
         #[arg(short, long)]
         tickers: Option<String>,
 
+        /// Data directory: market (default), crypto
+        #[arg(long)]
+        data_dir: Option<String>,
+
         /// Verbose output
         #[arg(long)]
         verbose: bool,
@@ -147,8 +151,8 @@ pub fn run() {
             });
             commands::company::run(ticker_list, force, cache_days);
         }
-        Commands::RebuildCsv { intervals, tickers, verbose } => {
-            if let Err(e) = commands::rebuild_csv::run(intervals, tickers, verbose) {
+        Commands::RebuildCsv { intervals, tickers, data_dir, verbose } => {
+            if let Err(e) = commands::rebuild_csv::run(intervals, tickers, data_dir, verbose) {
                 eprintln!("❌ CSV rebuild failed: {}", e);
                 std::process::exit(1);
             }

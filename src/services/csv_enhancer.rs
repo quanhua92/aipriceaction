@@ -10,7 +10,7 @@ use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
-use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp};
+use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time};
 use chrono::DateTime;
 use csv::Writer;
 use fs2::FileExt;
@@ -496,6 +496,18 @@ fn process_single_ticker(
 
     // Sort by time (oldest first)
     ticker_data.sort_by_key(|d| d.time);
+
+    // Deduplicate by timestamp (favor last duplicate)
+    let duplicates_removed = deduplicate_ohlcv_by_time(&mut ticker_data);
+    if duplicates_removed > 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_removed = duplicates_removed,
+            records_remaining = ticker_data.len(),
+            "Deduplicated CSV data"
+        );
+    }
 
     // Step 2: Enhance data (calculate MAs and scores) - in-memory
     let ma_start = Instant::now();
