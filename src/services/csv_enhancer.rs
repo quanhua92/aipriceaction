@@ -10,7 +10,7 @@ use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
-use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time};
+use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
 use chrono::DateTime;
 use csv::Writer;
 use fs2::FileExt;
@@ -136,6 +136,24 @@ pub fn save_enhanced_csv_to_dir(
     if data.is_empty() {
         return Err(Error::InvalidInput("No data to save".to_string()));
     }
+
+    // Deduplicate data before writing (favor last occurrence)
+    // Create mutable copy, sort, and deduplicate
+    let mut data_vec: Vec<StockData> = data.to_vec();
+    data_vec.sort_by_key(|d| d.time);
+    let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+    if duplicates_removed > 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_removed = duplicates_removed,
+            records_remaining = data_vec.len(),
+            "Deduplicated StockData before writing CSV"
+        );
+    }
+
+    // Use deduplicated data for all writes below
+    let data = &data_vec;
 
     // Create ticker directory
     let ticker_dir = base_dir.join(ticker);
