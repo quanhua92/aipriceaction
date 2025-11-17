@@ -1,8 +1,8 @@
-use crate::constants::{CSV_BASIC_COLUMNS, CSV_ENHANCED_COLUMNS, MIN_RECORDS_FOR_MA50, MIN_RECORDS_FOR_ANALYSIS};
-use crate::models::Interval;
+use crate::constants::{CSV_BASIC_COLUMNS, CSV_ENHANCED_COLUMNS, MIN_RECORDS_FOR_MA50, MIN_RECORDS_FOR_ANALYSIS, INDEX_TICKERS};
+use crate::models::{Interval, load_crypto_symbols, get_default_crypto_list_path};
 use crate::utils::{get_market_data_dir, get_crypto_data_dir, parse_timestamp};
 use chrono::{NaiveDate, NaiveDateTime};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -32,6 +32,35 @@ struct FileReport {
     duplicate_timestamps: HashMap<String, usize>, // timestamp -> count
 }
 
+/// Load all valid stock tickers from ticker_group.json and INDEX_TICKERS
+fn load_stock_tickers() -> Option<HashSet<String>> {
+    match std::fs::read_to_string("ticker_group.json") {
+        Ok(content) => {
+            match serde_json::from_str::<HashMap<String, Vec<String>>>(&content) {
+                Ok(groups) => {
+                    let mut all_tickers = HashSet::new();
+
+                    // Add all stock tickers from ticker_group.json
+                    for (_, tickers) in groups {
+                        for ticker in tickers {
+                            all_tickers.insert(ticker);
+                        }
+                    }
+
+                    // Add index tickers (VNINDEX, VN30)
+                    for index in INDEX_TICKERS {
+                        all_tickers.insert(index.to_string());
+                    }
+
+                    Some(all_tickers)
+                }
+                Err(_) => None,
+            }
+        }
+        Err(_) => None,
+    }
+}
+
 pub fn run() {
     println!("🔍 Running health check on market data directories...\n");
 
@@ -41,9 +70,17 @@ pub fn run() {
     let market_data_dir = get_market_data_dir();
     let crypto_data_dir = get_crypto_data_dir();
 
+    // Load valid stock tickers from ticker_group.json
+    let valid_stock_tickers = load_stock_tickers();
+
+    // Load valid crypto symbols from crypto_top_100.json
+    let valid_crypto_symbols = load_crypto_symbols(get_default_crypto_list_path())
+        .ok()
+        .map(|symbols| symbols.into_iter().collect::<HashSet<String>>());
+
     if market_data_dir.exists() {
         println!("📂 Checking market_data (VN stocks)...\n");
-        let has_issues = check_directory(&market_data_dir, "VN Stocks");
+        let has_issues = check_directory(&market_data_dir, "VN Stocks", valid_stock_tickers.as_ref());
         has_any_issues = has_any_issues || has_issues;
         println!();
     } else {
@@ -52,7 +89,7 @@ pub fn run() {
 
     if crypto_data_dir.exists() {
         println!("📂 Checking crypto_data (Cryptocurrencies)...\n");
-        let has_issues = check_directory(&crypto_data_dir, "Crypto");
+        let has_issues = check_directory(&crypto_data_dir, "Crypto", valid_crypto_symbols.as_ref());
         has_any_issues = has_any_issues || has_issues;
     } else {
         println!("⚠️  crypto_data directory not found\n");
@@ -63,10 +100,11 @@ pub fn run() {
     }
 }
 
-fn check_directory(data_dir: &PathBuf, data_type: &str) -> bool {
+fn check_directory(data_dir: &PathBuf, data_type: &str, valid_tickers: Option<&HashSet<String>>) -> bool {
     let mut ticker_reports: Vec<TickerReport> = Vec::new();
     let mut total_tickers = 0;
     let mut total_issues = 0;
+    let mut unknown_tickers: Vec<String> = Vec::new();
 
     // Get all ticker directories
     let entries = match std::fs::read_dir(data_dir) {
@@ -92,6 +130,15 @@ fn check_directory(data_dir: &PathBuf, data_type: &str) -> bool {
             Some(t) => t.to_string(),
             None => continue,
         };
+
+        // Validate ticker against known list
+        if let Some(valid_set) = valid_tickers {
+            if !valid_set.contains(&ticker) {
+                unknown_tickers.push(ticker.clone());
+                println!("   ⚠️  Unknown ticker: {} (not in official {} ticker list)", ticker, data_type);
+                continue; // Skip processing unknown tickers
+            }
+        }
 
         total_tickers += 1;
         print!("   [{:>3}/{}] Checking {}... ", total_tickers, total_ticker_count, ticker);
@@ -231,11 +278,21 @@ fn check_directory(data_dir: &PathBuf, data_type: &str) -> bool {
     println!("📊 Health Check Summary");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("Total tickers scanned: {}", total_tickers);
+    println!("Unknown tickers found: {}", unknown_tickers.len());
     println!("Tickers with issues:   {}", ticker_reports.len());
     println!("Total issues found:    {}", total_issues);
     println!();
 
-    if ticker_reports.is_empty() {
+    // Print unknown tickers if found
+    if !unknown_tickers.is_empty() {
+        println!("❌ Unknown Tickers (not in official {} ticker list):\n", data_type);
+        for ticker in &unknown_tickers {
+            println!("  - {}", ticker);
+        }
+        println!();
+    }
+
+    if ticker_reports.is_empty() && unknown_tickers.is_empty() {
         println!("✅ All {} tickers are healthy! No issues found.", data_type);
         return false; // No issues
     }
