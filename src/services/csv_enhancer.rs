@@ -295,18 +295,42 @@ fn parse_time(time_str: &str) -> Result<DateTime<chrono::Utc>, Error> {
 
 /// Legacy function for backward compatibility: reads CSV files and enhances them
 /// This is used by workers that don't have direct access to OhlcvData
-pub fn enhance_interval(
+/// Uses streaming approach to process one ticker at a time (memory-efficient)
+///
+/// # Arguments
+/// * `interval` - The interval to enhance (Daily, Hourly, Minute)
+/// * `market_data_dir` - The directory containing ticker subdirectories
+/// * `tickers_filter` - Optional list of tickers to process. If None, processes all tickers in directory.
+pub fn enhance_interval_filtered(
     interval: Interval,
     market_data_dir: &Path,
+    tickers_filter: Option<&[String]>,
 ) -> Result<EnhancementStats, Error> {
     let start_time = Instant::now();
 
-    // Read all CSV files for this interval
-    let ma_start = Instant::now();
-    let data = read_and_enhance_interval(interval, market_data_dir)?;
-    let ma_time = ma_start.elapsed();
+    // Calculate cutoff date (2 days ago) for smart saving
+    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(2);
 
-    if data.is_empty() {
+    // Scan ticker subdirectories (optionally filtered)
+    let entries: Vec<_> = std::fs::read_dir(market_data_dir)
+        .map_err(|e| Error::Io(format!("Failed to read market_data directory: {}", e)))?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            if !e.path().is_dir() {
+                return false;
+            }
+            // If filter is specified, only process tickers in the filter list
+            if let Some(filter) = tickers_filter {
+                if let Some(ticker_name) = e.path().file_name().and_then(|n| n.to_str()) {
+                    return filter.contains(&ticker_name.to_string());
+                }
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    if entries.is_empty() {
         return Ok(EnhancementStats {
             tickers: 0,
             records: 0,
@@ -317,149 +341,191 @@ pub fn enhance_interval(
         });
     }
 
-    let ticker_count = data.len();
+    let total_tickers = entries.len();
+    let mut ticker_count = 0;
+    let mut total_records = 0;
+    let mut total_bytes_written = 0u64;
+    let mut total_ma_time = Duration::ZERO;
+    let mut total_write_time = Duration::ZERO;
 
-    // Calculate cutoff date (2 days ago) for smart saving
-    let cutoff_date = chrono::Utc::now() - chrono::Duration::days(2);
-
-    // Write enhanced CSV back to per-ticker directories
-    let write_start = Instant::now();
-    let (record_count, total_bytes_written) = write_enhanced_csv(&data, interval, market_data_dir, cutoff_date)?;
-    let write_time = write_start.elapsed();
-
-    Ok(EnhancementStats {
-        tickers: ticker_count,
-        records: record_count,
-        duration: start_time.elapsed(),
-        ma_time,
-        write_time,
-        total_bytes_written,
-    })
-}
-
-/// Read CSV files and enhance them (legacy function for workers)
-fn read_and_enhance_interval(
-    interval: Interval,
-    market_data_dir: &Path,
-) -> Result<HashMap<String, Vec<StockData>>, Error> {
-    let mut data: HashMap<String, Vec<OhlcvData>> = HashMap::new();
-
-    // Scan all ticker subdirectories
-    let entries = std::fs::read_dir(market_data_dir)
-        .map_err(|e| Error::Io(format!("Failed to read market_data directory: {}", e)))?;
-
-    for entry in entries {
-        let entry = entry.map_err(|e| Error::Io(format!("Failed to read directory entry: {}", e)))?;
+    // Process each ticker sequentially (streaming - one at a time)
+    for (idx, entry) in entries.iter().enumerate() {
         let ticker_dir = entry.path();
+        let ticker = match ticker_dir.file_name().and_then(|n| n.to_str()) {
+            Some(t) => t,
+            None => continue,
+        };
 
-        if !ticker_dir.is_dir() {
-            continue;
-        }
-
-        let ticker = ticker_dir
-            .file_name()
-            .and_then(|n| n.to_str())
-            .ok_or_else(|| Error::Io("Invalid ticker directory name".to_string()))?
-            .to_string();
-
-        // Read CSV file for this ticker
+        // Check if CSV exists for this interval
         let csv_path = ticker_dir.join(interval.to_filename());
         if !csv_path.exists() {
             continue;
         }
 
-        let mut reader = csv::ReaderBuilder::new()
-            .flexible(true) // Allow varying number of fields per record
-            .from_path(&csv_path)
-            .map_err(|e| Error::Io(format!("Failed to read {}: {}", csv_path.display(), e)))?;
+        // Process single ticker: Load → Enhance → Write → Free memory
+        match process_single_ticker(ticker, interval, market_data_dir, cutoff_date) {
+            Ok(stats) => {
+                ticker_count += 1;
+                total_records += stats.records;
+                total_bytes_written += stats.bytes_written;
+                total_ma_time += stats.ma_time;
+                total_write_time += stats.write_time;
 
-        let mut ticker_data = Vec::new();
-
-        for result in reader.records() {
-            let record = result.map_err(|e| Error::Io(format!("CSV parse error in {}: {}", csv_path.display(), e)))?;
-
-            // Read basic OHLCV data (first 7 columns)
-            if record.len() < 7 {
-                continue;
+                // Log progress (every 10 tickers or last ticker)
+                if (idx + 1) % 10 == 0 || idx == total_tickers - 1 {
+                    tracing::debug!(
+                        "[{}/{}] Processed {} ({} records, {:.1} KB)",
+                        idx + 1,
+                        total_tickers,
+                        ticker,
+                        stats.records,
+                        stats.bytes_written as f64 / 1024.0
+                    );
+                }
             }
-
-            let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time".to_string()))?;
-            let open: f64 = record
-                .get(2)
-                .ok_or_else(|| Error::Io("Missing open".to_string()))?
-                .parse()
-                .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
-            let high: f64 = record
-                .get(3)
-                .ok_or_else(|| Error::Io("Missing high".to_string()))?
-                .parse()
-                .map_err(|e| Error::Io(format!("Invalid high: {}", e)))?;
-            let low: f64 = record
-                .get(4)
-                .ok_or_else(|| Error::Io("Missing low".to_string()))?
-                .parse()
-                .map_err(|e| Error::Io(format!("Invalid low: {}", e)))?;
-            let close: f64 = record
-                .get(5)
-                .ok_or_else(|| Error::Io("Missing close".to_string()))?
-                .parse()
-                .map_err(|e| Error::Io(format!("Invalid close: {}", e)))?;
-            let volume: u64 = record
-                .get(6)
-                .ok_or_else(|| Error::Io("Missing volume".to_string()))?
-                .parse()
-                .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
-
-            // Parse datetime
-            let time = parse_time(time_str)?;
-
-            let ohlcv = OhlcvData {
-                time,
-                open,
-                high,
-                low,
-                close,
-                volume,
-                symbol: Some(ticker.clone()),
-            };
-            ticker_data.push(ohlcv);
+            Err(e) => {
+                tracing::warn!("Failed to process {}: {}", ticker, e);
+            }
         }
-
-        // Sort by time (oldest first)
-        ticker_data.sort_by_key(|d| d.time);
-
-        if !ticker_data.is_empty() {
-            data.insert(ticker, ticker_data);
-        }
+        // Ticker data is now dropped, memory freed
     }
 
-    // Enhance the data in-memory
-    Ok(enhance_data(data))
+    Ok(EnhancementStats {
+        tickers: ticker_count,
+        records: total_records,
+        duration: start_time.elapsed(),
+        ma_time: total_ma_time,
+        write_time: total_write_time,
+        total_bytes_written,
+    })
 }
 
-/// Write enhanced data back to per-ticker CSV files (20 columns)
-fn write_enhanced_csv(
-    data: &HashMap<String, Vec<StockData>>,
+/// Backward-compatible wrapper that processes all tickers in directory
+pub fn enhance_interval(
+    interval: Interval,
+    market_data_dir: &Path,
+) -> Result<EnhancementStats, Error> {
+    enhance_interval_filtered(interval, market_data_dir, None)
+}
+
+/// Statistics for single ticker processing
+struct TickerStats {
+    records: usize,
+    bytes_written: u64,
+    ma_time: Duration,
+    write_time: Duration,
+}
+
+/// Process a single ticker: Load → Enhance → Write → Free memory
+/// This is the streaming version that processes one ticker at a time
+fn process_single_ticker(
+    ticker: &str,
     interval: Interval,
     market_data_dir: &Path,
     cutoff_date: DateTime<chrono::Utc>,
-) -> Result<(usize, u64), Error> {
-    let mut total_record_count = 0;
-    let mut total_bytes_written = 0u64;
+) -> Result<TickerStats, Error> {
+    let ticker_dir = market_data_dir.join(ticker);
+    let csv_path = ticker_dir.join(interval.to_filename());
 
-    for (ticker, ticker_data) in data {
-        save_enhanced_csv_to_dir(ticker, ticker_data, interval, cutoff_date, false, market_data_dir)?;
+    // Step 1: Read CSV file for this ticker (OHLCV only)
+    let mut reader = csv::ReaderBuilder::new()
+        .flexible(true) // Allow varying number of fields per record
+        .from_path(&csv_path)
+        .map_err(|e| Error::Io(format!("Failed to read {}: {}", csv_path.display(), e)))?;
 
-        total_record_count += ticker_data.len();
+    let mut ticker_data = Vec::new();
 
-        // Estimate bytes written
-        let ticker_dir = market_data_dir.join(ticker);
-        let csv_path = ticker_dir.join(interval.to_filename());
-        let file_size = std::fs::metadata(&csv_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
-        total_bytes_written += file_size;
+    for result in reader.records() {
+        let record = result.map_err(|e| Error::Io(format!("CSV parse error in {}: {}", csv_path.display(), e)))?;
+
+        // Read basic OHLCV data (first 7 columns)
+        if record.len() < 7 {
+            continue;
+        }
+
+        let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time".to_string()))?;
+        let open: f64 = record
+            .get(2)
+            .ok_or_else(|| Error::Io("Missing open".to_string()))?
+            .parse()
+            .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
+        let high: f64 = record
+            .get(3)
+            .ok_or_else(|| Error::Io("Missing high".to_string()))?
+            .parse()
+            .map_err(|e| Error::Io(format!("Invalid high: {}", e)))?;
+        let low: f64 = record
+            .get(4)
+            .ok_or_else(|| Error::Io("Missing low".to_string()))?
+            .parse()
+            .map_err(|e| Error::Io(format!("Invalid low: {}", e)))?;
+        let close: f64 = record
+            .get(5)
+            .ok_or_else(|| Error::Io("Missing close".to_string()))?
+            .parse()
+            .map_err(|e| Error::Io(format!("Invalid close: {}", e)))?;
+        let volume: u64 = record
+            .get(6)
+            .ok_or_else(|| Error::Io("Missing volume".to_string()))?
+            .parse()
+            .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
+
+        // Parse datetime
+        let time = parse_time(time_str)?;
+
+        let ohlcv = OhlcvData {
+            time,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            symbol: Some(ticker.to_string()),
+        };
+        ticker_data.push(ohlcv);
     }
 
-    Ok((total_record_count, total_bytes_written))
+    if ticker_data.is_empty() {
+        return Ok(TickerStats {
+            records: 0,
+            bytes_written: 0,
+            ma_time: Duration::ZERO,
+            write_time: Duration::ZERO,
+        });
+    }
+
+    // Sort by time (oldest first)
+    ticker_data.sort_by_key(|d| d.time);
+
+    // Step 2: Enhance data (calculate MAs and scores) - in-memory
+    let ma_start = Instant::now();
+    let mut data_map: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+    data_map.insert(ticker.to_string(), ticker_data);
+    let enhanced_map = enhance_data(data_map);
+    let ma_time = ma_start.elapsed();
+
+    // Get enhanced data for this ticker
+    let enhanced_data = enhanced_map.get(ticker)
+        .ok_or_else(|| Error::Io(format!("Failed to enhance data for {}", ticker)))?;
+
+    let record_count = enhanced_data.len();
+
+    // Step 3: Write enhanced CSV
+    let write_start = Instant::now();
+    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, cutoff_date, false, market_data_dir)?;
+    let write_time = write_start.elapsed();
+
+    // Step 4: Get file size for stats
+    let bytes_written = std::fs::metadata(&csv_path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    Ok(TickerStats {
+        records: record_count,
+        bytes_written,
+        ma_time,
+        write_time,
+    })
+    // ticker_data and enhanced_map are dropped here, freeing memory
 }
+

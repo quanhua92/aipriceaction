@@ -336,17 +336,18 @@ async fn sync_and_enhance(
     // Write log entry
     write_log_entry(&sync_start, &sync_end, sync_duration, sync_success, interval, symbols, tier);
 
-    // Step 2: Enhance CSV if sync succeeded
+    // Step 2: Enhance CSV if sync succeeded (ONLY enhance the symbols that were synced)
     if sync_success {
         info!(
             worker = "Crypto",
             iteration = iteration,
             tier = tier,
             interval = interval_name,
-            "Enhancing CSV"
+            "Enhancing CSV (filtered to {} symbols)",
+            symbols.len()
         );
 
-        match csv_enhancer::enhance_interval(interval, crypto_data_dir) {
+        match csv_enhancer::enhance_interval_filtered(interval, crypto_data_dir, Some(symbols)) {
             Ok(stats) => {
                 info!(
                     worker = "Crypto",
