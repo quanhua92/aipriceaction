@@ -491,9 +491,14 @@ impl DataStore {
         // For daily data with cache=true: check if cache is expired (TTL)
         let cache_expired = self.is_cache_expired().await;
         if cache_expired {
-            tracing::info!("In-memory cache expired (TTL: {}s), reading from disk", CACHE_TTL_SECONDS);
-            // Cache expired - read from disk for all tickers
-            return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
+            tracing::info!("In-memory cache expired (TTL: {}s), reloading from disk", CACHE_TTL_SECONDS);
+            // Cache expired - reload the entire interval into memory
+            if let Err(e) = self.reload_interval(interval).await {
+                tracing::warn!("Failed to reload interval {}: {}", interval.to_filename(), e);
+                // Fallback to disk read for requested tickers only
+                return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
+            }
+            // Cache refreshed - continue with normal cache retrieval below
         }
 
         // If limit is provided, check if cache has enough records (regardless of limit size)
