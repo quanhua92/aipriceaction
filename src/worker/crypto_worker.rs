@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, load_crypto_symbols, get_default_crypto_list_path};
 use crate::services::{CryptoSync, SharedHealthStats, csv_enhancer};
 use crate::utils::{get_crypto_data_dir, write_with_rotation};
+use crate::worker::crypto_sync_info::{CryptoSyncInfo, get_crypto_sync_info_path};
 use chrono::Utc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -36,23 +37,28 @@ pub async fn run(health_stats: SharedHealthStats) {
         LOOP_CHECK_INTERVAL_SECS
     );
 
-    let mut iteration_count = 0u64;
     let crypto_data_dir = get_crypto_data_dir();
+    let info_path = get_crypto_sync_info_path(&crypto_data_dir);
 
-    // Track last sync times for regular cryptos per interval
-    let mut last_regular_daily_sync = std::time::Instant::now();
-    let mut last_regular_hourly_sync = std::time::Instant::now();
-    let mut last_regular_minute_sync = std::time::Instant::now();
+    // Load sync info from disk (persists across restarts)
+    let mut sync_info = CryptoSyncInfo::load(&info_path);
+
+    info!(
+        "Loaded sync info: iteration={}, last_syncs: priority_daily={:?}, regular_daily={:?}",
+        sync_info.iteration_count,
+        sync_info.priority_daily_last_sync,
+        sync_info.regular_daily_last_sync
+    );
 
     info!("Crypto worker started");
 
     loop {
-        iteration_count += 1;
+        sync_info.increment_iteration();
         let loop_start = std::time::Instant::now();
 
         info!(
             worker = "Crypto",
-            iteration = iteration_count,
+            iteration = sync_info.iteration_count,
             "Starting crypto sync cycle"
         );
 
@@ -67,7 +73,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                 if ignored_count > 0 {
                     info!(
                         worker = "Crypto",
-                        iteration = iteration_count,
+                        iteration = sync_info.iteration_count,
                         ignored_count = ignored_count,
                         ignored_symbols = ?IGNORED_CRYPTOS,
                         "Filtered ignored cryptos"
@@ -88,7 +94,7 @@ pub async fn run(health_stats: SharedHealthStats) {
 
                 info!(
                     worker = "Crypto",
-                    iteration = iteration_count,
+                    iteration = sync_info.iteration_count,
                     priority_count = priority.len(),
                     regular_count = regular.len(),
                     "Loaded and categorized crypto symbols"
@@ -99,7 +105,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             Err(e) => {
                 error!(
                     worker = "Crypto",
-                    iteration = iteration_count,
+                    iteration = sync_info.iteration_count,
                     error = %e,
                     "Failed to load crypto symbols, skipping iteration"
                 );
@@ -110,25 +116,59 @@ pub async fn run(health_stats: SharedHealthStats) {
 
         let mut all_intervals_successful = true;
 
-        // TIER 1: Always sync priority cryptos (every 15 minutes, all intervals)
+        // TIER 1: Sync priority cryptos (every 15 minutes, all intervals)
         if !priority_symbols.is_empty() {
             info!(
                 worker = "Crypto",
-                iteration = iteration_count,
-                "Syncing priority cryptos: {}",
+                iteration = sync_info.iteration_count,
+                "Checking priority cryptos: {}",
                 PRIORITY_CRYPTOS.join(", ")
             );
 
-            for interval in &[Interval::Daily, Interval::Hourly, Interval::Minute] {
+            // Daily
+            if sync_info.should_sync(sync_info.priority_daily_last_sync, LOOP_CHECK_INTERVAL_SECS) {
                 let success = sync_and_enhance(
-                    *interval,
+                    Interval::Daily,
                     &priority_symbols,
-                    iteration_count,
+                    sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
                 ).await;
+                if success {
+                    sync_info.update_priority_daily();
+                } else {
+                    all_intervals_successful = false;
+                }
+            }
 
-                if !success {
+            // Hourly
+            if sync_info.should_sync(sync_info.priority_hourly_last_sync, LOOP_CHECK_INTERVAL_SECS) {
+                let success = sync_and_enhance(
+                    Interval::Hourly,
+                    &priority_symbols,
+                    sync_info.iteration_count,
+                    "Priority",
+                    &crypto_data_dir,
+                ).await;
+                if success {
+                    sync_info.update_priority_hourly();
+                } else {
+                    all_intervals_successful = false;
+                }
+            }
+
+            // Minute
+            if sync_info.should_sync(sync_info.priority_minute_last_sync, LOOP_CHECK_INTERVAL_SECS) {
+                let success = sync_and_enhance(
+                    Interval::Minute,
+                    &priority_symbols,
+                    sync_info.iteration_count,
+                    "Priority",
+                    &crypto_data_dir,
+                ).await;
+                if success {
+                    sync_info.update_priority_minute();
+                } else {
                     all_intervals_successful = false;
                 }
             }
@@ -136,89 +176,102 @@ pub async fn run(health_stats: SharedHealthStats) {
 
         // TIER 2: Sync regular cryptos based on per-interval timing
         if !regular_symbols.is_empty() {
-            // Check Daily (every 1 hour)
-            if last_regular_daily_sync.elapsed().as_secs() >= REGULAR_DAILY_SYNC_INTERVAL_SECS {
+            // Daily (every 1 hour)
+            if sync_info.should_sync(sync_info.regular_daily_last_sync, REGULAR_DAILY_SYNC_INTERVAL_SECS) {
                 info!(
                     worker = "Crypto",
-                    iteration = iteration_count,
+                    iteration = sync_info.iteration_count,
                     "Syncing regular cryptos: Daily (1 hour elapsed)"
                 );
 
                 let success = sync_and_enhance(
                     Interval::Daily,
                     &regular_symbols,
-                    iteration_count,
+                    sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
                 ).await;
 
-                if !success {
+                if success {
+                    sync_info.update_regular_daily();
+                } else {
                     all_intervals_successful = false;
                 }
-                last_regular_daily_sync = std::time::Instant::now();
             }
 
-            // Check Hourly (every 3 hours)
-            if last_regular_hourly_sync.elapsed().as_secs() >= REGULAR_HOURLY_SYNC_INTERVAL_SECS {
+            // Hourly (every 3 hours)
+            if sync_info.should_sync(sync_info.regular_hourly_last_sync, REGULAR_HOURLY_SYNC_INTERVAL_SECS) {
                 info!(
                     worker = "Crypto",
-                    iteration = iteration_count,
+                    iteration = sync_info.iteration_count,
                     "Syncing regular cryptos: Hourly (3 hours elapsed)"
                 );
 
                 let success = sync_and_enhance(
                     Interval::Hourly,
                     &regular_symbols,
-                    iteration_count,
+                    sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
                 ).await;
 
-                if !success {
+                if success {
+                    sync_info.update_regular_hourly();
+                } else {
                     all_intervals_successful = false;
                 }
-                last_regular_hourly_sync = std::time::Instant::now();
             }
 
-            // Check Minute (every 6 hours)
-            if last_regular_minute_sync.elapsed().as_secs() >= REGULAR_MINUTE_SYNC_INTERVAL_SECS {
+            // Minute (every 6 hours)
+            if sync_info.should_sync(sync_info.regular_minute_last_sync, REGULAR_MINUTE_SYNC_INTERVAL_SECS) {
                 info!(
                     worker = "Crypto",
-                    iteration = iteration_count,
+                    iteration = sync_info.iteration_count,
                     "Syncing regular cryptos: Minute (6 hours elapsed)"
                 );
 
                 let success = sync_and_enhance(
                     Interval::Minute,
                     &regular_symbols,
-                    iteration_count,
+                    sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
                 ).await;
 
-                if !success {
+                if success {
+                    sync_info.update_regular_minute();
+                } else {
                     all_intervals_successful = false;
                 }
-                last_regular_minute_sync = std::time::Instant::now();
             }
         }
 
-        // Step 3: Update health stats
+        // Step 3: Save sync info to disk (persists across restarts)
+        if let Err(e) = sync_info.save(&info_path) {
+            warn!(
+                worker = "Crypto",
+                iteration = sync_info.iteration_count,
+                error = %e,
+                "Failed to save sync info to disk"
+            );
+        }
+
+        // Step 4: Update health stats
         {
             let mut health = health_stats.write().await;
             health.crypto_last_sync = Some(Utc::now().to_rfc3339());
-            health.crypto_iteration_count = iteration_count;
+            health.crypto_iteration_count = sync_info.iteration_count;
         }
 
         let loop_duration = loop_start.elapsed();
 
         info!(
             worker = "Crypto",
-            iteration = iteration_count,
+            iteration = sync_info.iteration_count,
             loop_duration_secs = loop_duration.as_secs_f64(),
             next_check_secs = LOOP_CHECK_INTERVAL_SECS,
             all_successful = all_intervals_successful,
-            "Iteration completed"
+            "Iteration completed, sync info saved to disk"
         );
 
         // Sleep for 15 minutes before next check
