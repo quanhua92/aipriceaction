@@ -86,85 +86,27 @@ impl std::fmt::Display for CryptoError {
 
 impl std::error::Error for CryptoError {}
 
-/// CryptoCompare API response structure (for errors and success)
+/// CryptoCompare API response structure (future-proof with flexible parsing)
+/// All fields use default/optional to handle API changes gracefully
 #[derive(Debug, Deserialize)]
 struct CryptoCompareResponse {
-    #[serde(rename = "Response")]
+    #[serde(rename = "Response", default)]
     response: String,
-    #[serde(rename = "Message")]
+    #[serde(rename = "Message", default)]
     message: String,
-    #[serde(rename = "HasWarning")]
+    #[serde(rename = "HasWarning", default)]
     #[allow(dead_code)]
     has_warning: bool,
-    #[serde(rename = "Type")]
+    #[serde(rename = "Type", default)]
     #[allow(dead_code)]
     response_type: i32,
-    #[serde(rename = "Data")]
-    #[serde(default)]
-    data: Option<serde_json::Value>,  // Use Value to handle both CryptoCompareData and {}
-    #[serde(rename = "RateLimit")]
-    #[serde(default)]
-    rate_limit: Option<RateLimitInfo>,
-}
-
-/// Rate limit information from CryptoCompare API
-#[derive(Debug, Deserialize)]
-struct RateLimitInfo {
-    #[serde(rename = "calls_made")]
-    calls_made: CallStats,
-    #[serde(rename = "max_calls")]
-    #[allow(dead_code)]
-    max_calls: Option<CallStats>,
-}
-
-#[derive(Debug, Deserialize)]
-struct CallStats {
-    #[serde(default)]
-    second: i32,
-    #[serde(default)]
-    minute: i32,
-    #[serde(default)]
-    hour: i32,
-    #[serde(default)]
-    day: i32,
-    #[serde(default)]
-    month: i32,
-    #[serde(default)]
-    total_calls: i32,
-}
-
-#[derive(Debug, Deserialize)]
-struct CryptoCompareData {
-    #[serde(rename = "Aggregated")]
-    #[allow(dead_code)]
-    aggregated: bool,
-    #[serde(rename = "TimeFrom")]
-    #[allow(dead_code)]
-    time_from: i64,
-    #[serde(rename = "TimeTo")]
-    #[allow(dead_code)]
-    time_to: i64,
-    #[serde(rename = "Data")]
-    data: Vec<CryptoCompareCandle>,
-}
-
-#[derive(Debug, Deserialize)]
-struct CryptoCompareCandle {
-    time: i64,
-    high: f64,
-    low: f64,
-    open: f64,
-    #[serde(rename = "volumefrom")]
-    volume_from: f64,
-    #[serde(rename = "volumeto")]
-    volume_to: f64,
-    close: f64,
-    #[serde(rename = "conversionType")]
-    #[allow(dead_code)]
-    conversion_type: String,
-    #[serde(rename = "conversionSymbol")]
-    #[allow(dead_code)]
-    conversion_symbol: String,
+    #[serde(rename = "Data", default)]
+    data: Option<serde_json::Value>,
+    #[serde(rename = "RateLimit", default)]
+    rate_limit: Option<serde_json::Value>,
+    // Catch any other fields CryptoCompare might add
+    #[serde(flatten)]
+    _extra: serde_json::Value,
 }
 
 /// CryptoCompare API client with rate limiting and retry logic
@@ -304,10 +246,16 @@ impl CryptoCompareClient {
                             if data.response_type == 99 || data.message.contains("rate limit") {
                                 // Log rate limit info if available
                                 if let Some(ref rate_limit) = data.rate_limit {
-                                    warn!(
-                                        "Rate limit exceeded! Daily calls: {}/7500",
-                                        rate_limit.calls_made.day
-                                    );
+                                    // Try to extract daily calls if structure exists
+                                    if let Some(calls_made) = rate_limit.get("calls_made") {
+                                        if let Some(day) = calls_made.get("day").and_then(|v| v.as_i64()) {
+                                            warn!("Rate limit exceeded! Daily calls: {}/7500", day);
+                                        } else {
+                                            warn!("Rate limit exceeded: {} (rate limit data: {})", data.message, rate_limit);
+                                        }
+                                    } else {
+                                        warn!("Rate limit exceeded: {} (rate limit object: {})", data.message, rate_limit);
+                                    }
                                 } else {
                                     warn!("Rate limit exceeded: {}", data.message);
                                 }
@@ -426,37 +374,49 @@ impl CryptoCompareClient {
         // Make request with retry logic
         let response = self.make_request(&url).await?;
 
-        // Parse data
+        // Parse data using flexible Value-based extraction (future-proof)
         let data_value = response.data.ok_or(CryptoError::NoData)?;
-        let data: CryptoCompareData = serde_json::from_value(data_value)
-            .map_err(|e| CryptoError::Serialization(e))?;
 
-        // Convert to OhlcvData
-        let mut ohlcv_data: Vec<OhlcvData> = data
-            .data
-            .into_iter()
-            .filter_map(|candle| {
+        // Extract the Data array from the nested structure
+        let candles_array = data_value
+            .get("Data")
+            .and_then(|v| v.as_array())
+            .ok_or(CryptoError::InvalidResponse("Missing 'Data' array in response".to_string()))?;
+
+        // Convert to OhlcvData using safe Value extraction
+        let mut ohlcv_data: Vec<OhlcvData> = candles_array
+            .iter()
+            .filter_map(|candle_value| {
+                // Extract fields with defaults for missing values
+                let time_unix = candle_value.get("time")?.as_i64()?;
+                let open = candle_value.get("open")?.as_f64()?;
+                let high = candle_value.get("high")?.as_f64()?;
+                let low = candle_value.get("low")?.as_f64()?;
+                let close = candle_value.get("close")?.as_f64()?;
+                let volume_from = candle_value.get("volumefrom")?.as_f64().unwrap_or(0.0);
+                let volume_to = candle_value.get("volumeto")?.as_f64().unwrap_or(0.0);
+
                 // Skip zero-volume candles
-                if candle.volume_from == 0.0 && candle.volume_to == 0.0 {
+                if volume_from == 0.0 && volume_to == 0.0 {
                     return None;
                 }
 
                 // Convert Unix timestamp to DateTime
-                let time = match DateTime::from_timestamp(candle.time, 0) {
+                let time = match DateTime::from_timestamp(time_unix, 0) {
                     Some(dt) => dt,
                     None => {
-                        warn!("Invalid timestamp: {}", candle.time);
+                        warn!("Invalid timestamp: {}", time_unix);
                         return None;
                     }
                 };
 
                 Some(OhlcvData {
                     time,
-                    open: candle.open,
-                    high: candle.high,
-                    low: candle.low,
-                    close: candle.close,
-                    volume: candle.volume_from as u64, // Use volumefrom (crypto volume)
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume: volume_from as u64, // Use volumefrom (crypto volume)
                     symbol: Some(symbol.to_string()),
                 })
             })
