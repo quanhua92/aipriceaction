@@ -30,9 +30,9 @@ pub async fn run(port: u16) {
     };
     let shared_health_stats = Arc::new(RwLock::new(health_stats));
 
-    // Load only daily data into memory (hourly/minute read from disk on-demand)
-    println!("📊 Loading VN daily data into memory...");
-    let load_intervals = vec![Interval::Daily];
+    // Load daily and hourly data into memory (minute data uses disk cache)
+    println!("📊 Loading VN daily and hourly data into memory...");
+    let load_intervals = vec![Interval::Daily, Interval::Hourly];
 
     match shared_data_store_vn.load_last_year(load_intervals.clone()).await {
         Ok(_) => {
@@ -63,8 +63,8 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Load crypto daily data into memory
-    println!("📊 Loading crypto daily data into memory...");
+    // Load crypto daily and hourly data into memory
+    println!("📊 Loading crypto daily and hourly data into memory...");
     match shared_data_store_crypto.load_last_year(load_intervals).await {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_crypto.get_record_counts().await;
@@ -87,6 +87,27 @@ pub async fn run(port: u16) {
             eprintln!("   Server will start with empty crypto cache. Crypto worker will populate data.");
         }
     }
+
+    // Spawn background auto-reload tasks for in-memory cache (15s TTL, 730 records)
+    use crate::services::data_store::CACHE_TTL_SECONDS;
+    use crate::services::data_store::DATA_RETENTION_RECORDS;
+
+    println!("🔄 Starting auto-reload tasks (TTL: {}s, limit: {} records)...", CACHE_TTL_SECONDS, DATA_RETENTION_RECORDS);
+
+    // VN auto-reload tasks (Daily + Hourly)
+    let _vn_daily_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Daily);
+    let _vn_hourly_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Hourly);
+
+    // Crypto auto-reload tasks (Daily + Hourly)
+    let _crypto_daily_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Daily);
+    let _crypto_hourly_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
+
+    println!("✅ Auto-reload tasks started:");
+    println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
+    println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
+    println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
+    println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
+    println!("   ℹ️  Minute data uses disk cache (for aggregated intervals)");
 
     // Create dedicated runtime for workers (8 threads for heavy I/O batching)
     // Workers only write CSVs to disk, don't touch memory cache

@@ -3,17 +3,18 @@ use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time};
 use tracing::{debug, info};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
 
 /// Memory management constants
-pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit for 2 years of data
+pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit
 pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
-pub const DATA_RETENTION_DAYS: i64 = 730; // Keep 2 years of data (365 * 2)
+pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per ticker per interval
 
 /// Cache TTL constants
 pub const CACHE_TTL_SECONDS: i64 = 15; // 15 seconds TTL for memory cache
@@ -226,19 +227,17 @@ impl DataStore {
         }
     }
 
-    /// Load last 1 year of data from CSV files for specified intervals
+    /// Load data from CSV files for specified intervals (limited to last 730 records per ticker)
     pub async fn load_last_year(&self, intervals: Vec<Interval>) -> Result<(), Error> {
-        let cutoff_date = Utc::now() - Duration::days(DATA_RETENTION_DAYS);
-
         for interval in intervals {
-            self.load_interval(interval, Some(cutoff_date)).await?;
+            self.load_interval(interval, None, Some(DATA_RETENTION_RECORDS)).await?;
         }
 
         Ok(())
     }
 
-    /// Load data for a specific interval from CSV files
-    async fn load_interval(&self, interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<(), Error> {
+    /// Load data for a specific interval from CSV files with optional record limit
+    async fn load_interval(&self, interval: Interval, cutoff_date: Option<DateTime<Utc>>, limit: Option<usize>) -> Result<(), Error> {
         // Step 1: Read all CSV files WITHOUT holding any locks
         // This prevents file I/O from blocking API requests
         let mut data = HashMap::new();
@@ -268,8 +267,18 @@ impl DataStore {
 
             // Read and parse CSV (blocking I/O happens here, NO locks held)
             match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
-                Ok(ticker_data) => {
+                Ok(mut ticker_data) => {
                     if !ticker_data.is_empty() {
+                        // Apply record limit if specified (keep last N records)
+                        if let Some(max_records) = limit {
+                            if ticker_data.len() > max_records {
+                                // Sort descending by time and take last N records
+                                ticker_data.sort_by(|a, b| b.time.cmp(&a.time));
+                                ticker_data.truncate(max_records);
+                                // Sort back to ascending order for consistency
+                                ticker_data.sort_by(|a, b| a.time.cmp(&b.time));
+                            }
+                        }
                         data.insert(ticker.clone(), ticker_data);
                     }
                 }
@@ -386,13 +395,52 @@ impl DataStore {
         Ok(data)
     }
 
-    /// Reload a specific interval from CSV files
+    /// Reload a specific interval from CSV files (limited to last 730 records per ticker)
     pub async fn reload_interval(&self, interval: Interval) -> Result<(), Error> {
-        let cutoff_date = Utc::now() - Duration::days(DATA_RETENTION_DAYS);
-        self.load_interval(interval, Some(cutoff_date)).await
+        self.load_interval(interval, None, Some(DATA_RETENTION_RECORDS)).await
     }
 
-  
+    /// Spawn a background task that auto-reloads the specified interval every CACHE_TTL_SECONDS
+    /// Returns a JoinHandle that can be used for graceful shutdown
+    pub fn spawn_auto_reload_task(
+        self: Arc<Self>,
+        interval: Interval,
+    ) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            tracing::info!(
+                "Starting auto-reload task for {} interval (TTL: {}s, limit: {} records)",
+                interval.to_filename(),
+                CACHE_TTL_SECONDS,
+                DATA_RETENTION_RECORDS
+            );
+
+            loop {
+                // Sleep first (cache was just loaded during server startup)
+                tokio::time::sleep(tokio::time::Duration::from_secs(CACHE_TTL_SECONDS as u64)).await;
+
+                tracing::debug!(
+                    "Auto-reloading {} cache (TTL expired)",
+                    interval.to_filename()
+                );
+
+                match self.reload_interval(interval).await {
+                    Ok(_) => {
+                        tracing::info!("♻️  Reloaded {} cache", interval.to_filename());
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "Failed to auto-reload {} cache: {}. Will retry in {}s",
+                            interval.to_filename(),
+                            e,
+                            CACHE_TTL_SECONDS
+                        );
+                        // Don't panic - continue loop and retry next cycle
+                    }
+                }
+            }
+        })
+    }
+
     /// Smart data retrieval with aggregation awareness and centralized logic
     /// This method handles all query complexity internally
     pub async fn get_data_smart(
@@ -473,7 +521,8 @@ impl DataStore {
     }
 
     /// Get data with cache control option
-    /// Smart caching: if cache doesn't have requested range or is expired, automatically read from disk
+    /// Daily and Hourly use in-memory cache (auto-reloaded by background task every 15s)
+    /// Minute data always uses disk cache (needed for aggregated intervals with MA200)
     pub async fn get_data_with_cache(
         &self,
         tickers: Vec<String>,
@@ -483,22 +532,26 @@ impl DataStore {
         limit: Option<usize>,
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
-        // For hourly/minute data or when cache=false explicitly requested, always use disk
-        if interval == Interval::Hourly || interval == Interval::Minute || !use_cache {
+        // Minute data always uses disk cache (needed for aggregations)
+        // OR when cache=false explicitly requested
+        if interval == Interval::Minute || !use_cache {
             return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
         }
 
-        // For daily data with cache=true: check if cache is expired (TTL)
-        let cache_expired = self.is_cache_expired().await;
-        if cache_expired {
-            tracing::info!("In-memory cache expired (TTL: {}s), reloading from disk", CACHE_TTL_SECONDS);
-            // Cache expired - reload the entire interval into memory
+        // Emergency fallback: if cache is VERY stale (2x TTL), force reload
+        // This only happens if background auto-reload task is failing
+        let cache_age = self.get_cache_age().await;
+        if cache_age > CACHE_TTL_SECONDS * 2 {
+            tracing::warn!(
+                "Cache extremely stale ({}s > {}s), forcing emergency reload for {}",
+                cache_age,
+                CACHE_TTL_SECONDS * 2,
+                interval.to_filename()
+            );
             if let Err(e) = self.reload_interval(interval).await {
-                tracing::warn!("Failed to reload interval {}: {}", interval.to_filename(), e);
-                // Fallback to disk read for requested tickers only
+                tracing::error!("Emergency reload failed for {}: {}, falling back to disk", interval.to_filename(), e);
                 return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
             }
-            // Cache refreshed - continue with normal cache retrieval below
         }
 
         // If limit is provided, check if cache has enough records (regardless of limit size)
@@ -877,12 +930,16 @@ impl DataStore {
         (disk_cache.len(), *disk_cache_size, self.max_cache_size_bytes)
     }
 
-    /// Check if in-memory cache has expired based on TTL
-    async fn is_cache_expired(&self) -> bool {
+    /// Get cache age in seconds
+    async fn get_cache_age(&self) -> i64 {
         let cache_last_updated = self.cache_last_updated.read().await;
         let now = Utc::now();
-        let cache_age = now.signed_duration_since(*cache_last_updated);
-        cache_age.num_seconds() >= CACHE_TTL_SECONDS
+        now.signed_duration_since(*cache_last_updated).num_seconds()
+    }
+
+    /// Check if in-memory cache has expired based on TTL
+    async fn is_cache_expired(&self) -> bool {
+        self.get_cache_age().await >= CACHE_TTL_SECONDS
     }
 
     /// Update cache timestamp (called after reading fresh data from disk)
