@@ -532,6 +532,8 @@ impl DataStore {
         limit: Option<usize>,
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
+        let start_time = std::time::Instant::now();
+
         // Minute data always uses disk cache (needed for aggregations)
         // OR when cache=false explicitly requested
         if interval == Interval::Minute || !use_cache {
@@ -607,27 +609,32 @@ impl DataStore {
                     };
 
                     if has_required_range {
-                        // Cache has sufficient data
-                        let filtered: Vec<StockData> = interval_data
-                            .iter()
-                            .filter(|d| {
-                                if let Some(start) = start_date {
-                                    if d.time < start {
-                                        return false;
-                                    }
-                                }
-                                if let Some(end) = end_date {
-                                    if d.time > end {
-                                        return false;
-                                    }
-                                }
-                                true
-                            })
-                            .cloned()
-                            .collect();
+                        // Cache has sufficient data - use binary search for date range
+                        // Data is sorted by time (ascending), so we can binary search
+                        let start_idx = if let Some(start) = start_date {
+                            // Find first record >= start_date
+                            interval_data.partition_point(|d| d.time < start)
+                        } else {
+                            0
+                        };
 
-                        if !filtered.is_empty() {
-                            result.insert(ticker.clone(), filtered);
+                        let end_idx = if let Some(end) = end_date {
+                            // Find first record > end_date
+                            interval_data.partition_point(|d| d.time <= end)
+                        } else {
+                            interval_data.len()
+                        };
+
+                        // Only clone the records in range (not all records)
+                        if start_idx < end_idx {
+                            let filtered: Vec<StockData> = interval_data[start_idx..end_idx]
+                                .iter()
+                                .cloned()
+                                .collect();
+
+                            if !filtered.is_empty() {
+                                result.insert(ticker.clone(), filtered);
+                            }
                         }
                     } else {
                         // Cache doesn't have full range - need disk read
@@ -686,6 +693,16 @@ impl DataStore {
                     .collect();
             }
         }
+
+        let duration = start_time.elapsed();
+        let total_records: usize = result.values().map(|v| v.len()).sum();
+        tracing::debug!(
+            "Cache lookup: {} tickers, {} records, {:.2}ms (interval: {})",
+            tickers.len(),
+            total_records,
+            duration.as_secs_f64() * 1000.0,
+            interval.to_filename()
+        );
 
         result
     }
