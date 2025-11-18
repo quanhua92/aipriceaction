@@ -610,7 +610,7 @@ test_crypto_mode_csv() {
     print_test "Test 16: Crypto mode - CSV format"
 
     local response=$(curl -s "$BASE_URL/tickers?symbol=ETH&mode=crypto&interval=1D&limit=2&format=csv")
-    local line_count=$(echo "$response" | wc -l)
+    local line_count=$(echo "$response" | wc -l | xargs)
     local header=$(echo "$response" | head -1)
 
     # Should have header + 2 data rows = 3 lines
