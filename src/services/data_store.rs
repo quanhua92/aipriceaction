@@ -419,17 +419,18 @@ impl DataStore {
                 tokio::time::sleep(tokio::time::Duration::from_secs(CACHE_TTL_SECONDS as u64)).await;
 
                 tracing::debug!(
-                    "Auto-reloading {} cache (TTL expired)",
+                    "[DEBUG:PERF:BG_TASK] Auto-reload start for {} (TTL expired)",
                     interval.to_filename()
                 );
 
+                let reload_start = std::time::Instant::now();
                 match self.reload_interval(interval).await {
                     Ok(_) => {
-                        tracing::info!("♻️  Reloaded {} cache", interval.to_filename());
+                        tracing::info!("[DEBUG:PERF:BG_TASK] ♻️  Reloaded {} cache: {:.2}ms", interval.to_filename(), reload_start.elapsed().as_secs_f64() * 1000.0);
                     }
                     Err(e) => {
                         tracing::warn!(
-                            "Failed to auto-reload {} cache: {}. Will retry in {}s",
+                            "[DEBUG:PERF:BG_TASK] Failed to auto-reload {} cache: {}. Will retry in {}s",
                             interval.to_filename(),
                             e,
                             CACHE_TTL_SECONDS
@@ -533,10 +534,12 @@ impl DataStore {
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
         let start_time = std::time::Instant::now();
+        tracing::debug!("[DEBUG:PERF] get_data_with_cache start: {} tickers, interval={}, limit={:?}", tickers.len(), interval.to_filename(), limit);
 
         // Minute data always uses disk cache (needed for aggregations)
         // OR when cache=false explicitly requested
         if interval == Interval::Minute || !use_cache {
+            tracing::debug!("[DEBUG:PERF] Using disk cache (minute data or cache=false)");
             return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
         }
 
@@ -556,16 +559,29 @@ impl DataStore {
             }
         }
 
-        // If limit is provided, check if cache has enough records (regardless of limit size)
+        // If limit is provided, check if cache has enough records using representative tickers
+        // Use well-known tickers (VNINDEX, VCB, VIC) that always have full history
+        // Don't check ALL tickers because some new listings might have < limit days
         if let Some(limit_count) = limit {
             if start_date.is_none() {
-                // Check if cache has enough records for the requested limit
+                let representative_tickers = ["VNINDEX", "VCB", "VIC"];
                 let store = self.data.read().await;
-                let cache_insufficient = tickers.iter().any(|ticker| {
-                    store.get(ticker)
+
+                let cache_insufficient = representative_tickers.iter().any(|ticker| {
+                    let record_count = store.get(*ticker)
                         .and_then(|td| td.get(&interval))
-                        .map(|data| data.len() < limit_count)
-                        .unwrap_or(true) // No data in cache = insufficient
+                        .map(|data| data.len())
+                        .unwrap_or(0);
+
+                    if record_count < limit_count {
+                        tracing::debug!(
+                            "[DEBUG:PERF] Representative ticker {} has only {} records (need {})",
+                            ticker, record_count, limit_count
+                        );
+                        true
+                    } else {
+                        false
+                    }
                 });
                 drop(store);
 
@@ -575,12 +591,15 @@ impl DataStore {
                         limit_count,
                         tickers.len()
                     );
+                    tracing::debug!("[DEBUG:PERF] Cache insufficient check failed (representative tickers), falling back to disk for all {} tickers", tickers.len());
                     return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
                 }
             }
         }
 
         // Cache is fresh - try cache first, fall back to disk if insufficient
+        let perf_cache_lookup_start = std::time::Instant::now();
+        tracing::debug!("[DEBUG:PERF] Cache lookup start");
         let store = self.data.read().await;
         let mut result = HashMap::new();
         let mut need_disk_read: Vec<String> = Vec::new();
@@ -658,6 +677,13 @@ impl DataStore {
 
         drop(store); // Release lock before disk read
 
+        let from_cache_count = result.len();
+        tracing::debug!("[DEBUG:PERF] Cache lookup complete: {:.2}ms, {} from cache, {} need disk",
+            perf_cache_lookup_start.elapsed().as_secs_f64() * 1000.0,
+            from_cache_count,
+            need_disk_read.len()
+        );
+
         // Read missing tickers from disk
         if !need_disk_read.is_empty() {
             tracing::info!(
@@ -665,6 +691,8 @@ impl DataStore {
                 need_disk_read.len(),
                 need_disk_read
             );
+            let perf_disk_start = std::time::Instant::now();
+            tracing::debug!("[DEBUG:PERF] Disk read start: {} tickers", need_disk_read.len());
             let disk_data = self.get_data_from_disk_with_cache(
                 need_disk_read,
                 interval,
@@ -672,6 +700,10 @@ impl DataStore {
                 end_date,
                 limit,
             ).await;
+            tracing::debug!("[DEBUG:PERF] Disk read complete: {:.2}ms, {} tickers",
+                perf_disk_start.elapsed().as_secs_f64() * 1000.0,
+                disk_data.len()
+            );
 
             // Merge disk data into result
             result.extend(disk_data);

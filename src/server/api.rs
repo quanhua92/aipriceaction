@@ -116,6 +116,9 @@ pub async fn get_tickers_handler(
     State(app_state): State<AppState>,
     Query(params): Query<TickerQuery>,
 ) -> impl IntoResponse {
+    let perf_start = std::time::Instant::now();
+    debug!("[DEBUG:PERF] Request start");
+
     let start_time = Utc::now();
     let mut performance_metrics = ApiPerformanceMetrics::new(start_time);
     performance_metrics.endpoint = "/tickers".to_string();
@@ -127,11 +130,13 @@ pub async fn get_tickers_handler(
     let data_state = app_state.get_data_store(params.mode);
 
     // Parse and validate parameters
+    let perf_parse_start = std::time::Instant::now();
     let query_params = match parse_query_parameters(params.clone(), data_state).await {
         Ok(params) => {
             performance_metrics.interval = params.interval.to_filename().to_string();
             performance_metrics.ticker_count = params.tickers.len();
             performance_metrics.cache_used = params.use_cache;
+            debug!("[DEBUG:PERF] Parse params: {:.2}ms, {} tickers", perf_parse_start.elapsed().as_secs_f64() * 1000.0, params.tickers.len());
             params
         },
         Err(error_response) => {
@@ -144,10 +149,13 @@ pub async fn get_tickers_handler(
     };
 
     // Smart data retrieval - DataStore handles all the complexity
+    let perf_data_start = std::time::Instant::now();
+    debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
     let result_data = data_state.get_data_smart(query_params.clone()).await;
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
+    debug!("[DEBUG:PERF] get_data_smart complete: {:.2}ms, {} tickers, {} records", perf_data_start.elapsed().as_secs_f64() * 1000.0, ticker_count, total_records);
 
     info!(
         ticker_count,
@@ -172,7 +180,11 @@ pub async fn get_tickers_handler(
     // Check format parameter
     if params.format == "csv" {
         // Generate CSV format
+        let perf_csv_start = std::time::Instant::now();
+        debug!("[DEBUG:PERF] CSV generation start: {} tickers, {} records", ticker_count, total_records);
         let response = generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, params.mode, headers);
+        debug!("[DEBUG:PERF] CSV generation complete: {:.2}ms", perf_csv_start.elapsed().as_secs_f64() * 1000.0);
+        debug!("[DEBUG:PERF] Total request: {:.2}ms", perf_start.elapsed().as_secs_f64() * 1000.0);
 
         // Complete performance metrics and log for CSV response
         performance_metrics.response_size_bytes = response.body().size_hint().lower() as usize;
