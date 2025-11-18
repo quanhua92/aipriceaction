@@ -58,11 +58,11 @@ AVG_TIME=$(echo "scale=3; $TOTAL_TIME / 5" | bc)
 echo "Average: ${AVG_TIME}s"
 echo ""
 
-# Test 4: Multiple representative tickers (VCB, VIC, FPT)
-echo "=== Test 4: Multiple tickers (VCB, VIC, FPT), 1D, limit=100 ==="
+# Test 4: Representative tickers used in cache check (VNINDEX, VCB, VIC)
+echo "=== Test 4: Representative tickers (VNINDEX, VCB, VIC) - Cache Check Validation ==="
 TOTAL_TIME=0
 for i in 1 2 3 4 5; do
-  TIME=$(curl -s -o /tmp/perf_test_4_$i.csv -w "%{time_total}" "$BASE_URL/tickers?symbol=VCB&symbol=VIC&symbol=FPT&interval=1D&format=csv&limit=100")
+  TIME=$(curl -s -o /tmp/perf_test_4_$i.csv -w "%{time_total}" "$BASE_URL/tickers?symbol=VNINDEX&symbol=VCB&symbol=VIC&interval=1D&format=csv&limit=100")
   echo "Request $i: ${TIME}s"
   TOTAL_TIME=$(echo "$TOTAL_TIME + $TIME" | bc)
   sleep 0.2
