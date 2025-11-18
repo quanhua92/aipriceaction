@@ -328,13 +328,14 @@ fn generate_csv_response(
     mode: Mode,
     mut headers: HeaderMap,
 ) -> Response {
+    use std::fmt::Write;
+
+    let start_time = std::time::Instant::now();
+
     // Helper function to check if ticker is a market index
     let is_index = |ticker: &str| -> bool {
         INDEX_TICKERS.contains(&ticker)
     };
-
-    // Build CSV content
-    let mut csv_content = String::new();
 
     // CSV header - adapt based on whether we have technical indicators
     // For simplicity, we'll check the first record to see what fields are available
@@ -342,6 +343,15 @@ fn generate_csv_response(
         .and_then(|records| records.first())
         .map(|record| record.ma10.is_some())
         .unwrap_or(false);
+
+    // Calculate total record count for buffer pre-allocation
+    let total_records: usize = data.values().map(|v| v.len()).sum();
+
+    // Pre-allocate buffer: header (~200) + (records * avg_bytes_per_row)
+    // Each row ~200 bytes (20 fields with indicators) or ~80 bytes (7 fields basic)
+    let bytes_per_row = if has_indicators { 200 } else { 80 };
+    let estimated_size = 200 + (total_records * bytes_per_row);
+    let mut csv_content = String::with_capacity(estimated_size);
 
     if has_indicators {
         // Full header with technical indicators (NEW 20-column format)
@@ -370,8 +380,10 @@ fn generate_csv_response(
 
                 if has_indicators {
                     // Write row with all fields (NEW 20-column format)
-                    csv_content.push_str(&format!(
-                        "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+                    // Use write! macro which is more efficient than format!
+                    let _ = write!(
+                        csv_content,
+                        "{},{},{},{},{},{},{},",
                         ticker,
                         time_str,
                         record.open / price_divisor,
@@ -379,23 +391,44 @@ fn generate_csv_response(
                         record.low / price_divisor,
                         record.close / price_divisor,
                         record.volume,
-                        record.ma10.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
-                        record.ma20.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
-                        record.ma50.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
-                        record.ma100.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
-                        record.ma200.map(|v| (v / price_divisor).to_string()).unwrap_or_default(),
-                        record.ma10_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma20_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma50_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma100_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.ma200_score.map(|v| v.to_string()).unwrap_or_default(),
-                        record.close_changed.map(|v| v.to_string()).unwrap_or_default(),
-                        record.volume_changed.map(|v| v.to_string()).unwrap_or_default(),
-                        record.total_money_changed.map(|v| v.to_string()).unwrap_or_default(),
-                    ));
+                    );
+
+                    // MA values
+                    if let Some(v) = record.ma10 { let _ = write!(csv_content, "{}", v / price_divisor); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma20 { let _ = write!(csv_content, "{}", v / price_divisor); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma50 { let _ = write!(csv_content, "{}", v / price_divisor); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma100 { let _ = write!(csv_content, "{}", v / price_divisor); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma200 { let _ = write!(csv_content, "{}", v / price_divisor); }
+                    csv_content.push(',');
+
+                    // MA scores (no price divisor)
+                    if let Some(v) = record.ma10_score { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma20_score { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma50_score { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma100_score { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.ma200_score { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+
+                    // Change percentages
+                    if let Some(v) = record.close_changed { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.volume_changed { let _ = write!(csv_content, "{}", v); }
+                    csv_content.push(',');
+                    if let Some(v) = record.total_money_changed { let _ = write!(csv_content, "{}", v); }
+
+                    csv_content.push('\n');
                 } else {
                     // Write row with basic fields only
-                    csv_content.push_str(&format!(
+                    let _ = write!(
+                        csv_content,
                         "{},{},{},{},{},{},{}\n",
                         ticker,
                         time_str,
@@ -404,11 +437,19 @@ fn generate_csv_response(
                         record.low / price_divisor,
                         record.close / price_divisor,
                         record.volume,
-                    ));
+                    );
                 }
             }
         }
     }
+
+    let duration = start_time.elapsed();
+    tracing::info!(
+        "CSV generation: {} records, {} bytes, {:.2}ms",
+        total_records,
+        csv_content.len(),
+        duration.as_secs_f64() * 1000.0
+    );
 
     // Set CSV content type
     headers.insert(

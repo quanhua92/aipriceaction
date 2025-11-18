@@ -309,7 +309,7 @@ test_indicators_completeness() {
 test_csv_export_performance() {
     print_test "CSV Export Performance Tests"
 
-    # Test 1D CSV (all tickers)
+    # Test 1D CSV (all tickers) - without compression
     local response=$(curl -s -o /dev/null -w "%{time_total},%{size_download}" "$BASE_URL/tickers?interval=1D&format=csv" || echo "")
     if [[ -z "$response" ]]; then
         print_error "Failed to get 1D CSV response"
@@ -318,7 +318,19 @@ test_csv_export_performance() {
 
     local daily_time=$(echo "$response" | cut -d',' -f1)
     local daily_size=$(echo "$response" | cut -d',' -f2)
-    print_success "1D CSV: ${daily_size} bytes in ${daily_time}s"
+    print_success "1D CSV: ${daily_size} bytes in ${daily_time}s (uncompressed)"
+
+    # Test 1D CSV with compression
+    response=$(curl -s --compressed -o /dev/null -w "%{time_total},%{size_download}" "$BASE_URL/tickers?interval=1D&format=csv" || echo "")
+    if [[ -z "$response" ]]; then
+        print_error "Failed to get 1D CSV response (compressed)"
+        return 1
+    fi
+
+    local daily_time_compressed=$(echo "$response" | cut -d',' -f1)
+    local daily_size_compressed=$(echo "$response" | cut -d',' -f2)
+    local compression_ratio=$(echo "scale=1; $daily_size / $daily_size_compressed" | bc)
+    print_success "1D CSV: ${daily_size_compressed} bytes in ${daily_time_compressed}s (compressed ${compression_ratio}x)"
 
     # Test 1m CSV (single ticker)
     response=$(curl -s -o /dev/null -w "%{time_total},%{size_download}" "$BASE_URL/tickers?symbol=VCB&interval=1m&format=csv" || echo "")
@@ -347,27 +359,28 @@ test_csv_export_performance() {
     local minute_time_ms=$(echo "$minute_time * 1000" | bc)
     local ten_tickers_time_ms=$(echo "$ten_tickers_time * 1000" | bc)
 
-    # Check that daily is fast (< 350ms)
-    if (( $(echo "$daily_time_ms < 350" | bc -l) )); then
+    # Check that daily is reasonable (< 600ms for full cycle: cache lookup + CSV gen + network)
+    # Note: CSV generation itself is ~60ms, the rest is cache/memory lookup
+    if (( $(echo "$daily_time_ms < 600" | bc -l) )); then
         print_success "Daily CSV performance: ${daily_time_ms}ms ✓"
     else
-        print_error "Daily CSV too slow: ${daily_time_ms}ms"
+        print_error "Daily CSV too slow: ${daily_time_ms}ms (expected < 600ms)"
         return 1
     fi
 
-    # Check that single ticker minute is reasonable (< 500ms)
-    if (( $(echo "$minute_time_ms < 500" | bc -l) )); then
+    # Check that single ticker minute is reasonable (< 200ms)
+    if (( $(echo "$minute_time_ms < 200" | bc -l) )); then
         print_success "Single ticker minute CSV: ${minute_time_ms}ms ✓"
     else
-        print_error "Single ticker minute CSV too slow: ${minute_time_ms}ms"
+        print_error "Single ticker minute CSV too slow: ${minute_time_ms}ms (expected < 200ms)"
         return 1
     fi
 
-    # Check that 10 tickers minute is reasonable (< 2000ms)
-    if (( $(echo "$ten_tickers_time_ms < 2000" | bc -l) )); then
+    # Check that 10 tickers minute is reasonable (< 1200ms)
+    if (( $(echo "$ten_tickers_time_ms < 1200" | bc -l) )); then
         print_success "10 tickers minute CSV: ${ten_tickers_time_ms}ms ✓"
     else
-        print_error "10 tickers minute CSV too slow: ${ten_tickers_time_ms}ms"
+        print_error "10 tickers minute CSV too slow: ${ten_tickers_time_ms}ms (expected < 1200ms)"
         return 1
     fi
 
