@@ -112,7 +112,7 @@ pub struct SyncConfig {
     /// Force full download (disable resume mode)
     pub force_full: bool,
 
-    /// Number of concurrent batch requests (1 = sequential, 3 = default, higher = faster but more load)
+    /// Number of concurrent batch requests (1 = sequential, auto-detected based on CPU cores)
     pub concurrent_batches: usize,
 }
 
@@ -125,7 +125,7 @@ impl Default for SyncConfig {
             resume_days: None, // Use interval-specific defaults
             intervals: vec![Interval::Daily],
             force_full: false,
-            concurrent_batches: 3, // Default: 3 concurrent batch requests
+            concurrent_batches: 1, // Conservative default: sequential (prevents CPU overload on small VPS)
         }
     }
 }

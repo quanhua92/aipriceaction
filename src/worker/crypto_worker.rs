@@ -2,7 +2,7 @@ use crate::constants::IGNORED_CRYPTOS;
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, load_crypto_symbols, get_default_crypto_list_path};
 use crate::services::{CryptoSync, SharedHealthStats, csv_enhancer};
-use crate::utils::{get_crypto_data_dir, write_with_rotation};
+use crate::utils::{get_crypto_data_dir, write_with_rotation, get_concurrent_batches};
 use crate::worker::crypto_sync_info::{CryptoSyncInfo, get_crypto_sync_info_path};
 use chrono::Utc;
 use std::time::Duration;
@@ -389,11 +389,13 @@ async fn sync_crypto_interval(interval: Interval, symbols: &[String]) -> Result<
         .to_string();
 
     // Create sync config for single interval (resume mode, not full)
+    let concurrent_batches = get_concurrent_batches();
     let config = SyncConfig {
         intervals: vec![interval],
         start_date,
         end_date,
         force_full: false, // Resume mode - let CryptoSync categorize
+        concurrent_batches, // Auto-detected based on CPU cores
         ..Default::default()
     };
 

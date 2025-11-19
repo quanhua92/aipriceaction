@@ -239,6 +239,43 @@ pub fn deduplicate_stock_data_by_time(data: &mut Vec<StockData>) -> usize {
     removed
 }
 
+/// Auto-detect optimal worker threads based on CPU cores
+///
+/// Strategy:
+/// - 1-2 cores: 1 worker thread (minimal overhead for small VPS)
+/// - 3-4 cores: 2 worker threads (balance between throughput and overhead)
+/// - 5+ cores: 4 worker threads (better parallelism for larger systems)
+///
+/// This prevents oversubscription on small VPS (e.g., 2-core VPS gets 1 worker,
+/// not 8 workers causing 100% CPU usage).
+pub fn get_worker_threads() -> usize {
+    let cpus = num_cpus::get();
+
+    match cpus {
+        1..=2 => 1,  // Small VPS - minimize overhead
+        3..=4 => 2,  // Medium system - balance
+        _ => 4,      // Larger system - better parallelism
+    }
+}
+
+/// Auto-detect optimal concurrent batches based on CPU cores
+///
+/// Strategy:
+/// - 1-2 cores: 1 concurrent batch (sequential processing to avoid CPU contention)
+/// - 3-4 cores: 2 concurrent batches (moderate parallelism)
+/// - 5+ cores: 3 concurrent batches (maximum throughput)
+///
+/// This ensures that API batch fetching doesn't overwhelm small VPS systems.
+pub fn get_concurrent_batches() -> usize {
+    let cpus = num_cpus::get();
+
+    match cpus {
+        1..=2 => 1,  // Small VPS - sequential processing
+        3..=4 => 2,  // Medium system - moderate parallelism
+        _ => 3,      // Larger system - maximum throughput
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

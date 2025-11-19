@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
-use crate::utils::{get_market_data_dir, write_with_rotation};
+use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -138,6 +138,7 @@ async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
         .to_string();
 
     // Create sync config for daily interval only
+    let concurrent_batches = get_concurrent_batches();
     let config = SyncConfig::new(
         start_date,
         Some(end_date),
@@ -145,7 +146,7 @@ async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
         Some(2), // resume_days: 2 days adaptive mode
         vec![Interval::Daily],
         false, // not full sync
-        3, // concurrent_batches
+        concurrent_batches, // Auto-detected based on CPU cores
     );
 
     // Run sync directly (already in async context)

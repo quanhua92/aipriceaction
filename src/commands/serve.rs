@@ -1,6 +1,6 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
-use crate::utils::{get_market_data_dir, get_crypto_data_dir};
+use crate::utils::{get_market_data_dir, get_crypto_data_dir, get_worker_threads};
 use crate::worker;
 use crate::server;
 use std::sync::Arc;
@@ -109,16 +109,28 @@ pub async fn run(port: u16) {
     println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
     println!("   ℹ️  Minute data uses disk cache (for aggregated intervals)");
 
-    // Create dedicated runtime for workers (8 threads for heavy I/O batching)
+    // CPU auto-detection for optimal performance
+    println!();
+    println!("🔧 CPU Configuration (auto-detected):");
+    let cpu_cores = num_cpus::get();
+    let worker_threads = crate::utils::get_worker_threads();
+    let concurrent_batches = crate::utils::get_concurrent_batches();
+    println!("   💻 CPU cores detected: {}", cpu_cores);
+    println!("   🔧 Worker threads:     {} (1-2 cores→1, 3-4 cores→2, 5+ cores→4)", worker_threads);
+    println!("   ⚡ Concurrent batches: {} (1-2 cores→1, 3-4 cores→2, 5+ cores→3)", concurrent_batches);
+    println!("   📝 Workers will use {} concurrent API batch requests", concurrent_batches);
+    println!();
+
+    // Create dedicated runtime for workers (auto-detected based on CPU cores)
     // Workers only write CSVs to disk, don't touch memory cache
-    println!("⚙️  Creating dedicated worker runtime (8 threads)...");
+    println!("⚙️  Creating dedicated worker runtime ({} threads)...", worker_threads);
     let worker_health_daily = shared_health_stats.clone();
     let worker_health_slow = shared_health_stats.clone();
     let worker_health_crypto = shared_health_stats.clone();
 
     std::thread::spawn(move || {
         let worker_runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(8)  // 8 threads for parallel batch API calls + CSV I/O
+            .worker_threads(worker_threads)  // Auto-detected based on CPU cores
             .thread_name("worker-pool")
             .enable_all()
             .build()

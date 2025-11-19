@@ -17,7 +17,7 @@ pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
 pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per ticker per interval
 
 /// Cache TTL constants
-pub const CACHE_TTL_SECONDS: i64 = 15; // 15 seconds TTL for memory cache
+pub const CACHE_TTL_SECONDS: i64 = 30; // 30 seconds TTL for memory cache (reduced from 15s for CPU efficiency)
 
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size

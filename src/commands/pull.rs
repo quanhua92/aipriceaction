@@ -1,7 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, validate_and_repair_interval};
-use crate::utils::get_market_data_dir;
+use crate::utils::{get_market_data_dir, get_concurrent_batches};
 
 pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
     // Parse intervals
@@ -29,6 +29,7 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
     }
 
     // Create sync config
+    let concurrent_batches = get_concurrent_batches();
     let config = SyncConfig::new(
         start_date.clone(),
         None, // Use default (today)
@@ -36,7 +37,7 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         resume_days,
         intervals.clone(),
         full,
-        3, // concurrent_batches: 3 concurrent requests
+        concurrent_batches, // Auto-detected based on CPU cores
     );
 
     // Step 0: Validate and repair CSV files (recovery step)
