@@ -22,13 +22,26 @@ impl AiPriceActionClient {
     /// * `base_url` - Base URL of the aipriceaction API (e.g., "https://api.aipriceaction.com")
     /// * `host_header` - Optional Host header value for CDN/proxy bypass
     pub fn new(base_url: String, host_header: Option<String>) -> Result<Self, Error> {
+        // Trim whitespace and remove trailing slashes from base_url
+        let base_url = base_url.trim().trim_end_matches('/').to_string();
+
+        debug!("After trimming, base_url: '{}'", base_url);
+
+        // Validate URL format
+        if !base_url.starts_with("http://") && !base_url.starts_with("https://") {
+            return Err(Error::Config(format!(
+                "Invalid base_url: must start with http:// or https://, got: '{}'",
+                base_url
+            )));
+        }
+
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()
             .map_err(|e| Error::Network(format!("Failed to create HTTP client: {}", e)))?;
 
         info!(
-            "Created AiPriceActionClient: base_url={}, host_header={:?}",
+            "Created AiPriceActionClient: base_url='{}', host_header={:?}",
             base_url, host_header
         );
 
