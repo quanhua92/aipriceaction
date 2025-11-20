@@ -613,6 +613,116 @@
 
       </section>
 
+      <!-- Volume Profile Analysis Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📊 Volume Profile Analysis</h2>
+          <button
+            onclick="fetchVolumeProfile()"
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
+            Analyze Volume Profile
+          </button>
+        </div>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Discover where the most trading occurred at different price levels. Identify Point of Control (POC), Value Area, High Volume Nodes (HVN), and Low Volume Nodes (LVN) for better trading decisions.
+        </div>
+
+        <!-- Form Inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <!-- Symbol Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Symbol</label>
+            <input
+              type="text"
+              id="vp-symbol"
+              value="VJC"
+              placeholder="e.g., VJC, VCB, FPT, BTC"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+          </div>
+
+          <!-- Date Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Analysis Date</label>
+            <input
+              type="date"
+              id="vp-date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
+          </div>
+
+          <!-- Bins Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Price Bins</label>
+            <input
+              type="number"
+              id="vp-bins"
+              value="10"
+              min="5"
+              max="100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Number of price levels (5-100, default: 10 for readability)</p>
+          </div>
+
+          <!-- Value Area Percentage -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Value Area %</label>
+            <input
+              type="number"
+              id="vp-value-area-pct"
+              value="70"
+              min="50"
+              max="90"
+              step="5"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Default: 70% of volume</p>
+          </div>
+
+          <!-- Mode Select -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Market Mode</label>
+            <select
+              id="vp-mode"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+              <option value="vn" selected>Vietnamese Stocks (VN)</option>
+              <option value="crypto">Cryptocurrency</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <button
+            onclick="fetchVolumeProfile()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+            Fetch Volume Profile
+          </button>
+          <button
+            onclick="copyVolumeProfileUrl()"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+            Copy API URL
+          </button>
+        </div>
+
+        <!-- Important Note -->
+        <div class="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+          <p class="text-xs text-yellow-800">
+            <strong>⚠️ Note:</strong> Volume Profile analysis requires minute-level (1m) data.
+            Best used for intraday analysis. Historical analysis limited by minute data availability.
+          </p>
+        </div>
+
+        <!-- Result Display -->
+        <div id="volume-profile-result" class="mt-4 bg-white rounded border border-gray-200 hidden">
+          <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+            <span class="text-sm font-medium text-gray-700">Volume Profile Analysis</span>
+            <span id="volume-profile-count" class="text-xs text-gray-500"></span>
+          </div>
+          <div id="volume-profile-content" class="p-4">
+            <!-- Content will be populated by JavaScript -->
+          </div>
+        </div>
+      </section>
+
       <!-- API Documentation Section -->
       <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
         <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📚 API Reference</h2>
@@ -937,6 +1047,7 @@
     <script src="/public/js/ticker-explorer.js"></script>
     <script src="/public/js/analysis.js"></script>
       <script src="/public/js/sector-analysis.js"></script>
+    <script src="/public/js/volume-profile.js"></script>
     <script src="/public/js/app.js"></script>
 
     <!-- Set end_date to today by default -->
