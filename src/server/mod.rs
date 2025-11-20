@@ -92,13 +92,7 @@ impl AppState {
     }
 }
 
-// FromRef implementations to extract specific state components
-impl FromRef<AppState> for SharedDataStore {
-    fn from_ref(app_state: &AppState) -> SharedDataStore {
-        app_state.data_vn.clone() // Default to VN for backward compatibility
-    }
-}
-
+// FromRef implementation for health stats
 impl FromRef<AppState> for SharedHealthStats {
     fn from_ref(app_state: &AppState) -> SharedHealthStats {
         app_state.health_stats.clone()

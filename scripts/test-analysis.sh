@@ -265,6 +265,38 @@ test_top_performers() {
         fi
     fi
 
+    # Test 10: Crypto mode - top performers
+    print_test "Crypto mode top performers test (BTC, ETH)"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?mode=crypto&limit=5" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local analysis_type=$(echo "$response" | jq -r '.analysis_type // empty')
+        local performers_count=$(echo "$response" | jq '.data.performers | length // 0')
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+
+        print_result "Crypto mode analysis type correct" "top_performers" "$analysis_type"
+        print_result "Crypto performers returned" "greater_than_0" "$performers_count"
+
+        if [[ -n "$first_symbol" && "$first_symbol" != "null" ]]; then
+            print_success "Crypto mode returned symbol: ${first_symbol}"
+        fi
+    fi
+
+    # Test 11: Crypto mode - sort by close change
+    print_test "Crypto mode sort by close change test"
+    response=$(curl -s "$BASE_URL/analysis/top-performers?mode=crypto&sort_by=close_changed&limit=5" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local first_symbol=$(echo "$response" | jq -r '.data.performers[0].symbol // empty')
+        local first_close_changed=$(echo "$response" | jq -r '.data.performers[0].close_changed // empty')
+
+        print_result "Crypto close change sort received" "not_empty" "$first_symbol"
+
+        if [[ -n "$first_close_changed" && "$first_close_changed" != "null" ]]; then
+            print_success "Crypto close change value: ${first_close_changed}%"
+        fi
+    fi
+
     echo ""
 }
 
@@ -319,6 +351,38 @@ test_ma_scores_by_sector() {
         else
             print_error "Expected error for invalid MA period but got valid response"
         fi
+    fi
+
+    # Test 5: Crypto mode - MA scores by sector
+    print_test "Crypto mode MA scores test (MA20)"
+    response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?mode=crypto&ma_period=20" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local analysis_type=$(echo "$response" | jq -r '.analysis_type // empty')
+        local sectors_count=$(echo "$response" | jq '.data.sectors | length // 0')
+        local ma_period=$(echo "$response" | jq -r '.data.ma_period // empty')
+
+        print_result "Crypto mode analysis type correct" "ma_scores_by_sector" "$analysis_type"
+        print_result "Crypto mode MA period correct" "20" "$ma_period"
+
+        if [[ $sectors_count -gt 0 ]]; then
+            print_success "Crypto mode returned ${sectors_count} sectors"
+        else
+            # Crypto mode might not have sectors, that's okay
+            print_success "Crypto mode response received (${sectors_count} sectors)"
+        fi
+    fi
+
+    # Test 6: Crypto mode - MA50 scores
+    print_test "Crypto mode MA50 scores test"
+    response=$(curl -s "$BASE_URL/analysis/ma-scores-by-sector?mode=crypto&ma_period=50&min_score=0.5" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local ma_period=$(echo "$response" | jq -r '.data.ma_period // empty')
+        local threshold=$(echo "$response" | jq -r '.data.threshold // empty')
+
+        print_result "Crypto MA50 period correct" "50" "$ma_period"
+        print_result "Crypto threshold correct" "0.5" "$threshold"
     fi
 
     echo ""
@@ -380,9 +444,12 @@ test_volume_profile() {
     response=$(curl -s "$BASE_URL/analysis/volume-profile?date=2024-01-15" || echo "")
 
     if [[ -n "$response" ]]; then
-        local error=$(echo "$response" | jq -r '.error // empty')
+        # Check for JSON error or plain text error (Axum deserialization error)
+        local error=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
         if [[ -n "$error" ]]; then
             print_success "Missing symbol properly rejected: $error"
+        elif [[ "$response" == *"missing field"* ]] || [[ "$response" == *"deserialize"* ]]; then
+            print_success "Missing symbol properly rejected: $response"
         else
             print_error "Expected error for missing symbol but got valid response"
         fi
@@ -428,10 +495,10 @@ test_volume_profile() {
     response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
 
     if [[ -n "$response" ]]; then
-        local has_poc=$(echo "$response" | jq 'has("data") and .data | has("poc")' || echo "false")
-        local has_value_area=$(echo "$response" | jq 'has("data") and .data | has("value_area")' || echo "false")
-        local has_profile=$(echo "$response" | jq 'has("data") and .data | has("profile")' || echo "false")
-        local has_statistics=$(echo "$response" | jq 'has("data") and .data | has("statistics")' || echo "false")
+        local has_poc=$(echo "$response" | jq 'has("data") and (.data | has("poc"))' || echo "false")
+        local has_value_area=$(echo "$response" | jq 'has("data") and (.data | has("value_area"))' || echo "false")
+        local has_profile=$(echo "$response" | jq 'has("data") and (.data | has("profile"))' || echo "false")
+        local has_statistics=$(echo "$response" | jq 'has("data") and (.data | has("statistics"))' || echo "false")
 
         if [[ "$has_poc" == "true" && "$has_value_area" == "true" && "$has_profile" == "true" && "$has_statistics" == "true" ]]; then
             print_success "All required fields present (POC, Value Area, Profile, Statistics)"

@@ -481,12 +481,16 @@ fn generate_csv_response(
 }
 
 /// GET /health - Health statistics endpoint
-#[instrument(skip(health_state, data_state))]
+#[instrument(skip(health_state, app_state))]
 pub async fn health_handler(
     State(health_state): State<SharedHealthStats>,
-    State(data_state): State<SharedDataStore>,
+    State(app_state): State<AppState>,
 ) -> impl IntoResponse {
     debug!("Received request for health stats");
+
+    // NOTE: Currently shows only VN market stats for backward compatibility
+    // TODO: Consider adding separate vn_stats and crypto_stats in future version
+    let data_state = app_state.get_data_store(Mode::Vn);
 
     let mut health_stats = health_state.read().await.clone();
 

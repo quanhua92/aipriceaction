@@ -203,7 +203,10 @@ src/server/analysis/
 
 ### Integration Points
 
-1. **Data Source**: `SharedDataStore` (already handles VN + Crypto modes)
+1. **Data Source**: `AppState` with mode-based DataStore selection
+   - Handler receives `State(app_state): State<AppState>`
+   - Use `app_state.get_data_store(mode)` to get correct DataStore (VN or Crypto)
+   - **IMPORTANT**: Never use `State<SharedDataStore>` directly - this bypasses mode selection
    - Fetch minute-level data: `Interval::Minute`
    - Single date filtering via `start_date` and `end_date`
 

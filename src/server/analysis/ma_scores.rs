@@ -9,9 +9,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use crate::{
-    services::data_store::SharedDataStore,
-    models::Interval,
+    models::{Interval, Mode},
     constants::INDEX_TICKERS,
+    server::AppState,
 };
 use super::{
     AnalysisResponse, parse_analysis_date,
@@ -38,6 +38,10 @@ pub struct MaScoresBySectorQuery {
 
     /// Maximum stocks per sector (default: 10)
     pub top_per_sector: Option<usize>,
+
+    /// Market mode: vn (default) or crypto
+    #[serde(default)]
+    pub mode: Mode,
 }
 
 fn default_ma_period() -> u32 {
@@ -80,9 +84,12 @@ pub struct StockMaInfo {
 
 /// Handler for MA scores by sector analysis endpoint
 pub async fn ma_scores_by_sector_handler(
-    State(data_state): State<SharedDataStore>,
+    State(app_state): State<AppState>,
     Query(params): Query<MaScoresBySectorQuery>,
 ) -> impl IntoResponse {
+    // Get DataStore based on mode
+    let data_state = app_state.get_data_store(params.mode);
+
     // Validate MA period
     if ![10, 20, 50, 100, 200].contains(&params.ma_period) {
         return (

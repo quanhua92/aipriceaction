@@ -10,9 +10,10 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::{
-    services::data_store::SharedDataStore,
-    models::Interval,
+    models::{Interval, Mode},
     constants::INDEX_TICKERS,
+    server::AppState,
+    services::SharedDataStore,
 };
 use super::{
     AnalysisResponse, validate_limit, parse_analysis_date,
@@ -44,6 +45,10 @@ pub struct TopPerformersQuery {
 
     /// Include hourly breakdown (default: false)
     pub with_hour: Option<bool>,
+
+    /// Market mode: vn (default) or crypto
+    #[serde(default)]
+    pub mode: Mode,
 }
 
 fn default_sort_by() -> String {
@@ -284,9 +289,12 @@ fn sort_performers(performers: Vec<PerformerInfo>, sort_by: &str, direction: &st
 
 /// Handler for top performers analysis endpoint
 pub async fn top_performers_handler(
-    State(data_state): State<SharedDataStore>,
+    State(app_state): State<AppState>,
     Query(params): Query<TopPerformersQuery>,
 ) -> impl IntoResponse {
+    // Get DataStore based on mode
+    let data_state = app_state.get_data_store(params.mode);
+
     // Load ticker groups for sector mapping
     let ticker_groups = match load_ticker_groups() {
         Ok(groups) => groups,
