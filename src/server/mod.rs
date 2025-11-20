@@ -202,6 +202,7 @@ pub async fn serve(
     tracing::info!("  GET /tickers/group");
     tracing::info!("  GET /analysis/top-performers?sort_by=close_changed&limit=10");
     tracing::info!("  GET /analysis/ma-scores-by-sector?ma_period=20");
+    tracing::info!("  GET /analysis/volume-profile?symbol=VCB&date=2024-01-15");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
@@ -263,4 +264,5 @@ fn analysis_routes() -> Router<AppState> {
     Router::new()
         .route("/top-performers", get(analysis::top_performers_handler))
         .route("/ma-scores-by-sector", get(analysis::ma_scores_by_sector_handler))
+        .route("/volume-profile", get(analysis::volume_profile_handler))
 }

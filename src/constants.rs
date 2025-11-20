@@ -77,3 +77,39 @@ pub const BATCH_FAILURE_THRESHOLD_MINUTES: i64 = 15;
 /// Cryptocurrencies to ignore during sync (no data available from CryptoCompare API)
 /// These symbols consistently fail with "Max retries exceeded" errors
 pub const IGNORED_CRYPTOS: &[&str] = &["MNT", "IOTA"];
+
+/// Vietnamese Stock Market Tick Sizes
+///
+/// Vietnamese stocks use dynamic tick sizes based on current price level:
+///
+/// | Price Range (VND) | Tick Size (VND) | Example             |
+/// |-------------------|-----------------|---------------------|
+/// | < 10,000          | 10              | 9,990 → 10,000     |
+/// | 10,000 - 49,990   | 50              | 23,200 → 23,250    |
+/// | ≥ 50,000          | 100             | 95,400 → 95,500    |
+///
+/// These tick sizes are used in Volume Profile calculations to determine
+/// the granularity of price level aggregation.
+///
+/// **Note**: All prices in aipriceaction are stored in full VND format
+/// (e.g., 23,200 not 23.2), so tick sizes are also in full format.
+pub const TICK_SIZE_VN_LOW: f64 = 10.0;      // For prices < 10,000 VND
+pub const TICK_SIZE_VN_MID: f64 = 50.0;      // For prices 10,000 - 49,990 VND
+pub const TICK_SIZE_VN_HIGH: f64 = 100.0;    // For prices >= 50,000 VND
+
+/// Cryptocurrency Tick Sizes
+///
+/// Cryptocurrencies use much finer tick sizes due to their decimal nature:
+///
+/// | Price Range (USD) | Tick Size | Example              |
+/// |-------------------|-----------|----------------------|
+/// | < 1.0             | 0.0001    | 0.5234 → 0.5235     |
+/// | 1.0 - 99.99       | 0.01      | 45.67 → 45.68       |
+/// | 100.0 - 999.99    | 0.1       | 456.7 → 456.8       |
+/// | ≥ 1,000           | 1.0       | 45,678 → 45,679     |
+///
+/// These are used for crypto Volume Profile calculations.
+pub const TICK_SIZE_CRYPTO_MICRO: f64 = 0.0001;  // For prices < $1
+pub const TICK_SIZE_CRYPTO_SMALL: f64 = 0.01;    // For prices $1 - $99.99
+pub const TICK_SIZE_CRYPTO_MID: f64 = 0.1;       // For prices $100 - $999.99
+pub const TICK_SIZE_CRYPTO_LARGE: f64 = 1.0;     // For prices >= $1,000

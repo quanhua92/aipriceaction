@@ -294,6 +294,212 @@ GET /analysis/ma-scores-by-sector?date=2024-01-10&ma_period=20
 
 ---
 
+### GET /analysis/volume-profile
+
+Provides volume distribution analysis across price levels for a specific trading session using minute-level OHLCV data. Also known as Price-by-Volume or Market Profile.
+
+#### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `symbol` | string | **required** | Stock ticker symbol (e.g., "VCB", "FPT") |
+| `date` | string | **required** | Trading date in YYYY-MM-DD format (e.g., "2024-01-15") |
+| `mode` | string | "vn" | Market mode: "vn" for Vietnamese stocks or "crypto" for cryptocurrencies |
+| `bins` | number | 50 | Number of price bins for aggregation (10-200) |
+| `value_area_pct` | number | 70.0 | Value area percentage (60-90) |
+
+#### Response Structure
+
+```json
+{
+  "analysis_date": "2024-01-15",
+  "analysis_type": "volume_profile",
+  "total_analyzed": 360,
+  "data": {
+    "symbol": "VCB",
+    "total_volume": 15234500,
+    "total_minutes": 360,
+    "price_range": {
+      "low": 60100.0,
+      "high": 60800.0,
+      "spread": 700.0
+    },
+    "poc": {
+      "price": 60400.0,
+      "volume": 850000.0,
+      "percentage": 5.58
+    },
+    "value_area": {
+      "low": 60200.0,
+      "high": 60600.0,
+      "volume": 10664150.0,
+      "percentage": 70.0
+    },
+    "profile": [
+      {
+        "price": 60100.0,
+        "volume": 125000.0,
+        "percentage": 0.82,
+        "cumulative_percentage": 0.82
+      },
+      {
+        "price": 60150.0,
+        "volume": 340000.0,
+        "percentage": 2.23,
+        "cumulative_percentage": 3.05
+      }
+    ],
+    "statistics": {
+      "mean_price": 60385.5,
+      "median_price": 60400.0,
+      "std_deviation": 145.2,
+      "skewness": 0.15
+    }
+  }
+}
+```
+
+#### Field Descriptions
+
+**Session Data:**
+- `symbol`: Stock ticker symbol
+- `total_volume`: Sum of all volume across all minute candles
+- `total_minutes`: Number of minute candles processed (typically 360 for full day)
+
+**Price Range:**
+- `low`: Lowest price reached during the session in full VND
+- `high`: Highest price reached during the session in full VND
+- `spread`: Price range (high - low)
+
+**Point of Control (POC):**
+- `price`: Price level with highest traded volume (most significant support/resistance)
+- `volume`: Total volume traded at this price level
+- `percentage`: Percentage of total volume at POC
+
+**Value Area (VA):**
+- `low`: Lower bound of value area
+- `high`: Upper bound of value area
+- `volume`: Total volume within value area
+- `percentage`: Percentage of total volume in value area (typically 70%)
+
+**Volume Profile:**
+- `price`: Price level in full VND
+- `volume`: Total volume traded at this price level
+- `percentage`: Percentage of total volume (volume / total_volume × 100)
+- `cumulative_percentage`: Running total of volume percentage
+
+**Statistics:**
+- `mean_price`: Volume-weighted average price
+- `median_price`: Price at 50th percentile of volume
+- `std_deviation`: Volume-weighted standard deviation
+- `skewness`: Distribution skewness (positive = tail on right side)
+
+#### Volume Profile Concepts
+
+**Point of Control (POC):**
+- Price level with highest volume
+- Represents "fair value" where market agreed most
+- Strong support/resistance level for future price action
+- Often acts as magnet during price discovery
+
+**Value Area (VA):**
+- Price range containing 70% of volume (centered on POC)
+- Represents primary trading range for the session
+- Prices outside VA are considered outliers
+- VA boundaries become key support/resistance levels
+
+**High Volume Nodes (HVN):**
+- Price levels with significantly high volume
+- Strong support/resistance areas
+- Price tends to slow down or consolidate at these levels
+
+**Low Volume Nodes (LVN):**
+- Price levels with minimal volume
+- Areas of quick price movement (no agreement)
+- Often lead to volatile breakouts when revisited
+
+#### Tick Sizes
+
+**Vietnamese Stocks:**
+| Price Range (VND) | Tick Size (VND) |
+|-------------------|-----------------|
+| < 10,000 | 10 |
+| 10,000 - 49,990 | 50 |
+| ≥ 50,000 | 100 |
+
+**Cryptocurrencies:**
+| Price Range (USD) | Tick Size |
+|-------------------|-----------|
+| < 1.0 | 0.0001 |
+| 1.0 - 99.99 | 0.01 |
+| 100.0 - 999.99 | 0.1 |
+| ≥ 1,000 | 1.0 |
+
+#### Example Requests
+
+```bash
+# Basic volume profile for VCB
+GET /analysis/volume-profile?symbol=VCB&date=2024-01-15
+
+# High-resolution profile (more bins)
+GET /analysis/volume-profile?symbol=FPT&date=2024-01-15&bins=100
+
+# Custom value area (80% instead of 70%)
+GET /analysis/volume-profile?symbol=HPG&date=2024-01-15&value_area_pct=80
+
+# Crypto volume profile
+GET /analysis/volume-profile?symbol=BTC&date=2024-01-15&mode=crypto
+
+# Multiple requests for comparison
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-15" \
+     -o vcb_profile.json
+curl "http://localhost:3000/analysis/volume-profile?symbol=FPT&date=2024-01-15" \
+     -o fpt_profile.json
+```
+
+#### Use Cases
+
+**1. Support/Resistance Identification:**
+- POC and Value Area boundaries are key levels
+- High volume nodes indicate strong support/resistance
+- Use for entry/exit planning
+
+**2. Fair Value Analysis:**
+- POC represents market's agreed fair value
+- Prices above/below VA are considered overvalued/undervalued
+- Mean reversion opportunities when price strays from POC
+
+**3. Breakout Confirmation:**
+- Low volume nodes often lead to breakouts
+- Monitor price action when approaching LVN areas
+- High volume at breakout level confirms strength
+
+**4. Session Analysis:**
+- Compare daily profiles to identify changing market structure
+- Expanding VA indicates increased volatility
+- Narrow VA suggests consolidation
+
+**5. Intraday Trading:**
+- POC acts as magnet during trading session
+- Price tends to return to high volume areas
+- Use VA boundaries for position sizing
+
+#### Algorithm Details
+
+Volume Profile uses the **Uniform Distribution Method** (also called "smearing") since tick-by-tick data is not available:
+
+1. For each minute candle, volume is distributed evenly across all price ticks between Low and High
+2. Price indices are calculated as: `Round(price / tick_size)` to avoid floating-point precision errors
+3. Volume accumulates in a HashMap with integer keys
+4. Results are aggregated into bins for visualization
+5. POC is calculated as the price level with maximum volume
+6. Value Area expands from POC until reaching target percentage (70% default)
+
+**Complexity:** O(M × T) where M = minute candles (360), T = average ticks per candle (~10-20)
+**Performance:** ~60-120ms response time (includes data fetch + calculation)
+
+---
+
 ## Error Handling
 
 ### HTTP Status Codes
@@ -301,7 +507,8 @@ GET /analysis/ma-scores-by-sector?date=2024-01-10&ma_period=20
 | Status Code | Description | Common Causes |
 |-------------|-------------|----------------|
 | `200` | Success | Request processed successfully |
-| `400` | Bad Request | Invalid parameters (e.g., invalid MA period) |
+| `400` | Bad Request | Invalid parameters (e.g., invalid MA period, missing required fields, invalid date format) |
+| `404` | Not Found | No data available for specified symbol/date combination |
 | `500` | Internal Server Error | Sector data loading failure |
 
 ### Error Response Format
@@ -318,6 +525,8 @@ GET /analysis/ma-scores-by-sector?date=2024-01-10&ma_period=20
 2. **Invalid Date Format**: Date not in YYYY-MM-DD format
 3. **Sector Data Unavailable**: ticker_group.json file missing or corrupted
 4. **Invalid Date**: Future dates or dates with no available data
+5. **Missing Required Parameters**: Volume profile requires both symbol and date
+6. **No Minute Data**: Volume profile requires minute-level data for the specified date
 
 ---
 
@@ -405,6 +614,11 @@ The test script covers:
 4. **Trend Confirmation**: Long-term trend analysis
    ```bash
    GET /analysis/top-performers?sort_by=ma200_score&limit=10
+   ```
+
+5. **Volume Distribution Analysis**: Identify support/resistance from volume profile
+   ```bash
+   GET /analysis/volume-profile?symbol=VCB&date=2024-01-15
    ```
 
 ### Sample Analysis Response

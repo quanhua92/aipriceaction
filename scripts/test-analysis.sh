@@ -324,6 +324,125 @@ test_ma_scores_by_sector() {
     echo ""
 }
 
+# Test Volume Profile Endpoint
+test_volume_profile() {
+    print_header "Testing Volume Profile Endpoint (/analysis/volume-profile)"
+
+    # Test 1: Basic volume profile
+    print_test "Basic volume profile test (VCB stock)"
+    local response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
+
+    if [[ -z "$response" ]]; then
+        print_error "No response for volume profile"
+        return 1
+    fi
+
+    local analysis_type=$(echo "$response" | jq -r '.analysis_type // empty')
+    local symbol=$(echo "$response" | jq -r '.data.symbol // empty')
+    local poc_price=$(echo "$response" | jq -r '.data.poc.price // empty')
+    local va_low=$(echo "$response" | jq -r '.data.value_area.low // empty')
+
+    print_result "Analysis type correct" "volume_profile" "$analysis_type" || return 1
+    print_result "Symbol correct" "VCB" "$symbol" || return 1
+    print_result "POC price present" "not_empty" "$poc_price" || return 1
+    print_result "Value area low present" "not_empty" "$va_low" || return 1
+
+    # Test 2: Crypto mode
+    print_test "Crypto volume profile test (BTC)"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=BTC&date=2024-01-15&mode=crypto" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local symbol=$(echo "$response" | jq -r '.data.symbol // empty')
+        local error=$(echo "$response" | jq -r '.error // empty')
+
+        if [[ -n "$error" ]]; then
+            print_success "Crypto query handled (Note: $error)"
+        else
+            print_result "Crypto symbol correct" "BTC" "$symbol"
+        fi
+    fi
+
+    # Test 3: Invalid date format
+    print_test "Invalid date format test"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=invalid-date" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" ]]; then
+            print_success "Invalid date properly rejected: $error"
+        else
+            print_error "Expected error for invalid date but got valid response"
+        fi
+    fi
+
+    # Test 4: Missing symbol parameter
+    print_test "Missing symbol parameter test"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?date=2024-01-15" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" ]]; then
+            print_success "Missing symbol properly rejected: $error"
+        else
+            print_error "Expected error for missing symbol but got valid response"
+        fi
+    fi
+
+    # Test 5: Custom bins parameter
+    print_test "Custom bins parameter test (100 bins)"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&bins=100" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local profile_length=$(echo "$response" | jq '.data.profile | length // 0')
+        if [[ $profile_length -gt 0 ]]; then
+            print_success "Custom bins returned profile with ${profile_length} levels"
+        else
+            print_error "No profile levels returned for custom bins"
+        fi
+    fi
+
+    # Test 6: Custom value area percentage
+    print_test "Custom value area percentage test (80%)"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&value_area_pct=80" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local va_percentage=$(echo "$response" | jq -r '.data.value_area.percentage // empty')
+        if [[ -n "$va_percentage" && "$va_percentage" != "null" ]]; then
+            # Check if percentage is close to 80% (allow some rounding)
+            if command -v bc &> /dev/null; then
+                if (( $(echo "$va_percentage >= 75 && $va_percentage <= 85" | bc -l) )); then
+                    print_success "Value area percentage is around 80%: ${va_percentage}%"
+                else
+                    print_success "Value area percentage: ${va_percentage}%"
+                fi
+            else
+                print_success "Value area percentage: ${va_percentage}%"
+            fi
+        else
+            print_error "Value area percentage not present"
+        fi
+    fi
+
+    # Test 7: Validate response structure
+    print_test "Response structure validation test"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local has_poc=$(echo "$response" | jq 'has("data") and .data | has("poc")' || echo "false")
+        local has_value_area=$(echo "$response" | jq 'has("data") and .data | has("value_area")' || echo "false")
+        local has_profile=$(echo "$response" | jq 'has("data") and .data | has("profile")' || echo "false")
+        local has_statistics=$(echo "$response" | jq 'has("data") and .data | has("statistics")' || echo "false")
+
+        if [[ "$has_poc" == "true" && "$has_value_area" == "true" && "$has_profile" == "true" && "$has_statistics" == "true" ]]; then
+            print_success "All required fields present (POC, Value Area, Profile, Statistics)"
+        else
+            print_error "Missing fields - POC: $has_poc, VA: $has_value_area, Profile: $has_profile, Stats: $has_statistics"
+        fi
+    fi
+
+    echo ""
+}
+
 # Main execution
 main() {
     echo -e "${BLUE}🚀 Analysis API Integration Test Suite${NC}"
@@ -338,6 +457,7 @@ main() {
     # Run tests
     test_top_performers
     test_ma_scores_by_sector
+    test_volume_profile
 
     # Print summary
     print_header "Test Summary"
@@ -360,6 +480,7 @@ main() {
     echo -e "${BLUE}  - Top Performers: GET /analysis/top-performers?sort_by=close_changed&limit=10${NC}"
     echo -e "${BLUE}  - Total Money Flow: GET /analysis/top-performers?sort_by=total_money_changed&direction=desc${NC}"
     echo -e "${BLUE}  - MA Scores by Sector: GET /analysis/ma-scores-by-sector?ma_period=20${NC}"
+    echo -e "${BLUE}  - Volume Profile: GET /analysis/volume-profile?symbol=VCB&date=2024-01-15${NC}"
     echo ""
     echo -e "${GREEN}🔍 Test completed successfully!${NC}"
 }

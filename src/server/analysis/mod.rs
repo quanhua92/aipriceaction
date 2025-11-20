@@ -5,6 +5,7 @@
 
 pub mod performers;
 pub mod ma_scores;
+pub mod volume_profile;
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
@@ -14,6 +15,7 @@ use std::collections::HashMap;
 /// Re-export handlers for easier routing
 pub use performers::top_performers_handler;
 pub use ma_scores::ma_scores_by_sector_handler;
+pub use volume_profile::volume_profile_handler;
 
 /// Common query parameters for analysis endpoints
 #[derive(Debug, Deserialize)]
