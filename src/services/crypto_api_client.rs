@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use reqwest;
 use serde_json::Value;
 use std::collections::HashMap;
-use tracing::{info, debug};
+use tracing::{info, debug, warn, error};
 
 /// Client for fetching crypto data from another aipriceaction API instance
 /// Used when CryptoCompare API is blocked but we have access to another server
@@ -71,19 +71,35 @@ impl AiPriceActionClient {
         );
 
         // Build request
-        let mut request = self.client.get(&url);
+        let mut request_builder = self.client.get(&url);
 
         // Add Host header if provided (for CDN/proxy bypass)
+        // Note: reqwest handles Host header specially, so we use header() carefully
         if let Some(ref host) = self.host_header {
-            request = request.header("Host", host);
-            debug!("Added Host header: {}", host);
+            debug!("Setting Host header: {}", host);
+            // Use HeaderValue to ensure proper encoding
+            use reqwest::header::{HeaderValue, HOST};
+            match HeaderValue::from_str(host) {
+                Ok(header_value) => {
+                    request_builder = request_builder.header(HOST, header_value);
+                    debug!("Host header set successfully");
+                }
+                Err(e) => {
+                    warn!("Failed to set Host header '{}': {}. Proceeding without custom Host header.", host, e);
+                }
+            }
         }
 
         // Execute request
-        let response = request
+        debug!("Sending request to: {}", url);
+        let response = request_builder
             .send()
             .await
-            .map_err(|e| Error::Network(format!("API request failed: {}", e)))?;
+            .map_err(|e| {
+                let error_msg = format!("API request failed: {} (url: {}, host: {:?})", e, url, self.host_header);
+                error!("{}", error_msg);
+                Error::Network(error_msg)
+            })?;
 
         // Check status
         if !response.status().is_success() {
