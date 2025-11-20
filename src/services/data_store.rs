@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::SystemTime;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
@@ -198,6 +199,9 @@ pub struct DataStore {
     disk_cache_size: RwLock<usize>,
     /// Maximum cache size in bytes (configurable via env)
     max_cache_size_bytes: usize,
+    /// File modification time tracker for auto-reload optimization
+    /// Key: (ticker, interval), Value: SystemTime from fs::metadata().modified()
+    file_mtimes: RwLock<HashMap<(String, Interval), SystemTime>>,
 }
 
 impl DataStore {
@@ -224,6 +228,7 @@ impl DataStore {
             disk_cache: RwLock::new(HashMap::new()),
             disk_cache_size: RwLock::new(0),
             max_cache_size_bytes,
+            file_mtimes: RwLock::new(HashMap::new()),
         }
     }
 
@@ -241,6 +246,14 @@ impl DataStore {
         // Step 1: Read all CSV files WITHOUT holding any locks
         // This prevents file I/O from blocking API requests
         let mut data = HashMap::new();
+        let mut files_read = 0;
+        let mut files_skipped = 0;
+
+        // Read current mtimes snapshot (acquire lock briefly)
+        let mtimes_snapshot = {
+            let mtimes = self.file_mtimes.read().await;
+            mtimes.clone()
+        };
 
         // Read all ticker directories
         let entries = std::fs::read_dir(&self.market_data_dir)
@@ -265,42 +278,108 @@ impl DataStore {
                 continue;
             }
 
-            // Read and parse CSV (blocking I/O happens here, NO locks held)
-            match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
-                Ok(mut ticker_data) => {
-                    if !ticker_data.is_empty() {
-                        // Apply record limit if specified (keep last N records)
-                        if let Some(max_records) = limit {
-                            if ticker_data.len() > max_records {
-                                // Sort descending by time and take last N records
-                                ticker_data.sort_by(|a, b| b.time.cmp(&a.time));
-                                ticker_data.truncate(max_records);
-                                // Sort back to ascending order for consistency
-                                ticker_data.sort_by(|a, b| a.time.cmp(&b.time));
+            // Check modification time before reading
+            let mtime_key = (ticker.clone(), interval);
+            let should_read = match std::fs::metadata(&csv_path) {
+                Ok(metadata) => {
+                    match metadata.modified() {
+                        Ok(current_mtime) => {
+                            // Compare with stored mtime
+                            match mtimes_snapshot.get(&mtime_key) {
+                                Some(stored_mtime) => {
+                                    if current_mtime != *stored_mtime {
+                                        // File modified, need to reload
+                                        tracing::debug!("File modified: {}/{}", ticker, interval.to_filename());
+                                        true
+                                    } else {
+                                        // File unchanged, skip reading
+                                        tracing::debug!("File unchanged, skipping: {}/{}", ticker, interval.to_filename());
+                                        files_skipped += 1;
+                                        false
+                                    }
+                                }
+                                None => {
+                                    // New file, need to load
+                                    tracing::debug!("New file detected: {}/{}", ticker, interval.to_filename());
+                                    true
+                                }
                             }
                         }
-                        data.insert(ticker.clone(), ticker_data);
+                        Err(e) => {
+                            tracing::warn!("Failed to get mtime for {}/{}: {}", ticker, interval.to_filename(), e);
+                            true // Read anyway if mtime check fails
+                        }
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to read CSV for {}/{}: {}", ticker, interval.to_filename(), e);
-                    continue;
+                    tracing::warn!("Failed to get metadata for {}/{}: {}", ticker, interval.to_filename(), e);
+                    true // Read anyway if metadata check fails
+                }
+            };
+
+            // Only read file if it has changed or is new
+            if should_read {
+                // Read and parse CSV (blocking I/O happens here, NO locks held)
+                match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
+                    Ok(mut ticker_data) => {
+                        if !ticker_data.is_empty() {
+                            // Apply record limit if specified (keep last N records)
+                            if let Some(max_records) = limit {
+                                if ticker_data.len() > max_records {
+                                    // Sort descending by time and take last N records
+                                    ticker_data.sort_by(|a, b| b.time.cmp(&a.time));
+                                    ticker_data.truncate(max_records);
+                                    // Sort back to ascending order for consistency
+                                    ticker_data.sort_by(|a, b| a.time.cmp(&b.time));
+                                }
+                            }
+                            data.insert(ticker.clone(), ticker_data);
+                            files_read += 1;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to read CSV for {}/{}: {}", ticker, interval.to_filename(), e);
+                        continue;
+                    }
                 }
             }
         }
 
+        tracing::info!(
+            "Auto-reload {} completed: {} files read, {} files skipped (unchanged)",
+            interval.to_filename(),
+            files_read,
+            files_skipped
+        );
+
         // Step 2: Acquire write lock ONLY to update in-memory cache (fast operation)
         // File I/O is complete, so this lock is held very briefly
-        {
+        let loaded_tickers: Vec<String> = {
             let mut store = self.data.write().await;
+            let mut loaded = Vec::new();
             for (ticker, ticker_data) in data {
+                loaded.push(ticker.clone());
                 store.entry(ticker)
                     .or_insert_with(HashMap::new)
                     .insert(interval, ticker_data);
             }
-        } // Write lock released immediately
+            loaded
+        }; // Write lock released immediately
 
-        // Step 3: Update cache timestamp (separate lock, also fast)
+        // Step 3: Update modification times for loaded files
+        {
+            let mut mtimes = self.file_mtimes.write().await;
+            for ticker in &loaded_tickers {
+                let csv_path = self.market_data_dir.join(ticker).join(interval.to_filename());
+                if let Ok(metadata) = std::fs::metadata(&csv_path) {
+                    if let Ok(mtime) = metadata.modified() {
+                        mtimes.insert((ticker.clone(), interval), mtime);
+                    }
+                }
+            }
+        }
+
+        // Step 4: Update cache timestamp (separate lock, also fast)
         {
             let mut cache_last_updated = self.cache_last_updated.write().await;
             *cache_last_updated = Utc::now();
