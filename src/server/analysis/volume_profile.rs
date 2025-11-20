@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc, NaiveDate};
 use crate::{
-    services::data_store::SharedDataStore,
     models::{Interval, StockData, Mode},
+    server::AppState,
 };
 use super::AnalysisResponse;
 
@@ -389,7 +389,7 @@ fn add_percentages(profile: &mut [PriceLevelVolume], total_volume: f64) {
 
 /// Handler for volume profile analysis endpoint
 pub async fn volume_profile_handler(
-    State(data_state): State<SharedDataStore>,
+    State(app_state): State<AppState>,
     Query(params): Query<VolumeProfileQuery>,
 ) -> impl IntoResponse {
     // Validate required parameters
@@ -429,6 +429,9 @@ pub async fn volume_profile_handler(
         "crypto" => Mode::Crypto,
         _ => Mode::Vn,
     };
+
+    // Get DataStore based on mode
+    let data_state = app_state.get_data_store(mode);
 
     // Validate bins parameter
     let num_bins = params.bins.unwrap_or(50).clamp(10, 200);
