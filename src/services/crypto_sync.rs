@@ -82,44 +82,82 @@ impl CryptoSync {
         if !resume_list.is_empty() {
             println!("\n🔄 Processing {} resume cryptos...", resume_list.len());
 
-            for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
-                print!("   [{}/{}] {} (from {})... ",
-                    idx + 1,
-                    resume_list.len(),
-                    symbol,
-                    last_date
-                );
+            // Batch optimization: Use batch fetch for ApiProxy (1 API call vs N calls)
+            if self.fetcher.is_using_api_proxy() {
+                println!("   🚀 Using batch fetch (1 API call for {} cryptos)", resume_list.len());
 
-                match self.fetch_recent(symbol, last_date, interval).await {
-                    Ok(data) => {
-                        match self.process_crypto(symbol, Some(data), interval, last_date).await {
-                            Ok(_) => {
-                                success_count += 1;
-                                println!("✅");
-                            }
-                            Err(e) => {
-                                eprintln!("❌ Save failed: {}", e);
-                                failed_cryptos.push(symbol.clone());
+                match self.fetcher.fetch_batch_recent(&resume_list, interval).await {
+                    Ok(batch_data) => {
+                        // Process each crypto from the batch
+                        for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
+                            print!("   [{}/{}] {} (from {})... ",
+                                idx + 1,
+                                resume_list.len(),
+                                symbol,
+                                last_date
+                            );
+
+                            let data = batch_data.get(symbol).cloned().unwrap_or_default();
+                            match self.process_crypto(symbol, Some(data), interval, last_date).await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    println!("✅");
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Save failed: {}", e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
                             }
                         }
                     }
                     Err(e) => {
-                        // Check if rate limit error - stop processing remaining tickers
-                        if matches!(e, Error::RateLimit) {
-                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", resume_list.len() - idx);
-                            // Add remaining tickers to failed list
-                            for (remaining_symbol, _) in resume_list.iter().skip(idx) {
-                                failed_cryptos.push(remaining_symbol.clone());
-                            }
-                            break;
-                        }
-                        eprintln!("❌ Fetch failed: {}", e);
-                        failed_cryptos.push(symbol.clone());
+                        eprintln!("❌ Batch fetch failed: {}, falling back to individual fetches", e);
+                        // If batch fails, the batch method already fell back to individual fetches
+                        // So we shouldn't get here, but handle it anyway
+                        failed_cryptos.extend(resume_list.iter().map(|(s, _)| s.clone()));
                     }
                 }
+            } else {
+                // CryptoCompare: Fetch individually (no batch API)
+                for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
+                    print!("   [{}/{}] {} (from {})... ",
+                        idx + 1,
+                        resume_list.len(),
+                        symbol,
+                        last_date
+                    );
 
-                // Rate limit delay
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                    match self.fetch_recent(symbol, last_date, interval).await {
+                        Ok(data) => {
+                            match self.process_crypto(symbol, Some(data), interval, last_date).await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    println!("✅");
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Save failed: {}", e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // Check if rate limit error - stop processing remaining tickers
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", resume_list.len() - idx);
+                                // Add remaining tickers to failed list
+                                for (remaining_symbol, _) in resume_list.iter().skip(idx) {
+                                    failed_cryptos.push(remaining_symbol.clone());
+                                }
+                                break;
+                            }
+                            eprintln!("❌ Fetch failed: {}", e);
+                            failed_cryptos.push(symbol.clone());
+                        }
+                    }
+
+                    // Rate limit delay
+                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                }
             }
         }
 
@@ -129,43 +167,78 @@ impl CryptoSync {
 
             let start_date = self.get_start_date_for_interval(interval);
 
-            for (idx, symbol) in full_list.iter().enumerate() {
-                print!("   [{}/{}] {} (full)... ",
-                    idx + 1,
-                    full_list.len(),
-                    symbol
-                );
+            // Batch optimization: Use batch fetch for ApiProxy (1 API call vs N calls)
+            if self.fetcher.is_using_api_proxy() {
+                println!("   🚀 Using batch fetch (1 API call for {} cryptos)", full_list.len());
 
-                match self.fetch_full_history(symbol, &start_date, interval).await {
-                    Ok(data) => {
-                        match self.process_crypto(symbol, Some(data), interval, "").await {
-                            Ok(_) => {
-                                success_count += 1;
-                                println!("✅");
-                            }
-                            Err(e) => {
-                                eprintln!("❌ Save failed: {}", e);
-                                failed_cryptos.push(symbol.clone());
+                match self.fetcher.fetch_batch_full_history(&full_list, &start_date, interval).await {
+                    Ok(batch_data) => {
+                        // Process each crypto from the batch
+                        for (idx, symbol) in full_list.iter().enumerate() {
+                            print!("   [{}/{}] {} (full)... ",
+                                idx + 1,
+                                full_list.len(),
+                                symbol
+                            );
+
+                            let data = batch_data.get(symbol).cloned().unwrap_or_default();
+                            match self.process_crypto(symbol, Some(data), interval, "").await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    println!("✅");
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Save failed: {}", e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
                             }
                         }
                     }
                     Err(e) => {
-                        // Check if rate limit error - stop processing remaining tickers
-                        if matches!(e, Error::RateLimit) {
-                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", full_list.len() - idx);
-                            // Add remaining tickers to failed list
-                            for remaining_symbol in full_list.iter().skip(idx) {
-                                failed_cryptos.push(remaining_symbol.clone());
-                            }
-                            break;
-                        }
-                        eprintln!("❌ Fetch failed: {}", e);
-                        failed_cryptos.push(symbol.clone());
+                        eprintln!("❌ Batch fetch failed: {}", e);
+                        failed_cryptos.extend(full_list.clone());
                     }
                 }
+            } else {
+                // CryptoCompare: Fetch individually (no batch API)
+                for (idx, symbol) in full_list.iter().enumerate() {
+                    print!("   [{}/{}] {} (full)... ",
+                        idx + 1,
+                        full_list.len(),
+                        symbol
+                    );
 
-                // Rate limit delay
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                    match self.fetch_full_history(symbol, &start_date, interval).await {
+                        Ok(data) => {
+                            match self.process_crypto(symbol, Some(data), interval, "").await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    println!("✅");
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Save failed: {}", e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            // Check if rate limit error - stop processing remaining tickers
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", full_list.len() - idx);
+                                // Add remaining tickers to failed list
+                                for remaining_symbol in full_list.iter().skip(idx) {
+                                    failed_cryptos.push(remaining_symbol.clone());
+                                }
+                                break;
+                            }
+                            eprintln!("❌ Fetch failed: {}", e);
+                            failed_cryptos.push(symbol.clone());
+                        }
+                    }
+
+                    // Rate limit delay
+                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                }
             }
         }
 

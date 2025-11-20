@@ -377,6 +377,139 @@ impl CryptoFetcher {
         Ok(all_data)
     }
 
+    /// Check if using alternative API proxy (for batch optimization)
+    pub fn is_using_api_proxy(&self) -> bool {
+        matches!(self.primary_source, CryptoDataSource::ApiProxy(_))
+    }
+
+    /// Batch fetch recent data for multiple cryptos (optimized for ApiProxy)
+    /// Returns HashMap<symbol, data> - one API call fetches all cryptos
+    pub async fn fetch_batch_recent(
+        &mut self,
+        symbols_with_dates: &[(String, String)],
+        interval: Interval,
+    ) -> Result<HashMap<String, Vec<OhlcvData>>, Error> {
+        if symbols_with_dates.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        // For ApiProxy: fetch once, distribute to all symbols
+        if let CryptoDataSource::ApiProxy(client) = &mut self.primary_source {
+            // Find the earliest last_date (to ensure we get data for all symbols)
+            let earliest_date = symbols_with_dates
+                .iter()
+                .map(|(_, date)| date.as_str())
+                .min()
+                .unwrap_or("2010-07-17");
+
+            info!("Batch fetching {} cryptos via API proxy (earliest date: {})", symbols_with_dates.len(), earliest_date);
+
+            match client.fetch_recent(earliest_date, interval).await {
+                Ok(all_data) => {
+                    // Group data by symbol
+                    let mut grouped: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+                    for record in all_data {
+                        if let Some(ref sym) = record.symbol {
+                            grouped.entry(sym.clone()).or_insert_with(Vec::new).push(record);
+                        }
+                    }
+
+                    // Filter each symbol's data to only include records after its last_date
+                    let mut filtered: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+                    for (symbol, last_date) in symbols_with_dates {
+                        if let Some(data) = grouped.get(symbol) {
+                            let symbol_data: Vec<OhlcvData> = data.iter()
+                                .filter(|d| d.time.format("%Y-%m-%d").to_string() > *last_date)
+                                .cloned()
+                                .collect();
+                            filtered.insert(symbol.clone(), symbol_data);
+                        }
+                    }
+
+                    info!("Batch fetch successful: {} cryptos fetched", filtered.len());
+                    return Ok(filtered);
+                }
+                Err(e) => {
+                    warn!("Batch fetch from API proxy failed: {}, falling back to individual fetches", e);
+                    // Fall through to individual fetches
+                }
+            }
+        }
+
+        // For CryptoCompare or if ApiProxy failed: fetch individually
+        let mut results = HashMap::new();
+        for (symbol, last_date) in symbols_with_dates {
+            match self.fetch_recent(symbol, last_date, interval).await {
+                Ok(data) => {
+                    results.insert(symbol.clone(), data);
+                }
+                Err(e) => {
+                    warn!("Individual fetch failed for {}: {}", symbol, e);
+                    results.insert(symbol.clone(), Vec::new());
+                }
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        }
+
+        Ok(results)
+    }
+
+    /// Batch fetch full history for multiple cryptos (optimized for ApiProxy)
+    /// Returns HashMap<symbol, data> - one API call fetches all cryptos
+    pub async fn fetch_batch_full_history(
+        &mut self,
+        symbols: &[String],
+        start_date: &str,
+        interval: Interval,
+    ) -> Result<HashMap<String, Vec<OhlcvData>>, Error> {
+        if symbols.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        // For ApiProxy: fetch once, distribute to all symbols
+        if let CryptoDataSource::ApiProxy(client) = &mut self.primary_source {
+            info!("Batch fetching {} cryptos full history via API proxy (from {})", symbols.len(), start_date);
+
+            match client.fetch_full_history(interval).await {
+                Ok(all_data) => {
+                    // Group data by symbol
+                    let mut grouped: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+                    for record in all_data {
+                        if let Some(ref sym) = record.symbol {
+                            if symbols.contains(sym) {
+                                grouped.entry(sym.clone()).or_insert_with(Vec::new).push(record);
+                            }
+                        }
+                    }
+
+                    info!("Batch fetch successful: {} cryptos fetched", grouped.len());
+                    return Ok(grouped);
+                }
+                Err(e) => {
+                    warn!("Batch fetch from API proxy failed: {}, falling back to individual fetches", e);
+                    // Fall through to individual fetches
+                }
+            }
+        }
+
+        // For CryptoCompare or if ApiProxy failed: fetch individually
+        let mut results = HashMap::new();
+        for symbol in symbols {
+            match self.fetch_full_history(symbol, start_date, interval).await {
+                Ok(data) => {
+                    results.insert(symbol.clone(), data);
+                }
+                Err(e) => {
+                    warn!("Individual fetch failed for {}: {}", symbol, e);
+                    results.insert(symbol.clone(), Vec::new());
+                }
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        }
+
+        Ok(results)
+    }
+
     /// Sequential fetch for multiple cryptos (no batch API for CryptoCompare)
     pub async fn sequential_fetch(
         &mut self,
