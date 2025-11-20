@@ -61,6 +61,8 @@ export interface StockData {
   symbol: string;
   /** Time in YYYY-MM-DD (daily) or YYYY-MM-DD HH:MM:SS (hourly/minute) */
   time: string;
+  /** Asset mode: 'vn' for Vietnamese stocks, 'crypto' for cryptocurrencies (injected by client) */
+  mode?: 'vn' | 'crypto';
   /** Opening price */
   open: number;
   /** Highest price */
@@ -213,6 +215,8 @@ export interface TickersQueryParams {
   format?: ResponseFormat | string;
   /** Use cache (default: true) */
   cache?: boolean;
+  /** Asset mode: 'vn' for Vietnamese stocks, 'crypto' for cryptocurrencies (default: 'vn') */
+  mode?: 'vn' | 'crypto' | string;
 }
 
 /**
