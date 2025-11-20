@@ -22,9 +22,35 @@ const LOOP_CHECK_INTERVAL_SECS: u64 = 900; // 15 minutes (matches priority sync)
 
 #[instrument(skip(health_stats))]
 pub async fn run(health_stats: SharedHealthStats) {
+    // Check crypto data source configuration
+    let target_url = std::env::var("CRYPTO_WORKER_TARGET_URL").ok();
+    let target_host = std::env::var("CRYPTO_WORKER_TARGET_HOST").ok();
+
     info!(
         "Starting crypto worker with two-tier sync strategy"
     );
+
+    // Log data source configuration
+    if let Some(ref url) = target_url {
+        info!(
+            "  - Data Source: Alternative API ({})",
+            url
+        );
+        if let Some(ref host) = target_host {
+            info!(
+                "  - Host Header: {}",
+                host
+            );
+        }
+        info!(
+            "  - Fallback: CryptoCompare API (if alternative fails)"
+        );
+    } else {
+        info!(
+            "  - Data Source: CryptoCompare API (default)"
+        );
+    }
+
     info!(
         "  - Priority cryptos: {} (every 15min, all intervals)",
         PRIORITY_CRYPTOS.join(", ")

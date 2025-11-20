@@ -1,9 +1,11 @@
 use crate::error::Error;
 use crate::models::Interval;
 use crate::services::crypto_compare::CryptoCompareClient;
+use crate::services::crypto_api_client::AiPriceActionClient;
 use crate::services::vci::OhlcvData;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use tracing::{info, warn};
 
 /// Category result for crypto pre-scan
 #[derive(Debug)]
@@ -27,18 +29,72 @@ impl CryptoCategory {
     }
 }
 
-/// Cryptocurrency data fetcher using CryptoCompare client
+/// Crypto data source - either CryptoCompare API or alternative aipriceaction API
+enum CryptoDataSource {
+    /// Direct CryptoCompare API access
+    CryptoCompare(CryptoCompareClient),
+    /// Alternative API (another aipriceaction instance)
+    ApiProxy(AiPriceActionClient),
+}
+
+/// Cryptocurrency data fetcher with fallback support
 pub struct CryptoFetcher {
-    crypto_client: CryptoCompareClient,
+    primary_source: CryptoDataSource,
+    fallback_source: Option<CryptoCompareClient>,
 }
 
 impl CryptoFetcher {
-    /// Create new crypto fetcher with CryptoCompare client
+    /// Create new crypto fetcher with automatic source selection
+    ///
+    /// Checks environment variables:
+    /// - CRYPTO_WORKER_TARGET_URL: If set, use alternative API as primary source
+    /// - CRYPTO_WORKER_TARGET_HOST: Optional Host header for CDN/proxy bypass
+    ///
+    /// If alternative API is used, CryptoCompare is kept as fallback
     pub fn new(api_key: Option<String>) -> Result<Self, Error> {
-        let crypto_client = CryptoCompareClient::new(api_key)
-            .map_err(|e| Error::Config(format!("Failed to create CryptoCompare client: {:?}", e)))?;
+        // Check for alternative API configuration
+        let target_url = std::env::var("CRYPTO_WORKER_TARGET_URL").ok();
+        let target_host = std::env::var("CRYPTO_WORKER_TARGET_HOST").ok();
 
-        Ok(Self { crypto_client })
+        let (primary_source, fallback_source) = if let Some(url) = target_url {
+            // Use alternative API as primary source
+            info!(
+                "Using alternative API for crypto data: url={}, host={:?}",
+                url, target_host
+            );
+
+            let api_client = AiPriceActionClient::new(url, target_host)
+                .map_err(|e| Error::Config(format!("Failed to create API client: {}", e)))?;
+
+            // Create CryptoCompare as fallback
+            let fallback = CryptoCompareClient::new(api_key.clone())
+                .map_err(|e| {
+                    warn!("Failed to create CryptoCompare fallback client: {:?}", e);
+                    e
+                })
+                .ok();
+
+            if fallback.is_some() {
+                info!("CryptoCompare client configured as fallback");
+            } else {
+                warn!("CryptoCompare fallback not available - API failures will not be retried");
+            }
+
+            (CryptoDataSource::ApiProxy(api_client), fallback)
+        } else {
+            // Use CryptoCompare as primary (default behavior)
+            info!("Using CryptoCompare API for crypto data (default)");
+
+            let crypto_client = CryptoCompareClient::new(api_key)
+                .map_err(|e| Error::Config(format!("Failed to create CryptoCompare client: {:?}", e)))?;
+
+            (CryptoDataSource::CryptoCompare(crypto_client), None)
+        };
+
+        Ok(Self {
+            primary_source,
+            fallback_source,
+        })
     }
 
     /// Read the last date from a CSV file
@@ -160,23 +216,71 @@ impl CryptoFetcher {
         start_date: &str,
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
-        match interval {
-            Interval::Daily => {
-                // Use allData=true for daily (no pagination needed)
-                self.crypto_client
-                    .get_history(symbol, start_date, None, interval, None, true)
-                    .await
-                    .map_err(|e| {
-                        if e.to_string().contains("Rate limit exceeded") {
-                            Error::RateLimit
-                        } else {
-                            Error::Network(format!("Failed to fetch daily data: {}", e))
-                        }
+        // Try primary source first
+        let result = match &mut self.primary_source {
+            CryptoDataSource::ApiProxy(client) => {
+                info!("Fetching {} full history via API proxy", symbol);
+                client.fetch_all_cryptos(start_date, interval).await
+                    .map(|all_data| {
+                        // Filter for this specific symbol
+                        all_data.into_iter()
+                            .filter(|d| d.symbol.as_ref().map(|s| s.as_str()) == Some(symbol))
+                            .collect()
                     })
             }
-            Interval::Hourly | Interval::Minute => {
-                // Use pagination for hourly and minute
-                self.fetch_paginated_history(symbol, start_date, interval).await
+            CryptoDataSource::CryptoCompare(client) => {
+                match interval {
+                    Interval::Daily => {
+                        // Use allData=true for daily (no pagination needed)
+                        client
+                            .get_history(symbol, start_date, None, interval, None, true)
+                            .await
+                            .map_err(|e| {
+                                if e.to_string().contains("Rate limit exceeded") {
+                                    Error::RateLimit
+                                } else {
+                                    Error::Network(format!("Failed to fetch daily data: {}", e))
+                                }
+                            })
+                    }
+                    Interval::Hourly | Interval::Minute => {
+                        // Use pagination for hourly and minute
+                        Self::fetch_paginated_history_from_cryptocompare(client, symbol, start_date, interval).await
+                    }
+                }
+            }
+        };
+
+        // If primary source failed and we have a fallback, try it
+        match result {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                if let Some(fallback) = &mut self.fallback_source {
+                    warn!(
+                        "Primary source failed for {} ({}), trying fallback CryptoCompare: {}",
+                        symbol, interval.to_filename(), e
+                    );
+
+                    match interval {
+                        Interval::Daily => {
+                            fallback
+                                .get_history(symbol, start_date, None, interval, None, true)
+                                .await
+                                .map_err(|e| {
+                                    if e.to_string().contains("Rate limit exceeded") {
+                                        Error::RateLimit
+                                    } else {
+                                        Error::Network(format!("Fallback also failed: {}", e))
+                                    }
+                                })
+                        }
+                        Interval::Hourly | Interval::Minute => {
+                            Self::fetch_paginated_history_from_cryptocompare(fallback, symbol, start_date, interval).await
+                        }
+                    }
+                } else {
+                    Err(e)
+                }
             }
         }
     }
@@ -188,13 +292,44 @@ impl CryptoFetcher {
         last_date: &str,
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
-        // For resume mode, use pagination from last_date
-        self.fetch_paginated_history(symbol, last_date, interval).await
+        // Try primary source first
+        let result = match &mut self.primary_source {
+            CryptoDataSource::ApiProxy(client) => {
+                info!("Fetching {} recent data via API proxy (from {})", symbol, last_date);
+                client.fetch_recent(last_date, interval).await
+                    .map(|all_data| {
+                        // Filter for this specific symbol
+                        all_data.into_iter()
+                            .filter(|d| d.symbol.as_ref().map(|s| s.as_str()) == Some(symbol))
+                            .collect()
+                    })
+            }
+            CryptoDataSource::CryptoCompare(client) => {
+                Self::fetch_paginated_history_from_cryptocompare(client, symbol, last_date, interval).await
+            }
+        };
+
+        // If primary source failed and we have a fallback, try it
+        match result {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                if let Some(fallback) = &mut self.fallback_source {
+                    warn!(
+                        "Primary source failed for {} resume ({}), trying fallback CryptoCompare: {}",
+                        symbol, interval.to_filename(), e
+                    );
+
+                    Self::fetch_paginated_history_from_cryptocompare(fallback, symbol, last_date, interval).await
+                } else {
+                    Err(e)
+                }
+            }
+        }
     }
 
-    /// Fetch paginated history (for hourly and minute intervals)
-    async fn fetch_paginated_history(
-        &mut self,
+    /// Fetch paginated history from CryptoCompare (for hourly and minute intervals)
+    async fn fetch_paginated_history_from_cryptocompare(
+        client: &mut CryptoCompareClient,
         symbol: &str,
         start_date: &str,
         interval: Interval,
@@ -204,7 +339,7 @@ impl CryptoFetcher {
         let limit = 2000; // CryptoCompare max
 
         loop {
-            let batch = self.crypto_client
+            let batch = client
                 .get_history(symbol, start_date, to_ts, interval, Some(limit), false)
                 .await
                 .map_err(|e| {

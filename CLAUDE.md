@@ -523,6 +523,34 @@ The codebase uses `fs2` for cross-process file locking:
 - `MAX_CACHE_SIZE_MB`: Disk cache limit (default: 500MB)
 - `RUST_LOG`: Logging level (`info`, `debug`, `trace`)
 - `PORT`: Server port (default: 3000)
+- `CRYPTO_WORKER_TARGET_URL`: Alternative API URL for crypto data (optional). If set, the crypto worker will fetch data from this API instead of CryptoCompare. Example: `https://api.aipriceaction.com`
+- `CRYPTO_WORKER_TARGET_HOST`: Host header for crypto API requests (optional). Used with `CRYPTO_WORKER_TARGET_URL` for CDN/proxy bypass. Example: `api.aipriceaction.com`
+
+#### Crypto Data Source Configuration
+
+By default, the crypto worker fetches data directly from CryptoCompare API. However, if your server IP is blocked by CryptoCompare, you can configure it to fetch data from another aipriceaction instance instead:
+
+**Usage:**
+```bash
+# Set environment variables
+export CRYPTO_WORKER_TARGET_URL="https://api.aipriceaction.com"
+export CRYPTO_WORKER_TARGET_HOST="api.aipriceaction.com"  # Optional, for CDN/proxy bypass
+
+# Start server (worker-only feature)
+./target/release/aipriceaction serve
+```
+
+**How it works:**
+- The crypto worker will fetch all crypto data in a single API call: `/tickers?mode=crypto&interval={interval}&start_date={date}`
+- Supports all intervals: 1D (daily), 1H (hourly), 1m (minute)
+- Automatic fallback: If the alternative API fails, it retries with CryptoCompare
+- Worker-only: CLI commands (`crypto-pull`) always use CryptoCompare directly
+
+**Example scenario:**
+1. Server A: Has access to CryptoCompare, runs API server
+2. Server B: Blocked by CryptoCompare, runs worker pointing to Server A
+3. Server B worker fetches crypto data from Server A's `/tickers` endpoint
+4. Server B serves the synced data via its own API
 
 ### Key Files
 

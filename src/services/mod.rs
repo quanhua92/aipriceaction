@@ -11,6 +11,7 @@ pub mod data_store;
 pub mod trading_hours;
 pub mod api_logging;
 pub mod crypto_compare;
+pub mod crypto_api_client;
 pub mod crypto_fetcher;
 pub mod crypto_sync;
 
@@ -26,5 +27,6 @@ pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats,
 pub use trading_hours::{is_trading_hours, get_sync_interval};
 pub use api_logging::{ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
 pub use crypto_compare::{CryptoCompareClient, CryptoError};
+pub use crypto_api_client::AiPriceActionClient;
 pub use crypto_fetcher::{CryptoFetcher, CryptoCategory};
 pub use crypto_sync::CryptoSync;
