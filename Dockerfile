@@ -23,8 +23,9 @@ WORKDIR /app
 FROM chef AS rust-planner
 WORKDIR /app
 
-# Copy entire source for cargo-chef to analyze
-COPY . .
+# Copy only manifest files for cargo-chef to analyze
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Stage 2: Cache dependencies
