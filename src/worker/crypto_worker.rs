@@ -12,13 +12,15 @@ use tracing::{info, warn, error, instrument};
 // Priority cryptos sync every 15 minutes (all intervals)
 const PRIORITY_CRYPTOS: &[&str] = &["BTC", "ETH", "XRP"];
 
-// Regular cryptos use staggered intervals to manage rate limits
+// CryptoCompare mode: staggered intervals to manage rate limits
 const REGULAR_DAILY_SYNC_INTERVAL_SECS: u64 = 3600;   // 1 hour
 const REGULAR_HOURLY_SYNC_INTERVAL_SECS: u64 = 10800; // 3 hours
 const REGULAR_MINUTE_SYNC_INTERVAL_SECS: u64 = 21600; // 6 hours
+const LOOP_CHECK_INTERVAL_SECS: u64 = 900; // 15 minutes
 
-// Main loop check interval
-const LOOP_CHECK_INTERVAL_SECS: u64 = 900; // 15 minutes (matches priority sync)
+// ApiProxy mode: faster intervals (no rate limit from CryptoCompare)
+const PROXY_SYNC_INTERVAL_SECS: u64 = 300; // 5 minutes for all intervals
+const PROXY_LOOP_CHECK_INTERVAL_SECS: u64 = 300; // 5 minutes
 
 #[instrument(skip(health_stats))]
 pub async fn run(health_stats: SharedHealthStats) {
@@ -51,16 +53,26 @@ pub async fn run(health_stats: SharedHealthStats) {
         );
     }
 
+    // Determine intervals based on mode
+    let is_proxy_mode = target_url.is_some();
+    let (daily_interval, hourly_interval, minute_interval, loop_interval) = if is_proxy_mode {
+        (PROXY_SYNC_INTERVAL_SECS, PROXY_SYNC_INTERVAL_SECS, PROXY_SYNC_INTERVAL_SECS, PROXY_LOOP_CHECK_INTERVAL_SECS)
+    } else {
+        (REGULAR_DAILY_SYNC_INTERVAL_SECS, REGULAR_HOURLY_SYNC_INTERVAL_SECS, REGULAR_MINUTE_SYNC_INTERVAL_SECS, LOOP_CHECK_INTERVAL_SECS)
+    };
+
     info!(
-        "  - Priority cryptos: {} (every 15min, all intervals)",
-        PRIORITY_CRYPTOS.join(", ")
+        "  - Priority cryptos: {} (every {}s)",
+        PRIORITY_CRYPTOS.join(", "), loop_interval
     );
+    if is_proxy_mode {
+        info!("  - Regular cryptos: all intervals every {}s (proxy mode)", PROXY_SYNC_INTERVAL_SECS);
+    } else {
+        info!("  - Regular cryptos: Daily=1h, Hourly=3h, Minute=6h (CryptoCompare mode)");
+    }
     info!(
-        "  - Regular cryptos: Daily=1h, Hourly=3h, Minute=6h"
-    );
-    info!(
-        "  - Main loop interval: {}s (15 minutes)",
-        LOOP_CHECK_INTERVAL_SECS
+        "  - Main loop interval: {}s",
+        loop_interval
     );
 
     let crypto_data_dir = get_crypto_data_dir();
@@ -152,7 +164,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             );
 
             // Daily
-            if sync_info.should_sync(sync_info.priority_daily_last_sync, LOOP_CHECK_INTERVAL_SECS) {
+            if sync_info.should_sync(sync_info.priority_daily_last_sync, loop_interval) {
                 let success = sync_and_enhance(
                     Interval::Daily,
                     &priority_symbols,
@@ -168,7 +180,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             }
 
             // Hourly
-            if sync_info.should_sync(sync_info.priority_hourly_last_sync, LOOP_CHECK_INTERVAL_SECS) {
+            if sync_info.should_sync(sync_info.priority_hourly_last_sync, loop_interval) {
                 let success = sync_and_enhance(
                     Interval::Hourly,
                     &priority_symbols,
@@ -184,7 +196,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             }
 
             // Minute
-            if sync_info.should_sync(sync_info.priority_minute_last_sync, LOOP_CHECK_INTERVAL_SECS) {
+            if sync_info.should_sync(sync_info.priority_minute_last_sync, loop_interval) {
                 let success = sync_and_enhance(
                     Interval::Minute,
                     &priority_symbols,
@@ -202,12 +214,12 @@ pub async fn run(health_stats: SharedHealthStats) {
 
         // TIER 2: Sync regular cryptos based on per-interval timing
         if !regular_symbols.is_empty() {
-            // Daily (every 1 hour)
-            if sync_info.should_sync(sync_info.regular_daily_last_sync, REGULAR_DAILY_SYNC_INTERVAL_SECS) {
+            // Daily
+            if sync_info.should_sync(sync_info.regular_daily_last_sync, daily_interval) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Daily (1 hour elapsed)"
+                    "Syncing regular cryptos: Daily"
                 );
 
                 let success = sync_and_enhance(
@@ -225,12 +237,12 @@ pub async fn run(health_stats: SharedHealthStats) {
                 }
             }
 
-            // Hourly (every 3 hours)
-            if sync_info.should_sync(sync_info.regular_hourly_last_sync, REGULAR_HOURLY_SYNC_INTERVAL_SECS) {
+            // Hourly
+            if sync_info.should_sync(sync_info.regular_hourly_last_sync, hourly_interval) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Hourly (3 hours elapsed)"
+                    "Syncing regular cryptos: Hourly"
                 );
 
                 let success = sync_and_enhance(
@@ -248,12 +260,12 @@ pub async fn run(health_stats: SharedHealthStats) {
                 }
             }
 
-            // Minute (every 6 hours)
-            if sync_info.should_sync(sync_info.regular_minute_last_sync, REGULAR_MINUTE_SYNC_INTERVAL_SECS) {
+            // Minute
+            if sync_info.should_sync(sync_info.regular_minute_last_sync, minute_interval) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Minute (6 hours elapsed)"
+                    "Syncing regular cryptos: Minute"
                 );
 
                 let success = sync_and_enhance(
@@ -295,13 +307,12 @@ pub async fn run(health_stats: SharedHealthStats) {
             worker = "Crypto",
             iteration = sync_info.iteration_count,
             loop_duration_secs = loop_duration.as_secs_f64(),
-            next_check_secs = LOOP_CHECK_INTERVAL_SECS,
+            next_check_secs = loop_interval,
             all_successful = all_intervals_successful,
             "Iteration completed, sync info saved to disk"
         );
 
-        // Sleep for 15 minutes before next check
-        sleep(Duration::from_secs(LOOP_CHECK_INTERVAL_SECS)).await;
+        sleep(Duration::from_secs(loop_interval)).await;
     }
 }
 
