@@ -45,6 +45,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
         tags: |
+          type=raw,value=${{ inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
           type=ref,event=branch
           type=ref,event=pr
           type=semver,pattern={{version}}
