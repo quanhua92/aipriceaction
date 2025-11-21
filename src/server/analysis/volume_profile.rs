@@ -441,7 +441,7 @@ pub async fn volume_profile_handler(
     let data_state = app_state.get_data_store(mode);
 
     // Validate bins parameter
-    let num_bins = params.bins.unwrap_or(50).clamp(10, 200);
+    let num_bins = params.bins.unwrap_or(50).clamp(2, 200);
 
     // Validate value_area_pct parameter
     let value_area_pct = params.value_area_pct.unwrap_or(70.0).clamp(60.0, 90.0);
