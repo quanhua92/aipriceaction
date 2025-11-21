@@ -170,6 +170,10 @@ impl CryptoFetcher {
             }
 
             if !file_path.exists() {
+                info!(
+                    "📄 {} [{}] file_path={} exists=false → full_history",
+                    symbol, interval.to_filename(), file_path.display()
+                );
                 if should_print {
                     println!("   📄 {} - No existing data (full history needed)", symbol);
                 }
@@ -178,18 +182,30 @@ impl CryptoFetcher {
                 // File exists - read last date and use resume mode
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
+                        info!(
+                            "✅ {} [{}] file_path={} last_date={} → resume",
+                            symbol, interval.to_filename(), file_path.display(), last_date
+                        );
                         if should_print {
                             println!("   ✅ {} - Resume from {}", symbol, last_date);
                         }
                         category.resume_cryptos.push((symbol.clone(), last_date));
                     }
                     Ok(None) => {
+                        info!(
+                            "⚠️ {} [{}] file_path={} last_date=None → full_history",
+                            symbol, interval.to_filename(), file_path.display()
+                        );
                         if should_print {
                             println!("   ⚠️  {} - CSV exists but empty (full history needed)", symbol);
                         }
                         category.full_history_cryptos.push(symbol.clone());
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        info!(
+                            "⚠️ {} [{}] file_path={} error={} → full_history",
+                            symbol, interval.to_filename(), file_path.display(), e
+                        );
                         if should_print {
                             println!("   ⚠️  {} - Failed to read CSV (full history needed)", symbol);
                         }

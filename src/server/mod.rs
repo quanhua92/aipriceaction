@@ -200,18 +200,18 @@ pub async fn serve(
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
-    // Configure rate limiting: 500 requests/second per IP, burst up to 1000
+    // Configure rate limiting: 5000 requests/second per IP, burst up to 10000
     // Uses CF-Connecting-IP header to identify real client behind Cloudflare
     let governor_conf = GovernorConfigBuilder::default()
-        .per_second(500)
-        .burst_size(1000)
+        .per_second(5000)
+        .burst_size(10000)
         .key_extractor(CloudflareKeyExtractor)
         .use_headers()
         .finish()
         .unwrap();
 
     tracing::info!("Security middleware enabled:");
-    tracing::info!("  Rate Limit: 500 req/s per IP, burst 1000 (using CF-Connecting-IP)");
+    tracing::info!("  Rate Limit: 5000 req/s per IP, burst 10000 (using CF-Connecting-IP)");
     tracing::info!("  Request Timeout: 30s");
     tracing::info!("  Body Size Limit: 1MB");
     tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
