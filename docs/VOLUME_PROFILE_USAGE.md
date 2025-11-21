@@ -77,13 +77,30 @@ Volume Profile helps you answer critical trading questions:
 
 ## How to Use the API
 
-### Basic Request
+### Basic Request (Single Day)
 
 Get volume profile for VCB on January 15, 2024:
 
 ```bash
 curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-15"
 ```
+
+### Multi-Day Analysis (Date Range)
+
+Analyze volume profile across multiple trading days:
+
+```bash
+# Weekly profile (Monday to Friday)
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-19"
+
+# Just start_date (same as single day)
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&start_date=2024-01-15"
+```
+
+**Why use multi-day profiles?**
+- Identifies **stronger** support/resistance levels (consistent across days)
+- Shows **composite** POC that represents fair value over longer period
+- Reduces noise from single-day anomalies
 
 ### What You Get Back
 
@@ -428,7 +445,10 @@ Get profiles for last 3 days and compare:
 - POC moving down daily → Downtrend
 
 ```bash
-# Get last 3 days
+# Option 1: Get composite profile for the entire range (recommended)
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&start_date=2024-01-13&end_date=2024-01-15"
+
+# Option 2: Get individual days to compare
 curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-15"
 curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-14"
 curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-13"

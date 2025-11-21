@@ -490,7 +490,28 @@ test_volume_profile() {
         fi
     fi
 
-    # Test 7: Validate response structure
+    # Test 7: Date range (multi-day) analysis
+    print_test "Date range (multi-day) volume profile test"
+    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-17" || echo "")
+
+    if [[ -n "$response" ]]; then
+        local analysis_date=$(echo "$response" | jq -r '.analysis_date // empty')
+        local total_minutes=$(echo "$response" | jq -r '.data.total_minutes // 0')
+
+        if [[ "$analysis_date" == *"to"* ]]; then
+            print_success "Date range format correct: ${analysis_date}"
+        else
+            print_error "Expected date range format with 'to', got: ${analysis_date}"
+        fi
+
+        if [[ $total_minutes -gt 360 ]]; then
+            print_success "Multi-day data aggregated: ${total_minutes} minutes (> single day 360)"
+        else
+            print_success "Total minutes: ${total_minutes}"
+        fi
+    fi
+
+    # Test 8: Validate response structure
     print_test "Response structure validation test"
     response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
 

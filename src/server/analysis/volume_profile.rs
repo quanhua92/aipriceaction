@@ -23,14 +23,23 @@ pub struct VolumeProfileQuery {
     /// Ticker symbol (required)
     pub symbol: String,
 
-    /// Date to analyze (YYYY-MM-DD format, required)
-    pub date: String,
+    /// Single date to analyze (YYYY-MM-DD format) - backward compatible
+    /// If provided, used as both start_date and end_date
+    pub date: Option<String>,
+
+    /// Start date for analysis (YYYY-MM-DD format)
+    /// Required if date is not provided
+    pub start_date: Option<String>,
+
+    /// End date for analysis (YYYY-MM-DD format)
+    /// Defaults to start_date if not provided
+    pub end_date: Option<String>,
 
     /// Market mode: vn or crypto (default: vn)
     #[serde(default = "default_mode")]
     pub mode: String,
 
-    /// Number of price bins for aggregation (default: 50, range: 10-200)
+    /// Number of price bins for aggregation (default: 50, range: 2-200)
     pub bins: Option<usize>,
 
     /// Value area percentage (default: 70.0, range: 60-90)
@@ -409,27 +418,58 @@ pub async fn volume_profile_handler(
         ).into_response();
     }
 
-    if params.date.is_empty() {
+    // Determine start_date and end_date from params
+    let (start_date_str, end_date_str) = if let Some(ref date) = params.date {
+        // Backward compatible: date param sets both start and end
+        (date.clone(), date.clone())
+    } else if let Some(ref start) = params.start_date {
+        // Use start_date, default end_date to start_date if not provided
+        let end = params.end_date.clone().unwrap_or_else(|| start.clone());
+        (start.clone(), end)
+    } else {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
-                "error": "date parameter is required (YYYY-MM-DD format)"
+                "error": "Either 'date' or 'start_date' parameter is required (YYYY-MM-DD format)"
             })),
         ).into_response();
-    }
+    };
 
-    // Parse and validate date
-    let naive_date = match NaiveDate::parse_from_str(&params.date, "%Y-%m-%d") {
+    // Parse and validate start date
+    let start_naive = match NaiveDate::parse_from_str(&start_date_str, "%Y-%m-%d") {
         Ok(date) => date,
         Err(_) => {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
-                    "error": "Invalid date format. Use YYYY-MM-DD"
+                    "error": "Invalid start date format. Use YYYY-MM-DD"
                 })),
             ).into_response();
         }
     };
+
+    // Parse and validate end date
+    let end_naive = match NaiveDate::parse_from_str(&end_date_str, "%Y-%m-%d") {
+        Ok(date) => date,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid end date format. Use YYYY-MM-DD"
+                })),
+            ).into_response();
+        }
+    };
+
+    // Validate date order
+    if end_naive < start_naive {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "end_date must be >= start_date"
+            })),
+        ).into_response();
+    }
 
     // Parse mode
     let mode = match params.mode.to_lowercase().as_str() {
@@ -446,12 +486,12 @@ pub async fn volume_profile_handler(
     // Validate value_area_pct parameter
     let value_area_pct = params.value_area_pct.unwrap_or(70.0).clamp(60.0, 90.0);
 
-    // Create start and end datetime for the specific date
-    let start_datetime = naive_date.and_hms_opt(0, 0, 0)
+    // Create start and end datetime for the date range
+    let start_datetime = start_naive.and_hms_opt(0, 0, 0)
         .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
         .unwrap();
 
-    let end_datetime = naive_date.and_hms_opt(23, 59, 59)
+    let end_datetime = end_naive.and_hms_opt(23, 59, 59)
         .map(|dt| DateTime::<Utc>::from_naive_utc_and_offset(dt, Utc))
         .unwrap();
 
@@ -469,25 +509,38 @@ pub async fn volume_profile_handler(
     let stock_data = match data.get(&params.symbol) {
         Some(data) if !data.is_empty() => data,
         _ => {
+            let date_desc = if start_date_str == end_date_str {
+                start_date_str.clone()
+            } else {
+                format!("{} to {}", start_date_str, end_date_str)
+            };
             return (
                 StatusCode::NOT_FOUND,
                 Json(serde_json::json!({
-                    "error": format!("No minute data found for {} on {}", params.symbol, params.date)
+                    "error": format!("No minute data found for {} on {}", params.symbol, date_desc)
                 })),
             ).into_response();
         }
     };
 
-    // Filter data to only include the specific date
+    // Filter data to only include the date range
     let filtered_data: Vec<&StockData> = stock_data.iter()
-        .filter(|d| d.time.date_naive() == naive_date)
+        .filter(|d| {
+            let date = d.time.date_naive();
+            date >= start_naive && date <= end_naive
+        })
         .collect();
 
     if filtered_data.is_empty() {
+        let date_desc = if start_date_str == end_date_str {
+            start_date_str.clone()
+        } else {
+            format!("{} to {}", start_date_str, end_date_str)
+        };
         return (
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({
-                "error": format!("No minute data found for {} on {}", params.symbol, params.date)
+                "error": format!("No minute data found for {} on {}", params.symbol, date_desc)
             })),
         ).into_response();
     }
@@ -554,10 +607,17 @@ pub async fn volume_profile_handler(
         statistics,
     };
 
+    // Build analysis_date string (range or single date)
+    let analysis_date = if start_date_str == end_date_str {
+        start_date_str
+    } else {
+        format!("{} to {}", start_date_str, end_date_str)
+    };
+
     (
         StatusCode::OK,
         Json(AnalysisResponse {
-            analysis_date: params.date,
+            analysis_date,
             analysis_type: "volume_profile".to_string(),
             total_analyzed: filtered_data.len(),
             data: response,

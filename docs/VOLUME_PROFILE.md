@@ -128,10 +128,17 @@ GET /analysis/volume-profile
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `symbol` | String | **Yes** | - | Ticker symbol (e.g., "VCB", "FPT") |
-| `date` | String | **Yes** | - | Trading date in YYYY-MM-DD format |
+| `date` | String | **One of date/start_date required** | - | Single date in YYYY-MM-DD format (backward compatible) |
+| `start_date` | String | **One of date/start_date required** | - | Start date for multi-day analysis (YYYY-MM-DD) |
+| `end_date` | String | No | start_date | End date for multi-day analysis (YYYY-MM-DD) |
 | `mode` | String | No | "vn" | Market mode: "vn" or "crypto" |
-| `bins` | Integer | No | 50 | Number of price bins for aggregation (10-200) |
+| `bins` | Integer | No | 50 | Number of price bins for aggregation (2-200) |
 | `value_area_pct` | Float | No | 70.0 | Value area percentage (60-90) |
+
+**Date Parameter Logic:**
+- If `date` is provided: analyzes that single day (backward compatible)
+- If `start_date` is provided without `end_date`: analyzes that single day
+- If both `start_date` and `end_date` are provided: analyzes the entire date range
 
 ### Response Format
 
@@ -368,10 +375,17 @@ fn aggregate_into_bins(profile: Vec<PriceLevelVolume>, num_bins: usize) -> Vec<P
 
 ## 8. Usage Examples
 
-### Basic Volume Profile
+### Basic Volume Profile (Single Day)
 
 ```bash
 curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&date=2024-01-15"
+```
+
+### Multi-Day Volume Profile (Date Range)
+
+```bash
+# Analyze volume profile across multiple trading days
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-19"
 ```
 
 ### Crypto Volume Profile
@@ -390,6 +404,13 @@ curl "http://localhost:3000/analysis/volume-profile?symbol=FPT&date=2024-01-15&b
 
 ```bash
 curl "http://localhost:3000/analysis/volume-profile?symbol=HPG&date=2024-01-15&value_area_pct=80"
+```
+
+### Weekly Volume Profile
+
+```bash
+# Analyze a full week of trading
+curl "http://localhost:3000/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-19&bins=100"
 ```
 
 ## 9. Testing Strategy
