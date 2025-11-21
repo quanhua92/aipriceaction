@@ -138,7 +138,7 @@ impl CryptoFetcher {
 
     /// Get the file path for a crypto's CSV file
     fn get_crypto_file_path(&self, symbol: &str, interval: Interval) -> PathBuf {
-        let crypto_data_dir = PathBuf::from("crypto_data");
+        let crypto_data_dir = crate::utils::get_crypto_data_dir();
         crypto_data_dir.join(symbol).join(interval.to_filename())
     }
 

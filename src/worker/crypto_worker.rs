@@ -79,7 +79,13 @@ pub async fn run(health_stats: SharedHealthStats) {
     let info_path = get_crypto_sync_info_path(&crypto_data_dir);
 
     // Load sync info from disk (persists across restarts)
-    let mut sync_info = CryptoSyncInfo::load(&info_path);
+    // For proxy mode, start fresh to sync immediately
+    let mut sync_info = if is_proxy_mode {
+        info!("Proxy mode: starting fresh sync info for immediate sync");
+        CryptoSyncInfo::default()
+    } else {
+        CryptoSyncInfo::load(&info_path)
+    };
 
     info!(
         "Loaded sync info: iteration={}, last_syncs: priority_daily={:?}, regular_daily={:?}",
