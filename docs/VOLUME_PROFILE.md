@@ -596,3 +596,86 @@ Vietnamese stocks have daily price limits:
 - **±15%** for newly listed stocks (first 3 days)
 
 These limits affect volume profile shape, often creating concentrated volume near limit prices.
+
+## 13. TailwindCSS Volume by Price Design
+
+### UI Component Structure
+
+The Volume Profile UI uses a two-row layout for each price level to ensure consistent bar widths:
+
+```html
+<!-- Each price level -->
+<div class="py-1.5 px-2 rounded {bgClass} hover:bg-gray-100 transition-colors">
+  <!-- Row 1: Price + Bar -->
+  <div class="flex items-center gap-2">
+    <div class="w-20 text-xs font-mono text-right font-semibold {isPOC ? 'text-yellow-700' : 'text-gray-700'}">
+      {price}
+    </div>
+    <div class="flex-1 relative h-5">
+      <div class="{barColor} h-full rounded transition-all" style="width: {displayWidth}%;"></div>
+    </div>
+  </div>
+  <!-- Row 2: Volume/Percentage + Badges -->
+  <div class="flex items-center justify-between mt-1 text-xs text-gray-500 pl-22">
+    <span>{volume} ({percentage}%)</span>
+    <span>
+      {isPOC ? '⭐ POC badge' : ''}
+      {isHVN ? 'HVN badge' : ''}
+      {isLVN ? 'LVN badge' : ''}
+    </span>
+  </div>
+</div>
+```
+
+### Color Scheme
+
+| Element | Background | Text | Use Case |
+|---------|------------|------|----------|
+| POC Bar | `bg-yellow-500` | `text-yellow-700` | Point of Control (highest volume) |
+| HVN Bar | `bg-green-500` | `text-green-700` | High Volume Node (≥3%) |
+| LVN Bar | `bg-orange-400` | `text-orange-700` | Low Volume Node (<1%) |
+| Normal Bar | `bg-indigo-500` | `text-gray-700` | Standard volume levels |
+| Value Area BG | `bg-blue-50` | - | Price levels within Value Area |
+
+### Badges
+
+```html
+<!-- POC Badge -->
+<span class="text-yellow-600 mr-1">⭐</span>
+<span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">POC</span>
+
+<!-- HVN Badge -->
+<span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-semibold">HVN</span>
+
+<!-- LVN Badge -->
+<span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold">LVN</span>
+```
+
+### Bar Width Calculation
+
+```javascript
+// Calculate bar width as percentage of max volume
+const barWidth = (level.volume / maxVolume * 100).toFixed(1);
+
+// Add minimum width for visibility (at least 2% for non-zero volumes)
+const minWidth = level.volume > 0 ? 2 : 0;
+const displayWidth = Math.max(minWidth, parseFloat(barWidth));
+```
+
+### Classification Logic
+
+```javascript
+const isPOC = Math.abs(level.price - poc.price) < 0.01;
+const inVA = level.price >= valueArea.low && level.price <= valueArea.high;
+const isHVN = percentage >= 3.0;  // High Volume Node threshold
+const isLVN = percentage < 1.0;   // Low Volume Node threshold
+```
+
+### Design Decisions
+
+1. **Two-Row Layout**: Separates bar from metadata to ensure consistent bar container widths across all price levels
+2. **Fixed Price Column**: `w-20` ensures price labels don't affect bar width
+3. **Flex-1 Bar Container**: Bar container takes remaining space after price column
+4. **Minimum Bar Width**: 2% minimum ensures all non-zero volumes are visible
+5. **Value Area Highlighting**: Light blue background for prices within VA
+6. **Hover Effects**: `hover:bg-gray-100` for interactive feedback

@@ -163,20 +163,23 @@ function renderVolumeChart(data) {
     const displayWidth = Math.max(minWidth, parseFloat(barWidth));
 
     html += `
-      <div class="flex items-center gap-2 py-1.5 px-2 rounded ${bgClass} hover:bg-gray-100 transition-colors">
-        <div class="w-24 text-xs font-mono text-right font-semibold ${isPOC ? 'text-yellow-700' : 'text-gray-700'}">
-          ${formatNumber(level.price)}
-          ${isPOC ? '<span class="text-yellow-600 ml-1">⭐</span>' : ''}
+      <div class="py-1.5 px-2 rounded ${bgClass} hover:bg-gray-100 transition-colors">
+        <div class="flex items-center gap-2">
+          <div class="w-20 text-xs font-mono text-right font-semibold ${isPOC ? 'text-yellow-700' : 'text-gray-700'}">
+            ${formatNumber(level.price)}
+          </div>
+          <div class="flex-1 relative h-5">
+            <div class="${barColor} h-full rounded transition-all" style="width: ${displayWidth}%;"></div>
+          </div>
         </div>
-        <div class="flex-1 relative ${isPOC ? 'h-10' : 'h-8'} min-w-0">
-          <div class="${barColor} h-full rounded ${isPOC ? 'shadow-lg' : ''} transition-all" style="width: ${displayWidth}%; min-width: ${minWidth}%;"></div>
+        <div class="flex items-center justify-between mt-1 text-xs text-gray-500 pl-22">
+          <span>${formatVolume(level.volume)} (${percentage.toFixed(1)}%)</span>
+          <span>
+            ${isPOC ? '<span class="text-yellow-600 mr-1">⭐</span><span class="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">POC</span>' : ''}
+            ${isHVN && !isPOC ? '<span class="px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-semibold">HVN</span>' : ''}
+            ${isLVN ? '<span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold">LVN</span>' : ''}
+          </span>
         </div>
-        <div class="w-28 text-xs text-right flex-shrink-0">
-          <div class="font-semibold text-gray-700">${formatVolume(level.volume)}</div>
-          <div class="text-gray-500">${percentage.toFixed(1)}%</div>
-        </div>
-        ${isHVN && !isPOC ? '<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-semibold flex-shrink-0">HVN</span>' : ''}
-        ${isLVN ? '<span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs rounded font-semibold flex-shrink-0">LVN</span>' : ''}
       </div>
     `;
   });
