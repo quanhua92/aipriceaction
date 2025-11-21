@@ -165,7 +165,14 @@ impl VolumeProfileBuilder {
 }
 
 /// Get tick size based on price level (Vietnamese stock market rules)
-pub fn get_tick_size_vn(avg_price: f64) -> f64 {
+pub fn get_tick_size_vn(avg_price: f64, symbol: &str) -> f64 {
+    use crate::constants::INDEX_TICKERS;
+
+    // Market indices use tick size of 0.01
+    if INDEX_TICKERS.contains(&symbol) {
+        return 0.01;
+    }
+
     if avg_price < 10_000.0 {
         10.0
     } else if avg_price < 50_000.0 {
@@ -490,7 +497,7 @@ pub async fn volume_profile_handler(
     let avg_price = total_price / filtered_data.len() as f64;
 
     let tick_size = match mode {
-        Mode::Vn => get_tick_size_vn(avg_price),
+        Mode::Vn => get_tick_size_vn(avg_price, &params.symbol),
         Mode::Crypto => get_tick_size_crypto(avg_price),
     };
 
@@ -620,13 +627,18 @@ mod tests {
 
     #[test]
     fn test_tick_size_selection_vn() {
-        assert_eq!(get_tick_size_vn(5_000.0), 10.0);
-        assert_eq!(get_tick_size_vn(9_999.0), 10.0);
-        assert_eq!(get_tick_size_vn(10_000.0), 50.0);
-        assert_eq!(get_tick_size_vn(25_000.0), 50.0);
-        assert_eq!(get_tick_size_vn(49_999.0), 50.0);
-        assert_eq!(get_tick_size_vn(50_000.0), 100.0);
-        assert_eq!(get_tick_size_vn(100_000.0), 100.0);
+        // Stock tickers
+        assert_eq!(get_tick_size_vn(5_000.0, "VCB"), 10.0);
+        assert_eq!(get_tick_size_vn(9_999.0, "VCB"), 10.0);
+        assert_eq!(get_tick_size_vn(10_000.0, "VCB"), 50.0);
+        assert_eq!(get_tick_size_vn(25_000.0, "VCB"), 50.0);
+        assert_eq!(get_tick_size_vn(49_999.0, "VCB"), 50.0);
+        assert_eq!(get_tick_size_vn(50_000.0, "VCB"), 100.0);
+        assert_eq!(get_tick_size_vn(100_000.0, "VCB"), 100.0);
+
+        // Index tickers use tick size 0.01 regardless of price
+        assert_eq!(get_tick_size_vn(1200.0, "VNINDEX"), 0.01);
+        assert_eq!(get_tick_size_vn(1300.0, "VN30"), 0.01);
     }
 
     #[test]

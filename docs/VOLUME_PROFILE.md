@@ -74,6 +74,7 @@ Vietnamese stocks use **dynamic tick sizes** based on current price level:
 
 | Price Range (VND) | Tick Size (VND) | Example |
 |-------------------|-----------------|---------|
+| Market Indices (VNINDEX, VN30) | 1 | 1247.5 → 1248.5 |
 | < 10,000 | 10 | 9,990 → 10,000 |
 | 10,000 - 49,990 | 50 | 23,200 → 23,250 |
 | ≥ 50,000 | 100 | 95,400 → 95,500 |
@@ -81,7 +82,12 @@ Vietnamese stocks use **dynamic tick sizes** based on current price level:
 ### Tick Size Determination Logic
 
 ```rust
-pub fn get_tick_size(price: f64) -> f64 {
+pub fn get_tick_size_vn(price: f64, symbol: &str) -> f64 {
+    // Market indices use tick size of 1.0
+    if INDEX_TICKERS.contains(&symbol) {
+        return 1.0;
+    }
+
     if price < 10_000.0 {
         10.0
     } else if price < 50_000.0 {

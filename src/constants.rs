@@ -93,6 +93,7 @@ pub const IGNORED_CRYPTOS: &[&str] = &["MNT", "IOTA"];
 ///
 /// **Note**: All prices in aipriceaction are stored in full VND format
 /// (e.g., 23,200 not 23.2), so tick sizes are also in full format.
+pub const TICK_SIZE_VN_INDEX: f64 = 0.01;    // For market indices (VNINDEX, VN30)
 pub const TICK_SIZE_VN_LOW: f64 = 10.0;      // For prices < 10,000 VND
 pub const TICK_SIZE_VN_MID: f64 = 50.0;      // For prices 10,000 - 49,990 VND
 pub const TICK_SIZE_VN_HIGH: f64 = 100.0;    // For prices >= 50,000 VND
