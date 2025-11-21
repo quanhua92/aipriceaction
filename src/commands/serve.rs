@@ -1,6 +1,6 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
-use crate::utils::{get_market_data_dir, get_crypto_data_dir, get_worker_threads};
+use crate::utils::{get_market_data_dir, get_crypto_data_dir};
 use crate::worker;
 use crate::server;
 use std::sync::Arc;

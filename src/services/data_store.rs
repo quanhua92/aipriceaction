@@ -1065,11 +1065,6 @@ impl DataStore {
         now.signed_duration_since(*cache_last_updated).num_seconds()
     }
 
-    /// Check if in-memory cache has expired based on TTL
-    async fn is_cache_expired(&self) -> bool {
-        self.get_cache_age().await >= CACHE_TTL_SECONDS
-    }
-
     /// Update cache timestamp (called after reading fresh data from disk)
     async fn update_cache_timestamp(&self) {
         let mut cache_last_updated = self.cache_last_updated.write().await;
