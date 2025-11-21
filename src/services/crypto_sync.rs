@@ -82,82 +82,45 @@ impl CryptoSync {
         if !resume_list.is_empty() {
             println!("\n🔄 Processing {} resume cryptos...", resume_list.len());
 
-            // Batch optimization: Use batch fetch for ApiProxy (1 API call vs N calls)
-            if self.fetcher.is_using_api_proxy() {
-                println!("   🚀 Using batch fetch (1 API call for {} cryptos)", resume_list.len());
+            // Fetch individually (works for both CryptoCompare and ApiProxy)
+            for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
+                print!("   [{}/{}] {} (from {})... ",
+                    idx + 1,
+                    resume_list.len(),
+                    symbol,
+                    last_date
+                );
 
-                match self.fetcher.fetch_batch_recent(&resume_list, interval).await {
-                    Ok(batch_data) => {
-                        // Process each crypto from the batch
-                        for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
-                            print!("   [{}/{}] {} (from {})... ",
-                                idx + 1,
-                                resume_list.len(),
-                                symbol,
-                                last_date
-                            );
-
-                            let data = batch_data.get(symbol).cloned().unwrap_or_default();
-                            match self.process_crypto(symbol, Some(data), interval, last_date).await {
-                                Ok(_) => {
-                                    success_count += 1;
-                                    println!("✅");
-                                }
-                                Err(e) => {
-                                    eprintln!("❌ Save failed: {}", e);
-                                    failed_cryptos.push(symbol.clone());
-                                }
+                match self.fetch_recent(symbol, last_date, interval).await {
+                    Ok(data) => {
+                        match self.process_crypto(symbol, Some(data), interval, last_date).await {
+                            Ok(_) => {
+                                success_count += 1;
+                                println!("✅");
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Save failed: {}", e);
+                                failed_cryptos.push(symbol.clone());
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("❌ Batch fetch failed: {}, falling back to individual fetches", e);
-                        // If batch fails, the batch method already fell back to individual fetches
-                        // So we shouldn't get here, but handle it anyway
-                        failed_cryptos.extend(resume_list.iter().map(|(s, _)| s.clone()));
+                        // Check if rate limit error - stop processing remaining tickers
+                        if matches!(e, Error::RateLimit) {
+                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", resume_list.len() - idx);
+                            // Add remaining tickers to failed list
+                            for (remaining_symbol, _) in resume_list.iter().skip(idx) {
+                                failed_cryptos.push(remaining_symbol.clone());
+                            }
+                            break;
+                        }
+                        eprintln!("❌ Fetch failed: {}", e);
+                        failed_cryptos.push(symbol.clone());
                     }
                 }
-            } else {
-                // CryptoCompare: Fetch individually (no batch API)
-                for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
-                    print!("   [{}/{}] {} (from {})... ",
-                        idx + 1,
-                        resume_list.len(),
-                        symbol,
-                        last_date
-                    );
 
-                    match self.fetch_recent(symbol, last_date, interval).await {
-                        Ok(data) => {
-                            match self.process_crypto(symbol, Some(data), interval, last_date).await {
-                                Ok(_) => {
-                                    success_count += 1;
-                                    println!("✅");
-                                }
-                                Err(e) => {
-                                    eprintln!("❌ Save failed: {}", e);
-                                    failed_cryptos.push(symbol.clone());
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            // Check if rate limit error - stop processing remaining tickers
-                            if matches!(e, Error::RateLimit) {
-                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", resume_list.len() - idx);
-                                // Add remaining tickers to failed list
-                                for (remaining_symbol, _) in resume_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
-                            }
-                            eprintln!("❌ Fetch failed: {}", e);
-                            failed_cryptos.push(symbol.clone());
-                        }
-                    }
-
-                    // Rate limit delay
-                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-                }
+                // Rate limit delay
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             }
         }
 
@@ -167,78 +130,44 @@ impl CryptoSync {
 
             let start_date = self.get_start_date_for_interval(interval);
 
-            // Batch optimization: Use batch fetch for ApiProxy (1 API call vs N calls)
-            if self.fetcher.is_using_api_proxy() {
-                println!("   🚀 Using batch fetch (1 API call for {} cryptos)", full_list.len());
+            // Fetch individually (works for both CryptoCompare and ApiProxy)
+            for (idx, symbol) in full_list.iter().enumerate() {
+                print!("   [{}/{}] {} (full)... ",
+                    idx + 1,
+                    full_list.len(),
+                    symbol
+                );
 
-                match self.fetcher.fetch_batch_full_history(&full_list, &start_date, interval).await {
-                    Ok(batch_data) => {
-                        // Process each crypto from the batch
-                        for (idx, symbol) in full_list.iter().enumerate() {
-                            print!("   [{}/{}] {} (full)... ",
-                                idx + 1,
-                                full_list.len(),
-                                symbol
-                            );
-
-                            let data = batch_data.get(symbol).cloned().unwrap_or_default();
-                            match self.process_crypto(symbol, Some(data), interval, "").await {
-                                Ok(_) => {
-                                    success_count += 1;
-                                    println!("✅");
-                                }
-                                Err(e) => {
-                                    eprintln!("❌ Save failed: {}", e);
-                                    failed_cryptos.push(symbol.clone());
-                                }
+                match self.fetch_full_history(symbol, &start_date, interval).await {
+                    Ok(data) => {
+                        match self.process_crypto(symbol, Some(data), interval, "").await {
+                            Ok(_) => {
+                                success_count += 1;
+                                println!("✅");
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Save failed: {}", e);
+                                failed_cryptos.push(symbol.clone());
                             }
                         }
                     }
                     Err(e) => {
-                        eprintln!("❌ Batch fetch failed: {}", e);
-                        failed_cryptos.extend(full_list.clone());
+                        // Check if rate limit error - stop processing remaining tickers
+                        if matches!(e, Error::RateLimit) {
+                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", full_list.len() - idx);
+                            // Add remaining tickers to failed list
+                            for remaining_symbol in full_list.iter().skip(idx) {
+                                failed_cryptos.push(remaining_symbol.clone());
+                            }
+                            break;
+                        }
+                        eprintln!("❌ Fetch failed: {}", e);
+                        failed_cryptos.push(symbol.clone());
                     }
                 }
-            } else {
-                // CryptoCompare: Fetch individually (no batch API)
-                for (idx, symbol) in full_list.iter().enumerate() {
-                    print!("   [{}/{}] {} (full)... ",
-                        idx + 1,
-                        full_list.len(),
-                        symbol
-                    );
 
-                    match self.fetch_full_history(symbol, &start_date, interval).await {
-                        Ok(data) => {
-                            match self.process_crypto(symbol, Some(data), interval, "").await {
-                                Ok(_) => {
-                                    success_count += 1;
-                                    println!("✅");
-                                }
-                                Err(e) => {
-                                    eprintln!("❌ Save failed: {}", e);
-                                    failed_cryptos.push(symbol.clone());
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            // Check if rate limit error - stop processing remaining tickers
-                            if matches!(e, Error::RateLimit) {
-                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", full_list.len() - idx);
-                                // Add remaining tickers to failed list
-                                for remaining_symbol in full_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
-                            }
-                            eprintln!("❌ Fetch failed: {}", e);
-                            failed_cryptos.push(symbol.clone());
-                        }
-                    }
-
-                    // Rate limit delay
-                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-                }
+                // Rate limit delay
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             }
         }
 
@@ -294,62 +223,156 @@ impl CryptoSync {
         Ok(())
     }
 
-    /// Enhance and save crypto data
+    /// Enhance and save crypto data (mirrors stock sync optimization)
     fn enhance_and_save_crypto_data(
         &self,
         symbol: &str,
-        data: &[OhlcvData],
+        new_data: &[OhlcvData],
         interval: Interval,
         last_date: &str,
     ) -> Result<(), Error> {
-        // Convert to HashMap for enhance_data()
-        let mut data_map: HashMap<String, Vec<OhlcvData>> = HashMap::new();
-        data_map.insert(symbol.to_string(), data.to_vec());
+        if new_data.is_empty() {
+            return Ok(());
+        }
 
-        // Enhance data (calculates all MAs and scores)
+        let crypto_data_dir = get_crypto_data_dir();
+        let file_path = crypto_data_dir.join(symbol).join(interval.to_filename());
+        let is_resume = !last_date.is_empty() && !self.config.force_full;
+
+        // Merge existing CSV data with new data (like stock sync does)
+        let merged_data = if is_resume && file_path.exists() {
+            let existing = self.read_existing_ohlcv(&file_path)?;
+            self.merge_ohlcv_data(existing, new_data.to_vec())
+        } else {
+            new_data.to_vec()
+        };
+
+        if merged_data.is_empty() {
+            return Ok(());
+        }
+
+        // Calculate cutoff date (like stock sync)
+        let resume_days = 2i64;
+        let cutoff_datetime = if is_resume && file_path.exists() {
+            if let Some(last_record) = merged_data.last() {
+                last_record.time - chrono::Duration::days(resume_days)
+            } else {
+                chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+            }
+        } else {
+            chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+        };
+
+        // Find cutoff index
+        let cutoff_index = merged_data.iter()
+            .position(|d| d.time >= cutoff_datetime)
+            .unwrap_or(merged_data.len());
+
+        // Optimization: Take 200 records before cutoff for MA200 context
+        const MA_BUFFER: usize = 200;
+        let start_index = cutoff_index.saturating_sub(MA_BUFFER);
+        let sliced_data = &merged_data[start_index..];
+
+        // Enhance the sliced data (with proper MA context)
+        let mut data_map: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+        data_map.insert(symbol.to_string(), sliced_data.to_vec());
         let enhanced_data = enhance_data(data_map);
 
-        // Get the enhanced data for this symbol
         let stock_data = enhanced_data.get(symbol)
             .ok_or_else(|| Error::Other("Failed to enhance data".to_string()))?;
 
-        let crypto_data_dir = get_crypto_data_dir();
-
-        // Determine if this is resume mode or full mode
-        let is_resume = !last_date.is_empty() && !self.config.force_full;
-
-        if is_resume {
-            // Resume mode: append new data
-            let cutoff_date = chrono::NaiveDate::parse_from_str(last_date, "%Y-%m-%d")
-                .map_err(|e| Error::InvalidInput(format!("Invalid date format: {}", e)))?;
-            let cutoff_datetime = chrono::DateTime::<Utc>::from_naive_utc_and_offset(
-                cutoff_date.and_hms_opt(0, 0, 0).unwrap(),
-                Utc
-            );
-
-            save_enhanced_csv_to_dir(
-                symbol,
-                stock_data,
-                interval,
-                cutoff_datetime,
-                false, // Don't rewrite all
-                &crypto_data_dir
-            )?;
-        } else {
-            // Full mode: rewrite entire file
-            let cutoff_date = chrono::Utc::now() - chrono::Duration::days(365 * 20); // Far in past
-
-            save_enhanced_csv_to_dir(
-                symbol,
-                stock_data,
-                interval,
-                cutoff_date,
-                true, // rewrite_all
-                &crypto_data_dir
-            )?;
-        }
+        // Save with cutoff strategy
+        save_enhanced_csv_to_dir(
+            symbol,
+            stock_data,
+            interval,
+            cutoff_datetime,
+            !is_resume, // rewrite_all for full mode
+            &crypto_data_dir
+        )?;
 
         Ok(())
+    }
+
+    /// Read existing OHLCV data from CSV file
+    fn read_existing_ohlcv(&self, file_path: &std::path::Path) -> Result<Vec<OhlcvData>, Error> {
+        if !file_path.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut reader = csv::ReaderBuilder::new()
+            .flexible(true)
+            .from_path(file_path)
+            .map_err(|e| Error::Io(format!("Failed to read CSV: {}", e)))?;
+
+        let mut data = Vec::new();
+        for result in reader.records() {
+            let record = match result {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+
+            if record.len() < 7 {
+                continue;
+            }
+
+            let symbol = record.get(0).unwrap_or("").to_string();
+            let time_str = record.get(1).unwrap_or("");
+            let open: f64 = record.get(2).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+            let high: f64 = record.get(3).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+            let low: f64 = record.get(4).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+            let close: f64 = record.get(5).and_then(|s| s.parse().ok()).unwrap_or(0.0);
+            let volume: u64 = record.get(6).and_then(|s| s.parse().ok()).unwrap_or(0);
+
+            // Parse time
+            let time = crate::utils::parse_timestamp(time_str)
+                .unwrap_or_else(|_| Utc::now());
+
+            data.push(OhlcvData {
+                time,
+                open,
+                high,
+                low,
+                close,
+                volume,
+                symbol: Some(symbol),
+            });
+        }
+
+        data.sort_by_key(|d| d.time);
+        Ok(data)
+    }
+
+    /// Merge existing and new OHLCV data (like stock sync)
+    fn merge_ohlcv_data(&self, existing: Vec<OhlcvData>, new: Vec<OhlcvData>) -> Vec<OhlcvData> {
+        if existing.is_empty() {
+            return new;
+        }
+        if new.is_empty() {
+            return existing;
+        }
+
+        // Find the latest timestamp in existing data
+        let latest_existing_time = existing.iter()
+            .map(|d| d.time)
+            .max()
+            .unwrap_or_else(|| Utc::now());
+
+        // Keep existing data before latest time
+        let mut merged: Vec<OhlcvData> = existing
+            .into_iter()
+            .filter(|d| d.time < latest_existing_time)
+            .collect();
+
+        // Add new data >= latest time (includes update to last row)
+        let new_rows: Vec<OhlcvData> = new
+            .into_iter()
+            .filter(|d| d.time >= latest_existing_time)
+            .collect();
+
+        merged.extend(new_rows);
+        merged.sort_by(|a, b| a.time.cmp(&b.time));
+        merged
     }
 
     /// Get start date for interval (accounts for data retention limits)

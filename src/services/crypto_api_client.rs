@@ -231,7 +231,7 @@ impl AiPriceActionClient {
         self.fetch_all_cryptos(BTC_INCEPTION, interval).await
     }
 
-    /// Fetch recent data since a specific date
+    /// Fetch recent data since a specific date (all cryptos)
     pub async fn fetch_recent(
         &self,
         last_date: &str,
@@ -243,5 +243,74 @@ impl AiPriceActionClient {
         );
 
         self.fetch_all_cryptos(last_date, interval).await
+    }
+
+    /// Fetch data for a single crypto symbol (saves bandwidth)
+    pub async fn fetch_single_crypto(
+        &self,
+        symbol: &str,
+        start_date: &str,
+        interval: Interval,
+    ) -> Result<Vec<OhlcvData>, Error> {
+        let interval_str = match interval {
+            Interval::Daily => "1D",
+            Interval::Hourly => "1H",
+            Interval::Minute => "1m",
+        };
+
+        // Build URL with symbol parameter
+        let url = format!(
+            "{}/tickers?mode=crypto&symbol={}&interval={}&start_date={}",
+            self.base_url, symbol, interval_str, start_date
+        );
+
+        info!(
+            "Fetching {} data from API proxy (start_date={})",
+            symbol, start_date
+        );
+
+        // Build request
+        let mut request_builder = self.client.get(&url);
+
+        // Add Host header if provided
+        if let Some(ref host) = self.host_header {
+            use reqwest::header::{HeaderValue, HOST};
+            if let Ok(header_value) = HeaderValue::from_str(host) {
+                request_builder = request_builder.header(HOST, header_value);
+            }
+        }
+
+        // Execute request
+        let response = request_builder
+            .send()
+            .await
+            .map_err(|e| Error::Network(format!("API request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(Error::Network(format!("API error {}: {}", status, body)));
+        }
+
+        // Parse JSON response
+        let body = response
+            .text()
+            .await
+            .map_err(|e| Error::Network(format!("Failed to read response: {}", e)))?;
+
+        let json: HashMap<String, Vec<Value>> = serde_json::from_str(&body)
+            .map_err(|e| Error::Parse(format!("Failed to parse JSON: {}", e)))?;
+
+        // Convert to Vec<OhlcvData>
+        let mut all_data = Vec::new();
+        for (sym, records) in json {
+            for record in records {
+                let ohlcv = self.parse_ohlcv_record(&sym, &record, interval)?;
+                all_data.push(ohlcv);
+            }
+        }
+
+        info!("Fetched {} records for {}", all_data.len(), symbol);
+        Ok(all_data)
     }
 }
