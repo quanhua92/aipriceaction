@@ -640,14 +640,24 @@
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
           </div>
 
-          <!-- Date Input -->
+          <!-- Start Date Input -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Analysis Date</label>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
             <input
               type="date"
-              id="vp-date"
+              id="vp-start-date"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
             <p class="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
+          </div>
+
+          <!-- End Date Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">End Date <span class="text-gray-400">(optional)</span></label>
+            <input
+              type="date"
+              id="vp-end-date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Leave empty for single day analysis</p>
           </div>
 
           <!-- Bins Input -->
@@ -657,10 +667,10 @@
               type="number"
               id="vp-bins"
               value="10"
-              min="5"
+              min="2"
               max="100"
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-            <p class="text-xs text-gray-500 mt-1">Number of price levels (5-100, default: 10 for readability)</p>
+            <p class="text-xs text-gray-500 mt-1">Number of price levels (2-100, default: 10 for readability)</p>
           </div>
 
           <!-- Value Area Percentage -->

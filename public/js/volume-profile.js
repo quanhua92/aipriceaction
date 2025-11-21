@@ -48,10 +48,15 @@ function buildVolumeProfileUrl() {
   const symbol = document.getElementById('vp-symbol').value.trim();
   if (symbol) params.symbol = symbol;
 
-  // Date is required - use input value or default to today
-  const dateInput = document.getElementById('vp-date').value;
-  const date = dateInput || new Date().toISOString().split('T')[0];
-  params.date = date;
+  // Date parameters - use start_date/end_date, default to today
+  const today = new Date().toISOString().split('T')[0];
+  const startDate = document.getElementById('vp-start-date').value || today;
+  const endDate = document.getElementById('vp-end-date').value;
+
+  params.start_date = startDate;
+  if (endDate && endDate !== startDate) {
+    params.end_date = endDate;
+  }
 
   const bins = document.getElementById('vp-bins').value;
   if (bins) params.bins = bins;
