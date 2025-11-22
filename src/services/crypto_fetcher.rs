@@ -66,21 +66,11 @@ impl CryptoFetcher {
             let api_client = AiPriceActionClient::new(url, target_host)
                 .map_err(|e| Error::Config(format!("Failed to create API client: {}", e)))?;
 
-            // Create CryptoCompare as fallback
-            let fallback = CryptoCompareClient::new(api_key.clone())
-                .map_err(|e| {
-                    warn!("Failed to create CryptoCompare fallback client: {:?}", e);
-                    e
-                })
-                .ok();
+            // No fallback in API proxy mode - if proxy fails, skip that crypto instead of retrying with CryptoCompare
+            // This avoids double API calls and allows the worker to continue with other cryptos
+            info!("API proxy mode: no CryptoCompare fallback (fail-fast behavior)");
 
-            if fallback.is_some() {
-                info!("CryptoCompare client configured as fallback");
-            } else {
-                warn!("CryptoCompare fallback not available - API failures will not be retried");
-            }
-
-            (CryptoDataSource::ApiProxy(api_client), fallback)
+            (CryptoDataSource::ApiProxy(api_client), None)
         } else {
             // Use CryptoCompare as primary (default behavior)
             info!("Using CryptoCompare API for crypto data (default)");

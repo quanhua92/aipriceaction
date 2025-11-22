@@ -45,7 +45,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             );
         }
         info!(
-            "  - Fallback: CryptoCompare API (if alternative fails)"
+            "  - Fallback: None (fail-fast, skip crypto on error)"
         );
     } else {
         info!(
