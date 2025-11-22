@@ -345,6 +345,56 @@ async fn sync_and_enhance(
         "Starting interval sync"
     );
 
+    // Step 0: Pre-check (only in ApiProxy mode)
+    // Check if data has changed before doing expensive sync operation
+    use crate::services::CryptoFetcher;
+    match CryptoFetcher::new(None) {
+        Ok(mut fetcher) => {
+            match fetcher.pre_check_interval_unchanged(symbols, interval).await {
+                Ok(true) => {
+                    info!(
+                        worker = "Crypto",
+                        iteration = iteration,
+                        tier = tier,
+                        interval = interval_name,
+                        crypto_count = symbols.len(),
+                        "Pre-check: all cryptos unchanged, skipping sync and enhancement"
+                    );
+                    return true; // Skip sync, return success
+                }
+                Ok(false) => {
+                    info!(
+                        worker = "Crypto",
+                        iteration = iteration,
+                        tier = tier,
+                        interval = interval_name,
+                        "Pre-check: data changed or not applicable, proceeding with sync"
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        worker = "Crypto",
+                        iteration = iteration,
+                        tier = tier,
+                        interval = interval_name,
+                        error = %e,
+                        "Pre-check failed, proceeding with sync anyway"
+                    );
+                }
+            }
+        }
+        Err(e) => {
+            warn!(
+                worker = "Crypto",
+                iteration = iteration,
+                tier = tier,
+                interval = interval_name,
+                error = %e,
+                "Failed to create fetcher for pre-check, proceeding with sync anyway"
+            );
+        }
+    }
+
     // Step 1: Sync
     let sync_start = Utc::now();
     let sync_result = sync_crypto_interval(interval, symbols).await;

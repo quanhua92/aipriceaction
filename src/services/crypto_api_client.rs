@@ -53,18 +53,20 @@ impl AiPriceActionClient {
     }
 
     /// Fetch all crypto data for a given interval and start date
-    /// Makes a single API call: GET /tickers?mode=crypto&interval={interval}&start_date={start_date}
+    /// Makes a single API call: GET /tickers?mode=crypto&interval={interval}&start_date={start_date}&limit={limit}
     ///
     /// # Arguments
-    /// * `start_date` - Start date in YYYY-MM-DD format (e.g., "2024-11-01")
+    /// * `start_date` - Optional start date in YYYY-MM-DD format (e.g., "2024-11-01")
     /// * `interval` - Time interval (Daily, Hourly, Minute)
+    /// * `limit` - Optional limit on number of records to return
     ///
     /// # Returns
     /// Vector of OHLCV data for all cryptocurrencies
     pub async fn fetch_all_cryptos(
         &self,
-        start_date: &str,
+        start_date: Option<&str>,
         interval: Interval,
+        limit: Option<usize>,
     ) -> Result<Vec<OhlcvData>, Error> {
         let interval_str = match interval {
             Interval::Daily => "1D",
@@ -72,15 +74,23 @@ impl AiPriceActionClient {
             Interval::Minute => "1m",
         };
 
-        // Build URL: /tickers?mode=crypto&interval={interval}&start_date={start_date}
-        let url = format!(
-            "{}/tickers?mode=crypto&interval={}&start_date={}",
-            self.base_url, interval_str, start_date
+        // Build URL: /tickers?mode=crypto&interval={interval}[&start_date={start_date}][&limit={limit}]
+        let mut url = format!(
+            "{}/tickers?mode=crypto&interval={}",
+            self.base_url, interval_str
         );
 
+        if let Some(date) = start_date {
+            url.push_str(&format!("&start_date={}", date));
+        }
+
+        if let Some(lim) = limit {
+            url.push_str(&format!("&limit={}", lim));
+        }
+
         debug!(
-            "Fetching crypto data from API: url={}, interval={}, start_date={}",
-            url, interval_str, start_date
+            "Fetching crypto data from API: url={}, interval={}, start_date={:?}, limit={:?}",
+            url, interval_str, start_date, limit
         );
 
         // Build request
@@ -228,7 +238,7 @@ impl AiPriceActionClient {
             BTC_INCEPTION
         );
 
-        self.fetch_all_cryptos(BTC_INCEPTION, interval).await
+        self.fetch_all_cryptos(Some(BTC_INCEPTION), interval, None).await
     }
 
     /// Fetch recent data since a specific date (all cryptos)
@@ -242,7 +252,7 @@ impl AiPriceActionClient {
             last_date
         );
 
-        self.fetch_all_cryptos(last_date, interval).await
+        self.fetch_all_cryptos(Some(last_date), interval, None).await
     }
 
     /// Fetch data for a single crypto symbol (saves bandwidth)

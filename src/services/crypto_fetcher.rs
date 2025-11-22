@@ -1,11 +1,12 @@
 use crate::error::Error;
-use crate::models::Interval;
+use crate::models::{Interval, StockData};
 use crate::services::crypto_compare::CryptoCompareClient;
 use crate::services::crypto_api_client::AiPriceActionClient;
 use crate::services::vci::OhlcvData;
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use tracing::{info, warn};
+use tracing::{info, warn, debug};
 
 /// Category result for crypto pre-scan
 #[derive(Debug)]
@@ -124,6 +125,127 @@ impl CryptoFetcher {
         }
 
         Ok(last_valid_date)
+    }
+
+    /// Read the last enhanced record from a CSV file (with MA indicators)
+    /// Returns StockData with full 20-column CSV data
+    fn read_last_enhanced_record(&self, file_path: &Path) -> Result<Option<StockData>, Error> {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+
+        let file = File::open(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
+
+        let reader = BufReader::new(file);
+        let mut last_valid_line: Option<String> = None;
+
+        // Read all lines to find the last valid data line
+        for line in reader.lines() {
+            let line = line.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+
+            // Skip header and empty lines
+            if line.starts_with("ticker") || line.trim().is_empty() {
+                continue;
+            }
+
+            last_valid_line = Some(line);
+        }
+
+        // Parse the last valid line into StockData
+        if let Some(line) = last_valid_line {
+            Self::parse_enhanced_csv_line(&line)
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Parse a CSV line into StockData (20 columns)
+    /// Format: ticker,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,
+    ///         ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,
+    ///         close_changed,volume_changed,total_money_changed
+    fn parse_enhanced_csv_line(line: &str) -> Result<Option<StockData>, Error> {
+        let parts: Vec<&str> = line.split(',').collect();
+        if parts.len() < 20 {
+            return Ok(None); // Not an enhanced CSV line
+        }
+
+        // Helper to parse optional f64
+        let parse_opt_f64 = |s: &str| -> Option<f64> {
+            s.trim().parse::<f64>().ok()
+        };
+
+        // Parse ticker (column 0)
+        let ticker = parts[0].trim().to_string();
+
+        // Parse time (column 1)
+        let time_str = parts[1].trim();
+        let time: DateTime<Utc> = if time_str.contains(' ') || time_str.contains('T') {
+            // Hourly/Minute format: "2024-11-20 09:30:00" or "2024-11-20T09:30:00"
+            // Normalize to ISO format and parse
+            let normalized = time_str.replace(' ', "T");
+            chrono::NaiveDateTime::parse_from_str(&normalized, "%Y-%m-%dT%H:%M:%S")
+                .map(|ndt| ndt.and_utc())
+                .map_err(|e| Error::Parse(format!("Failed to parse hourly/minute time '{}': {}", time_str, e)))?
+        } else {
+            // Daily format: "2024-11-20"
+            chrono::NaiveDate::parse_from_str(time_str, "%Y-%m-%d")
+                .map(|nd| nd.and_hms_opt(0, 0, 0).unwrap().and_utc())
+                .map_err(|e| Error::Parse(format!("Failed to parse daily time '{}': {}", time_str, e)))?
+        };
+
+        // Parse OHLCV (columns 2-6)
+        let open = parts[2].trim().parse::<f64>()
+            .map_err(|e| Error::Parse(format!("Failed to parse open: {}", e)))?;
+        let high = parts[3].trim().parse::<f64>()
+            .map_err(|e| Error::Parse(format!("Failed to parse high: {}", e)))?;
+        let low = parts[4].trim().parse::<f64>()
+            .map_err(|e| Error::Parse(format!("Failed to parse low: {}", e)))?;
+        let close = parts[5].trim().parse::<f64>()
+            .map_err(|e| Error::Parse(format!("Failed to parse close: {}", e)))?;
+        let volume = parts[6].trim().parse::<u64>()
+            .map_err(|e| Error::Parse(format!("Failed to parse volume: {}", e)))?;
+
+        // Parse MAs (columns 7-11)
+        let ma10 = parse_opt_f64(parts[7]);
+        let ma20 = parse_opt_f64(parts[8]);
+        let ma50 = parse_opt_f64(parts[9]);
+        let ma100 = parse_opt_f64(parts[10]);
+        let ma200 = parse_opt_f64(parts[11]);
+
+        // Parse MA scores (columns 12-16)
+        let ma10_score = parse_opt_f64(parts[12]);
+        let ma20_score = parse_opt_f64(parts[13]);
+        let ma50_score = parse_opt_f64(parts[14]);
+        let ma100_score = parse_opt_f64(parts[15]);
+        let ma200_score = parse_opt_f64(parts[16]);
+
+        // Parse change indicators (columns 17-19)
+        let close_changed = parse_opt_f64(parts[17]);
+        let volume_changed = parse_opt_f64(parts[18]);
+        let total_money_changed = parse_opt_f64(parts[19]);
+
+        Ok(Some(StockData {
+            time,
+            ticker,
+            open,
+            high,
+            low,
+            close,
+            volume,
+            ma10,
+            ma20,
+            ma50,
+            ma100,
+            ma200,
+            ma10_score,
+            ma20_score,
+            ma50_score,
+            ma100_score,
+            ma200_score,
+            close_changed,
+            volume_changed,
+            total_money_changed,
+        }))
     }
 
     /// Get the file path for a crypto's CSV file
@@ -417,6 +539,104 @@ impl CryptoFetcher {
         }
 
         Ok(results)
+    }
+
+    /// Pre-check if interval data has changed for any crypto
+    /// Returns true if ALL cryptos unchanged (skip sync), false if ANY changed (proceed with sync)
+    /// Only works in ApiProxy mode - returns false for CryptoCompare mode
+    pub async fn pre_check_interval_unchanged(
+        &mut self,
+        symbols: &[String],
+        interval: Interval,
+    ) -> Result<bool, Error> {
+        // Only works in ApiProxy mode
+        if !matches!(self.primary_source, CryptoDataSource::ApiProxy(_)) {
+            debug!("Pre-check: Not in ApiProxy mode, skipping pre-check");
+            return Ok(false); // Skip pre-check in CryptoCompare mode
+        }
+
+        info!(
+            "Pre-check: Fetching last 1 record for {} cryptos via batch API (interval={})",
+            symbols.len(),
+            interval.to_filename()
+        );
+
+        // Fetch last 1 record for all cryptos (no start_date, just limit=1)
+        let api_data = match &mut self.primary_source {
+            CryptoDataSource::ApiProxy(client) => {
+                client.fetch_all_cryptos(None, interval, Some(1)).await?
+            }
+            _ => return Ok(false), // Should never reach here due to check above
+        };
+
+        // Group API data by symbol
+        let mut api_map: HashMap<String, &OhlcvData> = HashMap::new();
+        for record in &api_data {
+            if let Some(ref symbol) = record.symbol {
+                api_map.insert(symbol.clone(), record);
+            }
+        }
+
+        info!(
+            "Pre-check: Received {} records from API, comparing with CSV files",
+            api_map.len()
+        );
+
+        // Compare each crypto's last record
+        for symbol in symbols {
+            let csv_path = self.get_crypto_file_path(symbol, interval);
+
+            // Read last record from CSV
+            let csv_record = match self.read_last_enhanced_record(&csv_path) {
+                Ok(Some(record)) => record,
+                Ok(None) => {
+                    info!("Pre-check: {} - CSV missing or empty, needs sync", symbol);
+                    return Ok(false); // CSV missing, need sync
+                }
+                Err(e) => {
+                    warn!("Pre-check: {} - Failed to read CSV: {}, needs sync", symbol, e);
+                    return Ok(false); // CSV read error, need sync
+                }
+            };
+
+            // Get API record
+            let api_record = match api_map.get(symbol) {
+                Some(record) => record,
+                None => {
+                    info!("Pre-check: {} - Not in API response, needs sync", symbol);
+                    return Ok(false); // API missing data, need sync
+                }
+            };
+
+            // Compare OHLC values (tolerance: 0.01)
+            let tolerance = 0.01;
+            if (csv_record.open - api_record.open).abs() >= tolerance
+                || (csv_record.high - api_record.high).abs() >= tolerance
+                || (csv_record.low - api_record.low).abs() >= tolerance
+                || (csv_record.close - api_record.close).abs() >= tolerance
+            {
+                info!(
+                    "Pre-check: {} - OHLC changed (CSV close={}, API close={}), needs sync",
+                    symbol, csv_record.close, api_record.close
+                );
+                return Ok(false); // Price changed, need sync
+            }
+
+            // Note: We can't compare MA20/MA50 directly from OhlcvData
+            // The API response needs to be enhanced to include MA values
+            // For now, we'll just compare OHLC which is sufficient for detecting new data
+
+            debug!(
+                "Pre-check: {} - OHLC matches (close={})",
+                symbol, csv_record.close
+            );
+        }
+
+        info!(
+            "Pre-check: All {} cryptos unchanged, sync can be skipped",
+            symbols.len()
+        );
+        Ok(true) // All cryptos unchanged
     }
 }
 
