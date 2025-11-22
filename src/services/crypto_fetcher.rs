@@ -541,6 +541,67 @@ impl CryptoFetcher {
         Ok(results)
     }
 
+    /// Fetch data for multiple cryptos using batch API (ApiProxy mode only)
+    /// Returns HashMap of symbol -> Vec<OhlcvData>
+    /// In CryptoCompare mode, falls back to sequential fetching
+    pub async fn fetch_batch(
+        &mut self,
+        symbols: &[String],
+        start_date: &str,
+        interval: Interval,
+    ) -> Result<HashMap<String, Vec<OhlcvData>>, Error> {
+        match &mut self.primary_source {
+            CryptoDataSource::ApiProxy(client) => {
+                info!(
+                    "Batch fetch: {} cryptos via API proxy (start_date={}, interval={})",
+                    symbols.len(),
+                    start_date,
+                    interval.to_filename()
+                );
+
+                // Make single batch API call for all cryptos
+                let all_data = client.fetch_all_cryptos(Some(start_date), interval, None).await?;
+
+                // Group data by symbol
+                let mut result: HashMap<String, Vec<OhlcvData>> = HashMap::new();
+                for record in all_data {
+                    if let Some(ref symbol) = record.symbol {
+                        result.entry(symbol.clone()).or_insert_with(Vec::new).push(record);
+                    }
+                }
+
+                // Ensure all requested symbols have an entry (even if empty)
+                for symbol in symbols {
+                    result.entry(symbol.clone()).or_insert_with(Vec::new);
+                }
+
+                info!(
+                    "Batch fetch: received data for {} cryptos",
+                    result.iter().filter(|(_, v)| !v.is_empty()).count()
+                );
+
+                Ok(result)
+            }
+            CryptoDataSource::CryptoCompare(_) => {
+                // CryptoCompare doesn't have batch API, fall back to sequential
+                info!(
+                    "Batch fetch: CryptoCompare mode, falling back to sequential fetch for {} cryptos",
+                    symbols.len()
+                );
+                self.sequential_fetch(symbols, start_date, interval, false).await.map(|results| {
+                    results.into_iter()
+                        .filter_map(|(k, v)| v.map(|data| (k, data)))
+                        .collect()
+                })
+            }
+        }
+    }
+
+    /// Check if using API proxy mode
+    pub fn is_proxy_mode(&self) -> bool {
+        matches!(self.primary_source, CryptoDataSource::ApiProxy(_))
+    }
+
     /// Pre-check if interval data has changed for any crypto
     /// Returns true if ALL cryptos unchanged (skip sync), false if ANY changed (proceed with sync)
     /// Only works in ApiProxy mode - returns false for CryptoCompare mode

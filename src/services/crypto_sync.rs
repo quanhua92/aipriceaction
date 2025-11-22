@@ -61,8 +61,8 @@ impl CryptoSync {
     async fn sync_interval(&mut self, symbols: &[String], interval: Interval) -> Result<(), Error> {
         let interval_start_time = Instant::now();
 
-        // Check if proxy mode for faster delays
-        let is_proxy_mode = std::env::var("CRYPTO_WORKER_TARGET_URL").is_ok();
+        // Check if proxy mode for batch API optimization
+        let is_proxy_mode = self.fetcher.is_proxy_mode();
         let delay_ms = if is_proxy_mode { 50 } else { 200 };
 
         // Categorize cryptos (resume vs full history)
@@ -91,41 +91,92 @@ impl CryptoSync {
             println!("\n🔄 Processing {} resume cryptos...", resume_list.len());
             let total = resume_list.len();
 
-            for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
-                let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
-                if idx == show_first && total > show_first + show_last {
-                    println!("   ... ({} more cryptos) ...", total - show_first - show_last);
-                }
+            if is_proxy_mode {
+                // API Proxy mode: Use batch API for all resume cryptos (single API call)
+                println!("   🚀 Batch API mode: fetching all cryptos in one request");
 
-                match self.fetch_recent(symbol, last_date, interval).await {
-                    Ok(data) => {
-                        match self.process_crypto(symbol, Some(data), interval, last_date).await {
-                            Ok(_) => {
-                                success_count += 1;
-                                if should_print {
-                                    println!("   [{}/{}] {} ✅", idx + 1, total, symbol);
-                                }
+                // Find minimum last_date across all resume cryptos
+                let min_last_date = resume_list.iter()
+                    .map(|(_, date)| date.as_str())
+                    .min()
+                    .unwrap_or("2010-07-17"); // Fallback to BTC inception
+
+                // Single batch API call for all cryptos
+                match self.fetcher.fetch_batch(
+                    &resume_list.iter().map(|(s, _)| s.clone()).collect::<Vec<_>>(),
+                    min_last_date,
+                    interval
+                ).await {
+                    Ok(batch_data) => {
+                        // Process each crypto's data
+                        for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
+                            let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
+                            if idx == show_first && total > show_first + show_last {
+                                println!("   ... ({} more cryptos) ...", total - show_first - show_last);
                             }
-                            Err(e) => {
-                                eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+
+                            if let Some(data) = batch_data.get(symbol) {
+                                match self.process_crypto(symbol, Some(data.clone()), interval, last_date).await {
+                                    Ok(_) => {
+                                        success_count += 1;
+                                        if should_print {
+                                            println!("   [{}/{}] {} ✅ ({} records)", idx + 1, total, symbol, data.len());
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+                                        failed_cryptos.push(symbol.clone());
+                                    }
+                                }
+                            } else {
+                                eprintln!("   [{}/{}] {} ❌ No data in batch response", idx + 1, total, symbol);
                                 failed_cryptos.push(symbol.clone());
                             }
                         }
                     }
                     Err(e) => {
-                        if matches!(e, Error::RateLimit) {
-                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                            for (remaining_symbol, _) in resume_list.iter().skip(idx) {
-                                failed_cryptos.push(remaining_symbol.clone());
-                            }
-                            break;
-                        }
-                        eprintln!("   [{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
-                        failed_cryptos.push(symbol.clone());
+                        eprintln!("❌ Batch API failed: {}", e);
+                        failed_cryptos.extend(resume_list.iter().map(|(s, _)| s.clone()));
                     }
                 }
+            } else {
+                // CryptoCompare mode: Sequential fetching (one by one)
+                for (idx, (symbol, last_date)) in resume_list.iter().enumerate() {
+                    let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
+                    if idx == show_first && total > show_first + show_last {
+                        println!("   ... ({} more cryptos) ...", total - show_first - show_last);
+                    }
 
-                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    match self.fetch_recent(symbol, last_date, interval).await {
+                        Ok(data) => {
+                            match self.process_crypto(symbol, Some(data), interval, last_date).await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    if should_print {
+                                        println!("   [{}/{}] {} ✅", idx + 1, total, symbol);
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", total - idx);
+                                for (remaining_symbol, _) in resume_list.iter().skip(idx) {
+                                    failed_cryptos.push(remaining_symbol.clone());
+                                }
+                                break;
+                            }
+                            eprintln!("   [{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
+                            failed_cryptos.push(symbol.clone());
+                        }
+                    }
+
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                }
             }
         }
 
@@ -135,41 +186,82 @@ impl CryptoSync {
             let total = full_list.len();
             let start_date = self.get_start_date_for_interval(interval);
 
-            for (idx, symbol) in full_list.iter().enumerate() {
-                let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
-                if idx == show_first && total > show_first + show_last {
-                    println!("   ... ({} more cryptos) ...", total - show_first - show_last);
-                }
+            if is_proxy_mode {
+                // API Proxy mode: Use batch API for all full history cryptos (single API call)
+                println!("   🚀 Batch API mode: fetching all cryptos in one request");
 
-                match self.fetch_full_history(symbol, &start_date, interval).await {
-                    Ok(data) => {
-                        match self.process_crypto(symbol, Some(data), interval, "").await {
-                            Ok(_) => {
-                                success_count += 1;
-                                if should_print {
-                                    println!("   [{}/{}] {} ✅", idx + 1, total, symbol);
-                                }
+                // Single batch API call for all cryptos
+                match self.fetcher.fetch_batch(&full_list, &start_date, interval).await {
+                    Ok(batch_data) => {
+                        // Process each crypto's data
+                        for (idx, symbol) in full_list.iter().enumerate() {
+                            let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
+                            if idx == show_first && total > show_first + show_last {
+                                println!("   ... ({} more cryptos) ...", total - show_first - show_last);
                             }
-                            Err(e) => {
-                                eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+
+                            if let Some(data) = batch_data.get(symbol) {
+                                match self.process_crypto(symbol, Some(data.clone()), interval, "").await {
+                                    Ok(_) => {
+                                        success_count += 1;
+                                        if should_print {
+                                            println!("   [{}/{}] {} ✅ ({} records)", idx + 1, total, symbol, data.len());
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+                                        failed_cryptos.push(symbol.clone());
+                                    }
+                                }
+                            } else {
+                                eprintln!("   [{}/{}] {} ❌ No data in batch response", idx + 1, total, symbol);
                                 failed_cryptos.push(symbol.clone());
                             }
                         }
                     }
                     Err(e) => {
-                        if matches!(e, Error::RateLimit) {
-                            eprintln!("❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                            for remaining_symbol in full_list.iter().skip(idx) {
-                                failed_cryptos.push(remaining_symbol.clone());
-                            }
-                            break;
-                        }
-                        eprintln!("   [{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
-                        failed_cryptos.push(symbol.clone());
+                        eprintln!("❌ Batch API failed: {}", e);
+                        failed_cryptos.extend(full_list.clone());
                     }
                 }
+            } else {
+                // CryptoCompare mode: Sequential fetching (one by one)
+                for (idx, symbol) in full_list.iter().enumerate() {
+                    let should_print = idx < show_first || idx >= total.saturating_sub(show_last);
+                    if idx == show_first && total > show_first + show_last {
+                        println!("   ... ({} more cryptos) ...", total - show_first - show_last);
+                    }
 
-                tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    match self.fetch_full_history(symbol, &start_date, interval).await {
+                        Ok(data) => {
+                            match self.process_crypto(symbol, Some(data), interval, "").await {
+                                Ok(_) => {
+                                    success_count += 1;
+                                    if should_print {
+                                        println!("   [{}/{}] {} ✅", idx + 1, total, symbol);
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("   [{}/{}] {} ❌ Save failed: {}", idx + 1, total, symbol, e);
+                                    failed_cryptos.push(symbol.clone());
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("❌ Rate limit hit - skipping remaining {} tickers", total - idx);
+                                for remaining_symbol in full_list.iter().skip(idx) {
+                                    failed_cryptos.push(remaining_symbol.clone());
+                                }
+                                break;
+                            }
+                            eprintln!("   [{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
+                            failed_cryptos.push(symbol.clone());
+                        }
+                    }
+
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                }
             }
         }
 
