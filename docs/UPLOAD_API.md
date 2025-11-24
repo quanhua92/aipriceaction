@@ -255,6 +255,109 @@ X-Content-Type-Options: nosniff
 
 ---
 
+### 5. Delete Markdown File
+
+**Endpoint:** `DELETE /uploads/{session_id}/markdown/{filename}`
+
+**Query Parameters:**
+- `secret` (required): Session secret key
+
+**Example:**
+```bash
+SESSION_ID="018c9f8e-7a2b-7890-a456-123456789abc"
+SECRET="a1b2c3d4-e5f6-7890-1234-567890abcdef"
+
+# Delete a markdown file
+curl -X DELETE "http://localhost:3000/uploads/$SESSION_ID/markdown/notes.md?secret=$SECRET"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "File deleted successfully",
+  "file": "notes.md"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid session_id or filename, missing secret
+- `403 Forbidden`: Wrong secret
+- `404 Not Found`: Session or file doesn't exist
+- `500 Internal Server Error`: File deletion failed
+
+---
+
+### 6. Delete Image File
+
+**Endpoint:** `DELETE /uploads/{session_id}/images/{filename}`
+
+**Query Parameters:**
+- `secret` (required): Session secret key
+
+**Example:**
+```bash
+SESSION_ID="018c9f8e-7a2b-7890-a456-123456789abc"
+SECRET="a1b2c3d4-e5f6-7890-1234-567890abcdef"
+
+# Delete an image file
+curl -X DELETE "http://localhost:3000/uploads/$SESSION_ID/images/screenshot.png?secret=$SECRET"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "File deleted successfully",
+  "file": "screenshot.png"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid session_id or filename, missing secret
+- `403 Forbidden`: Wrong secret
+- `404 Not Found`: Session or file doesn't exist
+- `500 Internal Server Error`: File deletion failed
+
+---
+
+### 7. Delete Entire Session
+
+**Endpoint:** `DELETE /uploads/{session_id}`
+
+**Query Parameters:**
+- `secret` (required): Session secret key
+
+**Example:**
+```bash
+SESSION_ID="018c9f8e-7a2b-7890-a456-123456789abc"
+SECRET="a1b2c3d4-e5f6-7890-1234-567890abcdef"
+
+# Delete entire session (all files + metadata)
+curl -X DELETE "http://localhost:3000/uploads/$SESSION_ID?secret=$SECRET"
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Session deleted successfully",
+  "session_id": "018c9f8e-7a2b-7890-a456-123456789abc",
+  "files_deleted": {
+    "markdown": 2,
+    "images": 1
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid session_id, missing secret
+- `403 Forbidden`: Wrong secret
+- `404 Not Found`: Session doesn't exist
+- `500 Internal Server Error`: Session deletion failed
+
+---
+
 ## Security & Validation
 
 ### Filename Sanitization

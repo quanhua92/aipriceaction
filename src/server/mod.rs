@@ -198,10 +198,13 @@ pub async fn serve(
     tracing::info!("  GET /analysis/top-performers?sort_by=close_changed&limit=10");
     tracing::info!("  GET /analysis/ma-scores-by-sector?ma_period=20");
     tracing::info!("  GET /analysis/volume-profile?symbol=VCB&date=2024-01-15");
-    tracing::info!("  POST /upload/markdown?session_id=<uuid>");
-    tracing::info!("  POST /upload/image?session_id=<uuid>");
+    tracing::info!("  POST /upload/markdown?session_id=<uuid>&secret=<secret>");
+    tracing::info!("  POST /upload/image?session_id=<uuid>&secret=<secret>");
     tracing::info!("  GET /uploads/{{session_id}}/markdown/{{filename}}");
     tracing::info!("  GET /uploads/{{session_id}}/images/{{filename}}");
+    tracing::info!("  DELETE /uploads/{{session_id}}/markdown/{{filename}}?secret=<secret>");
+    tracing::info!("  DELETE /uploads/{{session_id}}/images/{{filename}}?secret=<secret>");
+    tracing::info!("  DELETE /uploads/{{session_id}}?secret=<secret>");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
@@ -225,8 +228,9 @@ pub async fn serve(
     let upload_routes = Router::new()
         .route("/upload/markdown", post(upload::upload_markdown_handler))
         .route("/upload/image", post(upload::upload_image_handler))
-        .route("/uploads/{session_id}/markdown/{filename}", get(upload::serve_markdown_handler))
-        .route("/uploads/{session_id}/images/{filename}", get(upload::serve_image_handler))
+        .route("/uploads/{session_id}/markdown/{filename}", get(upload::serve_markdown_handler).delete(upload::delete_markdown_handler))
+        .route("/uploads/{session_id}/images/{filename}", get(upload::serve_image_handler).delete(upload::delete_image_handler))
+        .route("/uploads/{session_id}", axum::routing::delete(upload::delete_session_handler))
         .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)); // 10MB for uploads
 
     // Build main routes with 1MB body limit

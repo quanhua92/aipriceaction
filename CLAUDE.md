@@ -68,7 +68,7 @@ Complete test flow covering all aspects of the system:
 ./scripts/test-integration.sh    # 17 integration tests (13 VN + 4 crypto)
 ./scripts/test-analysis.sh        # 10 analysis API tests
 ./scripts/test-aggregated.sh      # 27 aggregated interval tests
-./scripts/test-upload.sh          # 13 upload API tests (includes secret validation)
+./scripts/test-upload.sh          # 19 upload API tests (includes DELETE operations)
 
 # 3. Run all SDK examples
 cd sdk/aipriceaction-js
@@ -139,7 +139,13 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 - ✅ Path traversal prevention (400/404)
 - ✅ Wrong file type (415 Unsupported Media Type)
 - ✅ File size limit enforcement (413/500)
-- **Total: 13 tests**
+- ✅ DELETE markdown file with correct secret
+- ✅ DELETE with wrong secret (403 Forbidden)
+- ✅ DELETE non-existent file (404 Not Found)
+- ✅ DELETE image file with correct secret
+- ✅ DELETE entire session (all files + metadata)
+- ✅ Verify session deleted (404 Not Found)
+- **Total: 19 tests**
 
 **SDK Examples** (10 TypeScript examples):
 1. `01-basic-tickers.ts` - Single/multiple tickers, historical data, hourly data
@@ -166,7 +172,7 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 - **Integration**: 17/17 tests passed (13 VN + 4 crypto)
 - **Analysis**: 10/10 tests passed
 - **Aggregated**: 27/27 tests passed
-- **Upload**: 13/13 tests passed
+- **Upload**: 19/19 tests passed (includes DELETE operations)
 - **SDK Examples**: All 10 examples run successfully without errors
 
 #### Troubleshooting Tests

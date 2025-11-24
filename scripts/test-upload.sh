@@ -293,6 +293,93 @@ else
 fi
 echo ""
 
+# Test 14: Delete markdown file (with correct secret - 200 OK expected)
+echo "=== Test 12: Delete markdown file with correct secret ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/uploads/$SESSION_ID/markdown/test-upload.txt?secret=$SECRET")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" = "200" ] && echo "$BODY" | jq -e '.success == true' > /dev/null 2>&1; then
+    print_result 0 "Delete markdown file with correct secret"
+    echo "$BODY" | jq '.'
+else
+    print_result 1 "Delete markdown file (HTTP $HTTP_CODE)"
+    echo "$BODY"
+fi
+echo ""
+
+# Test 15: Try to delete with wrong secret (403 expected)
+echo "=== Test 13: Delete with wrong secret (403 Forbidden expected) ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/uploads/$SESSION_ID/markdown/test-upload.md?secret=wrong-secret-abc")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" = "403" ]; then
+    print_result 0 "Wrong secret rejection for DELETE"
+    echo "$BODY" | jq '.'
+else
+    print_result 1 "Wrong secret rejection (expected 403, got HTTP $HTTP_CODE)"
+    echo "$BODY"
+fi
+echo ""
+
+# Test 16: Try to delete non-existent file (404 expected)
+echo "=== Test 14: Delete non-existent file (404 Not Found expected) ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/uploads/$SESSION_ID/markdown/nonexistent.md?secret=$SECRET")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" = "404" ]; then
+    print_result 0 "Non-existent file detection"
+    echo "$BODY" | jq '.'
+else
+    print_result 1 "Non-existent file detection (expected 404, got HTTP $HTTP_CODE)"
+    echo "$BODY"
+fi
+echo ""
+
+# Test 17: Delete image file (with correct secret - 200 OK expected)
+echo "=== Test 15: Delete image file with correct secret ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/uploads/$SESSION_ID/images/test-upload.png?secret=$SECRET")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" = "200" ] && echo "$BODY" | jq -e '.success == true' > /dev/null 2>&1; then
+    print_result 0 "Delete image file with correct secret"
+    echo "$BODY" | jq '.'
+else
+    print_result 1 "Delete image file (HTTP $HTTP_CODE)"
+    echo "$BODY"
+fi
+echo ""
+
+# Test 18: Delete entire session (with correct secret - 200 OK expected)
+echo "=== Test 16: Delete entire session ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/uploads/$SESSION_ID?secret=$SECRET")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" = "200" ] && echo "$BODY" | jq -e '.success == true' > /dev/null 2>&1; then
+    print_result 0 "Delete entire session"
+    echo "$BODY" | jq '.'
+else
+    print_result 1 "Delete entire session (HTTP $HTTP_CODE)"
+    echo "$BODY"
+fi
+echo ""
+
+# Test 19: Verify session is deleted (404 expected)
+echo "=== Test 17: Verify session deleted (404 expected) ==="
+RESPONSE=$(curl -s -w "\n%{http_code}" "$BASE_URL/uploads/$SESSION_ID/markdown/test-upload.md")
+HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+if [ "$HTTP_CODE" = "404" ]; then
+    print_result 0 "Session deletion verification"
+else
+    print_result 1 "Session should be deleted (expected 404, got HTTP $HTTP_CODE)"
+fi
+echo ""
+
 # Cleanup
 cleanup_test_files
 

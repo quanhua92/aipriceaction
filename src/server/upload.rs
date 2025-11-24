@@ -30,6 +30,12 @@ pub struct RetrieveQuery {
     pub secret: Option<String>,
 }
 
+/// Query parameters for delete endpoints
+#[derive(Debug, Deserialize)]
+pub struct DeleteQuery {
+    pub secret: String,
+}
+
 /// Session metadata stored in metadata.json
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SessionMetadata {
@@ -37,6 +43,29 @@ pub struct SessionMetadata {
     pub secret: String,
     pub is_public: bool,
     pub created_at: String,
+}
+
+/// Response structure for delete operations
+#[derive(Debug, Serialize)]
+pub struct DeleteResponse {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files_deleted: Option<FilesDeleted>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+/// Files deleted count in session deletion
+#[derive(Debug, Serialize)]
+pub struct FilesDeleted {
+    pub markdown: usize,
+    pub images: usize,
 }
 
 /// Response structure for successful uploads
@@ -335,6 +364,12 @@ async fn serve_file_handler(
         }
     };
 
+    // Check if session exists BEFORE checking access
+    let session_dir = PathBuf::from("uploads").join(session_uuid.to_string());
+    if !session_dir.exists() {
+        return error_response(StatusCode::NOT_FOUND, "Session does not exist");
+    }
+
     // Validate filename (prevent path traversal)
     if let Err(e) = validate_path_component(&filename) {
         return error_response(StatusCode::BAD_REQUEST, &e);
@@ -619,6 +654,241 @@ fn error_response(status: StatusCode, message: &str) -> Response {
         success: false,
         session_id: None,
         files: None,
+        error: Some(message.to_string()),
+    };
+
+    (status, axum::Json(response)).into_response()
+}
+/// DELETE /uploads/{session_id}/markdown/{filename}?secret={secret}
+/// Delete a specific markdown file
+#[instrument(skip(query))]
+pub async fn delete_markdown_handler(
+    Path((session_id, filename)): Path<(String, String)>,
+    Query(query): Query<DeleteQuery>,
+) -> Response {
+    info!("DELETE markdown file: session={}, file={}", session_id, filename);
+
+    // Validate session_id
+    let session_uuid = match Uuid::parse_str(&session_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return delete_error_response(StatusCode::BAD_REQUEST, "Invalid session_id format"),
+    };
+
+    // Validate secret format (min 8 chars)
+    if query.secret.len() < 8 {
+        return delete_error_response(StatusCode::BAD_REQUEST, "Secret must be at least 8 characters");
+    }
+
+    // Sanitize and validate filename
+    let sanitized = sanitize_filename(&filename);
+    if sanitized.is_empty() || sanitized.contains("..") || sanitized.contains('/') {
+        return delete_error_response(StatusCode::BAD_REQUEST, "Invalid filename");
+    }
+
+    // Build file path
+    let session_dir = PathBuf::from("uploads").join(session_uuid.to_string());
+    let file_path = session_dir.join("markdown").join(&sanitized);
+
+    // Check if session exists
+    if !session_dir.exists() {
+        return delete_error_response(StatusCode::NOT_FOUND, "Session does not exist");
+    }
+
+    // Validate secret
+    match validate_secret(&session_uuid, &query.secret).await {
+        Ok(_) => info!("Secret validated for DELETE"),
+        Err(e) => {
+            warn!("Invalid secret for DELETE: {}", e);
+            return delete_error_response(StatusCode::FORBIDDEN, &e);
+        }
+    }
+
+    // Check if file exists
+    if !file_path.exists() {
+        return delete_error_response(StatusCode::NOT_FOUND, "File not found");
+    }
+
+    // Delete the file
+    if let Err(e) = fs::remove_file(&file_path).await {
+        error!("Failed to delete file: {}", e);
+        return delete_error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete file");
+    }
+
+    info!("File deleted successfully: {}", sanitized);
+
+    let response = DeleteResponse {
+        success: true,
+        message: Some("File deleted successfully".to_string()),
+        file: Some(sanitized),
+        session_id: None,
+        files_deleted: None,
+        error: None,
+    };
+
+    (StatusCode::OK, axum::Json(response)).into_response()
+}
+
+/// DELETE /uploads/{session_id}/images/{filename}?secret={secret}
+/// Delete a specific image file
+#[instrument(skip(query))]
+pub async fn delete_image_handler(
+    Path((session_id, filename)): Path<(String, String)>,
+    Query(query): Query<DeleteQuery>,
+) -> Response {
+    info!("DELETE image file: session={}, file={}", session_id, filename);
+
+    // Validate session_id
+    let session_uuid = match Uuid::parse_str(&session_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return delete_error_response(StatusCode::BAD_REQUEST, "Invalid session_id format"),
+    };
+
+    // Validate secret format (min 8 chars)
+    if query.secret.len() < 8 {
+        return delete_error_response(StatusCode::BAD_REQUEST, "Secret must be at least 8 characters");
+    }
+
+    // Sanitize and validate filename
+    let sanitized = sanitize_filename(&filename);
+    if sanitized.is_empty() || sanitized.contains("..") || sanitized.contains('/') {
+        return delete_error_response(StatusCode::BAD_REQUEST, "Invalid filename");
+    }
+
+    // Build file path
+    let session_dir = PathBuf::from("uploads").join(session_uuid.to_string());
+    let file_path = session_dir.join("images").join(&sanitized);
+
+    // Check if session exists
+    if !session_dir.exists() {
+        return delete_error_response(StatusCode::NOT_FOUND, "Session does not exist");
+    }
+
+    // Validate secret
+    match validate_secret(&session_uuid, &query.secret).await {
+        Ok(_) => info!("Secret validated for DELETE"),
+        Err(e) => {
+            warn!("Invalid secret for DELETE: {}", e);
+            return delete_error_response(StatusCode::FORBIDDEN, &e);
+        }
+    }
+
+    // Check if file exists
+    if !file_path.exists() {
+        return delete_error_response(StatusCode::NOT_FOUND, "File not found");
+    }
+
+    // Delete the file
+    if let Err(e) = fs::remove_file(&file_path).await {
+        error!("Failed to delete file: {}", e);
+        return delete_error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete file");
+    }
+
+    info!("File deleted successfully: {}", sanitized);
+
+    let response = DeleteResponse {
+        success: true,
+        message: Some("File deleted successfully".to_string()),
+        file: Some(sanitized),
+        session_id: None,
+        files_deleted: None,
+        error: None,
+    };
+
+    (StatusCode::OK, axum::Json(response)).into_response()
+}
+
+/// DELETE /uploads/{session_id}?secret={secret}
+/// Delete entire session (all files + metadata)
+#[instrument(skip(query))]
+pub async fn delete_session_handler(
+    Path(session_id): Path<String>,
+    Query(query): Query<DeleteQuery>,
+) -> Response {
+    info!("DELETE session: {}", session_id);
+
+    // Validate session_id
+    let session_uuid = match Uuid::parse_str(&session_id) {
+        Ok(uuid) => uuid,
+        Err(_) => return delete_error_response(StatusCode::BAD_REQUEST, "Invalid session_id format"),
+    };
+
+    // Validate secret format (min 8 chars)
+    if query.secret.len() < 8 {
+        return delete_error_response(StatusCode::BAD_REQUEST, "Secret must be at least 8 characters");
+    }
+
+    // Build session directory path
+    let session_dir = PathBuf::from("uploads").join(session_uuid.to_string());
+
+    // Check if session exists
+    if !session_dir.exists() {
+        return delete_error_response(StatusCode::NOT_FOUND, "Session does not exist");
+    }
+
+    // Validate secret
+    match validate_secret(&session_uuid, &query.secret).await {
+        Ok(_) => info!("Secret validated for session DELETE"),
+        Err(e) => {
+            warn!("Invalid secret for session DELETE: {}", e);
+            return delete_error_response(StatusCode::FORBIDDEN, &e);
+        }
+    }
+
+    // Count files before deletion
+    let markdown_dir = session_dir.join("markdown");
+    let images_dir = session_dir.join("images");
+
+    let mut markdown_count = 0;
+    let mut images_count = 0;
+
+    if markdown_dir.exists() {
+        if let Ok(mut entries) = fs::read_dir(&markdown_dir).await {
+            while let Ok(Some(_)) = entries.next_entry().await {
+                markdown_count += 1;
+            }
+        }
+    }
+
+    if images_dir.exists() {
+        if let Ok(mut entries) = fs::read_dir(&images_dir).await {
+            while let Ok(Some(_)) = entries.next_entry().await {
+                images_count += 1;
+            }
+        }
+    }
+
+    // Delete entire session directory
+    if let Err(e) = fs::remove_dir_all(&session_dir).await {
+        error!("Failed to delete session: {}", e);
+        return delete_error_response(StatusCode::INTERNAL_SERVER_ERROR, "Failed to delete session");
+    }
+
+    info!("Session deleted successfully: {} (markdown: {}, images: {})",
+          session_id, markdown_count, images_count);
+
+    let response = DeleteResponse {
+        success: true,
+        message: Some("Session deleted successfully".to_string()),
+        file: None,
+        session_id: Some(session_id),
+        files_deleted: Some(FilesDeleted {
+            markdown: markdown_count,
+            images: images_count,
+        }),
+        error: None,
+    };
+
+    (StatusCode::OK, axum::Json(response)).into_response()
+}
+
+/// Build delete error response
+fn delete_error_response(status: StatusCode, message: &str) -> Response {
+    let response = DeleteResponse {
+        success: false,
+        message: None,
+        file: None,
+        session_id: None,
+        files_deleted: None,
         error: Some(message.to_string()),
     };
 
