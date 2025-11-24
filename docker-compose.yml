@@ -11,6 +11,8 @@ services:
       - ./market_data:/app/market_data
       # Mount crypto_data directory for cryptocurrency data
       - ./crypto_data:/app/crypto_data
+      # Mount uploads directory for user-uploaded files
+      - ./uploads:/app/uploads
       # ticker_group.json and crypto_top_100.json are already copied in Dockerfile
     environment:
       - RUST_LOG=info

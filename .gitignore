@@ -78,6 +78,10 @@ market_data/**/*.parquet
 crypto_data/*
 !crypto_data/BTC/
 
+# Upload Data (gitignore all uploaded files, keep directory structure)
+uploads/*
+!uploads/.gitkeep
+
 # Crypto Scraper
 scripts/crypto/node_modules
 

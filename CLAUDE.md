@@ -68,6 +68,7 @@ Complete test flow covering all aspects of the system:
 ./scripts/test-integration.sh    # 17 integration tests (13 VN + 4 crypto)
 ./scripts/test-analysis.sh        # 10 analysis API tests
 ./scripts/test-aggregated.sh      # 27 aggregated interval tests
+./scripts/test-upload.sh          # 13 upload API tests (includes secret validation)
 
 # 3. Run all SDK examples
 cd sdk/aipriceaction-js
@@ -124,6 +125,22 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 - ✅ CSV export for aggregated data
 - **Total: 27 tests**
 
+**Upload API Tests** (`./scripts/test-upload.sh`):
+- ✅ Upload markdown file (with secret - success)
+- ✅ Retrieve markdown file (public access - success)
+- ✅ Duplicate file detection (409 Conflict)
+- ✅ Upload image file (with secret - success)
+- ✅ Retrieve image file (public access - success)
+- ✅ Upload .txt file to markdown endpoint
+- ✅ Wrong secret detection (403 Forbidden)
+- ✅ Invalid session ID (400 Bad Request)
+- ✅ Missing secret (400 Bad Request)
+- ✅ Missing session ID (400 Bad Request)
+- ✅ Path traversal prevention (400/404)
+- ✅ Wrong file type (415 Unsupported Media Type)
+- ✅ File size limit enforcement (413/500)
+- **Total: 13 tests**
+
 **SDK Examples** (10 TypeScript examples):
 1. `01-basic-tickers.ts` - Single/multiple tickers, historical data, hourly data
 2. `02-health-check.ts` - Server status, memory, disk cache, worker stats
@@ -142,12 +159,14 @@ cd sdk/aipriceaction-js && for file in examples/*.ts; do echo "=== $file ===" &&
 ./scripts/test-integration.sh http://localhost:3001
 ./scripts/test-analysis.sh http://api.aipriceaction.com
 ./scripts/test-aggregated.sh https://api.aipriceaction.com
+./scripts/test-upload.sh https://api.aipriceaction.com
 ```
 
 #### Expected Results
 - **Integration**: 17/17 tests passed (13 VN + 4 crypto)
 - **Analysis**: 10/10 tests passed
 - **Aggregated**: 27/27 tests passed
+- **Upload**: 13/13 tests passed
 - **SDK Examples**: All 10 examples run successfully without errors
 
 #### Troubleshooting Tests
@@ -279,6 +298,64 @@ curl "http://localhost:3000/tickers?symbol=VCB&legacy=true"
 curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&legacy=true"
 # BTC price: 95555.28 (unchanged)
 ```
+
+### Upload API (File Storage)
+
+**Session-based file storage for markdown documents and images.**
+
+For complete API documentation, see [docs/UPLOAD_API.md](docs/UPLOAD_API.md)
+
+```bash
+# Generate a session ID and secret (client-side)
+SESSION_ID=$(uuidgen | tr '[:upper:]' '[:lower:]')
+SECRET=$(uuidgen | tr '[:upper:]' '[:lower:]')
+
+# Upload markdown file (secret required)
+curl -X POST "http://localhost:3000/upload/markdown?session_id=$SESSION_ID&secret=$SECRET" \
+  -F "file=@notes.md"
+
+# Upload image file (secret required)
+curl -X POST "http://localhost:3000/upload/image?session_id=$SESSION_ID&secret=$SECRET" \
+  -F "file=@screenshot.png"
+
+# Retrieve markdown file (public by default - no secret needed)
+curl "http://localhost:3000/uploads/$SESSION_ID/markdown/notes.md"
+
+# Retrieve image file (public by default - no secret needed)
+curl "http://localhost:3000/uploads/$SESSION_ID/images/screenshot.png"
+```
+
+**Directory Structure:**
+```
+uploads/
+└── {session-uuid}/
+    ├── metadata.json  # Session config: secret, is_public, created_at
+    ├── markdown/      # .md, .markdown, .txt files (max 5MB)
+    └── images/        # .jpg, .png, .gif, .webp, .svg files (max 10MB)
+```
+
+**Key Features:**
+- **Secret-based authentication**: All uploads require a client-generated secret (min 8 chars, recommended 32+)
+- **Public/private sessions**: `is_public: true` (default) allows public read access without secret
+- Session-based isolation using UUID identifiers
+- File type validation (extension + MIME type)
+- Security: filename sanitization, path traversal prevention, SVG script blocking
+- Duplicate file detection (returns 409 Conflict)
+- Rate limiting via existing middleware (5000 req/s per IP)
+
+**Testing:**
+```bash
+# Run upload API tests (13 tests)
+./scripts/test-upload.sh
+
+# Test against different server
+./scripts/test-upload.sh https://api.aipriceaction.com
+```
+
+**Docker Volume:**
+The `uploads/` directory is mounted as a volume for persistence:
+- `docker-compose.yml`: `./uploads:/app/uploads`
+- `docker-compose.local.yml`: `/Volumes/data/workspace/aipriceaction/uploads:/app/uploads`
 
 ## Architecture
 

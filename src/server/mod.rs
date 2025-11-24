@@ -1,11 +1,12 @@
 pub mod api;
 pub mod legacy;
 pub mod analysis;
+pub mod upload;
 
 use crate::models::Mode;
 use crate::services::{SharedDataStore, SharedHealthStats};
 use crate::utils::get_public_dir;
-use axum::{extract::FromRef, routing::get, Router};
+use axum::{extract::FromRef, routing::{get, post}, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -197,6 +198,10 @@ pub async fn serve(
     tracing::info!("  GET /analysis/top-performers?sort_by=close_changed&limit=10");
     tracing::info!("  GET /analysis/ma-scores-by-sector?ma_period=20");
     tracing::info!("  GET /analysis/volume-profile?symbol=VCB&date=2024-01-15");
+    tracing::info!("  POST /upload/markdown?session_id=<uuid>");
+    tracing::info!("  POST /upload/image?session_id=<uuid>");
+    tracing::info!("  GET /uploads/{{session_id}}/markdown/{{filename}}");
+    tracing::info!("  GET /uploads/{{session_id}}/images/{{filename}}");
     tracing::info!("  GET /raw/* (legacy GitHub proxy)");
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
@@ -213,22 +218,35 @@ pub async fn serve(
     tracing::info!("Security middleware enabled:");
     tracing::info!("  Rate Limit: 5000 req/s per IP, burst 10000 (using CF-Connecting-IP)");
     tracing::info!("  Request Timeout: 30s");
-    tracing::info!("  Body Size Limit: 1MB");
+    tracing::info!("  Body Size Limit: 10MB (upload endpoints), 1MB (other endpoints)");
     tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
 
-    // Build router with routes
-    let app = Router::new()
+    // Build upload routes with 10MB body limit
+    let upload_routes = Router::new()
+        .route("/upload/markdown", post(upload::upload_markdown_handler))
+        .route("/upload/image", post(upload::upload_image_handler))
+        .route("/uploads/{session_id}/markdown/{filename}", get(upload::serve_markdown_handler))
+        .route("/uploads/{session_id}/images/{filename}", get(upload::serve_image_handler))
+        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)); // 10MB for uploads
+
+    // Build main routes with 1MB body limit
+    let main_routes = Router::new()
         .route("/explorer", get(api::explorer_handler))
         .route("/tickers", get(api::get_tickers_handler))
         .route("/health", get(api::health_handler))
         .route("/tickers/group", get(api::get_ticker_groups_handler))
         .nest("/analysis", analysis_routes())
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
+        .layer(RequestBodyLimitLayer::new(1024 * 1024)); // 1MB for regular API
+
+    // Combine routers
+    let app = Router::new()
+        .merge(upload_routes)
+        .merge(main_routes)
         .nest_service("/public", ServeDir::new(public_dir))
         .with_state(app_state)
         // Apply middleware in order (outer → inner)
         .layer(GovernorLayer::new(Arc::new(governor_conf)))
-        .layer(RequestBodyLimitLayer::new(1024 * 1024))
         .layer(TimeoutLayer::new(Duration::from_secs(30)))
         .layer(middleware::from_fn(add_security_headers))
         .layer(
