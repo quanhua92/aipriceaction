@@ -47,6 +47,11 @@ pub async fn run(port: u16) {
             println!("   ⏱️  Minute records: {}", minute_count);
             println!("   💾 Memory usage:   {:.2} MB", memory_mb);
 
+            // Quick check data integrity
+            if let Err(e) = shared_data_store_vn.quick_check_data().await {
+                eprintln!("⚠️  Warning: Quick check failed: {}", e);
+            }
+
             // Update initial VN health stats
             let mut health = shared_health_stats.write().await;
             health.active_tickers_count = active_tickers;

@@ -241,6 +241,89 @@ impl DataStore {
         Ok(())
     }
 
+    /// Quick check data integrity after loading
+    /// Verifies all tickers have data for the last 10 trading days (based on VNINDEX)
+    pub async fn quick_check_data(&self) -> Result<(), Error> {
+        let data = self.data.read().await;
+
+        // Get VNINDEX daily data to determine reference trading days
+        let vnindex_data = match data.get("VNINDEX") {
+            Some(intervals) => match intervals.get(&Interval::Daily) {
+                Some(records) => records,
+                None => {
+                    tracing::error!("QUICK_CHECK: VNINDEX has no daily data");
+                    return Ok(());
+                }
+            },
+            None => {
+                tracing::error!("QUICK_CHECK: VNINDEX not found in memory");
+                return Ok(());
+            }
+        };
+
+        // Get last 10 trading dates from VNINDEX
+        let reference_dates: Vec<chrono::NaiveDate> = vnindex_data
+            .iter()
+            .rev()
+            .take(10)
+            .map(|d| d.time.date_naive())
+            .collect();
+
+        if reference_dates.is_empty() {
+            tracing::error!("QUICK_CHECK: VNINDEX has no records");
+            return Ok(());
+        }
+
+        println!(
+            "🔍 QUICK_CHECK: Checking {} tickers against {} reference dates ({} to {})",
+            data.len(),
+            reference_dates.len(),
+            reference_dates.last().map(|d| d.to_string()).unwrap_or_default(),
+            reference_dates.first().map(|d| d.to_string()).unwrap_or_default()
+        );
+
+        let mut missing_count = 0;
+
+        for (ticker, intervals) in data.iter() {
+            if ticker == "VNINDEX" {
+                continue; // Skip reference ticker
+            }
+
+            if let Some(daily_data) = intervals.get(&Interval::Daily) {
+                // Get dates this ticker has
+                let ticker_dates: std::collections::HashSet<chrono::NaiveDate> =
+                    daily_data.iter().map(|d| d.time.date_naive()).collect();
+
+                // Check for missing dates
+                let missing_dates: Vec<&chrono::NaiveDate> = reference_dates
+                    .iter()
+                    .filter(|d| !ticker_dates.contains(d))
+                    .collect();
+
+                if !missing_dates.is_empty() {
+                    missing_count += 1;
+                    eprintln!(
+                        "❌ QUICK_CHECK: {} missing {} dates: {:?}",
+                        ticker,
+                        missing_dates.len(),
+                        missing_dates
+                    );
+                }
+            } else {
+                missing_count += 1;
+                eprintln!("❌ QUICK_CHECK: {} has no daily data", ticker);
+            }
+        }
+
+        if missing_count == 0 {
+            println!("✅ QUICK_CHECK: All {} tickers have complete data for last 10 trading days", data.len() - 1);
+        } else {
+            eprintln!("⚠️  QUICK_CHECK: {} tickers have missing data", missing_count);
+        }
+
+        Ok(())
+    }
+
     /// Load data for a specific interval from CSV files with optional record limit
     async fn load_interval(&self, interval: Interval, cutoff_date: Option<DateTime<Utc>>, limit: Option<usize>) -> Result<(), Error> {
         // Step 1: Read all CSV files WITHOUT holding any locks
