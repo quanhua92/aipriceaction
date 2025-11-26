@@ -302,11 +302,18 @@ impl DataSync {
     ) -> Result<Vec<OhlcvData>, Error> {
         // eprintln!("DEBUG [{}:process_ticker]: Starting processing", ticker);
 
-        // Check if ticker is in resume mode (has last date)
+        // Check if ticker is in resume mode OR partial history mode (both need merging)
         let ticker_last_date = category.resume_tickers
             .iter()
             .find(|(t, _)| t == ticker)
-            .map(|(_, date)| date.clone());
+            .map(|(_, date)| date.clone())
+            .or_else(|| {
+                // Also check partial_history_tickers - they have existing data and need merging too
+                category.partial_history_tickers
+                    .iter()
+                    .find(|(t, _)| t == ticker)
+                    .map(|(_, date)| date.clone())
+            });
 
         let is_resume = ticker_last_date.is_some();
         // eprintln!("DEBUG [{}:process_ticker]: is_resume={}", ticker, is_resume);
