@@ -6,7 +6,7 @@ on:
       tag:
         description: 'Docker image tag'
         required: false
-        default: 'latest'
+        default: 'test'
         type: string
   push:
     tags:
