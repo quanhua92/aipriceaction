@@ -114,3 +114,11 @@ pub const TICK_SIZE_CRYPTO_MICRO: f64 = 0.0001;  // For prices < $1
 pub const TICK_SIZE_CRYPTO_SMALL: f64 = 0.01;    // For prices $1 - $99.99
 pub const TICK_SIZE_CRYPTO_MID: f64 = 0.1;       // For prices $100 - $999.99
 pub const TICK_SIZE_CRYPTO_LARGE: f64 = 1.0;     // For prices >= $1,000
+
+/// Auto-Clear Cache Configuration
+///
+/// When disk cache reaches the threshold percentage, automatically clear
+/// a portion of the oldest entries to make room for new data.
+pub const DEFAULT_CACHE_AUTO_CLEAR_ENABLED: bool = true;
+pub const DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD: f64 = 0.95;  // 95%
+pub const DEFAULT_CACHE_AUTO_CLEAR_RATIO: f64 = 0.5;       // 50%

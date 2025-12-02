@@ -1,4 +1,4 @@
-use crate::constants::csv_column;
+use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO};
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time};
@@ -199,6 +199,10 @@ pub struct DataStore {
     disk_cache_size: RwLock<usize>,
     /// Maximum cache size in bytes (configurable via env)
     max_cache_size_bytes: usize,
+    /// Auto-clear cache configuration
+    auto_clear_enabled: bool,
+    auto_clear_threshold: f64,  // Clear when cache reaches this percentage (e.g., 0.95 = 95%)
+    auto_clear_ratio: f64,      // Clear this percentage of entries (e.g., 0.5 = 50%)
     /// File modification time tracker for auto-reload optimization
     /// Key: (ticker, interval), Value: SystemTime from fs::metadata().modified()
     file_mtimes: RwLock<HashMap<(String, Interval), SystemTime>>,
@@ -215,10 +219,29 @@ impl DataStore {
 
         let max_cache_size_bytes = max_cache_size_mb * 1024 * 1024;
 
+        // Read auto-clear configuration from environment variables
+        let auto_clear_enabled = std::env::var("CACHE_AUTO_CLEAR_ENABLED")
+            .ok()
+            .and_then(|s| s.parse::<bool>().ok())
+            .unwrap_or(DEFAULT_CACHE_AUTO_CLEAR_ENABLED);
+
+        let auto_clear_threshold = std::env::var("CACHE_AUTO_CLEAR_THRESHOLD")
+            .ok()
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD);
+
+        let auto_clear_ratio = std::env::var("CACHE_AUTO_CLEAR_RATIO")
+            .ok()
+            .and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(DEFAULT_CACHE_AUTO_CLEAR_RATIO);
+
         tracing::info!(
-            "Initializing DataStore with max_cache_size={}MB ({}bytes)",
+            "Initializing DataStore with max_cache_size={}MB ({}bytes), auto_clear={}, threshold={:.1}%, ratio={:.1}%",
             max_cache_size_mb,
-            max_cache_size_bytes
+            max_cache_size_bytes,
+            auto_clear_enabled,
+            auto_clear_threshold * 100.0,
+            auto_clear_ratio * 100.0
         );
 
         Self {
@@ -228,6 +251,9 @@ impl DataStore {
             disk_cache: RwLock::new(HashMap::new()),
             disk_cache_size: RwLock::new(0),
             max_cache_size_bytes,
+            auto_clear_enabled,
+            auto_clear_threshold,
+            auto_clear_ratio,
             file_mtimes: RwLock::new(HashMap::new()),
         }
     }
@@ -1028,12 +1054,91 @@ impl DataStore {
         result
     }
 
+    /// Auto-clear cache when threshold is reached
+    /// Clears a percentage of oldest entries to make room for new data
+    async fn auto_clear_cache(&self, current_size: usize, incoming_size: usize) -> bool {
+        if !self.auto_clear_enabled {
+            return false;
+        }
+
+        // Check if we've exceeded the threshold
+        let threshold_size = (self.max_cache_size_bytes as f64 * self.auto_clear_threshold) as usize;
+        if current_size + incoming_size <= threshold_size {
+            return false; // No need to clear yet
+        }
+
+        let mut disk_cache = self.disk_cache.write().await;
+        let mut disk_cache_size = self.disk_cache_size.write().await;
+
+        if disk_cache.is_empty() {
+            return false; // Nothing to clear
+        }
+
+        let current_entries = disk_cache.len();
+        let entries_to_remove = (current_entries as f64 * self.auto_clear_ratio) as usize;
+        let entries_to_remove = entries_to_remove.max(1); // Always remove at least 1
+
+        // Collect entries sorted by cached_at timestamp (oldest first)
+        let mut entries: Vec<((String, Interval), DateTime<Utc>)> = disk_cache.iter()
+            .map(|((symbol, interval), entry)| ((symbol.clone(), *interval), entry.cached_at))
+            .collect();
+        entries.sort_by_key(|(_, cached_at)| *cached_at);
+
+        let mut total_freed_size = 0usize;
+        let mut actual_removed = 0usize;
+
+        for ((symbol, interval), _) in entries.iter().take(entries_to_remove) {
+            let key = (symbol.clone(), *interval);
+            if let Some(removed) = disk_cache.remove(&key) {
+                total_freed_size += removed.size_bytes;
+                actual_removed += 1;
+            }
+        }
+
+        // Update the cache size tracking
+        *disk_cache_size -= total_freed_size;
+
+        tracing::info!(
+            "Auto-cleared {} cache entries ({:.1}% of total), freed {}MB, cache now {}MB/{}MB",
+            actual_removed,
+            (actual_removed as f64 / current_entries as f64) * 100.0,
+            total_freed_size / (1024 * 1024),
+            *disk_cache_size / (1024 * 1024),
+            self.max_cache_size_bytes / (1024 * 1024)
+        );
+
+        true // Cache was cleared
+    }
+
     /// Try to add data to cache, evicting old entries if necessary
     async fn try_add_to_cache(&self, key: (String, Interval), data: Vec<StockData>, size: usize) {
         let mut disk_cache = self.disk_cache.write().await;
         let mut disk_cache_size = self.disk_cache_size.write().await;
 
-        // Check if we need to evict entries to make room
+        // If auto-clear is enabled and we've exceeded the threshold, try auto-clear first
+        if self.auto_clear_enabled && *disk_cache_size + size > self.max_cache_size_bytes {
+            // Drop the locks temporarily to call auto_clear_cache
+            drop(disk_cache);
+            drop(disk_cache_size);
+
+            // Try auto-clear
+            let was_cleared = self.auto_clear_cache(*self.disk_cache_size.read().await, size).await;
+
+            // Re-acquire locks after auto_clear
+            disk_cache = self.disk_cache.write().await;
+            disk_cache_size = self.disk_cache_size.write().await;
+
+            if was_cleared {
+                tracing::debug!(
+                    "Auto-clear completed, now have {}MB available for {}/{}",
+                    (self.max_cache_size_bytes - *disk_cache_size) / (1024 * 1024),
+                    key.0,
+                    key.1.to_filename()
+                );
+            }
+        }
+
+        // Check if we need to evict entries to make room (for non-auto-clear or fallback)
         while *disk_cache_size + size > self.max_cache_size_bytes && !disk_cache.is_empty() {
             // Evict the oldest entry (LRU-like)
             if let Some(oldest_key) = disk_cache

@@ -67,9 +67,8 @@ impl CryptoFetcher {
             let api_client = AiPriceActionClient::new(url, target_host)
                 .map_err(|e| Error::Config(format!("Failed to create API client: {}", e)))?;
 
-            // No fallback in API proxy mode - if proxy fails, skip that crypto instead of retrying with CryptoCompare
-            // This avoids double API calls and allows the worker to continue with other cryptos
-            info!("API proxy mode: no CryptoCompare fallback (fail-fast behavior)");
+            // Using API proxy mode for crypto data
+            debug!("API proxy mode enabled for crypto data fetching");
 
             (CryptoDataSource::ApiProxy(api_client), None)
         } else {
