@@ -6,19 +6,21 @@ function getFormValues() {
     start_date: document.getElementById('start_date').value,
     end_date: document.getElementById('end_date').value,
     limit: document.getElementById('limit').value,
+    mode: document.getElementById('mode').value,
     format: document.getElementById('format').value
   };
 }
 
 // Build ticker API URL from form
 function buildTickerUrl() {
-  const { symbol, interval, start_date, end_date, limit, format } = getFormValues();
+  const { symbol, interval, start_date, end_date, limit, mode, format } = getFormValues();
 
   const params = {};
 
-  // Always add symbol, interval, and format
+  // Always add symbol, interval, mode, and format
   if (symbol) params.symbol = symbol;
   if (interval) params.interval = interval;
+  if (mode) params.mode = mode;
   if (format) params.format = format;
 
   // Add start_date if provided
@@ -116,6 +118,7 @@ function quickFetch(symbol, interval, startDate) {
   document.getElementById('start_date').value = startDate || '';
   document.getElementById('end_date').value = '';
   document.getElementById('limit').value = '';
+  document.getElementById('mode').value = 'vn'; // Default to VN for backward compatibility
   document.getElementById('format').value = 'csv';
 
   fetchTicker();
@@ -130,12 +133,13 @@ function quickFetch(symbol, interval, startDate) {
 }
 
 // Quick fetch with all parameters (new function)
-function quickFetchWithParams(symbol, interval, startDate, endDate, limit) {
+function quickFetchWithParams(symbol, interval, startDate, endDate, limit, mode = 'vn') {
   document.getElementById('symbol').value = symbol;
   document.getElementById('interval').value = interval;
   document.getElementById('start_date').value = startDate || '';
   document.getElementById('end_date').value = endDate || '';
   document.getElementById('limit').value = limit || '';
+  document.getElementById('mode').value = mode;
   document.getElementById('format').value = 'csv';
 
   fetchTicker();
