@@ -21,7 +21,6 @@ axum = { version = "0.8.4", features = ["multipart"] }
 axum-extra = { version = "0.10.1", features = ["query"] }
 tower = { version = "0.5.2", features = ["util"] }
 tower-http = { version = "0.6.2", features = ["cors", "fs", "compression-gzip", "compression-deflate", "compression-br", "timeout", "limit"] }
-fs2 = "0.4"
 num_cpus = "1.16"
 uuid = { version = "1.11", features = ["v7", "serde"] }
 infer = "0.16"

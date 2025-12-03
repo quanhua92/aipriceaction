@@ -1,7 +1,7 @@
 use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO};
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
-use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_shared};
+use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
 use tracing::{debug, info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -640,7 +640,7 @@ impl DataStore {
     /// Read CSV from the end (for recent data queries)
     fn read_csv_from_end(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<StockData>, Error> {
         let start_time = std::time::Instant::now();
-        let mut file = open_file_shared(csv_path)?;
+        let mut file = open_file_atomic_read(csv_path)?;
         let file_size = file.metadata()?.len();
 
         info!(
@@ -758,7 +758,7 @@ impl DataStore {
         );
 
         let mut data = Vec::with_capacity(std::cmp::min(limit, 1000));
-        let file = open_file_shared(csv_path)?;
+        let file = open_file_atomic_read(csv_path)?;
         let mut reader = csv::ReaderBuilder::new()
             .flexible(true)
             .from_reader(file);
@@ -820,7 +820,7 @@ impl DataStore {
         );
 
         let mut data = Vec::with_capacity(1000);
-        let file = open_file_shared(csv_path)?;
+        let file = open_file_atomic_read(csv_path)?;
         let mut reader = csv::ReaderBuilder::new()
             .flexible(true)
             .from_reader(file);

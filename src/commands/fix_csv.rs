@@ -327,9 +327,7 @@ fn write_csv_with_headers(
     headers: &[String],
     records: &[Vec<String>],
 ) -> Result<(), Error> {
-    // Use file locking for safety (following rebuild_csv pattern)
-    use fs2::FileExt;
-
+  
     let file = fs::OpenOptions::new()
         .write(true)
         .create(true)
@@ -337,10 +335,7 @@ fn write_csv_with_headers(
         .open(csv_path)
         .map_err(|e| Error::Io(format!("Failed to open {} for writing: {}", csv_path.display(), e)))?;
 
-    // Acquire exclusive lock
-    file.lock_exclusive()
-        .map_err(|e| Error::Io(format!("Failed to acquire lock on {}: {}", csv_path.display(), e)))?;
-
+  
     let mut wtr = csv::Writer::from_writer(file);
 
     // Write headers

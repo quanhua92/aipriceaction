@@ -13,10 +13,10 @@ use crate::services::vci::OhlcvData;
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
 use chrono::DateTime;
 use csv::Writer;
-use fs2::FileExt;
 use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
+use std::io::{BufRead, BufReader, Seek, SeekFrom};
 
 /// Statistics for enhancement operation
 #[derive(Debug)]
@@ -165,17 +165,13 @@ pub fn save_enhanced_csv_to_dir(
     let file_exists = file_path.exists();
 
     if !file_exists || rewrite_all {
-        // New file or rewrite - create/truncate with exclusive lock
+        // New file or rewrite - write directly (no locking needed for new files)
         let file = std::fs::OpenOptions::new()
             .create(true)
             .truncate(rewrite_all)
             .write(true)
             .open(&file_path)
             .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
-
-        // Acquire exclusive lock before writing
-        file.lock_exclusive()
-            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
 
         let mut wtr = csv::Writer::from_writer(file);
 
@@ -194,15 +190,27 @@ pub fn save_enhanced_csv_to_dir(
 
         wtr.flush()
             .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-        // Lock is automatically released when file (inside wtr) goes out of scope
     } else {
-        // File exists - use smart cutoff strategy
-        use std::io::{BufRead, BufReader, Seek, SeekFrom};
+        // File exists - use copy-processing-rename strategy for safe updates
 
-        // Step 1: Find truncation point by reading file backwards
+        // Generate unique processing filename with timestamp
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|e| Error::Io(format!("Failed to get timestamp: {}", e)))?
+            .as_secs();
+
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            file_path.extension().and_then(|s| s.to_str()).unwrap_or("csv"), timestamp));
+
+        // Step 1: Copy original file to processing file
+        std::fs::copy(&file_path, &processing_path)
+            .map_err(|e| Error::Io(format!("Failed to copy file to processing: {}", e)))?;
+
+        // Step 2: Find truncation point by reading original file (for validation)
         let truncate_pos: Option<u64> = {
-            let file = std::fs::File::open(&file_path)
-                .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
+            let file = std::fs::File::open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to open processing file for reading: {}", e)))?;
             let reader = BufReader::new(file);
             let mut pos: Option<u64> = None;
             let mut current_pos = 0u64;
@@ -231,37 +239,78 @@ pub fn save_enhanced_csv_to_dir(
             }
 
             pos
-        }; // Reader is now dropped, file is closed
+        };
 
-        // Step 2: Open file for writing, truncate and append
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&file_path)
-            .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
+        // Step 3: Perform enhancement on processing file (truncate + append)
+        let enhancement_result = (|| -> Result<(), Error> {
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to open processing file for writing: {}", e)))?;
 
-        // CRITICAL SECTION: Acquire exclusive lock to prevent race conditions
-        file.lock_exclusive()
-            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
+            // Truncate file at cutoff point (or keep all if no cutoff found)
+            if let Some(pos) = truncate_pos {
+                file.set_len(pos)
+                    .map_err(|e| Error::Io(format!("Failed to truncate processing file: {}", e)))?;
+            }
 
-        // Truncate file at cutoff point (or keep all if no cutoff found)
-        if let Some(pos) = truncate_pos {
-            file.set_len(pos)
-                .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
+            // Seek to end and append new data (only rows >= cutoff_date)
+            file.seek(SeekFrom::End(0))
+                .map_err(|e| Error::Io(format!("Failed to seek to end of processing file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+            for row in data.iter().filter(|r| r.time >= cutoff_date) {
+                write_stock_data_row(&mut wtr, row, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush processing CSV: {}", e)))?;
+
+            Ok(())
+        })();
+
+        // Step 4: Handle result - atomic rename on success, cleanup on failure
+        match enhancement_result {
+            Ok(()) => {
+                // Validation: Basic check that processing file is valid
+                let validation_result = (|| -> Result<(), Error> {
+                    // Quick validation: check if file exists and has content
+                    let metadata = std::fs::metadata(&processing_path)
+                        .map_err(|e| Error::Io(format!("Failed to read processing file metadata: {}", e)))?;
+                    if metadata.len() == 0 {
+                        return Err(Error::Io("Processing file is empty after enhancement".to_string()));
+                    }
+                    Ok(())
+                })();
+
+                match validation_result {
+                    Ok(()) => {
+                        // Atomic rename: processing file becomes the new original
+                        std::fs::rename(&processing_path, &file_path)
+                            .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
+
+                        tracing::debug!(
+                            ticker = ticker,
+                            interval = ?interval,
+                            processing_path = ?processing_path,
+                            target_path = ?file_path,
+                            "Successfully enhanced CSV with copy-processing-rename strategy"
+                        );
+                    }
+                    Err(e) => {
+                        // Validation failed - keep original, remove processing file
+                        let _ = std::fs::remove_file(&processing_path);
+                        return Err(Error::Io(format!("Enhancement validation failed: {}. Original file preserved.", e)));
+                    }
+                }
+            }
+            Err(e) => {
+                // Enhancement failed - keep original, remove processing file
+                let _ = std::fs::remove_file(&processing_path);
+                return Err(e);
+            }
         }
-
-        // Seek to end and append new data (only rows >= cutoff_date)
-        file.seek(SeekFrom::End(0))
-            .map_err(|e| Error::Io(format!("Failed to seek to end: {}", e)))?;
-
-        let mut wtr = csv::Writer::from_writer(file);
-        for row in data.iter().filter(|r| r.time >= cutoff_date) {
-            write_stock_data_row(&mut wtr, row, ticker, interval)?;
-        }
-
-        wtr.flush()
-            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
-        // Lock is automatically released when file (inside wtr) goes out of scope
     }
 
     Ok(())

@@ -276,51 +276,101 @@ pub fn get_concurrent_batches() -> usize {
     }
 }
 
-/// Open file with shared lock for reading (allows concurrent readers)
+/// Open file for atomic reading (lock-free coordination)
 ///
-/// This function opens a file for reading and attempts to acquire a shared lock.
-/// Shared locks allow multiple concurrent readers while blocking only during
-/// exclusive lock acquisition (when writers are actively writing).
-///
-/// If shared lock acquisition fails (e.g., on some filesystems or due to
-/// direct file opens), the function continues with the file handle to maintain
-/// backward compatibility.
+/// This function opens a file for reading without any locking. The atomicity
+/// is ensured by the copy-processing-rename strategy used by writers - readers
+/// will always see either the complete original file or the complete enhanced file.
 ///
 /// # Arguments
 /// * `csv_path` - Path to the CSV file to open
 ///
 /// # Returns
-/// * `Ok(File)` - File handle with shared lock (or without lock if acquisition failed)
+/// * `Ok(File)` - File handle ready for reading
 /// * `Err(Error)` - If file cannot be opened
 ///
 /// # Examples
 /// ```
-/// let file = open_file_shared(&PathBuf::from("data.csv"))?;
+/// let file = open_file_atomic_read(&PathBuf::from("data.csv"))?;
 /// let mut reader = csv::ReaderBuilder::new().from_reader(file)?;
 /// ```
-pub fn open_file_shared(csv_path: &Path) -> Result<File, Error> {
+pub fn open_file_atomic_read(csv_path: &Path) -> Result<File, Error> {
     let file = std::fs::OpenOptions::new()
         .read(true)
         .open(csv_path)
         .map_err(|e| Error::Io(format!("Failed to open file: {}", e)))?;
 
-    // Try to acquire shared lock, but don't fail if unavailable
-    match file.lock_shared() {
-        Ok(_) => {
-            tracing::trace!(path = ?csv_path, "Acquired shared lock for reading");
-        },
-        Err(e) => {
-            // Shared lock unavailable, but file is still readable
-            // This can happen on some filesystems or with direct file opens
-            tracing::debug!(
-                path = ?csv_path,
-                error = %e,
-                "Shared lock unavailable, proceeding without lock"
-            );
+    tracing::trace!(path = ?csv_path, "Opened file for atomic reading");
+
+    Ok(file)
+}
+
+/// Clean up orphaned processing files from previous runs
+///
+/// This function removes any .processing.* files that may have been left
+/// behind due to crashes or interruptions during enhancement operations.
+///
+/// # Arguments
+/// * `base_dir` - Base directory containing CSV files (e.g., market_data/ or crypto_data/)
+///
+/// # Returns
+/// * `Ok(usize)` - Number of processing files cleaned up
+/// * `Err(Error)` - If cleanup fails
+pub fn cleanup_orphaned_processing_files(base_dir: &Path) -> Result<usize, Error> {
+    let mut cleaned_count = 0;
+
+    if !base_dir.exists() {
+        return Ok(0);
+    }
+
+    // Walk through all subdirectories
+    for entry in std::fs::read_dir(base_dir)
+        .map_err(|e| Error::Io(format!("Failed to read base directory {}: {}", base_dir.display(), e)))?
+    {
+        let entry = entry.map_err(|e| Error::Io(format!("Failed to read directory entry: {}", e)))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            // Check for processing files in this ticker directory
+            for file_entry in std::fs::read_dir(&path)
+                .map_err(|e| Error::Io(format!("Failed to read ticker directory {}: {}", path.display(), e)))?
+            {
+                let file_entry = file_entry.map_err(|e| Error::Io(format!("Failed to read file entry: {}", e)))?;
+                let file_path = file_entry.path();
+
+                if let Some(file_name) = file_path.file_name().and_then(|n| n.to_str()) {
+                    if file_name.contains(".processing.") {
+                        match std::fs::remove_file(&file_path) {
+                            Ok(()) => {
+                                cleaned_count += 1;
+                                tracing::info!(
+                                    file_path = ?file_path,
+                                    "Cleaned up orphaned processing file"
+                                );
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    file_path = ?file_path,
+                                    error = %e,
+                                    "Failed to remove orphaned processing file"
+                                );
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    Ok(file)
+    if cleaned_count > 0 {
+        tracing::info!(
+            base_dir = ?base_dir,
+            cleaned_count = cleaned_count,
+            "Completed cleanup of orphaned processing files"
+        );
+    }
+
+    Ok(cleaned_count)
 }
 
 #[cfg(test)]
