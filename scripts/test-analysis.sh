@@ -40,6 +40,56 @@ print_error() {
     ((FAILED_TESTS++))
 }
 
+# Enhanced curl with retry logic and debugging
+curl_with_retry() {
+    local url="$1"
+    local max_retries="${2:-3}"
+    local retry_delay="${3:-1}"
+    local attempt=1
+    local response=""
+
+    while [[ $attempt -le $max_retries ]]; do
+        if [[ $attempt -gt 1 ]]; then
+            echo -e "${YELLOW}⏳ Retry $attempt/$max_retries for $url${NC}"
+            sleep $retry_delay
+        fi
+
+        response=$(curl -s --connect-timeout 10 --max-time 30 "$url" 2>/dev/null || echo "")
+
+        if [[ -n "$response" ]]; then
+            # Check if it's valid JSON
+            if echo "$response" | jq . >/dev/null 2>&1 || [[ "$response" == *"missing field"* ]] || [[ "$response" == *"deserialize"* ]]; then
+                echo "$response"
+                return 0
+            else
+                echo -e "${YELLOW}⚠️  Invalid JSON response, retrying...${NC}" >&2
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Empty response, retrying...${NC}" >&2
+        fi
+
+        ((attempt++))
+        retry_delay=$((retry_delay * 2))  # Exponential backoff
+    done
+
+    echo -e "${RED}❌ Failed to get response after $max_retries attempts: $url${NC}" >&2
+    echo ""
+    return 1
+}
+
+# Validate server connection before critical tests
+validate_connection() {
+    local test_url="$BASE_URL/health"
+    local response=$(curl_with_retry "$test_url" 2 0.5)
+
+    if [[ -n "$response" ]]; then
+        return 0
+    else
+        echo -e "${RED}❌ Server connection validation failed${NC}" >&2
+        return 1
+    fi
+}
+
 print_result() {
     local test_name="$1"
     local expected="$2"
@@ -81,7 +131,7 @@ check_server() {
     print_header "Checking Server Availability"
 
     local response
-    response=$(curl -s "$BASE_URL/health" || echo "")
+    response=$(curl_with_retry "$BASE_URL/health" 3 1)
 
     if [[ -z "$response" ]]; then
         print_error "Server is not accessible at $BASE_URL"
@@ -392,12 +442,26 @@ test_ma_scores_by_sector() {
 test_volume_profile() {
     print_header "Testing Volume Profile Endpoint (/analysis/volume-profile)"
 
+    # Validate connection before starting volume profile tests
+    if ! validate_connection; then
+        print_error "Server connection validation failed before volume profile tests"
+        return 1
+    fi
+
     # Test 1: Basic volume profile
     print_test "Basic volume profile test (VCB stock)"
-    local response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
+    local response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15")
 
     if [[ -z "$response" ]]; then
-        print_error "No response for volume profile"
+        print_error "No response for volume profile after retries"
+        return 1
+    fi
+
+    # Check if we got an error response
+    local error=$(echo "$response" | jq -r '.error // empty')
+    if [[ -n "$error" && "$error" != "null" ]]; then
+        print_error "API returned error: $error"
+        echo -e "${YELLOW}🔍 Debug - Full response: $response${NC}"
         return 1
     fi
 
@@ -406,6 +470,11 @@ test_volume_profile() {
     local poc_price=$(echo "$response" | jq -r '.data.poc.price // empty')
     local va_low=$(echo "$response" | jq -r '.data.value_area.low // empty')
 
+    # Debug output if values are missing
+    if [[ -z "$analysis_type" || "$analysis_type" == "null" ]]; then
+        echo -e "${YELLOW}🔍 Debug - Missing analysis_type. Response: $response${NC}"
+    fi
+
     print_result "Analysis type correct" "volume_profile" "$analysis_type" || return 1
     print_result "Symbol correct" "VCB" "$symbol" || return 1
     print_result "POC price present" "not_empty" "$poc_price" || return 1
@@ -413,119 +482,153 @@ test_volume_profile() {
 
     # Test 2: Crypto mode
     print_test "Crypto volume profile test (BTC)"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=BTC&date=2024-01-15&mode=crypto" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=BTC&date=2025-11-10&mode=crypto" 2)
 
     if [[ -n "$response" ]]; then
         local symbol=$(echo "$response" | jq -r '.data.symbol // empty')
         local error=$(echo "$response" | jq -r '.error // empty')
 
-        if [[ -n "$error" ]]; then
+        if [[ -n "$error" && "$error" != "null" ]]; then
             print_success "Crypto query handled (Note: $error)"
         else
             print_result "Crypto symbol correct" "BTC" "$symbol"
         fi
+    else
+        print_error "No response for crypto volume profile test"
     fi
 
     # Test 3: Invalid date format
     print_test "Invalid date format test"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=invalid-date" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&date=invalid-date" 1)
 
     if [[ -n "$response" ]]; then
         local error=$(echo "$response" | jq -r '.error // empty')
-        if [[ -n "$error" ]]; then
+        if [[ -n "$error" && "$error" != "null" ]]; then
             print_success "Invalid date properly rejected: $error"
         else
             print_error "Expected error for invalid date but got valid response"
         fi
+    else
+        print_error "No response for invalid date test"
     fi
 
     # Test 4: Missing symbol parameter
     print_test "Missing symbol parameter test"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?date=2024-01-15" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?date=2024-01-15" 1)
 
     if [[ -n "$response" ]]; then
         # Check for JSON error or plain text error (Axum deserialization error)
         local error=$(echo "$response" | jq -r '.error // empty' 2>/dev/null)
-        if [[ -n "$error" ]]; then
+        if [[ -n "$error" && "$error" != "null" ]]; then
             print_success "Missing symbol properly rejected: $error"
         elif [[ "$response" == *"missing field"* ]] || [[ "$response" == *"deserialize"* ]]; then
-            print_success "Missing symbol properly rejected: $response"
+            print_success "Missing symbol properly rejected: ${response:0:100}..."
         else
             print_error "Expected error for missing symbol but got valid response"
         fi
+    else
+        print_error "No response for missing symbol test"
     fi
 
     # Test 5: Custom bins parameter
     print_test "Custom bins parameter test (100 bins)"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&bins=100" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&bins=100" 2)
 
     if [[ -n "$response" ]]; then
-        local profile_length=$(echo "$response" | jq '.data.profile | length // 0')
-        if [[ $profile_length -gt 0 ]]; then
-            print_success "Custom bins returned profile with ${profile_length} levels"
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" && "$error" != "null" ]]; then
+            print_error "Custom bins test failed with error: $error"
         else
-            print_error "No profile levels returned for custom bins"
+            local profile_length=$(echo "$response" | jq '.data.profile | length // 0')
+            if [[ $profile_length -gt 0 ]]; then
+                print_success "Custom bins returned profile with ${profile_length} levels"
+            else
+                print_error "No profile levels returned for custom bins"
+            fi
         fi
+    else
+        print_error "No response for custom bins test"
     fi
 
     # Test 6: Custom value area percentage
     print_test "Custom value area percentage test (80%)"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&value_area_pct=80" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15&value_area_pct=80" 2)
 
     if [[ -n "$response" ]]; then
-        local va_percentage=$(echo "$response" | jq -r '.data.value_area.percentage // empty')
-        if [[ -n "$va_percentage" && "$va_percentage" != "null" ]]; then
-            # Check if percentage is close to 80% (allow some rounding)
-            if command -v bc &> /dev/null; then
-                if (( $(echo "$va_percentage >= 75 && $va_percentage <= 85" | bc -l) )); then
-                    print_success "Value area percentage is around 80%: ${va_percentage}%"
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" && "$error" != "null" ]]; then
+            print_error "Value area percentage test failed with error: $error"
+        else
+            local va_percentage=$(echo "$response" | jq -r '.data.value_area.percentage // empty')
+            if [[ -n "$va_percentage" && "$va_percentage" != "null" ]]; then
+                # Check if percentage is close to 80% (allow some rounding)
+                if command -v bc &> /dev/null; then
+                    if (( $(echo "$va_percentage >= 75 && $va_percentage <= 85" | bc -l) )); then
+                        print_success "Value area percentage is around 80%: ${va_percentage}%"
+                    else
+                        print_success "Value area percentage: ${va_percentage}%"
+                    fi
                 else
                     print_success "Value area percentage: ${va_percentage}%"
                 fi
             else
-                print_success "Value area percentage: ${va_percentage}%"
+                print_error "Value area percentage not present"
             fi
-        else
-            print_error "Value area percentage not present"
         fi
+    else
+        print_error "No response for value area percentage test"
     fi
 
     # Test 7: Date range (multi-day) analysis
     print_test "Date range (multi-day) volume profile test"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-17" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&start_date=2024-01-15&end_date=2024-01-17" 2)
 
     if [[ -n "$response" ]]; then
-        local analysis_date=$(echo "$response" | jq -r '.analysis_date // empty')
-        local total_minutes=$(echo "$response" | jq -r '.data.total_minutes // 0')
-
-        if [[ "$analysis_date" == *"to"* ]]; then
-            print_success "Date range format correct: ${analysis_date}"
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" && "$error" != "null" ]]; then
+            print_error "Date range test failed with error: $error"
         else
-            print_error "Expected date range format with 'to', got: ${analysis_date}"
-        fi
+            local analysis_date=$(echo "$response" | jq -r '.analysis_date // empty')
+            local total_minutes=$(echo "$response" | jq -r '.data.total_minutes // 0')
 
-        if [[ $total_minutes -gt 360 ]]; then
-            print_success "Multi-day data aggregated: ${total_minutes} minutes (> single day 360)"
-        else
-            print_success "Total minutes: ${total_minutes}"
+            if [[ "$analysis_date" == *"to"* ]]; then
+                print_success "Date range format correct: ${analysis_date}"
+            else
+                print_error "Expected date range format with 'to', got: ${analysis_date}"
+            fi
+
+            if [[ $total_minutes -gt 360 ]]; then
+                print_success "Multi-day data aggregated: ${total_minutes} minutes (> single day 360)"
+            else
+                print_success "Total minutes: ${total_minutes}"
+            fi
         fi
+    else
+        print_error "No response for date range test"
     fi
 
     # Test 8: Validate response structure
     print_test "Response structure validation test"
-    response=$(curl -s "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" || echo "")
+    response=$(curl_with_retry "$BASE_URL/analysis/volume-profile?symbol=VCB&date=2024-01-15" 2)
 
     if [[ -n "$response" ]]; then
-        local has_poc=$(echo "$response" | jq 'has("data") and (.data | has("poc"))' || echo "false")
-        local has_value_area=$(echo "$response" | jq 'has("data") and (.data | has("value_area"))' || echo "false")
-        local has_profile=$(echo "$response" | jq 'has("data") and (.data | has("profile"))' || echo "false")
-        local has_statistics=$(echo "$response" | jq 'has("data") and (.data | has("statistics"))' || echo "false")
-
-        if [[ "$has_poc" == "true" && "$has_value_area" == "true" && "$has_profile" == "true" && "$has_statistics" == "true" ]]; then
-            print_success "All required fields present (POC, Value Area, Profile, Statistics)"
+        local error=$(echo "$response" | jq -r '.error // empty')
+        if [[ -n "$error" && "$error" != "null" ]]; then
+            print_error "Response structure validation failed with error: $error"
         else
-            print_error "Missing fields - POC: $has_poc, VA: $has_value_area, Profile: $has_profile, Stats: $has_statistics"
+            local has_poc=$(echo "$response" | jq 'has("data") and (.data | has("poc"))' || echo "false")
+            local has_value_area=$(echo "$response" | jq 'has("data") and (.data | has("value_area"))' || echo "false")
+            local has_profile=$(echo "$response" | jq 'has("data") and (.data | has("profile"))' || echo "false")
+            local has_statistics=$(echo "$response" | jq 'has("data") and (.data | has("statistics"))' || echo "false")
+
+            if [[ "$has_poc" == "true" && "$has_value_area" == "true" && "$has_profile" == "true" && "$has_statistics" == "true" ]]; then
+                print_success "All required fields present (POC, Value Area, Profile, Statistics)"
+            else
+                print_error "Missing fields - POC: $has_poc, VA: $has_value_area, Profile: $has_profile, Stats: $has_statistics"
+            fi
         fi
+    else
+        print_error "No response for structure validation test"
     fi
 
     echo ""

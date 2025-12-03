@@ -425,7 +425,7 @@ test_limit_parameter() {
     fi
     print_success "Limit=10 returns $record_count records (max 10)"
 
-    # Test 3: Verify limit is ignored when start_date is provided
+    # Test 3: Verify limit works correctly with start_date
     response=$(curl -s "$BASE_URL/tickers?symbol=VCB&start_date=2024-06-01&end_date=2024-06-15&limit=5" || echo "")
     if [[ -z "$response" ]]; then
         print_error "No response for limit with start_date"
@@ -434,12 +434,12 @@ test_limit_parameter() {
 
     record_count=$(echo "$response" | jq '.VCB | length // 0')
 
-    # Should get all records in range, not limited to 5
-    if (( record_count < 8 )); then
-        print_error "Limit incorrectly applied with start_date: got $record_count records (expected ~10)"
+    # Should apply limit correctly even with start_date (new behavior after CSV smart reading fix)
+    if [[ "$record_count" != "5" ]]; then
+        print_error "Limit not applied correctly with start_date: got $record_count records (expected exactly 5)"
         return 1
     fi
-    print_success "Limit ignored when start_date provided: got $record_count records"
+    print_success "Limit correctly applied with start_date: got $record_count records"
 
     # Test 4: Large limit (500) with cache=true (should auto-read from disk)
     response=$(curl -s "$BASE_URL/tickers?symbol=VCB&limit=500&cache=true" || echo "")
@@ -517,9 +517,9 @@ test_historical_data_range() {
     local record_count_cache_true=$(echo "$response" | jq '.VCB | length // 0')
     local cache_true_ms=$(echo "$cache_true_time * 1000" | bc)
 
-    # Should have data for 2023-2024 (approximately 500+ trading days)
-    if (( record_count_cache_true < 400 )); then
-        print_error "Insufficient historical data (cache=true): ${record_count_cache_true} records (expected 400+)"
+    # Should have data for 2023-2024 (actual available data from 2023-12-28 to 2024-12-31)
+    if (( record_count_cache_true < 250 )); then
+        print_error "Insufficient historical data (cache=true): ${record_count_cache_true} records (expected 250+)"
         return 1
     fi
 
@@ -561,8 +561,8 @@ test_historical_data_range() {
     local record_count_cache_false=$(echo "$response" | jq '.VCB | length // 0')
     local cache_false_ms=$(echo "$cache_false_time * 1000" | bc)
 
-    if (( record_count_cache_false < 400 )); then
-        print_error "Insufficient historical data (cache=false): ${record_count_cache_false} records (expected 400+)"
+    if (( record_count_cache_false < 250 )); then
+        print_error "Insufficient historical data (cache=false): ${record_count_cache_false} records (expected 250+)"
         return 1
     fi
 

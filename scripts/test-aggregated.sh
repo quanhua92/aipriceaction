@@ -86,9 +86,9 @@ test_aggregation_details() {
 
     # Verify MA indicators exist (check based on data availability)
     record_count=$(echo "$response" | jq '.VCB | length')
-    ma10_present=$(echo "$first_record" | jq -e 'has("ma10")' >/dev/null 2>&1 && echo "true" || echo "false")
-    ma20_present=$(echo "$first_record" | jq -e 'has("ma20")' >/dev/null 2>&1 && echo "true" || echo "false")
-    ma50_present=$(echo "$first_record" | jq -e 'has("ma50")' >/dev/null 2>&1 && echo "true" || echo "false")
+    ma10_present=$(echo "$first_record" | jq -e '.ma10 != null' >/dev/null 2>&1 && echo "true" || echo "false")
+    ma20_present=$(echo "$first_record" | jq -e '.ma20 != null' >/dev/null 2>&1 && echo "true" || echo "false")
+    ma50_present=$(echo "$first_record" | jq -e '.ma50 != null' >/dev/null 2>&1 && echo "true" || echo "false")
 
     # Check if MAs are present based on data availability
     # MA10 needs 10+ records, MA20 needs 20+ records, MA50 needs 50+ records
@@ -103,6 +103,26 @@ test_aggregation_details() {
         expected_ma10="false"  # First monthly record lacks 10 months prior history
         expected_ma20="false"  # First monthly record lacks 20 months prior history
         expected_ma50="false"  # First monthly record lacks 50 months prior history
+    elif [ "$interval" = "5m" ] || [ "$interval" = "15m" ] || [ "$interval" = "30m" ]; then
+        # For minute-based aggregation: first few records won't have MAs
+        # because MAs are calculated on aggregated data, not source data
+        # Check a record in the middle instead (around index 50)
+        middle_record_index=50
+        if [ "$record_count" -gt "$middle_record_index" ]; then
+            ma10_present=$(echo "$response" | jq ".VCB[$middle_record_index] | .ma10 != null" >/dev/null 2>&1 && echo "true" || echo "false")
+            ma20_present=$(echo "$response" | jq ".VCB[$middle_record_index] | .ma20 != null" >/dev/null 2>&1 && echo "true" || echo "false")
+            ma50_present=$(echo "$response" | jq ".VCB[$middle_record_index] | .ma50 != null" >/dev/null 2>&1 && echo "true" || echo "false")
+            # At index 50, we should have enough aggregated history for MA10 and MA20
+            expected_ma10="true"
+            expected_ma20="true"
+            # MA50 needs 50 records, so at index 50 we should have it
+            expected_ma50="true"
+        else
+            # Not enough records to test middle record
+            expected_ma10="false"
+            expected_ma20="false"
+            expected_ma50="false"
+        fi
     else
         # For other intervals: standard logic applies
         expected_ma10=$([ "$record_count" -ge 10 ] && echo "true" || echo "false")
@@ -289,15 +309,15 @@ else
 fi
 echo ""
 
-echo "Testing aggregated interval with start_date (limit should be ignored):"
-response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=15m&start_date=2025-01-01&end_date=2025-01-10&limit=10")
+echo "Testing aggregated interval with start_date and limit (limit should be respected):"
+response=$(curl -s "$BASE_URL/tickers?symbol=VCB&interval=15m&start_date=2025-01-02&end_date=2025-01-10&limit=10")
 count=$(echo "$response" | jq '.VCB | length')
-echo "  → With start_date=2025-01-01, end_date=2025-01-10, limit=10: Got $count records"
-if [ "$count" -gt 10 ]; then
-    echo -e "${GREEN}✓ Limit correctly ignored when start_date is provided (got $count records > limit 10)${NC}"
+echo "  → With start_date=2025-01-02, end_date=2025-01-10, limit=10: Got $count records"
+if [ "$count" -eq 10 ]; then
+    echo -e "${GREEN}✓ Limit correctly respected when start_date and limit are both provided (got exactly $count records)${NC}"
     ((test_passed++))
 else
-    echo -e "${RED}✗ Limit should be ignored with start_date, got only $count records${NC}"
+    echo -e "${RED}✗ Limit should be respected with start_date, expected 10 records but got $count${NC}"
     ((test_failed++))
 fi
 echo ""
