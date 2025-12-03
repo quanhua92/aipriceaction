@@ -63,7 +63,7 @@ impl DataSync {
 
         // Load tickers from ticker_group.json or use debug list
         let tickers = if debug {
-            println!("🐛 Using debug ticker list: VNINDEX, VIC, VCB");
+            println!("SYNC::FAST::🐛 Using debug ticker list: VNINDEX, VIC, VCB");
             vec!["VNINDEX".to_string(), "VIC".to_string(), "VCB".to_string()]
         } else {
             self.load_tickers()?
@@ -182,7 +182,7 @@ impl DataSync {
                         full_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
-                        println!("   ❌ {}: Failed - {}", ticker, e);
+                        println!("SYNC::FAST::   ❌ {}: Failed - {}", ticker, e);
                         full_history_results.insert(ticker.clone(), None);
                     }
                 }
@@ -195,13 +195,14 @@ impl DataSync {
         let mut partial_history_results = HashMap::new();
 
         if !category.partial_history_tickers.is_empty() {
+            let prefix = self.get_log_prefix(interval);
             println!(
-                "\n📥 Processing {} tickers with partial history (gap > 3 days)...",
-                category.partial_history_tickers.len()
+                "\n{}📥 Processing {} tickers with partial history (gap > 3 days)...",
+                prefix, category.partial_history_tickers.len()
             );
 
             for (ticker, start_date) in &category.partial_history_tickers {
-                println!("   📥 {} - Fetching from {}...", ticker, start_date);
+                println!("{}   📥 {} - Fetching from {}...", prefix, ticker, start_date);
                 match self.fetcher
                     .fetch_full_history(
                         ticker,
@@ -212,11 +213,11 @@ impl DataSync {
                     .await
                 {
                     Ok(data) => {
-                        println!("   ✅ {}: {} records", ticker, data.len());
+                        println!("{}   ✅ {}: {} records", prefix, ticker, data.len());
                         partial_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
-                        println!("   ❌ {}: Failed - {}", ticker, e);
+                        println!("{}   ❌ {}: Failed - {}", prefix, ticker, e);
                         partial_history_results.insert(ticker.clone(), None);
                     }
                 }
@@ -279,8 +280,10 @@ impl DataSync {
         // Show minimal summary - just one line per sync
         let interval_time = interval_start_time.elapsed();
         let now = format_date(&Utc::now());
+        let prefix = self.get_log_prefix(interval);
         println!(
-            "[{}] ✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
+            "{}[{}] ✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
+            prefix,
             now,
             self.interval_name(interval),
             total_tickers,
@@ -349,8 +352,9 @@ impl DataSync {
         }
 
         // Batch has been failing for >= 15 minutes, fallback to individual fetch
-        println!("   🔄 Batch not available for {} ({}min), fetching individually...",
-                 ticker, BATCH_FAILURE_THRESHOLD_MINUTES);
+        let prefix = self.get_log_prefix(interval);
+        println!("{}   🔄 Batch not available for {} ({}min), fetching individually...",
+                 prefix, ticker, BATCH_FAILURE_THRESHOLD_MINUTES);
 
         if is_resume {
             // Resume mode: fetch from last date in file
@@ -755,6 +759,14 @@ impl DataSync {
             Interval::Daily => "Daily",
             Interval::Hourly => "Hourly",
             Interval::Minute => "Minute",
+        }
+    }
+
+    /// Get log prefix based on interval type
+    fn get_log_prefix(&self, interval: Interval) -> &'static str {
+        match interval {
+            Interval::Daily => "SYNC::FAST::",
+            Interval::Hourly | Interval::Minute => "SYNC::SLOW::",
         }
     }
 

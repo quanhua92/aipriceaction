@@ -3,7 +3,7 @@ use crate::models::{Interval, StockData};
 use crate::services::crypto_compare::CryptoCompareClient;
 use crate::services::crypto_api_client::AiPriceActionClient;
 use crate::services::vci::OhlcvData;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDate};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn, debug};
@@ -254,10 +254,12 @@ impl CryptoFetcher {
     }
 
     /// Categorize cryptos into resume vs full history based on existing data
+    /// Includes gap detection similar to stock system
     pub fn categorize_cryptos(
         &self,
         symbols: &[String],
         interval: Interval,
+        disable_partial: bool,
     ) -> Result<CryptoCategory, Error> {
         println!(
             "\n🔍 Pre-scanning {} cryptos to categorize data needs for {}...",
@@ -269,6 +271,8 @@ impl CryptoFetcher {
         let total = symbols.len();
         let show_first = 3;
         let show_last = 2;
+        let today = Utc::now().date_naive();
+        let gap_threshold_days = 3; // Same as stock system
 
         for (idx, symbol) in symbols.iter().enumerate() {
             let file_path = self.get_crypto_file_path(symbol, interval);
@@ -290,17 +294,48 @@ impl CryptoFetcher {
                 }
                 category.full_history_cryptos.push(symbol.clone());
             } else {
-                // File exists - read last date and use resume mode
+                // File exists - read last date and check gap
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
-                        info!(
-                            "✅ {} [{}] file_path={} last_date={} → resume",
-                            symbol, interval.to_filename(), file_path.display(), last_date
-                        );
-                        if should_print {
-                            println!("   ✅ {} - Resume from {}", symbol, last_date);
+                        // Parse last date and calculate gap
+                        match NaiveDate::parse_from_str(&last_date, "%Y-%m-%d") {
+                            Ok(last_date_parsed) => {
+                                let days_gap = (today - last_date_parsed).num_days();
+
+                                // Gap detection logic - same as stock system
+                                if days_gap > gap_threshold_days && !disable_partial {
+                                    info!(
+                                        "⏰ {} [{}] file_path={} last_date={} gap={}days → partial_history",
+                                        symbol, interval.to_filename(), file_path.display(), last_date, days_gap
+                                    );
+                                    if should_print {
+                                        println!("   ⏰ {} - Gap {} days > {} threshold (partial history from {})",
+                                                symbol, days_gap, gap_threshold_days, last_date);
+                                    }
+                                    category.partial_history_cryptos.push((symbol.clone(), last_date));
+                                } else {
+                                    // Gap small enough for batch resume
+                                    info!(
+                                        "✅ {} [{}] file_path={} last_date={} gap={}days → resume",
+                                        symbol, interval.to_filename(), file_path.display(), last_date, days_gap
+                                    );
+                                    if should_print {
+                                        println!("   ✅ {} - Resume from {} ({} day gap)", symbol, last_date, days_gap);
+                                    }
+                                    category.resume_cryptos.push((symbol.clone(), last_date));
+                                }
+                            }
+                            Err(e) => {
+                                warn!(
+                                    "⚠️ {} [{}] file_path={} last_date={} parse_error={} → full_history",
+                                    symbol, interval.to_filename(), file_path.display(), last_date, e
+                                );
+                                if should_print {
+                                    println!("   ⚠️  {} - Failed to parse last date (full history needed)", symbol);
+                                }
+                                category.full_history_cryptos.push(symbol.clone());
+                            }
                         }
-                        category.resume_cryptos.push((symbol.clone(), last_date));
                     }
                     Ok(None) => {
                         info!(
@@ -558,8 +593,8 @@ impl CryptoFetcher {
                     interval.to_filename()
                 );
 
-                // Make single batch API call for all cryptos
-                let all_data = client.fetch_all_cryptos(Some(start_date), interval, None).await?;
+                // Make single batch API call for specific cryptos in this chunk
+                let all_data = client.fetch_all_cryptos(Some(symbols), Some(start_date), interval, None).await?;
 
                 // Group data by symbol
                 let mut result: HashMap<String, Vec<OhlcvData>> = HashMap::new();
@@ -621,10 +656,10 @@ impl CryptoFetcher {
             interval.to_filename()
         );
 
-        // Fetch last 1 record for all cryptos (no start_date, just limit=1)
+        // Fetch last 1 record for specific cryptos (no start_date, just limit=1)
         let api_data = match &mut self.primary_source {
             CryptoDataSource::ApiProxy(client) => {
-                client.fetch_all_cryptos(None, interval, Some(1)).await?
+                client.fetch_all_cryptos(Some(symbols), None, interval, Some(1)).await?
             }
             _ => return Ok(false), // Should never reach here due to check above
         };
