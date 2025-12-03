@@ -469,17 +469,58 @@ async fn sync_and_enhance(
     sync_success
 }
 
+/// Get adaptive resume date for crypto sync (like stock sync)
+fn get_adaptive_crypto_resume_date(
+    symbols: &[String],
+    interval: Interval
+) -> Result<String, Error> {
+    use crate::services::CryptoFetcher;
+
+    // Create fetcher to read CSV dates
+    let fetcher = CryptoFetcher::new(None)?;
+
+    // Categorize cryptos to read last CSV dates
+    let category = fetcher.categorize_cryptos(symbols, interval, false)?;
+
+    // Find minimum last date across resume and partial cryptos
+    let mut last_dates = Vec::new();
+
+    // Collect last dates from resume cryptos
+    for (_, last_date) in &category.resume_cryptos {
+        last_dates.push(last_date.clone());
+    }
+
+    // Collect last dates from partial history cryptos
+    for (_, last_date) in &category.partial_history_cryptos {
+        last_dates.push(last_date.clone());
+    }
+
+    // Return minimum date, or fallback to 2 days ago
+    if let Some(min_date) = last_dates.iter().min() {
+        Ok(min_date.clone())
+    } else {
+        // No existing CSV data - use 2 days ago as fallback
+        Ok((Utc::now() - chrono::Duration::days(2))
+            .format("%Y-%m-%d")
+            .to_string())
+    }
+}
+
 /// Sync a single interval for all cryptocurrencies using CryptoSync
 async fn sync_crypto_interval(interval: Interval, symbols: &[String]) -> Result<(), Error> {
     // Calculate date range
     let end_date = Utc::now().format("%Y-%m-%d").to_string();
 
-    // Use a 2-day window - CryptoSync's categorization will handle the rest:
-    // - If CSV exists: categorize as "resume", fetch from last CSV date
+    // Use adaptive resume date like stock sync - CryptoSync's categorization will handle the rest:
+    // - If CSV exists: categorize as "resume", fetch from actual last CSV date
     // - If CSV missing: categorize as "full history", fetch from BTC inception (2010-07-17)
-    let start_date = (Utc::now() - chrono::Duration::days(2))
-        .format("%Y-%m-%d")
-        .to_string();
+    let start_date = get_adaptive_crypto_resume_date(symbols, interval)
+        .unwrap_or_else(|_| {
+            // Fallback to 2 days ago if categorization fails
+            (Utc::now() - chrono::Duration::days(2))
+                .format("%Y-%m-%d")
+                .to_string()
+        });
 
     // Create sync config for single interval (resume mode, not full)
     let concurrent_batches = get_concurrent_batches();
