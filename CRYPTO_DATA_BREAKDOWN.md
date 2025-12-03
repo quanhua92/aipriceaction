@@ -2,7 +2,7 @@
 
 Auto-generated breakdown of all cryptocurrency data in the `crypto_data/` directory.
 
-**Last Updated:** 2025-11-16 20:51:57 +07
+**Last Updated:** 2025-12-02 22:27:33 +07
 
 **Total Cryptocurrencies:** 98
 
@@ -10,112 +10,112 @@ Auto-generated breakdown of all cryptocurrency data in the `crypto_data/` direct
 
 | Rank | Symbol | Name | Daily (1D) | Hourly (1H) | Minute (1m) | Total Records | Daily Size | Hourly Size | Minute Size |
 |------|--------|------|------------|-------------|-------------|---------------|------------|-------------|-------------|
-| 1 | BTC | Bitcoin | 5596 | 104052 | 10323 | 119971 | 834KB | 16MB | 1MB |
-| 2 | ETH | Ethereum | 3755 | 70035 | 10141 | 83931 | 552KB | 10MB | 1MB |
-| 3 | USDT | Tether | 3228 | 70035 | 10141 | 83404 | 387KB | 8MB | 1MB |
-| 4 | XRP | XRP | 3945 | 70034 | 10140 | 84119 | 506KB | 9MB | 1MB |
-| 5 | BNB | BNB | 3011 | 66017 | 10139 | 79167 | 416KB | 9MB | 1MB |
-| 6 | SOL | Solana | 2047 | 48023 | 10139 | 60209 | 283KB | 6MB | 1MB |
-| 7 | USDC | USDC | 2594 | 62028 | 10139 | 74761 | 308KB | 7MB | 1MB |
-| 8 | TRX | TRON | 2996 | 70035 | 4080 | 77111 | 378KB | 8MB | 500KB |
-| 9 | DOGE | Dogecoin | 4275 | 70035 | 10139 | 84449 | 548KB | 9MB | 1MB |
-| 10 | ADA | Cardano | 2969 | 70033 | 10138 | 83140 | 381KB | 9MB | 1MB |
-| 11 | HYPE | Hyperliquid | 153 | 1818 | 10138 | 12109 | 16KB | 242KB | 1MB |
-| 12 | ZEC | Zcash | 3307 | 70035 | 10138 | 83480 | 455KB | 9MB | 1MB |
-| 13 | BCH | Bitcoin Cash | 3030 | 70035 | 4092 | 77157 | 436KB | 10MB | 562KB |
-| 14 | LINK | Chainlink | 2979 | 70033 | 10137 | 83149 | 394KB | 9MB | 1MB |
-| 15 | XLM | Stellar | 4041 | 70034 | 10137 | 84212 | 515KB | 9MB | 1MB |
-| 16 | LEO | UNUS SED LEO | 2365 | 1830 | 2204 | 6399 | 286KB | 225KB | 259KB |
-| 17 | USDe | Ethena USDe | 580 | 6002 | 10136 | 16718 | 68KB | 763KB | 1MB |
-| 18 | XMR | Monero | 3948 | 48000 | 4042 | 55990 | 541KB | 6MB | 558KB |
-| 19 | LTC | Litecoin | 4423 | 70035 | 10136 | 84594 | 596KB | 9MB | 1MB |
-| 20 | AVAX | Avalanche | 1882 | 45172 | 4100 | 51154 | 255KB | 6MB | 543KB |
-| 21 | HBAR | Hedera | 2250 | 54006 | 10136 | 66392 | 289KB | 7MB | 1MB |
-| 22 | SUI | Sui | 921 | 22092 | 10136 | 33149 | 117KB | 2MB | 1MB |
-| 23 | SHIB | Shiba Inu | 1609 | 38615 | 4100 | 44324 | 213KB | 5MB | 415KB |
-| 24 | DAI | Dai | 2804 | 64025 | 1668 | 68497 | 339KB | 8MB | 194KB |
-| 25 | UNI | Uniswap | 1887 | 45290 | 10135 | 57312 | 243KB | 5MB | 1MB |
-| 26 | DOT | Polkadot | 1914 | 45932 | 4094 | 51940 | 247KB | 5MB | 505KB |
-| 27 | TON | Toncoin | 1257 | 20008 | 4096 | 25361 | 157KB | 2MB | 501KB |
-| 28 | CRO | Cronos | 2438 | 58530 | 10134 | 71102 | 308KB | 7MB | 1MB |
-| 29 | CC | Canton | 7 | 146 | 1460 | 1613 | 680B | 16KB | 173KB |
-| 31 | WLFI | World Liberty Financial | 76 | 1801 | 4072 | 5949 | 7KB | 237KB | 512KB |
-| 32 | TAO | Bittensor | 661 | 12680 | 10134 | 23475 | 91KB | 1MB | 1MB |
-| 33 | PYUSD | PayPal USD | 795 | 18817 | 4086 | 23698 | 92KB | 2MB | 493KB |
-| 34 | NEAR | NEAR Protocol | 1859 | 44619 | 4086 | 50564 | 238KB | 5MB | 511KB |
-| 35 | ICP | Internet Computer | 1652 | 39640 | 10132 | 51424 | 215KB | 5MB | 1MB |
-| 36 | USD1 | World Liberty Financial USD | 153 | 3649 | 10133 | 13935 | 15KB | 462KB | 1MB |
-| 37 | AAVE | Aave | 1863 | 44661 | 4076 | 50600 | 260KB | 6MB | 567KB |
-| 38 | BGB | Bitget Token | 559 | 12906 | 2743 | 16208 | 67KB | 1MB | 341KB |
-| 39 | OKB | OKB | 2746 | 12000 | 4076 | 18822 | 356KB | 1MB | 534KB |
-| 40 | ASTER | Aster | 52 | 1225 | 10133 | 11410 | 4KB | 163KB | 1MB |
-| 41 | ETC | Ethereum Classic | 3403 | 70034 | 3846 | 77283 | 450KB | 9MB | 498KB |
-| 42 | M | MemeCore | 62 | 1461 | 2100 | 3623 | 5KB | 181KB | 247KB |
-| 43 | APT | Aptos | 1124 | 26970 | 3970 | 32064 | 143KB | 3MB | 487KB |
-| 44 | PEPE | Pepe | 3445 | 22824 | 4094 | 30363 | 441KB | 3MB | 417KB |
-| 45 | ENA | Ethena | 593 | 14211 | 10133 | 24937 | 74KB | 1MB | 1MB |
-| 46 | PI | Pi | 244 | 1965 | 10132 | 12341 | 26KB | 247KB | 1MB |
-| 47 | ONDO | Ondo | 661 | 15850 | 10132 | 26643 | 83KB | 2MB | 1MB |
-| 48 | POL | Polygon (prev. MATIC) | 1928 | 17747 | 3958 | 23633 | 243KB | 2MB | 490KB |
-| 49 | WLD | Worldcoin | 832 | 19950 | 10132 | 30914 | 105KB | 2MB | 1MB |
-| 50 | KCS | KuCoin Token | 2873 | 1997 | 4092 | 8962 | 362KB | 267KB | 531KB |
-| 51 | XAUt | Tether Gold | 1978 | 3884 | 2846 | 8708 | 283KB | 578KB | 395KB |
-| 52 | FIL | Filecoin | 1971 | 45987 | 4088 | 52046 | 255KB | 5MB | 509KB |
-| 53 | ALGO | Algorand | 2341 | 56184 | 3954 | 62479 | 301KB | 7MB | 493KB |
-| 54 | TRUMP | OFFICIAL TRUMP | 301 | 7204 | 3832 | 11337 | 37KB | 986KB | 475KB |
-| 55 | ATOM | Cosmos | 2400 | 57601 | 4048 | 64049 | 313KB | 7MB | 502KB |
-| 56 | PAXG | PAX Gold | 2220 | 48011 | 3222 | 53453 | 320KB | 7MB | 450KB |
-| 57 | VET | VeChain | 2986 | 60029 | 4076 | 67091 | 381KB | 7MB | 510KB |
-| 58 | ARB | Arbitrum | 958 | 22983 | 3858 | 27799 | 121KB | 2MB | 478KB |
-| 59 | PUMP | Pump.fun | 123 | 2924 | 3984 | 7031 | 13KB | 394KB | 396KB |
-| 60 | KAS | Kaspa | 944 | 22644 | 4048 | 27636 | 118KB | 2MB | 498KB |
-| 61 | SKY | Sky | 340 | 3940 | 2250 | 6530 | 38KB | 508KB | 273KB |
-| 62 | FLR | Flare | 993 | 23822 | 4088 | 28903 | 124KB | 3MB | 511KB |
-| 63 | RENDER | Render | 507 | 12153 | 3990 | 16650 | 63KB | 1MB | 503KB |
-| 64 | USDG | Global Dollar | 153 | 1996 | 3594 | 5743 | 15KB | 251KB | 436KB |
-| 65 | DASH | Dash | 4305 | 90042 | 4090 | 98437 | 582KB | 12MB | 548KB |
-| 66 | SEI | Sei | 823 | 19736 | 3782 | 24341 | 104KB | 2MB | 469KB |
-| 67 | QNT | Quant | 2472 | 40019 | 10047 | 52538 | 331KB | 5MB | 1MB |
-| 68 | RLUSD | Ripple USD | 311 | 7442 | 4090 | 11843 | 34KB | 955KB | 497KB |
-| 69 | IP | Story | 244 | 5836 | 4078 | 10158 | 27KB | 753KB | 496KB |
-| 70 | STRK | Starknet | 797 | 13353 | 10130 | 24280 | 101KB | 1MB | 1MB |
-| 71 | XDC | XDC Network | 1894 | 34012 | 10046 | 45952 | 235KB | 4MB | 1MB |
-| 72 | FDUSD | First Digital USD | 776 | 3649 | 10130 | 14555 | 95KB | 464KB | 1MB |
-| 73 | BONK | Bonk | 707 | 16954 | 10129 | 27790 | 92KB | 2MB | 1MB |
-| 74 | JUP | Jupiter | 1062 | 15506 | 4074 | 20642 | 134KB | 1MB | 493KB |
-| 75 | GT | GateToken | 2266 | 1994 | 2880 | 7140 | 275KB | 265KB | 365KB |
-| 76 | PENGU | Pudgy Penguins | 315 | 5799 | 4044 | 10158 | 38KB | 784KB | 517KB |
-| 77 | CAKE | PancakeSwap | 1727 | 12003 | 10045 | 23775 | 218KB | 1MB | 1MB |
-| 78 | AERO | Aerodrome Finance | 502 | 12513 | 3860 | 16875 | 61KB | 1MB | 482KB |
-| 79 | VIRTUAL | Virtuals Protocol | 500 | 5951 | 1750 | 8201 | 63KB | 793KB | 213KB |
-| 80 | IMX | Immutable | 1397 | 33518 | 3794 | 38709 | 177KB | 4MB | 467KB |
-| 81 | OP | Optimism | 1229 | 29492 | 4086 | 34807 | 155KB | 3MB | 498KB |
-| 82 | MORPHO | Morpho | 334 | 6002 | 2292 | 8628 | 39KB | 791KB | 279KB |
-| 83 | TIA | Celestia | 740 | 17747 | 10129 | 28616 | 94KB | 2MB | 1MB |
-| 84 | FET | Artificial Superintelligence Alliance | 2454 | 58893 | 4006 | 65353 | 311KB | 7MB | 496KB |
-| 85 | INJ | Injective | 1847 | 44017 | 3890 | 49754 | 239KB | 5MB | 476KB |
-| 86 | LDO | Lido DAO | 1502 | 30002 | 4078 | 35582 | 190KB | 3MB | 499KB |
-| 87 | STX | Stacks | 3039 | 43395 | 3136 | 49570 | 382KB | 5MB | 382KB |
-| 88 | NEXO | Nexo | 2735 | 58028 | 4082 | 64845 | 342KB | 7MB | 500KB |
-| 89 | TEL | Telcoin | 2849 | 1997 | 4054 | 8900 | 361KB | 255KB | 512KB |
-| 90 | CRV | Curve DAO Token | 1918 | 46108 | 4078 | 52104 | 243KB | 5MB | 504KB |
-| 91 | SOON | SOON | 153 | 1967 | 3154 | 5274 | 16KB | 253KB | 392KB |
-| 92 | DCR | Decred | 3599 | 9983 | 4020 | 17602 | 475KB | 1MB | 496KB |
-| 93 | GRT | The Graph | 2450 | 43081 | 2652 | 48183 | 310KB | 5MB | 326KB |
-| 94 | XTZ | Tezos | 3067 | 70022 | 2630 | 75719 | 388KB | 8MB | 318KB |
-| 95 | AB | AB | 62 | 1020 | 4907 | 5989 | 5KB | 128KB | 625KB |
-| 96 | 2Z | DoubleZero | 42 | 976 | 1654 | 2672 | 3KB | 122KB | 193KB |
-| 97 | MYX | MYX Finance | 26 | 2133 | 10129 | 12288 | 2KB | 284KB | 1MB |
-| 99 | KAIA | Kaia | 368 | 7852 | 4070 | 12290 | 44KB | 1008KB | 496KB |
-| 100 | FLOKI | FLOKI | 1474 | 21974 | 4086 | 27534 | 192KB | 2MB | 410KB |
+| 1 | BTC | Bitcoin | 5607 | 104239 | 23560 | 133406 | 835KB | 16MB | 3MB |
+| 2 | ETH | Ethereum | 3766 | 70239 | 23560 | 97565 | 554KB | 10MB | 3MB |
+| 3 | USDT | Tether | 3239 | 70235 | 22915 | 96389 | 379KB | 8MB | 2MB |
+| 4 | XRP | XRP | 3956 | 70238 | 23559 | 97753 | 500KB | 8MB | 2MB |
+| 5 | BNB | BNB | 3022 | 66219 | 21148 | 90389 | 418KB | 9MB | 2MB |
+| 6 | SOL | Solana | 2058 | 48234 | 22914 | 73206 | 284KB | 6MB | 3MB |
+| 7 | USDC | USDC | 2605 | 62232 | 22913 | 87750 | 302KB | 7MB | 2MB |
+| 8 | TRX | TRON | 3007 | 70235 | 12945 | 86187 | 367KB | 8MB | 1MB |
+| 9 | DOGE | Dogecoin | 4286 | 70235 | 22910 | 97431 | 411KB | 7MB | 2MB |
+| 10 | ADA | Cardano | 2980 | 70233 | 22842 | 96055 | 378KB | 8MB | 2MB |
+| 11 | HYPE | Hyperliquid | 164 | 2026 | 22840 | 25030 | 17KB | 270KB | 3MB |
+| 12 | ZEC | Zcash | 3318 | 70235 | 22842 | 96395 | 456KB | 9MB | 3MB |
+| 13 | BCH | Bitcoin Cash | 3041 | 70235 | 12982 | 86258 | 438KB | 10MB | 1MB |
+| 14 | LINK | Chainlink | 2990 | 70233 | 21958 | 95181 | 395KB | 9MB | 2MB |
+| 15 | LEO | UNUS SED LEO | 2377 | 2065 | 6692 | 11134 | 286KB | 254KB | 820KB |
+| 16 | XLM | Stellar | 4052 | 70234 | 22840 | 97126 | 466KB | 8MB | 2MB |
+| 17 | USDe | Ethena USDe | 591 | 6234 | 21956 | 28781 | 66KB | 773KB | 2MB |
+| 18 | XMR | Monero | 3959 | 48211 | 12489 | 64659 | 542KB | 6MB | 1MB |
+| 19 | LTC | Litecoin | 4434 | 70235 | 22840 | 97509 | 597KB | 9MB | 3MB |
+| 20 | AVAX | Avalanche | 1893 | 45384 | 18988 | 66265 | 257KB | 6MB | 2MB |
+| 21 | HBAR | Hedera | 2261 | 54214 | 22838 | 79313 | 284KB | 6MB | 2MB |
+| 22 | SUI | Sui | 932 | 22315 | 22837 | 46084 | 118KB | 2MB | 2MB |
+| 23 | DAI | Dai | 2815 | 64228 | 7819 | 74862 | 330KB | 7MB | 954KB |
+| 24 | SHIB | Shiba Inu | 1620 | 38830 | 21951 | 62401 | 112KB | 2MB | 1MB |
+| 25 | DOT | Polkadot | 1925 | 46144 | 13860 | 61929 | 248KB | 6MB | 1MB |
+| 26 | UNI | Uniswap | 1898 | 45502 | 21947 | 69347 | 244KB | 5MB | 2MB |
+| 27 | TON | Toncoin | 1268 | 20233 | 12514 | 34015 | 158KB | 2MB | 1MB |
+| 28 | CRO | Cronos | 2449 | 58735 | 22836 | 84020 | 303KB | 7MB | 2MB |
+| 30 | CC | Canton | 18 | 380 | 9275 | 9673 | 1KB | 46KB | 1MB |
+| 31 | WLFI | World Liberty Financial | 87 | 2035 | 12824 | 14946 | 8KB | 263KB | 1MB |
+| 32 | PYUSD | PayPal USD | 806 | 19042 | 13745 | 33593 | 91KB | 2MB | 1MB |
+| 33 | TAO | Bittensor | 672 | 12908 | 22835 | 36415 | 93KB | 1MB | 3MB |
+| 34 | NEAR | NEAR Protocol | 1870 | 44831 | 12936 | 59637 | 239KB | 5MB | 1MB |
+| 35 | USD1 | World Liberty Financial USD | 164 | 3882 | 22834 | 26880 | 16KB | 480KB | 2MB |
+| 36 | ICP | Internet Computer | 1663 | 39855 | 21919 | 63437 | 217KB | 5MB | 2MB |
+| 37 | AAVE | Aave | 1874 | 44873 | 12964 | 59711 | 261KB | 6MB | 1MB |
+| 38 | BGB | Bitget Token | 570 | 13134 | 8127 | 21831 | 68KB | 1MB | 1018KB |
+| 39 | ASTER | Aster | 63 | 1459 | 18415 | 19937 | 5KB | 194KB | 2MB |
+| 40 | OKB | OKB | 2757 | 12229 | 12934 | 27920 | 357KB | 1MB | 1MB |
+| 41 | ETC | Ethereum Classic | 3414 | 70234 | 12106 | 85754 | 452KB | 9MB | 1MB |
+| 42 | M | MemeCore | 73 | 1695 | 10191 | 11959 | 6KB | 211KB | 1MB |
+| 43 | APT | Aptos | 1135 | 27191 | 13386 | 41712 | 145KB | 3MB | 1MB |
+| 44 | PEPE | Pepe | 3456 | 23047 | 12609 | 39112 | 365KB | 1MB | 948KB |
+| 45 | ENA | Ethena | 604 | 14438 | 20693 | 35735 | 75KB | 1MB | 2MB |
+| 46 | PI | Pi | 255 | 2197 | 22457 | 24909 | 27KB | 274KB | 2MB |
+| 47 | ONDO | Ondo | 672 | 16079 | 22454 | 39205 | 84KB | 2MB | 2MB |
+| 48 | KCS | KuCoin Token | 2884 | 2233 | 22455 | 27572 | 363KB | 299KB | 2MB |
+| 49 | POL | Polygon (prev. MATIC) | 1939 | 17975 | 12055 | 31969 | 240KB | 2MB | 1MB |
+| 50 | WLD | Worldcoin | 843 | 20177 | 22450 | 43470 | 106KB | 2MB | 2MB |
+| 51 | XAUt | Tether Gold | 1989 | 4119 | 10954 | 17062 | 285KB | 614KB | 1MB |
+| 52 | TRUMP | OFFICIAL TRUMP | 312 | 7437 | 11705 | 19454 | 38KB | 1016KB | 1MB |
+| 53 | FIL | Filecoin | 1982 | 46201 | 12542 | 60725 | 256KB | 6MB | 1MB |
+| 54 | ALGO | Algorand | 2352 | 56392 | 12072 | 70816 | 299KB | 7MB | 1MB |
+| 55 | PAXG | PAX Gold | 2231 | 48224 | 11248 | 61703 | 322KB | 7MB | 1MB |
+| 56 | ATOM | Cosmos | 2411 | 57809 | 13364 | 73584 | 314KB | 7MB | 1MB |
+| 57 | ARB | Arbitrum | 969 | 23208 | 12062 | 36239 | 122KB | 2MB | 1MB |
+| 58 | VET | VeChain | 2997 | 60236 | 12579 | 75812 | 366KB | 7MB | 1MB |
+| 59 | PUMP | Pump.fun | 134 | 3159 | 12313 | 15606 | 12KB | 292KB | 891KB |
+| 60 | KAS | Kaspa | 955 | 22869 | 12548 | 36372 | 117KB | 2MB | 1MB |
+| 61 | SKY | Sky | 351 | 4175 | 10600 | 15126 | 39KB | 535KB | 1MB |
+| 62 | USDG | Global Dollar | 164 | 2232 | 11988 | 14384 | 16KB | 278KB | 1MB |
+| 63 | FLR | Flare | 1004 | 24047 | 12604 | 37655 | 121KB | 3MB | 1MB |
+| 64 | DASH | Dash | 4316 | 90234 | 16146 | 110696 | 583KB | 12MB | 2MB |
+| 65 | RENDER | Render | 518 | 12383 | 11773 | 24674 | 64KB | 1MB | 1MB |
+| 66 | STRK | Starknet | 808 | 13583 | 21564 | 35955 | 101KB | 1MB | 2MB |
+| 67 | RLUSD | Ripple USD | 322 | 7674 | 13485 | 21481 | 34KB | 963KB | 1MB |
+| 68 | SEI | Sei | 834 | 19963 | 12250 | 33047 | 104KB | 2MB | 1MB |
+| 69 | QNT | Quant | 2483 | 40236 | 21571 | 64290 | 333KB | 5MB | 2MB |
+| 70 | FDUSD | First Digital USD | 787 | 3884 | 22454 | 27125 | 91KB | 482KB | 2MB |
+| 71 | IP | Story | 255 | 6070 | 12589 | 18914 | 28KB | 783KB | 1MB |
+| 72 | XDC | XDC Network | 1905 | 34232 | 21478 | 57615 | 230KB | 4MB | 2MB |
+| 73 | JUP | Jupiter | 1073 | 15735 | 12570 | 29378 | 132KB | 1MB | 1MB |
+| 74 | GT | GateToken | 2277 | 2230 | 8981 | 13488 | 276KB | 296KB | 1MB |
+| 75 | BONK | Bonk | 718 | 17182 | 22449 | 40349 | 50KB | 1MB | 1MB |
+| 76 | CAKE | PancakeSwap | 1738 | 12234 | 21478 | 35450 | 219KB | 1MB | 2MB |
+| 77 | PENGU | Pudgy Penguins | 326 | 6033 | 12544 | 18903 | 37KB | 797KB | 1MB |
+| 78 | IMX | Immutable | 1408 | 33738 | 11499 | 46645 | 178KB | 4MB | 1MB |
+| 79 | AERO | Aerodrome Finance | 513 | 12743 | 12009 | 25265 | 62KB | 1MB | 1MB |
+| 80 | OP | Optimism | 1240 | 29714 | 21563 | 52517 | 156KB | 3MB | 2MB |
+| 81 | VIRTUAL | Virtuals Protocol | 511 | 6185 | 7864 | 14560 | 64KB | 822KB | 1017KB |
+| 82 | MORPHO | Morpho | 345 | 6236 | 7918 | 14499 | 40KB | 820KB | 1009KB |
+| 83 | TIA | Celestia | 751 | 17975 | 22451 | 41177 | 95KB | 2MB | 2MB |
+| 84 | LDO | Lido DAO | 1513 | 30224 | 13472 | 45209 | 191KB | 3MB | 1MB |
+| 85 | INJ | Injective | 1858 | 44232 | 12304 | 58394 | 241KB | 5MB | 1MB |
+| 86 | FET | Artificial Superintelligence Alliance | 2465 | 59100 | 13188 | 74753 | 310KB | 7MB | 1MB |
+| 87 | NEXO | Nexo | 2746 | 58236 | 12585 | 73567 | 341KB | 7MB | 1MB |
+| 88 | DCR | Decred | 3610 | 10215 | 12440 | 26265 | 477KB | 1MB | 1MB |
+| 89 | STX | Stacks | 3050 | 43610 | 10377 | 57037 | 380KB | 5MB | 1MB |
+| 90 | TEL | Telcoin | 2860 | 2233 | 10731 | 15824 | 238KB | 210KB | 1MB |
+| 91 | AB | AB | 73 | 1218 | 16564 | 17855 | 6KB | 152KB | 2MB |
+| 92 | CRV | Curve DAO Token | 1929 | 46321 | 12575 | 60825 | 244KB | 5MB | 1MB |
+| 93 | GRT | The Graph | 2461 | 43296 | 8622 | 54379 | 272KB | 5MB | 1MB |
+| 94 | XTZ | Tezos | 3078 | 70224 | 8658 | 81960 | 388KB | 8MB | 1MB |
+| 95 | SOON | SOON | 164 | 2203 | 9449 | 11816 | 17KB | 284KB | 1MB |
+| 96 | MYX | MYX Finance | 37 | 2368 | 22221 | 24626 | 3KB | 314KB | 2MB |
+| 97 | ETHFI | ether.fi | 610 | 6220 | 10477 | 17307 | 77KB | 812KB | 1MB |
+| 98 | KAIA | Kaia | 379 | 8085 | 12560 | 21024 | 44KB | 1MB | 1MB |
+| 100 | FLOKI | FLOKI | 1485 | 22200 | 21556 | 45241 | 101KB | 1MB | 1MB |
 
 ## Summary Statistics
 
 - **Total Cryptocurrencies:** 98
-- **Total Daily Records:** 169,993
-- **Total Hourly Records:** 3,069,350
-- **Total Minute Records:** 582,978
-- **Grand Total Records:** 3,822,321
+- **Total Daily Records:** 171,629
+- **Total Hourly Records:** 3,095,883
+- **Total Minute Records:** 1,570,953
+- **Grand Total Records:** 4,838,465
 
 ## Data Intervals
 

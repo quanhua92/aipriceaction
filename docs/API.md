@@ -54,7 +54,7 @@ Query market data (stocks or crypto) with optional filters.
 | `interval` | string | No | `1D` | Time interval: **Base intervals:** `1D` (daily), `1H` (hourly), `1m` (minute). **Aggregated intervals:** `5m`, `15m`, `30m` (minute aggregations), `1W` (weekly), `2W` (bi-weekly), `1M` (monthly) |
 | `start_date` | string | No | Yesterday | Start date filter (YYYY-MM-DD format) |
 | `end_date` | string | No | Today | End date filter (YYYY-MM-DD format) |
-| `limit` | number | No | None | Limit number of records to return (works with `end_date` to get N rows back in history). Ignored if `start_date` is provided |
+| `limit` | number | No | None | Limit number of records to return (works with `start_date`/`end_date` to get N most recent records) |
 | `legacy` | boolean | No | `false` | **VN mode only:** If true, divides stock prices by 1000 (old proxy compatibility). Ignored in crypto mode |
 | `format` | string | No | `json` | Response format: `json` or `csv` |
 | `cache` | boolean | No | `true` | Use memory cache (default). Set to `false` to force disk read and bypass TTL cache |
