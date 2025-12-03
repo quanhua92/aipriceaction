@@ -493,22 +493,23 @@ impl CryptoSync {
         let is_resume = !last_date.is_empty() && !self.config.force_full;
 
         // Merge existing CSV data with new data (like stock sync does)
-        let merged_data = if is_resume && file_path.exists() {
+        let (existing, merged_data) = if is_resume && file_path.exists() {
             let existing = self.read_existing_ohlcv(&file_path)?;
-            self.merge_ohlcv_data(existing, new_data.to_vec())
+            let merged = self.merge_ohlcv_data(existing.clone(), new_data.to_vec());
+            (Some(existing), merged)
         } else {
-            new_data.to_vec()
+            (None, new_data.to_vec())
         };
 
         if merged_data.is_empty() {
             return Ok(());
         }
 
-        // Calculate cutoff date (like stock sync)
+        // Calculate cutoff date based on EXISTING CSV data (not merged)
         let resume_days = 2i64;
-        let cutoff_datetime = if is_resume && file_path.exists() {
-            if let Some(last_record) = merged_data.last() {
-                last_record.time - chrono::Duration::days(resume_days)
+        let cutoff_datetime = if let Some(ref existing_data) = existing {
+            if let Some(last_existing_record) = existing_data.last() {
+                last_existing_record.time - chrono::Duration::days(resume_days)
             } else {
                 chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
             }
