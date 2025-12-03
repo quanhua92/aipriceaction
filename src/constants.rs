@@ -78,6 +78,20 @@ pub const BATCH_FAILURE_THRESHOLD_MINUTES: i64 = 15;
 /// These symbols consistently fail with "Max retries exceeded" errors
 pub const IGNORED_CRYPTOS: &[&str] = &["MNT", "IOTA"];
 
+// Crypto API batching configuration
+/// Target number of records per batch for daily interval data
+pub const CRYPTO_API_TARGET_RECORDS_DAILY: usize = 1000;
+/// Target number of records per batch for hourly interval data
+pub const CRYPTO_API_TARGET_RECORDS_HOURLY: usize = 1000;
+/// Target number of records per batch for minute interval data
+pub const CRYPTO_API_TARGET_RECORDS_MINUTE: usize = 1000;
+/// Delay between batch API calls in milliseconds to avoid overwhelming the API
+pub const CRYPTO_API_BATCH_DELAY_MS: u64 = 500;
+/// Maximum number of retries for failed batch requests
+pub const CRYPTO_API_MAX_RETRIES: u32 = 3;
+/// Maximum number of symbols per batch in pre-check mode (limit=1)
+pub const CRYPTO_API_PRECHECK_MAX_SYMBOLS: usize = 50;
+
 /// Vietnamese Stock Market Tick Sizes
 ///
 /// Vietnamese stocks use dynamic tick sizes based on current price level:

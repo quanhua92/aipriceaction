@@ -45,6 +45,45 @@ impl FromRef<AppState> for SharedHealthStats {
     }
 }
 
+/// Middleware to add cache control headers to static files
+async fn add_cache_headers(request: Request, next: Next) -> Response {
+    let uri = request.uri();
+    let path = uri.path().to_string(); // Clone the path to avoid borrow checker issue
+
+    let mut response = next.run(request).await;
+
+    // Add cache control headers based on file type
+    let cache_control = if path.ends_with(".js") {
+        // JavaScript files: 5 minutes
+        Some("max-age=300, public")
+    } else if path.ends_with(".css") {
+        // CSS files: 1 hour
+        Some("max-age=3600, public")
+    } else if path.ends_with(".html") {
+        // HTML files: no cache
+        Some("no-cache, no-store, must-revalidate")
+    } else if path.ends_with(".png") || path.ends_with(".jpg") || path.ends_with(".jpeg")
+           || path.ends_with(".gif") || path.ends_with(".webp") || path.ends_with(".svg") {
+        // Images: 1 day
+        Some("max-age=86400, public")
+    } else if path.ends_with(".ico") {
+        // Favicon: 1 day
+        Some("max-age=86400, public")
+    } else {
+        // Other static files: 1 hour
+        Some("max-age=3600, public")
+    };
+
+    if let Some(cache_value) = cache_control {
+        response.headers_mut().insert(
+            HeaderName::from_static("cache-control"),
+            HeaderValue::from_str(cache_value).unwrap()
+        );
+    }
+
+    response
+}
+
 /// Middleware to add security headers to all responses
 async fn add_security_headers(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
@@ -151,7 +190,7 @@ pub async fn serve(
     tracing::info!("  GET /public/* (static files from {})", public_dir.display());
 
     tracing::info!("Security middleware enabled:");
-    tracing::info!("  Request Timeout: 30s");
+    tracing::info!("  Request Timeout: 180s");
     tracing::info!("  Body Size Limit: 10MB (upload endpoints), 1MB (other endpoints)");
     tracing::info!("  Security Headers: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection");
 
@@ -174,14 +213,19 @@ pub async fn serve(
         .route("/raw/{*path}", get(legacy::raw_proxy_handler))
         .layer(RequestBodyLimitLayer::new(1024 * 1024)); // 1MB for regular API
 
+    // Build public routes with cache control middleware
+    let public_routes = Router::new()
+        .nest_service("/public", ServeDir::new(public_dir).precompressed_br())
+        .layer(middleware::from_fn(add_cache_headers));
+
     // Combine routers
     let app = Router::new()
         .merge(upload_routes)
         .merge(main_routes)
-        .nest_service("/public", ServeDir::new(public_dir))
+        .merge(public_routes)
         .with_state(app_state)
         // Apply middleware in order (outer → inner)
-        .layer(TimeoutLayer::new(Duration::from_secs(30)))
+        .layer(TimeoutLayer::new(Duration::from_secs(180)))
         .layer(middleware::from_fn(add_security_headers))
         .layer(
             CompressionLayer::new()

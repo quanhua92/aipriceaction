@@ -73,8 +73,7 @@ pub struct TickerQuery {
     /// End date filter (YYYY-MM-DD)
     pub end_date: Option<String>,
 
-    /// Limit number of records to return (works with end_date to get N rows back in history)
-    /// If start_date is provided, limit is ignored
+    /// Limit number of records to return (works with start_date/end_date to get N most recent records)
     pub limit: Option<usize>,
 
     /// Legacy price format: divide by 1000 for old proxy compatibility - default: false
@@ -126,6 +125,15 @@ pub async fn get_tickers_handler(
 
     debug!("Received request for tickers with params: {:?}", params);
 
+    // Special logging for 1m USDT requests to track performance
+    let is_usdt_1m = params.mode == Mode::Crypto
+        && params.symbol.as_ref().map_or(false, |symbols| symbols.contains(&"USDT".to_string()))
+        && params.interval.as_deref() == Some("1m");
+
+    if is_usdt_1m {
+        info!("DEBUG:PERF:1m:USDT Request detected - starting performance tracking");
+    }
+
     // Get DataStore based on mode
     let data_state = app_state.get_data_store(params.mode);
 
@@ -140,6 +148,9 @@ pub async fn get_tickers_handler(
             params
         },
         Err(error_response) => {
+            if is_usdt_1m {
+                info!("DEBUG:PERF:1m:USDT Request failed during parameter parsing");
+            }
             performance_metrics.status = ApiStatus::Fail;
             performance_metrics.complete();
             performance_metrics.error_message = Some("Invalid parameters".to_string());
@@ -150,12 +161,20 @@ pub async fn get_tickers_handler(
 
     // Smart data retrieval - DataStore handles all the complexity
     let perf_data_start = std::time::Instant::now();
+    if is_usdt_1m {
+        info!("DEBUG:PERF:1m:USDT About to call get_data_smart - tickers: {:?}", query_params.tickers);
+    }
     debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
     let result_data = data_state.get_data_smart(query_params.clone()).await;
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
-    debug!("[DEBUG:PERF] get_data_smart complete: {:.2}ms, {} tickers, {} records", perf_data_start.elapsed().as_secs_f64() * 1000.0, ticker_count, total_records);
+    let data_retrieval_time = perf_data_start.elapsed().as_secs_f64() * 1000.0;
+    debug!("[DEBUG:PERF] get_data_smart complete: {:.2}ms, {} tickers, {} records", data_retrieval_time, ticker_count, total_records);
+
+    if is_usdt_1m {
+        info!("DEBUG:PERF:1m:USDT Data retrieved - {:.2}ms, {} tickers, {} records", data_retrieval_time, ticker_count, total_records);
+    }
 
     info!(
         ticker_count,
@@ -196,6 +215,11 @@ pub async fn get_tickers_handler(
     }
 
     // Return JSON format - use BTreeMap for alphabetically sorted keys
+    let perf_json_start = std::time::Instant::now();
+    if is_usdt_1m {
+        info!("DEBUG:PERF:1m:USDT Starting JSON response generation");
+    }
+
     let response_data: BTreeMap<String, Vec<StockDataResponse>> = result_data
         .into_iter()
         .map(|(ticker, data)| {
@@ -240,10 +264,24 @@ pub async fn get_tickers_handler(
         .collect();
 
     // Complete performance metrics and log
+    let json_gen_time = perf_json_start.elapsed().as_secs_f64() * 1000.0;
+    if is_usdt_1m {
+        info!("DEBUG:PERF:1m:USDT JSON generation complete - {:.2}ms", json_gen_time);
+    }
+
     performance_metrics.response_size_bytes = response_data.len() * 200; // Approximate size
     performance_metrics.data_source = determine_data_source(query_params.use_cache, !query_params.use_cache);
     performance_metrics.complete();
     write_api_log_entry(&performance_metrics);
+
+    if is_usdt_1m {
+        let total_time = perf_start.elapsed().as_secs_f64() * 1000.0;
+        info!("DEBUG:PERF:1m:USDT Complete request - Total: {:.2}ms | Parse: {:.2}ms | Data: {:.2}ms | JSON: {:.2}ms",
+              total_time,
+              (perf_parse_start.elapsed().as_secs_f64() * 1000.0),
+              data_retrieval_time,
+              json_gen_time);
+    }
 
     (StatusCode::OK, headers, Json(response_data)).into_response()
 }

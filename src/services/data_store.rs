@@ -1,7 +1,7 @@
 use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO};
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
-use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time};
+use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_shared};
 use tracing::{debug, info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -9,8 +9,16 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
+use std::io::{Read, Seek};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+
+#[derive(Debug)]
+enum ReadingStrategy {
+    FromEnd { limit: usize },
+    FromStart { limit: usize },
+    CompleteFile,
+}
 
 /// Memory management constants
 pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit
@@ -37,8 +45,8 @@ struct CacheEntry {
 }
 
 /// Cache for hourly/minute data with size tracking
-/// Key: (ticker, interval)
-type HourlyMinuteCache = HashMap<(String, Interval), CacheEntry>;
+/// Key: (ticker, interval, start_date, end_date, limit)
+type HourlyMinuteCache = HashMap<(String, Interval, Option<DateTime<Utc>>, Option<DateTime<Utc>>, Option<usize>), CacheEntry>;
 
 // Shared data store for passing between threads
 pub type SharedDataStore = Arc<DataStore>;
@@ -428,9 +436,24 @@ impl DataStore {
 
             // Only read file if it has changed or is new
             if should_read {
+                // Log before starting CSV read
+                let file_size = csv_path.metadata().map(|m| m.len()).unwrap_or(0);
+                tracing::debug!(
+                    ticker = ticker,
+                    csv_path = ?csv_path,
+                    file_size_bytes = file_size,
+                    "Starting CSV file read"
+                );
+
                 // Read and parse CSV (blocking I/O happens here, NO locks held)
-                match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date) {
+                match self.read_csv_file(&csv_path, &ticker, interval, cutoff_date, None, limit) {
                     Ok(mut ticker_data) => {
+                        tracing::debug!(
+                            ticker = ticker,
+                            records_read = ticker_data.len(),
+                            "Successfully read CSV file"
+                        );
+
                         if !ticker_data.is_empty() {
                             // Apply record limit if specified (keep last N records)
                             if let Some(max_records) = limit {
@@ -447,7 +470,13 @@ impl DataStore {
                         }
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to read CSV for {}/{}: {}", ticker, interval.to_filename(), e);
+                        tracing::error!(
+                            ticker = ticker,
+                            interval = ?interval,
+                            csv_path = ?csv_path,
+                            error = %e,
+                            "Failed to read CSV file"
+                        );
                         continue;
                     }
                 }
@@ -497,79 +526,334 @@ impl DataStore {
         Ok(())
     }
 
-    /// Read a single CSV file and return StockData vector
-    fn read_csv_file(&self, csv_path: &Path, ticker: &str, _interval: Interval, cutoff_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
+    /// Read a single CSV file and return StockData vector (optimized with smart strategy)
+    fn read_csv_file(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, limit: Option<usize>) -> Result<Vec<StockData>, Error> {
+        let start_time = std::time::Instant::now();
+        let file_size = csv_path.metadata()?.len();
+
+        // Strategy selection based on query parameters
+        let strategy = self.determine_reading_strategy(start_date, end_date, interval, file_size, limit)?;
+
+        debug!(
+            ticker = ticker,
+            file_size_bytes = file_size,
+            file_size_mb = file_size / 1024 / 1024,
+            strategy = ?strategy,
+            start_date = ?start_date,
+            end_date = ?end_date,
+            "Starting smart CSV read"
+        );
+
+        let data = match strategy {
+            ReadingStrategy::FromEnd { limit } => {
+                self.read_csv_from_end(csv_path, ticker, interval, start_date, end_date, limit)?
+            },
+            ReadingStrategy::FromStart { limit } => {
+                self.read_csv_from_start(csv_path, ticker, interval, start_date, end_date, limit)?
+            },
+            ReadingStrategy::CompleteFile => {
+                self.read_csv_complete(csv_path, ticker, interval, start_date, end_date)?
+            }
+        };
+
+        let duration = start_time.elapsed();
+        let records_per_sec = if duration.as_secs_f32() > 0.0 {
+            data.len() as f32 / duration.as_secs_f32()
+        } else {
+            0.0
+        };
+
+        debug!(
+            ticker = ticker,
+            rows_read = data.len(),
+            duration_ms = duration.as_millis(),
+            records_per_sec = records_per_sec.round(),
+            strategy = ?strategy,
+            "CSV read completed successfully"
+        );
+
+        Ok(data)
+    }
+
+    /// Determine the optimal reading strategy based on query parameters
+    fn determine_reading_strategy(&self, start_date: Option<DateTime<Utc>>, _end_date: Option<DateTime<Utc>>, interval: Interval, file_size: u64, api_limit: Option<usize>) -> Result<ReadingStrategy, Error> {
+        // Use API limit with buffer, or default to reasonable values
+        let smart_limit = match api_limit {
+            Some(limit) => {
+                // For aggregated intervals with MA calculations, we need higher caps
+                // MA200 for aggregation: (limit * multiplier) + (200 * multiplier)
+                // 5m with 252 limit needs: (252 * 5) + (200 * 5) = 2260 records
+                let cap = if limit > 252 {
+                    // This likely indicates aggregation needs (252+5=257, 252+15=267, etc.)
+                    limit * 10  // Allow up to 10x for aggregation with MA buffer
+                } else if limit > 100 {
+                    // Medium limits that might be aggregation
+                    3000
+                } else {
+                    1000  // Regular cap for non-aggregated queries
+                };
+
+                (limit + 20).min(cap)
+            },
+            None => {
+                // Default limits when no API limit specified
+                match interval {
+                    Interval::Minute => 200,  // 3+ hours of minute data
+                    Interval::Hourly => 100,  // 4+ days of hourly data
+                    Interval::Daily => 50,    // 50+ days of daily data
+                }
+            }
+        };
+
+        match start_date {
+            Some(start) => {
+                // For date-filtered queries, check if we need recent data or historical data
+                let days_since_cutoff = (Utc::now() - start).num_days();
+
+                if days_since_cutoff <= 7 && file_size > 10 * 1024 * 1024 { // 10MB
+                    // Recent data query on large file - read from end
+                    Ok(ReadingStrategy::FromEnd { limit: smart_limit * 10 })
+                } else if file_size > 50 * 1024 * 1024 { // 50MB
+                    // Historical query on very large file - read with smart limit
+                    Ok(ReadingStrategy::FromStart { limit: smart_limit * 20 })
+                } else {
+                    // Small to medium file - read completely
+                    Ok(ReadingStrategy::CompleteFile)
+                }
+            },
+            None => {
+                // No date filter - this is a "latest data" query
+                // For minute data, ALWAYS use FromEnd strategy regardless of file size
+                if interval == Interval::Minute {
+                    Ok(ReadingStrategy::FromEnd { limit: smart_limit })
+                } else if file_size > 20 * 1024 * 1024 { // 20MB
+                    // Large file, read from end for latest data
+                    Ok(ReadingStrategy::FromEnd { limit: smart_limit * 4 })
+                } else {
+                    // Small file (daily/hourly), read completely
+                    Ok(ReadingStrategy::CompleteFile)
+                }
+            }
+        }
+    }
+
+    /// Read CSV from the end (for recent data queries)
+    fn read_csv_from_end(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<StockData>, Error> {
+        let start_time = std::time::Instant::now();
+        let mut file = open_file_shared(csv_path)?;
+        let file_size = file.metadata()?.len();
+
+        info!(
+            ticker = ticker,
+            strategy = "from_end",
+            limit = limit,
+            "Reading CSV from end for recent data"
+        );
+
+        // Read file backwards in chunks to find the last N records
+        let mut buffer = vec![0u8; 8192]; // 8KB buffer
+        let mut position = file_size;
+        let mut lines = Vec::new();
+        let mut found_records = 0;
+
+        // Skip the header first
+        if file_size > 0 {
+            position -= 1;
+            file.seek(std::io::SeekFrom::Start(position))?;
+            let mut header_found = false;
+            while position > 0 && !header_found {
+                position -= 1;
+                file.seek(std::io::SeekFrom::Start(position))?;
+                let mut byte = [0u8; 1];
+                file.read_exact(&mut byte)?;
+                if byte[0] == b'\n' {
+                    header_found = true;
+                }
+            }
+        }
+
+        // Now read backwards to collect records
+        while position > 0 && found_records < limit {
+            let chunk_size = std::cmp::min(buffer.len(), position as usize);
+            position -= chunk_size as u64;
+            file.seek(std::io::SeekFrom::Start(position))?;
+            file.read_exact(&mut buffer[..chunk_size])?;
+
+            // Process the chunk backwards, extracting complete lines
+            let chunk_str = String::from_utf8_lossy(&buffer[..chunk_size]);
+            let mut chunk_lines: Vec<&str> = chunk_str.lines().collect();
+
+            // Reverse to get correct order (since we're reading backwards)
+            chunk_lines.reverse();
+
+            for line in chunk_lines {
+                if line.trim().is_empty() { continue; }
+
+                // Parse the line to see if it matches our criteria
+                if let Ok(record) = csv::ReaderBuilder::new()
+                    .has_headers(false)
+                    .flexible(true)
+                    .from_reader(line.as_bytes())
+                    .records()
+                    .next()
+                    .ok_or_else(|| Error::Io("Failed to parse record".to_string()))?
+                {
+                    if let Ok(time) = self.parse_time_from_record(&record) {
+                        // Check start date
+                        if let Some(start) = start_date {
+                            if time < start {
+                                continue;
+                            }
+                        }
+
+                        // Check end date
+                        if let Some(end) = end_date {
+                            if time > end {
+                                continue;
+                            }
+                        }
+
+                        found_records += 1;
+                        lines.push(line.to_string());
+
+                        if found_records >= limit {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now parse the collected lines in correct order
+        let mut data = Vec::with_capacity(lines.len());
+        lines.reverse(); // Reverse to get chronological order
+
+        for line in lines {
+            if let Ok(stock_data) = self.parse_csv_line(&line, ticker, interval) {
+                data.push(stock_data);
+            }
+        }
+
+        let duration = start_time.elapsed();
+        info!(
+            ticker = ticker,
+            strategy = "from_end",
+            records_found = data.len(),
+            duration_ms = duration.as_millis(),
+            "Reverse read completed"
+        );
+
+        Ok(data)
+    }
+
+    /// Read CSV from start with smart limit
+    fn read_csv_from_start(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<StockData>, Error> {
+        let start_time = std::time::Instant::now();
+
+        info!(
+            ticker = ticker,
+            strategy = "from_start",
+            limit = limit,
+            "Reading CSV from start with limit"
+        );
+
+        let mut data = Vec::with_capacity(std::cmp::min(limit, 1000));
+        let file = open_file_shared(csv_path)?;
         let mut reader = csv::ReaderBuilder::new()
-            .flexible(true) // Allow 7 or 16 columns
-            .from_path(csv_path)?;
+            .flexible(true)
+            .from_reader(file);
 
-        let mut data = Vec::new();
-
+        let mut records_processed = 0;
         for result in reader.records() {
-            let record = result?;
+            if records_processed >= limit {
+                break;
+            }
 
-            // Parse time based on interval format
+            let record = result?;
+            records_processed += 1;
+
+            // Parse time
             let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
             let time = parse_timestamp(time_str)?;
 
-            // Skip data older than cutoff
-            if let Some(cutoff) = cutoff_date {
-                if time < cutoff {
+            // Skip data older than start date
+            if let Some(start) = start_date {
+                if time < start {
                     continue;
                 }
             }
 
-            // Parse OHLCV
-            let open: f64 = record.get(2).ok_or_else(|| Error::Io("Missing open".to_string()))?.parse()
-                .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
-            let high: f64 = record.get(3).ok_or_else(|| Error::Io("Missing high".to_string()))?.parse()
-                .map_err(|e| Error::Io(format!("Invalid high: {}", e)))?;
-            let low: f64 = record.get(4).ok_or_else(|| Error::Io("Missing low".to_string()))?.parse()
-                .map_err(|e| Error::Io(format!("Invalid low: {}", e)))?;
-            let close: f64 = record.get(5).ok_or_else(|| Error::Io("Missing close".to_string()))?.parse()
-                .map_err(|e| Error::Io(format!("Invalid close: {}", e)))?;
-            let volume: u64 = record.get(6).ok_or_else(|| Error::Io("Missing volume".to_string()))?.parse()
-                .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
-
-            // Parse technical indicators if present (enhanced CSV format)
-            let mut stock_data = StockData::new(time, ticker.to_string(), open, high, low, close, volume);
-
-            if record.len() >= csv_column::VOLUME_CHANGED + 1 {
-                // Parse MAs
-                stock_data.ma10 = record.get(csv_column::MA10).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma20 = record.get(csv_column::MA20).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma50 = record.get(csv_column::MA50).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma100 = record.get(csv_column::MA100).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma200 = record.get(csv_column::MA200).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-
-                // Parse MA scores
-                stock_data.ma10_score = record.get(csv_column::MA10_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma20_score = record.get(csv_column::MA20_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma50_score = record.get(csv_column::MA50_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma100_score = record.get(csv_column::MA100_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.ma200_score = record.get(csv_column::MA200_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-
-                // Parse change indicators (percentage change from previous row)
-                stock_data.close_changed = record.get(csv_column::CLOSE_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-                stock_data.volume_changed = record.get(csv_column::VOLUME_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-
-                // Parse total money changed if present (enhanced CSV format)
-                stock_data.total_money_changed = record.get(csv_column::TOTAL_MONEY_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
-
-                // Set total_money_changed to 0 for market indices (VNINDEX, VN30)
-                // Market indices don't have money flow like individual stocks
-                if crate::constants::INDEX_TICKERS.contains(&stock_data.ticker.as_str()) {
-                    stock_data.total_money_changed = Some(0.0);
+            // Skip data newer than end date
+            if let Some(end) = end_date {
+                if time > end {
+                    continue;
                 }
             }
 
-            data.push(stock_data);
+            // Parse the record
+            if let Ok(stock_data) = self.parse_csv_record(&record, ticker, interval) {
+                data.push(stock_data);
+            }
         }
 
-        // Sort by time
-        data.sort_by(|a, b| a.time.cmp(&b.time));
+        let duration = start_time.elapsed();
+        info!(
+            ticker = ticker,
+            strategy = "from_start",
+            records_processed = records_processed,
+            records_kept = data.len(),
+            duration_ms = duration.as_millis(),
+            "Forward read with limit completed"
+        );
 
-        // Deduplicate by timestamp (favor last duplicate)
+        Ok(data)
+    }
+
+    /// Read complete CSV file (original implementation)
+    fn read_csv_complete(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>) -> Result<Vec<StockData>, Error> {
+        let start_time = std::time::Instant::now();
+
+        debug!(
+            ticker = ticker,
+            strategy = "complete",
+            "Reading complete CSV file"
+        );
+
+        let mut data = Vec::with_capacity(1000);
+        let file = open_file_shared(csv_path)?;
+        let mut reader = csv::ReaderBuilder::new()
+            .flexible(true)
+            .from_reader(file);
+
+        for result in reader.records() {
+            let record = result?;
+
+            // Parse time
+            let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
+            let time = parse_timestamp(time_str)?;
+
+            // Skip data older than start date
+            if let Some(start) = start_date {
+                if time < start {
+                    continue;
+                }
+            }
+
+            // Skip data newer than end date
+            if let Some(end) = end_date {
+                if time > end {
+                    continue;
+                }
+            }
+
+            // Parse the record
+            if let Ok(stock_data) = self.parse_csv_record(&record, ticker, interval) {
+                data.push(stock_data);
+            }
+        }
+
+        // Sort by time and deduplicate
+        data.sort_by(|a, b| a.time.cmp(&b.time));
         let duplicates_removed = deduplicate_stock_data_by_time(&mut data);
         if duplicates_removed > 0 {
             debug!(
@@ -580,7 +864,88 @@ impl DataStore {
             );
         }
 
+        let duration = start_time.elapsed();
+        debug!(
+            ticker = ticker,
+            strategy = "complete",
+            rows_read = data.len(),
+            duplicates_removed = duplicates_removed,
+            duration_ms = duration.as_millis(),
+            "Complete CSV read finished"
+        );
+
         Ok(data)
+    }
+
+    /// Parse time from a CSV record
+    fn parse_time_from_record(&self, record: &csv::StringRecord) -> Result<DateTime<Utc>, Error> {
+        let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
+        parse_timestamp(time_str)
+    }
+
+    /// Parse a CSV line into StockData
+    fn parse_csv_line(&self, line: &str, ticker: &str, interval: Interval) -> Result<StockData, Error> {
+        let mut reader = csv::ReaderBuilder::new()
+            .has_headers(false)
+            .flexible(true)
+            .from_reader(line.as_bytes());
+
+        let record = reader.records()
+            .next()
+            .ok_or_else(|| Error::Io("Failed to parse line".to_string()))??;
+
+        self.parse_csv_record(&record, ticker, interval)
+    }
+
+    /// Parse a CSV record into StockData
+    fn parse_csv_record(&self, record: &csv::StringRecord, ticker: &str, _interval: Interval) -> Result<StockData, Error> {
+        // Parse time
+        let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
+        let time = parse_timestamp(time_str)?;
+
+        // Parse OHLCV
+        let open: f64 = record.get(2).ok_or_else(|| Error::Io("Missing open".to_string()))?.parse()
+            .map_err(|e| Error::Io(format!("Invalid open: {}", e)))?;
+        let high: f64 = record.get(3).ok_or_else(|| Error::Io("Missing high".to_string()))?.parse()
+            .map_err(|e| Error::Io(format!("Invalid high: {}", e)))?;
+        let low: f64 = record.get(4).ok_or_else(|| Error::Io("Missing low".to_string()))?.parse()
+            .map_err(|e| Error::Io(format!("Invalid low: {}", e)))?;
+        let close: f64 = record.get(5).ok_or_else(|| Error::Io("Missing close".to_string()))?.parse()
+            .map_err(|e| Error::Io(format!("Invalid close: {}", e)))?;
+        let volume: u64 = record.get(6).ok_or_else(|| Error::Io("Missing volume".to_string()))?.parse()
+            .map_err(|e| Error::Io(format!("Invalid volume: {}", e)))?;
+
+        // Create base StockData
+        let mut stock_data = StockData::new(time, ticker.to_string(), open, high, low, close, volume);
+
+        // Parse technical indicators if present (enhanced CSV format)
+        if record.len() >= csv_column::VOLUME_CHANGED + 1 {
+            // Parse MAs
+            stock_data.ma10 = record.get(csv_column::MA10).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma20 = record.get(csv_column::MA20).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma50 = record.get(csv_column::MA50).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma100 = record.get(csv_column::MA100).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma200 = record.get(csv_column::MA200).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+
+            // Parse MA scores
+            stock_data.ma10_score = record.get(csv_column::MA10_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma20_score = record.get(csv_column::MA20_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma50_score = record.get(csv_column::MA50_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma100_score = record.get(csv_column::MA100_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.ma200_score = record.get(csv_column::MA200_SCORE).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+
+            // Parse change indicators
+            stock_data.close_changed = record.get(csv_column::CLOSE_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.volume_changed = record.get(csv_column::VOLUME_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+            stock_data.total_money_changed = record.get(csv_column::TOTAL_MONEY_CHANGED).and_then(|s| if s.is_empty() { None } else { s.parse().ok() });
+
+            // Set total_money_changed to 0 for market indices
+            if crate::constants::INDEX_TICKERS.contains(&stock_data.ticker.as_str()) {
+                stock_data.total_money_changed = Some(0.0);
+            }
+        }
+
+        Ok(stock_data)
     }
 
     /// Reload a specific interval from CSV files (limited to last 730 records per ticker)
@@ -692,8 +1057,8 @@ impl DataStore {
         limit: usize,
         start_date: Option<DateTime<Utc>>,
     ) -> HashMap<String, Vec<StockData>> {
-        // If no start date specified, limit to the most recent N records
-        if start_date.is_none() && limit > 0 {
+        // Apply limit if specified
+        if limit > 0 {
             data = data
                 .into_iter()
                 .map(|(ticker, mut records)| {
@@ -775,9 +1140,11 @@ impl DataStore {
 
                 if cache_insufficient {
                     tracing::info!(
-                        "Cache has insufficient records (limit: {}), reading from disk for {} tickers",
-                        limit_count,
-                        tickers.len()
+                        ticker = ?tickers.first().unwrap_or(&"unknown".to_string()),
+                        interval = ?interval,
+                        limit = limit_count,
+                        cache_records = cache_insufficient as u64, // Will be 1 (true)
+                        "Cache has insufficient records, reading from disk"
                     );
                     tracing::debug!("[DEBUG:PERF] Cache insufficient check failed (representative tickers), falling back to disk for all {} tickers", tickers.len());
                     return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
@@ -897,9 +1264,9 @@ impl DataStore {
             result.extend(disk_data);
         }
 
-        // Apply limit if provided and start_date is None
+        // Apply limit if provided
         if let Some(limit_count) = limit {
-            if start_date.is_none() && limit_count > 0 {
+            if limit_count > 0 {
                 result = result
                     .into_iter()
                     .map(|(ticker, mut records)| {
@@ -940,7 +1307,7 @@ impl DataStore {
         let mut result = HashMap::new();
 
         for ticker in tickers {
-            let cache_key = (ticker.clone(), interval);
+            let cache_key = (ticker.clone(), interval, start_date, end_date, limit);
 
             // Check disk cache first
             let cache_hit = {
@@ -970,8 +1337,24 @@ impl DataStore {
                     continue;
                 }
 
-                match self.read_csv_file(&csv_path, &ticker, interval, None) {
+                // Log before starting second CSV read
+                let file_size = csv_path.metadata().map(|m| m.len()).unwrap_or(0);
+                tracing::info!(
+                    ticker = ticker,
+                    csv_path = ?csv_path,
+                    file_size_bytes = file_size,
+                    "Starting second CSV file read (disk cache miss)"
+                );
+
+                // Pass start_date and end_date to enable smart CSV reading strategy
+                match self.read_csv_file(&csv_path, &ticker, interval, start_date, end_date, limit) {
                     Ok(data) => {
+                        tracing::info!(
+                            ticker = ticker,
+                            records_read = data.len(),
+                            "Successfully read second CSV file"
+                        );
+
                         if data.is_empty() {
                             continue;
                         }
@@ -996,7 +1379,13 @@ impl DataStore {
                         data
                     }
                     Err(e) => {
-                        tracing::warn!("Failed to read {} data for {}: {}", interval.to_filename(), ticker, e);
+                        tracing::error!(
+                            ticker = ticker,
+                            interval = ?interval,
+                            csv_path = ?csv_path,
+                            error = %e,
+                            "Failed to read second CSV file (disk cache miss)"
+                        );
                         continue;
                     }
                 }
@@ -1079,16 +1468,16 @@ impl DataStore {
         let entries_to_remove = entries_to_remove.max(1); // Always remove at least 1
 
         // Collect entries sorted by cached_at timestamp (oldest first)
-        let mut entries: Vec<((String, Interval), DateTime<Utc>)> = disk_cache.iter()
-            .map(|((symbol, interval), entry)| ((symbol.clone(), *interval), entry.cached_at))
+        let mut entries: Vec<((String, Interval, Option<DateTime<Utc>>, Option<DateTime<Utc>>, Option<usize>), DateTime<Utc>)> = disk_cache.iter()
+            .map(|((symbol, interval, start_date, end_date, limit), entry)| ((symbol.clone(), *interval, *start_date, *end_date, *limit), entry.cached_at))
             .collect();
         entries.sort_by_key(|(_, cached_at)| *cached_at);
 
         let mut total_freed_size = 0usize;
         let mut actual_removed = 0usize;
 
-        for ((symbol, interval), _) in entries.iter().take(entries_to_remove) {
-            let key = (symbol.clone(), *interval);
+        for ((symbol, interval, start_date, end_date, limit), _) in entries.iter().take(entries_to_remove) {
+            let key = (symbol.clone(), *interval, *start_date, *end_date, *limit);
             if let Some(removed) = disk_cache.remove(&key) {
                 total_freed_size += removed.size_bytes;
                 actual_removed += 1;
@@ -1111,7 +1500,7 @@ impl DataStore {
     }
 
     /// Try to add data to cache, evicting old entries if necessary
-    async fn try_add_to_cache(&self, key: (String, Interval), data: Vec<StockData>, size: usize) {
+    async fn try_add_to_cache(&self, key: (String, Interval, Option<DateTime<Utc>>, Option<DateTime<Utc>>, Option<usize>), data: Vec<StockData>, size: usize) {
         let mut disk_cache = self.disk_cache.write().await;
         let mut disk_cache_size = self.disk_cache_size.write().await;
 

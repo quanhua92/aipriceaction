@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::fs::{OpenOptions, rename, metadata};
+use std::fs::{OpenOptions, rename, metadata, File};
 use std::io::{Write, Error as IoError};
 use chrono::{DateTime, NaiveDate, Utc};
 use crate::error::Error;
@@ -274,6 +274,53 @@ pub fn get_concurrent_batches() -> usize {
         3..=4 => 2,  // Medium system - moderate parallelism
         _ => 3,      // Larger system - maximum throughput
     }
+}
+
+/// Open file with shared lock for reading (allows concurrent readers)
+///
+/// This function opens a file for reading and attempts to acquire a shared lock.
+/// Shared locks allow multiple concurrent readers while blocking only during
+/// exclusive lock acquisition (when writers are actively writing).
+///
+/// If shared lock acquisition fails (e.g., on some filesystems or due to
+/// direct file opens), the function continues with the file handle to maintain
+/// backward compatibility.
+///
+/// # Arguments
+/// * `csv_path` - Path to the CSV file to open
+///
+/// # Returns
+/// * `Ok(File)` - File handle with shared lock (or without lock if acquisition failed)
+/// * `Err(Error)` - If file cannot be opened
+///
+/// # Examples
+/// ```
+/// let file = open_file_shared(&PathBuf::from("data.csv"))?;
+/// let mut reader = csv::ReaderBuilder::new().from_reader(file)?;
+/// ```
+pub fn open_file_shared(csv_path: &Path) -> Result<File, Error> {
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .open(csv_path)
+        .map_err(|e| Error::Io(format!("Failed to open file: {}", e)))?;
+
+    // Try to acquire shared lock, but don't fail if unavailable
+    match file.lock_shared() {
+        Ok(_) => {
+            tracing::trace!(path = ?csv_path, "Acquired shared lock for reading");
+        },
+        Err(e) => {
+            // Shared lock unavailable, but file is still readable
+            // This can happen on some filesystems or with direct file opens
+            tracing::debug!(
+                path = ?csv_path,
+                error = %e,
+                "Shared lock unavailable, proceeding without lock"
+            );
+        }
+    }
+
+    Ok(file)
 }
 
 #[cfg(test)]
