@@ -30,11 +30,12 @@ pub async fn run(port: u16) {
     };
     let shared_health_stats = Arc::new(RwLock::new(health_stats));
 
-    // Load daily, hourly, and minute data into memory
-    println!("📊 Loading VN daily, hourly, and minute data into memory...");
-    let load_intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
+    // Load daily data only, skip 1H and 1m (background workers will handle it)
+    println!("📊 Loading VN daily data into memory (1H/1m handled by background workers)...");
+    let load_intervals = vec![Interval::Daily];
+    let skip_intervals = vec![Interval::Hourly, Interval::Minute];
 
-    match shared_data_store_vn.load_last_year(load_intervals.clone()).await {
+    match shared_data_store_vn.load_last_year(load_intervals.clone(), Some(skip_intervals.clone())).await {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_vn.get_record_counts().await;
             let active_tickers = shared_data_store_vn.get_active_ticker_count().await;
@@ -68,9 +69,9 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Load crypto daily, hourly, and minute data into memory
-    println!("📊 Loading crypto daily, hourly, and minute data into memory...");
-    match shared_data_store_crypto.load_last_year(load_intervals).await {
+    // Load crypto daily data only, skip 1H and 1m (background workers will handle it)
+    println!("📊 Loading crypto daily data into memory (1H/1m handled by background workers)...");
+    match shared_data_store_crypto.load_last_year(load_intervals, Some(skip_intervals)).await {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_crypto.get_record_counts().await;
             let active_tickers = shared_data_store_crypto.get_active_ticker_count().await;

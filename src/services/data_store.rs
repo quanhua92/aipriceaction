@@ -283,8 +283,16 @@ impl DataStore {
     }
 
     /// Load data from CSV files for specified intervals (interval-specific retention limits)
-    pub async fn load_last_year(&self, intervals: Vec<Interval>) -> Result<(), Error> {
+    pub async fn load_last_year(&self, intervals: Vec<Interval>, skip_intervals: Option<Vec<Interval>>) -> Result<(), Error> {
         for interval in intervals {
+            // Skip if interval is in skip_intervals
+            if let Some(ref skip) = skip_intervals {
+                if skip.contains(&interval) {
+                    println!("⏭️  Skipping {} loading - background worker will handle it", interval.to_filename());
+                    continue;
+                }
+            }
+
             let retention_limit = match interval {
                 Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
                 _ => DATA_RETENTION_RECORDS,
