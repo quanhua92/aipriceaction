@@ -991,6 +991,11 @@ impl DataStore {
         self: Arc<Self>,
         interval: Interval,
     ) -> JoinHandle<()> {
+        // Generate random delay before entering async block to avoid Send issues
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let initial_delay_ms = rng.gen_range(0u64..(CACHE_TTL_SECONDS as u64 * 1000 / 6));  // Distribute across 30s window
+
         tokio::spawn(async move {
             let retention_limit = match interval {
                 Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
@@ -1003,6 +1008,18 @@ impl DataStore {
                 CACHE_TTL_SECONDS,
                 retention_limit
             );
+
+            // Add random initial delay to stagger auto-reload tasks across the TTL window
+            // This prevents all 6 tasks from running simultaneously
+            let initial_delay = tokio::time::Duration::from_millis(initial_delay_ms);
+
+            tracing::debug!(
+                "Auto-reload task for {} will start after {}ms initial delay",
+                interval.to_filename(),
+                initial_delay_ms
+            );
+
+            tokio::time::sleep(initial_delay).await;
 
             loop {
                 // Sleep first (cache was just loaded during server startup)

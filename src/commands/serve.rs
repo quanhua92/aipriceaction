@@ -94,29 +94,49 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Spawn background auto-reload tasks for in-memory cache (15s TTL, 730 records)
+    // Spawn background auto-reload tasks for in-memory cache in dedicated runtime
     use crate::services::data_store::CACHE_TTL_SECONDS;
     use crate::services::data_store::DATA_RETENTION_RECORDS;
 
     println!("🔄 Starting auto-reload tasks (TTL: {}s, limit: {} records)...", CACHE_TTL_SECONDS, DATA_RETENTION_RECORDS);
 
-    // VN auto-reload tasks (Daily + Hourly + Minute)
-    let _vn_daily_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Daily);
-    let _vn_hourly_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Hourly);
-    let _vn_minute_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Minute);
+    // Create dedicated runtime for auto-reload tasks (separate from HTTP server runtime)
+    let auto_reload_data_vn = shared_data_store_vn.clone();
+    let auto_reload_data_crypto = shared_data_store_crypto.clone();
 
-    // Crypto auto-reload tasks (Daily + Hourly + Minute)
-    let _crypto_daily_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Daily);
-    let _crypto_hourly_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
-    let _crypto_minute_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Minute);
+    std::thread::spawn(move || {
+        let auto_reload_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(3)  // Fixed small number for auto-reload tasks
+            .thread_name("auto-reload")
+            .enable_all()
+            .build()
+            .expect("Failed to create auto-reload runtime");
 
-    println!("✅ Auto-reload tasks started:");
-    println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
-    println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
-    println!("   🔄 VN Minute reload:   Every {}s", CACHE_TTL_SECONDS);
-    println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
-    println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
-    println!("   🔄 Crypto Minute reload: Every {}s", CACHE_TTL_SECONDS);
+        auto_reload_runtime.block_on(async {
+            println!("🔄 Auto-reload runtime started with 3 worker threads");
+
+            // VN auto-reload tasks (Daily + Hourly + Minute)
+            let _vn_daily_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Daily);
+            let _vn_hourly_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Hourly);
+            let _vn_minute_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Minute);
+
+            // Crypto auto-reload tasks (Daily + Hourly + Minute)
+            let _crypto_daily_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Daily);
+            let _crypto_hourly_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
+            let _crypto_minute_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Minute);
+
+            println!("✅ Auto-reload tasks started in dedicated runtime:");
+            println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
+            println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
+            println!("   🔄 VN Minute reload:   Every {}s", CACHE_TTL_SECONDS);
+            println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
+            println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
+            println!("   🔄 Crypto Minute reload: Every {}s", CACHE_TTL_SECONDS);
+
+            // Keep runtime alive
+            tokio::signal::ctrl_c().await.ok();
+        });
+    });
 
     // CPU auto-detection for optimal performance
     println!();
@@ -176,8 +196,11 @@ pub async fn run(port: u16) {
         }
     });
 
-    // Start axum server (blocking)
-    println!("🌐 Starting HTTP server...");
+    // Start axum server in main runtime (dedicated to HTTP requests)
+    println!("🌐 Starting HTTP server in dedicated main runtime...");
+    println!("   ℹ️  Main runtime handles HTTP API requests only");
+    println!("   ℹ️  Auto-reload tasks run in separate runtime (3 threads)");
+    println!("   ℹ️  Background workers run in dedicated runtime ({} threads)", worker_threads);
     println!();
     if let Err(e) = server::serve(shared_data_store_vn, shared_data_store_crypto, shared_health_stats, port).await {
         eprintln!("❌ Server error: {}", e);
