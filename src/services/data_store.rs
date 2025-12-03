@@ -29,6 +29,15 @@ pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute 
 /// Cache TTL constants
 pub const CACHE_TTL_SECONDS: i64 = 30; // 30 seconds TTL for memory cache (reduced from 15s for CPU efficiency)
 
+/// Auto-reload interval constants (different from cache TTL)
+/// Since workers update data at different intervals, set auto-reload to be longer than worker intervals
+/// Daily worker: 15s (trading) / 300s (off-hours) → Auto-reload: 300s (5 minutes)
+/// Hourly worker: 60s (trading) / 1800s (off-hours) → Auto-reload: 600s (10 minutes)
+/// Minute worker: 300s (trading) / 1800s (off-hours) → Auto-reload: 900s (15 minutes)
+pub const AUTO_RELOAD_DAILY_SECONDS: u64 = 300;   // 5 minutes for daily data
+pub const AUTO_RELOAD_HOURLY_SECONDS: u64 = 600;  // 10 minutes for hourly data
+pub const AUTO_RELOAD_MINUTE_SECONDS: u64 = 900;  // 15 minutes for minute data (matches crypto worker interval)
+
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
 pub const MAX_ITEM_CACHE_SIZE_MB: usize = 100; // Don't cache individual items larger than 100MB
@@ -994,7 +1003,13 @@ impl DataStore {
         // Generate random delay before entering async block to avoid Send issues
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        let initial_delay_ms = rng.gen_range(0u64..(CACHE_TTL_SECONDS as u64 * 1000 / 6));  // Distribute across 30s window
+              // Use interval-specific reload duration for staggered initial delay
+        let reload_duration = match interval {
+            Interval::Daily => AUTO_RELOAD_DAILY_SECONDS,
+            Interval::Hourly => AUTO_RELOAD_HOURLY_SECONDS,
+            Interval::Minute => AUTO_RELOAD_MINUTE_SECONDS,
+        };
+        let initial_delay_ms = rng.gen_range(0u64..(reload_duration * 1000 / 6));  // Distribute across the reload window
 
         tokio::spawn(async move {
             let retention_limit = match interval {
@@ -1003,8 +1018,9 @@ impl DataStore {
             };
 
             tracing::info!(
-                "Starting auto-reload task for {} interval (TTL: {}s, limit: {} records)",
+                "Starting auto-reload task for {} interval (reload: {}s, TTL: {}s, limit: {} records)",
                 interval.to_filename(),
+                reload_duration,
                 CACHE_TTL_SECONDS,
                 retention_limit
             );
@@ -1023,7 +1039,7 @@ impl DataStore {
 
             loop {
                 // Sleep first (cache was just loaded during server startup)
-                tokio::time::sleep(tokio::time::Duration::from_secs(CACHE_TTL_SECONDS as u64)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(reload_duration)).await;
 
                 tracing::debug!(
                     "[DEBUG:PERF:BG_TASK] Auto-reload start for {} (TTL expired)",
@@ -1040,7 +1056,7 @@ impl DataStore {
                             "[DEBUG:PERF:BG_TASK] Failed to auto-reload {} cache: {}. Will retry in {}s",
                             interval.to_filename(),
                             e,
-                            CACHE_TTL_SECONDS
+                            reload_duration
                         );
                         // Don't panic - continue loop and retry next cycle
                     }
