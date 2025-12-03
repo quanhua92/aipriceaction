@@ -27,16 +27,13 @@ pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per tick
 pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute records (1.5 days) to support aggregated intervals
 
 /// Cache TTL constants
-pub const CACHE_TTL_SECONDS: i64 = 30; // 30 seconds TTL for memory cache (reduced from 15s for CPU efficiency)
+pub const CACHE_TTL_SECONDS: i64 = 300; // 5 minutes TTL for memory cache (matches minute auto-reload interval)
 
 /// Auto-reload interval constants (different from cache TTL)
-/// Since workers update data at different intervals, set auto-reload to be longer than worker intervals
-/// Daily worker: 15s (trading) / 300s (off-hours) → Auto-reload: 300s (5 minutes)
-/// Hourly worker: 60s (trading) / 1800s (off-hours) → Auto-reload: 600s (10 minutes)
-/// Minute worker: 300s (trading) / 1800s (off-hours) → Auto-reload: 900s (15 minutes)
-pub const AUTO_RELOAD_DAILY_SECONDS: u64 = 300;   // 5 minutes for daily data
-pub const AUTO_RELOAD_HOURLY_SECONDS: u64 = 600;  // 10 minutes for hourly data
-pub const AUTO_RELOAD_MINUTE_SECONDS: u64 = 900;  // 15 minutes for minute data (matches crypto worker interval)
+/// Balance between CPU usage and data freshness
+pub const AUTO_RELOAD_DAILY_SECONDS: u64 = 15;    // 15 seconds for daily data (match daily worker interval)
+pub const AUTO_RELOAD_HOURLY_SECONDS: u64 = 30;   // 30 seconds for hourly data (keep fast refresh)
+pub const AUTO_RELOAD_MINUTE_SECONDS: u64 = 300;  // 5 minutes for minute data (rarely changes, saves CPU)
 
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
