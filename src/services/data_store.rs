@@ -266,6 +266,21 @@ impl DataStore {
         }
     }
 
+    /// Check if this DataStore is operating in crypto mode
+    fn is_crypto_mode(&self) -> bool {
+        // Check if the directory path contains "crypto_data"
+        self.market_data_dir.to_string_lossy().contains("crypto_data")
+    }
+
+    /// Get representative tickers for cache sufficiency check based on mode
+    fn get_representative_tickers(&self) -> &[&str] {
+        if self.is_crypto_mode() {
+            &["BTC", "ETH", "XRP"] // Major crypto tickers
+        } else {
+            &["VNINDEX", "VCB", "VIC"] // Major VN tickers
+        }
+    }
+
     /// Load data from CSV files for specified intervals (limited to last 730 records per ticker)
     pub async fn load_last_year(&self, intervals: Vec<Interval>) -> Result<(), Error> {
         for interval in intervals {
@@ -1113,11 +1128,11 @@ impl DataStore {
         }
 
         // If limit is provided, check if cache has enough records using representative tickers
-        // Use well-known tickers (VNINDEX, VCB, VIC) that always have full history
+        // Use mode-appropriate tickers that always have full history
         // Don't check ALL tickers because some new listings might have < limit days
         if let Some(limit_count) = limit {
             if start_date.is_none() {
-                let representative_tickers = ["VNINDEX", "VCB", "VIC"];
+                let representative_tickers = self.get_representative_tickers();
                 let store = self.data.read().await;
 
                 let cache_insufficient = representative_tickers.iter().any(|ticker| {
