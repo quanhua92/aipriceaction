@@ -78,6 +78,13 @@ market_data/**/*.parquet
 crypto_data/*
 !crypto_data/BTC/
 
+# Processing data directories (ignore all contents, keep structure)
+market_data/*/
+!market_data/VNINDEX/
+!market_data/VIC/
+crypto_data/*/
+!crypto_data/BTC/
+
 # Upload Data (gitignore all uploaded files, keep directory structure)
 uploads/*
 !uploads/.gitkeep
