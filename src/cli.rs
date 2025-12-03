@@ -110,6 +110,36 @@ pub enum Commands {
         #[arg(long)]
         full: bool,
     },
+    /// Fix CSV files by removing last N rows (with safety features)
+    FixCsv {
+        /// Data mode: vn (default) or crypto
+        #[arg(long, default_value = "vn")]
+        mode: String,
+
+        /// Intervals to process: all, daily, hourly, minute (comma-separated)
+        #[arg(short, long, default_value = "all")]
+        intervals: String,
+
+        /// Number of rows to remove from end of each file
+        #[arg(long)]
+        rows: usize,
+
+        /// Specific tickers to process (comma-separated, process all if not specified)
+        #[arg(short, long)]
+        tickers: Option<String>,
+
+        /// Verbose output
+        #[arg(long)]
+        verbose: bool,
+
+        /// Execute changes (default is dry-run mode)
+        #[arg(long)]
+        execute: bool,
+
+        /// Backup original files before modification (to separate backup directory)
+        #[arg(long)]
+        backup: bool,
+    },
 }
 
 pub fn run() {
@@ -159,6 +189,12 @@ pub fn run() {
         }
         Commands::CryptoPull { symbol, interval, full } => {
             commands::crypto_pull::run(symbol, interval, full);
+        }
+        Commands::FixCsv { mode, intervals, rows, tickers, verbose, execute, backup } => {
+            if let Err(e) = commands::fix_csv::run(mode, intervals, rows, tickers, verbose, execute, backup) {
+                eprintln!("❌ Fix CSV failed: {}", e);
+                std::process::exit(1);
+            }
         }
     }
 }
