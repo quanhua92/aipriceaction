@@ -489,7 +489,7 @@ fn process_single_ticker(
     ticker: &str,
     interval: Interval,
     market_data_dir: &Path,
-    cutoff_date: DateTime<chrono::Utc>,
+    _cutoff_date: DateTime<chrono::Utc>, // Unused - we calculate per-ticker cutoff
 ) -> Result<TickerStats, Error> {
     let ticker_dir = market_data_dir.join(ticker);
     let csv_path = ticker_dir.join(interval.to_filename());
@@ -576,7 +576,20 @@ fn process_single_ticker(
         );
     }
 
-    // Step 2: Enhance data (calculate MAs and scores) - in-memory
+    // Step 2: Calculate cutoff date based on existing CSV data (before moving ticker_data)
+    let resume_days = 2i64;
+    let proper_cutoff_date = if !ticker_data.is_empty() {
+        // Use existing CSV's last record time - resume_days
+        if let Some(last_record) = ticker_data.last() {
+            last_record.time - chrono::Duration::days(resume_days)
+        } else {
+            chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| chrono::Utc::now())
+        }
+    } else {
+        chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| chrono::Utc::now())
+    };
+
+    // Step 3: Enhance data (calculate MAs and scores) - in-memory
     let ma_start = Instant::now();
     let mut data_map: HashMap<String, Vec<OhlcvData>> = HashMap::new();
     data_map.insert(ticker.to_string(), ticker_data);
@@ -589,9 +602,10 @@ fn process_single_ticker(
 
     let record_count = enhanced_data.len();
 
-    // Step 3: Write enhanced CSV
+    // Step 4: Write enhanced CSV with proper cutoff
     let write_start = Instant::now();
-    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, cutoff_date, false, market_data_dir)?;
+
+    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, false, market_data_dir)?;
     let write_time = write_start.elapsed();
 
     // Step 4: Get file size for stats
