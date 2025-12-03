@@ -23,7 +23,8 @@ enum ReadingStrategy {
 /// Memory management constants
 pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit
 pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
-pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per ticker per interval
+pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per ticker per interval (default for daily/hourly)
+pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute records (1.5 days) to support aggregated intervals
 
 /// Cache TTL constants
 pub const CACHE_TTL_SECONDS: i64 = 30; // 30 seconds TTL for memory cache (reduced from 15s for CPU efficiency)
@@ -281,10 +282,14 @@ impl DataStore {
         }
     }
 
-    /// Load data from CSV files for specified intervals (limited to last 730 records per ticker)
+    /// Load data from CSV files for specified intervals (interval-specific retention limits)
     pub async fn load_last_year(&self, intervals: Vec<Interval>) -> Result<(), Error> {
         for interval in intervals {
-            self.load_interval(interval, None, Some(DATA_RETENTION_RECORDS)).await?;
+            let retention_limit = match interval {
+                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
+                _ => DATA_RETENTION_RECORDS,
+            };
+            self.load_interval(interval, None, Some(retention_limit)).await?;
         }
 
         Ok(())
@@ -963,9 +968,13 @@ impl DataStore {
         Ok(stock_data)
     }
 
-    /// Reload a specific interval from CSV files (limited to last 730 records per ticker)
+    /// Reload a specific interval from CSV files (interval-specific retention limits)
     pub async fn reload_interval(&self, interval: Interval) -> Result<(), Error> {
-        self.load_interval(interval, None, Some(DATA_RETENTION_RECORDS)).await
+        let retention_limit = match interval {
+            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
+            _ => DATA_RETENTION_RECORDS,
+        };
+        self.load_interval(interval, None, Some(retention_limit)).await
     }
 
     /// Spawn a background task that auto-reloads the specified interval every CACHE_TTL_SECONDS
@@ -975,11 +984,16 @@ impl DataStore {
         interval: Interval,
     ) -> JoinHandle<()> {
         tokio::spawn(async move {
+            let retention_limit = match interval {
+                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
+                _ => DATA_RETENTION_RECORDS,
+            };
+
             tracing::info!(
                 "Starting auto-reload task for {} interval (TTL: {}s, limit: {} records)",
                 interval.to_filename(),
                 CACHE_TTL_SECONDS,
-                DATA_RETENTION_RECORDS
+                retention_limit
             );
 
             loop {
@@ -1104,10 +1118,9 @@ impl DataStore {
         let start_time = std::time::Instant::now();
         tracing::debug!("[DEBUG:PERF] get_data_with_cache start: {} tickers, interval={}, limit={:?}", tickers.len(), interval.to_filename(), limit);
 
-        // Minute data always uses disk cache (needed for aggregations)
         // OR when cache=false explicitly requested
-        if interval == Interval::Minute || !use_cache {
-            tracing::debug!("[DEBUG:PERF] Using disk cache (minute data or cache=false)");
+        if !use_cache {
+            tracing::debug!("[DEBUG:PERF] Using disk cache (cache=false)");
             return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
         }
 
@@ -1141,15 +1154,7 @@ impl DataStore {
                         .map(|data| data.len())
                         .unwrap_or(0);
 
-                    if record_count < limit_count {
-                        tracing::debug!(
-                            "[DEBUG:PERF] Representative ticker {} has only {} records (need {})",
-                            ticker, record_count, limit_count
-                        );
-                        true
-                    } else {
-                        false
-                    }
+                    record_count < limit_count
                 });
                 drop(store);
 

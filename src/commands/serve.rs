@@ -30,9 +30,9 @@ pub async fn run(port: u16) {
     };
     let shared_health_stats = Arc::new(RwLock::new(health_stats));
 
-    // Load daily and hourly data into memory (minute data uses disk cache)
-    println!("📊 Loading VN daily and hourly data into memory...");
-    let load_intervals = vec![Interval::Daily, Interval::Hourly];
+    // Load daily, hourly, and minute data into memory
+    println!("📊 Loading VN daily, hourly, and minute data into memory...");
+    let load_intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
 
     match shared_data_store_vn.load_last_year(load_intervals.clone()).await {
         Ok(_) => {
@@ -68,8 +68,8 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Load crypto daily and hourly data into memory
-    println!("📊 Loading crypto daily and hourly data into memory...");
+    // Load crypto daily, hourly, and minute data into memory
+    println!("📊 Loading crypto daily, hourly, and minute data into memory...");
     match shared_data_store_crypto.load_last_year(load_intervals).await {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_crypto.get_record_counts().await;
@@ -99,20 +99,23 @@ pub async fn run(port: u16) {
 
     println!("🔄 Starting auto-reload tasks (TTL: {}s, limit: {} records)...", CACHE_TTL_SECONDS, DATA_RETENTION_RECORDS);
 
-    // VN auto-reload tasks (Daily + Hourly)
+    // VN auto-reload tasks (Daily + Hourly + Minute)
     let _vn_daily_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Daily);
     let _vn_hourly_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Hourly);
+    let _vn_minute_reload = shared_data_store_vn.clone().spawn_auto_reload_task(Interval::Minute);
 
-    // Crypto auto-reload tasks (Daily + Hourly)
+    // Crypto auto-reload tasks (Daily + Hourly + Minute)
     let _crypto_daily_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Daily);
     let _crypto_hourly_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
+    let _crypto_minute_reload = shared_data_store_crypto.clone().spawn_auto_reload_task(Interval::Minute);
 
     println!("✅ Auto-reload tasks started:");
     println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
     println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
+    println!("   🔄 VN Minute reload:   Every {}s", CACHE_TTL_SECONDS);
     println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
     println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
-    println!("   ℹ️  Minute data uses disk cache (for aggregated intervals)");
+    println!("   🔄 Crypto Minute reload: Every {}s", CACHE_TTL_SECONDS);
 
     // CPU auto-detection for optimal performance
     println!();
