@@ -143,7 +143,7 @@ async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
         start_date,
         Some(end_date),
         10, // batch_size (default)
-        Some(2), // resume_days: 2 days adaptive mode
+        Some(5), // resume_days: 5 days for dividend detection
         vec![Interval::Daily],
         false, // not full sync
         concurrent_batches, // Auto-detected based on CPU cores

@@ -106,8 +106,16 @@ impl DataSync {
             let resume_ticker_names = category.get_resume_ticker_names();
 
             // Always use actual last date from CSV files for adaptive resume
+            // Apply resume_days offset for dividend detection
             let fetch_start_date = match category.get_min_resume_date() {
-                Some(date) => date,  // Resume from actual last CSV date
+                Some(date) => {
+                    // Subtract resume_days to get proper fetch window
+                    use chrono::{Duration, Utc};
+                    let last_date = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
+                        .unwrap_or_else(|_| Utc::now().naive_utc().date());
+                    let start_date = last_date - Duration::days(self.config.resume_days.unwrap_or(2) as i64);
+                    start_date.format("%Y-%m-%d").to_string()
+                }
                 None => self.config.get_effective_start_date(interval),  // New ticker fallback
             };
 
