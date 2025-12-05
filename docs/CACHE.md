@@ -17,23 +17,57 @@ Fast access to frequently accessed recent data that is automatically kept fresh.
 ### Data Stored
 - **Daily data**: Last 730 records (~2 years per ticker)
 - **Hourly data**: Last 2160 records (~3 months per ticker for aggregated intervals)
-- **Total memory usage**: ~40-63MB for VN data, ~23MB for crypto data
+- **Minute data**: Last 2160 records (1.5 days per ticker, required for aggregated intervals)
+- **Memory limit**: 4GB per mode (VN + Crypto), actual usage ~40-63MB for VN data, ~23MB for crypto data
 
 ### Auto-Reload Mechanism
 ```rust
-// Background tasks run every 30 seconds
+// Interval-specific background tasks
 let _vn_daily_reload = shared_data_store_vn.spawn_auto_reload_task(Interval::Daily);
 let _vn_hourly_reload = shared_data_store_vn.spawn_auto_reload_task(Interval::Hourly);
+let _vn_minute_reload = shared_data_store_vn.spawn_auto_reload_task(Interval::Minute);
 ```
 
-- **Frequency**: Every 30 seconds by background workers
-- **TTL**: 30 seconds, but continuously refreshed
-- **File change detection**: Only reloads if CSV files have been modified
-- **Non-blocking**: File I/O happens without locks, brief write locks only for final update
+- **Frequency**: Interval-specific reload intervals
+  - **Daily data**: Every 15 seconds
+  - **Hourly data**: Every 30 seconds
+  - **Minute data**: Every 300 seconds (5 minutes)
+- **TTL**: 300 seconds (5 minutes), but continuously refreshed
+- **File change detection**: Only reloads if CSV files have been modified via mtime tracking
+- **Non-blocking**: File I/O happens in dedicated auto-reload runtime, separate from main server
 
 ### Performance
 - **Cache hit**: ~1-2ms response time
 - **Concurrent access**: Safe with RwLock (`data.read().await`)
+
+### Emergency Cache Reload
+```rust
+// Triggered when cache is extremely stale (2x TTL)
+if cache_age > CACHE_TTL_SECONDS * 2 {
+    tracing::warn!("Cache extremely stale ({}s > {}s), forcing emergency reload", cache_age, CACHE_TTL_SECONDS * 2);
+    // Force reload if background auto-reload task fails
+}
+```
+
+- **Trigger**: Cache age exceeds 600 seconds (10 minutes, 2x TTL)
+- **Purpose**: Recovery when background auto-reload tasks fail
+- **Action**: Forces immediate file reload bypassing normal background schedule
+- **Logging**: Warn-level logging for monitoring
+
+### Dedicated Auto-Reload Runtime
+```rust
+// Separate runtime for background tasks (3 worker threads)
+let auto_reload_runtime = tokio::runtime::Builder::new_multi_thread()
+    .worker_threads(3)
+    .thread_name("auto-reload")
+    .build()
+    .expect("Failed to create auto-reload runtime");
+```
+
+- **Isolation**: Runs in dedicated tokio runtime, separate from main server
+- **Worker threads**: 3 dedicated threads for auto-reload operations
+- **Coverage**: 6 total tasks (3 VN + 3 Crypto: daily, hourly, minute)
+- **Non-blocking**: Server API performance unaffected by file I/O
 
 ### Usage Pattern
 ```rust
@@ -155,6 +189,56 @@ async fn get_data_with_fallback(ticker, interval, start_date, end_date, limit) {
 }
 ```
 
+## Dual-Mode Cache System
+
+The system maintains separate cache instances for Vietnamese stocks and cryptocurrencies:
+
+### Mode Detection
+```rust
+fn is_crypto_mode(&self) -> bool {
+    self.market_data_dir.to_string_lossy().contains("crypto_data")
+}
+
+fn get_representative_tickers(&self) -> &[&str] {
+    if self.is_crypto_mode() {
+        &["BTC", "ETH", "XRP"] // Crypto tickers
+    } else {
+        &["VNINDEX", "VCB", "VIC"] // VN tickers
+    }
+}
+```
+
+### VN Mode (Vietnamese Stocks)
+- **Data directory**: `market_data/`
+- **Tickers**: 282 Vietnamese stocks + indices
+- **Representative tickers**: VNINDEX, VCB, VIC
+- **Memory usage**: ~40-63MB (daily data cache)
+- **Background tasks**: 3 auto-reload tasks (daily, hourly, minute)
+- **Trading hours**: 9:00-15:00 ICT affects worker frequency
+
+### Crypto Mode (Cryptocurrencies)
+- **Data directory**: `crypto_data/`
+- **Tickers**: 98 cryptocurrencies (filtered from top 100)
+- **Representative tickers**: BTC, ETH, XRP
+- **Memory usage**: ~23MB (daily data cache)
+- **Background tasks**: 3 auto-reload tasks (daily, hourly, minute)
+- **24/7 operation**: No trading hour restrictions
+
+### Dual-Mode Benefits
+- **Isolation**: VN and crypto caches operate independently
+- **Resource sharing**: Same cache algorithms and structures
+- **Mode switching**: API mode parameter determines which cache to use
+- **Independent scaling**: Each mode can have different retention policies
+
+### API Mode Selection
+```bash
+# VN mode (default)
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1D"
+
+# Crypto mode
+curl "http://localhost:3000/tickers?symbol=BTC&mode=crypto&interval=1D"
+```
+
 ## Critical Use Cases
 
 ### 1. Aggregated Intervals
@@ -190,21 +274,92 @@ curl "http://localhost:3000/tickers?symbol=VCB&cache=false"
 | Memory Cache | 1-2ms | 50-200ms (falls back to disk) | Recent data, high frequency |
 | Disk Cache | 50-200ms | 500ms-2s (file read) | Historical data, minute data |
 | File Read | 500ms-2s | N/A | Cold start, cache bypass |
+| Emergency Reload | 1-5s | N/A | Cache extremely stale (>10min) |
+
+### Performance Factors
+
+**Memory Cache Performance:**
+- **TTL impact**: 300-second TTL reduces cache misses vs 30-second TTL
+- **Auto-reload frequency**: Interval-specific (15s, 30s, 300s) affects freshness
+- **Dual-mode overhead**: Minimal, separate instances for VN and Crypto
+
+**Disk Cache Performance:**
+- **Cache size**: 500MB limit with 95% auto-clear threshold
+- **Eviction cost**: LRU-style removal of 50% oldest entries
+- **Smart reading**: Strategy selection (FromEnd, FromStart, CompleteFile)
+
+**File Reading Performance:**
+- **Change detection**: mtime tracking avoids unnecessary reads
+- **CSV parsing**: Optimized for 20-column enhanced format
+- **Atomic operations**: Copy-process-rename adds minimal overhead
+
+### Memory Usage Breakdown
+
+**VN Mode (282 tickers):**
+- Daily data: ~40-63MB (730 records × 282 tickers × 20 columns)
+- Hourly data: Cached on-demand (500MB disk limit)
+- Minute data: Cached on-demand (500MB disk limit)
+
+**Crypto Mode (98 tickers):**
+- Daily data: ~23MB (730 records × 98 tickers × 20 columns)
+- Hourly data: Cached on-demand (500MB disk limit)
+- Minute data: Cached on-demand (500MB disk limit)
+
+**Total System Memory:**
+- Memory limit: 4GB per mode (8GB total theoretical)
+- Actual usage: ~83-86MB for both modes combined
+- Disk cache: Up to 1GB total (500MB per mode)
 
 ## Cache Management
 
 ### Memory Cache Auto-Reload
 ```rust
-// Background auto-reload tasks (spawn every 30 seconds)
+// Background auto-reload tasks (interval-specific timing)
 async fn spawn_auto_reload_task(&self, interval: Interval) {
+    let sleep_duration = match interval {
+        Interval::Daily => Duration::from_secs(15),    // 15 seconds
+        Interval::Hourly => Duration::from_secs(30),   // 30 seconds
+        Interval::Minute => Duration::from_secs(300),  // 5 minutes
+    };
+
     loop {
-        // Check file modification times
-        // Only reload changed files
+        // Check file modification times via mtime tracking
+        // Only reload changed files to minimize I/O
         // Update in-memory cache with brief write lock
-        tokio::time::sleep(Duration::from_secs(30)).await;
+        tokio::time::sleep(sleep_duration).await;
     }
 }
 ```
+
+### Auto-Clear Cache Feature
+```rust
+// Automatic cache eviction when memory threshold exceeded
+async fn auto_clear_cache(&self, current_size: usize, incoming_size: usize) -> bool {
+    let threshold_size = (self.max_cache_size_bytes as f64 * 0.95) as usize; // 95% threshold
+
+    if current_size + incoming_size <= threshold_size {
+        return false; // No clearing needed
+    }
+
+    // Sort entries by cached_at (oldest first)
+    let mut entries: Vec<_> = self.disk_cache.iter()
+        .map(|(key, entry)| (key.clone(), entry.cached_at))
+        .collect();
+    entries.sort_by_key(|(_, cached_at)| *cached_at);
+
+    // Remove oldest 50% of entries
+    let entries_to_remove = (entries.len() as f64 * 0.5) as usize;
+    // ... eviction logic
+}
+```
+
+- **Trigger**: Cache reaches 95% of `MAX_CACHE_SIZE_MB` (default: 475MB of 500MB limit)
+- **Eviction ratio**: Removes oldest 50% of entries when triggered
+- **Strategy**: LRU-style based on `cached_at` timestamp
+- **Environment variables**:
+  - `CACHE_AUTO_CLEAR_ENABLED=true` (default)
+  - `CACHE_AUTO_CLEAR_THRESHOLD=0.95` (95%)
+  - `CACHE_AUTO_CLEAR_RATIO=0.5` (50% eviction)
 
 ### Disk Cache Eviction
 ```rust
@@ -232,13 +387,37 @@ async fn auto_clear_cache(&self, current_size: usize, incoming_size: usize) -> b
 }
 ```
 
-## File Locking and Concurrent Access
+## Atomic File Operations and Concurrent Access
+
+### Copy-Process-Rename Strategy
+The system uses atomic file operations instead of traditional file locking:
+
+```rust
+// Background worker file processing pattern
+fn save_enhanced_csv_to_dir(file_path: &Path, data: &[StockData]) -> Result<(), Error> {
+    if file_path.exists() {
+        // Step 1: Copy original to processing file
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            extension, timestamp));
+        std::fs::copy(&file_path, &processing_path)?;
+
+        // Step 2: Process data on the copy
+        process_csv_data(&processing_path, data)?;
+
+        // Step 3: Atomic rename on success
+        std::fs::rename(&processing_path, &file_path)?;
+    } else {
+        // New files: Direct write (no atomic rename needed)
+        write_new_csv(&file_path, data)?;
+    }
+}
+```
 
 ### Atomic File Reading
 ```rust
 pub fn open_file_atomic_read(csv_path: &Path) -> Result<File, Error> {
     let file = std::fs::OpenOptions::new()
-        .read(true)  // Read-only, no locking needed
+        .read(true)  // Read-only access, no locking needed
         .open(csv_path)?;
     Ok(file)
 }
@@ -246,18 +425,48 @@ pub fn open_file_atomic_read(csv_path: &Path) -> Result<File, Error> {
 
 ### File Change Detection
 ```rust
-// Track file modification times to avoid unnecessary reads
+// Sophisticated mtime tracking to avoid unnecessary file reads
 let current_mtime = std::fs::metadata(&csv_path)?.modified()?;
 if let Some(stored_mtime) = file_mtimes.get(&mtime_key) {
     if current_mtime != *stored_mtime {
-        // File modified, need to reload
+        tracing::debug!("File modified, need to reload");
         read_and_cache_file();
+    } else {
+        tracing::debug!("File unchanged, skipping");
     }
 } else {
-    // New file, need to load
+    tracing::debug!("New file detected, loading");
     read_and_cache_file();
 }
 ```
+
+### Processing File Management
+```rust
+// Automatic cleanup of orphaned processing files
+fn cleanup_orphaned_processing_files(data_dir: &Path) -> Result<(), Error> {
+    for entry in std::fs::read_dir(data_dir)? {
+        let path = entry?.path();
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if name.contains(".processing.") {
+                tracing::warn!("Removing orphaned processing file: {:?}", path);
+                std::fs::remove_file(&path)?;
+            }
+        }
+    }
+}
+```
+
+### Concurrent Access Safety
+- **No Traditional Locking**: The system does NOT use fs2 or file locking
+- **Atomic Rename**: Readers always see either complete old file or complete new file
+- **Processing Isolation**: All modifications happen on temporary copies
+- **Error Recovery**: Original files preserved if processing fails
+- **Cleanup**: Orphaned processing files automatically removed
+
+### Limitations
+- **No Writer Coordination**: Multiple workers could theoretically write to same files
+- **Read-Write Race**: API reads during writes may see either old or new data (never partial)
+- **Best Effort**: System relies on atomic operations rather than explicit locking
 
 ## Configuration
 
@@ -266,8 +475,8 @@ if let Some(stored_mtime) = file_mtimes.get(&mtime_key) {
 # Disk cache size limit (default: 500MB)
 export MAX_CACHE_SIZE_MB=500
 
-# TTL for both cache layers (default: 30 seconds)
-export CACHE_TTL_SECONDS=30
+# TTL for both cache layers (default: 300 seconds)
+export CACHE_TTL_SECONDS=300
 
 # Cache auto-clear settings
 export CACHE_AUTO_CLEAR_ENABLED=true
