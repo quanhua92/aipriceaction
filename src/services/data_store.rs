@@ -684,46 +684,86 @@ impl DataStore {
             "Reading CSV from end for recent data"
         );
 
-        // Read file backwards in chunks to find the last N records
-        let mut buffer = vec![0u8; 8192]; // 8KB buffer
-        let mut position = file_size;
+        // Chunk-and-Stitch backward reading
+        const BUFFER_SIZE: usize = 65536; // 64KB buffer - optimized for reading 128+ rows of 15m data (1,920+ 1m rows)
+        let mut pointer = file_size;
+        let mut leftover = String::new();
         let mut lines = Vec::new();
         let mut found_records = 0;
+        let mut header_skipped = false;
 
-        // Skip the header first
-        if file_size > 0 {
-            position -= 1;
-            file.seek(std::io::SeekFrom::Start(position))?;
-            let mut header_found = false;
-            while position > 0 && !header_found {
-                position -= 1;
-                file.seek(std::io::SeekFrom::Start(position))?;
-                let mut byte = [0u8; 1];
-                file.read_exact(&mut byte)?;
-                if byte[0] == b'\n' {
-                    header_found = true;
+        // Read backwards in chunks
+        while pointer > 0 && found_records < limit {
+            let read_size = std::cmp::min(BUFFER_SIZE, pointer as usize);
+            pointer -= read_size as u64;
+
+            file.seek(std::io::SeekFrom::Start(pointer))?;
+            let mut buffer = vec![0u8; read_size];
+            file.read_exact(&mut buffer)?;
+
+            // Convert to string and prepend leftover from previous iteration
+            let data = String::from_utf8_lossy(&buffer);
+            let text_block = format!("{}{}", data, leftover);
+
+            // Split into lines
+            let mut lines_in_chunk: Vec<&str> = text_block.lines().collect();
+
+            // First item is potentially partial line - save as new leftover
+            if !lines_in_chunk.is_empty() {
+                leftover = lines_in_chunk[0].to_string();
+
+                // Process complete lines in reverse order (from newest to oldest)
+                for i in (1..lines_in_chunk.len()).rev() {
+                    let line = lines_in_chunk[i];
+
+                    if line.trim().is_empty() { continue; }
+
+                    // Skip header row
+                    if line.starts_with("ticker,") {
+                        header_skipped = true;
+                        continue;
+                    }
+
+                    // Parse the line to see if it matches our criteria
+                    if let Ok(record) = csv::ReaderBuilder::new()
+                        .has_headers(false)
+                        .flexible(true)
+                        .from_reader(line.as_bytes())
+                        .records()
+                        .next()
+                        .ok_or_else(|| Error::Io("Failed to parse record".to_string()))?
+                    {
+                        if let Ok(time) = self.parse_time_from_record(&record) {
+                            // Check start date
+                            if let Some(start) = start_date {
+                                if time < start {
+                                    continue;
+                                }
+                            }
+
+                            // Check end date
+                            if let Some(end) = end_date {
+                                if time > end {
+                                    continue;
+                                }
+                            }
+
+                            found_records += 1;
+                            lines.push(line.to_string());
+
+                            if found_records >= limit {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // Now read backwards to collect records
-        while position > 0 && found_records < limit {
-            let chunk_size = std::cmp::min(buffer.len(), position as usize);
-            position -= chunk_size as u64;
-            file.seek(std::io::SeekFrom::Start(position))?;
-            file.read_exact(&mut buffer[..chunk_size])?;
-
-            // Process the chunk backwards, extracting complete lines
-            let chunk_str = String::from_utf8_lossy(&buffer[..chunk_size]);
-            let mut chunk_lines: Vec<&str> = chunk_str.lines().collect();
-
-            // Reverse to get correct order (since we're reading backwards)
-            chunk_lines.reverse();
-
-            for line in chunk_lines {
-                if line.trim().is_empty() { continue; }
-
-                // Parse the line to see if it matches our criteria
+        // Process any remaining leftover (the very first line of file)
+        if !leftover.is_empty() && found_records < limit && header_skipped {
+            let line = &leftover;
+            if !line.trim().is_empty() && !line.starts_with("ticker,") {
                 if let Ok(record) = csv::ReaderBuilder::new()
                     .has_headers(false)
                     .flexible(true)
@@ -736,22 +776,30 @@ impl DataStore {
                         // Check start date
                         if let Some(start) = start_date {
                             if time < start {
-                                continue;
+                                // Don't add
+                            } else {
+                                // Check end date
+                                if let Some(end) = end_date {
+                                    if time <= end {
+                                        found_records += 1;
+                                        lines.push(line.to_string());
+                                    }
+                                } else {
+                                    found_records += 1;
+                                    lines.push(line.to_string());
+                                }
                             }
-                        }
-
-                        // Check end date
-                        if let Some(end) = end_date {
-                            if time > end {
-                                continue;
+                        } else {
+                            // Check end date
+                            if let Some(end) = end_date {
+                                if time <= end {
+                                    found_records += 1;
+                                    lines.push(line.to_string());
+                                }
+                            } else {
+                                found_records += 1;
+                                lines.push(line.to_string());
                             }
-                        }
-
-                        found_records += 1;
-                        lines.push(line.to_string());
-
-                        if found_records >= limit {
-                            break;
                         }
                     }
                 }
