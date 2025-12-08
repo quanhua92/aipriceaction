@@ -18,6 +18,20 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 
+/// Format price with adaptive precision based on magnitude
+/// This is crucial for small-priced cryptocurrencies like BONK (~0.000012)
+fn format_adaptive_price(value: f64) -> String {
+    if value >= 1.0 {
+        format!("{:.2}", value)        // 1.2345 -> 1.23
+    } else if value >= 0.01 {
+        format!("{:.4}", value)        // 0.1234 -> 0.1234
+    } else if value >= 0.0001 {
+        format!("{:.6}", value)        // 0.000123 -> 0.000123
+    } else {
+        format!("{:.8}", value)        // 0.00000123 -> 0.00000123
+    }
+}
+
 /// Statistics for enhancement operation
 #[derive(Debug)]
 pub struct EnhancementStats {
@@ -331,16 +345,16 @@ fn write_stock_data_row(
     wtr.write_record(&[
         ticker,
         &time_str,
-        &format!("{:.2}", stock_data.open),
-        &format!("{:.2}", stock_data.high),
-        &format!("{:.2}", stock_data.low),
-        &format!("{:.2}", stock_data.close),
+        &format_adaptive_price(stock_data.open),
+        &format_adaptive_price(stock_data.high),
+        &format_adaptive_price(stock_data.low),
+        &format_adaptive_price(stock_data.close),
         &stock_data.volume.to_string(),
-        &stock_data.ma10.map_or(String::new(), |v| format!("{:.2}", v)),
-        &stock_data.ma20.map_or(String::new(), |v| format!("{:.2}", v)),
-        &stock_data.ma50.map_or(String::new(), |v| format!("{:.2}", v)),
-        &stock_data.ma100.map_or(String::new(), |v| format!("{:.2}", v)),
-        &stock_data.ma200.map_or(String::new(), |v| format!("{:.2}", v)),
+        &stock_data.ma10.map_or(String::new(), format_adaptive_price),
+        &stock_data.ma20.map_or(String::new(), format_adaptive_price),
+        &stock_data.ma50.map_or(String::new(), format_adaptive_price),
+        &stock_data.ma100.map_or(String::new(), format_adaptive_price),
+        &stock_data.ma200.map_or(String::new(), format_adaptive_price),
         &stock_data.ma10_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.ma20_score.map_or(String::new(), |v| format!("{:.4}", v)),
         &stock_data.ma50_score.map_or(String::new(), |v| format!("{:.4}", v)),
