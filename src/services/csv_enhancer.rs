@@ -179,6 +179,10 @@ pub fn save_enhanced_csv_to_dir(
     let mut data_vec: Vec<StockData> = data.to_vec();
     data_vec.sort_by_key(|d| d.time);
     let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+
+    // Check if we should do full rewrite due to duplicates
+    let has_excessive_duplicates = duplicates_removed > 0;
+
     if duplicates_removed > 0 {
         tracing::info!(
             ticker = ticker,
@@ -201,11 +205,25 @@ pub fn save_enhanced_csv_to_dir(
     let file_path = ticker_dir.join(interval.to_filename());
     let file_exists = file_path.exists();
 
-    if !file_exists || rewrite_all {
+    // Force full rewrite if duplicates detected, regardless of rewrite_all parameter
+    let should_rewrite_all = !file_exists || rewrite_all || has_excessive_duplicates;
+
+    if should_rewrite_all {
+        // Log if we're fixing duplicates
+        if has_excessive_duplicates && file_exists {
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                duplicates_found = duplicates_removed,
+                records_after_dedup = data.len(),
+                "[FIX-DUPLICATION] Duplicates detected - performing full rewrite"
+            );
+        }
+
         // New file or rewrite - write directly (no locking needed for new files)
         let file = std::fs::OpenOptions::new()
             .create(true)
-            .truncate(rewrite_all)
+            .truncate(true)  // Always truncate when we decide to rewrite
             .write(true)
             .open(&file_path)
             .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
@@ -661,8 +679,13 @@ fn process_single_ticker(
     // Sort by time (oldest first)
     ticker_data.sort_by_key(|d| d.time);
 
-    // Deduplicate by timestamp (favor last duplicate)
+    // Step 1: Keep original data for cutoff calculation (before deduplication)
+    let original_data = ticker_data.clone();
+
+    // Step 2: Deduplicate by timestamp (favor last duplicate)
     let duplicates_removed = deduplicate_ohlcv_by_time(&mut ticker_data);
+    let has_excessive_duplicates = duplicates_removed > 0;
+
     if duplicates_removed > 0 {
         tracing::info!(
             ticker = ticker,
@@ -673,11 +696,11 @@ fn process_single_ticker(
         );
     }
 
-    // Step 2: Calculate cutoff date based on existing CSV data (before moving ticker_data)
+    // Step 3: Calculate cutoff date based on ORIGINAL CSV data (before deduplication)
     let resume_days = 2i64;
-    let proper_cutoff_date = if !ticker_data.is_empty() {
-        // Use existing CSV's last record time - resume_days
-        if let Some(last_record) = ticker_data.last() {
+    let proper_cutoff_date = if !original_data.is_empty() {
+        // Use ORIGINAL CSV's last record time - resume_days
+        if let Some(last_record) = original_data.last() {
             last_record.time - chrono::Duration::days(resume_days)
         } else {
             chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| chrono::Utc::now())
@@ -686,7 +709,7 @@ fn process_single_ticker(
         chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| chrono::Utc::now())
     };
 
-    // Step 3: Enhance data (calculate MAs and scores) - in-memory
+    // Step 4: Enhance data (calculate MAs and scores) - in-memory
     let ma_start = Instant::now();
     let mut data_map: HashMap<String, Vec<OhlcvData>> = HashMap::new();
     data_map.insert(ticker.to_string(), ticker_data);
@@ -699,13 +722,33 @@ fn process_single_ticker(
 
     let record_count = enhanced_data.len();
 
-    // Step 4: Write enhanced CSV with proper cutoff
+    // Step 5: Write enhanced CSV with conditional strategy
     let write_start = Instant::now();
 
-    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, false, market_data_dir, channel_sender, mode)?;
+    // Choose save strategy based on duplicates
+    if has_excessive_duplicates {
+        // Full rewrite if duplicates detected
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_found = duplicates_removed,
+            records_after_dedup = enhanced_data.len(),
+            "[FIX-DUPLICATION] Duplicates detected - performing full rewrite"
+        );
+        save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, true, market_data_dir, channel_sender, mode)?;
+    } else {
+        // Use incremental update if no duplicates (with fixed cutoff logic)
+        tracing::debug!(
+            ticker = ticker,
+            interval = ?interval,
+            records = enhanced_data.len(),
+            "No duplicates - using incremental update"
+        );
+        save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, false, market_data_dir, channel_sender, mode)?;
+    }
     let write_time = write_start.elapsed();
 
-    // Step 4: Get file size for stats
+    // Step 6: Get file size for stats
     let bytes_written = std::fs::metadata(&csv_path)
         .map(|m| m.len())
         .unwrap_or(0);
