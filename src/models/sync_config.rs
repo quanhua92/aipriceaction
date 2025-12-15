@@ -1,6 +1,7 @@
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use std::fmt;
 
 // Adaptive resume configuration constants
 /// Start with small resume window for minute data (fast path)
@@ -21,6 +22,12 @@ pub enum Interval {
     Hourly,
     /// Minute data -> 1m.csv
     Minute,
+}
+
+impl fmt::Display for Interval {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_vci_format())
+    }
 }
 
 impl Interval {

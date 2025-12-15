@@ -26,12 +26,15 @@ pub enum AppError {
     #[error("Rate limit exceeded")]
     RateLimit,
 
+    #[error("Database error: {0}")]
+    Database(String),
+
     #[error("{0}")]
     Other(String),
 }
 
-impl From<std::io::Error> for AppError {
-    fn from(err: std::io::Error) -> Self {
+impl From<tokio::io::Error> for AppError {
+    fn from(err: tokio::io::Error) -> Self {
         AppError::Io(err.to_string())
     }
 }
@@ -39,6 +42,12 @@ impl From<std::io::Error> for AppError {
 impl From<csv::Error> for AppError {
     fn from(err: csv::Error) -> Self {
         AppError::Io(format!("CSV error: {}", err))
+    }
+}
+
+impl From<sqlx::Error> for AppError {
+    fn from(err: sqlx::Error) -> Self {
+        AppError::Database(err.to_string())
     }
 }
 
