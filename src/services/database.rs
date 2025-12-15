@@ -247,6 +247,36 @@ impl SQLiteDatabaseStore {
         Ok(result)
     }
 
+    /// Get the latest timestamp for a ticker and interval
+    pub async fn get_latest_timestamp(&self, ticker: &str, interval: &str) -> Result<Option<chrono::DateTime<chrono::Utc>>, sqlx::Error> {
+        let result: Option<String> = sqlx::query_scalar(
+            "SELECT timestamp FROM market_data
+             WHERE ticker = ?1 AND interval = ?2
+             ORDER BY timestamp DESC
+             LIMIT 1"
+        )
+        .bind(ticker)
+        .bind(interval)
+        .fetch_one(&self.pool)
+        .await?;
+
+        match result {
+            Some(timestamp_str) => {
+                // Parse timestamp (ISO format with potential timezone)
+                if timestamp_str.contains('+') {
+                    let timestamp = chrono::DateTime::parse_from_rfc3339(&timestamp_str)
+                        .map_err(|e| sqlx::Error::Decode(e.into()))?;
+                    Ok(Some(timestamp.with_timezone(&chrono::Utc)))
+                } else {
+                    let timestamp = chrono::DateTime::parse_from_rfc3339(&format!("{}Z", timestamp_str))
+                        .map_err(|e| sqlx::Error::Decode(e.into()))?;
+                    Ok(Some(timestamp.with_timezone(&chrono::Utc)))
+                }
+            }
+            None => Ok(None)
+        }
+    }
+
     /// Check if database has recent data after the specified date
     pub async fn has_recent_data(&self, since: DateTime<Utc>) -> Result<bool, sqlx::Error> {
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM market_data WHERE timestamp > ?")

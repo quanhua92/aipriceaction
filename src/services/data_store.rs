@@ -121,6 +121,7 @@ impl DataStore {
 
         info!("[DATA_STORE] Raw DATA_STORE_BACKEND env var: {:?}", std::env::var("DATA_STORE_BACKEND"));
         info!("[DATA_STORE] Backend preference: '{}'", backend_preference);
+        info!("[DATA_STORE] PID: {}", std::process::id());
 
         let backend = match backend_preference.as_str() {
             "sqlite" => {
@@ -151,6 +152,39 @@ impl DataStore {
                                     info!("[SQLITE] Database has {} records", record_count);
                                     if record_count > 0 {
                                         info!("✅ [SQLITE] Using existing SQLite database with {} records", record_count);
+
+                                        // Spawn background smart sync check (non-blocking)
+                                        info!("[SQLITE] Spawning background smart sync check...");
+                                        let db_path_clone = db_path.clone();
+                                        let market_data_dir_clone = market_data_dir.clone();
+                                        tokio::spawn(async move {
+                                            let csv_dirs = if market_data_dir_clone.ends_with("crypto_data") {
+                                                vec![market_data_dir_clone.clone()]
+                                            } else {
+                                                vec![
+                                                    market_data_dir_clone.clone(),
+                                                    market_data_dir_clone.parent()
+                                                        .unwrap_or(&market_data_dir_clone)
+                                                        .join("crypto_data")
+                                                ]
+                                            };
+
+                                            match crate::services::migration::smart_sync_check(&db_path_clone, &csv_dirs).await {
+                                                Ok(sync_result) => {
+                                                    if sync_result.missing_files > 0 || sync_result.outdated_files > 0 {
+                                                        info!("✅ [SQLITE] Background smart sync completed: {} files updated with {} records",
+                                                              sync_result.missing_files + sync_result.outdated_files,
+                                                              sync_result.migrated_records);
+                                                    } else {
+                                                        info!("✅ [SQLITE] Background smart sync check passed - all data current");
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    warn!("⚠️  [SQLITE] Background smart sync check failed: {}", e);
+                                                }
+                                            }
+                                        });
+
                                         DataStoreBackend::SQLite(Arc::new(db))
                                     } else {
                                         warn!("⚠️  [SQLITE] Database exists but is empty. Starting background migration...");
@@ -583,10 +617,11 @@ fn spawn_background_migration(db_path: PathBuf, market_data_dir: PathBuf) {
 
         match CsvToSqliteMigration::new(db_path).await {
             Ok(migration) => {
-                info!("Starting background CSV to SQLite migration");
+                info!("📋 [SQLITE] Starting background CSV to SQLite migration");
+                info!("[SQLITE] Directories to migrate: {:?}", config.csv_directories);
                 match migration.migrate_directories(config).await {
                     Ok(result) => {
-                        info!("✅ Background migration completed successfully!");
+                        info!("✅ [SQLITE] Background migration completed successfully!");
                         info!("   Files processed: {}", result.total_files_processed);
                         info!("   Records migrated: {}", result.total_records_migrated);
                         info!("   Duration: {} seconds", result.duration_secs);
@@ -595,7 +630,7 @@ fn spawn_background_migration(db_path: PathBuf, market_data_dir: PathBuf) {
                         }
                     }
                     Err(e) => {
-                        error!("❌ Background migration failed: {}", e);
+                        error!("❌ [SQLITE] Background migration failed: {}", e);
                     }
                 }
             }

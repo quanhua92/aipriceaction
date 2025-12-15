@@ -13,15 +13,19 @@ pub async fn run(port: u16) -> Result<(), crate::error::Error> {
     // Create VN stock data store
     let market_data_dir = get_market_data_dir();
     println!("📁 VN stocks directory: {}", market_data_dir.display());
+    println!("🔧 [SERVE] Creating VN DataStore...");
     let data_store_vn = DataStore::new(market_data_dir.clone()).await
         .map_err(|e| crate::error::Error::Other(format!("Failed to create VN data store: {}", e)))?;
+    println!("✅ [SERVE] VN DataStore created successfully");
     let shared_data_store_vn = Arc::new(data_store_vn);
 
     // Create crypto data store
     let crypto_data_dir = get_crypto_data_dir();
     println!("📁 Crypto directory: {}", crypto_data_dir.display());
+    println!("🔧 [SERVE] Creating Crypto DataStore...");
     let data_store_crypto = DataStore::new(crypto_data_dir.clone()).await
         .map_err(|e| crate::error::Error::Other(format!("Failed to create crypto data store: {}", e)))?;
+    println!("✅ [SERVE] Crypto DataStore created successfully");
     let shared_data_store_crypto = Arc::new(data_store_crypto);
 
     // Initialize health stats
