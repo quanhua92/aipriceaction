@@ -418,12 +418,12 @@ pub fn save_enhanced_csv_to_dir(
                         std::fs::rename(&processing_path, &file_path)
                             .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
 
-                        tracing::debug!(
+                        tracing::info!(
                             ticker = ticker,
                             interval = ?interval,
-                            processing_path = ?processing_path,
-                            target_path = ?file_path,
-                            "Successfully enhanced CSV with copy-processing-rename strategy"
+                            records = data.len(),
+                            file_path = ?file_path,
+                            "[CSV] Wrote file"
                         );
                     }
                     Err(e) => {
@@ -454,11 +454,11 @@ pub fn save_enhanced_csv_to_dir(
         // Non-blocking send - if channel is full or disconnected, just log and continue
         match sender.send(message) {
             Ok(()) => {
-                tracing::debug!(
+                tracing::info!(
                     ticker = ticker,
                     interval = ?interval,
                     records = data.len(),
-                    "[MPSC] Sent data update via channel"
+                    "[MPSC] Updated cache"
                 );
             }
             Err(e) => {
