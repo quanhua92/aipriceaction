@@ -245,8 +245,81 @@ pub fn save_enhanced_csv_to_dir(
 
         wtr.flush()
             .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+    } else if has_excessive_duplicates {
+        // File exists AND has duplicates - perform safe full rewrite
+        // This is safer than truncation when we know there are data issues
+
+        // Generate unique processing filename with timestamp
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|e| Error::Io(format!("Failed to get timestamp: {}", e)))?
+            .as_secs();
+
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            file_path.extension().and_then(|s| s.to_str()).unwrap_or("csv"), timestamp));
+
+        // Log the safe full rewrite due to duplicates
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_found = duplicates_removed,
+            records_after_dedup = data.len(),
+            processing_path = ?processing_path,
+            "[SAFE-FULL-REWRITE] Duplicates detected - skipping truncation, rewriting entire file"
+        );
+
+        // Write header and all deduplicated data directly to processing file
+        let enhancement_result = (|| -> Result<(), Error> {
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to create processing file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+
+            // Write 20-column header
+            wtr.write_record(&[
+                "ticker", "time", "open", "high", "low", "close", "volume",
+                "ma10", "ma20", "ma50", "ma100", "ma200",
+                "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                "close_changed", "volume_changed", "total_money_changed"
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+            // Write ALL deduplicated data (no cutoff filtering)
+            for row in data {
+                write_stock_data_row(&mut wtr, row, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush processing CSV: {}", e)))?;
+
+            Ok(())
+        })();
+
+        // Handle result - atomic rename on success, cleanup on failure
+        match enhancement_result {
+            Ok(()) => {
+                // Atomic rename: processing file becomes the new original
+                std::fs::rename(&processing_path, &file_path)
+                    .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
+
+                tracing::debug!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    "Successfully performed safe full rewrite to eliminate duplicates"
+                );
+            }
+            Err(e) => {
+                // Enhancement failed - keep original, remove processing file
+                let _ = std::fs::remove_file(&processing_path);
+                return Err(e);
+            }
+        }
     } else {
-        // File exists - use copy-processing-rename strategy for safe updates
+        // File exists, no duplicates - use copy-processing-rename strategy for incremental updates
 
         // Generate unique processing filename with timestamp
         use std::time::SystemTime;
