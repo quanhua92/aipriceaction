@@ -440,42 +440,8 @@ async fn sync_and_enhance(
     // Write log entry
     write_log_entry(&sync_start, &sync_end, sync_duration, sync_success, interval, symbols, tier);
 
-    // Step 2: Enhance CSV if sync succeeded (ONLY enhance the symbols that were synced)
-    if sync_success {
-        info!(
-            worker = "Crypto",
-            iteration = iteration,
-            tier = tier,
-            interval = interval_name,
-            "[CRYPTO] Enhancing CSV (filtered to {} symbols)",
-            symbols.len()
-        );
-
-        match csv_enhancer::enhance_interval_filtered(interval, crypto_data_dir, Some(symbols), channel_sender.as_ref(), DataMode::Crypto) {
-            Ok(stats) => {
-                info!(
-                    worker = "Crypto",
-                    iteration = iteration,
-                    tier = tier,
-                    interval = interval_name,
-                    tickers = stats.tickers,
-                    records = stats.records,
-                    duration_secs = stats.duration.as_secs_f64(),
-                    "[CRYPTO] Enhancement completed"
-                );
-            }
-            Err(e) => {
-                warn!(
-                    worker = "Crypto",
-                    iteration = iteration,
-                    tier = tier,
-                    interval = interval_name,
-                    error = %e,
-                    "[CRYPTO] Enhancement failed"
-                );
-            }
-        }
-    }
+    // Step 2: CSV files already enhanced by CryptoSync during sync
+    // CryptoSync::enhance_and_save_crypto_data() handles all indicator calculations efficiently
 
     sync_success
 }

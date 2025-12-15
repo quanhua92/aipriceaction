@@ -133,30 +133,8 @@ async fn run_interval_worker(
         // Write log entry for this interval
         write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, interval);
 
-        // Step 2: Enhance CSV files
-        info!(worker = interval_name, iteration = iteration_count, "[SLOW] Enhancing CSV");
-        match csv_enhancer::enhance_interval_filtered(interval, &market_data_dir, None, channel_sender.as_ref(), DataMode::VN) {
-            Ok(stats) => {
-                info!(
-                    worker = interval_name,
-                    iteration = iteration_count,
-                    tickers = stats.tickers,
-                    records = stats.records,
-                    duration_secs = stats.duration.as_secs_f64(),
-                    "[SLOW] Enhancement completed"
-                );
-            }
-            Err(e) => {
-                warn!(
-                    worker = interval_name,
-                    iteration = iteration_count,
-                    error = %e,
-                    "[SLOW] Enhancement failed"
-                );
-            }
-        }
-
-        // Step 3: Update health stats
+        // Step 2: Update health stats (CSV files already enhanced by DataSync during sync)
+        // DataSync::enhance_and_save_ticker_data() handles all indicator calculations efficiently
         {
             let mut health = health_stats.write().await;
             match interval {

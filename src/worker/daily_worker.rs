@@ -84,24 +84,8 @@ pub async fn run(
             }
         };
 
-        // Step 2: Enhance CSV files with technical indicators
-        info!(iteration = iteration_count, "[DAILY] Enhancing CSV");
-        match csv_enhancer::enhance_interval_filtered(Interval::Daily, &market_data_dir, None, channel_sender.as_ref(), DataMode::VN) {
-            Ok(stats) => {
-                info!(
-                    iteration = iteration_count,
-                    tickers = stats.tickers,
-                    records = stats.records,
-                    duration_secs = stats.duration.as_secs_f64(),
-                    "[DAILY] Enhancement completed"
-                );
-            }
-            Err(e) => {
-                warn!(iteration = iteration_count, error = %e, "[DAILY] Enhancement failed");
-            }
-        }
-
-        // Step 3: Update health stats (memory cache updated lazily by API on cache miss)
+        // Step 2: Update health stats (CSV files already enhanced by DataSync during sync)
+        // DataSync::enhance_and_save_ticker_data() handles all indicator calculations efficiently
         {
             let mut health = health_stats.write().await;
             health.daily_last_sync = Some(Utc::now().to_rfc3339());
