@@ -2,11 +2,12 @@ use crate::error::Error;
 use crate::models::{Interval, AggregatedInterval, StockData};
 use crate::services::database::SQLiteDatabaseStore;
 use crate::services::migration::{CsvToSqliteMigration, MigrationConfig};
+use crate::services::sqlite_updater::SQLiteUpdater;
 use tracing::{debug, info, warn, error};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
@@ -314,10 +315,89 @@ impl DataStore {
         &self,
         params: QueryParameters,
     ) -> HashMap<String, Vec<StockData>> {
-        // For now, return empty data - in production this would read from CSV files
-        warn!("CSV fallback: returning empty data ({} tickers, {} interval)",
-               params.tickers.len(), params.interval);
-        HashMap::new()
+        let mut result = HashMap::new();
+
+        for ticker in &params.tickers {
+            let csv_path = self.market_data_dir.join(ticker).join(params.interval.to_filename());
+
+            if !csv_path.exists() {
+                debug!("CSV file not found: {}", csv_path.display());
+                continue;
+            }
+
+            match self.read_csv_file(&csv_path, ticker).await {
+                Ok(mut data) => {
+                    // Apply date filtering if specified
+                    if let Some(start_date) = params.start_date {
+                        data.retain(|d| d.time >= start_date);
+                    }
+                    if let Some(end_date) = params.end_date {
+                        data.retain(|d| d.time <= end_date);
+                    }
+
+                    // Apply limit if specified
+                    if params.limit > 0 && data.len() > params.limit {
+                        data.truncate(params.limit);
+                    }
+
+                    result.insert(ticker.clone(), data);
+                }
+                Err(e) => {
+                    warn!("Failed to read CSV file {}: {}", csv_path.display(), e);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Read a CSV file and return StockData
+    async fn read_csv_file(&self, csv_path: &Path, ticker: &str) -> Result<Vec<StockData>, Error> {
+        let csv_content = tokio::fs::read_to_string(csv_path).await
+            .map_err(|e| Error::Other(format!("Failed to read CSV file {:?}: {}", csv_path, e)))?;
+
+        let mut rdr = csv::Reader::from_reader(csv_content.as_bytes());
+        let headers = rdr.headers().map_err(|e| Error::Other(format!("CSV parsing error: {}", e)))?;
+
+        // Check if this is an enhanced CSV with technical indicators
+        let is_enhanced = headers.len() >= 20; // 20 columns for enhanced CSV
+
+        let mut stock_data = Vec::new();
+
+        for result in rdr.records() {
+            let record = result.map_err(|e| Error::Other(format!("CSV parsing error: {}", e)))?;
+
+            match SQLiteUpdater::parse_csv_record(&record, ticker, self.interval_from_filename(csv_path)?, is_enhanced) {
+                Ok(data) => stock_data.push(data),
+                Err(e) => {
+                    warn!("Skipping malformed record in {}: {}", csv_path.display(), e);
+                    continue;
+                }
+            }
+        }
+
+        if stock_data.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Sort by timestamp descending (most recent first)
+        stock_data.sort_by(|a, b| b.time.cmp(&a.time));
+
+        Ok(stock_data)
+    }
+
+    /// Determine interval from filename
+    fn interval_from_filename(&self, csv_path: &Path) -> Result<Interval, Error> {
+        let filename = csv_path.file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| Error::Other("Invalid filename".to_string()))?;
+
+        match filename {
+            "1D.csv" => Ok(Interval::Daily),
+            "1h.csv" | "1H.csv" => Ok(Interval::Hourly),
+            "1m.csv" => Ok(Interval::Minute),
+            _ => Err(Error::Other(format!("Unknown interval file: {}", filename))),
+        }
     }
 
     /// Load startup data for specified intervals
