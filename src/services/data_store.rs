@@ -23,7 +23,7 @@ enum ReadingStrategy {
 /// Memory management constants
 pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit
 pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
-pub const DATA_RETENTION_RECORDS: usize = 730; // Keep last 730 records per ticker per interval (default for daily/hourly)
+pub const DATA_RETENTION_RECORDS: usize = 1500; // Keep last 1500 records per ticker per interval
 pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute records (1.5 days) to support aggregated intervals
 
 /// Cache TTL constants
@@ -179,10 +179,11 @@ impl QueryParameters {
     }
 
     /// Calculate the effective limit for base interval data fetching
-    /// For aggregated intervals, we need extra records for MA200 calculation
+    /// For aggregated intervals, we need extra records for MA calculation
+    /// Note: No MA200 buffer for 1W and 1M as they don't need such long moving averages
     pub fn effective_limit(&self) -> usize {
         if let Some(agg_interval) = self.aggregated_interval {
-            // For aggregated intervals, we need: (requested_records * multiplier) + MA200_buffer
+            // Calculate base multiplier for aggregation
             let multiplier = match agg_interval {
                 AggregatedInterval::Minutes5 => 5,
                 AggregatedInterval::Minutes15 => 15,
@@ -191,7 +192,21 @@ impl QueryParameters {
                 AggregatedInterval::Week2 => 14,
                 AggregatedInterval::Month => 30,
             };
-            (self.limit * multiplier) + (200 * multiplier) // MA200 buffer on top of requested records
+
+            // Add appropriate buffer based on interval type
+            let ma_buffer = match agg_interval {
+                // Minute aggregations need full MA200 buffer (200 * multiplier)
+                AggregatedInterval::Minutes5
+                | AggregatedInterval::Minutes15
+                | AggregatedInterval::Minutes30 => 200 * multiplier,
+
+                // Weekly/ Monthly aggregations use smaller buffer (MA50 is sufficient)
+                AggregatedInterval::Week
+                | AggregatedInterval::Week2
+                | AggregatedInterval::Month => 50 * multiplier, // MA50 instead of MA200
+            };
+
+            (self.limit * multiplier) + ma_buffer
         } else {
             self.limit // No buffer needed for regular intervals
         }
@@ -644,7 +659,22 @@ impl DataStore {
                 // For date-filtered queries, check if we need recent data or historical data
                 let days_since_cutoff = (Utc::now() - start).num_days();
 
-                if days_since_cutoff <= 7 && file_size > 10 * 1024 * 1024 { // 10MB
+                // For daily and hourly intervals, prefer FromEnd for better performance
+                if interval == Interval::Daily || interval == Interval::Hourly {
+                    if days_since_cutoff <= 365 { // Within last year
+                        // Recent-ish data - read from end with buffer
+                        Ok(ReadingStrategy::FromEnd { limit: smart_limit * 20 })
+                    } else if file_size > 50 * 1024 * 1024 { // 50MB
+                        // Very old historical query on large file - read with smart limit
+                        Ok(ReadingStrategy::FromStart { limit: smart_limit * 20 })
+                    } else {
+                        // Small to medium file - read from end for consistency
+                        Ok(ReadingStrategy::FromEnd { limit: smart_limit * 20 })
+                    }
+                } else if interval == Interval::Minute {
+                    // Minute data always uses FromEnd
+                    Ok(ReadingStrategy::FromEnd { limit: smart_limit * 20 })
+                } else if days_since_cutoff <= 7 && file_size > 10 * 1024 * 1024 { // 10MB
                     // Recent data query on large file - read from end
                     Ok(ReadingStrategy::FromEnd { limit: smart_limit * 10 })
                 } else if file_size > 50 * 1024 * 1024 { // 50MB
@@ -657,14 +687,12 @@ impl DataStore {
             },
             None => {
                 // No date filter - this is a "latest data" query
-                // For minute data, ALWAYS use FromEnd strategy regardless of file size
-                if interval == Interval::Minute {
-                    Ok(ReadingStrategy::FromEnd { limit: smart_limit })
-                } else if file_size > 20 * 1024 * 1024 { // 20MB
-                    // Large file, read from end for latest data
+                // For minute, hourly, and daily data, ALWAYS use FromEnd strategy regardless of file size
+                // This is faster for recent data queries which are most common
+                if interval == Interval::Minute || interval == Interval::Hourly || interval == Interval::Daily {
                     Ok(ReadingStrategy::FromEnd { limit: smart_limit * 4 })
                 } else {
-                    // Small file (daily/hourly), read completely
+                    // Default fallback (should not reach here)
                     Ok(ReadingStrategy::CompleteFile)
                 }
             }
@@ -1129,10 +1157,20 @@ impl DataStore {
 
         // Apply aggregation if needed
         let aggregated_result = if let Some(agg_interval) = params.aggregated_interval {
-            debug!("Applying {} aggregation with MA200 buffer", agg_interval);
+            let agg_start = std::time::Instant::now();
+            info!("[PROFILE] Starting aggregation: {}", agg_interval);
+
+            // Log cache status before aggregation
+            let total_records_before: usize = result.values().map(|v| v.len()).sum();
+            info!("[PROFILE] Records before aggregation: {}", total_records_before);
+
+            debug!("Applying {} aggregation with MA buffer", agg_interval);
             let mut result = result
                 .into_iter()
                 .map(|(ticker, records)| {
+                    let agg_single_start = std::time::Instant::now();
+                    info!("[PROFILE] Aggregating {} - {} records", ticker, records.len());
+
                     let aggregated = match agg_interval {
                         AggregatedInterval::Minutes5
                         | AggregatedInterval::Minutes15
@@ -1145,13 +1183,25 @@ impl DataStore {
                             crate::services::Aggregator::aggregate_daily_data(records, agg_interval)
                         }
                     };
+
+                    info!("[PROFILE] {} aggregation complete: {:.2}ms -> {} records",
+                          ticker, agg_single_start.elapsed().as_secs_f64() * 1000.0, aggregated.len());
                     (ticker, aggregated)
                 })
                 .collect();
 
             // Enhance aggregated data with technical indicators (MA, scores, changes)
             // BEFORE applying limit so we have enough data for MA calculations
+            let enhance_start = std::time::Instant::now();
             result = crate::services::Aggregator::enhance_aggregated_data(result);
+            info!("[PROFILE] Enhancement with technical indicators: {:.2}ms",
+                  enhance_start.elapsed().as_secs_f64() * 1000.0);
+
+            let total_records_after: usize = result.values().map(|v| v.len()).sum();
+            let agg_total_time = agg_start.elapsed().as_secs_f64() * 1000.0;
+
+            info!("[PROFILE] {} aggregation complete: Total {:.2}ms | Before: {} records | After: {} records",
+                  agg_interval, agg_total_time, total_records_before, total_records_after);
             info!("Applied {} aggregation with full technical indicators", agg_interval);
 
             result
@@ -1170,7 +1220,7 @@ impl DataStore {
         &self,
         mut data: HashMap<String, Vec<StockData>>,
         limit: usize,
-        start_date: Option<DateTime<Utc>>,
+        _start_date: Option<DateTime<Utc>>,
     ) -> HashMap<String, Vec<StockData>> {
         // Apply limit if specified
         if limit > 0 {
@@ -1289,6 +1339,7 @@ impl DataStore {
                     };
 
                     if has_required_range {
+                        tracing::info!("[PROFILE] CACHE HIT for {} - {} records in memory", ticker, interval_data.len());
                         // Cache has sufficient data - use binary search for date range
                         // Data is sorted by time (ascending), so we can binary search
                         let start_idx = if let Some(start) = start_date {
@@ -1318,8 +1369,8 @@ impl DataStore {
                         }
                     } else {
                         // Cache doesn't have full range - need disk read
-                        tracing::debug!(
-                            "Cache insufficient for {} (requested start: {:?}, cache starts: {:?})",
+                        tracing::info!(
+                            "[PROFILE] CACHE MISS for {} - insufficient date range (requested start: {:?}, cache starts: {:?})",
                             ticker,
                             start_date,
                             interval_data.first().map(|d| d.time)
@@ -1328,10 +1379,12 @@ impl DataStore {
                     }
                 } else {
                     // No data in cache for this ticker/interval
+                    tracing::info!("[PROFILE] CACHE MISS for {} - no data in cache for {}", ticker, interval.to_filename());
                     need_disk_read.push(ticker.clone());
                 }
             } else {
                 // Ticker not in cache
+                tracing::info!("[PROFILE] CACHE MISS for {} - ticker not in cache", ticker);
                 need_disk_read.push(ticker.clone());
             }
         }
@@ -1347,11 +1400,7 @@ impl DataStore {
 
         // Read missing tickers from disk
         if !need_disk_read.is_empty() {
-            tracing::info!(
-                "Reading {} tickers from disk (cache insufficient): {:?}",
-                need_disk_read.len(),
-                need_disk_read
-            );
+            tracing::info!("[PROFILE] READING FROM DISK/CSV - {} tickers: {:?}", need_disk_read.len(), need_disk_read);
             let perf_disk_start = std::time::Instant::now();
             tracing::debug!("[DEBUG:PERF] Disk read start: {} tickers", need_disk_read.len());
             let disk_data = self.get_data_from_disk_with_cache(

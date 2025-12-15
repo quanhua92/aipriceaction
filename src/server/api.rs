@@ -159,10 +159,17 @@ pub async fn get_tickers_handler(
         },
     };
 
+    // Check if this is an aggregated interval request for profiling
+    let is_aggregated = query_params.aggregated_interval.is_some();
+    let agg_interval_str = query_params.aggregated_interval.as_ref().map(|i| format!("{:?}", i)).unwrap_or_else(|| "None".to_string());
+
     // Smart data retrieval - DataStore handles all the complexity
     let perf_data_start = std::time::Instant::now();
     if is_usdt_1m {
         info!("DEBUG:PERF:1m:USDT About to call get_data_smart - tickers: {:?}", query_params.tickers);
+    }
+    if is_aggregated {
+        info!("[PROFILE] Aggregated interval request: {} - starting data retrieval", agg_interval_str);
     }
     debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
     let result_data = data_state.get_data_smart(query_params.clone()).await;
@@ -174,6 +181,9 @@ pub async fn get_tickers_handler(
 
     if is_usdt_1m {
         info!("DEBUG:PERF:1m:USDT Data retrieved - {:.2}ms, {} tickers, {} records", data_retrieval_time, ticker_count, total_records);
+    }
+    if is_aggregated {
+        info!("[PROFILE] Data retrieval complete for {}: {:.2}ms, {} tickers, {} records", agg_interval_str, data_retrieval_time, ticker_count, total_records);
     }
 
     info!(
