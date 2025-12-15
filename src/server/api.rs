@@ -398,11 +398,11 @@ fn generate_csv_response(
     };
 
     // CSV header - adapt based on whether we have technical indicators
-    // For simplicity, we'll check the first record to see what fields are available
-    let has_indicators = data.values().next()
-        .and_then(|records| records.first())
-        .map(|record| record.ma10.is_some())
-        .unwrap_or(false);
+    // Check if ANY record has the close_changed field (indicates enhanced CSV with 20 columns)
+    let has_indicators = data.values()
+        .any(|records| {
+            records.iter().any(|record| record.close_changed.is_some())
+        });
 
     // Calculate total record count for buffer pre-allocation
     let total_records: usize = data.values().map(|v| v.len()).sum();
