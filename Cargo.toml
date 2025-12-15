@@ -24,6 +24,7 @@ tower-http = { version = "0.6.2", features = ["cors", "fs", "compression-gzip", 
 num_cpus = "1.16"
 uuid = { version = "1.11", features = ["v7", "serde"] }
 infer = "0.16"
+memmap2 = "0.9"
 
 [dev-dependencies]
 tempfile = "3.13"
