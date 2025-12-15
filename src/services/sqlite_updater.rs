@@ -242,11 +242,17 @@ impl SQLiteUpdater {
                 date.and_hms_opt(0, 0, 0).unwrap().and_utc()
             }
             Interval::Hourly | Interval::Minute => {
-                // Format: "2024-01-01 09:00:00"
+                // Format: "2024-01-01 09:00:00" or "2024-01-01T09:00:00"
                 let datetime_str = record.get(1).ok_or_else(|| AppError::Parse("Missing datetime column".to_string()))?;
-                chrono::NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S")
-                    .map(|dt| dt.and_utc())
-                    .map_err(|e| AppError::Parse(format!("Invalid datetime '{}': {}", datetime_str, e)))?
+
+                // Try space separator first, then T separator
+                if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%d %H:%M:%S") {
+                    dt.and_utc()
+                } else if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(datetime_str, "%Y-%m-%dT%H:%M:%S") {
+                    dt.and_utc()
+                } else {
+                    return Err(AppError::Parse(format!("Invalid datetime '{}': expected YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS", datetime_str)));
+                }
             }
         };
 

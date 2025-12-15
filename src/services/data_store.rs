@@ -110,44 +110,69 @@ pub struct DataStore {
 
 impl DataStore {
     pub async fn new(market_data_dir: PathBuf) -> Result<Self, Error> {
+        // Log all environment variables for debugging
+        info!("[DATA_STORE] ===== DataStore Initialization Start =====");
+        info!("[DATA_STORE] Market dir: {:?}", market_data_dir);
+        info!("[DATA_STORE] Current working directory: {:?}", std::env::current_dir());
+
         let backend_preference = env::var("DATA_STORE_BACKEND")
             .unwrap_or_else(|_| "csv".to_string())
             .to_lowercase();
 
+        info!("[DATA_STORE] Raw DATA_STORE_BACKEND env var: {:?}", std::env::var("DATA_STORE_BACKEND"));
+        info!("[DATA_STORE] Backend preference: '{}'", backend_preference);
+
         let backend = match backend_preference.as_str() {
             "sqlite" => {
                 let db_path = if market_data_dir.to_string_lossy().contains("crypto") {
+                    info!("[DATA_STORE] Detected crypto market data dir");
                     market_data_dir.parent()
                         .unwrap_or(&market_data_dir)
                         .join("crypto_data.db")
                 } else {
+                    info!("[DATA_STORE] Detected VN market data dir");
                     market_data_dir.join("..").join("market_data.db")
                 };
 
+                info!("[SQLITE] SQLite backend requested - DB path: {:?}", db_path);
+                info!("[SQLITE] Database exists: {}", db_path.exists());
+                info!("[SQLITE] Database parent dir exists: {}", db_path.parent().map(|p| p.exists()).unwrap_or(false));
+                if let Some(parent) = db_path.parent() {
+                    info!("[SQLITE] Database parent dir: {:?}", parent);
+                }
+
                 if db_path.exists() {
+                    info!("[SQLITE] Database file exists, attempting to initialize...");
                     match SQLiteDatabaseStore::new(db_path.clone()).await {
                         Ok(db) => {
-                            if let Ok(record_count) = db.get_record_count().await {
-                                if record_count > 0 {
-                                    info!("Using existing SQLite database with {} records", record_count);
-                                    DataStoreBackend::SQLite(Arc::new(db))
-                                } else {
-                                    warn!("SQLite database exists but is empty. Starting background migration...");
+                            info!("[SQLITE] SQLiteDatabaseStore created successfully");
+                            match db.get_record_count().await {
+                                Ok(record_count) => {
+                                    info!("[SQLITE] Database has {} records", record_count);
+                                    if record_count > 0 {
+                                        info!("✅ [SQLITE] Using existing SQLite database with {} records", record_count);
+                                        DataStoreBackend::SQLite(Arc::new(db))
+                                    } else {
+                                        warn!("⚠️  [SQLITE] Database exists but is empty. Starting background migration...");
+                                        spawn_background_migration(db_path.clone(), market_data_dir.clone());
+                                        DataStoreBackend::CSV
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("❌ [SQLITE] Failed to get record count: {}. Starting background migration...", e);
                                     spawn_background_migration(db_path.clone(), market_data_dir.clone());
                                     DataStoreBackend::CSV
                                 }
-                            } else {
-                                DataStoreBackend::CSV
                             }
                         }
                         Err(e) => {
-                            warn!("Failed to initialize SQLite backend: {}. Starting background migration...", e);
+                            error!("❌ [SQLITE] Failed to initialize SQLite backend: {}. Starting background migration...", e);
                             spawn_background_migration(db_path.clone(), market_data_dir.clone());
                             DataStoreBackend::CSV
                         }
                     }
                 } else {
-                    info!("SQLite database not found. Starting background migration...");
+                    warn!("⚠️  [SQLITE] SQLite database not found at {:?}. Starting background migration...", db_path);
                     spawn_background_migration(db_path.clone(), market_data_dir.clone());
                     DataStoreBackend::CSV
                 }
@@ -162,6 +187,18 @@ impl DataStore {
         } else {
             Some(market_data_dir.join("..").join("market_data.db"))
         };
+
+        // Log final backend selection
+        match backend {
+            DataStoreBackend::SQLite(_) => {
+                info!("✅ [DATA_STORE] DataStore initialized with SQLite backend");
+            }
+            DataStoreBackend::CSV => {
+                info!("📄 [DATA_STORE] DataStore initialized with CSV backend (migration in progress)");
+            }
+        }
+
+        info!("[DATA_STORE] ===== DataStore Initialization Complete =====");
 
         Ok(Self {
             backend: RwLock::new(backend),
@@ -289,6 +326,11 @@ impl DataStore {
         &self,
         params: QueryParameters,
     ) -> HashMap<String, Vec<StockData>> {
+        // Log backend selection for this request
+        let backend_type = self.get_backend_type().await;
+        debug!("[DATA_STORE] Request routed to {} backend - symbols: {:?}, interval: {:?}",
+               backend_type, params.tickers, params.interval);
+
         // Try to switch to SQLite if we're on CSV and migration is complete
         self.try_switch_to_sqlite().await;
 
@@ -296,15 +338,21 @@ impl DataStore {
         let backend = self.backend.read().await;
         match &*backend {
             DataStoreBackend::SQLite(sqlite_db) => {
+                info!("🔍 [DATA_STORE] Using SQLite backend for request");
                 match sqlite_db.get_data_smart(params.clone()).await {
-                    Ok(data) => data,
+                    Ok(data) => {
+                        debug!("[DATA_STORE] SQLite returned {} tickers", data.len());
+                        data
+                    },
                     Err(e) => {
-                        error!("SQLite backend error: {}. Falling back to CSV", e);
+                        error!("❌ [DATA_STORE] SQLite backend error: {}. Falling back to CSV", e);
+                        warn!("📄 [DATA_STORE] Falling back to CSV backend");
                         self.get_data_csv_fallback(params).await
                     }
                 }
             }
             DataStoreBackend::CSV => {
+                info!("📄 [DATA_STORE] Using CSV backend for request");
                 self.get_data_csv_fallback(params).await
             }
         }
@@ -508,9 +556,12 @@ impl DataStore {
 
 /// Spawn background migration task to populate SQLite database from CSV files
 fn spawn_background_migration(db_path: PathBuf, market_data_dir: PathBuf) {
-    info!("Spawning background migration task");
+    info!("🚀 [SQLITE] Spawning background migration task");
+    info!("[SQLITE] Migration target DB: {:?}", db_path);
+    info!("[SQLITE] Migration source dir: {:?}", market_data_dir);
 
     tokio::spawn(async move {
+        info!("📋 [SQLITE] Background migration task started");
         let csv_directories = if market_data_dir.ends_with("crypto_data") {
             vec![market_data_dir.clone()]
         } else {
