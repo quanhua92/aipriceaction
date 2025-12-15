@@ -730,13 +730,19 @@ impl DataStore {
         let file = open_file_atomic_read(csv_path)?;
         let file_size = file.metadata()?.len() as usize;
 
-        info!(
-            ticker = ticker,
-            strategy = "from_end_mmap",
-            limit = limit,
-            file_size_mb = file_size / (1024 * 1024),
-            "Reading CSV from end with memory mapping"
-        );
+        // Define major tickers to log at INFO level
+        const MAJOR_TICKERS: &[&str] = &["VNINDEX", "VCB", "VIC", "TCX"];
+
+        // Only log major tickers
+        if MAJOR_TICKERS.contains(&ticker) {
+            info!(
+                ticker = ticker,
+                strategy = "from_end_mmap",
+                limit = limit,
+                file_size_mb = file_size / (1024 * 1024),
+                "Reading CSV from end with memory mapping"
+            );
+        }
 
         // Memory map the entire file
         let mmap = unsafe { Mmap::map(&file)? };
@@ -805,18 +811,22 @@ impl DataStore {
         }
 
         let duration = start_time.elapsed();
-        info!(
-            ticker = ticker,
-            strategy = "from_end_mmap",
-            records_found = data.len(),
-            duration_ms = duration.as_millis(),
-            throughput_mb_s = if duration.as_millis() > 0 {
-                (file_size / (1024 * 1024)) * 1000 / duration.as_millis() as usize
-            } else {
-                0
-            },
-            "Memory-mapped read completed"
-        );
+
+        // Only log major tickers completion
+        if MAJOR_TICKERS.contains(&ticker) {
+            info!(
+                ticker = ticker,
+                strategy = "from_end_mmap",
+                records_found = data.len(),
+                duration_ms = duration.as_millis(),
+                throughput_mb_s = if duration.as_millis() > 0 {
+                    (file_size / (1024 * 1024)) * 1000 / duration.as_millis() as usize
+                } else {
+                    0
+                },
+                "Memory-mapped read completed"
+            );
+        }
 
         Ok(data)
     }
