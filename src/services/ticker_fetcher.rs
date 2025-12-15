@@ -91,7 +91,7 @@ impl TickerFetcher {
 
             if !file_path.exists() {
                 if should_print {
-                    println!("   📄 {} - File does not exist: {:?}", ticker, file_path);
+                    println!("   📄 {} [FULL] - File does not exist: {:?}", ticker, file_path);
                 }
                 category.full_history_tickers.push(ticker.clone());
             } else {
@@ -137,9 +137,9 @@ impl TickerFetcher {
                                 // Gap small enough for batch resume (or partial history disabled)
                                 if should_print {
                                     if disable_partial && days_gap > gap_threshold_days {
-                                        println!("   📄 {} - Resume from: {} ({} days gap, PARTIAL_HISTORY_DISABLED)", ticker, last_date, days_gap);
+                                        println!("   📄 {} [RESUME] - Resume from: {} ({} days gap, PARTIAL_HISTORY_DISABLED)", ticker, last_date, days_gap);
                                     } else {
-                                        println!("   📄 {} - Resume from: {}", ticker, last_date);
+                                        println!("   📄 {} [RESUME] - Resume from: {}", ticker, last_date);
                                     }
                                 }
                                 category.resume_tickers.push((ticker.clone(), last_date));
@@ -147,7 +147,7 @@ impl TickerFetcher {
                         } else {
                             // Can't parse date, default to resume
                             if should_print {
-                                println!("   📄 {} - Resume from: {}", ticker, last_date);
+                                println!("   📄 {} [RESUME] - Resume from: {} (can't parse date)", ticker, last_date);
                             }
                             category.resume_tickers.push((ticker.clone(), last_date));
                         }
@@ -155,14 +155,14 @@ impl TickerFetcher {
                     Ok(None) => {
                         // File exists but no valid data - need full history
                         if should_print {
-                            println!("   📄 {} - File exists but no valid data found: {:?}", ticker, file_path);
+                            println!("   📄 {} [FULL] - File exists but no valid data: {:?}", ticker, file_path);
                         }
                         category.full_history_tickers.push(ticker.clone());
                     }
                     Err(e) => {
                         // Error reading file - need full history
                         if should_print {
-                            println!("   📄 {} - Error reading file: {} - {:?}", ticker, e, file_path);
+                            println!("   📄 {} [FULL] - Error reading file: {} - {:?}", ticker, e, file_path);
                         }
                         category.full_history_tickers.push(ticker.clone());
                     }
@@ -368,10 +368,8 @@ impl TickerFetcher {
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
         println!(
-            "   - Downloading full history from {} to {} using VCI [{}]...",
-            start_date,
-            end_date,
-            interval.to_vci_format()
+            "   - {} [FULL]: Downloading full history from {} to {} using VCI [{}]...",
+            ticker, start_date, end_date, interval.to_vci_format()
         );
 
         match interval {
