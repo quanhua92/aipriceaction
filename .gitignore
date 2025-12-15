@@ -96,3 +96,4 @@ scripts/crypto/node_modules
 references/
 market_data.tar.gz
 crypto_data.tar.gz
+*.db
