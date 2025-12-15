@@ -325,6 +325,29 @@ impl DataStore {
         Ok(())
     }
 
+    /// Load only recent data for fast startup (128 days for daily, background workers will load full history)
+    pub async fn load_startup_data(&self, intervals: Vec<Interval>, skip_intervals: Option<Vec<Interval>>) -> Result<(), Error> {
+        for interval in intervals {
+            // Skip if interval is in skip_intervals
+            if let Some(ref skip) = skip_intervals {
+                if skip.contains(&interval) {
+                    println!("⏭️  Skipping {} loading - background worker will handle it", interval.to_filename());
+                    continue;
+                }
+            }
+
+            // Load only 128 days for fast startup, background workers will load full ~1500 days
+            let startup_limit = match interval {
+                Interval::Daily => 128, // Fast startup: ~4 months of data
+                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
+                _ => 300, // For hourly, reasonable startup amount
+            };
+            self.load_interval(interval, None, Some(startup_limit)).await?;
+        }
+
+        Ok(())
+    }
+
     /// Quick check data integrity after loading
     /// Verifies all tickers have data for the last 10 trading days (based on VNINDEX)
     pub async fn quick_check_data(&self) -> Result<(), Error> {
