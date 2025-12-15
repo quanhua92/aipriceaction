@@ -1,15 +1,17 @@
 //! CSV Enhancement Service
 //!
 //! Enhances raw OHLCV data with technical indicators in-memory,
-//! producing enhanced CSV files with 11 columns including:
-//! - Moving averages (MA10, MA20, MA50)
-//! - MA scores (percentage deviation from MA)
-//! - Close changed and volume changed (percentage change from previous row)
+//! producing enhanced CSV files with 20 columns including:
+//! - Moving averages (MA10, MA20, MA50, MA100, MA200)
+//! - MA scores (percentage deviation from each MA)
+//! - Close changed, volume changed, total_money_changed
+//! - Optional SQLite sync for real-time database updates
 
 use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
+use crate::services::sqlite_updater::{SQLiteUpdater, SQLiteUpdaterConfig};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
 use chrono::DateTime;
 use csv::Writer;
@@ -17,6 +19,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::time::{Duration, Instant};
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use tracing::{info, warn, error};
 
 /// Format price with adaptive precision based on magnitude
 /// This is crucial for small-priced cryptocurrencies like BONK (~0.000012)
@@ -634,5 +637,149 @@ fn process_single_ticker(
         write_time,
     })
     // ticker_data and enhanced_map are dropped here, freeing memory
+}
+
+/// Enhance CSV interval and sync to SQLite database
+/// This is the main function to be used by workers for dual-backend support
+pub async fn enhance_interval_with_sqlite(
+    interval: Interval,
+    market_data_dir: &Path,
+    tickers_filter: Option<&[String]>,
+) -> Result<EnhancementStats, Error> {
+    let _start_time = Instant::now();
+
+    // Step 1: Perform CSV enhancement (existing functionality)
+    let enhancement_stats = enhance_interval_filtered(interval, market_data_dir, tickers_filter)?;
+
+    // Step 2: Sync enhanced CSV files to SQLite (new functionality)
+    if let Err(e) = sync_enhanced_csvs_to_sqlite(interval, market_data_dir, tickers_filter).await {
+        warn!(
+            interval = %interval,
+            error = %e,
+            "CSV enhancement completed, but SQLite sync failed"
+        );
+        // Don't fail the entire operation if SQLite sync fails
+        // Workers can continue functioning with CSV backend
+    } else {
+        info!(
+            interval = %interval,
+            duration_secs = enhancement_stats.duration.as_secs_f64(),
+            "CSV enhancement and SQLite sync completed successfully"
+        );
+    }
+
+    Ok(enhancement_stats)
+}
+
+/// Sync enhanced CSV files to SQLite database
+async fn sync_enhanced_csvs_to_sqlite(
+    interval: Interval,
+    market_data_dir: &Path,
+    tickers_filter: Option<&[String]>,
+) -> Result<(), Error> {
+    // Determine database path based on market_data_dir
+    let db_path = if market_data_dir.to_string_lossy().contains("crypto") {
+        market_data_dir.parent()
+            .unwrap_or(market_data_dir)
+            .join("crypto_data.db")
+    } else {
+        market_data_dir.join("..").join("market_data.db")
+    };
+
+    // Check if database exists, skip sync if not
+    if !db_path.exists() {
+        info!(
+            db_path = %db_path.display(),
+            "SQLite database not found, skipping sync (background migration will handle it)"
+        );
+        return Ok(());
+    }
+
+    // Create SQLite updater config
+    let config = SQLiteUpdaterConfig {
+        database_path: db_path,
+        csv_directories: vec![market_data_dir.to_path_buf()],
+        enable_realtime_sync: false, // We'll do manual sync
+    };
+
+    // Initialize SQLite updater
+    let sqlite_updater = SQLiteUpdater::new(config).await
+        .map_err(|e| Error::Other(format!("Failed to initialize SQLite updater: {}", e)))?;
+
+    // Scan for ticker directories
+    let entries: Vec<_> = std::fs::read_dir(market_data_dir)
+        .map_err(|e| Error::Io(format!("Failed to read market_data directory: {}", e)))?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            if !e.path().is_dir() {
+                return false;
+            }
+            // If filter is specified, only process tickers in the filter list
+            if let Some(filter) = tickers_filter {
+                if let Some(ticker_name) = e.path().file_name().and_then(|n| n.to_str()) {
+                    return filter.contains(&ticker_name.to_string());
+                }
+                return false;
+            }
+            true
+        })
+        .collect();
+
+    if entries.is_empty() {
+        warn!("No ticker directories found for SQLite sync");
+        return Ok(());
+    }
+
+    let mut synced_files = 0;
+    let mut sync_errors = 0;
+
+    // Sync each ticker's CSV file for the given interval
+    for entry in entries {
+        let ticker_path = entry.path();
+        if let Some(ticker_name) = ticker_path.file_name().and_then(|n| n.to_str()) {
+            let csv_filename = interval.to_filename();
+            let csv_path = ticker_path.join(csv_filename);
+
+            if csv_path.exists() {
+                match sqlite_updater.sync_file(&csv_path).await {
+                    Ok(records_synced) => {
+                        info!(
+                            ticker = ticker_name,
+                            interval = %interval,
+                            records = records_synced,
+                            "Synced CSV to SQLite"
+                        );
+                        synced_files += 1;
+                    }
+                    Err(e) => {
+                        error!(
+                            ticker = ticker_name,
+                            interval = %interval,
+                            error = %e,
+                            "Failed to sync CSV to SQLite"
+                        );
+                        sync_errors += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    info!(
+        interval = %interval,
+        synced_files = synced_files,
+        sync_errors = sync_errors,
+        "SQLite sync completed"
+    );
+
+    if sync_errors > 0 {
+        warn!(
+            interval = %interval,
+            sync_errors = sync_errors,
+            "Some CSV files failed to sync to SQLite"
+        );
+    }
+
+    Ok(())
 }
 

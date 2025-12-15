@@ -440,7 +440,7 @@ async fn sync_and_enhance(
             symbols.len()
         );
 
-        match csv_enhancer::enhance_interval_filtered(interval, crypto_data_dir, Some(symbols)) {
+        match csv_enhancer::enhance_interval_with_sqlite(interval, crypto_data_dir, Some(symbols)).await {
             Ok(stats) => {
                 info!(
                     worker = "Crypto",
@@ -450,7 +450,7 @@ async fn sync_and_enhance(
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Enhancement completed"
+                    "CSV enhancement and SQLite sync completed"
                 );
             }
             Err(e) => {
@@ -460,7 +460,7 @@ async fn sync_and_enhance(
                     tier = tier,
                     interval = interval_name,
                     error = %e,
-                    "Enhancement failed"
+                    "CSV enhancement/SQLite sync failed"
                 );
             }
         }

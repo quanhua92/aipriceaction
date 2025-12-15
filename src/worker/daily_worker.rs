@@ -80,20 +80,20 @@ pub async fn run(health_stats: SharedHealthStats) {
             }
         };
 
-        // Step 2: Enhance CSV files with technical indicators
-        info!(iteration = iteration_count, "Daily worker: Enhancing CSV");
-        match csv_enhancer::enhance_interval(Interval::Daily, &market_data_dir) {
+        // Step 2: Enhance CSV files with technical indicators and sync to SQLite
+        info!(iteration = iteration_count, "Daily worker: Enhancing CSV and syncing to SQLite");
+        match csv_enhancer::enhance_interval_with_sqlite(Interval::Daily, &market_data_dir, None).await {
             Ok(stats) => {
                 info!(
                     iteration = iteration_count,
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Daily worker: Enhancement completed"
+                    "Daily worker: CSV enhancement and SQLite sync completed"
                 );
             }
             Err(e) => {
-                warn!(iteration = iteration_count, error = %e, "Daily worker: Enhancement failed");
+                warn!(iteration = iteration_count, error = %e, "Daily worker: CSV enhancement/SQLite sync failed");
             }
         }
 

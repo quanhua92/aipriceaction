@@ -123,9 +123,9 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
         // Write log entry for this interval
         write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, interval);
 
-        // Step 2: Enhance CSV files
-        info!(worker = interval_name, iteration = iteration_count, "Enhancing CSV");
-        match csv_enhancer::enhance_interval(interval, &market_data_dir) {
+        // Step 2: Enhance CSV files and sync to SQLite
+        info!(worker = interval_name, iteration = iteration_count, "Enhancing CSV and syncing to SQLite");
+        match csv_enhancer::enhance_interval_with_sqlite(interval, &market_data_dir, None).await {
             Ok(stats) => {
                 info!(
                     worker = interval_name,
@@ -133,7 +133,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Enhancement completed"
+                    "CSV enhancement and SQLite sync completed"
                 );
             }
             Err(e) => {
@@ -141,7 +141,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                     worker = interval_name,
                     iteration = iteration_count,
                     error = %e,
-                    "Enhancement failed"
+                    "CSV enhancement/SQLite sync failed"
                 );
             }
         }
