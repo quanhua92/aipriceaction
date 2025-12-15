@@ -102,7 +102,6 @@ pub async fn run(health_stats: SharedHealthStats) {
             let mut health = health_stats.write().await;
             health.daily_last_sync = Some(Utc::now().to_rfc3339());
             health.daily_iteration_count = iteration_count;
-            health.is_trading_hours = is_trading;
         }
 
         let loop_duration = loop_start.elapsed();

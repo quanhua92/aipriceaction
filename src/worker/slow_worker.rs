@@ -159,7 +159,6 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                 Interval::Daily => {} // shouldn't happen
             }
             health.slow_iteration_count = iteration_count;
-            health.is_trading_hours = is_trading;
         }
 
         let loop_duration = loop_start.elapsed();

@@ -1,57 +1,21 @@
+use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO};
 use crate::error::Error;
-use crate::models::{Interval, AggregatedInterval, StockData};
+use crate::models::{Interval, StockData, AggregatedInterval};
+use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
 use crate::services::database::SQLiteDatabaseStore;
 use crate::services::migration::{CsvToSqliteMigration, MigrationConfig};
 use tracing::{debug, info, warn, error};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::SystemTime;
+use std::io::{Read, Seek};
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
+use memmap2::Mmap;
 use std::env;
-
-/// Memory management constants
-pub const MAX_MEMORY_MB: usize = 4096; // 4GB limit
-pub const MAX_MEMORY_BYTES: usize = MAX_MEMORY_MB * 1024 * 1024;
-pub const DATA_RETENTION_RECORDS: usize = 1500; // Keep last 1500 records per ticker per interval
-pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute records (1.5 days) to support aggregated intervals
-pub const CACHE_TTL_SECONDS: i64 = 300; // 5 minutes TTL for memory cache
-pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
-
-/// Health statistics for the data store
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct HealthStats {
-    pub daily_last_sync: Option<String>,
-    pub hourly_last_sync: Option<String>,
-    pub minute_last_sync: Option<String>,
-    pub crypto_last_sync: Option<String>,
-    pub daily_iteration_count: u64,
-    pub slow_iteration_count: u64,
-    pub crypto_iteration_count: u64,
-    pub uptime_secs: u64,
-    pub current_system_time: String,
-}
-
-impl Default for HealthStats {
-    fn default() -> Self {
-        Self {
-            daily_last_sync: None,
-            hourly_last_sync: None,
-            minute_last_sync: None,
-            crypto_last_sync: None,
-            daily_iteration_count: 0,
-            slow_iteration_count: 0,
-            crypto_iteration_count: 0,
-            uptime_secs: 0,
-            current_system_time: Utc::now().to_rfc3339(),
-        }
-    }
-}
-
-pub type SharedDataStore = Arc<DataStore>;
-pub type SharedHealthStats = Arc<RwLock<HealthStats>>;
 
 #[derive(Debug, Clone)]
 pub enum DataStoreBackend {
@@ -312,117 +276,11 @@ impl DataStore {
     /// CSV fallback implementation
     async fn get_data_csv_fallback(
         &self,
-        params: QueryParameters,
+        _params: QueryParameters,
     ) -> HashMap<String, Vec<StockData>> {
-        // For now, return empty data - in production this would read from CSV files
-        warn!("CSV fallback: returning empty data ({} tickers, {} interval)",
-               params.tickers.len(), params.interval);
+        // For now, return empty data
+        warn!("CSV fallback not implemented yet");
         HashMap::new()
-    }
-
-    /// Load startup data for specified intervals
-    pub async fn load_startup_data(&self, intervals: Vec<Interval>, skip_intervals: Option<Vec<Interval>>) -> Result<(), Error> {
-        for interval in intervals {
-            // Skip if interval is in skip_intervals
-            if let Some(ref skip) = skip_intervals {
-                if skip.contains(&interval) {
-                    info!("⏭️  Skipping {} loading - background worker will handle it", interval.to_filename());
-                    continue;
-                }
-            }
-
-            // Load only limited data for fast startup
-            let startup_limit = match interval {
-                Interval::Daily => 128, // Fast startup: ~4 months of data
-                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
-                _ => 300, // For hourly, reasonable startup amount
-            };
-
-            info!("Loading {} with {} records limit", interval.to_filename(), startup_limit);
-        }
-        Ok(())
-    }
-
-    /// Get record counts for statistics
-    pub async fn get_record_counts(&self) -> (usize, usize, usize) {
-        // Return default counts for now
-        (0, 0, 0)
-    }
-
-    /// Get active ticker count
-    pub async fn get_active_ticker_count(&self) -> usize {
-        // Return default count for now
-        0
-    }
-
-    /// Estimate memory usage
-    pub fn estimate_memory_usage(&self) -> usize {
-        // Return default estimate for now
-        0
-    }
-}
-
-/// Public function to estimate memory usage for compatibility
-pub fn estimate_memory_usage() -> usize {
-    // Return default estimate for now
-    0
-}
-
-impl DataStore {
-    /// Spawn auto-reload task for an interval
-    pub async fn spawn_auto_reload_task(&self, interval: Interval) -> JoinHandle<()> {
-        tokio::spawn(async move {
-            info!("Auto-reload task started for {} interval", interval.to_filename());
-            tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
-            info!("Auto-reload task completed for {} interval", interval.to_filename());
-        })
-    }
-
-    /// Get cache statistics
-    pub async fn get_cache_stats(&self) -> (usize, f64) {
-        // Return default cache stats for now
-        (0, 0.0)
-    }
-
-    /// Get data with cache (alias for get_data_smart for compatibility)
-    pub async fn get_data_with_cache(
-        &self,
-        tickers: Vec<String>,
-        interval: Interval,
-        start_date: Option<DateTime<Utc>>,
-        end_date: Option<DateTime<Utc>>,
-        limit: Option<usize>,
-        use_cache: bool,
-    ) -> HashMap<String, Vec<StockData>> {
-        let params = QueryParameters::new(
-            tickers,
-            interval,
-            None, // aggregated_interval
-            start_date,
-            end_date,
-            limit,
-            use_cache,
-            false, // legacy_prices
-        );
-        self.get_data_smart(params).await
-    }
-
-    /// Clear cache
-    pub async fn clear_cache(&self) -> Result<(), Error> {
-        info!("Clearing cache");
-        Ok(())
-    }
-
-    /// Get all ticker names (placeholder implementation)
-    pub async fn get_all_ticker_names(&self) -> Vec<String> {
-        // Return empty for now - in real implementation this would scan the data directory
-        vec![]
-    }
-
-    /// Get disk cache stats (placeholder implementation)
-    pub async fn get_disk_cache_stats(&self) -> (usize, usize, usize) {
-        // Return (entries, size_bytes, limit_bytes)
-        (0, 0, 500 * 1024 * 1024) // 0 entries, 0 bytes, 500MB limit
     }
 }
 

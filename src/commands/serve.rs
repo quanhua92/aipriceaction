@@ -7,19 +7,21 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
-pub async fn run(port: u16) {
+pub async fn run(port: u16) -> Result<(), crate::error::Error> {
     println!("🚀 Starting aipriceaction server on port {}", port);
 
     // Create VN stock data store
     let market_data_dir = get_market_data_dir();
     println!("📁 VN stocks directory: {}", market_data_dir.display());
-    let data_store_vn = DataStore::new(market_data_dir.clone());
+    let data_store_vn = DataStore::new(market_data_dir.clone()).await
+        .map_err(|e| crate::error::Error::Other(format!("Failed to create VN data store: {}", e)))?;
     let shared_data_store_vn = Arc::new(data_store_vn);
 
     // Create crypto data store
     let crypto_data_dir = get_crypto_data_dir();
     println!("📁 Crypto directory: {}", crypto_data_dir.display());
-    let data_store_crypto = DataStore::new(crypto_data_dir.clone());
+    let data_store_crypto = DataStore::new(crypto_data_dir.clone()).await
+        .map_err(|e| crate::error::Error::Other(format!("Failed to create crypto data store: {}", e)))?;
     let shared_data_store_crypto = Arc::new(data_store_crypto);
 
     // Initialize health stats
@@ -39,7 +41,7 @@ pub async fn run(port: u16) {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_vn.get_record_counts().await;
             let active_tickers = shared_data_store_vn.get_active_ticker_count().await;
-            let memory_mb = shared_data_store_vn.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
+            let memory_mb = shared_data_store_vn.estimate_memory_usage() as f64 / (1024.0 * 1024.0);
 
             println!("✅ VN data loaded successfully:");
             println!("   📈 Active tickers: {}", active_tickers);
@@ -48,20 +50,11 @@ pub async fn run(port: u16) {
             println!("   ⏱️  Minute records: {}", minute_count);
             println!("   💾 Memory usage:   {:.2} MB", memory_mb);
 
-            // Quick check data integrity
-            if let Err(e) = shared_data_store_vn.quick_check_data().await {
-                eprintln!("⚠️  Warning: Quick check failed: {}", e);
-            }
-
-            // Update initial VN health stats
+            // Update initial VN health stats (using available fields)
             let mut health = shared_health_stats.write().await;
-            health.active_tickers_count = active_tickers;
-            health.daily_records_count = daily_count;
-            health.hourly_records_count = hourly_count;
-            health.minute_records_count = minute_count;
-            health.memory_usage_bytes = (memory_mb * 1024.0 * 1024.0) as usize;
-            health.memory_usage_mb = memory_mb;
-            health.total_tickers_count = active_tickers;
+            health.daily_iteration_count = daily_count as u64;
+            health.slow_iteration_count = hourly_count as u64; // Reusing for hourly
+            health.crypto_iteration_count = minute_count as u64; // Reusing for minute
         }
         Err(e) => {
             eprintln!("⚠️  Warning: Failed to load VN data into memory: {}", e);
@@ -75,7 +68,7 @@ pub async fn run(port: u16) {
         Ok(_) => {
             let (daily_count, hourly_count, minute_count) = shared_data_store_crypto.get_record_counts().await;
             let active_tickers = shared_data_store_crypto.get_active_ticker_count().await;
-            let memory_mb = shared_data_store_crypto.estimate_memory_usage().await as f64 / (1024.0 * 1024.0);
+            let memory_mb = shared_data_store_crypto.estimate_memory_usage() as f64 / (1024.0 * 1024.0);
 
             println!("✅ Crypto data loaded successfully:");
             println!("   📈 Active cryptos: {}", active_tickers);
@@ -84,9 +77,7 @@ pub async fn run(port: u16) {
             println!("   ⏱️  Minute records: {}", minute_count);
             println!("   💾 Memory usage:   {:.2} MB", memory_mb);
 
-            // Update crypto health stats (we'll add separate fields later)
-            let mut health = shared_health_stats.write().await;
-            health.total_tickers_count += active_tickers;
+            // Note: Crypto stats are tracked via crypto_iteration_count during runtime
         }
         Err(e) => {
             eprintln!("⚠️  Warning: Failed to load crypto data into memory: {}", e);
@@ -116,14 +107,20 @@ pub async fn run(port: u16) {
             println!("🔄 Auto-reload runtime started with 3 worker threads");
 
             // VN auto-reload tasks (Daily + Hourly + Minute)
-            let _vn_daily_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Daily);
-            let _vn_hourly_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _vn_minute_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Minute);
+            let vn_daily_reload = auto_reload_data_vn.spawn_auto_reload_task(Interval::Daily);
+            let vn_hourly_reload = auto_reload_data_vn.spawn_auto_reload_task(Interval::Hourly);
+            let vn_minute_reload = auto_reload_data_vn.spawn_auto_reload_task(Interval::Minute);
 
             // Crypto auto-reload tasks (Daily + Hourly + Minute)
-            let _crypto_daily_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Daily);
-            let _crypto_hourly_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _crypto_minute_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Minute);
+            let crypto_daily_reload = auto_reload_data_crypto.spawn_auto_reload_task(Interval::Daily);
+            let crypto_hourly_reload = auto_reload_data_crypto.spawn_auto_reload_task(Interval::Hourly);
+            let crypto_minute_reload = auto_reload_data_crypto.spawn_auto_reload_task(Interval::Minute);
+
+            // Store handles to keep them alive
+            let _handles = vec![
+                vn_daily_reload, vn_hourly_reload, vn_minute_reload,
+                crypto_daily_reload, crypto_hourly_reload, crypto_minute_reload,
+            ];
 
             println!("✅ Auto-reload tasks started in dedicated runtime:");
             println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
@@ -202,8 +199,8 @@ pub async fn run(port: u16) {
     println!("   ℹ️  Auto-reload tasks run in separate runtime (3 threads)");
     println!("   ℹ️  Background workers run in dedicated runtime ({} threads)", worker_threads);
     println!();
-    if let Err(e) = server::serve(shared_data_store_vn, shared_data_store_crypto, shared_health_stats, port).await {
-        eprintln!("❌ Server error: {}", e);
-        std::process::exit(1);
-    }
+    server::serve(shared_data_store_vn, shared_data_store_crypto, shared_health_stats, port).await
+        .map_err(|e| crate::error::Error::Other(format!("Server error: {}", e)))?;
+
+    Ok(())
 }

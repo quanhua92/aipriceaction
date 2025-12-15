@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::mpsc;
 use tracing::{info, warn, error, debug};
-use crate::models::{StockData, Interval};
+use crate::models::Interval;
 use crate::error::AppError;
 use crate::services::database::{SQLiteDatabaseStore, database_exists};
 use crate::services::sqlite_updater::SQLiteUpdater;
@@ -217,7 +216,6 @@ impl CsvToSqliteMigration {
         // Check if this is an enhanced CSV with technical indicators
         let is_enhanced = headers.len() >= 20; // 20 columns for enhanced CSV
 
-        let mut stock_data: Vec<StockData> = Vec::new();
         let mut records_processed = 0;
 
         // Process CSV records in batches

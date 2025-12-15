@@ -1,6 +1,7 @@
 use sqlx::{sqlite::SqliteConnectOptions, Row, SqlitePool};
 use std::path::PathBuf;
 use std::time::Duration;
+use chrono::{DateTime, Utc};
 use crate::models::{StockData, Interval};
 use crate::services::data_store::QueryParameters;
 use crate::error::AppError;
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use tracing::info;
 
 /// SQLite database for market data storage
+#[derive(Debug)]
 pub struct SQLiteDatabaseStore {
     pool: SqlitePool,
     database_path: PathBuf,
@@ -243,6 +245,26 @@ impl SQLiteDatabaseStore {
             .fetch_one(&self.pool)
             .await?;
         Ok(result)
+    }
+
+    /// Check if database has recent data after the specified date
+    pub async fn has_recent_data(&self, since: DateTime<Utc>) -> Result<bool, sqlx::Error> {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM market_data WHERE timestamp > ?")
+            .bind(since.naive_utc())
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(count > 0)
+    }
+
+    /// Check if database has data for a specific ticker
+    pub async fn has_ticker_data(&self, ticker: &str) -> Result<bool, sqlx::Error> {
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM market_data WHERE ticker = ?")
+            .bind(ticker)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(count > 0)
     }
 
     /// Get count of records by ticker and interval

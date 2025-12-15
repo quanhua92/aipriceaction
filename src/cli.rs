@@ -164,7 +164,10 @@ pub fn run() {
             // Serve needs async runtime - create one just for this command
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
-                commands::serve::run(port).await;
+                if let Err(e) = commands::serve::run(port).await {
+                    eprintln!("❌ Serve command failed: {}", e);
+                    std::process::exit(1);
+                }
             });
         }
         Commands::Status => {

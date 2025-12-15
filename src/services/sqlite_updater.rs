@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{info, error, warn, debug};
 use notify::{Watcher, RecursiveMode, Event, EventKind, RecommendedWatcher};
 use tokio::sync::mpsc;
@@ -8,7 +7,6 @@ use crate::models::StockData;
 use crate::models::Interval;
 use crate::error::AppError;
 use crate::services::database::{SQLiteDatabaseStore, database_exists};
-use std::collections::HashMap;
 
 /// SQLite updater for real-time CSV synchronization
 pub struct SQLiteUpdater {
