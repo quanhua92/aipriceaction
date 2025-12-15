@@ -10,11 +10,13 @@ use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
+use crate::services::data_store::{DataUpdateMessage, DataMode};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use csv::Writer;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 use std::io::{BufRead, BufReader, Seek, SeekFrom};
 
@@ -128,14 +130,33 @@ pub fn enhance_data(
 /// - For existing files: truncate to cutoff_date, then append new data
 /// - For new files: create with all data
 /// - Uses file locking to prevent race conditions
+/// - Optionally sends data through MPSC channel for real-time cache updates
 pub fn save_enhanced_csv(
     ticker: &str,
     data: &[StockData],
     interval: Interval,
     cutoff_date: DateTime<chrono::Utc>,
     rewrite_all: bool,
+    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    mode: DataMode,
 ) -> Result<(), Error> {
-    save_enhanced_csv_to_dir(ticker, data, interval, cutoff_date, rewrite_all, &get_market_data_dir())
+    save_enhanced_csv_to_dir(ticker, data, interval, cutoff_date, rewrite_all, &get_market_data_dir(), channel_sender, mode)
+}
+
+/// Backward-compatible wrapper for save_enhanced_csv (no channel support)
+pub fn save_enhanced_csv_legacy(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+) -> Result<(), Error> {
+    let mode = if get_market_data_dir().to_string_lossy().contains("crypto_data") {
+        DataMode::Crypto
+    } else {
+        DataMode::VN
+    };
+    save_enhanced_csv(ticker, data, interval, cutoff_date, rewrite_all, None, mode)
 }
 
 /// Save enhanced CSV to a specific directory (for crypto_data support)
@@ -146,6 +167,8 @@ pub fn save_enhanced_csv_to_dir(
     cutoff_date: DateTime<chrono::Utc>,
     rewrite_all: bool,
     base_dir: &Path,
+    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    mode: DataMode,
 ) -> Result<(), Error> {
     if data.is_empty() {
         return Err(Error::InvalidInput("No data to save".to_string()));
@@ -327,7 +350,56 @@ pub fn save_enhanced_csv_to_dir(
         }
     }
 
+      // Send data through channel for real-time memory cache update (if channel provided)
+    if let Some(sender) = channel_sender {
+        let message = DataUpdateMessage::Single {
+            ticker: ticker.to_string(),
+            data: data.to_vec(), // Send ALL data including buffer
+            interval,
+            mode,
+            timestamp: Utc::now(),
+        };
+
+        // Non-blocking send - if channel is full or disconnected, just log and continue
+        match sender.send(message) {
+            Ok(()) => {
+                tracing::debug!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    records = data.len(),
+                    "[MPSC] Sent data update via channel"
+                );
+            }
+            Err(e) => {
+                // Channel is disconnected or full - log but don't fail the CSV write
+                tracing::warn!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    error = %e,
+                    "[MPSC] Failed to send data update via channel (channel disconnected or full)"
+                );
+            }
+        }
+    }
+
     Ok(())
+}
+
+/// Backward-compatible wrapper for save_enhanced_csv_to_dir (no channel support)
+pub fn save_enhanced_csv_to_dir_legacy(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+    base_dir: &Path,
+) -> Result<(), Error> {
+    let mode = if base_dir.to_string_lossy().contains("crypto_data") {
+        DataMode::Crypto
+    } else {
+        DataMode::VN
+    };
+    save_enhanced_csv_to_dir(ticker, data, interval, cutoff_date, rewrite_all, base_dir, None, mode)
 }
 
 /// Write a single StockData row to CSV (20 columns)
@@ -382,10 +454,14 @@ fn parse_time(time_str: &str) -> Result<DateTime<chrono::Utc>, Error> {
 /// * `interval` - The interval to enhance (Daily, Hourly, Minute)
 /// * `market_data_dir` - The directory containing ticker subdirectories
 /// * `tickers_filter` - Optional list of tickers to process. If None, processes all tickers in directory.
+/// * `channel_sender` - Optional MPSC channel sender for real-time cache updates
+/// * `mode` - Data mode (VN or Crypto)
 pub fn enhance_interval_filtered(
     interval: Interval,
     market_data_dir: &Path,
     tickers_filter: Option<&[String]>,
+    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    mode: DataMode,
 ) -> Result<EnhancementStats, Error> {
     let start_time = Instant::now();
 
@@ -444,7 +520,7 @@ pub fn enhance_interval_filtered(
         }
 
         // Process single ticker: Load → Enhance → Write → Free memory
-        match process_single_ticker(ticker, interval, market_data_dir, cutoff_date) {
+        match process_single_ticker(ticker, interval, market_data_dir, cutoff_date, channel_sender, mode) {
             Ok(stats) => {
                 ticker_count += 1;
                 total_records += stats.records;
@@ -486,7 +562,12 @@ pub fn enhance_interval(
     interval: Interval,
     market_data_dir: &Path,
 ) -> Result<EnhancementStats, Error> {
-    enhance_interval_filtered(interval, market_data_dir, None)
+    let mode = if market_data_dir.to_string_lossy().contains("crypto_data") {
+        DataMode::Crypto
+    } else {
+        DataMode::VN
+    };
+    enhance_interval_filtered(interval, market_data_dir, None, None, mode)
 }
 
 /// Statistics for single ticker processing
@@ -504,6 +585,8 @@ fn process_single_ticker(
     interval: Interval,
     market_data_dir: &Path,
     _cutoff_date: DateTime<chrono::Utc>, // Unused - we calculate per-ticker cutoff
+    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    mode: DataMode,
 ) -> Result<TickerStats, Error> {
     let ticker_dir = market_data_dir.join(ticker);
     let csv_path = ticker_dir.join(interval.to_filename());
@@ -619,7 +702,7 @@ fn process_single_ticker(
     // Step 4: Write enhanced CSV with proper cutoff
     let write_start = Instant::now();
 
-    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, false, market_data_dir)?;
+    save_enhanced_csv_to_dir(ticker, enhanced_data, interval, proper_cutoff_date, false, market_data_dir, channel_sender, mode)?;
     let write_time = write_start.elapsed();
 
     // Step 4: Get file size for stats

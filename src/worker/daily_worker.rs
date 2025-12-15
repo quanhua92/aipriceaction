@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::services::data_store::{DataUpdateMessage, DataMode};
 use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
 use std::time::Duration;
@@ -12,10 +13,13 @@ use tracing::{info, warn, error, instrument};
 const TRADING_INTERVAL_SECS: u64 = 15;
 const NON_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
 
-#[instrument(skip(health_stats))]
-pub async fn run(health_stats: SharedHealthStats) {
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+) {
     info!(
-        "Starting daily worker - Trading hours: {}s, Non-trading hours: {}s",
+        "[DAILY] Starting daily worker - Trading hours: {}s, Non-trading hours: {}s",
         TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS
     );
 
@@ -30,7 +34,7 @@ pub async fn run(health_stats: SharedHealthStats) {
         info!(
             iteration = iteration_count,
             is_trading_hours = is_trading,
-            "Daily worker: Starting sync"
+            "[DAILY] Starting sync"
         );
 
         // Step 0: Validate and repair CSV files (corruption recovery)
@@ -40,20 +44,20 @@ pub async fn run(health_stats: SharedHealthStats) {
                     warn!(
                         iteration = iteration_count,
                         corrupted_count = reports.len(),
-                        "Daily worker: Found and repaired corrupted CSV files"
+                        "[DAILY] Found and repaired corrupted CSV files"
                     );
                     for report in &reports {
                         warn!(
                             iteration = iteration_count,
                             ticker = %report.ticker,
                             removed_lines = report.removed_lines,
-                            "Daily worker: Repaired corrupted file"
+                            "[DAILY] Repaired corrupted file"
                         );
                     }
                 }
             }
             Err(e) => {
-                warn!(iteration = iteration_count, error = %e, "Daily worker: Validation failed");
+                warn!(iteration = iteration_count, error = %e, "[DAILY] Validation failed");
             }
         }
 
@@ -65,11 +69,11 @@ pub async fn run(health_stats: SharedHealthStats) {
 
         let (sync_success, stats) = match sync_result {
             Ok(s) => {
-                info!(iteration = iteration_count, "Daily worker: Sync completed");
+                info!(iteration = iteration_count, "[DAILY] Sync completed");
                 (true, s)
             }
             Err(e) => {
-                error!(iteration = iteration_count, error = %e, "Daily worker: Sync failed");
+                error!(iteration = iteration_count, error = %e, "[DAILY] Sync failed");
                 // Continue to next iteration even if sync fails
                 let sync_interval = get_sync_interval(
                     Duration::from_secs(TRADING_INTERVAL_SECS),
@@ -81,19 +85,19 @@ pub async fn run(health_stats: SharedHealthStats) {
         };
 
         // Step 2: Enhance CSV files with technical indicators
-        info!(iteration = iteration_count, "Daily worker: Enhancing CSV");
-        match csv_enhancer::enhance_interval(Interval::Daily, &market_data_dir) {
+        info!(iteration = iteration_count, "[DAILY] Enhancing CSV");
+        match csv_enhancer::enhance_interval_filtered(Interval::Daily, &market_data_dir, None, channel_sender.as_ref(), DataMode::VN) {
             Ok(stats) => {
                 info!(
                     iteration = iteration_count,
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Daily worker: Enhancement completed"
+                    "[DAILY] Enhancement completed"
                 );
             }
             Err(e) => {
-                warn!(iteration = iteration_count, error = %e, "Daily worker: Enhancement failed");
+                warn!(iteration = iteration_count, error = %e, "[DAILY] Enhancement failed");
             }
         }
 
@@ -118,7 +122,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             loop_duration_secs = loop_duration.as_secs_f64(),
             next_sync_secs = sync_interval.as_secs(),
             is_trading_hours = is_trading,
-            "Daily worker: Iteration completed"
+            "[DAILY] Iteration completed"
         );
 
         // Write compact log entry

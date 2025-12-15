@@ -14,6 +14,33 @@ use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use memmap2::Mmap;
 
+/// Data mode for distinguishing between markets
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DataMode {
+    VN,
+    Crypto,
+}
+
+/// Message for sending data updates from workers to auto-reload tasks
+#[derive(Debug, Clone)]
+pub enum DataUpdateMessage {
+    /// Batch update for multiple tickers (most efficient)
+    Batch {
+        ticker_data: HashMap<String, Vec<StockData>>,
+        interval: Interval,
+        mode: DataMode,
+        timestamp: DateTime<Utc>,
+    },
+    /// Single ticker update (for small changes)
+    Single {
+        ticker: String,
+        data: Vec<StockData>,
+        interval: Interval,
+        mode: DataMode,
+        timestamp: DateTime<Utc>,
+    },
+}
+
 #[derive(Debug)]
 enum ReadingStrategy {
     FromEnd { limit: usize },
@@ -337,12 +364,135 @@ impl DataStore {
             }
 
             // Load only 128 days for fast startup, background workers will load full ~1500 days
+            // Use FromEnd strategy to get most recent data, not FromStart
             let startup_limit = match interval {
-                Interval::Daily => 128, // Fast startup: ~4 months of data
+                Interval::Daily => 128, // Fast startup: ~4 months of most recent data
                 Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
                 _ => 300, // For hourly, reasonable startup amount
             };
-            self.load_interval(interval, None, Some(startup_limit)).await?;
+
+            // Force reading from the end to get most recent data
+            self.load_interval_from_end(interval, Some(startup_limit)).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Load data for a specific interval from CSV files, forcing FromEnd strategy for most recent data
+    async fn load_interval_from_end(&self, interval: Interval, limit: Option<usize>) -> Result<(), Error> {
+        // Step 1: Read all CSV files WITHOUT holding any locks
+        // This prevents file I/O from blocking API requests
+        let mut data = HashMap::new();
+        let mut files_read = 0;
+        let mut files_skipped = 0;
+
+        // Read all ticker directories
+        let entries = std::fs::read_dir(&self.market_data_dir)
+            .map_err(|e| Error::Io(format!("Failed to read market_data dir: {}", e)))?;
+
+        for entry in entries {
+            let entry = entry.map_err(|e| Error::Io(format!("Failed to read entry: {}", e)))?;
+            let ticker_dir = entry.path();
+
+            if !ticker_dir.is_dir() {
+                continue;
+            }
+
+            let ticker = ticker_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or_else(|| Error::Io("Invalid ticker directory name".to_string()))?
+                .to_string();
+
+            let csv_path = ticker_dir.join(interval.to_filename());
+            if !csv_path.exists() {
+                continue;
+            }
+
+            // Always read for startup data loading (no mtime check needed for startup)
+            // Log before starting CSV read
+            let file_size = csv_path.metadata().map(|m| m.len()).unwrap_or(0);
+            tracing::debug!(
+                ticker = ticker,
+                csv_path = ?csv_path,
+                file_size_bytes = file_size,
+                "Starting startup CSV file read from END"
+            );
+
+            // Read and parse CSV using FromEnd strategy (blocking I/O happens here, NO locks held)
+            match self.read_csv_file(&csv_path, &ticker, interval, None, None, limit) {
+                Ok(mut ticker_data) => {
+                    tracing::debug!(
+                        ticker = ticker,
+                        records_read = ticker_data.len(),
+                        "Successfully read CSV file from END"
+                    );
+
+                    if !ticker_data.is_empty() {
+                        // Ensure we have the most recent data by sorting and taking from the end
+                        if let Some(max_records) = limit {
+                            if ticker_data.len() > max_records {
+                                // Sort descending by time (newest first) and keep first N records
+                                ticker_data.sort_by(|a, b| b.time.cmp(&a.time));
+                                ticker_data.truncate(max_records);
+                                // Sort back to ascending order for consistency
+                                ticker_data.sort_by(|a, b| a.time.cmp(&b.time));
+                            }
+                        }
+                        data.insert(ticker.clone(), ticker_data);
+                        files_read += 1;
+                    }
+                }
+                Err(e) => {
+                    tracing::error!(
+                        ticker = ticker,
+                        interval = ?interval,
+                        csv_path = ?csv_path,
+                        error = %e,
+                        "Failed to read CSV file from END"
+                    );
+                    continue;
+                }
+            }
+        }
+
+        tracing::info!(
+            "Startup load from END {} completed: {} files read",
+            interval.to_filename(),
+            files_read
+        );
+
+        // Step 2: Acquire write lock ONLY to update in-memory cache (fast operation)
+        // File I/O is complete, so this lock is held very briefly
+        let loaded_tickers: Vec<String> = {
+            let mut store = self.data.write().await;
+            let mut loaded = Vec::new();
+            for (ticker, ticker_data) in data {
+                loaded.push(ticker.clone());
+                store.entry(ticker)
+                    .or_insert_with(HashMap::new)
+                    .insert(interval, ticker_data);
+            }
+            loaded
+        }; // Write lock released immediately
+
+        // Step 3: Update modification times for loaded files
+        {
+            let mut mtimes = self.file_mtimes.write().await;
+            for ticker in &loaded_tickers {
+                let csv_path = self.market_data_dir.join(ticker).join(interval.to_filename());
+                if let Ok(metadata) = std::fs::metadata(&csv_path) {
+                    if let Ok(mtime) = metadata.modified() {
+                        mtimes.insert((ticker.clone(), interval), mtime);
+                    }
+                }
+            }
+        }
+
+        // Step 4: Update cache timestamp (separate lock, also fast)
+        {
+            let mut cache_last_updated = self.cache_last_updated.write().await;
+            *cache_last_updated = Utc::now();
         }
 
         Ok(())
@@ -1680,6 +1830,13 @@ impl DataStore {
 
             // Filter by date range
             let filtered = if start_date.is_some() || end_date.is_some() {
+                tracing::debug!(
+                    "[DEBUG] Filtering {} records for ticker {}: start_date={:?}, end_date={:?}",
+                    data.len(),
+                    ticker,
+                    start_date,
+                    end_date
+                );
                 data.into_iter()
                     .filter(|d| {
                         if let Some(start) = start_date {
@@ -1696,6 +1853,11 @@ impl DataStore {
                     })
                     .collect()
             } else {
+                tracing::debug!(
+                    "[DEBUG] No date filtering for ticker {}: returning all {} records",
+                    ticker,
+                    data.len()
+                );
                 data
             };
 
@@ -1934,6 +2096,250 @@ impl DataStore {
         let mut cache_last_updated = self.cache_last_updated.write().await;
         *cache_last_updated = Utc::now();
     }
+
+    /// Direct memory cache update (no CSV reading) - for MPSC channel integration
+    /// This bypasses CSV reading and directly updates the in-memory cache
+    pub async fn update_memory_cache(
+        &self,
+        message: DataUpdateMessage,
+    ) -> Result<(), Error> {
+        // Extract timestamp before moving message
+        let timestamp = match &message {
+            DataUpdateMessage::Batch { timestamp, .. } => *timestamp,
+            DataUpdateMessage::Single { timestamp, .. } => *timestamp,
+        };
+
+        let (mode, interval) = match &message {
+            DataUpdateMessage::Batch { mode, interval, .. } => (*mode, *interval),
+            DataUpdateMessage::Single { mode, interval, .. } => (*mode, *interval),
+        };
+
+        debug!(
+            "[MPSC] 🔵 [RECEIVER] Processing DataUpdateMessage: mode={:?}, interval={:?}, timestamp={}",
+            mode, interval, timestamp
+        );
+
+        // Acquire write lock on data
+        let mut data = self.data.write().await;
+
+        match message {
+            DataUpdateMessage::Batch { ticker_data, interval, .. } => {
+                debug!(
+                    "[MPSC] 🟢 [BATCH] Processing {} tickers for interval={:?}",
+                    ticker_data.len(), interval
+                );
+                // Batch update multiple tickers
+                for (ticker, stock_data) in ticker_data {
+                    let stock_data_len = stock_data.len();
+                    debug!(
+                        "[MPSC] 🟢 [BATCH] Updating ticker={} with {} records (interval: {:?})",
+                        ticker, stock_data_len, interval
+                    );
+
+                    // Apply retention limit
+                    let limited_data = self.apply_retention_limit(stock_data, interval);
+                    let limited_len = limited_data.len();
+
+                    debug!(
+                        "[MPSC] 🟢 [BATCH] After retention limit: {} -> {} records (ticker: {})",
+                        stock_data_len, limited_len, ticker
+                    );
+
+                    // Update or create ticker entry
+                    let intervals = data.entry(ticker.clone()).or_insert_with(HashMap::new);
+
+                    // MERGE with existing data instead of overwriting
+                    if let Some(existing_data) = intervals.get_mut(&interval) {
+                        let existing_len = existing_data.len();
+                        debug!(
+                            "[MPSC] 🟢 [BATCH] MERGING with existing data: ticker={}, existing={}, new={}",
+                            ticker, existing_len, limited_len
+                        );
+                        // Merge: find overlapping timestamps and replace, add new ones
+                        merge_stock_data(existing_data, limited_data);
+                        let final_len = existing_data.len();
+
+                        // DEBUG: Timestamp debugging to see final data range after merge
+                        if !existing_data.is_empty() {
+                            let first_time = existing_data.first().map(|d| &d.time);
+                            let last_time = existing_data.last().map(|d| &d.time);
+                            info!(
+                                "[MPSC] 🎯 {} BATCH FINAL: {} → {} (count: {})",
+                                ticker,
+                                first_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                                last_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                                existing_data.len()
+                            );
+                        }
+
+                        debug!(
+                            "[MPSC] 🟢 [BATCH] FINAL after merge: ticker={}, records={} (added={})",
+                            ticker, final_len, final_len.saturating_sub(existing_len)
+                        );
+                    } else {
+                        debug!(
+                            "[MPSC] 🟢 [BATCH] INSERTING new data: ticker={}, records={}",
+                            ticker, limited_len
+                        );
+                        // No existing data, just insert
+                        intervals.insert(interval, limited_data);
+                    }
+                }
+            }
+            DataUpdateMessage::Single { ticker, data: stock_data, interval, .. } => {
+                let stock_data_len = stock_data.len();
+                debug!(
+                    "[MPSC] 🔶 [SINGLE] Updating ticker={} with {} records (interval: {:?})",
+                    ticker, stock_data_len, interval
+                );
+                // Single ticker update
+                // Apply retention limit
+                let limited_data = self.apply_retention_limit(stock_data, interval);
+                let limited_len = limited_data.len();
+
+                debug!(
+                    "[MPSC] 🔶 [SINGLE] After retention limit: {} -> {} records (ticker: {})",
+                    stock_data_len, limited_len, ticker
+                );
+
+                // DEBUG: Timestamp debugging to see what data we're actually keeping
+                if !limited_data.is_empty() {
+                    let first_time = limited_data.first().map(|d| &d.time);
+                    let last_time = limited_data.last().map(|d| &d.time);
+                    info!(
+                        "[MPSC] 🚨 {} NEW: {} → {} (count: {})",
+                        ticker,
+                        first_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                        last_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                        limited_len
+                    );
+                }
+
+                // DEBUG: Compact timestamp check - why no 2025-12-15 data?
+                if !limited_data.is_empty() {
+                    let first_time = limited_data.first().map(|d| &d.time);
+                    let last_time = limited_data.last().map(|d| &d.time);
+                    info!(
+                        "[MPSC] 🚨 {} NEW: {} → {} (count: {})",
+                        ticker,
+                        first_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                        last_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                        limited_len
+                    );
+                }
+
+                // Update or create ticker entry
+                let intervals = data.entry(ticker.clone()).or_insert_with(HashMap::new);
+
+                // MERGE with existing data instead of overwriting
+                if let Some(existing_data) = intervals.get_mut(&interval) {
+                    let existing_len = existing_data.len();
+
+                    // DEBUG: Compact existing cache timestamp check
+                    if !existing_data.is_empty() {
+                        let first_time = existing_data.first().map(|d| &d.time);
+                        let last_time = existing_data.last().map(|d| &d.time);
+                        info!(
+                            "[MPSC] 💾 {} CACHE: {} → {} (count: {})",
+                            ticker,
+                            first_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                            last_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                            existing_len
+                        );
+                    }
+
+                    debug!(
+                        "[MPSC] 🔶 [SINGLE] MERGING with existing data: ticker={}, existing={}, new={}",
+                        ticker, existing_len, limited_len
+                    );
+                    // Merge: find overlapping timestamps and replace, add new ones
+                    merge_stock_data(existing_data, limited_data);
+                    let final_len = existing_data.len();
+
+                    // DEBUG: Timestamp debugging to see final data range after merge
+                    if !existing_data.is_empty() {
+                        let first_time = existing_data.first().map(|d| &d.time);
+                        let last_time = existing_data.last().map(|d| &d.time);
+                        info!(
+                            "[MPSC] 🎯 {} SINGLE FINAL: {} → {} (count: {})",
+                            ticker,
+                            first_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                            last_time.map(|t| t.to_string()).unwrap_or_else(|| "?".to_string()),
+                            existing_data.len()
+                        );
+                    }
+
+                    debug!(
+                        "[MPSC] 🔶 [SINGLE] FINAL after merge: ticker={}, records={} (added={})",
+                        ticker, final_len, final_len.saturating_sub(existing_len)
+                    );
+                } else {
+                    debug!(
+                        "[MPSC] 🔶 [SINGLE] INSERTING new data: ticker={}, records={}",
+                        ticker, limited_len
+                    );
+                    // No existing data, just insert
+                    intervals.insert(interval, limited_data);
+                }
+            }
+        }
+
+        // Update cache timestamp to mark as fresh
+        let mut cache_last_updated = self.cache_last_updated.write().await;
+        *cache_last_updated = timestamp;
+
+        debug!(
+            "[MPSC] ✅ [SUCCESS] Memory cache updated successfully for mode={:?}, interval={:?}",
+            mode, interval
+        );
+        Ok(())
+    }
+
+    /// Apply retention limit to stock data based on interval
+    fn apply_retention_limit(&self, mut data: Vec<StockData>, interval: Interval) -> Vec<StockData> {
+        let retention_limit = match interval {
+            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
+            _ => DATA_RETENTION_RECORDS,
+        };
+
+        if data.len() > retention_limit {
+            // Sort by time (oldest first) then keep only the most recent records
+            data.sort_by_key(|d| d.time);
+            // FIXED: Keep most recent records, not oldest
+            let start_idx = data.len() - retention_limit;
+            data = data.split_off(start_idx);
+        }
+
+        data
+    }
+}
+
+/// Merge new stock data with existing data, replacing overlapping entries
+fn merge_stock_data(existing: &mut Vec<StockData>, new_data: Vec<StockData>) {
+    use std::collections::HashMap;
+
+    // Create a map of timestamps to new data for O(1) lookup
+    let new_map: HashMap<chrono::DateTime<chrono::Utc>, StockData> =
+        new_data.into_iter().map(|d| (d.time, d)).collect();
+
+    // Replace overlapping entries and add new ones
+    for item in existing.iter_mut() {
+        if let Some(new_item) = new_map.get(&item.time) {
+            *item = new_item.clone();
+        }
+    }
+
+    // Add new entries that didn't exist before
+    let existing_times: std::collections::HashSet<_> =
+        existing.iter().map(|d| d.time).collect();
+    for (time, new_item) in new_map {
+        if !existing_times.contains(&time) {
+            existing.push(new_item);
+        }
+    }
+
+    // Sort by time to maintain order
+    existing.sort_by_key(|d| d.time);
 }
 
 /// Estimate memory usage of in-memory data

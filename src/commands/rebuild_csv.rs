@@ -6,7 +6,7 @@
 
 use crate::error::Error;
 use crate::models::Interval;
-use crate::services::{csv_enhancer::{enhance_data, save_enhanced_csv_to_dir}, OhlcvData};
+use crate::services::{csv_enhancer::{enhance_data, save_enhanced_csv_to_dir_legacy}, OhlcvData};
 use crate::utils::{get_market_data_dir, get_crypto_data_dir, parse_timestamp, deduplicate_ohlcv_by_time};
 use chrono::DateTime;
 use std::collections::HashMap;
@@ -204,7 +204,7 @@ fn rebuild_single_csv(
     // Use a cutoff date far in the past to rewrite entire file (removes all duplicates)
     // This ensures all historical duplicates are removed
     let cutoff_date = chrono::Utc::now() - chrono::Duration::days(365 * 50); // 50 years ago
-    save_enhanced_csv_to_dir(ticker, enhanced_ticker_data, interval, cutoff_date, true, data_dir)?;
+    save_enhanced_csv_to_dir_legacy(ticker, enhanced_ticker_data, interval, cutoff_date, true, data_dir)?;
 
     stats.files_rebuilt += 1;
     stats.records_enhanced += enhanced_ticker_data.len();

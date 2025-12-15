@@ -1,5 +1,5 @@
 use crate::models::Interval;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_legacy};
 use crate::services::vci::OhlcvData;
 use crate::utils::parse_timestamp;
 use chrono::{DateTime, Utc};
@@ -93,7 +93,7 @@ pub fn parse_daily_csv(input_path: &Path) -> Result<usize, Box<dyn std::error::E
         let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
 
         if let Some(stock_data) = enhanced.get(&ticker_name) {
-            save_enhanced_csv(&ticker_name, stock_data, Interval::Daily, cutoff_date, false)?;
+            save_enhanced_csv_legacy(&ticker_name, stock_data, Interval::Daily, cutoff_date, false)?;
         }
     }
 
@@ -168,7 +168,7 @@ pub fn parse_intraday_csv(
         let cutoff_date = Utc::now() - chrono::Duration::days(36500); // ~100 years ago
 
         if let Some(stock_data) = enhanced.get(&ticker_name) {
-            save_enhanced_csv(&ticker_name, stock_data, interval, cutoff_date, false)?;
+            save_enhanced_csv_legacy(&ticker_name, stock_data, interval, cutoff_date, false)?;
         }
     }
 

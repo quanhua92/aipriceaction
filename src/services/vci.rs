@@ -319,8 +319,7 @@ impl VciClient {
 
         let response_data = self.make_request(&url, &payload).await?;
 
-        // Log raw VCI response for debugging
-        tracing::debug!("VCI API raw response for {}: {}", symbol, serde_json::to_string(&response_data).unwrap_or_else(|_| "invalid json".to_string()));
+        // VCI API response received for {}
 
         if !response_data.is_array() || response_data.as_array().unwrap().is_empty() {
             return Err(VciError::NoData);

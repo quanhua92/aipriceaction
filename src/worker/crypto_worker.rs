@@ -2,6 +2,7 @@ use crate::constants::IGNORED_CRYPTOS;
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, load_crypto_symbols, get_default_crypto_list_path};
 use crate::services::{CryptoSync, SharedHealthStats, csv_enhancer};
+use crate::services::data_store::{DataMode, DataUpdateMessage};
 use crate::utils::{get_crypto_data_dir, write_with_rotation, get_concurrent_batches};
 use crate::worker::crypto_sync_info::{CryptoSyncInfo, get_crypto_sync_info_path};
 use chrono::Utc;
@@ -22,34 +23,37 @@ const LOOP_CHECK_INTERVAL_SECS: u64 = 900; // 15 minutes
 const PROXY_SYNC_INTERVAL_SECS: u64 = 300; // 5 minutes for all intervals
 const PROXY_LOOP_CHECK_INTERVAL_SECS: u64 = 300; // 5 minutes
 
-#[instrument(skip(health_stats))]
-pub async fn run(health_stats: SharedHealthStats) {
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+) {
     // Check crypto data source configuration
     let target_url = std::env::var("CRYPTO_WORKER_TARGET_URL").ok();
     let target_host = std::env::var("CRYPTO_WORKER_TARGET_HOST").ok();
 
     info!(
-        "Starting crypto worker with two-tier sync strategy"
+        "[CRYPTO] Starting crypto worker with two-tier sync strategy"
     );
 
     // Log data source configuration
     if let Some(ref url) = target_url {
         info!(
-            "  - Data Source: Alternative API ({})",
+            "[CRYPTO]   - Data Source: Alternative API ({})",
             url
         );
         if let Some(ref host) = target_host {
             info!(
-                "  - Host Header: {}",
+                "[CRYPTO]   - Host Header: {}",
                 host
             );
         }
         info!(
-            "  - Fallback: None (fail-fast, skip crypto on error)"
+            "[CRYPTO]   - Fallback: None (fail-fast, skip crypto on error)"
         );
     } else {
         info!(
-            "  - Data Source: CryptoCompare API (default)"
+            "[CRYPTO]   - Data Source: CryptoCompare API (default)"
         );
     }
 
@@ -62,16 +66,16 @@ pub async fn run(health_stats: SharedHealthStats) {
     };
 
     info!(
-        "  - Priority cryptos: {} (every {}s)",
+        "[CRYPTO]   - Priority cryptos: {} (every {}s)",
         PRIORITY_CRYPTOS.join(", "), loop_interval
     );
     if is_proxy_mode {
-        info!("  - Regular cryptos: all intervals every {}s (proxy mode)", PROXY_SYNC_INTERVAL_SECS);
+        info!("[CRYPTO]   - Regular cryptos: all intervals every {}s (proxy mode)", PROXY_SYNC_INTERVAL_SECS);
     } else {
-        info!("  - Regular cryptos: Daily=1h, Hourly=3h, Minute=6h (CryptoCompare mode)");
+        info!("[CRYPTO]   - Regular cryptos: Daily=1h, Hourly=3h, Minute=6h (CryptoCompare mode)");
     }
     info!(
-        "  - Main loop interval: {}s",
+        "[CRYPTO]   - Main loop interval: {}s",
         loop_interval
     );
 
@@ -81,20 +85,20 @@ pub async fn run(health_stats: SharedHealthStats) {
     // Load sync info from disk (persists across restarts)
     // For proxy mode, start fresh to sync immediately
     let mut sync_info = if is_proxy_mode {
-        info!("Proxy mode: starting fresh sync info for immediate sync");
+        info!("[CRYPTO] Proxy mode: starting fresh sync info for immediate sync");
         CryptoSyncInfo::default()
     } else {
         CryptoSyncInfo::load(&info_path)
     };
 
     info!(
-        "Loaded sync info: iteration={}, last_syncs: priority_daily={:?}, regular_daily={:?}",
+        "[CRYPTO] Loaded sync info: iteration={}, last_syncs: priority_daily={:?}, regular_daily={:?}",
         sync_info.iteration_count,
         sync_info.priority_daily_last_sync,
         sync_info.regular_daily_last_sync
     );
 
-    info!("Crypto worker started");
+    info!("[CRYPTO] Crypto worker started");
 
     loop {
         sync_info.increment_iteration();
@@ -103,7 +107,7 @@ pub async fn run(health_stats: SharedHealthStats) {
         info!(
             worker = "Crypto",
             iteration = sync_info.iteration_count,
-            "Starting crypto sync cycle"
+            "[CRYPTO] Starting crypto sync cycle"
         );
 
         // Load crypto symbols
@@ -120,7 +124,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                         iteration = sync_info.iteration_count,
                         ignored_count = ignored_count,
                         ignored_symbols = ?IGNORED_CRYPTOS,
-                        "Filtered ignored cryptos"
+                        "[CRYPTO] Filtered ignored cryptos"
                     );
                 }
 
@@ -141,7 +145,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     iteration = sync_info.iteration_count,
                     priority_count = priority.len(),
                     regular_count = regular.len(),
-                    "Loaded and categorized crypto symbols"
+                    "[CRYPTO] Loaded and categorized crypto symbols"
                 );
 
                 (priority, regular)
@@ -151,7 +155,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
                     error = %e,
-                    "Failed to load crypto symbols, skipping iteration"
+                    "[CRYPTO] Failed to load crypto symbols, skipping iteration"
                 );
                 sleep(Duration::from_secs(LOOP_CHECK_INTERVAL_SECS)).await;
                 continue;
@@ -165,7 +169,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             info!(
                 worker = "Crypto",
                 iteration = sync_info.iteration_count,
-                "Checking priority cryptos: {}",
+                "[CRYPTO] Checking priority cryptos: {}",
                 PRIORITY_CRYPTOS.join(", ")
             );
 
@@ -177,6 +181,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
                 if success {
                     sync_info.update_priority_daily();
@@ -193,6 +198,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
                 if success {
                     sync_info.update_priority_hourly();
@@ -209,6 +215,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
                 if success {
                     sync_info.update_priority_minute();
@@ -225,7 +232,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Daily"
+                    "[CRYPTO] Syncing regular cryptos: Daily"
                 );
 
                 let success = sync_and_enhance(
@@ -234,6 +241,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
 
                 if success {
@@ -248,7 +256,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Hourly"
+                    "[CRYPTO] Syncing regular cryptos: Hourly"
                 );
 
                 let success = sync_and_enhance(
@@ -257,6 +265,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
 
                 if success {
@@ -271,7 +280,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                 info!(
                     worker = "Crypto",
                     iteration = sync_info.iteration_count,
-                    "Syncing regular cryptos: Minute"
+                    "[CRYPTO] Syncing regular cryptos: Minute"
                 );
 
                 let success = sync_and_enhance(
@@ -280,6 +289,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
+                    channel_sender.clone(),
                 ).await;
 
                 if success {
@@ -296,7 +306,7 @@ pub async fn run(health_stats: SharedHealthStats) {
                 worker = "Crypto",
                 iteration = sync_info.iteration_count,
                 error = %e,
-                "Failed to save sync info to disk"
+                "[CRYPTO] Failed to save sync info to disk"
             );
         }
 
@@ -315,7 +325,7 @@ pub async fn run(health_stats: SharedHealthStats) {
             loop_duration_secs = loop_duration.as_secs_f64(),
             next_check_secs = loop_interval,
             all_successful = all_intervals_successful,
-            "Iteration completed, sync info saved to disk"
+            "[CRYPTO] Iteration completed, sync info saved to disk"
         );
 
         sleep(Duration::from_secs(loop_interval)).await;
@@ -329,6 +339,7 @@ async fn sync_and_enhance(
     iteration: u64,
     tier: &str,
     crypto_data_dir: &std::path::PathBuf,
+    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
 ) -> bool {
     let interval_name = match interval {
         Interval::Daily => "Daily",
@@ -342,7 +353,7 @@ async fn sync_and_enhance(
         tier = tier,
         interval = interval_name,
         crypto_count = symbols.len(),
-        "Starting interval sync"
+        "[CRYPTO] Starting interval sync"
     );
 
     // Step 0: Pre-check (only in ApiProxy mode)
@@ -358,7 +369,7 @@ async fn sync_and_enhance(
                         tier = tier,
                         interval = interval_name,
                         crypto_count = symbols.len(),
-                        "Pre-check: all cryptos unchanged, skipping sync and enhancement"
+                        "[CRYPTO] Pre-check: all cryptos unchanged, skipping sync and enhancement"
                     );
                     return true; // Skip sync, return success
                 }
@@ -368,7 +379,7 @@ async fn sync_and_enhance(
                         iteration = iteration,
                         tier = tier,
                         interval = interval_name,
-                        "Pre-check: data changed or not applicable, proceeding with sync"
+                        "[CRYPTO] Pre-check: data changed or not applicable, proceeding with sync"
                     );
                 }
                 Err(e) => {
@@ -378,7 +389,7 @@ async fn sync_and_enhance(
                         tier = tier,
                         interval = interval_name,
                         error = %e,
-                        "Pre-check failed, proceeding with sync anyway"
+                        "[CRYPTO] Pre-check failed, proceeding with sync anyway"
                     );
                 }
             }
@@ -390,7 +401,7 @@ async fn sync_and_enhance(
                 tier = tier,
                 interval = interval_name,
                 error = %e,
-                "Failed to create fetcher for pre-check, proceeding with sync anyway"
+                "[CRYPTO] Failed to create fetcher for pre-check, proceeding with sync anyway"
             );
         }
     }
@@ -409,7 +420,7 @@ async fn sync_and_enhance(
                 tier = tier,
                 interval = interval_name,
                 duration_secs = sync_duration,
-                "Sync completed"
+                "[CRYPTO] Sync completed"
             );
             true
         }
@@ -420,7 +431,7 @@ async fn sync_and_enhance(
                 tier = tier,
                 interval = interval_name,
                 error = %e,
-                "Sync failed"
+                "[CRYPTO] Sync failed"
             );
             false
         }
@@ -436,11 +447,11 @@ async fn sync_and_enhance(
             iteration = iteration,
             tier = tier,
             interval = interval_name,
-            "Enhancing CSV (filtered to {} symbols)",
+            "[CRYPTO] Enhancing CSV (filtered to {} symbols)",
             symbols.len()
         );
 
-        match csv_enhancer::enhance_interval_filtered(interval, crypto_data_dir, Some(symbols)) {
+        match csv_enhancer::enhance_interval_filtered(interval, crypto_data_dir, Some(symbols), channel_sender.as_ref(), DataMode::Crypto) {
             Ok(stats) => {
                 info!(
                     worker = "Crypto",
@@ -450,7 +461,7 @@ async fn sync_and_enhance(
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Enhancement completed"
+                    "[CRYPTO] Enhancement completed"
                 );
             }
             Err(e) => {
@@ -460,7 +471,7 @@ async fn sync_and_enhance(
                     tier = tier,
                     interval = interval_name,
                     error = %e,
-                    "Enhancement failed"
+                    "[CRYPTO] Enhancement failed"
                 );
             }
         }

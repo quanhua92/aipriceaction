@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_legacy};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -652,7 +652,7 @@ impl DataSync {
         // Save enhanced data to CSV with smart cutoff strategy and file locking
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
-            save_enhanced_csv(ticker, stock_data, interval, cutoff_date, false)?;
+            save_enhanced_csv_legacy(ticker, stock_data, interval, cutoff_date, false)?;
         }
 
         Ok(())

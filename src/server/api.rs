@@ -367,6 +367,15 @@ async fn parse_query_parameters(
         None => data_state.get_all_ticker_names().await, // All tickers
     };
 
+    // DEBUG: Log the parsed parameters
+    tracing::debug!(
+        "[DEBUG] parse_query_parameters: start_date={:?}, end_date={:?}, symbols={:?}, limit={:?}",
+        start_date_filter,
+        end_date_filter,
+        symbols_to_query,
+        params.limit
+    );
+
     // Create QueryParameters with all the logic
     Ok(QueryParameters::new(
         symbols_to_query,

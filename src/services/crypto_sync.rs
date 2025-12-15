@@ -2,7 +2,7 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, SyncStats};
 use crate::services::crypto_fetcher::CryptoFetcher;
 use crate::services::vci::OhlcvData;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir_legacy};
 use crate::utils::get_crypto_data_dir;
 use chrono::Utc;
 use std::collections::HashMap;
@@ -536,7 +536,7 @@ impl CryptoSync {
             .ok_or_else(|| Error::Other("Failed to enhance data".to_string()))?;
 
         // Save with cutoff strategy
-        save_enhanced_csv_to_dir(
+        save_enhanced_csv_to_dir_legacy(
             symbol,
             stock_data,
             interval,

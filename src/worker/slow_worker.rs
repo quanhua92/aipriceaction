@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours};
+use crate::services::data_store::{DataUpdateMessage, DataMode};
 use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
 use std::time::Duration;
@@ -15,30 +16,35 @@ const HOURLY_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
 const MINUTE_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes (trading hours)
 const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
 
-#[instrument(skip(health_stats))]
-pub async fn run(health_stats: SharedHealthStats) {
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+) {
     info!(
-        "Starting slow worker with 2 independent tasks:"
+        "[SLOW] Starting slow worker with 2 independent tasks:"
     );
     info!(
-        "  - Hourly: {}s (trading) / {}s (off-hours)",
+        "[SLOW]   - Hourly: {}s (trading) / {}s (off-hours)",
         HOURLY_TRADING_INTERVAL_SECS, HOURLY_NON_TRADING_INTERVAL_SECS
     );
     info!(
-        "  - Minute: {}s (trading) / {}s (off-hours)",
+        "[SLOW]   - Minute: {}s (trading) / {}s (off-hours)",
         MINUTE_TRADING_INTERVAL_SECS, MINUTE_NON_TRADING_INTERVAL_SECS
     );
 
     // Spawn two independent async tasks
     let health_stats_hourly = health_stats.clone();
     let health_stats_minute = health_stats.clone();
+    let channel_sender_hourly = channel_sender.clone();
+    let channel_sender_minute = channel_sender.clone();
 
     let hourly_task = tokio::spawn(async move {
-        run_interval_worker(Interval::Hourly, health_stats_hourly).await;
+        run_interval_worker(Interval::Hourly, health_stats_hourly, channel_sender_hourly).await;
     });
 
     let minute_task = tokio::spawn(async move {
-        run_interval_worker(Interval::Minute, health_stats_minute).await;
+        run_interval_worker(Interval::Minute, health_stats_minute, channel_sender_minute).await;
     });
 
     // Wait for both tasks (they run forever)
@@ -46,7 +52,11 @@ pub async fn run(health_stats: SharedHealthStats) {
 }
 
 /// Run a worker for a specific interval
-async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats) {
+async fn run_interval_worker(
+    interval: Interval,
+    health_stats: SharedHealthStats,
+    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+) {
     let mut iteration_count = 0u64;
     let market_data_dir = get_market_data_dir();
     let interval_name = match interval {
@@ -55,7 +65,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
         Interval::Daily => "Daily", // shouldn't happen
     };
 
-    info!("{} worker started", interval_name);
+    info!("[SLOW] {} worker started", interval_name);
 
     loop {
         iteration_count += 1;
@@ -95,7 +105,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                     worker = interval_name,
                     iteration = iteration_count,
                     error = %e,
-                    "Validation failed"
+                    "[SLOW] Validation failed"
                 );
             }
         }
@@ -108,11 +118,11 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
 
         let (sync_success, stats) = match sync_result {
             Ok(s) => {
-                info!(worker = interval_name, iteration = iteration_count, "Sync completed");
+                info!(worker = interval_name, iteration = iteration_count, "[SLOW] Sync completed");
                 (true, s)
             }
             Err(e) => {
-                error!(worker = interval_name, iteration = iteration_count, error = %e, "Sync failed");
+                error!(worker = interval_name, iteration = iteration_count, error = %e, "[SLOW] Sync failed");
                 // Continue to next iteration on failure
                 let sync_interval = get_interval_duration(interval, is_trading);
                 sleep(sync_interval).await;
@@ -124,8 +134,8 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
         write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, interval);
 
         // Step 2: Enhance CSV files
-        info!(worker = interval_name, iteration = iteration_count, "Enhancing CSV");
-        match csv_enhancer::enhance_interval(interval, &market_data_dir) {
+        info!(worker = interval_name, iteration = iteration_count, "[SLOW] Enhancing CSV");
+        match csv_enhancer::enhance_interval_filtered(interval, &market_data_dir, None, channel_sender.as_ref(), DataMode::VN) {
             Ok(stats) => {
                 info!(
                     worker = interval_name,
@@ -133,7 +143,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                     tickers = stats.tickers,
                     records = stats.records,
                     duration_secs = stats.duration.as_secs_f64(),
-                    "Enhancement completed"
+                    "[SLOW] Enhancement completed"
                 );
             }
             Err(e) => {
@@ -141,7 +151,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
                     worker = interval_name,
                     iteration = iteration_count,
                     error = %e,
-                    "Enhancement failed"
+                    "[SLOW] Enhancement failed"
                 );
             }
         }
@@ -173,7 +183,7 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
             loop_duration_secs = loop_duration.as_secs_f64(),
             next_sync_secs = sync_interval.as_secs(),
             is_trading_hours = is_trading,
-            "Iteration completed"
+            "[SLOW] Iteration completed"
         );
 
         // Sleep for remaining time
