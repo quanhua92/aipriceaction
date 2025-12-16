@@ -684,11 +684,19 @@ impl DataSync {
                 self.channel_sender.clone(),
             )?;
 
+            // Log concise change type without full record details
+            let change_summary = match &change_type {
+                crate::services::mpsc::ChangeType::NoChange => "NoChange".to_string(),
+                crate::services::mpsc::ChangeType::NewRecords { records } => format!("NewRecords({})", records.len()),
+                crate::services::mpsc::ChangeType::Truncated { from_record, new_records } => format!("Truncated(from:{}, new:{})", from_record, new_records.len()),
+                crate::services::mpsc::ChangeType::FullFile { records } => format!("FullFile({})", records.len()),
+            };
+
             tracing::info!(
                 ticker = ticker,
                 interval = ?interval,
                 record_count = record_count,
-                change_type = ?change_type,
+                change_type = %change_summary,
                 "Enhanced and saved with change detection"
             );
         }
