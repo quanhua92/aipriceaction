@@ -336,7 +336,8 @@ impl DataStore {
             ChangeType::NewRecords { mut records } => {
                 // Append new records and enforce retention
                 let mut cache = self.data.write().await;
-                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                let ticker = cache_key.0.clone(); // Clone to avoid move issue
+                let existing = cache.entry(ticker.clone()).or_insert_with(HashMap::new);
                 let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
 
                 // Remove existing records with same timestamps to avoid duplicates
@@ -364,6 +365,75 @@ impl DataStore {
                     retention_limit = retention_limit,
                     "Applied new records update"
                 );
+
+                // Check if we need to populate more from disk (gap > 500)
+                let current_count = interval_data.len();
+                if retention_limit > 500 {
+                    let gap = retention_limit.saturating_sub(current_count);
+                    println!("[MPSC::POPULATION_CHECK] ticker={}, interval={}, current={}, limit={}, gap={}",
+                             update.ticker, update.interval.to_filename(), current_count, retention_limit, gap);
+                    if gap > 500 {
+                        // Read more records from CSV to fill cache
+                        let csv_path = self.market_data_dir.join(&update.ticker).join(update.interval.to_filename());
+                        println!("[MPSC::POPULATION] Checking CSV: {}", csv_path.display());
+                        if csv_path.exists() {
+                            // Drop write lock temporarily to avoid blocking other operations
+                            drop(cache);
+
+                            match self.read_csv_from_end_mmap(
+                                &csv_path,
+                                &update.ticker,
+                                update.interval,
+                                None,
+                                None,
+                                retention_limit  // Read up to retention_limit records
+                            ) {
+                                Ok(disk_data) => {
+                                    if !disk_data.is_empty() {
+                                        // Re-acquire write lock
+                                        let mut cache = self.data.write().await;
+                                        let existing = cache.entry(ticker).or_insert_with(HashMap::new);
+                                        let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                                        // Create set of existing timestamps for O(1) lookup
+                                        let existing_times: std::collections::HashSet<_> =
+                                            interval_data.iter().map(|d| d.time).collect();
+
+                                        // Add only non-duplicate records from disk
+                                        let mut added_from_disk = 0;
+                                        for record in disk_data {
+                                            if !existing_times.contains(&record.time) {
+                                                interval_data.push(record);
+                                                added_from_disk += 1;
+                                            }
+                                        }
+
+                                        // Sort and apply retention limit
+                                        interval_data.sort_by_key(|d| d.time);
+                                        if interval_data.len() > retention_limit {
+                                            interval_data.truncate(retention_limit);
+                                        }
+
+                                        if added_from_disk > 0 {
+                                            info!(
+                                                "Cache populated from disk: ticker={}, interval={}, added={}, total={}",
+                                                update.ticker, update.interval.to_filename(), added_from_disk, interval_data.len()
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::error!(
+                                        "Failed to read from disk for cache population: ticker={}, error={}",
+                                        update.ticker, e
+                                    );
+                                }
+                            }
+                        } else {
+                            println!("[MPSC::POPULATION] CSV file not found: {}", csv_path.display());
+                        }
+                    }
+                }
             }
             ChangeType::Truncated { from_record, mut new_records } => {
                 // Replace from specific record
