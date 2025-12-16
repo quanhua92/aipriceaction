@@ -14,6 +14,7 @@ pub mod crypto_compare;
 pub mod crypto_api_client;
 pub mod crypto_fetcher;
 pub mod crypto_sync;
+pub mod mpsc;
 
 pub use aggregator::Aggregator;
 pub use importer::import_legacy;
@@ -21,7 +22,7 @@ pub use market_stats::{get_market_stats, get_ticker_info, is_index, MarketStats,
 pub use vci::{VciClient, VciError, OhlcvData, CompanyInfo};
 pub use ticker_fetcher::TickerFetcher;
 pub use data_sync::DataSync;
-pub use csv_enhancer::{enhance_interval, enhance_data, EnhancementStats, save_enhanced_csv_to_dir};
+pub use csv_enhancer::{enhance_interval, enhance_data, EnhancementStats, save_enhanced_csv_to_dir, save_enhanced_csv_to_dir_with_changes, save_enhanced_csv_with_changes};
 pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
 pub use trading_hours::{is_trading_hours, get_sync_interval};
@@ -30,3 +31,4 @@ pub use crypto_compare::{CryptoCompareClient, CryptoError};
 pub use crypto_api_client::AiPriceActionClient;
 pub use crypto_fetcher::{CryptoFetcher, CryptoCategory};
 pub use crypto_sync::CryptoSync;
+pub use mpsc::{TickerUpdate, ChangeType, ChannelManager, create_bounded_channels};

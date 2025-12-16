@@ -10,6 +10,7 @@ use crate::error::Error;
 use crate::models::{Interval, StockData};
 use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
+use crate::services::mpsc::{TickerUpdate, ChangeType};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
 use chrono::DateTime;
 use csv::Writer;
@@ -156,6 +157,10 @@ pub fn save_enhanced_csv_to_dir(
     let mut data_vec: Vec<StockData> = data.to_vec();
     data_vec.sort_by_key(|d| d.time);
     let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+
+    // Check if we should do full rewrite due to duplicates
+    let has_excessive_duplicates = duplicates_removed > 0;
+
     if duplicates_removed > 0 {
         tracing::info!(
             ticker = ticker,
@@ -178,11 +183,25 @@ pub fn save_enhanced_csv_to_dir(
     let file_path = ticker_dir.join(interval.to_filename());
     let file_exists = file_path.exists();
 
-    if !file_exists || rewrite_all {
+    // Force full rewrite if duplicates detected, regardless of rewrite_all parameter
+    let should_rewrite_all = !file_exists || rewrite_all || has_excessive_duplicates;
+
+    if should_rewrite_all {
+        // Log if we're fixing duplicates
+        if has_excessive_duplicates && file_exists {
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                duplicates_found = duplicates_removed,
+                records_after_dedup = data.len(),
+                "[FIX-DUPLICATION] Duplicates detected - performing full rewrite"
+            );
+        }
+
         // New file or rewrite - write directly (no locking needed for new files)
         let file = std::fs::OpenOptions::new()
             .create(true)
-            .truncate(rewrite_all)
+            .truncate(true)  // Always truncate when we decide to rewrite
             .write(true)
             .open(&file_path)
             .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
@@ -204,8 +223,81 @@ pub fn save_enhanced_csv_to_dir(
 
         wtr.flush()
             .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+    } else if has_excessive_duplicates {
+        // File exists AND has duplicates - perform safe full rewrite
+        // This is safer than truncation when we know there are data issues
+
+        // Generate unique processing filename with timestamp
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|e| Error::Io(format!("Failed to get timestamp: {}", e)))?
+            .as_secs();
+
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            file_path.extension().and_then(|s| s.to_str()).unwrap_or("csv"), timestamp));
+
+        // Log the safe full rewrite due to duplicates
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_found = duplicates_removed,
+            records_after_dedup = data.len(),
+            processing_path = ?processing_path,
+            "[SAFE-FULL-REWRITE] Duplicates detected - skipping truncation, rewriting entire file"
+        );
+
+        // Write header and all deduplicated data directly to processing file
+        let enhancement_result = (|| -> Result<(), Error> {
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to create processing file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+
+            // Write 20-column header
+            wtr.write_record(&[
+                "ticker", "time", "open", "high", "low", "close", "volume",
+                "ma10", "ma20", "ma50", "ma100", "ma200",
+                "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                "close_changed", "volume_changed", "total_money_changed"
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+            // Write ALL deduplicated data (no cutoff filtering)
+            for row in data {
+                write_stock_data_row(&mut wtr, row, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush processing CSV: {}", e)))?;
+
+            Ok(())
+        })();
+
+        // Handle result - atomic rename on success, cleanup on failure
+        match enhancement_result {
+            Ok(()) => {
+                // Atomic rename: processing file becomes the new original
+                std::fs::rename(&processing_path, &file_path)
+                    .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
+
+                tracing::debug!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    "Successfully performed safe full rewrite to eliminate duplicates"
+                );
+            }
+            Err(e) => {
+                // Enhancement failed - keep original, remove processing file
+                let _ = std::fs::remove_file(&processing_path);
+                return Err(e);
+            }
+        }
     } else {
-        // File exists - use copy-processing-rename strategy for safe updates
+        // File exists, no duplicates - use copy-processing-rename strategy for incremental updates
 
         // Generate unique processing filename with timestamp
         use std::time::SystemTime;
@@ -328,6 +420,634 @@ pub fn save_enhanced_csv_to_dir(
     }
 
     Ok(())
+}
+
+/// Save enhanced CSV to a specific directory with MPSC change detection and notification
+/// This function detects changes and sends real-time updates through the MPSC channel
+pub async fn save_enhanced_csv_to_dir_with_changes(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+    base_dir: &Path,
+    channel_sender: Option<std::sync::mpsc::SyncSender<TickerUpdate>>,
+) -> Result<(ChangeType, usize), Error> {
+    if data.is_empty() {
+        return Ok((ChangeType::NoChange, 0));
+    }
+
+    // Deduplicate data before writing (favor last occurrence)
+    // Create mutable copy, sort, and deduplicate
+    let mut data_vec: Vec<StockData> = data.to_vec();
+    data_vec.sort_by_key(|d| d.time);
+    let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+
+    // Check if we should do full rewrite due to duplicates
+    let has_excessive_duplicates = duplicates_removed > 0;
+
+    if duplicates_removed > 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_removed = duplicates_removed,
+            records_remaining = data_vec.len(),
+            "Deduplicated StockData before writing CSV with MPSC"
+        );
+    }
+
+    // Use deduplicated data for all writes below
+    let data = &data_vec;
+
+    // Create ticker directory
+    let ticker_dir = base_dir.join(ticker);
+    std::fs::create_dir_all(&ticker_dir)
+        .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+
+    // Get file path
+    let file_path = ticker_dir.join(interval.to_filename());
+    let file_exists = file_path.exists();
+
+    // Force full rewrite if duplicates detected, regardless of rewrite_all parameter
+    let should_rewrite_all = !file_exists || rewrite_all || has_excessive_duplicates;
+
+    let change_type = if should_rewrite_all {
+        // Log if we're fixing duplicates
+        if has_excessive_duplicates && file_exists {
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                duplicates_found = duplicates_removed,
+                records_after_dedup = data.len(),
+                "[FIX-DUPLICATION] Duplicates detected - performing full rewrite with MPSC"
+            );
+        }
+
+        // New file or rewrite - write directly (no locking needed for new files)
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)  // Always truncate when we decide to rewrite
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+
+        // Write header
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        // Write all data
+        for stock_data in data {
+            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
+
+        tracing::debug!(
+            ticker = ticker,
+            interval = ?interval,
+            records = data.len(),
+            "Created new CSV file with {} records",
+            data.len()
+        );
+
+        if rewrite_all {
+            ChangeType::FullFile { records: data.to_vec() }
+        } else {
+            ChangeType::NewRecords { records: data.to_vec() }
+        }
+    } else if has_excessive_duplicates {
+        // File exists AND has duplicates - perform safe full rewrite with MPSC
+        // This is safer than truncation when we know there are data issues
+
+        // Generate unique processing filename with timestamp
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|e| Error::Io(format!("Failed to get timestamp: {}", e)))?
+            .as_secs();
+
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            file_path.extension().and_then(|s| s.to_str()).unwrap_or("csv"), timestamp));
+
+        // Log the safe full rewrite due to duplicates
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_found = duplicates_removed,
+            records_after_dedup = data.len(),
+            processing_path = ?processing_path,
+            "[SAFE-FULL-REWRITE] Duplicates detected - skipping truncation, rewriting entire file with MPSC"
+        );
+
+        // Write header and all deduplicated data directly to processing file
+        let enhancement_result = (|| -> Result<(), Error> {
+            let file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to create processing file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+
+            // Write header
+            wtr.write_record(&[
+                "ticker", "time", "open", "high", "low", "close", "volume",
+                "ma10", "ma20", "ma50", "ma100", "ma200",
+                "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                "close_changed", "volume_changed", "total_money_changed"
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+            // Write ALL deduplicated data (no cutoff filtering)
+            for row in data {
+                write_stock_data_row(&mut wtr, row, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush processing CSV: {}", e)))?;
+
+            Ok(())
+        })();
+
+        // Handle result - atomic rename on success, cleanup on failure
+        match enhancement_result {
+            Ok(()) => {
+                // Atomic rename: processing file becomes the new original
+                std::fs::rename(&processing_path, &file_path)
+                    .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
+
+                tracing::debug!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    "Successfully performed safe full rewrite with MPSC to eliminate duplicates"
+                );
+            }
+            Err(e) => {
+                // Enhancement failed - keep original, remove processing file
+                let _ = std::fs::remove_file(&processing_path);
+                return Err(e);
+            }
+        }
+
+        // All deduplicated data was written, so it's a full file change
+        ChangeType::FullFile { records: data.to_vec() }
+    } else {
+        // Existing file, no duplicates - implement smart cutoff strategy without locking
+        // Read existing data to find cutoff point
+        let mut existing_data: Vec<StockData> = Vec::new();
+        {
+            let mut reader = csv::Reader::from_path(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
+
+            for result in reader.records() {
+                let record = result.map_err(|e| Error::Parse(format!("Failed to parse CSV: {}", e)))?;
+                if record.len() < 7 {
+                    continue; // Skip incomplete records
+                }
+
+                // Parse time
+                let time_str = &record[1];
+                let time = parse_time(time_str)?;
+
+                // Parse OHLCV (last 5 fields)
+                let open: f64 = record[2].parse().map_err(|_| Error::Parse("Invalid open price".to_string()))?;
+                let high: f64 = record[3].parse().map_err(|_| Error::Parse("Invalid high price".to_string()))?;
+                let low: f64 = record[4].parse().map_err(|_| Error::Parse("Invalid low price".to_string()))?;
+                let close: f64 = record[5].parse().map_err(|_| Error::Parse("Invalid close price".to_string()))?;
+                let volume: u64 = record[6].parse().map_err(|_| Error::Parse("Invalid volume".to_string()))?;
+
+                existing_data.push(StockData::new(time, ticker.to_string(), open, high, low, close, volume));
+            }
+        }
+
+        // Find cutoff point in existing data
+        let cutoff_index = existing_data
+            .iter()
+            .position(|d| d.time >= cutoff_date)
+            .unwrap_or(existing_data.len());
+
+        // CRITICAL FIX: Smart deduplication during cutoff
+        // Handle cutoff edge case: if cutoff is at index 0, we need full deduplication
+        let (mut final_data, mut existing_timestamps) = if cutoff_index == 0 && !existing_data.is_empty() {
+            // Edge case: cutoff at first record, need to deduplicate ALL existing data
+            let mut timestamps: std::collections::HashSet<DateTime<chrono::Utc>> = existing_data.iter().map(|d| d.time).collect();
+            let mut deduped: Vec<StockData> = Vec::new();
+            let mut skipped = 0;
+
+            // Process existing data in reverse, keep only latest per timestamp
+            for existing_record in existing_data.iter().rev() {
+                if !timestamps.contains(&existing_record.time) {
+                    deduped.push(existing_record.clone());
+                    timestamps.insert(existing_record.time);
+                } else {
+                    skipped += 1;
+                }
+            }
+
+            deduped.reverse(); // Restore chronological order
+            (deduped, timestamps)
+        } else {
+            // Normal case: use existing data up to cutoff point
+            let existing_prefix = existing_data[..cutoff_index].to_vec();
+            let timestamps: std::collections::HashSet<DateTime<chrono::Utc>> = existing_prefix.iter().map(|d| d.time).collect();
+            (existing_prefix, timestamps)
+        };
+
+        // Helper function to check if a record is enhanced (has MA values)
+        let is_enhanced = |record: &StockData| -> bool {
+            record.ma10.unwrap_or(0.0) > 0.0 || record.ma20.unwrap_or(0.0) > 0.0 || record.ma50.unwrap_or(0.0) > 0.0
+        };
+
+        // Add new records only if timestamp doesn't already exist (favor latest)
+        let mut duplicates_skipped = 0;
+        let mut enhanced_replacements = 0;
+        for new_record in data.iter().rev() {  // Process in reverse to favor latest
+            if !existing_timestamps.contains(&new_record.time) {
+                final_data.push(new_record.clone());
+                existing_timestamps.insert(new_record.time);
+            } else {
+                // Timestamp exists - check if we should replace with enhanced version
+                if let Some(existing_pos) = final_data.iter().position(|r| r.time == new_record.time) {
+                    if is_enhanced(new_record) && !is_enhanced(&final_data[existing_pos]) {
+                        // Replace unenhanced existing record with enhanced new record
+                        final_data[existing_pos] = new_record.clone();
+                        enhanced_replacements += 1;
+                    } else {
+                        duplicates_skipped += 1;
+                    }
+                } else {
+                    duplicates_skipped += 1;
+                }
+            }
+        }
+
+        // Sort final data by time (required for CSV writing)
+        final_data.sort_by_key(|d| d.time);
+
+        if duplicates_skipped > 0 || enhanced_replacements > 0 {
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                duplicates_skipped = duplicates_skipped,
+                enhanced_replacements = enhanced_replacements,
+                final_records = final_data.len(),
+                "[SMART-DEDUPLICATION] Processed duplicates: skipped={}, enhanced_replacements={}",
+                duplicates_skipped, enhanced_replacements
+            );
+        }
+
+        // Write to temporary file first, then atomically rename
+        let temp_path = file_path.with_extension("tmp");
+        {
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&temp_path)
+                .map_err(|e| Error::Io(format!("Failed to create temp file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+            wtr.write_record(&[
+                "ticker", "time", "open", "high", "low", "close", "volume",
+                "ma10", "ma20", "ma50", "ma100", "ma200",
+                "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                "close_changed", "volume_changed", "total_money_changed"
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+            // Write final deduplicated data
+            for stock_data in &final_data {
+                write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
+        }
+
+        // Atomically replace the old file
+        std::fs::rename(&temp_path, &file_path)
+            .map_err(|e| Error::Io(format!("Failed to atomically replace file: {}", e)))?;
+
+        tracing::debug!(
+            ticker = ticker,
+            interval = ?interval,
+            existing_before_cutoff = cutoff_index,
+            new_records = data.len(),
+            duplicates_skipped = duplicates_skipped,
+            final_records = final_data.len(),
+            "Updated CSV with smart cutoff strategy (atomic rename)"
+        );
+
+        if cutoff_index == 0 {
+            ChangeType::NewRecords { records: final_data }
+        } else {
+            ChangeType::Truncated {
+                from_record: cutoff_index,
+                new_records: final_data,
+            }
+        }
+    };
+
+    // Send update through channel if provided
+    if let Some(sender) = channel_sender {
+        let update = TickerUpdate::new(
+            ticker.to_string(),
+            interval,
+            change_type.clone(),
+        );
+
+        // Non-blocking send - don't fail if channel is full
+        match sender.send(update) {
+            Ok(()) => {
+                tracing::info!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    record_count = change_type.record_count(),
+                    change_type = %change_type,
+                    "Sent real-time update via MPSC"
+                );
+            }
+            Err(_) => {
+                // Channel is full or disconnected - log but don't fail
+                tracing::warn!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    record_count = change_type.record_count(),
+                    "MPSC channel full - skipping real-time update"
+                );
+            }
+        }
+    }
+
+    Ok((change_type, data.len()))
+}
+
+/// Save enhanced CSV to a specific directory with MPSC change detection and notification
+/// This function detects changes and sends real-time updates through the MPSC channel
+pub async fn save_enhanced_csv_with_changes(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+    base_dir: &Path,
+    channel_sender: Option<std::sync::mpsc::SyncSender<TickerUpdate>>,
+) -> Result<(ChangeType, usize), Error> {
+    if data.is_empty() {
+        return Ok((ChangeType::NoChange, 0));
+    }
+
+    // Deduplicate data before writing (favor last occurrence)
+    // Create mutable copy, sort, and deduplicate
+    let mut data_vec: Vec<StockData> = data.to_vec();
+    data_vec.sort_by_key(|d| d.time);
+    let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+
+    // Check if we should do full rewrite due to duplicates
+    let has_excessive_duplicates = duplicates_removed > 0;
+
+    if duplicates_removed > 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_removed = duplicates_removed,
+            records_remaining = data_vec.len(),
+            "Deduplicated StockData before writing CSV with MPSC"
+        );
+    }
+
+    // Use deduplicated data for all writes below
+    let data = &data_vec;
+
+    // Create ticker directory
+    let ticker_dir = base_dir.join(ticker);
+    std::fs::create_dir_all(&ticker_dir)
+        .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+
+    // Get file path
+    let file_path = ticker_dir.join(interval.to_filename());
+    let file_exists = file_path.exists();
+
+    // Force full rewrite if duplicates detected, regardless of rewrite_all parameter
+    let should_rewrite_all = !file_exists || rewrite_all || has_excessive_duplicates;
+
+    let change_type = if should_rewrite_all {
+        // Log if we're fixing duplicates
+        if has_excessive_duplicates && file_exists {
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                duplicates_found = duplicates_removed,
+                records_after_dedup = data.len(),
+                "[MPSC-FIX-DUPLICATION] Duplicates detected - performing full rewrite"
+            );
+        }
+
+        // New file or rewrite - write directly (no locking needed for new files)
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)  // Always truncate when we decide to rewrite
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+
+        // Write 20-column header
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        for row in data {
+            write_stock_data_row(&mut wtr, row, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+
+        ChangeType::FullFile { records: data.to_vec() }
+    } else {
+        // For incremental updates, detect actual new records
+        let new_records: Vec<StockData> = data
+            .iter()
+            .filter(|r| r.time >= cutoff_date)
+            .cloned()
+            .collect();
+
+        // File exists and no duplicates - use copy-processing-rename strategy for incremental updates
+        // Generate unique processing filename with timestamp
+        use std::time::SystemTime;
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .map_err(|e| Error::Io(format!("Failed to get timestamp: {}", e)))?
+            .as_secs();
+
+        let processing_path = file_path.with_extension(format!("{}.processing.{}",
+            file_path.extension().and_then(|s| s.to_str()).unwrap_or("csv"), timestamp));
+
+        // Step 1: Copy original file to processing file
+        std::fs::copy(&file_path, &processing_path)
+            .map_err(|e| Error::Io(format!("Failed to copy file to processing: {}", e)))?;
+
+        // Step 2: Perform enhancement on processing file (truncate + append)
+        let enhancement_result = (|| -> Result<(), Error> {
+            let mut file = std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(&processing_path)
+                .map_err(|e| Error::Io(format!("Failed to open processing file for writing: {}", e)))?;
+
+            // Truncate file at cutoff point (or keep all if no cutoff found)
+            let truncate_pos = {
+                let file = std::fs::File::open(&processing_path)
+                    .map_err(|e| Error::Io(format!("Failed to open processing file for reading: {}", e)))?;
+                let reader = BufReader::new(file);
+                let mut pos: Option<u64> = None;
+                let mut current_pos = 0u64;
+
+                for line_result in reader.lines() {
+                    let line = line_result.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+                    let line_len = (line.len() + 1) as u64;
+
+                    // Parse timestamp from line (skip header)
+                    if current_pos > 0 {
+                        let parts: Vec<&str> = line.split(',').collect();
+                        if parts.len() >= 2 {
+                            let time_str = parts[1];
+                            let time = parse_time(time_str)?;
+
+                            if time >= cutoff_date {
+                                // Found cutoff - truncate here
+                                break;
+                            }
+                            // This line is before cutoff, update truncate position
+                            pos = Some(current_pos + line_len);
+                        }
+                    }
+
+                    current_pos += line_len;
+                }
+
+                pos
+            };
+
+            // Truncate file at cutoff point (or keep all if no cutoff found)
+            if let Some(pos) = truncate_pos {
+                file.set_len(pos)
+                    .map_err(|e| Error::Io(format!("Failed to truncate processing file: {}", e)))?;
+            }
+
+            // Seek to end and append new data (only rows >= cutoff_date)
+            file.seek(SeekFrom::End(0))
+                .map_err(|e| Error::Io(format!("Failed to seek to end of processing file: {}", e)))?;
+
+            let mut wtr = csv::Writer::from_writer(file);
+            for row in data.iter().filter(|r| r.time >= cutoff_date) {
+                write_stock_data_row(&mut wtr, row, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush processing CSV: {}", e)))?;
+
+            Ok(())
+        })();
+
+        // Step 4: Handle result - atomic rename on success, cleanup on failure
+        match enhancement_result {
+            Ok(()) => {
+                // Validation: Basic check that processing file is valid
+                let validation_result = (|| -> Result<(), Error> {
+                    // Quick validation: check if file exists and has content
+                    let metadata = std::fs::metadata(&processing_path)
+                        .map_err(|e| Error::Io(format!("Failed to read processing file metadata: {}", e)))?;
+                    if metadata.len() == 0 {
+                        return Err(Error::Io("Processing file is empty after enhancement".to_string()));
+                    }
+                    Ok(())
+                })();
+
+                match validation_result {
+                    Ok(()) => {
+                        // Atomic rename: processing file becomes the new original
+                        std::fs::rename(&processing_path, &file_path)
+                            .map_err(|e| Error::Io(format!("Failed to atomically rename processing file: {}", e)))?;
+
+                        tracing::info!(
+                            ticker = ticker,
+                            interval = ?interval,
+                            records = data.len(),
+                            file_path = ?file_path,
+                            "[MPSC] Enhanced CSV with incremental updates"
+                        );
+                    }
+                    Err(e) => {
+                        // Validation failed - keep original, remove processing file
+                        let _ = std::fs::remove_file(&processing_path);
+                        return Err(Error::Io(format!("Enhancement validation failed: {}. Original file preserved.", e)));
+                    }
+                }
+            }
+            Err(e) => {
+                // Enhancement failed - keep original, remove processing file
+                let _ = std::fs::remove_file(&processing_path);
+                return Err(e);
+            }
+        }
+
+        ChangeType::NewRecords {
+            records: new_records
+        }
+    };
+
+    // Send update through channel for real-time memory cache update (if channel provided)
+    if let Some(sender) = channel_sender {
+        println!("[CSV_ENHANCER] About to send MPSC update for ticker={}, interval={:?}, change_type={}",
+                 ticker, interval, change_type);
+        let update = TickerUpdate::new(
+            ticker.to_string(),
+            interval,
+            change_type.clone(),
+        );
+
+        // Send with retry mechanism - wait for channel to be available instead of skipping
+        println!("[CSV_ENHANCER] Calling send_with_retry_async for ticker={}", ticker);
+        match crate::services::mpsc::send_with_retry_async(&sender, update, 50).await {
+            Ok(()) => {
+                println!("[CSV_ENHANCER] ✅ Successfully sent MPSC update for ticker={}", ticker);
+                tracing::info!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    record_count = change_type.record_count(),
+                    "[MPSC] Sent real-time update via channel"
+                );
+            }
+            Err(e) => {
+                // Failed after retries - log but don't fail the CSV write
+                println!("[CSV_ENHANCER] ❌ ERROR: Failed to send MPSC update for ticker={}, error={}", ticker, e);
+                tracing::warn!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    error = e,
+                    "[MPSC] Failed to send data update via channel after retries"
+                );
+            }
+        }
+    }
+
+    Ok((change_type, data.len()))
 }
 
 /// Write a single StockData row to CSV (20 columns)
@@ -634,5 +1354,167 @@ fn process_single_ticker(
         write_time,
     })
     // ticker_data and enhanced_map are dropped here, freeing memory
+}
+
+/// Clean up existing duplicates in a CSV file (one-time cleanup function)
+pub fn cleanup_existing_duplicates(file_path: &Path, ticker: &str, interval: Interval) -> Result<usize, Error> {
+    tracing::info!(
+        ticker = ticker,
+        interval = ?interval,
+        file_path = ?file_path,
+        "[CLEANUP] Starting one-time duplicate cleanup"
+    );
+
+    // Read full CSV file using regular CSV parser
+    let mut data = Vec::new();
+    if file_path.exists() {
+        let file = std::fs::File::open(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV file: {}", e)))?;
+
+        let mut rdr = csv::ReaderBuilder::new()
+            .has_headers(true)
+            .from_reader(file);
+
+        for result in rdr.records() {
+            let record = result
+                .map_err(|e| Error::Io(format!("Failed to read CSV record: {}", e)))?;
+
+            if record.len() >= 7 {
+                let time_str = record.get(1).unwrap_or_default();
+                if let Ok(time) = chrono::DateTime::parse_from_rfc3339(format!("{}T00:00:00Z", time_str).as_str()) {
+                    let stock_data = crate::models::StockData {
+                        ticker: ticker.to_string(),
+                        time: time.with_timezone(&chrono::Utc),
+                        open: record.get(2).unwrap_or("0").parse().unwrap_or(0.0),
+                        high: record.get(3).unwrap_or("0").parse().unwrap_or(0.0),
+                        low: record.get(4).unwrap_or("0").parse().unwrap_or(0.0),
+                        close: record.get(5).unwrap_or("0").parse().unwrap_or(0.0),
+                        volume: record.get(6).unwrap_or("0").parse().unwrap_or(0),
+                        ma10: Some(record.get(7).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma20: Some(record.get(8).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma50: Some(record.get(9).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma100: Some(record.get(10).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma200: Some(record.get(11).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma10_score: Some(record.get(12).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma20_score: Some(record.get(13).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma50_score: Some(record.get(14).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma100_score: Some(record.get(15).unwrap_or("0").parse().unwrap_or(0.0)),
+                        ma200_score: Some(record.get(16).unwrap_or("0").parse().unwrap_or(0.0)),
+                        close_changed: Some(record.get(17).unwrap_or("0").parse().unwrap_or(0.0)),
+                        volume_changed: Some(record.get(18).unwrap_or("0").parse().unwrap_or(0.0)),
+                        total_money_changed: Some(record.get(19).unwrap_or("0").parse().unwrap_or(0.0)),
+                    };
+                    data.push(stock_data);
+                }
+            }
+        }
+    }
+    let original_count = data.len();
+
+    if data.is_empty() {
+        tracing::warn!(
+            ticker = ticker,
+            interval = ?interval,
+            "[CLEANUP] CSV file is empty, nothing to cleanup"
+        );
+        return Ok(0);
+    }
+
+    // Sort by time to group duplicates together
+    data.sort_by_key(|d| d.time);
+
+    // Deduplicate by keeping only the latest record for each timestamp
+    let mut deduplicated_data = Vec::new();
+    let mut seen_timestamps = std::collections::HashSet::new();
+    let mut duplicates_removed = 0;
+
+    // Process in reverse to favor the latest records
+    for record in data.iter().rev() {
+        if seen_timestamps.contains(&record.time) {
+            duplicates_removed += 1;
+        } else {
+            seen_timestamps.insert(record.time);
+            deduplicated_data.push(record.clone());
+        }
+    }
+
+    // Reverse back to chronological order
+    deduplicated_data.reverse();
+
+    if duplicates_removed == 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            total_records = original_count,
+            "[CLEANUP] No duplicates found, file is already clean"
+        );
+        return Ok(0);
+    }
+
+    // Write cleaned data to temporary file first, then atomically rename
+    let temp_path = file_path.with_extension("tmp");
+    {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&temp_path)
+            .map_err(|e| Error::Io(format!("Failed to create temp file: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        // Write deduplicated data
+        for record in &deduplicated_data {
+            wtr.write_record(&[
+                &record.ticker,
+                &record.time.format("%Y-%m-%d").to_string(),
+                &format!("{:.2}", record.open),
+                &format!("{:.2}", record.high),
+                &format!("{:.2}", record.low),
+                &format!("{:.2}", record.close),
+                &record.volume.to_string(),
+                &format!("{:.2}", record.ma10.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma20.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma50.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma100.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma200.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma10_score.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma20_score.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma50_score.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma100_score.unwrap_or(0.0)),
+                &format!("{:.2}", record.ma200_score.unwrap_or(0.0)),
+                &format!("{:.2}", record.close_changed.unwrap_or(0.0)),
+                &format!("{:.2}", record.volume_changed.unwrap_or(0.0)),
+                &format!("{:.2}", record.total_money_changed.unwrap_or(0.0)),
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write record: {}", e)))?;
+        }
+
+        wtr.flush().map_err(|e| Error::Io(format!("Failed to flush CSV: {}", e)))?;
+    }
+
+    // Replace original with cleaned file
+    std::fs::rename(&temp_path, file_path)
+        .map_err(|e| Error::Io(format!("Failed to rename cleaned file: {}", e)))?;
+
+    tracing::info!(
+        ticker = ticker,
+        interval = ?interval,
+        original_records = original_count,
+        duplicates_removed = duplicates_removed,
+        final_records = deduplicated_data.len(),
+        "[CLEANUP] Successfully removed {} duplicate timestamps",
+        duplicates_removed
+    );
+
+    Ok(duplicates_removed)
 }
 

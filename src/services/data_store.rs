@@ -2,6 +2,7 @@ use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CAC
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
+use crate::services::mpsc::{TickerUpdate, ChangeType};
 use tracing::{debug, info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -11,7 +12,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::io::{Read, Seek};
 use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use memmap2::Mmap;
 
 #[derive(Debug)]
@@ -31,10 +31,7 @@ pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute 
 pub const CACHE_TTL_SECONDS: i64 = 300; // 5 minutes TTL for memory cache (matches minute auto-reload interval)
 
 /// Auto-reload interval constants (different from cache TTL)
-/// Balance between CPU usage and data freshness
-pub const AUTO_RELOAD_DAILY_SECONDS: u64 = 15;    // 15 seconds for daily data (match daily worker interval)
-pub const AUTO_RELOAD_HOURLY_SECONDS: u64 = 30;   // 30 seconds for hourly data (keep fast refresh)
-pub const AUTO_RELOAD_MINUTE_SECONDS: u64 = 300;  // 5 minutes for minute data (rarely changes, saves CPU)
+// Auto-reload constants removed - MPSC handles real-time cache updates efficiently
 
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
@@ -220,14 +217,15 @@ impl QueryParameters {
 }
 
 /// Data store for managing in-memory stock data
+#[derive(Clone)]
 pub struct DataStore {
-    data: RwLock<InMemoryData>,
+    data: Arc<RwLock<InMemoryData>>,
     market_data_dir: PathBuf,
-    cache_last_updated: RwLock<DateTime<Utc>>,
+    cache_last_updated: Arc<RwLock<DateTime<Utc>>>,
     /// Cache for disk-read data (hourly, minute, and cache=false queries)
-    disk_cache: RwLock<HourlyMinuteCache>,
+    disk_cache: Arc<RwLock<HourlyMinuteCache>>,
     /// Total size of disk cache in bytes
-    disk_cache_size: RwLock<usize>,
+    disk_cache_size: Arc<RwLock<usize>>,
     /// Maximum cache size in bytes (configurable via env)
     max_cache_size_bytes: usize,
     /// Auto-clear cache configuration
@@ -236,7 +234,7 @@ pub struct DataStore {
     auto_clear_ratio: f64,      // Clear this percentage of entries (e.g., 0.5 = 50%)
     /// File modification time tracker for auto-reload optimization
     /// Key: (ticker, interval), Value: SystemTime from fs::metadata().modified()
-    file_mtimes: RwLock<HashMap<(String, Interval), SystemTime>>,
+    file_mtimes: Arc<RwLock<HashMap<(String, Interval), SystemTime>>>,
 }
 
 impl DataStore {
@@ -276,17 +274,145 @@ impl DataStore {
         );
 
         Self {
-            data: RwLock::new(HashMap::new()),
+            data: Arc::new(RwLock::new(HashMap::new())),
             market_data_dir,
-            cache_last_updated: RwLock::new(Utc::now()),
-            disk_cache: RwLock::new(HashMap::new()),
-            disk_cache_size: RwLock::new(0),
+            cache_last_updated: Arc::new(RwLock::new(Utc::now())),
+            disk_cache: Arc::new(RwLock::new(HashMap::new())),
+            disk_cache_size: Arc::new(RwLock::new(0)),
             max_cache_size_bytes,
             auto_clear_enabled,
             auto_clear_threshold,
             auto_clear_ratio,
-            file_mtimes: RwLock::new(HashMap::new()),
+            file_mtimes: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+
+    /// Start the update listener to process real-time ticker updates
+    /// This method consumes the receiver and moves it into the listener task
+    pub fn start_update_listener(&self, receiver: std::sync::mpsc::Receiver<TickerUpdate>) {
+        let data_store = self.clone();
+        tokio::spawn(async move {
+            tracing::info!("Starting real-time update listener");
+            loop {
+                // Non-blocking receive with periodic checks
+                match receiver.try_recv() {
+                    Ok(update) => {
+                        println!("[MPSC::RECV] ✅ Received update for ticker={}, interval={:?}", update.ticker, update.interval);
+                        if let Err(e) = data_store.apply_update(update).await {
+                            println!("[MPSC::RECV] ❌ Failed to apply ticker update: {}", e);
+                            tracing::error!("Failed to apply ticker update: {}", e);
+                        }
+                        // Continue immediately to process more updates if available
+                    }
+                    Err(_) => {
+                        // No updates available, sleep briefly
+                        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                    }
+                }
+            }
+        });
+    }
+
+    /// Apply a ticker update to the in-memory cache
+    pub async fn apply_update(&self, update: TickerUpdate) -> Result<(), Error> {
+        let cache_key = (update.ticker.clone(), update.interval);
+
+        // Apply retention limits based on interval
+        let retention_limit = match update.interval {
+            Interval::Daily => DATA_RETENTION_RECORDS,           // 1500 records
+            Interval::Hourly => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
+            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
+        };
+
+        match update.change_type {
+            ChangeType::NoChange => {
+                // No action needed
+                debug!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    "No changes detected"
+                );
+            }
+            ChangeType::NewRecords { mut records } => {
+                // Append new records and enforce retention
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                // Remove existing records with same timestamps to avoid duplicates
+                let new_timestamps: std::collections::HashSet<_> = records
+                    .iter()
+                    .map(|r| r.time)
+                    .collect();
+
+                interval_data.retain(|r| !new_timestamps.contains(&r.time));
+
+                // Append new records
+                interval_data.append(&mut records);
+
+                // Sort by time and apply retention limit
+                interval_data.sort_by_key(|d| d.time);
+                if interval_data.len() > retention_limit {
+                    interval_data.truncate(retention_limit);
+                }
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    new_records = records.len(),
+                    total_records = interval_data.len(),
+                    retention_limit = retention_limit,
+                    "Applied new records update"
+                );
+            }
+            ChangeType::Truncated { from_record, mut new_records } => {
+                // Replace from specific record
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                interval_data.truncate(from_record);
+                interval_data.append(&mut new_records);
+
+                // Apply retention limit
+                if interval_data.len() > retention_limit {
+                    interval_data.truncate(retention_limit);
+                }
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    from_record = from_record,
+                    new_records = new_records.len(),
+                    total_records = interval_data.len(),
+                    "Applied truncated update"
+                );
+            }
+            ChangeType::FullFile { mut records } => {
+                // Full replacement with retention
+                let total_records = records.len();
+                if records.len() > retention_limit {
+                    records.truncate(retention_limit);
+                }
+
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                existing.insert(cache_key.1, records);
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    total_records = total_records,
+                    retention_limit = retention_limit,
+                    "Applied full file update"
+                );
+            }
+        }
+
+        // Update cache timestamp
+        *self.cache_last_updated.write().await = Utc::now();
+
+        Ok(())
     }
 
     /// Check if this DataStore is operating in crypto mode
@@ -415,6 +541,43 @@ impl DataStore {
                         missing_dates.len(),
                         missing_dates
                     );
+                }
+
+                // Check for duplicates in memory data
+                let total_records = daily_data.len();
+                let unique_dates: std::collections::HashSet<_> = daily_data.iter().map(|d| d.time.date_naive()).collect();
+                let duplicate_count = total_records.saturating_sub(unique_dates.len());
+
+                if duplicate_count > 0 {
+                    eprintln!(
+                        "🔄 QUICK_CHECK: {} has {} duplicate records in memory ({} total, {} unique) - Auto-cleaning...",
+                        ticker, duplicate_count, total_records, unique_dates.len()
+                    );
+
+                    // Auto-cleanup duplicates for all intervals (1D, 1H, 1m)
+                    let intervals = [crate::models::Interval::Daily, crate::models::Interval::Hourly, crate::models::Interval::Minute];
+                    for interval in intervals.iter() {
+                        let csv_path = self.market_data_dir.join(ticker).join(format!("{:?}.csv", interval).to_lowercase().replace("daily", "1D").replace("hourly", "1H").replace("minute", "1m"));
+
+                        if csv_path.exists() {
+                            match crate::services::csv_enhancer::cleanup_existing_duplicates(&csv_path, ticker, *interval) {
+                                Ok(removed) => {
+                                    if removed > 0 {
+                                        eprintln!(
+                                            "✅ QUICK_CHECK: Cleaned {} duplicate records from {} {:?} CSV",
+                                            removed, ticker, interval
+                                        );
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "❌ QUICK_CHECK: Failed to clean {} {:?} CSV: {}",
+                                        ticker, interval, e
+                                    );
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 missing_count += 1;
@@ -1191,84 +1354,7 @@ impl DataStore {
     }
 
     /// Reload a specific interval from CSV files (interval-specific retention limits)
-    pub async fn reload_interval(&self, interval: Interval) -> Result<(), Error> {
-        let retention_limit = match interval {
-            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
-            _ => DATA_RETENTION_RECORDS,
-        };
-        self.load_interval(interval, None, Some(retention_limit)).await
-    }
-
-    /// Spawn a background task that auto-reloads the specified interval every CACHE_TTL_SECONDS
-    /// Returns a JoinHandle that can be used for graceful shutdown
-    pub fn spawn_auto_reload_task(
-        self: Arc<Self>,
-        interval: Interval,
-    ) -> JoinHandle<()> {
-        // Generate random delay before entering async block to avoid Send issues
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-              // Use interval-specific reload duration for staggered initial delay
-        let reload_duration = match interval {
-            Interval::Daily => AUTO_RELOAD_DAILY_SECONDS,
-            Interval::Hourly => AUTO_RELOAD_HOURLY_SECONDS,
-            Interval::Minute => AUTO_RELOAD_MINUTE_SECONDS,
-        };
-        let initial_delay_ms = rng.gen_range(0u64..(reload_duration * 1000 / 6));  // Distribute across the reload window
-
-        tokio::spawn(async move {
-            let retention_limit = match interval {
-                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
-                _ => DATA_RETENTION_RECORDS,
-            };
-
-            tracing::info!(
-                "Starting auto-reload task for {} interval (reload: {}s, TTL: {}s, limit: {} records)",
-                interval.to_filename(),
-                reload_duration,
-                CACHE_TTL_SECONDS,
-                retention_limit
-            );
-
-            // Add random initial delay to stagger auto-reload tasks across the TTL window
-            // This prevents all 6 tasks from running simultaneously
-            let initial_delay = tokio::time::Duration::from_millis(initial_delay_ms);
-
-            tracing::debug!(
-                "Auto-reload task for {} will start after {}ms initial delay",
-                interval.to_filename(),
-                initial_delay_ms
-            );
-
-            tokio::time::sleep(initial_delay).await;
-
-            loop {
-                // Sleep first (cache was just loaded during server startup)
-                tokio::time::sleep(tokio::time::Duration::from_secs(reload_duration)).await;
-
-                tracing::debug!(
-                    "[DEBUG:PERF:BG_TASK] Auto-reload start for {} (TTL expired)",
-                    interval.to_filename()
-                );
-
-                let reload_start = std::time::Instant::now();
-                match self.reload_interval(interval).await {
-                    Ok(_) => {
-                        tracing::info!("[DEBUG:PERF:BG_TASK] ♻️  Reloaded {} cache: {:.2}ms", interval.to_filename(), reload_start.elapsed().as_secs_f64() * 1000.0);
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "[DEBUG:PERF:BG_TASK] Failed to auto-reload {} cache: {}. Will retry in {}s",
-                            interval.to_filename(),
-                            e,
-                            reload_duration
-                        );
-                        // Don't panic - continue loop and retry next cycle
-                    }
-                }
-            }
-        })
-    }
+    // Auto-reload methods removed - MPSC handles real-time cache updates efficiently
 
     /// Smart data retrieval with aggregation awareness and centralized logic
     /// This method handles all query complexity internally
@@ -1402,7 +1488,7 @@ impl DataStore {
                 CACHE_TTL_SECONDS * 2,
                 interval.to_filename()
             );
-            if let Err(e) = self.reload_interval(interval).await {
+            if let Err(e) = self.load_interval(interval, None, None).await {
                 tracing::error!("Emergency reload failed for {}: {}, falling back to disk", interval.to_filename(), e);
                 return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
             }

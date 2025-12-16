@@ -3,12 +3,14 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_with_changes};
+use crate::services::mpsc::TickerUpdate;
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::SyncSender;
 use std::time::Instant;
 
 const TICKER_GROUP_FILE: &str = "ticker_group.json";
@@ -20,6 +22,8 @@ pub struct DataSync {
     stats: SyncStats,
     /// Tracks first failure time for each interval to implement smart fallback
     batch_failure_times: HashMap<Interval, Option<DateTime<Utc>>>,
+    /// Optional MPSC channel sender for real-time ticker updates
+    channel_sender: Option<SyncSender<TickerUpdate>>,
 }
 
 impl DataSync {
@@ -32,6 +36,23 @@ impl DataSync {
             fetcher,
             stats: SyncStats::new(),
             batch_failure_times: HashMap::new(),
+            channel_sender: None,
+        })
+    }
+
+    /// Create new data sync orchestrator with MPSC channel support
+    pub fn new_with_channel(
+        config: SyncConfig,
+        channel_sender: Option<SyncSender<TickerUpdate>>,
+    ) -> Result<Self, Error> {
+        let fetcher = TickerFetcher::new()?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+            batch_failure_times: HashMap::new(),
+            channel_sender,
         })
     }
 
@@ -131,6 +152,18 @@ impl DataSync {
 
             // Get dynamic batch size based on date range
             let dynamic_batch_size = self.config.get_dynamic_batch_size(interval, date_range_days);
+
+            tracing::info!(
+                interval = ?interval,
+                interval_type = interval.to_vci_format(),
+                tickers_count = resume_ticker_names.len(),
+                start_date = %fetch_start_date,
+                end_date = %self.config.end_date,
+                batch_size = dynamic_batch_size,
+                concurrent_batches = self.config.concurrent_batches,
+                resume_tickers = ?resume_ticker_names[..resume_ticker_names.len().min(5)],
+                "DATA_SYNC:: Calling batch_fetch"
+            );
 
             self.fetcher
                 .batch_fetch(
@@ -257,7 +290,7 @@ impl DataSync {
             match result {
                 Ok(data) => {
                     // Enhance and save to CSV (single write)
-                    self.enhance_and_save_ticker_data(ticker, &data, interval)?;
+                    self.enhance_and_save_ticker_data(ticker, &data, interval).await?;
 
                     self.stats.successful += 1;
                     self.stats.files_written += 1;
@@ -596,7 +629,7 @@ impl DataSync {
     }
 
     /// Enhance and save ticker data to CSV in a single write operation
-    fn enhance_and_save_ticker_data(
+    async fn enhance_and_save_ticker_data(
         &self,
         ticker: &str,
         data: &[OhlcvData],
@@ -649,10 +682,35 @@ impl DataSync {
         // Enhance only the sliced portion (massive performance gain for minute data)
         let enhanced = enhance_data(ticker_data);
 
-        // Save enhanced data to CSV with smart cutoff strategy and file locking
+        // Save enhanced data to CSV with change detection and real-time updates
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
-            save_enhanced_csv(ticker, stock_data, interval, cutoff_date, false)?;
+            let market_data_dir = get_market_data_dir();
+            let (change_type, record_count) = save_enhanced_csv_with_changes(
+                ticker,
+                stock_data,
+                interval,
+                cutoff_date,
+                false, // rewrite_all - set to false for incremental
+                &market_data_dir,
+                self.channel_sender.clone(),
+            ).await?;
+
+            // Log concise change type without full record details
+            let change_summary = match &change_type {
+                crate::services::mpsc::ChangeType::NoChange => "NoChange".to_string(),
+                crate::services::mpsc::ChangeType::NewRecords { records } => format!("NewRecords({})", records.len()),
+                crate::services::mpsc::ChangeType::Truncated { from_record, new_records } => format!("Truncated(from:{}, new:{})", from_record, new_records.len()),
+                crate::services::mpsc::ChangeType::FullFile { records } => format!("FullFile({})", records.len()),
+            };
+
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                record_count = record_count,
+                change_type = %change_summary,
+                "Enhanced and saved with change detection"
+            );
         }
 
         Ok(())
