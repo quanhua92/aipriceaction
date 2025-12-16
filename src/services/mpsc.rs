@@ -56,6 +56,28 @@ pub struct TickerUpdate {
     pub timestamp: DateTime<Utc>,
 }
 
+impl std::fmt::Display for ChangeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ChangeType::NoChange => write!(f, "NoChange"),
+            ChangeType::NewRecords { records } => write!(f, "NewRecords({} records)", records.len()),
+            ChangeType::Truncated { from_record, new_records } => write!(
+                f, "Truncated(from={}, {} new records)", from_record, new_records.len()
+            ),
+            ChangeType::FullFile { records } => write!(f, "FullFile({} records)", records.len()),
+        }
+    }
+}
+
+impl std::fmt::Display for TickerUpdate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f, "TickerUpdate({}, {:?}, {})",
+            self.ticker, self.interval, self.change_type
+        )
+    }
+}
+
 impl TickerUpdate {
     /// Create a new ticker update
     pub fn new(
