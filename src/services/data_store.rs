@@ -2,7 +2,8 @@ use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CAC
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
-use tracing::{debug, info};
+use crate::services::mpsc::{TickerUpdate, ChangeType};
+use tracing::{debug, info, error, warn};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -220,14 +221,15 @@ impl QueryParameters {
 }
 
 /// Data store for managing in-memory stock data
+#[derive(Clone)]
 pub struct DataStore {
-    data: RwLock<InMemoryData>,
+    data: Arc<RwLock<InMemoryData>>,
     market_data_dir: PathBuf,
-    cache_last_updated: RwLock<DateTime<Utc>>,
+    cache_last_updated: Arc<RwLock<DateTime<Utc>>>,
     /// Cache for disk-read data (hourly, minute, and cache=false queries)
-    disk_cache: RwLock<HourlyMinuteCache>,
+    disk_cache: Arc<RwLock<HourlyMinuteCache>>,
     /// Total size of disk cache in bytes
-    disk_cache_size: RwLock<usize>,
+    disk_cache_size: Arc<RwLock<usize>>,
     /// Maximum cache size in bytes (configurable via env)
     max_cache_size_bytes: usize,
     /// Auto-clear cache configuration
@@ -236,7 +238,7 @@ pub struct DataStore {
     auto_clear_ratio: f64,      // Clear this percentage of entries (e.g., 0.5 = 50%)
     /// File modification time tracker for auto-reload optimization
     /// Key: (ticker, interval), Value: SystemTime from fs::metadata().modified()
-    file_mtimes: RwLock<HashMap<(String, Interval), SystemTime>>,
+    file_mtimes: Arc<RwLock<HashMap<(String, Interval), SystemTime>>>,
 }
 
 impl DataStore {
@@ -276,17 +278,134 @@ impl DataStore {
         );
 
         Self {
-            data: RwLock::new(HashMap::new()),
+            data: Arc::new(RwLock::new(HashMap::new())),
             market_data_dir,
-            cache_last_updated: RwLock::new(Utc::now()),
-            disk_cache: RwLock::new(HashMap::new()),
-            disk_cache_size: RwLock::new(0),
+            cache_last_updated: Arc::new(RwLock::new(Utc::now())),
+            disk_cache: Arc::new(RwLock::new(HashMap::new())),
+            disk_cache_size: Arc::new(RwLock::new(0)),
             max_cache_size_bytes,
             auto_clear_enabled,
             auto_clear_threshold,
             auto_clear_ratio,
-            file_mtimes: RwLock::new(HashMap::new()),
+            file_mtimes: Arc::new(RwLock::new(HashMap::new())),
         }
+    }
+
+    /// Start the update listener to process real-time ticker updates
+    /// This method consumes the receiver and moves it into the listener task
+    pub fn start_update_listener(&self, receiver: std::sync::mpsc::Receiver<TickerUpdate>) {
+        let data_store = self.clone();
+        tokio::spawn(async move {
+            tracing::info!("Starting real-time update listener");
+            while let Ok(update) = receiver.recv() {
+                if let Err(e) = data_store.apply_update(update).await {
+                    tracing::error!("Failed to apply ticker update: {}", e);
+                }
+            }
+            tracing::warn!("Real-time update listener disconnected - channel closed");
+        });
+    }
+
+    /// Apply a ticker update to the in-memory cache
+    pub async fn apply_update(&self, update: TickerUpdate) -> Result<(), Error> {
+        let cache_key = (update.ticker.clone(), update.interval);
+
+        // Apply retention limits based on interval
+        let retention_limit = match update.interval {
+            Interval::Daily => DATA_RETENTION_RECORDS,           // 1500 records
+            Interval::Hourly => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
+            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
+        };
+
+        match update.change_type {
+            ChangeType::NoChange => {
+                // No action needed
+                debug!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    "No changes detected"
+                );
+            }
+            ChangeType::NewRecords { mut records } => {
+                // Append new records and enforce retention
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                // Remove existing records with same timestamps to avoid duplicates
+                let new_timestamps: std::collections::HashSet<_> = records
+                    .iter()
+                    .map(|r| r.time)
+                    .collect();
+
+                interval_data.retain(|r| !new_timestamps.contains(&r.time));
+
+                // Append new records
+                interval_data.append(&mut records);
+
+                // Sort by time and apply retention limit
+                interval_data.sort_by_key(|d| d.time);
+                if interval_data.len() > retention_limit {
+                    interval_data.truncate(retention_limit);
+                }
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    new_records = records.len(),
+                    total_records = interval_data.len(),
+                    retention_limit = retention_limit,
+                    "Applied new records update"
+                );
+            }
+            ChangeType::Truncated { from_record, mut new_records } => {
+                // Replace from specific record
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                interval_data.truncate(from_record);
+                interval_data.append(&mut new_records);
+
+                // Apply retention limit
+                if interval_data.len() > retention_limit {
+                    interval_data.truncate(retention_limit);
+                }
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    from_record = from_record,
+                    new_records = new_records.len(),
+                    total_records = interval_data.len(),
+                    "Applied truncated update"
+                );
+            }
+            ChangeType::FullFile { mut records } => {
+                // Full replacement with retention
+                let total_records = records.len();
+                if records.len() > retention_limit {
+                    records.truncate(retention_limit);
+                }
+
+                let mut cache = self.data.write().await;
+                let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
+                existing.insert(cache_key.1, records);
+
+                info!(
+                    ticker = %update.ticker,
+                    interval = ?update.interval,
+                    total_records = total_records,
+                    retention_limit = retention_limit,
+                    "Applied full file update"
+                );
+            }
+        }
+
+        // Update cache timestamp
+        *self.cache_last_updated.write().await = Utc::now();
+
+        Ok(())
     }
 
     /// Check if this DataStore is operating in crypto mode

@@ -1,14 +1,20 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
+use crate::services::mpsc::{create_bounded_channels, ChannelManager};
 use crate::utils::{get_market_data_dir, get_crypto_data_dir};
 use crate::worker;
 use crate::server;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::time::Instant;
 use tokio::sync::RwLock;
 
 pub async fn run(port: u16) {
     println!("🚀 Starting aipriceaction server on port {}", port);
+
+    // Create bounded MPSC channels (capacity=1 to prevent OOM)
+    println!("🔗 Creating bounded MPSC channels (capacity=1)...");
+    let (vn_tx, vn_rx) = create_bounded_channels();
+    let (crypto_tx, crypto_rx) = create_bounded_channels();
 
     // Create VN stock data store
     let market_data_dir = get_market_data_dir();
@@ -21,6 +27,11 @@ pub async fn run(port: u16) {
     println!("📁 Crypto directory: {}", crypto_data_dir.display());
     let data_store_crypto = DataStore::new(crypto_data_dir.clone());
     let shared_data_store_crypto = Arc::new(data_store_crypto);
+
+    // Start update listeners for real-time cache updates
+    println!("🔄 Starting real-time update listeners...");
+    shared_data_store_vn.start_update_listener(vn_rx);
+    shared_data_store_crypto.start_update_listener(crypto_rx);
 
     // Initialize health stats
     let start_time = Instant::now();
@@ -157,6 +168,11 @@ pub async fn run(port: u16) {
     let worker_health_slow = shared_health_stats.clone();
     let worker_health_crypto = shared_health_stats.clone();
 
+    // Clone channel senders for workers
+    let vn_tx_daily = vn_tx.clone();
+    let vn_tx_slow = vn_tx.clone();
+    let crypto_tx_worker = crypto_tx.clone();
+
     std::thread::spawn(move || {
         let worker_runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(worker_threads)  // Auto-detected based on CPU cores
@@ -166,17 +182,17 @@ pub async fn run(port: u16) {
             .expect("Failed to create worker runtime");
 
         worker_runtime.block_on(async {
-            println!("⚡ Spawning daily worker (every 15 seconds)...");
+            println!("⚡ Spawning daily worker with MPSC channel...");
             tokio::spawn(async move {
-                worker::run_daily_worker(worker_health_daily).await;
+                worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
             });
 
-            println!("🐌 Spawning slow worker (every 5 minutes)...");
+            println!("🐌 Spawning slow worker (original)...");
             tokio::spawn(async move {
                 worker::run_slow_worker(worker_health_slow).await;
             });
 
-            println!("🪙 Spawning crypto worker (every 15 minutes)...");
+            println!("🪙 Spawning crypto worker (original)...");
             tokio::spawn(async move {
                 worker::run_crypto_worker(worker_health_crypto).await;
             });

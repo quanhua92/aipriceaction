@@ -14,6 +14,7 @@ pub mod crypto_compare;
 pub mod crypto_api_client;
 pub mod crypto_fetcher;
 pub mod crypto_sync;
+pub mod mpsc;
 
 pub use aggregator::Aggregator;
 pub use importer::import_legacy;
@@ -30,3 +31,4 @@ pub use crypto_compare::{CryptoCompareClient, CryptoError};
 pub use crypto_api_client::AiPriceActionClient;
 pub use crypto_fetcher::{CryptoFetcher, CryptoCategory};
 pub use crypto_sync::CryptoSync;
+pub use mpsc::{TickerUpdate, ChangeType, ChannelManager, create_bounded_channels};
