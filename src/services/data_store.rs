@@ -297,12 +297,21 @@ impl DataStore {
         let data_store = self.clone();
         tokio::spawn(async move {
             tracing::info!("Starting real-time update listener");
-            while let Ok(update) = receiver.recv() {
-                if let Err(e) = data_store.apply_update(update).await {
-                    tracing::error!("Failed to apply ticker update: {}", e);
+            loop {
+                // Non-blocking receive with periodic checks
+                match receiver.try_recv() {
+                    Ok(update) => {
+                        if let Err(e) = data_store.apply_update(update).await {
+                            tracing::error!("Failed to apply ticker update: {}", e);
+                        }
+                        // Continue immediately to process more updates if available
+                    }
+                    Err(_) => {
+                        // No updates available, sleep briefly
+                        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+                    }
                 }
             }
-            tracing::warn!("Real-time update listener disconnected - channel closed");
         });
     }
 
