@@ -132,8 +132,7 @@ pub async fn run(port: u16) {
     let vn_tx_slow = vn_tx.clone(); // Use MPSC channel for slow worker
     let crypto_tx_worker = crypto_tx.clone(); // Use MPSC channel for crypto worker
 
-    // Create dedicated runtime for VN daily worker (DISABLED FOR DEBUGGING)
-    /*
+    // Create dedicated runtime for VN daily worker
     std::thread::spawn(move || {
         let daily_runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(1)  // 1 thread for daily worker
@@ -147,7 +146,6 @@ pub async fn run(port: u16) {
             worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
         });
     });
-    */
 
     // Create dedicated runtime for VN slow worker
     std::thread::spawn(move || {
@@ -164,8 +162,7 @@ pub async fn run(port: u16) {
         });
     });
 
-    // Create dedicated runtime for crypto worker (DISABLED FOR DEBUGGING)
-    /*
+    // Create dedicated runtime for crypto worker
     std::thread::spawn(move || {
         let crypto_runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(1)  // 1 thread for crypto worker
@@ -179,7 +176,6 @@ pub async fn run(port: u16) {
             worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
         });
     });
-    */
 
     // Spawn uptime tracker
     let uptime_health_stats = shared_health_stats.clone();
