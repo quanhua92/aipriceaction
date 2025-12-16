@@ -197,6 +197,9 @@ impl DataSync {
             // );
 
             for ticker in &category.full_history_tickers {
+                // Yield control to allow other tasks to run
+                tokio::task::yield_now().await;
+
                 match self.fetcher
                     .fetch_full_history(
                         ticker,
@@ -231,6 +234,9 @@ impl DataSync {
             );
 
             for (ticker, start_date) in &category.partial_history_tickers {
+                // Yield control to allow other tasks to run
+                tokio::task::yield_now().await;
+
                 println!("{}   📥 {} - Fetching from {}...", prefix, ticker, start_date);
                 match self.fetcher
                     .fetch_full_history(
@@ -262,6 +268,11 @@ impl DataSync {
         let total_tickers = tickers.len();
 
         for (i, ticker) in tickers.iter().enumerate() {
+            // Yield control every few tickers to allow other tasks to run
+            if i % 5 == 0 {
+                tokio::task::yield_now().await;
+            }
+
             let ticker_start_time = Instant::now();
             let current = i + 1;
 

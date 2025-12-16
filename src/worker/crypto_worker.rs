@@ -644,6 +644,9 @@ pub async fn run_with_channel(
             }
 
             for interval in &[Interval::Daily, Interval::Hourly, Interval::Minute] {
+                // Sleep longer between intervals to allow VN workers to get CPU time
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
                 let interval_start = Utc::now();
                 let symbol_str = symbol.to_string(); // Move inside loop
 
@@ -718,9 +721,15 @@ pub async fn run_with_channel(
                     .get_chunk_size_for_interval(interval);
 
                 for chunk in interval_symbols.chunks(chunk_size) {
+                    // Sleep longer to allow VN workers to get CPU time
+                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
                     let chunk_start = std::time::Instant::now();
 
                     for symbol in chunk {
+                        // Longer delay between symbols to allow other tasks to run
+                        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
                         match run_sync_with_channel(
                             symbol,
                             interval,
