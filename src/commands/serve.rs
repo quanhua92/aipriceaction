@@ -173,32 +173,48 @@ pub async fn run(port: u16) {
     let vn_tx_slow = vn_tx.clone(); // Use MPSC channel for slow worker
     let crypto_tx_worker = crypto_tx.clone(); // Use MPSC channel for crypto worker
 
+    // Create dedicated runtime for VN daily worker
     std::thread::spawn(move || {
-        let worker_runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(worker_threads)  // Auto-detected based on CPU cores
-            .thread_name("worker-pool")
+        let daily_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)  // 1 thread for daily worker
+            .thread_name("vn-daily-worker")
             .enable_all()
             .build()
-            .expect("Failed to create worker runtime");
+            .expect("Failed to create daily worker runtime");
 
-        worker_runtime.block_on(async {
-            println!("⚡ Spawning daily worker with MPSC channel...");
-            tokio::spawn(async move {
-                worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
-            });
+        daily_runtime.block_on(async {
+            println!("⚡ Spawning VN daily worker in dedicated runtime...");
+            worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
+        });
+    });
 
-            println!("🐌 Spawning slow worker with MPSC channel...");
-            tokio::spawn(async move {
-                worker::run_slow_worker_with_channel(worker_health_slow, Some(vn_tx_slow)).await;
-            });
+    // Create dedicated runtime for VN slow worker
+    std::thread::spawn(move || {
+        let slow_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)  // 1 thread for slow worker
+            .thread_name("vn-slow-worker")
+            .enable_all()
+            .build()
+            .expect("Failed to create slow worker runtime");
 
-            println!("🪙 Spawning crypto worker with MPSC channel...");
-            tokio::spawn(async move {
-                worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
-            });
+        slow_runtime.block_on(async {
+            println!("🐌 Spawning VN slow worker in dedicated runtime...");
+            worker::run_slow_worker_with_channel(worker_health_slow, Some(vn_tx_slow)).await;
+        });
+    });
 
-            // Keep runtime alive
-            tokio::signal::ctrl_c().await.ok();
+    // Create dedicated runtime for crypto worker
+    std::thread::spawn(move || {
+        let crypto_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)  // 1 thread for crypto worker
+            .thread_name("crypto-worker")
+            .enable_all()
+            .build()
+            .expect("Failed to create crypto worker runtime");
+
+        crypto_runtime.block_on(async {
+            println!("🪙 Spawning crypto worker in dedicated runtime...");
+            worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
         });
     });
 

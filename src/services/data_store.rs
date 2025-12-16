@@ -544,6 +544,43 @@ impl DataStore {
                         missing_dates
                     );
                 }
+
+                // Check for duplicates in memory data
+                let total_records = daily_data.len();
+                let unique_dates: std::collections::HashSet<_> = daily_data.iter().map(|d| d.time.date_naive()).collect();
+                let duplicate_count = total_records.saturating_sub(unique_dates.len());
+
+                if duplicate_count > 0 {
+                    eprintln!(
+                        "🔄 QUICK_CHECK: {} has {} duplicate records in memory ({} total, {} unique) - Auto-cleaning...",
+                        ticker, duplicate_count, total_records, unique_dates.len()
+                    );
+
+                    // Auto-cleanup duplicates for all intervals (1D, 1H, 1m)
+                    let intervals = [crate::models::Interval::Daily, crate::models::Interval::Hourly, crate::models::Interval::Minute];
+                    for interval in intervals.iter() {
+                        let csv_path = self.market_data_dir.join(ticker).join(format!("{:?}.csv", interval).to_lowercase().replace("daily", "1D").replace("hourly", "1H").replace("minute", "1m"));
+
+                        if csv_path.exists() {
+                            match crate::services::csv_enhancer::cleanup_existing_duplicates(&csv_path, ticker, *interval) {
+                                Ok(removed) => {
+                                    if removed > 0 {
+                                        eprintln!(
+                                            "✅ QUICK_CHECK: Cleaned {} duplicate records from {} {:?} CSV",
+                                            removed, ticker, interval
+                                        );
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "❌ QUICK_CHECK: Failed to clean {} {:?} CSV: {}",
+                                        ticker, interval, e
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
             } else {
                 missing_count += 1;
                 eprintln!("❌ QUICK_CHECK: {} has no daily data", ticker);

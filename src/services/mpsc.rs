@@ -131,6 +131,33 @@ pub fn create_bounded_channels() -> (SyncSender<TickerUpdate>, Receiver<TickerUp
     std::sync::mpsc::sync_channel(1) // Capacity 1 to prevent OOM
 }
 
+/// Send update with retry mechanism - waits and retries instead of skipping
+pub fn send_with_retry(
+    sender: &SyncSender<TickerUpdate>,
+    update: TickerUpdate,
+    max_retries: usize,
+) -> Result<(), String> {
+    let mut retries = 0;
+
+    while retries < max_retries {
+        match sender.try_send(update.clone()) {
+            Ok(()) => return Ok(()),
+            Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                // Channel is full, wait and retry
+                retries += 1;
+                if retries < max_retries {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+            }
+            Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                return Err("Channel disconnected".to_string());
+            }
+        }
+    }
+
+    Err(format!("Failed to send after {} retries", max_retries))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
