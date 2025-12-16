@@ -772,7 +772,7 @@ pub fn save_enhanced_csv_to_dir_with_changes(
                     ticker = ticker,
                     interval = ?interval,
                     record_count = change_type.record_count(),
-                    change_type = ?change_type,
+                    change_type = %change_type,
                     "Sent real-time update via MPSC"
                 );
             }

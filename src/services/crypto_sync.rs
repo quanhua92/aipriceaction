@@ -571,7 +571,7 @@ impl CryptoSync {
             symbol = symbol,
             interval = ?interval,
             record_count = record_count,
-            change_type = ?change_type,
+            change_type = %change_type,
             "Enhanced and saved crypto data with change detection"
         );
 
