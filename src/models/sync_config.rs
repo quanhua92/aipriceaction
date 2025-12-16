@@ -218,20 +218,9 @@ impl SyncConfig {
             return 2; // Smaller batches for full downloads
         }
 
-        match interval {
-            Interval::Daily => 50,   // Daily is always lightweight
-            Interval::Hourly => 20,  // Hourly is moderate
-            Interval::Minute => {
-                // Dynamic sizing based on date range
-                if date_range_days <= MIN_MINUTE_RESUME_DAYS {
-                    20  // Small range = big batch (fast!) - sweet spot
-                } else if date_range_days <= MAX_MINUTE_RESUME_DAYS {
-                    10  // Medium range
-                } else {
-                    3   // Large range (safe default)
-                }
-            }
-        }
+        // IMPORTANT: Respect the configured batch_size instead of hardcoded values
+        // The batch_size was set specifically to avoid VCI API overload
+        self.batch_size
     }
 }
 

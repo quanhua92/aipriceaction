@@ -181,20 +181,35 @@ impl VciClient {
 
     async fn make_request(&mut self, url: &str, payload: &Value) -> Result<Value, VciError> {
         const MAX_RETRIES: u32 = 5;
-        
+        let mut last_error: Option<String> = None;
+
         for attempt in 0..MAX_RETRIES {
             self.enforce_rate_limit().await;
 
             if attempt > 0 {
                 let delay = StdDuration::from_secs_f64(2.0_f64.powi(attempt as i32 - 1) + rand::random::<f64>());
                 let delay = delay.min(StdDuration::from_secs(60));
-                tracing::info!("VCI API retry backoff: attempt {}/{}, waiting {:.1}s before retry", attempt + 1, MAX_RETRIES, delay.as_secs_f64());
+                let reason = last_error.as_deref().unwrap_or("unknown error");
+                tracing::info!("VCI API retry backoff: attempt {}/{} - reason: {}, waiting {:.1}s before retry",
+                    attempt + 1, MAX_RETRIES, reason, delay.as_secs_f64());
                 sleep(delay).await;
             }
 
             let user_agent = self.get_user_agent();
-            
-            
+
+            // Log the exact request details
+            tracing::info!(
+                "VCI_MAKE_REQUEST: attempt={}, url={}, payload_size={}, headers_count=12",
+                attempt + 1,
+                url,
+                serde_json::to_string(payload).unwrap_or_default().len()
+            );
+            tracing::debug!(
+                "VCI_MAKE_REQUEST_DETAILS: url={}, payload={}",
+                url,
+                serde_json::to_string_pretty(payload).unwrap_or_default()
+            );
+
             let response = self.client
                 .post(url)
                 .header("Accept", "application/json, text/plain, */*")
@@ -225,19 +240,35 @@ impl VciClient {
                     if status.is_success() {
                         match resp.json::<Value>().await {
                             Ok(data) => return Ok(data),
-                            Err(_) => continue,
+                            Err(e) => {
+                                last_error = Some(format!("JSON parse error: {}", e));
+                                continue;
+                            }
                         }
                     } else {
-                        if status == 403 || status == 429 || status.is_server_error() {
+                        let status_text = status.canonical_reason().unwrap_or("Unknown");
+                        if status == 403 {
+                            last_error = Some(format!("Forbidden (403) - rate limit or auth issue"));
+                            continue;
+                        } else if status == 429 {
+                            last_error = Some(format!("Too Many Requests (429) - rate limited"));
+                            continue;
+                        } else if status.is_server_error() {
+                            last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
                             continue;
                         } else if status.is_client_error() {
+                            last_error = Some(format!("Client error ({}) - {} - not retryable", status.as_u16(), status_text));
                             break;
                         } else {
+                            last_error = Some(format!("HTTP error ({}) - {}", status.as_u16(), status_text));
                             continue;
                         }
                     }
                 }
-                Err(_) => continue,
+                Err(e) => {
+                    last_error = Some(format!("Network error: {}", e));
+                    continue;
+                }
             }
         }
 
@@ -249,17 +280,16 @@ impl VciClient {
             Some(date) => {
                 let naive_date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
                     .expect("Invalid date format");
-                // Add one day to get the 'to' timestamp (exclusive end) - matching Python implementation
-                let next_day = naive_date + ChronoDuration::days(1);
-                let naive_datetime = next_day.and_hms_opt(0, 0, 0).unwrap();
+                // Use the actual date as end timestamp (not future date)
+                let naive_datetime = naive_date.and_hms_opt(23, 59, 59).unwrap();
                 let datetime = naive_datetime.and_utc();
                 datetime.timestamp()
             }
             None => {
-                // For current timestamp, add 1 day as well
+                // For current timestamp, use end of current day
                 let now = Utc::now();
-                let next_day = now + ChronoDuration::days(1);
-                next_day.timestamp()
+                let end_of_day = now.date_naive().and_hms_opt(23, 59, 59).unwrap().and_utc();
+                end_of_day.timestamp()
             },
         }
     }
@@ -315,6 +345,13 @@ impl VciClient {
             "to": end_timestamp,
             "countBack": count_back
         });
+
+        // Extensive input logging for debugging
+        tracing::debug!(
+            "VCI_GET_HISTORY_INPUT: symbol={}, start={}, end={:?}, interval={}, interval_value={}, end_timestamp={}, count_back={}, url={}",
+            symbol, start, end, interval, interval_value, end_timestamp, count_back, url
+        );
+        tracing::debug!("VCI_GET_HISTORY_PAYLOAD: {}", serde_json::to_string_pretty(&payload).unwrap_or_default());
 
 
         let response_data = self.make_request(&url, &payload).await?;
@@ -416,6 +453,15 @@ impl VciClient {
             "to": end_timestamp,
             "countBack": count_back
         });
+
+        // Extensive input logging for debugging
+        tracing::debug!(
+            "VCI_GET_BATCH_HISTORY_INPUT: symbols_count={}, symbols[5..]={:?}, start={}, end={:?}, interval={}, interval_value={}, end_timestamp={}, original_count_back={}, count_back={}, url={}",
+            symbols.len(),
+            &symbols[..symbols.len().min(5)],
+            start, end, interval, interval_value, end_timestamp, original_count_back, count_back, url
+        );
+        tracing::debug!("VCI_GET_BATCH_HISTORY_PAYLOAD: {}", serde_json::to_string_pretty(&payload).unwrap_or_default());
 
         tracing::debug!("VCI API request: interval={}, start={}, end={:?}, original_count_back={}, count_back={} (2x), to_timestamp={}",
             interval, start, end, original_count_back, count_back, end_timestamp);

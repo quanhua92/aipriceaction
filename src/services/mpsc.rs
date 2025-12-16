@@ -1,7 +1,7 @@
 //! MPSC (Multiple Producer Single Consumer) Channel Service
 //!
 //! Provides bounded channels for real-time ticker updates between workers and DataStore.
-//! Uses capacity=1 to prevent OOM while ensuring real-time updates.
+//! Uses capacity=100 to prevent OOM while ensuring real-time updates.
 //! Uses std::sync::mpsc to work across multiple tokio runtimes.
 
 use crate::models::{Interval, StockData};
@@ -182,42 +182,6 @@ pub async fn send_with_retry_async(
     Err(format!("Failed to send after {} retries", max_retries))
 }
 
-/// Send update with retry mechanism - waits and retries instead of skipping (blocking version)
-pub fn send_with_retry(
-    sender: &SyncSender<TickerUpdate>,
-    update: TickerUpdate,
-    max_retries: usize,
-) -> Result<(), String> {
-    println!("[MPSC::SEND] Starting send_with_retry for ticker={}, max_retries={}", update.ticker, max_retries);
-    let mut retries = 0;
-
-    while retries < max_retries {
-        match sender.try_send(update.clone()) {
-            Ok(()) => {
-                println!("[MPSC::SEND] ✅ Successfully sent update for ticker={} on attempt {}", update.ticker, retries + 1);
-                return Ok(());
-            }
-            Err(std::sync::mpsc::TrySendError::Full(_)) => {
-                // Channel is full, wait and retry
-                retries += 1;
-                println!("[MPSC::SEND] ⚠️  Channel full for ticker={}, attempt {}/{}", update.ticker, retries, max_retries);
-                if retries < max_retries {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
-                } else {
-                    println!("[MPSC::SEND] ❌ Max retries reached for ticker={}, channel appears to be stuck full", update.ticker);
-                }
-            }
-            Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
-                println!("[MPSC::SEND] ❌ Channel disconnected for ticker={}", update.ticker);
-                return Err("Channel disconnected".to_string());
-            }
-        }
-    }
-
-    let error_msg = format!("Failed to send after {} retries", max_retries);
-    println!("[MPSC::SEND] ❌ ERROR: {} for ticker={}", error_msg, update.ticker);
-    Err(error_msg)
-}
 
 #[cfg(test)]
 mod tests {
@@ -278,7 +242,7 @@ mod tests {
         // First send should succeed
         assert!(tx.try_send(update.clone()).is_ok());
 
-        // Second send should fail because channel is full (capacity=1)
+        // Second send should fail because channel is full (capacity=100)
         assert!(tx.try_send(update).is_err());
 
         // Receive the message
