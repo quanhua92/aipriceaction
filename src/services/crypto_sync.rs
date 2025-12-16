@@ -189,6 +189,11 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             let chunk_time = chunk_start_time.elapsed();
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit in batch mode - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
+                            }
                             eprintln!("SYNC::CRYPTO::❌ Chunk {}/{} failed after {:.1}s: {}",
                                 chunk_idx + 1, crypto_chunks.len(), chunk_time.as_secs_f64(), e);
                             failed_cryptos.extend(chunk.iter().cloned());
@@ -220,11 +225,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                                for (remaining_symbol, _) in resume_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());
@@ -329,11 +332,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} partial tickers", total - idx);
-                                for (remaining_symbol, _) in partial_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ Partial fetch failed: {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());
@@ -398,6 +399,11 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             let chunk_time = chunk_start_time.elapsed();
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit in batch mode - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
+                            }
                             eprintln!("SYNC::CRYPTO::❌ Chunk {}/{} failed after {:.1}s: {}",
                                 chunk_idx + 1, crypto_chunks.len(), chunk_time.as_secs_f64(), e);
                             failed_cryptos.extend(chunk.iter().cloned());
@@ -429,11 +435,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                                for remaining_symbol in full_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());

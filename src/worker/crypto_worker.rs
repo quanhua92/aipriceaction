@@ -173,49 +173,82 @@ pub async fn run(health_stats: SharedHealthStats) {
 
             // Daily
             if sync_info.should_sync(sync_info.priority_daily_last_sync, loop_interval) {
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Daily,
                     &priority_symbols,
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
-                ).await;
-                if success {
-                    sync_info.update_priority_daily();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_priority_daily();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in daily sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
 
             // Hourly
             if sync_info.should_sync(sync_info.priority_hourly_last_sync, loop_interval) {
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Hourly,
                     &priority_symbols,
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
-                ).await;
-                if success {
-                    sync_info.update_priority_hourly();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_priority_hourly();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in hourly sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
 
             // Minute
             if sync_info.should_sync(sync_info.priority_minute_last_sync, loop_interval) {
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Minute,
                     &priority_symbols,
                     sync_info.iteration_count,
                     "Priority",
                     &crypto_data_dir,
-                ).await;
-                if success {
-                    sync_info.update_priority_minute();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_priority_minute();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in minute sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
         }
@@ -230,18 +263,28 @@ pub async fn run(health_stats: SharedHealthStats) {
                     "Syncing regular cryptos: Daily"
                 );
 
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Daily,
                     &regular_symbols,
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
-                ).await;
-
-                if success {
-                    sync_info.update_regular_daily();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_regular_daily();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in regular daily sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
 
@@ -253,18 +296,28 @@ pub async fn run(health_stats: SharedHealthStats) {
                     "Syncing regular cryptos: Hourly"
                 );
 
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Hourly,
                     &regular_symbols,
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
-                ).await;
-
-                if success {
-                    sync_info.update_regular_hourly();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_regular_hourly();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in regular hourly sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
 
@@ -276,18 +329,28 @@ pub async fn run(health_stats: SharedHealthStats) {
                     "Syncing regular cryptos: Minute"
                 );
 
-                let success = sync_and_enhance(
+                match sync_and_enhance(
                     Interval::Minute,
                     &regular_symbols,
                     sync_info.iteration_count,
                     "Regular",
                     &crypto_data_dir,
-                ).await;
-
-                if success {
-                    sync_info.update_regular_minute();
-                } else {
-                    all_intervals_successful = false;
+                ).await {
+                    Ok(true) => {
+                        sync_info.update_regular_minute();
+                    }
+                    Ok(false) => {
+                        all_intervals_successful = false;
+                    }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit - aborting current sync cycle and waiting for next interval");
+                        // Skip all remaining intervals and wait for next main loop
+                        continue;
+                    }
+                    Err(e) => {
+                        error!("Unexpected error in regular minute sync: {}", e);
+                        all_intervals_successful = false;
+                    }
                 }
             }
         }
@@ -331,7 +394,7 @@ async fn sync_and_enhance(
     iteration: u64,
     tier: &str,
     crypto_data_dir: &std::path::PathBuf,
-) -> bool {
+) -> Result<bool, Error> {
     let interval_name = match interval {
         Interval::Daily => "Daily",
         Interval::Hourly => "Hourly",
@@ -362,7 +425,7 @@ async fn sync_and_enhance(
                         crypto_count = symbols.len(),
                         "Pre-check: all cryptos unchanged, skipping sync and enhancement"
                     );
-                    return true; // Skip sync, return success
+                    return Ok(true); // Skip sync, return success
                 }
                 Ok(false) => {
                     info!(
@@ -424,6 +487,12 @@ async fn sync_and_enhance(
                 error = %e,
                 "Sync failed"
             );
+
+            // Re-return rate limit errors so the main loop can handle them
+            if matches!(e, crate::error::Error::RateLimit) {
+                return Err(e);
+            }
+
             false
         }
     };
@@ -468,7 +537,7 @@ async fn sync_and_enhance(
         }
     }
 
-    sync_success
+      Ok(sync_success)
 }
 
 /// Get adaptive resume date for crypto sync (like stock sync)
@@ -688,6 +757,11 @@ pub async fn run_with_channel(
                             "Priority"
                         );
                     }
+                    Err(crate::error::Error::RateLimit) => {
+                        error!("Rate limit hit in priority sync - breaking current cycle and waiting for next interval");
+                        // Break out of interval loop for this symbol and continue to next symbol
+                        break;
+                    }
                     Err(e) => {
                         let interval_end = Utc::now();
             let duration = interval_end.signed_duration_since(interval_start);
@@ -746,6 +820,11 @@ pub async fn run_with_channel(
                                     tier = "Regular",
                                     "Regular sync completed"
                                 );
+                            }
+                            Err(crate::error::Error::RateLimit) => {
+                                error!("Rate limit hit in regular sync - breaking current cycle and waiting for next interval");
+                                // Break out of symbol loop and continue to next interval
+                                break;
                             }
                             Err(e) => {
                                 tracing::error!(
