@@ -635,12 +635,31 @@ pub fn save_enhanced_csv_to_dir_with_changes(
             .unwrap_or(existing_data.len());
 
         // CRITICAL FIX: Smart deduplication during cutoff
-        // Start with existing data up to cutoff
-        let mut final_data: Vec<StockData> = existing_data[..cutoff_index].to_vec();
+        // Handle cutoff edge case: if cutoff is at index 0, we need full deduplication
+        let (mut final_data, mut existing_timestamps) = if cutoff_index == 0 && !existing_data.is_empty() {
+            // Edge case: cutoff at first record, need to deduplicate ALL existing data
+            let mut timestamps: std::collections::HashSet<DateTime<chrono::Utc>> = existing_data.iter().map(|d| d.time).collect();
+            let mut deduped: Vec<StockData> = Vec::new();
+            let mut skipped = 0;
 
-        // Track existing timestamps for fast lookup
-        let mut existing_timestamps: std::collections::HashSet<DateTime<chrono::Utc>> =
-            final_data.iter().map(|d| d.time).collect();
+            // Process existing data in reverse, keep only latest per timestamp
+            for existing_record in existing_data.iter().rev() {
+                if !timestamps.contains(&existing_record.time) {
+                    deduped.push(existing_record.clone());
+                    timestamps.insert(existing_record.time);
+                } else {
+                    skipped += 1;
+                }
+            }
+
+            deduped.reverse(); // Restore chronological order
+            (deduped, timestamps)
+        } else {
+            // Normal case: use existing data up to cutoff point
+            let existing_prefix = existing_data[..cutoff_index].to_vec();
+            let timestamps: std::collections::HashSet<DateTime<chrono::Utc>> = existing_prefix.iter().map(|d| d.time).collect();
+            (existing_prefix, timestamps)
+        };
 
         // Helper function to check if a record is enhanced (has MA values)
         let is_enhanced = |record: &StockData| -> bool {
