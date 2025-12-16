@@ -12,7 +12,6 @@ use std::sync::Arc;
 use std::time::SystemTime;
 use std::io::{Read, Seek};
 use tokio::sync::RwLock;
-use tokio::task::JoinHandle;
 use memmap2::Mmap;
 
 #[derive(Debug)]
@@ -32,10 +31,7 @@ pub const MINUTE_DATA_RETENTION_RECORDS: usize = 2160; // Keep last 2160 minute 
 pub const CACHE_TTL_SECONDS: i64 = 300; // 5 minutes TTL for memory cache (matches minute auto-reload interval)
 
 /// Auto-reload interval constants (different from cache TTL)
-/// Balance between CPU usage and data freshness
-pub const AUTO_RELOAD_DAILY_SECONDS: u64 = 15;    // 15 seconds for daily data (match daily worker interval)
-pub const AUTO_RELOAD_HOURLY_SECONDS: u64 = 30;   // 30 seconds for hourly data (keep fast refresh)
-pub const AUTO_RELOAD_MINUTE_SECONDS: u64 = 300;  // 5 minutes for minute data (rarely changes, saves CPU)
+// Auto-reload constants removed - MPSC handles real-time cache updates efficiently
 
 /// Cache size limits (configurable via environment variables)
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
@@ -1356,84 +1352,7 @@ impl DataStore {
     }
 
     /// Reload a specific interval from CSV files (interval-specific retention limits)
-    pub async fn reload_interval(&self, interval: Interval) -> Result<(), Error> {
-        let retention_limit = match interval {
-            Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
-            _ => DATA_RETENTION_RECORDS,
-        };
-        self.load_interval(interval, None, Some(retention_limit)).await
-    }
-
-    /// Spawn a background task that auto-reloads the specified interval every CACHE_TTL_SECONDS
-    /// Returns a JoinHandle that can be used for graceful shutdown
-    pub fn spawn_auto_reload_task(
-        self: Arc<Self>,
-        interval: Interval,
-    ) -> JoinHandle<()> {
-        // Generate random delay before entering async block to avoid Send issues
-        use rand::Rng;
-        let mut rng = rand::thread_rng();
-              // Use interval-specific reload duration for staggered initial delay
-        let reload_duration = match interval {
-            Interval::Daily => AUTO_RELOAD_DAILY_SECONDS,
-            Interval::Hourly => AUTO_RELOAD_HOURLY_SECONDS,
-            Interval::Minute => AUTO_RELOAD_MINUTE_SECONDS,
-        };
-        let initial_delay_ms = rng.gen_range(0u64..(reload_duration * 1000 / 6));  // Distribute across the reload window
-
-        tokio::spawn(async move {
-            let retention_limit = match interval {
-                Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,
-                _ => DATA_RETENTION_RECORDS,
-            };
-
-            tracing::info!(
-                "Starting auto-reload task for {} interval (reload: {}s, TTL: {}s, limit: {} records)",
-                interval.to_filename(),
-                reload_duration,
-                CACHE_TTL_SECONDS,
-                retention_limit
-            );
-
-            // Add random initial delay to stagger auto-reload tasks across the TTL window
-            // This prevents all 6 tasks from running simultaneously
-            let initial_delay = tokio::time::Duration::from_millis(initial_delay_ms);
-
-            tracing::debug!(
-                "Auto-reload task for {} will start after {}ms initial delay",
-                interval.to_filename(),
-                initial_delay_ms
-            );
-
-            tokio::time::sleep(initial_delay).await;
-
-            loop {
-                // Sleep first (cache was just loaded during server startup)
-                tokio::time::sleep(tokio::time::Duration::from_secs(reload_duration)).await;
-
-                tracing::debug!(
-                    "[DEBUG:PERF:BG_TASK] Auto-reload start for {} (TTL expired)",
-                    interval.to_filename()
-                );
-
-                let reload_start = std::time::Instant::now();
-                match self.reload_interval(interval).await {
-                    Ok(_) => {
-                        tracing::info!("[DEBUG:PERF:BG_TASK] ♻️  Reloaded {} cache: {:.2}ms", interval.to_filename(), reload_start.elapsed().as_secs_f64() * 1000.0);
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "[DEBUG:PERF:BG_TASK] Failed to auto-reload {} cache: {}. Will retry in {}s",
-                            interval.to_filename(),
-                            e,
-                            reload_duration
-                        );
-                        // Don't panic - continue loop and retry next cycle
-                    }
-                }
-            }
-        })
-    }
+    // Auto-reload methods removed - MPSC handles real-time cache updates efficiently
 
     /// Smart data retrieval with aggregation awareness and centralized logic
     /// This method handles all query complexity internally
@@ -1567,7 +1486,7 @@ impl DataStore {
                 CACHE_TTL_SECONDS * 2,
                 interval.to_filename()
             );
-            if let Err(e) = self.reload_interval(interval).await {
+            if let Err(e) = self.load_interval(interval, None, None).await {
                 tracing::error!("Emergency reload failed for {}: {}, falling back to disk", interval.to_filename(), e);
                 return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
             }

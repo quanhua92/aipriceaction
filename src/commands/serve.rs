@@ -105,49 +105,8 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Spawn background auto-reload tasks for in-memory cache in dedicated runtime
-    use crate::services::data_store::CACHE_TTL_SECONDS;
-    use crate::services::data_store::DATA_RETENTION_RECORDS;
-
-    println!("🔄 Starting auto-reload tasks (TTL: {}s, limit: {} records)...", CACHE_TTL_SECONDS, DATA_RETENTION_RECORDS);
-
-    // Create dedicated runtime for auto-reload tasks (separate from HTTP server runtime)
-    let auto_reload_data_vn = shared_data_store_vn.clone();
-    let auto_reload_data_crypto = shared_data_store_crypto.clone();
-
-    std::thread::spawn(move || {
-        let auto_reload_runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(3)  // Fixed small number for auto-reload tasks
-            .thread_name("auto-reload")
-            .enable_all()
-            .build()
-            .expect("Failed to create auto-reload runtime");
-
-        auto_reload_runtime.block_on(async {
-            println!("🔄 Auto-reload runtime started with 3 worker threads");
-
-            // VN auto-reload tasks (Daily + Hourly + Minute)
-            let _vn_daily_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Daily);
-            let _vn_hourly_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _vn_minute_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Minute);
-
-            // Crypto auto-reload tasks (Daily + Hourly + Minute)
-            let _crypto_daily_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Daily);
-            let _crypto_hourly_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _crypto_minute_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Minute);
-
-            println!("✅ Auto-reload tasks started in dedicated runtime:");
-            println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 VN Minute reload:   Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Minute reload: Every {}s", CACHE_TTL_SECONDS);
-
-            // Keep runtime alive
-            tokio::signal::ctrl_c().await.ok();
-        });
-    });
+    // Auto-reload removed - MPSC handles real-time cache updates efficiently
+    // Memory cache updated via MPSC messages from workers (no periodic disk scanning needed)
 
     // CPU auto-detection for optimal performance
     println!();
