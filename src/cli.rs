@@ -50,6 +50,10 @@ pub enum Commands {
         #[arg(long)]
         debug: bool,
 
+        /// Skip CSV validation for faster startup (same as serve command)
+        #[arg(long)]
+        no_validation: bool,
+
         /// Batch size for API calls (default: 10, try 20-50 for faster sync)
         #[arg(long, default_value = "10")]
         batch_size: usize,
@@ -155,10 +159,11 @@ pub fn run() {
             resume_days,
             start_date,
             debug,
+            no_validation,
             batch_size,
         } => {
             // resume_days is now Option<u32>, passed directly
-            commands::pull::run(intervals, full, resume_days, start_date, debug, batch_size);
+            commands::pull::run(intervals, full, resume_days, start_date, debug, no_validation, batch_size);
         }
         Commands::Serve { port } => {
             // Serve needs async runtime - create one just for this command

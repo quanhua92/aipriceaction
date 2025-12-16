@@ -22,23 +22,43 @@ impl TickerFetcher {
         Ok(Self { vci_client })
     }
 
-    /// Read the last date from a CSV file (efficiently reads only last few lines)
+    /// Read the last date from a CSV file (fast - reads only last few KB from end)
     fn read_last_date(&self, file_path: &Path) -> Result<Option<String>, Error> {
         use std::fs::File;
-        use std::io::{BufRead, BufReader};
+        use std::io::{Seek, SeekFrom, Read};
 
-        let file = File::open(file_path)
+        let file_size = match std::fs::metadata(file_path) {
+            Ok(metadata) => metadata.len(),
+            Err(_) => return Ok(None),
+        };
+
+        if file_size < 1024 {  // File too small, read normally
+            return self.read_last_date_forward(file_path);
+        }
+
+        // Read only the last 8KB to find the last date quickly
+        let read_size = std::cmp::min(8192, file_size as usize);
+        let seek_pos = file_size - read_size as u64;
+
+        let mut file = File::open(file_path)
             .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
 
-        let reader = BufReader::new(file);
+        file.seek(SeekFrom::Start(seek_pos))
+            .map_err(|e| Error::Io(format!("Failed to seek in CSV: {}", e)))?;
+
+        let mut buffer = vec![0u8; read_size];
+        file.read_exact(&mut buffer)
+            .map_err(|e| Error::Io(format!("Failed to read CSV buffer: {}", e)))?;
+
+        let data = String::from_utf8_lossy(&buffer);
         let mut last_valid_date: Option<String> = None;
 
-        // Read all lines to find the last valid data line
-        for line in reader.lines() {
-            let line = line.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+        // Process lines backwards (more efficient - stop at first valid date)
+        for line in data.lines().rev() {
+            let line = line.trim();
 
             // Skip header and empty lines
-            if line.starts_with("ticker") || line.trim().is_empty() {
+            if line.starts_with("ticker") || line.is_empty() {
                 continue;
             }
 
@@ -48,6 +68,51 @@ impl TickerFetcher {
                 let date_str = parts[1].trim();
                 // Extract just the date part (YYYY-MM-DD) from datetime strings
                 // Handle both space-separated "YYYY-MM-DD HH:MM:SS" and ISO 8601 "YYYY-MM-DDTHH:MM:SS"
+                let date = if date_str.contains(' ') {
+                    date_str.split(' ').next().unwrap_or(date_str)
+                } else if date_str.contains('T') {
+                    date_str.split('T').next().unwrap_or(date_str)
+                } else {
+                    date_str
+                };
+
+                // Validate date format (should be YYYY-MM-DD)
+                if date.len() == 10 && date.chars().filter(|&c| c == '-').count() == 2 {
+                    last_valid_date = Some(date.to_string());
+                    break; // Found a valid date, no need to continue
+                }
+            }
+        }
+
+        // If no valid date found in the tail, fall back to reading from start
+        if last_valid_date.is_none() && file_size > read_size as u64 {
+            return self.read_last_date_forward(file_path);
+        }
+
+        Ok(last_valid_date)
+    }
+
+    /// Fallback method: read from start (for very small files or malformed data)
+    fn read_last_date_forward(&self, file_path: &Path) -> Result<Option<String>, Error> {
+        use std::fs::File;
+        use std::io::{BufRead, BufReader};
+
+        let file = File::open(file_path)
+            .map_err(|e| Error::Io(format!("Failed to open CSV: {}", e)))?;
+
+        let reader = BufReader::new(file);
+        let mut last_valid_date: Option<String> = None;
+
+        for line in reader.lines() {
+            let line = line.map_err(|e| Error::Io(format!("Failed to read line: {}", e)))?;
+
+            if line.starts_with("ticker") || line.trim().is_empty() {
+                continue;
+            }
+
+            let parts: Vec<&str> = line.split(',').collect();
+            if parts.len() >= 2 {
+                let date_str = parts[1].trim();
                 let date = if date_str.contains(' ') {
                     date_str.split(' ').next().unwrap_or(date_str)
                 } else if date_str.contains('T') {

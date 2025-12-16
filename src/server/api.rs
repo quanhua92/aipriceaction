@@ -540,7 +540,20 @@ pub async fn health_handler(
     // TODO: Consider adding separate vn_stats and crypto_stats in future version
     let data_state = app_state.get_data_store(Mode::Vn);
 
-    let mut health_stats = health_state.read().await.clone();
+    // Try to get health stats with short timeout to avoid lock contention
+    let health_snapshot = tokio::time::timeout(
+        tokio::time::Duration::from_millis(100), // 100ms timeout
+        health_state.read()
+    ).await;
+
+    let mut health_stats = match health_snapshot {
+        Ok(health) => health.clone(),
+        Err(_) => {
+            // Lock timeout - use default values
+            warn!("Health stats lock timeout, using defaults");
+            crate::services::HealthStats::default()
+        }
+    };
 
     // Calculate current metrics dynamically using DataStore methods
     let memory_bytes = data_state.estimate_memory_usage().await;

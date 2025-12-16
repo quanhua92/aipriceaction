@@ -3,7 +3,7 @@ use crate::models::{Interval, SyncConfig};
 use crate::services::{DataSync, validate_and_repair_interval};
 use crate::utils::{get_market_data_dir, get_concurrent_batches};
 
-pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, batch_size: usize) {
+pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_date: String, debug: bool, no_validation: bool, batch_size: usize) {
     // Parse intervals
     let intervals = match Interval::parse_intervals(&intervals_arg) {
         Ok(intervals) => intervals,
@@ -40,30 +40,34 @@ pub fn run(intervals_arg: String, full: bool, resume_days: Option<u32>, start_da
         concurrent_batches, // Auto-detected based on CPU cores
     );
 
-    // Step 0: Validate and repair CSV files (recovery step)
-    println!("\n🔍 Validating CSV files for corruption...");
+    // Step 0: Validate and repair CSV files (recovery step) - optional skip
     let market_data_dir = get_market_data_dir();
     let mut all_corrupted_tickers = Vec::new();
 
-    for interval in &intervals {
-        match validate_and_repair_interval(*interval, &market_data_dir) {
-            Ok(reports) => {
-                if !reports.is_empty() {
-                    println!("\n⚠️  Found {} corrupted {} files:", reports.len(), interval.to_filename());
-                    for report in &reports {
-                        println!("   {} - Removed {} corrupted lines (last valid: {:?})",
-                            report.ticker,
-                            report.removed_lines,
-                            report.last_valid_date
-                        );
-                        all_corrupted_tickers.push((report.ticker.clone(), *interval, report.last_valid_date));
+    if no_validation {
+        println!("\n🔍 Skipping CSV validation (--no-validation flag)");
+    } else {
+        println!("\n🔍 Validating CSV files for corruption...");
+        for interval in &intervals {
+            match validate_and_repair_interval(*interval, &market_data_dir) {
+                Ok(reports) => {
+                    if !reports.is_empty() {
+                        println!("\n⚠️  Found {} corrupted {} files:", reports.len(), interval.to_filename());
+                        for report in &reports {
+                            println!("   {} - Removed {} corrupted lines (last valid: {:?})",
+                                report.ticker,
+                                report.removed_lines,
+                                report.last_valid_date
+                            );
+                            all_corrupted_tickers.push((report.ticker.clone(), *interval, report.last_valid_date));
+                        }
+                    } else {
+                        println!("✅ All {} files are valid", interval.to_filename());
                     }
-                } else {
-                    println!("✅ All {} files are valid", interval.to_filename());
                 }
-            }
-            Err(e) => {
-                eprintln!("⚠️  Validation failed for {}: {}", interval.to_filename(), e);
+                Err(e) => {
+                    eprintln!("⚠️  Validation failed for {}: {}", interval.to_filename(), e);
+                }
             }
         }
     }

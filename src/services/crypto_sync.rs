@@ -2,10 +2,12 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, SyncStats};
 use crate::services::crypto_fetcher::CryptoFetcher;
 use crate::services::vci::OhlcvData;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_to_dir_with_changes};
+use crate::services::mpsc::TickerUpdate;
 use crate::utils::get_crypto_data_dir;
 use chrono::Utc;
 use std::collections::HashMap;
+use std::sync::mpsc::SyncSender;
 use std::time::Instant;
 
 /// High-level cryptocurrency data synchronization orchestrator
@@ -14,11 +16,13 @@ pub struct CryptoSync {
     fetcher: CryptoFetcher,
     #[allow(dead_code)]
     stats: SyncStats,
+    /// Optional MPSC channel sender for real-time ticker updates
+    channel_sender: Option<SyncSender<TickerUpdate>>,
 }
 
 impl CryptoSync {
     /// Get appropriate chunk size for different intervals
-    fn get_chunk_size_for_interval(&self, interval: Interval) -> usize {
+    pub fn get_chunk_size_for_interval(&self, interval: Interval) -> usize {
         match interval {
             Interval::Minute => 10,  // Process 10 cryptos per batch for 1m
             Interval::Hourly => 25,  // Process 25 cryptos per batch for 1H
@@ -41,6 +45,23 @@ impl CryptoSync {
             config,
             fetcher,
             stats: SyncStats::new(),
+            channel_sender: None,
+        })
+    }
+
+    /// Create new CryptoSync with MPSC channel support
+    pub fn new_with_channel(
+        config: SyncConfig,
+        api_key: Option<String>,
+        channel_sender: Option<SyncSender<TickerUpdate>>,
+    ) -> Result<Self, Error> {
+        let fetcher = CryptoFetcher::new(api_key)?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+            channel_sender,
         })
     }
 
@@ -168,6 +189,11 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             let chunk_time = chunk_start_time.elapsed();
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit in batch mode - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
+                            }
                             eprintln!("SYNC::CRYPTO::❌ Chunk {}/{} failed after {:.1}s: {}",
                                 chunk_idx + 1, crypto_chunks.len(), chunk_time.as_secs_f64(), e);
                             failed_cryptos.extend(chunk.iter().cloned());
@@ -199,11 +225,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                                for (remaining_symbol, _) in resume_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());
@@ -308,11 +332,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} partial tickers", total - idx);
-                                for (remaining_symbol, _) in partial_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ Partial fetch failed: {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());
@@ -377,6 +399,11 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             let chunk_time = chunk_start_time.elapsed();
+                            if matches!(e, Error::RateLimit) {
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit in batch mode - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
+                            }
                             eprintln!("SYNC::CRYPTO::❌ Chunk {}/{} failed after {:.1}s: {}",
                                 chunk_idx + 1, crypto_chunks.len(), chunk_time.as_secs_f64(), e);
                             failed_cryptos.extend(chunk.iter().cloned());
@@ -408,11 +435,9 @@ impl CryptoSync {
                         }
                         Err(e) => {
                             if matches!(e, Error::RateLimit) {
-                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - skipping remaining {} tickers", total - idx);
-                                for remaining_symbol in full_list.iter().skip(idx) {
-                                    failed_cryptos.push(remaining_symbol.clone());
-                                }
-                                break;
+                                eprintln!("SYNC::CRYPTO::❌ Rate limit hit - aborting sync and waiting for next interval");
+                                // Return rate limit error immediately to abort entire sync
+                                return Err(Error::RateLimit);
                             }
                             eprintln!("   SYNC::CRYPTO::[{}/{}] {} ❌ {}", idx + 1, total, symbol, e);
                             failed_cryptos.push(symbol.clone());
@@ -470,14 +495,14 @@ impl CryptoSync {
                 return Ok(()); // Skip empty data
             }
 
-            self.enhance_and_save_crypto_data(symbol, &ohlcv_data, interval, last_date)?;
+            self.enhance_and_save_crypto_data(symbol, &ohlcv_data, interval, last_date).await?;
         }
 
         Ok(())
     }
 
     /// Enhance and save crypto data (mirrors stock sync optimization)
-    fn enhance_and_save_crypto_data(
+    async fn enhance_and_save_crypto_data(
         &self,
         symbol: &str,
         new_data: &[OhlcvData],
@@ -535,15 +560,24 @@ impl CryptoSync {
         let stock_data = enhanced_data.get(symbol)
             .ok_or_else(|| Error::Other("Failed to enhance data".to_string()))?;
 
-        // Save with cutoff strategy
-        save_enhanced_csv_to_dir(
+        // Save with cutoff strategy and change detection
+        let (change_type, record_count) = save_enhanced_csv_to_dir_with_changes(
             symbol,
             stock_data,
             interval,
             cutoff_datetime,
             !is_resume, // rewrite_all for full mode
-            &crypto_data_dir
-        )?;
+            &crypto_data_dir,
+            self.channel_sender.clone(),
+        ).await?;
+
+        tracing::info!(
+            symbol = symbol,
+            interval = ?interval,
+            record_count = record_count,
+            change_type = %change_type,
+            "Enhanced and saved crypto data with change detection"
+        );
 
         Ok(())
     }
