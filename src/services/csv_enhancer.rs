@@ -424,7 +424,7 @@ pub fn save_enhanced_csv_to_dir(
 
 /// Save enhanced CSV to a specific directory with MPSC change detection and notification
 /// This function detects changes and sends real-time updates through the MPSC channel
-pub fn save_enhanced_csv_to_dir_with_changes(
+pub async fn save_enhanced_csv_to_dir_with_changes(
     ticker: &str,
     data: &[StockData],
     interval: Interval,
@@ -793,7 +793,7 @@ pub fn save_enhanced_csv_to_dir_with_changes(
 
 /// Save enhanced CSV to a specific directory with MPSC change detection and notification
 /// This function detects changes and sends real-time updates through the MPSC channel
-pub fn save_enhanced_csv_with_changes(
+pub async fn save_enhanced_csv_with_changes(
     ticker: &str,
     data: &[StockData],
     interval: Interval,
@@ -1014,6 +1014,8 @@ pub fn save_enhanced_csv_with_changes(
 
     // Send update through channel for real-time memory cache update (if channel provided)
     if let Some(sender) = channel_sender {
+        println!("[CSV_ENHANCER] About to send MPSC update for ticker={}, interval={:?}, change_type={}",
+                 ticker, interval, change_type);
         let update = TickerUpdate::new(
             ticker.to_string(),
             interval,
@@ -1021,8 +1023,10 @@ pub fn save_enhanced_csv_with_changes(
         );
 
         // Send with retry mechanism - wait for channel to be available instead of skipping
-        match crate::services::mpsc::send_with_retry(&sender, update, 50) {
+        println!("[CSV_ENHANCER] Calling send_with_retry_async for ticker={}", ticker);
+        match crate::services::mpsc::send_with_retry_async(&sender, update, 50).await {
             Ok(()) => {
+                println!("[CSV_ENHANCER] ✅ Successfully sent MPSC update for ticker={}", ticker);
                 tracing::info!(
                     ticker = ticker,
                     interval = ?interval,
@@ -1032,6 +1036,7 @@ pub fn save_enhanced_csv_with_changes(
             }
             Err(e) => {
                 // Failed after retries - log but don't fail the CSV write
+                println!("[CSV_ENHANCER] ❌ ERROR: Failed to send MPSC update for ticker={}, error={}", ticker, e);
                 tracing::warn!(
                     ticker = ticker,
                     interval = ?interval,

@@ -491,14 +491,14 @@ impl CryptoSync {
                 return Ok(()); // Skip empty data
             }
 
-            self.enhance_and_save_crypto_data(symbol, &ohlcv_data, interval, last_date)?;
+            self.enhance_and_save_crypto_data(symbol, &ohlcv_data, interval, last_date).await?;
         }
 
         Ok(())
     }
 
     /// Enhance and save crypto data (mirrors stock sync optimization)
-    fn enhance_and_save_crypto_data(
+    async fn enhance_and_save_crypto_data(
         &self,
         symbol: &str,
         new_data: &[OhlcvData],
@@ -565,7 +565,7 @@ impl CryptoSync {
             !is_resume, // rewrite_all for full mode
             &crypto_data_dir,
             self.channel_sender.clone(),
-        )?;
+        ).await?;
 
         tracing::info!(
             symbol = symbol,

@@ -153,6 +153,18 @@ impl DataSync {
             // Get dynamic batch size based on date range
             let dynamic_batch_size = self.config.get_dynamic_batch_size(interval, date_range_days);
 
+            tracing::info!(
+                interval = ?interval,
+                interval_type = interval.to_vci_format(),
+                tickers_count = resume_ticker_names.len(),
+                start_date = %fetch_start_date,
+                end_date = %self.config.end_date,
+                batch_size = dynamic_batch_size,
+                concurrent_batches = self.config.concurrent_batches,
+                resume_tickers = ?resume_ticker_names[..resume_ticker_names.len().min(5)],
+                "DATA_SYNC:: Calling batch_fetch"
+            );
+
             self.fetcher
                 .batch_fetch(
                     &resume_ticker_names,
@@ -197,9 +209,6 @@ impl DataSync {
             // );
 
             for ticker in &category.full_history_tickers {
-                // Yield control to allow other tasks to run
-                tokio::task::yield_now().await;
-
                 match self.fetcher
                     .fetch_full_history(
                         ticker,
@@ -234,9 +243,6 @@ impl DataSync {
             );
 
             for (ticker, start_date) in &category.partial_history_tickers {
-                // Yield control to allow other tasks to run
-                tokio::task::yield_now().await;
-
                 println!("{}   📥 {} - Fetching from {}...", prefix, ticker, start_date);
                 match self.fetcher
                     .fetch_full_history(
@@ -268,11 +274,6 @@ impl DataSync {
         let total_tickers = tickers.len();
 
         for (i, ticker) in tickers.iter().enumerate() {
-            // Yield control every few tickers to allow other tasks to run
-            if i % 5 == 0 {
-                tokio::task::yield_now().await;
-            }
-
             let ticker_start_time = Instant::now();
             let current = i + 1;
 
@@ -289,7 +290,7 @@ impl DataSync {
             match result {
                 Ok(data) => {
                     // Enhance and save to CSV (single write)
-                    self.enhance_and_save_ticker_data(ticker, &data, interval)?;
+                    self.enhance_and_save_ticker_data(ticker, &data, interval).await?;
 
                     self.stats.successful += 1;
                     self.stats.files_written += 1;
@@ -628,7 +629,7 @@ impl DataSync {
     }
 
     /// Enhance and save ticker data to CSV in a single write operation
-    fn enhance_and_save_ticker_data(
+    async fn enhance_and_save_ticker_data(
         &self,
         ticker: &str,
         data: &[OhlcvData],
@@ -693,7 +694,7 @@ impl DataSync {
                 false, // rewrite_all - set to false for incremental
                 &market_data_dir,
                 self.channel_sender.clone(),
-            )?;
+            ).await?;
 
             // Log concise change type without full record details
             let change_summary = match &change_type {

@@ -113,11 +113,11 @@ pub struct ChannelManager {
 }
 
 impl ChannelManager {
-    /// Create new channel manager with bounded channels (capacity=5)
+    /// Create new channel manager with bounded channels (capacity=100)
     pub fn new() -> (Self, Receiver<TickerUpdate>, Receiver<TickerUpdate>) {
-        // Create bounded channels with capacity 5 to prevent OOM while allowing some buffering
-        let (vn_tx, vn_rx) = std::sync::mpsc::sync_channel(5);
-        let (crypto_tx, crypto_rx) = std::sync::mpsc::sync_channel(5);
+        // Create bounded channels with capacity 100 to handle message volume from CSV enhancement
+        let (vn_tx, vn_rx) = std::sync::mpsc::sync_channel(100);
+        let (crypto_tx, crypto_rx) = std::sync::mpsc::sync_channel(100);
 
         let manager = Self {
             vn_sender: vn_tx,
@@ -150,11 +150,11 @@ impl ChannelManager {
 
 /// Convenience function for creating bounded channels directly
 pub fn create_bounded_channels() -> (SyncSender<TickerUpdate>, Receiver<TickerUpdate>) {
-    std::sync::mpsc::sync_channel(5) // Capacity 5 to prevent OOM while allowing buffering
+    std::sync::mpsc::sync_channel(100) // Capacity 100 to handle message volume from CSV enhancement
 }
 
-/// Send update with retry mechanism - waits and retries instead of skipping
-pub fn send_with_retry(
+/// Send update with retry mechanism - async version using tokio::time::sleep
+pub async fn send_with_retry_async(
     sender: &SyncSender<TickerUpdate>,
     update: TickerUpdate,
     max_retries: usize,
@@ -163,12 +163,14 @@ pub fn send_with_retry(
 
     while retries < max_retries {
         match sender.try_send(update.clone()) {
-            Ok(()) => return Ok(()),
+            Ok(()) => {
+                return Ok(());
+            }
             Err(std::sync::mpsc::TrySendError::Full(_)) => {
-                // Channel is full, wait and retry
+                // Channel is full, wait and retry with async sleep
                 retries += 1;
                 if retries < max_retries {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                 }
             }
             Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
@@ -178,6 +180,43 @@ pub fn send_with_retry(
     }
 
     Err(format!("Failed to send after {} retries", max_retries))
+}
+
+/// Send update with retry mechanism - waits and retries instead of skipping (blocking version)
+pub fn send_with_retry(
+    sender: &SyncSender<TickerUpdate>,
+    update: TickerUpdate,
+    max_retries: usize,
+) -> Result<(), String> {
+    println!("[MPSC::SEND] Starting send_with_retry for ticker={}, max_retries={}", update.ticker, max_retries);
+    let mut retries = 0;
+
+    while retries < max_retries {
+        match sender.try_send(update.clone()) {
+            Ok(()) => {
+                println!("[MPSC::SEND] ✅ Successfully sent update for ticker={} on attempt {}", update.ticker, retries + 1);
+                return Ok(());
+            }
+            Err(std::sync::mpsc::TrySendError::Full(_)) => {
+                // Channel is full, wait and retry
+                retries += 1;
+                println!("[MPSC::SEND] ⚠️  Channel full for ticker={}, attempt {}/{}", update.ticker, retries, max_retries);
+                if retries < max_retries {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                } else {
+                    println!("[MPSC::SEND] ❌ Max retries reached for ticker={}, channel appears to be stuck full", update.ticker);
+                }
+            }
+            Err(std::sync::mpsc::TrySendError::Disconnected(_)) => {
+                println!("[MPSC::SEND] ❌ Channel disconnected for ticker={}", update.ticker);
+                return Err("Channel disconnected".to_string());
+            }
+        }
+    }
+
+    let error_msg = format!("Failed to send after {} retries", max_retries);
+    println!("[MPSC::SEND] ❌ ERROR: {} for ticker={}", error_msg, update.ticker);
+    Err(error_msg)
 }
 
 #[cfg(test)]

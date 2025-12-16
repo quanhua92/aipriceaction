@@ -297,7 +297,9 @@ impl DataStore {
                 // Non-blocking receive with periodic checks
                 match receiver.try_recv() {
                     Ok(update) => {
+                        println!("[MPSC::RECV] ✅ Received update for ticker={}, interval={:?}", update.ticker, update.interval);
                         if let Err(e) = data_store.apply_update(update).await {
+                            println!("[MPSC::RECV] ❌ Failed to apply ticker update: {}", e);
                             tracing::error!("Failed to apply ticker update: {}", e);
                         }
                         // Continue immediately to process more updates if available

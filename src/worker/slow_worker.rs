@@ -105,6 +105,26 @@ async fn run_interval_worker(interval: Interval, health_stats: SharedHealthStats
 
         // Step 1: Sync this interval
         let sync_start = Utc::now();
+
+        // Add comprehensive logging before VCI calls
+        tracing::info!(
+            worker = interval_name,
+            iteration = iteration_count,
+            interval = ?interval,
+            start_date = ?sync_start,
+            is_trading_hours = is_trading,
+            "SLOW_WORKER:: Starting interval sync"
+        );
+
+        tracing::info!(
+            worker = interval_name,
+            iteration = iteration_count,
+            interval_type = interval.to_vci_format(),
+            mode = "resume",
+            resume_days = 2,
+            "SLOW_WORKER:: VCI sync parameters"
+        );
+
         let sync_result = sync_interval_data(interval).await;
         let sync_end = Utc::now();
         let sync_duration = (sync_end - sync_start).num_seconds();
