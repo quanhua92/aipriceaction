@@ -20,7 +20,62 @@ const MINUTE_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes (trading hours)
 const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
 
 // NOTE: Legacy run() and run_interval_worker() functions removed since serve.rs uses run_with_channel()
-// and minute worker now runs in separate runtime via run_minute_worker_separate()
+// and hour/minute workers now run in separate runtimes via run_hourly_worker_separate() and run_minute_worker_separate()
+
+/// Run hourly worker in separate runtime to avoid API overload
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run_hourly_worker_separate(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<SyncSender<TickerUpdate>>,
+) {
+    println!("[SYNC::HOURLY] === STARTING HOURLY WORKER IN SEPARATE RUNTIME ===");
+    info!("Starting hourly worker in separate runtime to avoid API overload");
+    println!("[SYNC::HOURLY] Channel sender exists: {}", channel_sender.is_some());
+
+    let mut iteration = 0;
+    loop {
+        iteration += 1;
+        println!("[SYNC::HOURLY] === HOURLY ITERATION {} STARTING ===", iteration);
+
+        let is_trading = is_trading_hours();
+        let sleep_secs = if is_trading {
+            HOURLY_TRADING_INTERVAL_SECS
+        } else {
+            HOURLY_NON_TRADING_INTERVAL_SECS
+        };
+
+        println!("[SYNC::HOURLY] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
+        info!(
+            interval = "Hourly",
+            trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
+            "Hourly worker sync started"
+        );
+
+        // Perform hourly sync
+        let start_time = Utc::now();
+        let sync_result = run_sync_with_channel(
+            Interval::Hourly,
+            &health_stats,
+            channel_sender.as_ref(),
+        ).await;
+
+        let end_time = Utc::now();
+        let duration = end_time.signed_duration_since(start_time);
+        let stats = sync_result.unwrap_or_else(|e| {
+            println!("[SYNC::HOURLY] Hourly sync failed with error: {}", e);
+            error!(error = %e, "Hourly sync failed");
+            SyncStats::new()
+        });
+
+        write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Hourly);
+
+        println!("[SYNC::HOURLY] === HOURLY ITERATION {} COMPLETED ===", iteration);
+        println!("[SYNC::HOURLY] Sleeping for {} seconds...", sleep_secs);
+        // Sleep until next iteration
+        sleep(Duration::from_secs(sleep_secs)).await;
+        println!("[SYNC::HOURLY] Woke up from sleep");
+    }
+}
 
 /// Perform sync for a single iteration
 async fn perform_sync(
@@ -240,88 +295,19 @@ fn write_log_entry(
 }
 
 /// Run slow worker with MPSC channel support for real-time updates
+/// NOTE: Hourly worker moved to separate runtime via run_hourly_worker_separate()
 #[instrument(skip(health_stats, channel_sender))]
 pub async fn run_with_channel(
     health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
     println!("[SYNC::SLOW] === STARTING SLOW WORKER WITH MPSC CHANNEL ===");
-    info!(
-        "Starting slow worker with MPSC channel and 2 independent tasks:"
-    );
+    info!("Slow worker now uses separate runtimes for hourly and minute workers");
     println!("[SYNC::SLOW] Channel sender exists: {}", channel_sender.is_some());
-    info!(
-        "  - Hourly: {}s (trading) / {}s (off-hours)",
-        HOURLY_TRADING_INTERVAL_SECS, HOURLY_NON_TRADING_INTERVAL_SECS
-    );
-    info!(
-        "  - Minute: {}s (trading) / {}s (off-hours)",
-        MINUTE_TRADING_INTERVAL_SECS, MINUTE_NON_TRADING_INTERVAL_SECS
-    );
-    println!("[SYNC::SLOW] About to spawn hourly sync task...");
+    println!("[SYNC::SLOW] Hourly and minute workers are now in separate runtimes");
 
-    // Spawn hourly sync task
-    println!("[SYNC::SLOW] Spawning hourly sync task...");
-    let health_stats_hourly = health_stats.clone();
-    let channel_sender_hourly = channel_sender.clone();
-    tokio::spawn(async move {
-        println!("[SYNC::SLOW] Hourly sync task SPAWNED successfully");
-        let mut iteration = 0;
-        loop {
-            iteration += 1;
-            println!("[SYNC::SLOW] === HOURLY ITERATION {} STARTING ===", iteration);
-
-            let is_trading = is_trading_hours();
-            let sleep_secs = if is_trading {
-                HOURLY_TRADING_INTERVAL_SECS
-            } else {
-                HOURLY_NON_TRADING_INTERVAL_SECS
-            };
-
-            println!("[SYNC::SLOW] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
-            info!(
-                interval = "Hourly",
-                trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
-                "Slow worker hourly sync started"
-            );
-            println!("[SYNC::SLOW] About to call run_sync_with_channel for Hourly...");
-
-            // Perform hourly sync
-            let start_time = Utc::now();
-            println!("[SYNC::SLOW] Start time: {}", start_time);
-
-            let sync_result = run_sync_with_channel(
-                Interval::Hourly,
-                &health_stats_hourly,
-                channel_sender_hourly.as_ref(),
-            ).await;
-
-            println!("[SYNC::SLOW] run_sync_with_channel for Hourly COMPLETED");
-            let end_time = Utc::now();
-            println!("[SYNC::SLOW] End time: {}", end_time);
-            let duration = end_time.signed_duration_since(start_time);
-            println!("[SYNC::SLOW] Duration: {} seconds", duration.num_seconds());
-
-            let stats = sync_result.unwrap_or_else(|e| {
-                println!("[SYNC::SLOW] Hourly sync failed with error: {}", e);
-                error!(error = %e, "Hourly sync failed");
-                SyncStats::new()
-            });
-
-            println!("[SYNC::SLOW] About to write log entry...");
-            write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Hourly);
-            println!("[SYNC::SLOW] Log entry written");
-
-            println!("[SYNC::SLOW] === HOURLY ITERATION {} COMPLETED ===", iteration);
-            println!("[SYNC::SLOW] Sleeping for {} seconds...", sleep_secs);
-            // Sleep until next iteration
-            sleep(Duration::from_secs(sleep_secs)).await;
-            println!("[SYNC::SLOW] Woke up from sleep");
-        }
-    });
-
-      // NOTE: Minute worker moved to separate runtime in serve.rs to avoid API overload
-    // Only hourly worker runs in this runtime
+    // This function is kept for compatibility but hourly/minute workers run separately
+    println!("[SYNC::SLOW] === SLOW WORKER COMPLETED (WORKERS MOVED TO SEPARATE RUNTIMES) ===");
 }
 
 /// Run minute worker in separate runtime to avoid API overload

@@ -7,5 +7,7 @@ pub use daily_worker::run as run_daily_worker;
 pub use daily_worker::run_with_channel as run_daily_worker_with_channel;
 // pub use slow_worker::run as run_slow_worker; // Removed - now uses run_with_channel()
 pub use slow_worker::run_with_channel as run_slow_worker_with_channel;
+pub use slow_worker::run_hourly_worker_separate;
+pub use slow_worker::run_minute_worker_separate;
 pub use crypto_worker::run as run_crypto_worker;
 pub use crypto_worker::run_with_channel as run_crypto_worker_with_channel;

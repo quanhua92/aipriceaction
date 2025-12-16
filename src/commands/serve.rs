@@ -147,18 +147,18 @@ pub async fn run(port: u16) {
         });
     });
 
-    // Create dedicated runtime for VN slow worker (hourly only)
+    // Create dedicated runtime for VN hourly worker
     std::thread::spawn(move || {
-        let slow_runtime = tokio::runtime::Builder::new_multi_thread()
+        let hourly_runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)  // 2 threads for hourly worker
             .thread_name("vn-slow-worker-hourly")
             .enable_all()
             .build()
-            .expect("Failed to create slow worker runtime");
+            .expect("Failed to create hourly worker runtime");
 
-        slow_runtime.block_on(async {
+        hourly_runtime.block_on(async {
             println!("🐌 Spawning VN HOURLY worker in dedicated runtime...");
-            worker::run_slow_worker_with_channel(worker_health_slow, Some(vn_tx_slow)).await;
+            worker::run_hourly_worker_separate(worker_health_slow, Some(vn_tx_slow)).await;
         });
     });
 
@@ -175,7 +175,7 @@ pub async fn run(port: u16) {
 
         minute_runtime.block_on(async {
             println!("🐌 Spawning VN MINUTE worker in separate dedicated runtime...");
-            worker::slow_worker::run_minute_worker_separate(worker_health_minute, Some(vn_tx_minute)).await;
+            worker::run_minute_worker_separate(worker_health_minute, Some(vn_tx_minute)).await;
         });
     });
 
