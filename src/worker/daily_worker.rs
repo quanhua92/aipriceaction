@@ -305,10 +305,12 @@ async fn run_sync_with_channel(
         channel_sender.cloned()
     )?;
 
-    // Update health stats
-    let mut health = health_stats.write().await;
-    health.daily_last_sync = Some(Utc::now().to_rfc3339());
-    health.daily_iteration_count += 1;
+    // Update health stats quickly - lock only for the brief moment needed
+    {
+        let mut health = health_stats.write().await;
+        health.daily_last_sync = Some(Utc::now().to_rfc3339());
+        health.daily_iteration_count += 1;
+    } // Lock released here immediately
 
     // Run the sync
     sync.sync_all_intervals(false).await?;

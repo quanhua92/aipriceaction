@@ -371,19 +371,21 @@ async fn run_sync_with_channel(
     health_stats: &SharedHealthStats,
     channel_sender: Option<&SyncSender<TickerUpdate>>,
 ) -> Result<SyncStats, Error> {
-    // Update health stats
-    let mut health = health_stats.write().await;
-    match interval {
-        Interval::Hourly => {
-            health.hourly_last_sync = Some(Utc::now().to_rfc3339());
-            health.slow_iteration_count += 1;
+    // Update health stats quickly - lock only for the brief moment needed
+    {
+        let mut health = health_stats.write().await;
+        match interval {
+            Interval::Hourly => {
+                health.hourly_last_sync = Some(Utc::now().to_rfc3339());
+                health.slow_iteration_count += 1;
+            }
+            Interval::Minute => {
+                health.minute_last_sync = Some(Utc::now().to_rfc3339());
+                health.slow_iteration_count += 1;
+            }
+            _ => {}
         }
-        Interval::Minute => {
-            health.minute_last_sync = Some(Utc::now().to_rfc3339());
-            health.slow_iteration_count += 1;
-        }
-        _ => {}
-    }
+    } // Lock released here immediately
 
     let concurrent_batches = get_concurrent_batches();
     let config = SyncConfig {
