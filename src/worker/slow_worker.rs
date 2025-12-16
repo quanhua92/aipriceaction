@@ -422,36 +422,29 @@ async fn run_sync_with_channel(
 
     println!("[SYNC::SLOW] Sync config: start={}, end={}, batches={}", start_date, end_date, concurrent_batches);
 
-    println!("🐛🐛🐛 DEBUG MODE: SERVE WILL USE DEBUG=true LIKE PULL COMMAND 🐛🐛🐛");
-    println!("🐛🐛🐛 THIS LIMITS TO 3 TICKERS (VNINDEX, VIC, VCB) INSTEAD OF 370 🐛🐛🐛");
-
     // Create sync config (same as pull command)
     let concurrent_batches = get_concurrent_batches();
     let config = SyncConfig::new(
         start_date,
         Some(end_date),
-        3, // batch_size (small to avoid VCI overload)
+        20, // batch_size (optimized for 1H/1m intervals)
         Some(2), // resume_days: 2 days adaptive mode
         vec![interval],
         false, // not full sync
         concurrent_batches, // Auto-detected based on CPU cores
     );
 
-    println!("🐛🐛🐛 SERVE DEBUG MODE ENABLED - sync_all_intervals(true) LIKE PULL 🐛🐛🐛");
-
     println!("[SYNC::SLOW] About to create DataSync with channel...");
-    println!("🔄🔄🔄 CREATING FRESH DATASYNC CLIENT (NEW CONNECTIONS) FOR THIS ITERATION 🔄🔄🔄");
     // Create DataSync with channel support (fresh client each time like pull)
     let mut sync = DataSync::new_with_channel(
         config,
         channel_sender.cloned()
     )?;
-    println!("[SYNC::SLOW] ✅ FRESH DataSync client created successfully - new HTTP connections!");
+    println!("[SYNC::SLOW] ✅ DataSync client created successfully - new HTTP connections!");
 
-    println!("[SYNC::SLOW] About to call sync_all_intervals with DEBUG=true...");
-    println!("🔄🔄🔄 USING FRESH VCI CLIENT CONNECTIONS - NO CONTAMINATION 🔄🔄🔄");
-    sync.sync_all_intervals(true).await?; // 🐛 DEBUG MODE = true (like pull command)
-    println!("[SYNC::SLOW] ✅ sync_all_intervals completed successfully with fresh client!");
+    println!("[SYNC::SLOW] About to call sync_all_intervals...");
+    sync.sync_all_intervals(false).await?; // Full sync (not debug mode)
+    println!("[SYNC::SLOW] ✅ sync_all_intervals completed successfully!");
 
     let stats = sync.get_stats().clone();
     println!("[SYNC::SLOW] === run_sync_with_channel COMPLETED for {} ===", interval_str);
