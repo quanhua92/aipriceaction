@@ -113,11 +113,11 @@ pub struct ChannelManager {
 }
 
 impl ChannelManager {
-    /// Create new channel manager with bounded channels (capacity=1)
+    /// Create new channel manager with bounded channels (capacity=5)
     pub fn new() -> (Self, Receiver<TickerUpdate>, Receiver<TickerUpdate>) {
-        // Create bounded channels with capacity 1 to prevent OOM
-        let (vn_tx, vn_rx) = std::sync::mpsc::sync_channel(1);
-        let (crypto_tx, crypto_rx) = std::sync::mpsc::sync_channel(1);
+        // Create bounded channels with capacity 5 to prevent OOM while allowing some buffering
+        let (vn_tx, vn_rx) = std::sync::mpsc::sync_channel(5);
+        let (crypto_tx, crypto_rx) = std::sync::mpsc::sync_channel(5);
 
         let manager = Self {
             vn_sender: vn_tx,
@@ -150,7 +150,7 @@ impl ChannelManager {
 
 /// Convenience function for creating bounded channels directly
 pub fn create_bounded_channels() -> (SyncSender<TickerUpdate>, Receiver<TickerUpdate>) {
-    std::sync::mpsc::sync_channel(1) // Capacity 1 to prevent OOM
+    std::sync::mpsc::sync_channel(5) // Capacity 5 to prevent OOM while allowing buffering
 }
 
 /// Send update with retry mechanism - waits and retries instead of skipping
