@@ -1,8 +1,11 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
+use crate::models::sync_config::SyncStats;
 use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours};
+use crate::services::mpsc::TickerUpdate;
 use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
@@ -262,4 +265,143 @@ fn write_log_entry(
 
     // Use log rotation utility
     let _ = write_with_rotation(&log_path, &log_line);
+}
+
+/// Run slow worker with MPSC channel support for real-time updates
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run_with_channel(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<SyncSender<TickerUpdate>>,
+) {
+    info!(
+        "Starting slow worker with MPSC channel and 2 independent tasks:"
+    );
+    info!(
+        "  - Hourly: {}s (trading) / {}s (off-hours)",
+        HOURLY_TRADING_INTERVAL_SECS, HOURLY_NON_TRADING_INTERVAL_SECS
+    );
+    info!(
+        "  - Minute: {}s (trading) / {}s (off-hours)",
+        MINUTE_TRADING_INTERVAL_SECS, MINUTE_NON_TRADING_INTERVAL_SECS
+    );
+
+    // Spawn hourly sync task
+    let health_stats_hourly = health_stats.clone();
+    let channel_sender_hourly = channel_sender.clone();
+    tokio::spawn(async move {
+        loop {
+            let is_trading = is_trading_hours();
+            let sleep_secs = if is_trading {
+                HOURLY_TRADING_INTERVAL_SECS
+            } else {
+                HOURLY_NON_TRADING_INTERVAL_SECS
+            };
+
+            info!(
+                interval = "Hourly",
+                trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
+                "Slow worker hourly sync started"
+            );
+
+            // Perform hourly sync
+            let start_time = Utc::now();
+            let sync_result = run_sync_with_channel(
+                Interval::Hourly,
+                &health_stats_hourly,
+                channel_sender_hourly.as_ref(),
+            ).await;
+
+            let end_time = Utc::now();
+            let duration = end_time.signed_duration_since(start_time);
+            let stats = sync_result.unwrap_or_else(|e| {
+                error!(error = %e, "Hourly sync failed");
+                SyncStats::new()
+            });
+
+            write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Hourly);
+
+            // Sleep until next iteration
+            sleep(Duration::from_secs(sleep_secs)).await;
+        }
+    });
+
+    // Spawn minute sync task
+    let health_stats_minute = health_stats;
+    tokio::spawn(async move {
+        loop {
+            let is_trading = is_trading_hours();
+            let sleep_secs = if is_trading {
+                MINUTE_TRADING_INTERVAL_SECS
+            } else {
+                MINUTE_NON_TRADING_INTERVAL_SECS
+            };
+
+            info!(
+                interval = "Minute",
+                trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
+                "Slow worker minute sync started"
+            );
+
+            // Perform minute sync
+            let start_time = Utc::now();
+            let sync_result = run_sync_with_channel(
+                Interval::Minute,
+                &health_stats_minute,
+                channel_sender.as_ref(),
+            ).await;
+
+            let end_time = Utc::now();
+            let duration = end_time.signed_duration_since(start_time);
+            let stats = sync_result.unwrap_or_else(|e| {
+                error!(error = %e, "Minute sync failed");
+                SyncStats::new()
+            });
+
+            write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Minute);
+
+            // Sleep until next iteration
+            sleep(Duration::from_secs(sleep_secs)).await;
+        }
+    });
+}
+
+/// Helper function to run sync with channel support
+async fn run_sync_with_channel(
+    interval: Interval,
+    health_stats: &SharedHealthStats,
+    channel_sender: Option<&SyncSender<TickerUpdate>>,
+) -> Result<SyncStats, Error> {
+    // Update health stats
+    let mut health = health_stats.write().await;
+    match interval {
+        Interval::Hourly => {
+            health.hourly_last_sync = Some(Utc::now().to_rfc3339());
+            health.slow_iteration_count += 1;
+        }
+        Interval::Minute => {
+            health.minute_last_sync = Some(Utc::now().to_rfc3339());
+            health.slow_iteration_count += 1;
+        }
+        _ => {}
+    }
+
+    let concurrent_batches = get_concurrent_batches();
+    let config = SyncConfig {
+        start_date: (Utc::now() - chrono::Days::new(7)).format("%Y-%m-%d").to_string(),
+        end_date: Utc::now().format("%Y-%m-%d").to_string(),
+        batch_size: 10,
+        resume_days: Some(2),
+        intervals: vec![interval],
+        force_full: false,
+        concurrent_batches,
+    };
+
+    // Create DataSync with channel support
+    let mut sync = DataSync::new_with_channel(
+        config,
+        channel_sender.cloned()
+    )?;
+
+    sync.sync_all_intervals(false).await?;
+    Ok(sync.get_stats().clone())
 }

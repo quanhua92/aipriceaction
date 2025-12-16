@@ -170,8 +170,8 @@ pub async fn run(port: u16) {
 
     // Clone channel senders for workers
     let vn_tx_daily = vn_tx.clone();
-    let _vn_tx_slow = vn_tx.clone(); // TODO: Use when slow_worker_with_channel is implemented
-    let _crypto_tx_worker = crypto_tx.clone(); // TODO: Use when crypto_worker_with_channel is implemented
+    let vn_tx_slow = vn_tx.clone(); // Use MPSC channel for slow worker
+    let crypto_tx_worker = crypto_tx.clone(); // Use MPSC channel for crypto worker
 
     std::thread::spawn(move || {
         let worker_runtime = tokio::runtime::Builder::new_multi_thread()
@@ -187,14 +187,14 @@ pub async fn run(port: u16) {
                 worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
             });
 
-            println!("🐌 Spawning slow worker (original)...");
+            println!("🐌 Spawning slow worker with MPSC channel...");
             tokio::spawn(async move {
-                worker::run_slow_worker(worker_health_slow).await;
+                worker::run_slow_worker_with_channel(worker_health_slow, Some(vn_tx_slow)).await;
             });
 
-            println!("🪙 Spawning crypto worker (original)...");
+            println!("🪙 Spawning crypto worker with MPSC channel...");
             tokio::spawn(async move {
-                worker::run_crypto_worker(worker_health_crypto).await;
+                worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
             });
 
             // Keep runtime alive

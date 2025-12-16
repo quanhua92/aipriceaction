@@ -333,6 +333,229 @@ pub fn save_enhanced_csv_to_dir(
 
 /// Save enhanced CSV to a specific directory with MPSC change detection and notification
 /// This function detects changes and sends real-time updates through the MPSC channel
+pub fn save_enhanced_csv_to_dir_with_changes(
+    ticker: &str,
+    data: &[StockData],
+    interval: Interval,
+    cutoff_date: DateTime<chrono::Utc>,
+    rewrite_all: bool,
+    base_dir: &Path,
+    channel_sender: Option<std::sync::mpsc::SyncSender<TickerUpdate>>,
+) -> Result<(ChangeType, usize), Error> {
+    if data.is_empty() {
+        return Ok((ChangeType::NoChange, 0));
+    }
+
+    // Deduplicate data before writing (favor last occurrence)
+    // Create mutable copy, sort, and deduplicate
+    let mut data_vec: Vec<StockData> = data.to_vec();
+    data_vec.sort_by_key(|d| d.time);
+    let duplicates_removed = deduplicate_stock_data_by_time(&mut data_vec);
+    if duplicates_removed > 0 {
+        tracing::info!(
+            ticker = ticker,
+            interval = ?interval,
+            duplicates_removed = duplicates_removed,
+            records_remaining = data_vec.len(),
+            "Deduplicated StockData before writing CSV with MPSC"
+        );
+    }
+
+    // Use deduplicated data for all writes below
+    let data = &data_vec;
+
+    // Create ticker directory
+    let ticker_dir = base_dir.join(ticker);
+    std::fs::create_dir_all(&ticker_dir)
+        .map_err(|e| Error::Io(format!("Failed to create directory: {}", e)))?;
+
+    // Get file path
+    let file_path = ticker_dir.join(interval.to_filename());
+    let file_exists = file_path.exists();
+
+    let change_type = if !file_exists || rewrite_all {
+        // New file or rewrite - write directly (no locking needed for new files)
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(rewrite_all)
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to create file: {}", e)))?;
+
+        let mut wtr = csv::Writer::from_writer(file);
+
+        // Write header
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        // Write all data
+        for stock_data in data {
+            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
+
+        tracing::debug!(
+            ticker = ticker,
+            interval = ?interval,
+            records = data.len(),
+            "Created new CSV file with {} records",
+            data.len()
+        );
+
+        if rewrite_all {
+            ChangeType::FullFile { records: data.to_vec() }
+        } else {
+            ChangeType::NewRecords { records: data.to_vec() }
+        }
+    } else {
+        // Existing file - implement smart cutoff strategy with locking
+        use std::fs::File;
+        use fs2::FileExt;
+
+        // Open file with read/write lock
+        let file = File::options()
+            .read(true)
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to open file for reading/writing: {}", e)))?;
+
+        // Acquire exclusive lock (blocks until available)
+        file.lock_exclusive()
+            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
+
+        // Read existing data to find cutoff point
+        let mut existing_data: Vec<StockData> = Vec::new();
+        {
+            let mut reader = csv::Reader::from_reader(&file);
+            for result in reader.records() {
+                let record = result.map_err(|e| Error::Parse(format!("Failed to parse CSV: {}", e)))?;
+                if record.len() < 7 {
+                    continue; // Skip incomplete records
+                }
+
+                // Parse time
+                let time_str = &record[1];
+                let time = parse_time(time_str)?;
+
+                // Parse OHLCV (last 5 fields)
+                let open: f64 = record[2].parse().map_err(|_| Error::Parse("Invalid open price".to_string()))?;
+                let high: f64 = record[3].parse().map_err(|_| Error::Parse("Invalid high price".to_string()))?;
+                let low: f64 = record[4].parse().map_err(|_| Error::Parse("Invalid low price".to_string()))?;
+                let close: f64 = record[5].parse().map_err(|_| Error::Parse("Invalid close price".to_string()))?;
+                let volume: u64 = record[6].parse().map_err(|_| Error::Parse("Invalid volume".to_string()))?;
+
+                existing_data.push(StockData::new(time, ticker.to_string(), open, high, low, close, volume));
+            }
+        }
+
+        // Find cutoff point in existing data
+        let cutoff_index = existing_data
+            .iter()
+            .position(|d| d.time >= cutoff_date)
+            .unwrap_or(existing_data.len());
+
+        // Seek to start of header (for rewrite)
+        use std::io::{Seek, SeekFrom, Write};
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&file_path)
+            .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
+
+        file.seek(SeekFrom::Start(0))
+            .map_err(|e| Error::Io(format!("Failed to seek to start: {}", e)))?;
+
+        // Truncate at cutoff point
+        if cutoff_index < existing_data.len() {
+            // Truncate existing file to cutoff point
+            file.set_len(0)
+                .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
+        }
+
+        // Write header and truncated existing data
+        let mut wtr = csv::Writer::from_writer(file);
+        wtr.write_record(&[
+            "ticker", "time", "open", "high", "low", "close", "volume",
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed"
+        ])
+        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
+
+        // Write existing data up to cutoff point
+        for stock_data in &existing_data[..cutoff_index] {
+            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+        }
+
+        // Write new data
+        for stock_data in data {
+            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+        }
+
+        wtr.flush()
+            .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
+
+        tracing::debug!(
+            ticker = ticker,
+            interval = ?interval,
+            existing_before_cutoff = cutoff_index,
+            new_records = data.len(),
+            "Updated CSV with smart cutoff strategy"
+        );
+
+        if cutoff_index == 0 {
+            ChangeType::NewRecords { records: data.to_vec() }
+        } else {
+            ChangeType::Truncated {
+                from_record: cutoff_index,
+                new_records: data.to_vec(),
+            }
+        }
+    };
+
+    // Send update through channel if provided
+    if let Some(sender) = channel_sender {
+        let update = TickerUpdate::new(
+            ticker.to_string(),
+            interval,
+            change_type.clone(),
+        );
+
+        // Non-blocking send - don't fail if channel is full
+        match sender.send(update) {
+            Ok(()) => {
+                tracing::info!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    record_count = change_type.record_count(),
+                    change_type = ?change_type,
+                    "Sent real-time update via MPSC"
+                );
+            }
+            Err(_) => {
+                // Channel is full or disconnected - log but don't fail
+                tracing::warn!(
+                    ticker = ticker,
+                    interval = ?interval,
+                    record_count = change_type.record_count(),
+                    "MPSC channel full - skipping real-time update"
+                );
+            }
+        }
+    }
+
+    Ok((change_type, data.len()))
+}
+
+/// Save enhanced CSV to a specific directory with MPSC change detection and notification
+/// This function detects changes and sends real-time updates through the MPSC channel
 pub fn save_enhanced_csv_with_changes(
     ticker: &str,
     data: &[StockData],
