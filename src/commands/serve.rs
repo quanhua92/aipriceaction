@@ -192,10 +192,10 @@ pub async fn run(port: u16) {
                 worker::run_slow_worker_with_channel(worker_health_slow, Some(vn_tx_slow)).await;
             });
 
-            println!("🪙 Spawning crypto worker with MPSC channel...");
-            tokio::spawn(async move {
-                worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
-            });
+            println!("🪙 Crypto worker disabled (commented out) to prevent rate limit issues");
+            // tokio::spawn(async move {
+            //     worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
+            // });
 
             // Keep runtime alive
             tokio::signal::ctrl_c().await.ok();

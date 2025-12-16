@@ -415,25 +415,13 @@ pub fn save_enhanced_csv_to_dir_with_changes(
             ChangeType::NewRecords { records: data.to_vec() }
         }
     } else {
-        // Existing file - implement smart cutoff strategy with locking
-        use std::fs::File;
-        use fs2::FileExt;
-
-        // Open file with read/write lock
-        let file = File::options()
-            .read(true)
-            .write(true)
-            .open(&file_path)
-            .map_err(|e| Error::Io(format!("Failed to open file for reading/writing: {}", e)))?;
-
-        // Acquire exclusive lock (blocks until available)
-        file.lock_exclusive()
-            .map_err(|e| Error::Io(format!("Failed to acquire file lock: {}", e)))?;
-
+        // Existing file - implement smart cutoff strategy without locking
         // Read existing data to find cutoff point
         let mut existing_data: Vec<StockData> = Vec::new();
         {
-            let mut reader = csv::Reader::from_reader(&file);
+            let mut reader = csv::Reader::from_path(&file_path)
+                .map_err(|e| Error::Io(format!("Failed to open file for reading: {}", e)))?;
+
             for result in reader.records() {
                 let record = result.map_err(|e| Error::Parse(format!("Failed to parse CSV: {}", e)))?;
                 if record.len() < 7 {
@@ -461,53 +449,50 @@ pub fn save_enhanced_csv_to_dir_with_changes(
             .position(|d| d.time >= cutoff_date)
             .unwrap_or(existing_data.len());
 
-        // Seek to start of header (for rewrite)
-        use std::io::{Seek, SeekFrom, Write};
-        let mut file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&file_path)
-            .map_err(|e| Error::Io(format!("Failed to open file for writing: {}", e)))?;
+        // Write to temporary file first, then atomically rename
+        let temp_path = file_path.with_extension("tmp");
+        {
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&temp_path)
+                .map_err(|e| Error::Io(format!("Failed to create temp file: {}", e)))?;
 
-        file.seek(SeekFrom::Start(0))
-            .map_err(|e| Error::Io(format!("Failed to seek to start: {}", e)))?;
+            let mut wtr = csv::Writer::from_writer(file);
+            wtr.write_record(&[
+                "ticker", "time", "open", "high", "low", "close", "volume",
+                "ma10", "ma20", "ma50", "ma100", "ma200",
+                "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                "close_changed", "volume_changed", "total_money_changed"
+            ])
+            .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
 
-        // Truncate at cutoff point
-        if cutoff_index < existing_data.len() {
-            // Truncate existing file to cutoff point
-            file.set_len(0)
-                .map_err(|e| Error::Io(format!("Failed to truncate file: {}", e)))?;
+            // Write existing data up to cutoff point
+            for stock_data in &existing_data[..cutoff_index] {
+                write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+            }
+
+            // Write new data
+            for stock_data in data {
+                write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
+            }
+
+            wtr.flush()
+                .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
         }
 
-        // Write header and truncated existing data
-        let mut wtr = csv::Writer::from_writer(file);
-        wtr.write_record(&[
-            "ticker", "time", "open", "high", "low", "close", "volume",
-            "ma10", "ma20", "ma50", "ma100", "ma200",
-            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
-            "close_changed", "volume_changed", "total_money_changed"
-        ])
-        .map_err(|e| Error::Io(format!("Failed to write header: {}", e)))?;
-
-        // Write existing data up to cutoff point
-        for stock_data in &existing_data[..cutoff_index] {
-            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
-        }
-
-        // Write new data
-        for stock_data in data {
-            write_stock_data_row(&mut wtr, stock_data, ticker, interval)?;
-        }
-
-        wtr.flush()
-            .map_err(|e| Error::Io(format!("Failed to flush writer: {}", e)))?;
+        // Atomically replace the old file
+        std::fs::rename(&temp_path, &file_path)
+            .map_err(|e| Error::Io(format!("Failed to atomically replace file: {}", e)))?;
 
         tracing::debug!(
             ticker = ticker,
             interval = ?interval,
             existing_before_cutoff = cutoff_index,
             new_records = data.len(),
-            "Updated CSV with smart cutoff strategy"
+            "Updated CSV with smart cutoff strategy (atomic rename)"
         );
 
         if cutoff_index == 0 {
