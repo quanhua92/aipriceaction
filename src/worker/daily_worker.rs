@@ -1,8 +1,11 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
+use crate::models::sync_config::SyncStats;
 use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours, get_sync_interval};
+use crate::services::mpsc::TickerUpdate;
 use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
+use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, error, instrument};
@@ -182,4 +185,136 @@ fn write_log_entry(
 
     // Use log rotation utility
     let _ = write_with_rotation(&log_path, &log_line);
+}
+
+/// Run daily worker with MPSC channel support for real-time updates
+#[instrument(skip(health_stats, channel_sender))]
+pub async fn run_with_channel(
+    health_stats: SharedHealthStats,
+    channel_sender: Option<SyncSender<TickerUpdate>>,
+) {
+    info!(
+        "Starting daily worker with MPSC channel - Trading hours: {}s, Non-trading hours: {}s",
+        TRADING_INTERVAL_SECS, NON_TRADING_INTERVAL_SECS
+    );
+
+    let mut iteration_count = 0u64;
+    let market_data_dir = get_market_data_dir();
+
+    loop {
+        iteration_count += 1;
+        let loop_start = std::time::Instant::now();
+        let is_trading = is_trading_hours();
+
+        info!(
+            iteration = iteration_count,
+            is_trading = is_trading,
+            trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
+            "Daily worker iteration started"
+        );
+
+        let sync_result = if is_trading {
+            // Trading hours: 1D interval only (fast)
+            let intervals = vec![Interval::Daily];
+            let config = SyncConfig {
+                intervals,
+                start_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
+                end_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
+                batch_size: 10, // Default batch size
+                resume_days: None,
+                force_full: false,
+                concurrent_batches: 1, // Sequential for daily data
+            };
+
+            run_sync_with_channel(config, &market_data_dir, &health_stats, channel_sender.as_ref()).await
+        } else {
+            // Non-trading hours: full sync (1D only)
+            let config = SyncConfig {
+                intervals: vec![Interval::Daily],
+                start_date: (Utc::now() - chrono::Days::new(7)).date_naive().format("%Y-%m-%d").to_string(),
+                end_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
+                batch_size: 10, // Default batch size
+                resume_days: None,
+                force_full: false,
+                concurrent_batches: 1, // Sequential for daily data
+            };
+
+            run_sync_with_channel(config, &market_data_dir, &health_stats, channel_sender.as_ref()).await
+        };
+
+        // Log results (same as original function)
+        let log_path = market_data_dir.join("daily_worker.log");
+        let start_time = Utc::now();
+
+        let (success, successful, failed, skipped, updated) = match sync_result {
+            Ok(stats) => {
+                let success = stats.successful > 0;
+                info!(
+                    successful = stats.successful,
+                    failed = stats.failed,
+                    skipped = stats.skipped,
+                    updated = stats.updated,
+                    duration_ms = loop_start.elapsed().as_millis(),
+                    "Daily sync completed"
+                );
+                (success, stats.successful, stats.failed, stats.skipped, stats.updated)
+            }
+            Err(_) => {
+                (false, 0, 0, 0, 0)
+            }
+        };
+
+        let end_time = Utc::now();
+        let duration_secs = loop_start.elapsed().as_secs_f64();
+        let status = if success { "OK" } else { "FAIL" };
+        let log_line = format!(
+            "{} | {} | {}s | 1D | {} | ok:{} fail:{} skip:{} upd:{} files:0 recs:0\n",
+            start_time.format("%Y-%m-%d %H:%M:%S"),
+            end_time.format("%Y-%m-%d %H:%M:%S"),
+            duration_secs,
+            status,
+            successful,
+            failed,
+            skipped,
+            updated
+        );
+
+        // Use log rotation utility
+        let _ = write_with_rotation(&log_path, &log_line);
+
+        // Sleep until next iteration
+        let sleep_secs = if is_trading {
+            TRADING_INTERVAL_SECS
+        } else {
+            NON_TRADING_INTERVAL_SECS
+        };
+        sleep(Duration::from_secs(sleep_secs)).await;
+    }
+}
+
+/// Helper function to run sync with channel support
+async fn run_sync_with_channel(
+    config: SyncConfig,
+    _market_data_dir: &std::path::Path,
+    health_stats: &SharedHealthStats,
+    channel_sender: Option<&SyncSender<TickerUpdate>>,
+) -> Result<SyncStats, Error> {
+    // Create DataSync with channel support
+    let mut sync = DataSync::new_with_channel(
+        config,
+        channel_sender.cloned()
+    )?;
+
+    // Update health stats quickly - lock only for the brief moment needed
+    {
+        let mut health = health_stats.write().await;
+        health.daily_last_sync = Some(Utc::now().to_rfc3339());
+        health.daily_iteration_count += 1;
+    } // Lock released here immediately
+
+    // Run the sync
+    sync.sync_all_intervals(false).await?;
+
+    // Return a default stats for now - TODO: Get actual stats from DataSync
+    Ok(SyncStats::new())
 }

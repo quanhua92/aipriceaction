@@ -1,5 +1,6 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
+use crate::services::mpsc::create_bounded_channels;
 use crate::utils::{get_market_data_dir, get_crypto_data_dir};
 use crate::worker;
 use crate::server;
@@ -9,6 +10,11 @@ use tokio::sync::RwLock;
 
 pub async fn run(port: u16) {
     println!("🚀 Starting aipriceaction server on port {}", port);
+
+    // Create bounded MPSC channels (capacity=100 to handle message volume)
+    println!("🔗 Creating bounded MPSC channels (capacity=100)...");
+    let (vn_tx, vn_rx) = create_bounded_channels();
+    let (crypto_tx, crypto_rx) = create_bounded_channels();
 
     // Create VN stock data store
     let market_data_dir = get_market_data_dir();
@@ -21,6 +27,11 @@ pub async fn run(port: u16) {
     println!("📁 Crypto directory: {}", crypto_data_dir.display());
     let data_store_crypto = DataStore::new(crypto_data_dir.clone());
     let shared_data_store_crypto = Arc::new(data_store_crypto);
+
+    // Start update listeners for real-time cache updates
+    println!("🔄 Starting real-time update listeners...");
+    shared_data_store_vn.start_update_listener(vn_rx);
+    shared_data_store_crypto.start_update_listener(crypto_rx);
 
     // Initialize health stats
     let start_time = Instant::now();
@@ -94,49 +105,8 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Spawn background auto-reload tasks for in-memory cache in dedicated runtime
-    use crate::services::data_store::CACHE_TTL_SECONDS;
-    use crate::services::data_store::DATA_RETENTION_RECORDS;
-
-    println!("🔄 Starting auto-reload tasks (TTL: {}s, limit: {} records)...", CACHE_TTL_SECONDS, DATA_RETENTION_RECORDS);
-
-    // Create dedicated runtime for auto-reload tasks (separate from HTTP server runtime)
-    let auto_reload_data_vn = shared_data_store_vn.clone();
-    let auto_reload_data_crypto = shared_data_store_crypto.clone();
-
-    std::thread::spawn(move || {
-        let auto_reload_runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(3)  // Fixed small number for auto-reload tasks
-            .thread_name("auto-reload")
-            .enable_all()
-            .build()
-            .expect("Failed to create auto-reload runtime");
-
-        auto_reload_runtime.block_on(async {
-            println!("🔄 Auto-reload runtime started with 3 worker threads");
-
-            // VN auto-reload tasks (Daily + Hourly + Minute)
-            let _vn_daily_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Daily);
-            let _vn_hourly_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _vn_minute_reload = auto_reload_data_vn.clone().spawn_auto_reload_task(Interval::Minute);
-
-            // Crypto auto-reload tasks (Daily + Hourly + Minute)
-            let _crypto_daily_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Daily);
-            let _crypto_hourly_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Hourly);
-            let _crypto_minute_reload = auto_reload_data_crypto.clone().spawn_auto_reload_task(Interval::Minute);
-
-            println!("✅ Auto-reload tasks started in dedicated runtime:");
-            println!("   🔄 VN Daily reload:    Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 VN Hourly reload:   Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 VN Minute reload:   Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Daily reload:  Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Hourly reload: Every {}s", CACHE_TTL_SECONDS);
-            println!("   🔄 Crypto Minute reload: Every {}s", CACHE_TTL_SECONDS);
-
-            // Keep runtime alive
-            tokio::signal::ctrl_c().await.ok();
-        });
-    });
+    // Auto-reload removed - MPSC handles real-time cache updates efficiently
+    // Memory cache updated via MPSC messages from workers (no periodic disk scanning needed)
 
     // CPU auto-detection for optimal performance
     println!();
@@ -157,32 +127,70 @@ pub async fn run(port: u16) {
     let worker_health_slow = shared_health_stats.clone();
     let worker_health_crypto = shared_health_stats.clone();
 
+    // Clone channel senders for workers
+    let vn_tx_daily = vn_tx.clone();
+    let vn_tx_slow = vn_tx.clone(); // Use MPSC channel for slow worker
+    let crypto_tx_worker = crypto_tx.clone(); // Use MPSC channel for crypto worker
+
+    // Create dedicated runtime for VN daily worker
     std::thread::spawn(move || {
-        let worker_runtime = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(worker_threads)  // Auto-detected based on CPU cores
-            .thread_name("worker-pool")
+        let daily_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)  // 2 threads for daily worker
+            .thread_name("vn-daily-worker")
             .enable_all()
             .build()
-            .expect("Failed to create worker runtime");
+            .expect("Failed to create daily worker runtime");
 
-        worker_runtime.block_on(async {
-            println!("⚡ Spawning daily worker (every 15 seconds)...");
-            tokio::spawn(async move {
-                worker::run_daily_worker(worker_health_daily).await;
-            });
+        daily_runtime.block_on(async {
+            println!("⚡ Spawning VN daily worker in dedicated runtime...");
+            worker::run_daily_worker_with_channel(worker_health_daily, Some(vn_tx_daily)).await;
+        });
+    });
 
-            println!("🐌 Spawning slow worker (every 5 minutes)...");
-            tokio::spawn(async move {
-                worker::run_slow_worker(worker_health_slow).await;
-            });
+    // Create dedicated runtime for VN hourly worker
+    std::thread::spawn(move || {
+        let hourly_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)  // 2 threads for hourly worker
+            .thread_name("vn-slow-worker-hourly")
+            .enable_all()
+            .build()
+            .expect("Failed to create hourly worker runtime");
 
-            println!("🪙 Spawning crypto worker (every 15 minutes)...");
-            tokio::spawn(async move {
-                worker::run_crypto_worker(worker_health_crypto).await;
-            });
+        hourly_runtime.block_on(async {
+            println!("🐌 Spawning VN HOURLY worker in dedicated runtime...");
+            worker::run_hourly_worker_separate(worker_health_slow, Some(vn_tx_slow)).await;
+        });
+    });
 
-            // Keep runtime alive
-            tokio::signal::ctrl_c().await.ok();
+    // Create dedicated runtime for VN minute worker (separate to avoid API overload)
+    let worker_health_minute = shared_health_stats.clone();
+    let vn_tx_minute = vn_tx.clone(); // Use MPSC channel for minute worker
+    std::thread::spawn(move || {
+        let minute_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)  // 2 threads for minute worker
+            .thread_name("vn-slow-worker-minute")
+            .enable_all()
+            .build()
+            .expect("Failed to create minute worker runtime");
+
+        minute_runtime.block_on(async {
+            println!("🐌 Spawning VN MINUTE worker in separate dedicated runtime...");
+            worker::run_minute_worker_separate(worker_health_minute, Some(vn_tx_minute)).await;
+        });
+    });
+
+    // Create dedicated runtime for crypto worker
+    std::thread::spawn(move || {
+        let crypto_runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)  // 2 threads for crypto worker
+            .thread_name("crypto-worker")
+            .enable_all()
+            .build()
+            .expect("Failed to create crypto worker runtime");
+
+        crypto_runtime.block_on(async {
+            println!("🪙 Spawning crypto worker in dedicated runtime...");
+            worker::run_crypto_worker_with_channel(worker_health_crypto, Some(crypto_tx_worker)).await;
         });
     });
 
