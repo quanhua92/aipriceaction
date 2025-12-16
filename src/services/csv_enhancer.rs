@@ -12,7 +12,7 @@ use crate::models::indicators::{calculate_sma, calculate_ma_score};
 use crate::services::vci::OhlcvData;
 use crate::services::mpsc::{TickerUpdate, ChangeType};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date, format_timestamp, deduplicate_ohlcv_by_time, deduplicate_stock_data_by_time};
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 use csv::Writer;
 use std::collections::HashMap;
 use std::path::Path;

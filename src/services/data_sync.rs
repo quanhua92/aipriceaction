@@ -3,12 +3,14 @@ use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
-use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv};
+use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_with_changes};
+use crate::services::mpsc::TickerUpdate;
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::mpsc::SyncSender;
 use std::time::Instant;
 
 const TICKER_GROUP_FILE: &str = "ticker_group.json";
@@ -20,6 +22,8 @@ pub struct DataSync {
     stats: SyncStats,
     /// Tracks first failure time for each interval to implement smart fallback
     batch_failure_times: HashMap<Interval, Option<DateTime<Utc>>>,
+    /// Optional MPSC channel sender for real-time ticker updates
+    channel_sender: Option<SyncSender<TickerUpdate>>,
 }
 
 impl DataSync {
@@ -32,6 +36,23 @@ impl DataSync {
             fetcher,
             stats: SyncStats::new(),
             batch_failure_times: HashMap::new(),
+            channel_sender: None,
+        })
+    }
+
+    /// Create new data sync orchestrator with MPSC channel support
+    pub fn new_with_channel(
+        config: SyncConfig,
+        channel_sender: Option<SyncSender<TickerUpdate>>,
+    ) -> Result<Self, Error> {
+        let fetcher = TickerFetcher::new()?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+            batch_failure_times: HashMap::new(),
+            channel_sender,
         })
     }
 
@@ -649,10 +670,27 @@ impl DataSync {
         // Enhance only the sliced portion (massive performance gain for minute data)
         let enhanced = enhance_data(ticker_data);
 
-        // Save enhanced data to CSV with smart cutoff strategy and file locking
+        // Save enhanced data to CSV with change detection and real-time updates
         // Only records >= cutoff_date will be written to CSV
         if let Some(stock_data) = enhanced.get(ticker) {
-            save_enhanced_csv(ticker, stock_data, interval, cutoff_date, false)?;
+            let market_data_dir = get_market_data_dir();
+            let (change_type, record_count) = save_enhanced_csv_with_changes(
+                ticker,
+                stock_data,
+                interval,
+                cutoff_date,
+                false, // rewrite_all - set to false for incremental
+                &market_data_dir,
+                self.channel_sender.clone(),
+            )?;
+
+            tracing::info!(
+                ticker = ticker,
+                interval = ?interval,
+                record_count = record_count,
+                change_type = ?change_type,
+                "Enhanced and saved with change detection"
+            );
         }
 
         Ok(())

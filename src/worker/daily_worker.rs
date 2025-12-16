@@ -295,13 +295,15 @@ pub async fn run_with_channel(
 /// Helper function to run sync with channel support
 async fn run_sync_with_channel(
     config: SyncConfig,
-    market_data_dir: &std::path::Path,
+    _market_data_dir: &std::path::Path,
     health_stats: &SharedHealthStats,
-    _channel_sender: Option<&SyncSender<TickerUpdate>>,
+    channel_sender: Option<&SyncSender<TickerUpdate>>,
 ) -> Result<SyncStats, Error> {
-    // For now, create DataSync without channel support
-    // TODO: Modify DataSync to accept and use channel sender
-    let mut sync = DataSync::new(config)?;
+    // Create DataSync with channel support
+    let mut sync = DataSync::new_with_channel(
+        config,
+        channel_sender.cloned()
+    )?;
 
     // Update health stats
     let mut health = health_stats.write().await;

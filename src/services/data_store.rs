@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
 use crate::services::mpsc::{TickerUpdate, ChangeType};
-use tracing::{debug, info, error, warn};
+use tracing::{debug, info};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

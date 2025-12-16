@@ -1,10 +1,10 @@
 use crate::models::Interval;
 use crate::services::{DataStore, HealthStats};
-use crate::services::mpsc::{create_bounded_channels, ChannelManager};
+use crate::services::mpsc::create_bounded_channels;
 use crate::utils::{get_market_data_dir, get_crypto_data_dir};
 use crate::worker;
 use crate::server;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::RwLock;
 
@@ -170,8 +170,8 @@ pub async fn run(port: u16) {
 
     // Clone channel senders for workers
     let vn_tx_daily = vn_tx.clone();
-    let vn_tx_slow = vn_tx.clone();
-    let crypto_tx_worker = crypto_tx.clone();
+    let _vn_tx_slow = vn_tx.clone(); // TODO: Use when slow_worker_with_channel is implemented
+    let _crypto_tx_worker = crypto_tx.clone(); // TODO: Use when crypto_worker_with_channel is implemented
 
     std::thread::spawn(move || {
         let worker_runtime = tokio::runtime::Builder::new_multi_thread()
