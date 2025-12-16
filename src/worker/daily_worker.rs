@@ -16,7 +16,7 @@ const NON_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes
 #[instrument(skip(health_stats, channel_sender))]
 pub async fn run(
     health_stats: SharedHealthStats,
-    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<std::sync::mpsc::SyncSender<DataUpdateMessage>>,
 ) {
     info!(
         "[DAILY] Starting daily worker - Trading hours: {}s, Non-trading hours: {}s",

@@ -19,7 +19,7 @@ const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
 #[instrument(skip(health_stats, channel_sender))]
 pub async fn run(
     health_stats: SharedHealthStats,
-    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<std::sync::mpsc::SyncSender<DataUpdateMessage>>,
 ) {
     info!(
         "[SLOW] Starting slow worker with 2 independent tasks:"
@@ -55,7 +55,7 @@ pub async fn run(
 async fn run_interval_worker(
     interval: Interval,
     health_stats: SharedHealthStats,
-    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<std::sync::mpsc::SyncSender<DataUpdateMessage>>,
 ) {
     let mut iteration_count = 0u64;
     let market_data_dir = get_market_data_dir();

@@ -34,8 +34,8 @@ pub async fn run(port: u16) {
 
     // Create MPSC channels for real-time data updates from workers to auto-reload tasks
     println!("🔗 Creating MPSC channels for real-time data updates...");
-    let (vn_tx, vn_rx) = mpsc::channel::<DataUpdateMessage>();
-    let (crypto_tx, crypto_rx) = mpsc::channel::<DataUpdateMessage>();
+    let (vn_tx, vn_rx) = mpsc::sync_channel(100); // Bounded to prevent OOM
+    let (crypto_tx, crypto_rx) = mpsc::sync_channel(100); // Bounded to prevent OOM
 
     // Load daily data only, skip 1H and 1m (background workers will handle it)
     println!("📊 Loading VN daily data into memory (128 days for fast startup, 1H/1m handled by background workers)...");

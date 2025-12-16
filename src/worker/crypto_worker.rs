@@ -26,7 +26,7 @@ const PROXY_LOOP_CHECK_INTERVAL_SECS: u64 = 300; // 5 minutes
 #[instrument(skip(health_stats, channel_sender))]
 pub async fn run(
     health_stats: SharedHealthStats,
-    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<std::sync::mpsc::SyncSender<DataUpdateMessage>>,
 ) {
     // Check crypto data source configuration
     let target_url = std::env::var("CRYPTO_WORKER_TARGET_URL").ok();
@@ -339,7 +339,7 @@ async fn sync_and_enhance(
     iteration: u64,
     tier: &str,
     crypto_data_dir: &std::path::PathBuf,
-    channel_sender: Option<std::sync::mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<std::sync::mpsc::SyncSender<DataUpdateMessage>>,
 ) -> bool {
     let interval_name = match interval {
         Interval::Daily => "Daily",

@@ -137,7 +137,7 @@ pub fn save_enhanced_csv(
     interval: Interval,
     cutoff_date: DateTime<chrono::Utc>,
     rewrite_all: bool,
-    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<&mpsc::SyncSender<DataUpdateMessage>>,
     mode: DataMode,
 ) -> Result<(), Error> {
     save_enhanced_csv_to_dir(ticker, data, interval, cutoff_date, rewrite_all, &get_market_data_dir(), channel_sender, mode)
@@ -167,7 +167,7 @@ pub fn save_enhanced_csv_to_dir(
     cutoff_date: DateTime<chrono::Utc>,
     rewrite_all: bool,
     base_dir: &Path,
-    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<&mpsc::SyncSender<DataUpdateMessage>>,
     mode: DataMode,
 ) -> Result<(), Error> {
     if data.is_empty() {
@@ -551,7 +551,7 @@ pub fn enhance_interval_filtered(
     interval: Interval,
     market_data_dir: &Path,
     tickers_filter: Option<&[String]>,
-    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<&mpsc::SyncSender<DataUpdateMessage>>,
     mode: DataMode,
 ) -> Result<EnhancementStats, Error> {
     let start_time = Instant::now();
@@ -676,7 +676,7 @@ fn process_single_ticker(
     interval: Interval,
     market_data_dir: &Path,
     _cutoff_date: DateTime<chrono::Utc>, // Unused - we calculate per-ticker cutoff
-    channel_sender: Option<&mpsc::Sender<DataUpdateMessage>>,
+    channel_sender: Option<&mpsc::SyncSender<DataUpdateMessage>>,
     mode: DataMode,
 ) -> Result<TickerStats, Error> {
     let ticker_dir = market_data_dir.join(ticker);
