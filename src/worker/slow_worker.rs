@@ -273,9 +273,11 @@ pub async fn run_with_channel(
     health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
+    println!("[SYNC::SLOW] === STARTING SLOW WORKER WITH MPSC CHANNEL ===");
     info!(
         "Starting slow worker with MPSC channel and 2 independent tasks:"
     );
+    println!("[SYNC::SLOW] Channel sender exists: {}", channel_sender.is_some());
     info!(
         "  - Hourly: {}s (trading) / {}s (off-hours)",
         HOURLY_TRADING_INTERVAL_SECS, HOURLY_NON_TRADING_INTERVAL_SECS
@@ -284,12 +286,19 @@ pub async fn run_with_channel(
         "  - Minute: {}s (trading) / {}s (off-hours)",
         MINUTE_TRADING_INTERVAL_SECS, MINUTE_NON_TRADING_INTERVAL_SECS
     );
+    println!("[SYNC::SLOW] About to spawn hourly sync task...");
 
     // Spawn hourly sync task
+    println!("[SYNC::SLOW] Spawning hourly sync task...");
     let health_stats_hourly = health_stats.clone();
     let channel_sender_hourly = channel_sender.clone();
     tokio::spawn(async move {
+        println!("[SYNC::SLOW] Hourly sync task SPAWNED successfully");
+        let mut iteration = 0;
         loop {
+            iteration += 1;
+            println!("[SYNC::SLOW] === HOURLY ITERATION {} STARTING ===", iteration);
+
             let is_trading = is_trading_hours();
             let sleep_secs = if is_trading {
                 HOURLY_TRADING_INTERVAL_SECS
@@ -297,31 +306,45 @@ pub async fn run_with_channel(
                 HOURLY_NON_TRADING_INTERVAL_SECS
             };
 
+            println!("[SYNC::SLOW] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
             info!(
                 interval = "Hourly",
                 trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
                 "Slow worker hourly sync started"
             );
+            println!("[SYNC::SLOW] About to call run_sync_with_channel for Hourly...");
 
             // Perform hourly sync
             let start_time = Utc::now();
+            println!("[SYNC::SLOW] Start time: {}", start_time);
+
             let sync_result = run_sync_with_channel(
                 Interval::Hourly,
                 &health_stats_hourly,
                 channel_sender_hourly.as_ref(),
             ).await;
 
+            println!("[SYNC::SLOW] run_sync_with_channel for Hourly COMPLETED");
             let end_time = Utc::now();
+            println!("[SYNC::SLOW] End time: {}", end_time);
             let duration = end_time.signed_duration_since(start_time);
+            println!("[SYNC::SLOW] Duration: {} seconds", duration.num_seconds());
+
             let stats = sync_result.unwrap_or_else(|e| {
+                println!("[SYNC::SLOW] Hourly sync failed with error: {}", e);
                 error!(error = %e, "Hourly sync failed");
                 SyncStats::new()
             });
 
+            println!("[SYNC::SLOW] About to write log entry...");
             write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Hourly);
+            println!("[SYNC::SLOW] Log entry written");
 
+            println!("[SYNC::SLOW] === HOURLY ITERATION {} COMPLETED ===", iteration);
+            println!("[SYNC::SLOW] Sleeping for {} seconds...", sleep_secs);
             // Sleep until next iteration
             sleep(Duration::from_secs(sleep_secs)).await;
+            println!("[SYNC::SLOW] Woke up from sleep");
         }
     });
 
@@ -371,26 +394,46 @@ async fn run_sync_with_channel(
     health_stats: &SharedHealthStats,
     channel_sender: Option<&SyncSender<TickerUpdate>>,
 ) -> Result<SyncStats, Error> {
+    let interval_str = match interval {
+        Interval::Hourly => "Hourly",
+        Interval::Minute => "Minute",
+        _ => "Unknown",
+    };
+
+    println!("[SYNC::SLOW] === run_sync_with_channel STARTING for {} ===", interval_str);
+    println!("[SYNC::SLOW] Channel sender: {:?}", channel_sender);
+
     // Update health stats quickly - lock only for the brief moment needed
+    println!("[SYNC::SLOW] About to acquire health stats lock...");
     {
         let mut health = health_stats.write().await;
+        println!("[SYNC::SLOW] Health stats lock acquired");
         match interval {
             Interval::Hourly => {
                 health.hourly_last_sync = Some(Utc::now().to_rfc3339());
                 health.slow_iteration_count += 1;
+                println!("[SYNC::SLOW] Updated hourly health stats");
             }
             Interval::Minute => {
                 health.minute_last_sync = Some(Utc::now().to_rfc3339());
                 health.slow_iteration_count += 1;
+                println!("[SYNC::SLOW] Updated minute health stats");
             }
             _ => {}
         }
     } // Lock released here immediately
+    println!("[SYNC::SLOW] Health stats lock released");
 
+    println!("[SYNC::SLOW] About to create SyncConfig...");
     let concurrent_batches = get_concurrent_batches();
+    let start_date = (Utc::now() - chrono::Days::new(7)).format("%Y-%m-%d").to_string();
+    let end_date = Utc::now().format("%Y-%m-%d").to_string();
+
+    println!("[SYNC::SLOW] Sync config: start={}, end={}, batches={}", start_date, end_date, concurrent_batches);
+
     let config = SyncConfig {
-        start_date: (Utc::now() - chrono::Days::new(7)).format("%Y-%m-%d").to_string(),
-        end_date: Utc::now().format("%Y-%m-%d").to_string(),
+        start_date: start_date.clone(),
+        end_date: end_date.clone(),
         batch_size: 10,
         resume_days: Some(2),
         intervals: vec![interval],
@@ -398,12 +441,19 @@ async fn run_sync_with_channel(
         concurrent_batches,
     };
 
+    println!("[SYNC::SLOW] About to create DataSync with channel...");
     // Create DataSync with channel support
     let mut sync = DataSync::new_with_channel(
         config,
         channel_sender.cloned()
     )?;
+    println!("[SYNC::SLOW] DataSync created successfully");
 
+    println!("[SYNC::SLOW] About to call sync_all_intervals...");
     sync.sync_all_intervals(false).await?;
-    Ok(sync.get_stats().clone())
+    println!("[SYNC::SLOW] sync_all_intervals completed successfully");
+
+    let stats = sync.get_stats().clone();
+    println!("[SYNC::SLOW] === run_sync_with_channel COMPLETED for {} ===", interval_str);
+    Ok(stats)
 }
