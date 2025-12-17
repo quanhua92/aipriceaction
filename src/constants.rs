@@ -136,3 +136,9 @@ pub const TICK_SIZE_CRYPTO_LARGE: f64 = 1.0;     // For prices >= $1,000
 pub const DEFAULT_CACHE_AUTO_CLEAR_ENABLED: bool = true;
 pub const DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD: f64 = 0.95;  // 95%
 pub const DEFAULT_CACHE_AUTO_CLEAR_RATIO: f64 = 0.5;       // 50%
+
+/// MPSC Channel Retry Configuration
+///
+/// Maximum number of retries for sending ticker updates through MPSC channel
+/// when the channel is temporarily full. Uses 10ms delay between retries.
+pub const MPSC_SEND_MAX_RETRIES: usize = 200;

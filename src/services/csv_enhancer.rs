@@ -1023,7 +1023,7 @@ pub async fn save_enhanced_csv_with_changes(
 
         // Send with retry mechanism - wait for channel to be available instead of skipping
         tracing::debug!("[CSV_ENHANCER] Calling send_with_retry_async for ticker={}", ticker);
-        match crate::services::mpsc::send_with_retry_async(&sender, update, 50).await {
+        match crate::services::mpsc::send_with_retry_async(&sender, update, crate::constants::MPSC_SEND_MAX_RETRIES).await {
             Ok(()) => {
                 tracing::debug!("[CSV_ENHANCER] ✅ Successfully sent MPSC update for ticker={}", ticker);
                 tracing::info!(
