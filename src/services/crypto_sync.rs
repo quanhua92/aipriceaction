@@ -507,7 +507,7 @@ impl CryptoSync {
         symbol: &str,
         new_data: &[OhlcvData],
         interval: Interval,
-        last_date: &str,
+        _last_date: &str,  // Parameter kept for API compatibility but not used
     ) -> Result<(), Error> {
         if new_data.is_empty() {
             return Ok(());
@@ -515,13 +515,14 @@ impl CryptoSync {
 
         let crypto_data_dir = get_crypto_data_dir();
         let file_path = crypto_data_dir.join(symbol).join(interval.to_filename());
-        let is_resume = !last_date.is_empty() && !self.config.force_full;
-
+        
         // Merge existing CSV data with new data (like stock sync does)
-        let (existing, merged_data) = if is_resume && file_path.exists() {
-            let existing = self.read_existing_ohlcv(&file_path)?;
-            let merged = self.merge_ohlcv_data(existing.clone(), new_data.to_vec());
-            (Some(existing), merged)
+        // IMPORTANT: Always merge when file exists, regardless of is_resume status
+        // This preserves historical data for partial history cases
+        let (existing, merged_data) = if file_path.exists() {
+            let existing_data = self.read_existing_ohlcv(&file_path)?;
+            let merged = self.merge_ohlcv_data(existing_data.clone(), new_data.to_vec());
+            (Some(existing_data), merged)
         } else {
             (None, new_data.to_vec())
         };
@@ -530,11 +531,19 @@ impl CryptoSync {
             return Ok(());
         }
 
-        // Calculate cutoff date based on EXISTING CSV data (not merged)
-        let resume_days = 2i64;
-        let cutoff_datetime = if let Some(ref existing_data) = existing {
-            if let Some(last_existing_record) = existing_data.last() {
-                last_existing_record.time - chrono::Duration::days(resume_days)
+        // Calculate cutoff date - use different logic for gaps vs resume
+        // If there's a large gap between existing and new data (partial history), preserve all existing data
+        let cutoff_datetime = if let (Some(ref existing_data), Some(first_new)) = (existing.as_ref(), new_data.first()) {
+            if let Some(last_existing) = existing_data.last() {
+                let gap_days = (first_new.time - last_existing.time).num_days();
+                if gap_days > 3 {
+                    // Large gap detected (partial history): use epoch to preserve all existing data
+                    chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
+                } else {
+                    // Small gap or no gap (resume): use 2-day cutoff to refresh recent data
+                    let resume_days = 2i64;
+                    last_existing.time - chrono::Duration::days(resume_days)
+                }
             } else {
                 chrono::DateTime::from_timestamp(0, 0).unwrap_or_else(|| Utc::now())
             }
@@ -566,7 +575,7 @@ impl CryptoSync {
             stock_data,
             interval,
             cutoff_datetime,
-            !is_resume, // rewrite_all for full mode
+            false, // rewrite_all - always false like stock sync
             &crypto_data_dir,
             self.channel_sender.clone(),
         ).await?;
