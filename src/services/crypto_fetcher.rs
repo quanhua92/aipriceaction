@@ -272,7 +272,15 @@ impl CryptoFetcher {
         let show_first = 3;
         let show_last = 2;
         let today = Utc::now().date_naive();
-        let gap_threshold_days = 3; // Same as stock system
+        // Interval-specific gap thresholds (same as stock system):
+        // - Daily: 14 days (2 weeks) - handles weekends + holidays efficiently
+        // - Hourly: 7 days (1 week) - reasonable gap for hourly data
+        // - Minute: 3 days - conservative approach for high-frequency data
+        let gap_threshold_days = match interval {
+            crate::models::Interval::Daily => 14,
+            crate::models::Interval::Hourly => 7,
+            crate::models::Interval::Minute => 3,
+        };
 
         for (idx, symbol) in symbols.iter().enumerate() {
             let file_path = self.get_crypto_file_path(symbol, interval);

@@ -6,6 +6,7 @@ use chrono::{Datelike, NaiveDate};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration as StdDuration;
+use tracing::{info, warn, error, debug};
 
 /// Ticker data fetcher using VCI client
 pub struct TickerFetcher {
@@ -133,10 +134,10 @@ impl TickerFetcher {
         tickers: &[String],
         interval: Interval,
     ) -> Result<TickerCategory, Error> {
-        println!(
-            "\n🔍 Pre-scanning {} tickers to categorize data needs for {}...",
-            tickers.len(),
-            interval.to_vci_format()
+        info!(
+            tickers_count = tickers.len(),
+            interval = interval.to_vci_format(),
+            "Pre-scanning tickers to categorize data needs"
         );
 
         let mut category = TickerCategory::new();
@@ -151,12 +152,12 @@ impl TickerFetcher {
             let should_print = idx < show_first || idx >= total - show_last;
 
             if idx == show_first && total > show_first + show_last {
-                println!("   ... ({} more tickers) ...", total - show_first - show_last);
+                debug!(remaining_tickers = total - show_first - show_last, "... more tickers");
             }
 
             if !file_path.exists() {
                 if should_print {
-                    println!("   📄 {} - File does not exist: {:?}", ticker, file_path);
+                    debug!(ticker = ticker, file_path = ?file_path, "File does not exist - full history needed");
                 }
                 category.full_history_tickers.push(ticker.clone());
             } else {
@@ -174,7 +175,7 @@ impl TickerFetcher {
 
                                 if days_old > STALE_TICKER_THRESHOLD_DAYS {
                                     if should_print {
-                                        println!("   ⏭️  {} - Skipping: last trade {} days ago ({})", ticker, days_old, last_date);
+                                        info!(ticker = ticker, days_old = days_old, last_date = last_date, "Skipping stale ticker");
                                     }
                                     category.skipped_stale_tickers.push((ticker.clone(), last_date.clone(), days_old));
                                     continue; // Skip this ticker
@@ -182,10 +183,18 @@ impl TickerFetcher {
                             }
                         }
 
-                        // Check if gap is > 3 days - if so, use partial history instead of batch resume
+                        // Check if gap exceeds interval-specific threshold - if so, use partial history instead of batch resume
+                        // Different intervals have different gap tolerances:
+                        // - Daily: 14 days (2 weeks) - handles weekends + holidays efficiently
+                        // - Hourly: 7 days (1 week) - reasonable gap for hourly data
+                        // - Minute: 3 days - conservative approach for high-frequency data
                         // Can be disabled with DISABLE_PARTIAL_HISTORY=1 for debugging
                         use chrono::NaiveDate;
-                        let gap_threshold_days = 3;
+                        let gap_threshold_days = match interval {
+                            crate::models::Interval::Daily => 14,
+                            crate::models::Interval::Hourly => 7,
+                            crate::models::Interval::Minute => 3,
+                        };
                         let disable_partial = std::env::var("DISABLE_PARTIAL_HISTORY").is_ok();
 
                         if let Ok(last_date_parsed) = NaiveDate::parse_from_str(&last_date, "%Y-%m-%d") {
@@ -195,16 +204,16 @@ impl TickerFetcher {
                             if days_gap > gap_threshold_days && !disable_partial {
                                 // Gap too large - batch API won't work, use partial history
                                 if should_print {
-                                    println!("   📥 {} - Partial history from: {} ({} days gap)", ticker, last_date, days_gap);
+                                    info!(ticker = ticker, last_date = last_date, days_gap = days_gap, "Partial history from gap");
                                 }
                                 category.partial_history_tickers.push((ticker.clone(), last_date));
                             } else {
                                 // Gap small enough for batch resume (or partial history disabled)
                                 if should_print {
                                     if disable_partial && days_gap > gap_threshold_days {
-                                        println!("   📄 {} - Resume from: {} ({} days gap, PARTIAL_HISTORY_DISABLED)", ticker, last_date, days_gap);
+                                        info!(ticker = ticker, last_date = last_date, days_gap = days_gap, "Resume from gap (PARTIAL_HISTORY_DISABLED)");
                                     } else {
-                                        println!("   📄 {} - Resume from: {}", ticker, last_date);
+                                        debug!(ticker = ticker, last_date = last_date, "Resume from date");
                                     }
                                 }
                                 category.resume_tickers.push((ticker.clone(), last_date));
@@ -212,7 +221,7 @@ impl TickerFetcher {
                         } else {
                             // Can't parse date, default to resume
                             if should_print {
-                                println!("   📄 {} - Resume from: {}", ticker, last_date);
+                                debug!(ticker = ticker, last_date = last_date, "Resume from unparsed date");
                             }
                             category.resume_tickers.push((ticker.clone(), last_date));
                         }
@@ -220,14 +229,14 @@ impl TickerFetcher {
                     Ok(None) => {
                         // File exists but no valid data - need full history
                         if should_print {
-                            println!("   📄 {} - File exists but no valid data found: {:?}", ticker, file_path);
+                            warn!(ticker = ticker, file_path = ?file_path, "File exists but no valid data found - full history needed");
                         }
                         category.full_history_tickers.push(ticker.clone());
                     }
                     Err(e) => {
                         // Error reading file - need full history
                         if should_print {
-                            println!("   📄 {} - Error reading file: {} - {:?}", ticker, e, file_path);
+                            warn!(ticker = ticker, error = %e, file_path = ?file_path, "Error reading file - full history needed");
                         }
                         category.full_history_tickers.push(ticker.clone());
                     }
@@ -235,32 +244,35 @@ impl TickerFetcher {
             }
         }
 
-        println!("\n📊 Categorization results:");
-        println!(
-            "   Resume mode tickers: {}",
-            category.resume_tickers.len()
-        );
-        println!(
-            "   Full history tickers: {}",
-            category.full_history_tickers.len()
-        );
+        info!(resume_tickers = category.resume_tickers.len(),
+              full_history_tickers = category.full_history_tickers.len(),
+              partial_history_tickers = category.partial_history_tickers.len(),
+              skipped_stale_tickers = category.skipped_stale_tickers.len(),
+              interval = interval.to_vci_format(),
+              "Categorization results");
+
+        // Log details for each category if not empty
         if !category.partial_history_tickers.is_empty() {
-            println!(
-                "   Partial history tickers: {} (gap > 3 days)",
-                category.partial_history_tickers.len()
-            );
+            let threshold = match interval {
+                crate::models::Interval::Daily => 14,
+                crate::models::Interval::Hourly => 7,
+                crate::models::Interval::Minute => 3,
+            };
+            info!(count = category.partial_history_tickers.len(),
+                  gap_threshold_days = threshold,
+                  interval = interval.to_vci_format(),
+                  "Partial history tickers");
         }
+
         if !category.skipped_stale_tickers.is_empty() {
-            println!(
-                "   Skipped stale tickers: {} (last trade >{} days ago)",
-                category.skipped_stale_tickers.len(),
-                crate::models::STALE_TICKER_THRESHOLD_DAYS
-            );
+            info!(count = category.skipped_stale_tickers.len(),
+                  stale_threshold_days = crate::models::STALE_TICKER_THRESHOLD_DAYS,
+                  "Skipped stale tickers");
         }
 
         // Show min/max dates for resume tickers
         if let Some(min_date) = category.get_min_resume_date() {
-            println!("   Resume from: {} (earliest last date)", min_date);
+            info!(earliest_date = min_date, "Resume date for tickers");
 
             // Show which tickers have the earliest date (are behind)
             let behind_tickers: Vec<String> = category.resume_tickers
@@ -269,20 +281,20 @@ impl TickerFetcher {
                 .map(|(ticker, _)| ticker.clone())
                 .take(5)
                 .collect();
+            let total_behind = category.resume_tickers
+                .iter()
+                .filter(|(_, date)| date == &min_date)
+                .count();
 
-            if behind_tickers.len() > 0 {
+            if !behind_tickers.is_empty() {
                 if behind_tickers.len() < category.resume_tickers.len() {
-                    print!("   Behind tickers: ");
                     if behind_tickers.len() <= 5 {
-                        println!("{}", behind_tickers.join(", "));
+                        info!(tickers = ?behind_tickers, count = total_behind, "Behind tickers");
                     } else {
-                        println!("{} and {} more", behind_tickers.join(", "),
-                            category.resume_tickers.iter()
-                                .filter(|(_, date)| date == &min_date)
-                                .count() - 5);
+                        info!(tickers = ?behind_tickers[..5], count = total_behind, additional = total_behind - 5, "Behind tickers (some not shown)");
                     }
                 } else {
-                    println!("   All tickers at same date ({})", min_date);
+                    info!(date = min_date, "All tickers at same date");
                 }
             }
         }
@@ -306,14 +318,11 @@ impl TickerFetcher {
 
         let concurrent_batches = concurrent_batches.max(1); // At least 1
 
-        println!(
-            "\n-> Processing batch of {} tickers using VCI batch history [{}]",
-            tickers.len(),
-            interval.to_vci_format()
-        );
-        if concurrent_batches > 1 {
-            println!("   🚀 Using {} concurrent batch requests", concurrent_batches);
-        }
+        info!(ticker_count = tickers.len(),
+              interval = interval.to_vci_format(),
+              batch_size = batch_size,
+              concurrent_batches = concurrent_batches,
+              "Processing batch of tickers using VCI batch history");
 
         let mut all_results = HashMap::new();
 
@@ -367,15 +376,13 @@ impl TickerFetcher {
                         let should_print = batch_idx < show_first || batch_idx >= total_batches - show_last;
 
                         if should_print {
-                            println!(
-                                "\n--- Batch {}/{}: {} tickers | {:.2}s ---",
-                                batch_idx + 1,
-                                total_batches,
-                                ticker_batch.len(),
-                                api_elapsed.as_secs_f64()
-                            );
+                            info!(batch_num = batch_idx + 1,
+                                  total_batches = total_batches,
+                                  tickers_count = ticker_batch.len(),
+                                  duration_s = api_elapsed.as_secs_f64(),
+                                  "Batch completed");
                         } else if batch_idx == show_first {
-                            println!("   ... ({} more batches) ...", total_batches - show_first - show_last);
+                            debug!(remaining_batches = total_batches - show_first - show_last, "... more batches");
                         }
 
                         match api_result {
@@ -388,21 +395,21 @@ impl TickerFetcher {
                                                 // Success - store result silently
                                                 all_results.insert(ticker.clone(), Some(ohlcv_vec.clone()));
                                             } else {
-                                                println!("   ❌ Batch failed: {} (empty data)", ticker);
+                                                warn!(ticker = ticker, "Batch failed - empty data");
                                                 all_results.insert(ticker.clone(), None);
                                             }
                                         } else {
-                                            println!("   ❌ Batch failed: {} (no data)", ticker);
+                                            warn!(ticker = ticker, "Batch failed - no data");
                                             all_results.insert(ticker.clone(), None);
                                         }
                                     } else {
-                                        println!("   ❌ Batch failed: {} (not in response)", ticker);
+                                        warn!(ticker = ticker, "Batch failed - ticker not in response");
                                         all_results.insert(ticker.clone(), None);
                                     }
                                 }
                             }
                             Err(e) => {
-                                println!("   ❌ Batch request error: {:?}", e);
+                                warn!(error = ?e, "Batch request error");
                                 for ticker in ticker_batch.iter() {
                                     all_results.insert(ticker.clone(), None);
                                 }
@@ -410,7 +417,7 @@ impl TickerFetcher {
                         }
                     }
                     Err(e) => {
-                        println!("   ❌ Task join error: {:?}", e);
+                        error!(error = %e, "Task join error");
                     }
                 }
             }
@@ -432,12 +439,11 @@ impl TickerFetcher {
         end_date: &str,
         interval: Interval,
     ) -> Result<Vec<OhlcvData>, Error> {
-        println!(
-            "   - Downloading full history from {} to {} using VCI [{}]...",
-            start_date,
-            end_date,
-            interval.to_vci_format()
-        );
+        info!(ticker = ticker,
+              start_date = start_date,
+              end_date = end_date,
+              interval = interval.to_vci_format(),
+              "Downloading full history");
 
         match interval {
             Interval::Hourly => {
@@ -479,7 +485,7 @@ impl TickerFetcher {
             )));
         }
 
-        println!("   - Downloaded {} records for full history", data.len());
+        info!(record_count = data.len(), "Downloaded records for full history");
         Ok(data)
     }
 
@@ -490,7 +496,7 @@ impl TickerFetcher {
         start_date: &str,
         end_date: &str,
     ) -> Result<Vec<OhlcvData>, Error> {
-        println!("   - Starting chunked hourly download for {}", ticker);
+        info!(ticker = ticker, "Starting chunked hourly download");
 
         let start_year = NaiveDate::parse_from_str(start_date, "%Y-%m-%d")
             .map_err(|e| Error::InvalidInput(format!("Invalid start date: {}", e)))?
@@ -515,7 +521,7 @@ impl TickerFetcher {
                 format!("{}-12-31", year)
             };
 
-            println!(
+            info!(
                 "   - Downloading {} chunk: {} to {}",
                 year, year_start, year_end
             );
@@ -526,14 +532,14 @@ impl TickerFetcher {
                 .await
             {
                 Ok(chunk_data) if !chunk_data.is_empty() => {
-                    println!("     - Downloaded {} records for {}", chunk_data.len(), year);
+                    debug!(year = year, record_count = chunk_data.len(), "Downloaded hourly chunk");
                     all_chunks.extend(chunk_data);
                 }
                 Ok(_) => {
-                    println!("     - No data for {}", year);
+                    debug!(year = year, "No data for year");
                 }
                 Err(e) => {
-                    println!("     - ERROR downloading {} chunk: {:?}", year, e);
+                    error!(year = year, error = ?e, "ERROR downloading chunk");
                 }
             }
 
@@ -551,7 +557,7 @@ impl TickerFetcher {
         // Sort by time
         all_chunks.sort_by(|a, b| a.time.cmp(&b.time));
 
-        println!(
+        info!(
             "   - Combined {} total records from {} yearly chunks",
             all_chunks.len(),
             (end_year - start_year + 1)
@@ -567,7 +573,7 @@ impl TickerFetcher {
         start_date: &str,
         end_date: &str,
     ) -> Result<Vec<OhlcvData>, Error> {
-        println!("   - Starting chunked minute download for {}", ticker);
+        info!(ticker = ticker, "Starting chunked minute download");
 
         let start_dt = NaiveDate::parse_from_str(start_date, "%Y-%m-%d")
             .map_err(|e| Error::InvalidInput(format!("Invalid start date: {}", e)))?;
@@ -612,7 +618,7 @@ impl TickerFetcher {
                 last_day_of_month.format("%Y-%m-%d").to_string()
             };
 
-            println!(
+            info!(
                 "   - Downloading {}-{:02} chunk: {} to {}",
                 year, month, month_start, month_end
             );
@@ -623,7 +629,7 @@ impl TickerFetcher {
                 .await
             {
                 Ok(chunk_data) if !chunk_data.is_empty() => {
-                    println!(
+                    info!(
                         "     - Downloaded {} records for {}-{:02}",
                         chunk_data.len(),
                         year,
@@ -632,10 +638,10 @@ impl TickerFetcher {
                     all_chunks.extend(chunk_data);
                 }
                 Ok(_) => {
-                    println!("     - No data for {}-{:02}", year, month);
+                    info!("     - No data for {}-{:02}", year, month);
                 }
                 Err(e) => {
-                    println!(
+                    info!(
                         "     - ERROR downloading {}-{:02} chunk: {:?}",
                         year, month, e
                     );
@@ -663,7 +669,7 @@ impl TickerFetcher {
             + (end_dt.month() as i32 - start_dt.month() as i32)
             + 1;
 
-        println!(
+        info!(
             "   - Combined {} total records from {} monthly chunks",
             all_chunks.len(),
             total_months
@@ -736,7 +742,7 @@ impl TickerFetcher {
                         // 2% threshold for dividend detection
                         if ratio > 1.02 {
                             let div_elapsed = div_start.elapsed();
-                            println!(
+                            info!(
                                 "   - 💰 DIVIDEND DETECTED for {} on {} (old day): ratio={:.4} (check took {:.3}s)",
                                 ticker,
                                 new_row.time.format("%Y-%m-%d"),
