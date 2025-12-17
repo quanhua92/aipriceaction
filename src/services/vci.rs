@@ -257,8 +257,7 @@ impl VciClient {
                             last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
                             continue;
                         } else if status.is_client_error() {
-                            last_error = Some(format!("Client error ({}) - {} - not retryable", status.as_u16(), status_text));
-                            break;
+                            return Err(VciError::InvalidResponse(format!("Client error ({}) - {} - not retryable", status.as_u16(), status_text)));
                         } else {
                             last_error = Some(format!("HTTP error ({}) - {}", status.as_u16(), status_text));
                             continue;

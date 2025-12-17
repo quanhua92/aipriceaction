@@ -213,7 +213,7 @@ impl SyncConfig {
     /// - <= 2 days: 20 tickers/batch (fast path for recent data)
     /// - <= 7 days: 10 tickers/batch (medium range)
     /// - > 7 days:  3 tickers/batch (safe for large ranges)
-    pub fn get_dynamic_batch_size(&self, interval: Interval, date_range_days: i64) -> usize {
+    pub fn get_dynamic_batch_size(&self, _interval: Interval, _date_range_days: i64) -> usize {
         if self.force_full {
             return 2; // Smaller batches for full downloads
         }

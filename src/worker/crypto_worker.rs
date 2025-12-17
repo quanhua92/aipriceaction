@@ -782,7 +782,7 @@ pub async fn run_with_channel(
         if !use_proxy {
             // CryptoCompare mode: stagger regular cryptos to manage rate limits
             let intervals = &[Interval::Daily, Interval::Hourly, Interval::Minute];
-            for (i, &interval) in intervals.iter().enumerate() {
+            for (_i, &interval) in intervals.iter().enumerate() {
                 let interval_symbols = symbols.iter()
                     .filter(|s| !PRIORITY_CRYPTOS.contains(&s.as_str()))
                     .collect::<Vec<_>>();
@@ -919,11 +919,11 @@ pub async fn run_with_channel(
 async fn run_sync_with_channel(
     symbol: &str,
     interval: Interval,
-    health_stats: &SharedHealthStats,
+    _health_stats: &SharedHealthStats,
     channel_sender: Option<&SyncSender<TickerUpdate>>,
     use_proxy: bool,
-    target_url: &Option<String>,
-    target_host: &Option<String>,
+    _target_url: &Option<String>,
+    _target_host: &Option<String>,
 ) -> Result<(), Error> {
     let concurrent_batches = if use_proxy { 1 } else { get_concurrent_batches() };
 
@@ -955,10 +955,10 @@ async fn run_sync_with_channel(
 /// Helper function to sync a batch of cryptos via proxy with channel support
 async fn run_sync_batch_with_channel(
     symbols: &[String],
-    health_stats: &SharedHealthStats,
+    _health_stats: &SharedHealthStats,
     channel_sender: Option<&SyncSender<TickerUpdate>>,
-    target_url: &str,
-    target_host: &Option<String>,
+    _target_url: &str,
+    _target_host: &Option<String>,
 ) -> Result<(), Error> {
     let config = SyncConfig {
         start_date: (Utc::now() - chrono::Days::new(30)).format("%Y-%m-%d").to_string(),

@@ -1065,6 +1065,7 @@ impl DataStore {
     }
 
     /// Read CSV from the end (for recent data queries)
+    #[allow(dead_code)]
     fn read_csv_from_end(&self, csv_path: &Path, ticker: &str, interval: Interval, start_date: Option<DateTime<Utc>>, end_date: Option<DateTime<Utc>>, limit: usize) -> Result<Vec<StockData>, Error> {
         let start_time = std::time::Instant::now();
         let mut file = open_file_atomic_read(csv_path)?;
@@ -1099,7 +1100,7 @@ impl DataStore {
             let text_block = format!("{}{}", data, leftover);
 
             // Split into lines
-            let mut lines_in_chunk: Vec<&str> = text_block.lines().collect();
+            let lines_in_chunk: Vec<&str> = text_block.lines().collect();
 
             // First item is potentially partial line - save as new leftover
             if !lines_in_chunk.is_empty() {
@@ -1174,11 +1175,9 @@ impl DataStore {
                                 // Check end date
                                 if let Some(end) = end_date {
                                     if time <= end {
-                                        found_records += 1;
                                         lines.push(line.to_string());
                                     }
                                 } else {
-                                    found_records += 1;
                                     lines.push(line.to_string());
                                 }
                             }
@@ -1186,11 +1185,9 @@ impl DataStore {
                             // Check end date
                             if let Some(end) = end_date {
                                 if time <= end {
-                                    found_records += 1;
                                     lines.push(line.to_string());
                                 }
                             } else {
-                                found_records += 1;
                                 lines.push(line.to_string());
                             }
                         }
@@ -1353,6 +1350,7 @@ impl DataStore {
     }
 
     /// Parse time from a CSV record
+    #[allow(dead_code)]
     fn parse_time_from_record(&self, record: &csv::StringRecord) -> Result<DateTime<Utc>, Error> {
         let time_str = record.get(1).ok_or_else(|| Error::Io("Missing time field".to_string()))?;
         parse_timestamp(time_str)

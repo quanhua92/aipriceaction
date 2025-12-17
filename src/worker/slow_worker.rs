@@ -1,15 +1,14 @@
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig};
 use crate::models::sync_config::SyncStats;
-use crate::services::{DataSync, SharedHealthStats, csv_enhancer, validate_and_repair_interval, is_trading_hours};
+use crate::services::{DataSync, SharedHealthStats, is_trading_hours};
 use crate::services::mpsc::TickerUpdate;
 use crate::utils::{get_market_data_dir, write_with_rotation, get_concurrent_batches};
 use chrono::Utc;
-use std::path::Path;
 use std::sync::mpsc::SyncSender;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn, error, instrument};
+use tracing::{info, error, instrument};
 
 // Hourly sync intervals
 const HOURLY_TRADING_INTERVAL_SECS: u64 = 60; // 1 minute (trading hours)
@@ -77,186 +76,7 @@ pub async fn run_hourly_worker_separate(
     }
 }
 
-/// Perform sync for a single iteration
-async fn perform_sync(
-    interval: Interval,
-    interval_name: &str,
-    iteration_count: u64,
-    market_data_dir: &Path,
-    health_stats: &SharedHealthStats,
-) -> Result<(), crate::error::Error> {
-    let loop_start = std::time::Instant::now();
-    let is_trading = is_trading_hours();
 
-    // Step 0: Validate and repair CSV files (corruption recovery)
-    match validate_and_repair_interval(interval, market_data_dir) {
-        Ok(reports) => {
-            if !reports.is_empty() {
-                warn!(
-                    worker = interval_name,
-                    iteration = iteration_count,
-                    corrupted_count = reports.len(),
-                    "Found and repaired corrupted CSV files"
-                );
-                for report in &reports {
-                    warn!(
-                        worker = interval_name,
-                        iteration = iteration_count,
-                        ticker = %report.ticker,
-                        removed_lines = report.removed_lines,
-                        "Repaired corrupted file"
-                    );
-                }
-            }
-        }
-        Err(e) => {
-            warn!(
-                worker = interval_name,
-                iteration = iteration_count,
-                error = %e,
-                "Validation failed"
-            );
-        }
-    }
-
-    // Step 1: Sync this interval
-    let sync_start = Utc::now();
-
-    // Add comprehensive logging before VCI calls
-    tracing::info!(
-        worker = interval_name,
-        iteration = iteration_count,
-        interval = ?interval,
-        start_date = ?sync_start,
-        is_trading_hours = is_trading,
-        "SLOW_WORKER:: Starting interval sync"
-    );
-
-    tracing::info!(
-        worker = interval_name,
-        iteration = iteration_count,
-        interval_type = interval.to_vci_format(),
-        mode = "resume",
-        resume_days = 2,
-        "SLOW_WORKER:: VCI sync parameters"
-    );
-
-    let sync_result = sync_interval_data(interval).await;
-    let sync_end = Utc::now();
-    let sync_duration = (sync_end - sync_start).num_seconds();
-
-    let (sync_success, stats) = match sync_result {
-        Ok(s) => {
-            info!(worker = interval_name, iteration = iteration_count, "Sync completed");
-            (true, s)
-        }
-        Err(e) => {
-            error!(worker = interval_name, iteration = iteration_count, error = %e, "Sync failed");
-            return Err(e);
-        }
-    };
-
-    // Write log entry for this interval
-    write_log_entry(&sync_start, &sync_end, sync_duration, &stats, sync_success, interval);
-
-    // Step 2: Enhance CSV files
-    info!(worker = interval_name, iteration = iteration_count, "Enhancing CSV");
-    match csv_enhancer::enhance_interval(interval, market_data_dir) {
-        Ok(stats) => {
-            info!(
-                worker = interval_name,
-                iteration = iteration_count,
-                tickers = stats.tickers,
-                records = stats.records,
-                duration_secs = stats.duration.as_secs_f64(),
-                "Enhancement completed"
-            );
-        }
-        Err(e) => {
-            warn!(
-                worker = interval_name,
-                iteration = iteration_count,
-                error = %e,
-                "Enhancement failed"
-            );
-        }
-    }
-
-    // Step 3: Update health stats
-    {
-        let mut health = health_stats.write().await;
-        match interval {
-            Interval::Hourly => {
-                health.hourly_last_sync = Some(Utc::now().to_rfc3339());
-            }
-            Interval::Minute => {
-                health.minute_last_sync = Some(Utc::now().to_rfc3339());
-            }
-            Interval::Daily => {} // shouldn't happen
-        }
-        health.slow_iteration_count = iteration_count;
-        health.is_trading_hours = is_trading;
-    }
-
-    let loop_duration = loop_start.elapsed();
-
-    info!(
-        worker = interval_name,
-        iteration = iteration_count,
-        loop_duration_secs = loop_duration.as_secs_f64(),
-        is_trading_hours = is_trading,
-        "Sync iteration completed"
-    );
-
-    Ok(())
-}
-
-/// Get sync interval duration based on interval type and trading hours
-fn get_interval_duration(interval: Interval, is_trading: bool) -> Duration {
-    match interval {
-        Interval::Hourly => {
-            if is_trading {
-                Duration::from_secs(HOURLY_TRADING_INTERVAL_SECS)
-            } else {
-                Duration::from_secs(HOURLY_NON_TRADING_INTERVAL_SECS)
-            }
-        }
-        Interval::Minute => {
-            if is_trading {
-                Duration::from_secs(MINUTE_TRADING_INTERVAL_SECS)
-            } else {
-                Duration::from_secs(MINUTE_NON_TRADING_INTERVAL_SECS)
-            }
-        }
-        Interval::Daily => Duration::from_secs(300), // shouldn't happen
-    }
-}
-
-/// Sync a single interval using existing DataSync infrastructure
-async fn sync_interval_data(interval: Interval) -> Result<crate::models::SyncStats, Error> {
-    // Calculate date range (last 2 days for resume mode - matches pull behavior)
-    let end_date = Utc::now().format("%Y-%m-%d").to_string();
-    let start_date = (Utc::now() - chrono::Duration::days(2))
-        .format("%Y-%m-%d")
-        .to_string();
-
-    // Create sync config for single interval
-    let concurrent_batches = get_concurrent_batches();
-    let config = SyncConfig::new(
-        start_date,
-        Some(end_date),
-        3, // batch_size (reduced from 10 to avoid VCI overload)
-        Some(2), // resume_days: 2 days adaptive mode
-        vec![interval],
-        false, // not full sync
-        concurrent_batches, // Auto-detected based on CPU cores
-    );
-
-    // Run sync directly (already in async context)
-    let mut sync = DataSync::new(config)?;
-    sync.sync_all_intervals(false).await?;
-    Ok(sync.get_stats().clone())
-}
 
 /// Write compact log entry to slow_worker.log
 fn write_log_entry(
@@ -296,9 +116,9 @@ fn write_log_entry(
 
 /// Run slow worker with MPSC channel support for real-time updates
 /// NOTE: Hourly worker moved to separate runtime via run_hourly_worker_separate()
-#[instrument(skip(health_stats, channel_sender))]
+#[instrument(skip(_health_stats, channel_sender))]
 pub async fn run_with_channel(
-    health_stats: SharedHealthStats,
+    _health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
     println!("[SYNC::SLOW] === STARTING SLOW WORKER WITH MPSC CHANNEL ===");
