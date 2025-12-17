@@ -705,84 +705,93 @@ pub async fn run_with_channel(
 
     loop {
         let loop_start = std::time::Instant::now();
+        let mut rate_limit_hit = false;
 
         // Priority cryptos - sync all intervals every sync_interval_secs
-        for symbol in PRIORITY_CRYPTOS {
-            if !symbols.contains(&symbol.to_string()) {
-                continue;
-            }
+        let priority_result = 'priority_loop: {
+            for symbol in PRIORITY_CRYPTOS {
+                if !symbols.contains(&symbol.to_string()) {
+                    continue;
+                }
 
-            for interval in &[Interval::Daily, Interval::Hourly, Interval::Minute] {
-                // Sleep longer between intervals to allow VN workers to get CPU time
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+                for interval in &[Interval::Daily, Interval::Hourly, Interval::Minute] {
+                    // Sleep longer between intervals to allow VN workers to get CPU time
+                    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-                let interval_start = Utc::now();
-                let symbol_str = symbol.to_string(); // Move inside loop
+                    let interval_start = Utc::now();
+                    let symbol_str = symbol.to_string(); // Move inside loop
 
-                info!(
-                    symbol = symbol_str,
-                    interval = ?interval,
-                    tier = "Priority",
-                    "Starting sync"
-                );
+                    info!(
+                        symbol = symbol_str,
+                        interval = ?interval,
+                        tier = "Priority",
+                        "Starting sync"
+                    );
 
-                match run_sync_with_channel(
-                    &symbol_str,
-                    *interval,
-                    &health_stats,
-                    channel_sender.as_ref(),
-                    use_proxy,
-                    &target_url,
-                    &target_host,
-                ).await {
-                    Ok(_) => {
-                        let interval_end = Utc::now();
-            let duration = interval_end.signed_duration_since(interval_start);
-                        tracing::info!(
-                            symbol = symbol_str,
-                            interval = ?interval,
-                            tier = "Priority",
-                            duration_ms = duration.num_milliseconds(),
-                            "Priority sync completed successfully"
-                        );
+                    match run_sync_with_channel(
+                        &symbol_str,
+                        *interval,
+                        &health_stats,
+                        channel_sender.as_ref(),
+                        use_proxy,
+                        &target_url,
+                        &target_host,
+                    ).await {
+                        Ok(_) => {
+                            let interval_end = Utc::now();
+                let duration = interval_end.signed_duration_since(interval_start);
+                            tracing::info!(
+                                symbol = symbol_str,
+                                interval = ?interval,
+                                tier = "Priority",
+                                duration_ms = duration.num_milliseconds(),
+                                "Priority sync completed successfully"
+                            );
 
-                        // Write log entry
-                        write_log_entry(
-                            &interval_start,
-                            &interval_end,
-                            duration.num_seconds(),
-                            true,
-                            *interval,
-                            &[symbol_str],
-                            "Priority"
-                        );
-                    }
-                    Err(crate::error::Error::RateLimit) => {
-                        error!("Rate limit hit in priority sync - breaking current cycle and waiting for next interval");
-                        // Break out of interval loop for this symbol and continue to next symbol
-                        break;
-                    }
-                    Err(e) => {
-                        let interval_end = Utc::now();
-            let duration = interval_end.signed_duration_since(interval_start);
-                        tracing::error!(
-                            symbol = symbol_str,
-                            interval = ?interval,
-                            tier = "Priority",
-                            error = %e,
-                            duration_ms = duration.num_milliseconds(),
-                            "Priority sync failed"
-                        );
+                            // Write log entry
+                            write_log_entry(
+                                &interval_start,
+                                &interval_end,
+                                duration.num_seconds(),
+                                true,
+                                *interval,
+                                &[symbol_str],
+                                "Priority"
+                            );
+                        }
+                        Err(crate::error::Error::RateLimit) => {
+                            error!("Rate limit hit in priority sync - breaking priority loop");
+                            rate_limit_hit = true;
+                            break 'priority_loop Err(crate::error::Error::RateLimit);
+                        }
+                        Err(e) => {
+                            let interval_end = Utc::now();
+                let duration = interval_end.signed_duration_since(interval_start);
+                            tracing::error!(
+                                symbol = symbol_str,
+                                interval = ?interval,
+                                tier = "Priority",
+                                error = %e,
+                                duration_ms = duration.num_milliseconds(),
+                                "Priority sync failed"
+                            );
+                        }
                     }
                 }
             }
-        }
+            Ok(())
+        };
+
+        // If rate limit was hit during priority sync, skip to sleep
+        if rate_limit_hit {
+            error!("Rate limit hit during priority sync - skipping regular sync and waiting for next interval");
+        } else {
 
         // Regular cryptos - staggered sync based on CryptoCompare rate limits
         if !use_proxy {
             // CryptoCompare mode: stagger regular cryptos to manage rate limits
             let intervals = &[Interval::Daily, Interval::Hourly, Interval::Minute];
-            for (_i, &interval) in intervals.iter().enumerate() {
+            'regular_intervals: for (_i, &interval) in intervals.iter().enumerate() {
                 let interval_symbols = symbols.iter()
                     .filter(|s| !PRIORITY_CRYPTOS.contains(&s.as_str()))
                     .collect::<Vec<_>>();
@@ -794,7 +803,7 @@ pub async fn run_with_channel(
                 let chunk_size = CryptoSync::new(SyncConfig::default(), None).unwrap()
                     .get_chunk_size_for_interval(interval);
 
-                for chunk in interval_symbols.chunks(chunk_size) {
+                'chunks: for chunk in interval_symbols.chunks(chunk_size) {
                     // Sleep longer to allow VN workers to get CPU time
                     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -822,9 +831,9 @@ pub async fn run_with_channel(
                                 );
                             }
                             Err(crate::error::Error::RateLimit) => {
-                                error!("Rate limit hit in regular sync - breaking current cycle and waiting for next interval");
-                                // Break out of symbol loop and continue to next interval
-                                break;
+                                error!("Rate limit hit in regular sync - breaking all loops and waiting for next interval");
+                                rate_limit_hit = true;
+                                break 'regular_intervals;
                             }
                             Err(e) => {
                                 tracing::error!(
@@ -884,6 +893,7 @@ pub async fn run_with_channel(
                 }
             }
         }
+        } // Close the else block for rate_limit_hit check
 
         // Update health stats
         {
