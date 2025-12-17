@@ -1013,7 +1013,7 @@ pub async fn save_enhanced_csv_with_changes(
 
     // Send update through channel for real-time memory cache update (if channel provided)
     if let Some(sender) = channel_sender {
-        println!("[CSV_ENHANCER] About to send MPSC update for ticker={}, interval={:?}, change_type={}",
+        tracing::debug!("[CSV_ENHANCER] About to send MPSC update for ticker={}, interval={:?}, change_type={}",
                  ticker, interval, change_type);
         let update = TickerUpdate::new(
             ticker.to_string(),
@@ -1022,10 +1022,10 @@ pub async fn save_enhanced_csv_with_changes(
         );
 
         // Send with retry mechanism - wait for channel to be available instead of skipping
-        println!("[CSV_ENHANCER] Calling send_with_retry_async for ticker={}", ticker);
+        tracing::debug!("[CSV_ENHANCER] Calling send_with_retry_async for ticker={}", ticker);
         match crate::services::mpsc::send_with_retry_async(&sender, update, 50).await {
             Ok(()) => {
-                println!("[CSV_ENHANCER] ✅ Successfully sent MPSC update for ticker={}", ticker);
+                tracing::debug!("[CSV_ENHANCER] ✅ Successfully sent MPSC update for ticker={}", ticker);
                 tracing::info!(
                     ticker = ticker,
                     interval = ?interval,
@@ -1035,7 +1035,7 @@ pub async fn save_enhanced_csv_with_changes(
             }
             Err(e) => {
                 // Failed after retries - log but don't fail the CSV write
-                println!("[CSV_ENHANCER] ❌ ERROR: Failed to send MPSC update for ticker={}, error={}", ticker, e);
+                tracing::error!("[CSV_ENHANCER] ❌ ERROR: Failed to send MPSC update for ticker={}, error={}", ticker, e);
                 tracing::warn!(
                     ticker = ticker,
                     interval = ?interval,
