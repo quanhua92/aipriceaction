@@ -198,14 +198,14 @@ impl VciClient {
             let user_agent = self.get_user_agent();
 
             // Log the exact request details
-            tracing::info!(
+            tracing::debug!(
                 "VCI_MAKE_REQUEST: attempt={}, url={}, payload_size={}, headers_count=12",
                 attempt + 1,
                 url,
                 serde_json::to_string(payload).unwrap_or_default().len()
             );
             tracing::debug!(
-                "VCI_MAKE_REQUEST_DETAILS: url={}, payload={}",
+                "VCI_MAKE_REQUEST_DEBUG: url={}, payload={}",
                 url,
                 serde_json::to_string_pretty(payload).unwrap_or_default()
             );

@@ -216,6 +216,7 @@ pub async fn run_with_channel(
         let sync_result = if is_trading {
             // Trading hours: 1D interval only (fast)
             let intervals = vec![Interval::Daily];
+            let concurrent_batches = get_concurrent_batches(); // Use auto-detected concurrent batches
             let config = SyncConfig {
                 intervals,
                 start_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
@@ -223,12 +224,13 @@ pub async fn run_with_channel(
                 batch_size: 10, // Default batch size
                 resume_days: None,
                 force_full: false,
-                concurrent_batches: 1, // Sequential for daily data
+                concurrent_batches, // Auto-detected based on CPU cores
             };
 
             run_sync_with_channel(config, &market_data_dir, &health_stats, channel_sender.as_ref()).await
         } else {
             // Non-trading hours: full sync (1D only)
+            let concurrent_batches = get_concurrent_batches(); // Use auto-detected concurrent batches
             let config = SyncConfig {
                 intervals: vec![Interval::Daily],
                 start_date: (Utc::now() - chrono::Days::new(7)).date_naive().format("%Y-%m-%d").to_string(),
@@ -236,7 +238,7 @@ pub async fn run_with_channel(
                 batch_size: 10, // Default batch size
                 resume_days: None,
                 force_full: false,
-                concurrent_batches: 1, // Sequential for daily data
+                concurrent_batches, // Auto-detected based on CPU cores
             };
 
             run_sync_with_channel(config, &market_data_dir, &health_stats, channel_sender.as_ref()).await
