@@ -297,9 +297,9 @@ impl DataStore {
                 // Non-blocking receive with periodic checks
                 match receiver.try_recv() {
                     Ok(update) => {
-                        println!("[MPSC::RECV] ✅ Received update for ticker={}, interval={:?}", update.ticker, update.interval);
+                        tracing::info!("[MPSC::RECV] ✅ Received update for ticker={}, interval={:?}", update.ticker, update.interval);
                         if let Err(e) = data_store.apply_update(update).await {
-                            println!("[MPSC::RECV] ❌ Failed to apply ticker update: {}", e);
+                            tracing::error!("[MPSC::RECV] ❌ Failed to apply ticker update: {}", e);
                             tracing::error!("Failed to apply ticker update: {}", e);
                         }
                         // Continue immediately to process more updates if available
@@ -313,16 +313,23 @@ impl DataStore {
         });
     }
 
+      /// Calculate 90% retention limit with minimum of 10 records
+    fn calculate_retention_limit(base_limit: usize) -> usize {
+        let limit = (base_limit as f64 * 0.9) as usize;
+        limit.max(10)
+    }
+
     /// Apply a ticker update to the in-memory cache
     pub async fn apply_update(&self, update: TickerUpdate) -> Result<(), Error> {
         let cache_key = (update.ticker.clone(), update.interval);
 
-        // Apply retention limits based on interval
-        let retention_limit = match update.interval {
+        // Apply retention limits based on interval (full limit for normal updates)
+        let base_retention_limit = match update.interval {
             Interval::Daily => DATA_RETENTION_RECORDS,           // 1500 records
             Interval::Hourly => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
             Interval::Minute => MINUTE_DATA_RETENTION_RECORDS,   // 2160 records
         };
+        let retention_limit = base_retention_limit; // Use 100% for normal updates
 
         match update.change_type {
             ChangeType::NoChange => {
@@ -346,15 +353,23 @@ impl DataStore {
                     .map(|r| r.time)
                     .collect();
 
+                // Debug: Log state before update
+                if let Some(last_record) = interval_data.last() {
+                    tracing::debug!("[MPSC::DEBUG] Cache state BEFORE update - ticker={}, interval={}, end_record.time={}, current_records={}",
+                         update.ticker, update.interval.to_filename(), last_record.time, interval_data.len());
+                }
+
                 interval_data.retain(|r| !new_timestamps.contains(&r.time));
 
                 // Append new records
                 interval_data.append(&mut records);
 
-                // Sort by time and apply retention limit
+                // Sort by time and apply retention limit (keep newest records)
                 interval_data.sort_by_key(|d| d.time);
                 if interval_data.len() > retention_limit {
-                    interval_data.truncate(retention_limit);
+                    // Drop oldest records to maintain retention limit
+                    let excess = interval_data.len() - retention_limit;
+                    interval_data.drain(0..excess);
                 }
 
                 info!(
@@ -366,16 +381,27 @@ impl DataStore {
                     "Applied new records update"
                 );
 
+                // Debug: Log end record info from cache
+                if let Some(last_record) = interval_data.last() {
+                    info!("[MPSC::DEBUG] Cache updated for ticker={}, interval={}, end_record.time={}, total_records={}",
+                         update.ticker, update.interval.to_filename(), last_record.time, interval_data.len());
+                }
+
                 // Check if we need to populate more from disk (gap > 500)
                 let current_count = interval_data.len();
                 if retention_limit > 500 {
                     let gap = retention_limit.saturating_sub(current_count);
-                    println!("[MPSC::POPULATION_CHECK] ticker={}, interval={}, current={}, limit={}, gap={}",
+                    tracing::info!("[MPSC::POPULATION_CHECK] ticker={}, interval={}, current={}, limit={}, gap={}",
                              update.ticker, update.interval.to_filename(), current_count, retention_limit, gap);
                     if gap > 500 {
+                        // For population, use 90% of limit to leave room for new records
+                        let target_count = Self::calculate_retention_limit(retention_limit);
+                        let records_to_read = target_count.saturating_sub(current_count);
+
                         // Read more records from CSV to fill cache
                         let csv_path = self.market_data_dir.join(&update.ticker).join(update.interval.to_filename());
-                        println!("[MPSC::POPULATION] Checking CSV: {}", csv_path.display());
+                        tracing::info!("[MPSC::POPULATION] Checking CSV: {}, need to read {} more records to reach target {}",
+                                     csv_path.display(), records_to_read, target_count);
                         if csv_path.exists() {
                             // Drop write lock temporarily to avoid blocking other operations
                             drop(cache);
@@ -386,7 +412,7 @@ impl DataStore {
                                 update.interval,
                                 None,
                                 None,
-                                retention_limit  // Read up to retention_limit records
+                                records_to_read  // Read only enough to fill to 90%
                             ) {
                                 Ok(disk_data) => {
                                     if !disk_data.is_empty() {
@@ -408,10 +434,12 @@ impl DataStore {
                                             }
                                         }
 
-                                        // Sort and apply retention limit
+                                        // Sort and apply retention limit (keep newest records)
                                         interval_data.sort_by_key(|d| d.time);
                                         if interval_data.len() > retention_limit {
-                                            interval_data.truncate(retention_limit);
+                                            // Drop oldest records to maintain retention limit
+                                            let excess = interval_data.len() - retention_limit;
+                                            interval_data.drain(0..excess);
                                         }
 
                                         if added_from_disk > 0 {
@@ -430,7 +458,7 @@ impl DataStore {
                                 }
                             }
                         } else {
-                            println!("[MPSC::POPULATION] CSV file not found: {}", csv_path.display());
+                            tracing::warn!("[MPSC::POPULATION] CSV file not found: {}", csv_path.display());
                         }
                     }
                 }
@@ -444,9 +472,12 @@ impl DataStore {
                 interval_data.truncate(from_record);
                 interval_data.append(&mut new_records);
 
-                // Apply retention limit
+                // Apply retention limit (keep newest records)
                 if interval_data.len() > retention_limit {
-                    interval_data.truncate(retention_limit);
+                    // Drop oldest records to maintain retention limit
+                    interval_data.sort_by_key(|d| d.time);
+                    let excess = interval_data.len() - retention_limit;
+                    interval_data.drain(0..excess);
                 }
 
                 info!(
@@ -1614,9 +1645,9 @@ impl DataStore {
                         };
 
                         let end_ok = if let Some(end) = end_date {
-                            // Check if cache has data for the requested end date
-                            // Cache should either contain the end date or start before it
-                            interval_data.first().map(|d| d.time <= end).unwrap_or(false)
+                            // Check if cache has data up to the requested end date
+                            // Cache should have data that includes or goes beyond the end date
+                            interval_data.last().map(|d| d.time >= end).unwrap_or(false)
                         } else {
                             true // No specific end requested
                         };
@@ -1626,6 +1657,13 @@ impl DataStore {
 
                     if has_required_range {
                         tracing::info!("[PROFILE] CACHE HIT for {} - {} records in memory", ticker, interval_data.len());
+
+                        // Debug: Log cache date range
+                        if let (Some(first_record), Some(last_record)) = (interval_data.first(), interval_data.last()) {
+                            info!("[CACHE_DEBUG] {} cached range: {} to {} ({} total records)",
+                                 ticker, first_record.time.date_naive(), last_record.time.date_naive(), interval_data.len());
+                        }
+
                         // Cache has sufficient data - use binary search for date range
                         // Data is sorted by time (ascending), so we can binary search
                         let start_idx = if let Some(start) = start_date {
@@ -1648,6 +1686,12 @@ impl DataStore {
                                 .iter()
                                 .cloned()
                                 .collect();
+
+                            // Debug: Log response date range
+                            if let (Some(first_response), Some(last_response)) = (filtered.first(), filtered.last()) {
+                                info!("[CACHE_DEBUG] {} response range: {} to {} ({} records)",
+                                     ticker, first_response.time.date_naive(), last_response.time.date_naive(), filtered.len());
+                            }
 
                             if !filtered.is_empty() {
                                 result.insert(ticker.clone(), filtered);
