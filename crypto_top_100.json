@@ -992,18 +992,7 @@
       "volume_24h": "$602.17M",
       "circulating_supply": "$19,105,054"
     },
-    {
-      "rank": 92,
-      "name": "Curve DAO Token",
-      "symbol": "CRV_CRYPTO",
-      "price": "$0.4232",
-      "change_24h": "0.23%",
-      "change_7d": "2.18%",
-      "market_cap": "N/A",
-      "volume_24h": "$598.13M",
-      "circulating_supply": "$112,441,265"
-    },
-    {
+      {
       "rank": 93,
       "name": "The Graph",
       "symbol": "GRT",
