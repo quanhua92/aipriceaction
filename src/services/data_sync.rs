@@ -4,7 +4,7 @@ use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups
 use crate::services::ticker_fetcher::TickerFetcher;
 use crate::services::vci::OhlcvData;
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_with_changes};
-use crate::services::mpsc::TickerUpdate;
+use crate::services::mpsc::{TickerUpdate, ChangeType};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -552,7 +552,21 @@ impl DataSync {
                 }
             }
 
-            // Re-download daily data with full history
+            // Send cache clear notifications for ALL intervals to invalidate cache immediately
+            // This ensures stale data doesn't persist in memory cache
+            for interval_type in [Interval::Daily, Interval::Hourly, Interval::Minute] {
+                if let Err(e) = self.send_cache_clear_notification(ticker, interval_type) {
+                    tracing::warn!(
+                        ticker = ticker,
+                        interval = ?interval_type,
+                        error = %e,
+                        "Failed to send cache clear notification"
+                    );
+                }
+            }
+
+            // Re-download daily data with full history (fast approach - only daily)
+            // Let CSV enhancer handle the enhancement later in the normal flow
             let start_date = interval.min_start_date();
             return self
                 .fetcher
@@ -574,6 +588,39 @@ impl DataSync {
 
         self.stats.updated += 1;
         Ok(merged_data)
+    }
+
+    /// Send MPSC notification to clear cache for specific ticker and interval
+    fn send_cache_clear_notification(
+        &self,
+        ticker: &str,
+        interval: Interval,
+    ) -> Result<(), Error> {
+        if let Some(sender) = &self.channel_sender {
+            let update = TickerUpdate::new(
+                ticker.to_string(),
+                interval,
+                ChangeType::FullFile { records: vec![] }, // Empty records to clear cache
+            );
+
+            match sender.send(update) {
+                Ok(()) => {
+                    tracing::info!(
+                        ticker = ticker,
+                        interval = ?interval,
+                        "Sent cache clear notification via MPSC (dividend detected)"
+                    );
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        ticker = ticker,
+                        interval = ?interval,
+                        "MPSC channel full - cache clear notification skipped"
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Verify overlap between existing and new data
