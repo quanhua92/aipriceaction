@@ -1828,7 +1828,18 @@ impl DataStore {
                                      ticker, first_response.time.date_naive(), last_response.time.date_naive(), limited.len());
                             }
 
-                            if !limited.is_empty() {
+                            // SAFETY CHECK: If cache returned fewer records than requested limit, fall back to CSV
+                            let needs_fallback = if limited.is_empty() && limit.map_or(false, |l| l > 0) {
+                                tracing::warn!(
+                                    "[CACHE_FALLBACK_SAFETY] {} cache returned {} records but requested limit={}. Falling back to CSV for complete data.",
+                                    ticker, limited.len(), limit.unwrap_or(0)
+                                );
+                                true
+                            } else {
+                                false
+                            };
+
+                            if !limited.is_empty() && !needs_fallback {
                                 result.insert(ticker.clone(), limited);
                             }
                         }
