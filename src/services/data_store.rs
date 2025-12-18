@@ -1624,11 +1624,12 @@ impl DataStore {
 
                 if cache_insufficient {
                     tracing::info!(
-                        ticker = ?tickers.first().unwrap_or(&"unknown".to_string()),
-                        interval = ?interval,
-                        limit = limit_count,
-                        cache_records = cache_insufficient as u64, // Will be 1 (true)
-                        "Cache has insufficient records, reading from disk"
+                        "[PROFILE] CACHE INSUFFICIENT - reading from disk (ticker: {}, interval: {:?}, limit: {}, requested start: {:?}, requested end: {:?})",
+                        tickers.first().unwrap_or(&"unknown".to_string()),
+                        interval,
+                        limit_count,
+                        start_date,
+                        end_date
                     );
                     tracing::debug!("[DEBUG:PERF] Cache insufficient check failed (representative tickers), falling back to disk for all {} tickers", tickers.len());
                     return self.get_data_from_disk_with_cache(tickers, interval, start_date, end_date, limit).await;
@@ -1647,27 +1648,48 @@ impl DataStore {
             if let Some(ticker_data) = store.get(ticker) {
                 if let Some(interval_data) = ticker_data.get(&interval) {
                     // Check if cache has the requested date range
-                    let has_required_range = {
-                        let start_ok = if let Some(start) = start_date {
-                            // Check if cache has data going back to requested start date
+                    let start_ok = if let Some(start) = start_date {
+                        if interval == Interval::Daily {
+                            // For daily data, compare dates only (not time component)
+                            interval_data.first()
+                                .map(|d| d.time.date_naive() <= start.date_naive())
+                                .unwrap_or(false)
+                        } else {
+                            // For hourly/minute data, compare full timestamps
                             interval_data.first().map(|d| d.time <= start).unwrap_or(false)
-                        } else {
-                            true // No specific start requested
-                        };
-
-                        let end_ok = if let Some(end) = end_date {
-                            // Check if cache has data up to the requested end date
-                            // Cache should have data that includes or goes beyond the end date
-                            interval_data.last().map(|d| d.time >= end).unwrap_or(false)
-                        } else {
-                            true // No specific end requested
-                        };
-
-                        start_ok && end_ok
+                        }
+                    } else {
+                        true // No specific start requested
                     };
 
+                    let end_ok = if let Some(end) = end_date {
+                        if interval == Interval::Daily {
+                            // For daily data, compare dates only (not time component)
+                            interval_data.last()
+                                .map(|d| d.time.date_naive() >= end.date_naive())
+                                .unwrap_or(false)
+                        } else {
+                            // For hourly/minute data, compare full timestamps
+                            interval_data.last().map(|d| d.time >= end).unwrap_or(false)
+                        }
+                    } else {
+                        true // No specific end requested
+                    };
+
+                    let has_required_range = start_ok && end_ok;
+
                     if has_required_range {
-                        tracing::info!("[PROFILE] CACHE HIT for {} - {} records in memory", ticker, interval_data.len());
+                        tracing::info!(
+                            "[PROFILE] CACHE HIT for {} - {} records in memory (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
+                            ticker,
+                            interval_data.len(),
+                            start_date,
+                            interval_data.first().map(|d| d.time),
+                            end_date,
+                            interval_data.last().map(|d| d.time),
+                            start_ok,
+                            end_ok
+                        );
 
                         // Debug: Log cache date range
                         if let (Some(first_record), Some(last_record)) = (interval_data.first(), interval_data.last()) {
@@ -1711,10 +1733,14 @@ impl DataStore {
                     } else {
                         // Cache doesn't have full range - need disk read
                         tracing::info!(
-                            "[PROFILE] CACHE MISS for {} - insufficient date range (requested start: {:?}, cache starts: {:?})",
+                            "[PROFILE] CACHE MISS for {} - insufficient date range (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
                             ticker,
                             start_date,
-                            interval_data.first().map(|d| d.time)
+                            interval_data.first().map(|d| d.time),
+                            end_date,
+                            interval_data.last().map(|d| d.time),
+                            start_ok,
+                            end_ok
                         );
                         need_disk_read.push(ticker.clone());
                     }
