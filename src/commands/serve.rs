@@ -105,8 +105,10 @@ pub async fn run(port: u16) {
         }
     }
 
-    // Auto-reload removed - MPSC handles real-time cache updates efficiently
-    // Memory cache updated via MPSC messages from workers (no periodic disk scanning needed)
+    // Start full reload background tasks for periodic cache refresh
+    println!("🔄 Starting full reload background tasks...");
+    shared_data_store_vn.start_full_reload_task();
+    shared_data_store_crypto.start_full_reload_task();
 
     // CPU auto-detection for optimal performance
     println!();

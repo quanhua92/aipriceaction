@@ -142,3 +142,17 @@ pub const DEFAULT_CACHE_AUTO_CLEAR_RATIO: f64 = 0.5;       // 50%
 /// Maximum number of retries for sending ticker updates through MPSC channel
 /// when the channel is temporarily full. Uses 10ms delay between retries.
 pub const MPSC_SEND_MAX_RETRIES: usize = 200;
+
+/// Daily Full Reload Configuration
+///
+/// Automatic full cache reload interval for refreshing all cached data
+/// Used by background task to ensure data freshness
+
+/// Interval for automatic full cache reload (6 hours default)
+pub const FULL_RELOAD_INTERVAL_HOURS: i64 = 6;
+
+/// Full reload interval in seconds for easier calculation
+pub const FULL_RELOAD_INTERVAL_SECS: i64 = FULL_RELOAD_INTERVAL_HOURS * 3600;
+
+/// Initial delay before starting full reload task (30 minutes to allow server startup)
+pub const FULL_RELOAD_INITIAL_DELAY_SECS: i64 = 1800;

@@ -1,9 +1,9 @@
-use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO};
+use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CACHE_AUTO_CLEAR_THRESHOLD, DEFAULT_CACHE_AUTO_CLEAR_RATIO, FULL_RELOAD_INTERVAL_HOURS, FULL_RELOAD_INITIAL_DELAY_SECS};
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
 use crate::services::mpsc::{TickerUpdate, ChangeType};
-use tracing::{debug, info};
+use tracing::{debug, info, error};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -235,6 +235,10 @@ pub struct DataStore {
     /// File modification time tracker for auto-reload optimization
     /// Key: (ticker, interval), Value: SystemTime from fs::metadata().modified()
     file_mtimes: Arc<RwLock<HashMap<(String, Interval), SystemTime>>>,
+    /// Full reload tracking - timestamp of last complete cache reload
+    full_reload_time: Arc<RwLock<DateTime<Utc>>>,
+    /// Full reload configuration - interval in hours (configurable via env)
+    full_reload_interval_hours: i64,
 }
 
 impl DataStore {
@@ -264,13 +268,20 @@ impl DataStore {
             .and_then(|s| s.parse::<f64>().ok())
             .unwrap_or(DEFAULT_CACHE_AUTO_CLEAR_RATIO);
 
+        // Read full reload interval from environment variable
+        let full_reload_interval_hours = std::env::var("FULL_RELOAD_INTERVAL_HOURS")
+            .ok()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(FULL_RELOAD_INTERVAL_HOURS);
+
         tracing::info!(
-            "Initializing DataStore with max_cache_size={}MB ({}bytes), auto_clear={}, threshold={:.1}%, ratio={:.1}%",
+            "Initializing DataStore with max_cache_size={}MB ({}bytes), auto_clear={}, threshold={:.1}%, ratio={:.1}%, full_reload_interval={}h",
             max_cache_size_mb,
             max_cache_size_bytes,
             auto_clear_enabled,
             auto_clear_threshold * 100.0,
-            auto_clear_ratio * 100.0
+            auto_clear_ratio * 100.0,
+            full_reload_interval_hours
         );
 
         Self {
@@ -284,6 +295,8 @@ impl DataStore {
             auto_clear_threshold,
             auto_clear_ratio,
             file_mtimes: Arc::new(RwLock::new(HashMap::new())),
+            full_reload_time: Arc::new(RwLock::new(Utc::now())),
+            full_reload_interval_hours,
         }
     }
 
@@ -2131,6 +2144,108 @@ impl DataStore {
     async fn update_cache_timestamp(&self) {
         let mut cache_last_updated = self.cache_last_updated.write().await;
         *cache_last_updated = Utc::now();
+    }
+
+    /// Start background task for periodic full cache reload
+    /// This task runs independently of existing workers and handles complete cache refresh
+    pub fn start_full_reload_task(&self) {
+        let data_store = self.clone();
+        let interval_hours = self.full_reload_interval_hours;
+        let interval_secs = interval_hours * 3600;
+
+        tokio::spawn(async move {
+            // Initial delay to allow server startup and initial data loading
+            tracing::info!(
+                interval_hours = interval_hours,
+                initial_delay_secs = FULL_RELOAD_INITIAL_DELAY_SECS,
+                "Starting full reload background task"
+            );
+
+            tokio::time::sleep(tokio::time::Duration::from_secs(FULL_RELOAD_INITIAL_DELAY_SECS as u64)).await;
+
+            loop {
+                let should_reload = {
+                    let last_reload = data_store.full_reload_time.read().await;
+                    let now = Utc::now();
+                    let elapsed = now.signed_duration_since(*last_reload);
+                    elapsed.num_seconds() >= interval_secs
+                };
+
+                if should_reload {
+                    info!(
+                        interval_hours = interval_hours,
+                        "Starting full cache reload ({} hours interval)",
+                        interval_hours
+                    );
+
+                    match data_store.perform_full_reload().await {
+                        Ok(()) => {
+                            info!("Full cache reload completed successfully");
+                            let mut last_reload = data_store.full_reload_time.write().await;
+                            *last_reload = Utc::now();
+                        }
+                        Err(e) => {
+                            error!(
+                                error = %e,
+                                interval_hours = interval_hours,
+                                "Full cache reload failed, will retry in {} hours",
+                                interval_hours
+                            );
+                        }
+                    }
+                }
+
+                // Sleep for the full reload interval (6 hours by default)
+                tokio::time::sleep(tokio::time::Duration::from_secs(interval_secs as u64)).await;
+            }
+        });
+    }
+
+    /// Perform complete cache reload using existing load_last_year method
+    async fn perform_full_reload(&self) -> Result<(), Error> {
+        let reload_start = std::time::Instant::now();
+        let intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
+
+        // Use existing load_last_year method which handles retention limits
+        // Pass None for skip_intervals to load all data
+        self.load_last_year(intervals, None).await?;
+
+        // Calculate updated statistics
+        let (daily_count, hourly_count, minute_count) = self.get_record_counts().await;
+        let active_tickers = self.get_active_ticker_count().await;
+        let memory_usage_bytes = self.estimate_memory_usage().await;
+        let memory_usage_mb = memory_usage_bytes as f64 / (1024.0 * 1024.0);
+
+        let duration = reload_start.elapsed();
+
+        info!(
+            daily_records = daily_count,
+            hourly_records = hourly_count,
+            minute_records = minute_count,
+            tickers = active_tickers,
+            memory_mb = memory_usage_mb,
+            duration_secs = duration.as_secs(),
+            "Full reload statistics"
+        );
+
+        // Update cache timestamp since we've refreshed all data
+        self.update_cache_timestamp().await;
+
+        Ok(())
+    }
+
+    /// Get full reload statistics for health monitoring
+    pub async fn get_full_reload_stats(&self) -> (DateTime<Utc>, i64) {
+        let last_reload = self.full_reload_time.read().await;
+        let now = Utc::now();
+        let elapsed_hours = now.signed_duration_since(*last_reload).num_hours();
+        (*last_reload, elapsed_hours)
+    }
+
+    /// Check if full reload is overdue (useful for health monitoring)
+    pub async fn is_full_reload_overdue(&self) -> bool {
+        let (_, elapsed_hours) = self.get_full_reload_stats().await;
+        elapsed_hours > self.full_reload_interval_hours
     }
 }
 
