@@ -27,14 +27,18 @@ pub async fn run_hourly_worker_separate(
     health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
-    println!("[SYNC::HOURLY] === STARTING HOURLY WORKER IN SEPARATE RUNTIME ===");
+    info!("[SYNC::HOURLY] === STARTING HOURLY WORKER IN SEPARATE RUNTIME ===");
     info!("Starting hourly worker in separate runtime to avoid API overload");
-    println!("[SYNC::HOURLY] Channel sender exists: {}", channel_sender.is_some());
+    info!("[SYNC::HOURLY] Channel sender exists: {}", channel_sender.is_some());
+
+    // Initial delay before first sync (2 minutes)
+    info!("[SYNC::HOURLY] Initial delay: waiting 120 seconds before first sync...");
+    tokio::time::sleep(tokio::time::Duration::from_secs(120)).await;
 
     let mut iteration = 0;
     loop {
         iteration += 1;
-        println!("[SYNC::HOURLY] === HOURLY ITERATION {} STARTING ===", iteration);
+        info!("[SYNC::HOURLY] === HOURLY ITERATION {} STARTING ===", iteration);
 
         let is_trading = is_trading_hours();
         let sleep_secs = if is_trading {
@@ -43,7 +47,7 @@ pub async fn run_hourly_worker_separate(
             HOURLY_NON_TRADING_INTERVAL_SECS
         };
 
-        println!("[SYNC::HOURLY] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
+        info!("[SYNC::HOURLY] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
         info!(
             interval = "Hourly",
             trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
@@ -61,18 +65,18 @@ pub async fn run_hourly_worker_separate(
         let end_time = Utc::now();
         let duration = end_time.signed_duration_since(start_time);
         let stats = sync_result.unwrap_or_else(|e| {
-            println!("[SYNC::HOURLY] Hourly sync failed with error: {}", e);
+            error!("[SYNC::HOURLY] Hourly sync failed with error: {}", e);
             error!(error = %e, "Hourly sync failed");
             SyncStats::new()
         });
 
         write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Hourly);
 
-        println!("[SYNC::HOURLY] === HOURLY ITERATION {} COMPLETED ===", iteration);
-        println!("[SYNC::HOURLY] Sleeping for {} seconds...", sleep_secs);
+        info!("[SYNC::HOURLY] === HOURLY ITERATION {} COMPLETED ===", iteration);
+        info!("[SYNC::HOURLY] Sleeping for {} seconds...", sleep_secs);
         // Sleep until next iteration
         sleep(Duration::from_secs(sleep_secs)).await;
-        println!("[SYNC::HOURLY] Woke up from sleep");
+        info!("[SYNC::HOURLY] Woke up from sleep");
     }
 }
 
@@ -121,13 +125,13 @@ pub async fn run_with_channel(
     _health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
-    println!("[SYNC::SLOW] === STARTING SLOW WORKER WITH MPSC CHANNEL ===");
+    info!("[SYNC::SLOW] === STARTING SLOW WORKER WITH MPSC CHANNEL ===");
     info!("Slow worker now uses separate runtimes for hourly and minute workers");
-    println!("[SYNC::SLOW] Channel sender exists: {}", channel_sender.is_some());
-    println!("[SYNC::SLOW] Hourly and minute workers are now in separate runtimes");
+    info!("[SYNC::SLOW] Channel sender exists: {}", channel_sender.is_some());
+    info!("[SYNC::SLOW] Hourly and minute workers are now in separate runtimes");
 
     // This function is kept for compatibility but hourly/minute workers run separately
-    println!("[SYNC::SLOW] === SLOW WORKER COMPLETED (WORKERS MOVED TO SEPARATE RUNTIMES) ===");
+    info!("[SYNC::SLOW] === SLOW WORKER COMPLETED (WORKERS MOVED TO SEPARATE RUNTIMES) ===");
 }
 
 /// Run minute worker in separate runtime to avoid API overload
@@ -136,14 +140,18 @@ pub async fn run_minute_worker_separate(
     health_stats: SharedHealthStats,
     channel_sender: Option<SyncSender<TickerUpdate>>,
 ) {
-    println!("[SYNC::MINUTE] === STARTING MINUTE WORKER IN SEPARATE RUNTIME ===");
+    info!("[SYNC::MINUTE] === STARTING MINUTE WORKER IN SEPARATE RUNTIME ===");
     info!("Starting minute worker in separate runtime to avoid API overload");
-    println!("[SYNC::MINUTE] Channel sender exists: {}", channel_sender.is_some());
+    info!("[SYNC::MINUTE] Channel sender exists: {}", channel_sender.is_some());
+
+    // Initial delay before first sync (3 minutes)
+    info!("[SYNC::MINUTE] Initial delay: waiting 180 seconds before first sync...");
+    tokio::time::sleep(tokio::time::Duration::from_secs(180)).await;
 
     let mut iteration = 0;
     loop {
         iteration += 1;
-        println!("[SYNC::MINUTE] === MINUTE ITERATION {} STARTING ===", iteration);
+        info!("[SYNC::MINUTE] === MINUTE ITERATION {} STARTING ===", iteration);
 
         let is_trading = is_trading_hours();
         let sleep_secs = if is_trading {
@@ -152,7 +160,7 @@ pub async fn run_minute_worker_separate(
             MINUTE_NON_TRADING_INTERVAL_SECS
         };
 
-        println!("[SYNC::MINUTE] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
+        info!("[SYNC::MINUTE] Trading hours: {}, sleep will be {}s", is_trading, sleep_secs);
         info!(
             interval = "Minute",
             trading_hours = if is_trading { "ACTIVE" } else { "CLOSED" },
@@ -170,18 +178,18 @@ pub async fn run_minute_worker_separate(
         let end_time = Utc::now();
         let duration = end_time.signed_duration_since(start_time);
         let stats = sync_result.unwrap_or_else(|e| {
-            println!("[SYNC::MINUTE] Minute sync failed with error: {}", e);
+            error!("[SYNC::MINUTE] Minute sync failed with error: {}", e);
             error!(error = %e, "Minute sync failed");
             SyncStats::new()
         });
 
         write_log_entry(&start_time, &end_time, duration.num_seconds(), &stats, true, Interval::Minute);
 
-        println!("[SYNC::MINUTE] === MINUTE ITERATION {} COMPLETED ===", iteration);
-        println!("[SYNC::MINUTE] Sleeping for {} seconds...", sleep_secs);
+        info!("[SYNC::MINUTE] === MINUTE ITERATION {} COMPLETED ===", iteration);
+        info!("[SYNC::MINUTE] Sleeping for {} seconds...", sleep_secs);
         // Sleep until next iteration
         sleep(Duration::from_secs(sleep_secs)).await;
-        println!("[SYNC::MINUTE] Woke up from sleep");
+        info!("[SYNC::MINUTE] Woke up from sleep");
     }
 }
 
@@ -197,36 +205,36 @@ async fn run_sync_with_channel(
         _ => "Unknown",
     };
 
-    println!("[SYNC::SLOW] === run_sync_with_channel STARTING for {} ===", interval_str);
-    println!("[SYNC::SLOW] Channel sender: {:?}", channel_sender);
+    info!("[SYNC::SLOW] === run_sync_with_channel STARTING for {} ===", interval_str);
+    info!("[SYNC::SLOW] Channel sender: {:?}", channel_sender);
 
     // Update health stats quickly - lock only for the brief moment needed
-    println!("[SYNC::SLOW] About to acquire health stats lock...");
+    info!("[SYNC::SLOW] About to acquire health stats lock...");
     {
         let mut health = health_stats.write().await;
-        println!("[SYNC::SLOW] Health stats lock acquired");
+        info!("[SYNC::SLOW] Health stats lock acquired");
         match interval {
             Interval::Hourly => {
                 health.hourly_last_sync = Some(Utc::now().to_rfc3339());
                 health.slow_iteration_count += 1;
-                println!("[SYNC::SLOW] Updated hourly health stats");
+                info!("[SYNC::SLOW] Updated hourly health stats");
             }
             Interval::Minute => {
                 health.minute_last_sync = Some(Utc::now().to_rfc3339());
                 health.slow_iteration_count += 1;
-                println!("[SYNC::SLOW] Updated minute health stats");
+                info!("[SYNC::SLOW] Updated minute health stats");
             }
             _ => {}
         }
     } // Lock released here immediately
-    println!("[SYNC::SLOW] Health stats lock released");
+    info!("[SYNC::SLOW] Health stats lock released");
 
-    println!("[SYNC::SLOW] About to create SyncConfig...");
+    info!("[SYNC::SLOW] About to create SyncConfig...");
     let concurrent_batches = get_concurrent_batches();
     let start_date = (Utc::now() - chrono::Days::new(7)).format("%Y-%m-%d").to_string();
     let end_date = Utc::now().format("%Y-%m-%d").to_string();
 
-    println!("[SYNC::SLOW] Sync config: start={}, end={}, batches={}", start_date, end_date, concurrent_batches);
+    info!("[SYNC::SLOW] Sync config: start={}, end={}, batches={}", start_date, end_date, concurrent_batches);
 
     // Create sync config (same as pull command)
     let concurrent_batches = get_concurrent_batches();
@@ -240,19 +248,19 @@ async fn run_sync_with_channel(
         concurrent_batches, // Auto-detected based on CPU cores
     );
 
-    println!("[SYNC::SLOW] About to create DataSync with channel...");
+    info!("[SYNC::SLOW] About to create DataSync with channel...");
     // Create DataSync with channel support (fresh client each time like pull)
     let mut sync = DataSync::new_with_channel(
         config,
         channel_sender.cloned()
     )?;
-    println!("[SYNC::SLOW] ✅ DataSync client created successfully - new HTTP connections!");
+    info!("[SYNC::SLOW] ✅ DataSync client created successfully - new HTTP connections!");
 
-    println!("[SYNC::SLOW] About to call sync_all_intervals...");
+    info!("[SYNC::SLOW] About to call sync_all_intervals...");
     sync.sync_all_intervals(false).await?; // Full sync (not debug mode)
-    println!("[SYNC::SLOW] ✅ sync_all_intervals completed successfully!");
+    info!("[SYNC::SLOW] ✅ sync_all_intervals completed successfully!");
 
     let stats = sync.get_stats().clone();
-    println!("[SYNC::SLOW] === run_sync_with_channel COMPLETED for {} ===", interval_str);
+    info!("[SYNC::SLOW] === run_sync_with_channel COMPLETED for {} ===", interval_str);
     Ok(stats)
 }

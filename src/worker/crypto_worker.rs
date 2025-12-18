@@ -703,6 +703,10 @@ pub async fn run_with_channel(
         error!("Failed to write initial crypto sync info: {}", e);
     }
 
+    // Initial delay before first sync (4 minutes)
+    info!("[SYNC::CRYPTO] Initial delay: waiting 240 seconds before first sync...");
+    tokio::time::sleep(tokio::time::Duration::from_secs(240)).await;
+
     loop {
         let loop_start = std::time::Instant::now();
         let mut rate_limit_hit = false;
