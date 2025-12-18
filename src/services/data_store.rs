@@ -360,25 +360,23 @@ impl DataStore {
                 let existing = cache.entry(ticker.clone()).or_insert_with(HashMap::new);
                 let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
 
-                // Remove existing records with same timestamps to avoid duplicates
-                let new_timestamps: std::collections::HashSet<_> = records
-                    .iter()
-                    .map(|r| r.time)
-                    .collect();
-
                 // Debug: Log state before update
                 if let Some(last_record) = interval_data.last() {
                     tracing::debug!("[MPSC::DEBUG] Cache state BEFORE update - ticker={}, interval={}, end_record.time={}, current_records={}",
                          update.ticker, update.interval.to_filename(), last_record.time, interval_data.len());
                 }
 
-                interval_data.retain(|r| !new_timestamps.contains(&r.time));
-
-                // Append new records
+                // Append new records first
                 interval_data.append(&mut records);
 
-                // Sort by time and apply retention limit (keep newest records)
+                // Sort by time
                 interval_data.sort_by_key(|d| d.time);
+
+                // Remove all duplicates (from both old and new records)
+                let mut seen_times = std::collections::HashSet::new();
+                interval_data.retain(|record| seen_times.insert(record.time));
+
+                // Apply retention limit (keep newest records)
                 if interval_data.len() > retention_limit {
                     // Drop oldest records to maintain retention limit
                     let excess = interval_data.len() - retention_limit;
