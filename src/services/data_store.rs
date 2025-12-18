@@ -2204,7 +2204,29 @@ impl DataStore {
     /// Perform complete cache reload using existing load_last_year method
     async fn perform_full_reload(&self) -> Result<(), Error> {
         let reload_start = std::time::Instant::now();
+
+        // Step 1: Clear the in-memory cache completely to ensure fresh reload
+        tracing::info!("🗑️  Clearing in-memory cache before full reload...");
+        let cache_clear_start = std::time::Instant::now();
+        {
+            let mut store = self.data.write().await;
+            let cleared_tickers = store.len();
+            store.clear();
+
+            // Also clear file mtimes to force fresh disk reads
+            let mut mtimes = self.file_mtimes.write().await;
+            mtimes.clear();
+
+            tracing::info!(
+                cleared_tickers = cleared_tickers,
+                duration_ms = cache_clear_start.elapsed().as_millis(),
+                "In-memory cache cleared"
+            );
+        }
+
+        // Step 2: Load all intervals with fresh data from disk
         let intervals = vec![Interval::Daily, Interval::Hourly, Interval::Minute];
+        tracing::info!("📂 Loading fresh data from disk for all intervals...");
 
         // Use existing load_last_year method which handles retention limits
         // Pass None for skip_intervals to load all data
@@ -2218,14 +2240,22 @@ impl DataStore {
 
         let duration = reload_start.elapsed();
 
-        info!(
+        tracing::info!(
             daily_records = daily_count,
             hourly_records = hourly_count,
             minute_records = minute_count,
             tickers = active_tickers,
             memory_mb = memory_usage_mb,
             duration_secs = duration.as_secs(),
-            "Full reload statistics"
+            "✅ Full reload completed successfully"
+        );
+
+        // Also log cache freshness information
+        let (last_reload, hours_since_reload) = self.get_full_reload_stats().await;
+        tracing::info!(
+            last_reload_utc = %last_reload.format("%Y-%m-%d %H:%M:%S UTC"),
+            hours_since_reload = hours_since_reload,
+            "Cache freshness updated"
         );
 
         // Update cache timestamp since we've refreshed all data
