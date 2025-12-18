@@ -174,15 +174,15 @@ pub async fn get_tickers_handler(
     }
     debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
 
-    // Strategic debug for VNINDEX historical requests
+    // Strategic debug for VNINDEX and BTC historical requests
     if query_params.tickers.len() == 1 {
         let ticker = &query_params.tickers[0];
-        if ticker == "VNINDEX" {
+        if ticker == "VNINDEX" || ticker == "BTC" {
             if let Some(end_date) = &query_params.end_date {
                 let today = chrono::Utc::now().date_naive();
                 let parsed_end = end_date.date_naive();
                 if parsed_end != today {
-                    warn!("[DEBUG_API] VNINDEX_CSV_FALLBACK: ticker={}, interval={}, end_date={}, cache={}",
+                    warn!("[DEBUG_API] HISTORICAL_CSV_FALLBACK: ticker={}, interval={}, end_date={}, cache={}",
                         ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"), query_params.use_cache);
                 }
             }
@@ -191,20 +191,20 @@ pub async fn get_tickers_handler(
 
     let mut result_data = data_state.get_data_smart(query_params.clone()).await;
 
-    // Log result of CSV fallback for VNINDEX
+    // Log result of CSV fallback for VNINDEX and BTC
     if query_params.tickers.len() == 1 {
         let ticker = &query_params.tickers[0];
-        if ticker == "VNINDEX" {
+        if ticker == "VNINDEX" || ticker == "BTC" {
             if let Some(end_date) = &query_params.end_date {
                 let today = chrono::Utc::now().date_naive();
                 let parsed_end = end_date.date_naive();
                 if parsed_end != today {
                     let record_count = result_data.get(ticker).map_or(0, |v| v.len());
-                    warn!("[DEBUG_API] VNINDEX_CSV_RESULT: ticker={}, interval={}, end_date={}, records_found={}",
+                    warn!("[DEBUG_API] HISTORICAL_CSV_RESULT: ticker={}, interval={}, end_date={}, records_found={}",
                         ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"), record_count);
 
                     if record_count == 0 {
-                        error!("[DEBUG_API] VNINDEX_CSV_ISSUE: ticker={}, interval={}, end_date={} - NO RECORDS FOUND IN CSV!",
+                        error!("[DEBUG_API] HISTORICAL_CSV_ISSUE: ticker={}, interval={}, end_date={} - NO RECORDS FOUND IN CSV!",
                             ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"));
                     }
                 }
@@ -253,16 +253,16 @@ pub async fn get_tickers_handler(
                 ticker_count, total_records, query_params.limit
             );
 
-            // Special debug for VNINDEX with historical end dates
+            // Special debug for VNINDEX and BTC with historical end dates
             if ticker_count == 1 {
                 let ticker = &result_data.keys().next().unwrap();
-                if *ticker == "VNINDEX" {
+                if *ticker == "VNINDEX" || *ticker == "BTC" {
                     if let Some(end_date) = &query_params.end_date {
                         let today = chrono::Utc::now().date_naive();
                         let parsed_end = end_date.date_naive();
                         if parsed_end != today {
                             tracing::warn!(
-                                "[DEBUG_API] VNINDEX_HISTORICAL_REQUEST: ticker={}, end_date={}, today={}, interval={}, total_records={}",
+                                "[DEBUG_API] HISTORICAL_REQUEST: ticker={}, end_date={}, today={}, interval={}, total_records={}",
                                 ticker, end_date.format("%Y-%m-%d"), today, query_params.interval.to_vci_format(), total_records
                             );
                         }
