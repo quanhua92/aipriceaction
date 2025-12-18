@@ -483,6 +483,10 @@ impl DataStore {
                 interval_data.truncate(from_record);
                 interval_data.append(&mut new_records);
 
+                // Remove all duplicates (same as FullFile handler)
+                let mut seen_times = std::collections::HashSet::new();
+                interval_data.retain(|record| seen_times.insert(record.time));
+
                 // Apply retention limit (keep newest records)
                 if interval_data.len() > retention_limit {
                     // Drop oldest records to maintain retention limit
@@ -501,11 +505,15 @@ impl DataStore {
                 );
             }
             ChangeType::FullFile { mut records } => {
-                // Full replacement with retention
+                // Full replacement with retention and deduplication
                 let total_records = records.len();
                 if records.len() > retention_limit {
                     records.truncate(retention_limit);
                 }
+
+                // Remove all duplicates (same as NewRecords handler)
+                let mut seen_times = std::collections::HashSet::new();
+                records.retain(|record| seen_times.insert(record.time));
 
                 let mut cache = self.data.write().await;
                 let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
@@ -838,19 +846,29 @@ impl DataStore {
             files_skipped
         );
 
-        // Step 2: Acquire write lock ONLY to update in-memory cache (fast operation)
-        // File I/O is complete, so this lock is held very briefly
+        // Step 2: Use apply_update for each ticker to ensure consistent deduplication
+        // This ensures all cache data (startup + updates) goes through the same deduplication path
         let loaded_tickers: Vec<String> = {
-            let mut store = self.data.write().await;
             let mut loaded = Vec::new();
             for (ticker, ticker_data) in data {
                 loaded.push(ticker.clone());
-                store.entry(ticker)
-                    .or_insert_with(HashMap::new)
-                    .insert(interval, ticker_data);
+
+                // Create TickerUpdate to use apply_update method (ensures deduplication)
+                let update = crate::services::mpsc::TickerUpdate {
+                    ticker: ticker.clone(),
+                    interval: interval.into(),
+                    change_type: crate::services::mpsc::ChangeType::FullFile { records: ticker_data },
+                    timestamp: Utc::now(),
+                };
+
+                // Apply update through the same path as workers for consistent deduplication
+                if let Err(e) = self.apply_update(update).await {
+                    tracing::error!("Failed to apply startup update for ticker {}: {}", ticker, e);
+                    // Continue with other tickers even if one fails
+                }
             }
             loaded
-        }; // Write lock released immediately
+        }; // No lock needed since apply_update handles locking internally
 
         // Step 3: Update modification times for loaded files
         {
@@ -1720,14 +1738,82 @@ impl DataStore {
                                 .cloned()
                                 .collect();
 
-                            // Debug: Log response date range
-                            if let (Some(first_response), Some(last_response)) = (filtered.first(), filtered.last()) {
-                                info!("[CACHE_DEBUG] {} response range: {} to {} ({} records)",
-                                     ticker, first_response.time.date_naive(), last_response.time.date_naive(), filtered.len());
+                            // Check if this is a small request for logging purposes only
+                            let is_small_request = tickers.len() < 3 &&
+                                                   limit.map_or(false, |l| l <= 20);
+
+                            // ALWAYS apply early duplicate detection and removal (for all requests)
+                            // Only log warnings for small requests to avoid spam
+                            let mut dates = std::collections::HashSet::new();
+                            let mut duplicates = Vec::new();
+                            for record in filtered.iter() {
+                                let date_key = record.time.date_naive();
+                                if !dates.insert(date_key) {
+                                    duplicates.push(date_key);
+                                }
                             }
 
-                            if !filtered.is_empty() {
-                                result.insert(ticker.clone(), filtered);
+                            let filtered = if !duplicates.is_empty() {
+                                // Log warnings only for small requests
+                                if is_small_request {
+                                    tracing::warn!(
+                                        "[DEBUG_API] CACHE_HAS_DUPLICATES: ticker={}, found {} duplicates in {} cached records - REMOVING BEFORE LIMIT",
+                                        ticker, duplicates.len(), filtered.len()
+                                    );
+                                }
+
+                                // Remove duplicates from filtered data BEFORE applying limit
+                                let mut seen_dates = std::collections::HashSet::new();
+                                let deduplicated_filtered: Vec<StockData> = filtered.iter()
+                                    .rev() // Reverse to keep last occurrence
+                                    .filter(|record| {
+                                        let date_key = record.time.date_naive();
+                                        seen_dates.insert(date_key)
+                                    })
+                                    .cloned()
+                                    .collect::<Vec<_>>()
+                                    .into_iter()
+                                    .rev().collect(); // Restore original order
+
+                                // Log deduplication results only for small requests
+                                if is_small_request {
+                                    tracing::warn!(
+                                        "[DEBUG_API] CACHE_DEDUPED_BEFORE_LIMIT: ticker={}, before={}, after={}, removed={}",
+                                        ticker, filtered.len(), deduplicated_filtered.len(), filtered.len() - deduplicated_filtered.len()
+                                    );
+                                }
+
+                                deduplicated_filtered
+                            } else {
+                                filtered
+                            };
+
+                            // Apply limit if specified (take last N records from filtered data)
+                            let limited = if let Some(limit_count) = limit {
+                                if filtered.len() > limit_count {
+                                    // Take last N records (most recent)
+                                    let filtered_len = filtered.len();
+                                    filtered.into_iter()
+                                        .skip(filtered_len - limit_count)
+                                        .collect()
+                                } else {
+                                    filtered
+                                }
+                            } else {
+                                filtered
+                            };
+
+                            // No need to check for duplicates after limit since we already removed them before
+                            // TODO: Remove this comment after confirming the early deduplication works correctly
+
+                            // Debug: Log response date range
+                            if let (Some(first_response), Some(last_response)) = (limited.first(), limited.last()) {
+                                info!("[CACHE_DEBUG] {} response range: {} to {} ({} records)",
+                                     ticker, first_response.time.date_naive(), last_response.time.date_naive(), limited.len());
+                            }
+
+                            if !limited.is_empty() {
+                                result.insert(ticker.clone(), limited);
                             }
                         }
                     } else {
@@ -1939,18 +2025,24 @@ impl DataStore {
             }
         }
 
-        // Apply limit if provided and start_date is None
+        // Apply limit if provided (regardless of start_date)
         if let Some(limit_count) = limit {
-            if start_date.is_none() && limit_count > 0 {
+            if limit_count > 0 {
                 result = result
                     .into_iter()
-                    .map(|(ticker, mut records)| {
-                        // Sort descending by time and take last N records
-                        records.sort_by(|a, b| b.time.cmp(&a.time));
-                        records.truncate(limit_count);
-                        // Sort back to ascending order for consistency
-                        records.sort_by(|a, b| a.time.cmp(&b.time));
-                        (ticker, records)
+                    .map(|(ticker, records)| {
+                        // If we have more records than the limit, take last N records (most recent)
+                        if records.len() > limit_count {
+                            let records_len = records.len();
+                            let limited_records: Vec<StockData> = records
+                                .into_iter()
+                                .skip(records_len - limit_count)
+                                .collect();
+                            // Records should already be in ascending order from filtering
+                            (ticker, limited_records)
+                        } else {
+                            (ticker, records)
+                        }
                     })
                     .collect();
             }

@@ -172,7 +172,7 @@ pub async fn get_tickers_handler(
         info!("[PROFILE] Aggregated interval request: {} - starting data retrieval", agg_interval_str);
     }
     debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
-    let result_data = data_state.get_data_smart(query_params.clone()).await;
+    let mut result_data = data_state.get_data_smart(query_params.clone()).await;
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
@@ -208,6 +208,108 @@ pub async fn get_tickers_handler(
 
     // Check format parameter
     if params.format == "csv" {
+        // Debug cache duplication - only for small requests
+        if total_records <= 20 * ticker_count && ticker_count < 3 {
+            tracing::warn!(
+                "[DEBUG_API] CSV_INPUT: tickers={}, total_records={}, limit={:?}",
+                ticker_count, total_records, query_params.limit
+            );
+
+            // Check for duplicates in each ticker's data
+            for (ticker, records) in &result_data {
+                if !records.is_empty() {
+                    let mut dates = std::collections::HashSet::new();
+                    let mut duplicates = Vec::new();
+                    for record in records {
+                        let date_key = record.time.date_naive();
+                        if !dates.insert(date_key) {
+                            duplicates.push(date_key);
+                        }
+                    }
+
+                    if !duplicates.is_empty() {
+                        tracing::warn!(
+                            "[DEBUG_API] DUPLICATES_IN_INPUT: ticker={}, duplicate_dates={:?}, total_records={}",
+                            ticker, duplicates, records.len()
+                        );
+                    }
+                }
+            }
+
+            // Deduplicate data before CSV generation using HashSet retain pattern
+            let mut total_before_dedup = 0;
+            let mut total_after_dedup = 0;
+            let request_limit = query_params.limit;
+
+            for (ticker, records) in result_data.iter_mut() {
+                if !records.is_empty() {
+                    total_before_dedup += records.len();
+
+                    let mut seen_dates = std::collections::HashSet::new();
+                    let original_len = records.len();
+
+                    // Use retain to keep only the last occurrence of each date
+                    records.reverse(); // Reverse to keep last occurrence when using retain
+                    records.retain(|record| {
+                        let date_key = record.time.date_naive();
+                        seen_dates.insert(date_key) // Keep if this is the first time we've seen this date
+                    });
+                    records.reverse(); // Restore original order (ascending)
+
+                    let final_len = records.len();
+                    total_after_dedup += final_len;
+
+                    // Check if we still meet the limit requirement
+                    if final_len < request_limit {
+                        tracing::warn!(
+                            "[DEBUG_API] CSV_DEDUP_LIMIT_ISSUE: ticker={}, original={}, unique={}, requested_limit={}, shortfall={}",
+                            ticker, original_len, final_len, request_limit, request_limit - final_len
+                        );
+                    }
+
+                    if original_len != final_len {
+                        tracing::warn!(
+                            "[DEBUG_API] CSV_DEDUP_BEFORE: ticker={}, records_before={}, records_after={}",
+                            ticker, original_len, final_len
+                        );
+                    }
+                }
+            }
+
+            if total_before_dedup != total_after_dedup {
+                tracing::warn!(
+                    "[DEBUG_API] CSV_DEDUP_SUMMARY: total_before={}, total_after={}, removed={}, requested_limit={}",
+                    total_before_dedup, total_after_dedup, total_before_dedup - total_after_dedup, request_limit
+                );
+            }
+
+            // Final verification after deduplication
+            for (ticker, records) in &result_data {
+                if !records.is_empty() {
+                    let mut dates = std::collections::HashSet::new();
+                    let mut duplicates_after = Vec::new();
+                    for record in records {
+                        let date_key = record.time.date_naive();
+                        if !dates.insert(date_key) {
+                            duplicates_after.push(date_key);
+                        }
+                    }
+
+                    if !duplicates_after.is_empty() {
+                        tracing::warn!(
+                            "[DEBUG_API] DUPLICATES_AFTER_DEDUP: ticker={}, duplicate_dates={:?}, total_records={}",
+                            ticker, duplicates_after, records.len()
+                        );
+                    } else {
+                        tracing::warn!(
+                            "[DEBUG_API] NO_DUPLICATES_AFTER_DEDUP: ticker={}, records={}",
+                            ticker, records.len()
+                        );
+                    }
+                }
+            }
+        }
+
         // Generate CSV format
         let perf_csv_start = std::time::Instant::now();
         debug!("[DEBUG:PERF] CSV generation start: {} tickers, {} records", ticker_count, total_records);
@@ -406,6 +508,50 @@ fn generate_csv_response(
 
     // Calculate total record count for buffer pre-allocation
     let total_records: usize = data.values().map(|v| v.len()).sum();
+
+    // Debug CSV generation input data quality
+    if total_records <= 60 {
+        tracing::warn!(
+            "[DEBUG_API] CSV_GENERATION_START: tickers={}, total_records={}, has_indicators={}",
+            data.len(), total_records, has_indicators
+        );
+
+        // Check for duplicates in input data
+        for (ticker, records) in &data {
+            let mut duplicate_count = 0;
+            let mut date_set = std::collections::HashSet::new();
+
+            for record in records {
+                let date = record.time.date_naive();
+                if !date_set.insert(date) {
+                    duplicate_count += 1;
+                }
+            }
+
+            if duplicate_count > 0 {
+                tracing::warn!(
+                    "[DEBUG_API] CSV_INPUT_DUPLICATES: ticker={}, duplicate_count={}, total_records={}",
+                    ticker, duplicate_count, records.len()
+                );
+
+                // Show which dates are duplicated
+                let mut date_counts = std::collections::HashMap::new();
+                for record in records {
+                    let date = record.time.date_naive();
+                    *date_counts.entry(date).or_insert(0) += 1;
+                }
+
+                let dup_dates: Vec<_> = date_counts.into_iter()
+                    .filter(|(_, count)| *count > 1)
+                    .collect();
+
+                tracing::warn!(
+                    "[DEBUG_API] CSV_DUPLICATE_DETAILS: ticker={}, duplicated_dates={:?}",
+                    ticker, dup_dates
+                );
+            }
+        }
+    }
 
     // Pre-allocate buffer: header (~200) + (records * avg_bytes_per_row)
     // Each row ~200 bytes (20 fields with indicators) or ~80 bytes (7 fields basic)
