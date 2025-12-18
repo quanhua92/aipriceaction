@@ -12,6 +12,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::SyncSender;
 use std::time::Instant;
+use tracing;
 
 const TICKER_GROUP_FILE: &str = "ticker_group.json";
 
@@ -84,7 +85,7 @@ impl DataSync {
 
         // Load tickers from ticker_group.json or use debug list
         let tickers = if debug {
-            println!("SYNC::FAST::🐛 Using debug ticker list: VNINDEX, VIC, VCB");
+            tracing::debug!("SYNC::FAST::🐛 Using debug ticker list: VNINDEX, VIC, VCB");
             vec!["VNINDEX".to_string(), "VIC".to_string(), "VCB".to_string()]
         } else {
             self.load_tickers()?
@@ -223,7 +224,7 @@ impl DataSync {
                         full_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
-                        println!("SYNC::FAST::   ❌ {}: Failed - {}", ticker, e);
+                        tracing::error!("SYNC::FAST::   ❌ {}: Failed - {}", ticker, e);
                         full_history_results.insert(ticker.clone(), None);
                     }
                 }
@@ -237,13 +238,13 @@ impl DataSync {
 
         if !category.partial_history_tickers.is_empty() {
             let prefix = self.get_log_prefix(interval);
-            println!(
-                "\n{}📥 Processing {} tickers with partial history (gap > 3 days)...",
+            tracing::info!(
+                "{}📥 Processing {} tickers with partial history (gap > 3 days)...",
                 prefix, category.partial_history_tickers.len()
             );
 
             for (ticker, start_date) in &category.partial_history_tickers {
-                println!("{}   📥 {} - Fetching from {}...", prefix, ticker, start_date);
+                tracing::info!("{}   📥 {} - Fetching from {}...", prefix, ticker, start_date);
                 match self.fetcher
                     .fetch_full_history(
                         ticker,
@@ -254,11 +255,11 @@ impl DataSync {
                     .await
                 {
                     Ok(data) => {
-                        println!("{}   ✅ {}: {} records", prefix, ticker, data.len());
+                        tracing::info!("{}   ✅ {}: {} records", prefix, ticker, data.len());
                         partial_history_results.insert(ticker.clone(), Some(data));
                     }
                     Err(e) => {
-                        println!("{}   ❌ {}: Failed - {}", prefix, ticker, e);
+                        tracing::error!("{}   ❌ {}: Failed - {}", prefix, ticker, e);
                         partial_history_results.insert(ticker.clone(), None);
                     }
                 }
@@ -312,7 +313,7 @@ impl DataSync {
                         // This is expected during batch API temporary unavailability
                     } else {
                         self.stats.failed += 1;
-                        println!("\r❌ {} | FAILED: {}", progress.format_compact(), e);
+                        tracing::error!("\r❌ {} | FAILED: {}", progress.format_compact(), e);
                     }
                 }
             }
@@ -322,7 +323,7 @@ impl DataSync {
         let interval_time = interval_start_time.elapsed();
         let now = format_date(&Utc::now());
         let prefix = self.get_log_prefix(interval);
-        println!(
+        tracing::info!(
             "{}[{}] ✨ {} sync: {} tickers, {}s, ✅{} ❌{}",
             prefix,
             now,
@@ -394,7 +395,7 @@ impl DataSync {
 
         // Batch has been failing for >= 15 minutes, fallback to individual fetch
         let prefix = self.get_log_prefix(interval);
-        println!("{}   🔄 Batch not available for {} ({}min), fetching individually...",
+        tracing::warn!("{}   🔄 Batch not available for {} ({}min), fetching individually...",
                  prefix, ticker, BATCH_FAILURE_THRESHOLD_MINUTES);
 
         if is_resume {
@@ -484,18 +485,18 @@ impl DataSync {
             if self.verify_overlap(existing_data, &new_data) {
                 // Good overlap found!
                 if attempt_num > 0 {
-                    println!("   ✅ Overlap found with {}-day window", days_back);
+                    tracing::info!("   ✅ Overlap found with {}-day window", days_back);
                 }
                 return Ok(new_data);
             } else if attempt_num < resume_attempts.len() - 1 {
                 // No overlap, try next expansion
-                println!("   ⚠️  Gap detected with {}-day window, expanding to {} days...",
+                tracing::warn!("   ⚠️  Gap detected with {}-day window, expanding to {} days...",
                     days_back, resume_attempts[attempt_num + 1]);
             }
         }
 
         // All attempts failed, use default fallback (fetch from ticker's last date)
-        println!("   ⚠️  Using fallback: fetch from ticker last date ({})", ticker_last_date);
+        tracing::warn!("   ⚠️  Using fallback: fetch from ticker last date ({})", ticker_last_date);
         self.fetcher
             .fetch_full_history(ticker, ticker_last_date, &today, interval)
             .await
@@ -517,7 +518,7 @@ impl DataSync {
 
             if !file_path.exists() {
                 // No existing file - download full history
-                println!("   📊 No existing {} file, downloading full history...", interval.to_filename());
+                tracing::info!("   📊 No existing {} file, downloading full history...", interval.to_filename());
                 let start_date = interval.min_start_date();
                 return self
                     .fetcher
@@ -536,7 +537,7 @@ impl DataSync {
         let dividend_detected = self.fetcher.check_dividend_from_data(ticker, recent_data, interval)?;
 
         if dividend_detected {
-            println!("   💰 Dividend detected! Deleting ALL CSV files for {} to force re-download...", ticker);
+            tracing::warn!("   💰 Dividend detected! Deleting ALL CSV files for {} to force re-download...", ticker);
             self.stats.updated += 1;
 
             // Delete ALL CSV files for this ticker (1D.csv, 1H.csv, 1m.csv)
@@ -547,7 +548,7 @@ impl DataSync {
                     if let Err(e) = std::fs::remove_file(&csv_path) {
                         eprintln!("   ⚠️  Failed to delete {}: {}", csv_path.display(), e);
                     } else {
-                        println!("   🗑️  Deleted {}", interval_type.to_filename());
+                        tracing::info!("   🗑️  Deleted {}", interval_type.to_filename());
                     }
                 }
             }
