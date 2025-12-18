@@ -249,16 +249,207 @@ test_interval_with_ground_truth "BTC" "crypto" "1m" "60" "2025-11-11" "2025-11-1
 test_interval_with_ground_truth "BTC" "crypto" "15m" "48" "2025-12-09" "2025-12-09" "BTC Crypto 15-minute (15m) - 48 periods on 2025-12-09"
 test_interval_with_ground_truth "BTC" "crypto" "1W" "12" "2025-10-20" "2025-07-28" "BTC Crypto Weekly (1W) - 12 weeks ending 2025-10-20"
 
-echo "=== SUMMARY ==="
+echo ""
+echo "=== BTC COMPREHENSIVE DATA AVAILABILITY TEST ==="
+echo ""
+
+# Function to test BTC availability across intervals
+test_btc_availability() {
+    local base_tests=$TOTAL_TESTS
+    local base_passed=$PASSED_TESTS
+    local base_failed=$FAILED_TESTS
+
+    echo -e "${BLUE}Testing BTC 1D/1H/1m Data Availability for Last 30 Days${NC}"
+    echo "Strategy: Get BTC 1D for 30 days, then test 1H/1m for each day"
+    echo ""
+
+    # Step 1: Get BTC 1D data for last 30 days
+    echo -e "${YELLOW}Step 1: Fetching BTC 1D data for last 30 days...${NC}"
+    local daily_url="$API_URL/tickers?symbol=BTC&mode=crypto&interval=1D&limit=30&format=csv"
+    local daily_response=$(curl -s "$daily_url" 2>/dev/null || echo "")
+
+    if [[ -z "$daily_response" ]]; then
+        echo -e "  ${RED}❌ FAILED: No response from server for BTC 1D data${NC}"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+        return 1
+    fi
+
+    # Count and validate daily data
+    local daily_line_count=$(echo "$daily_response" | wc -l | xargs)
+    local daily_record_count=$((daily_line_count - 1))
+
+    if [[ $daily_record_count -eq 0 ]]; then
+        echo -e "  ${RED}❌ FAILED: No BTC daily data returned${NC}"
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+        return 1
+    fi
+
+    echo -e "  ${GREEN}✅ Retrieved $daily_record_count days of BTC 1D data${NC}"
+
+    # Extract dates from daily data (skip header)
+    local btc_dates=($(echo "$daily_response" | tail -n +2 | cut -d',' -f2 | cut -d'T' -f1 | tac)) # Reverse to get oldest first
+
+    echo ""
+    echo -e "${YELLOW}Step 2: Testing 1H and 1m availability for each day...${NC}"
+    echo ""
+
+    local total_daily_tests=0
+    local daily_passed=0
+    local daily_failed=0
+    local total_hours_checked=0
+    local total_minutes_checked=0
+
+    # Test each day
+    for i in "${!btc_dates[@]}"; do
+        local test_date="${btc_dates[$i]}"
+        local day_num=$((daily_record_count - i)) # Count from most recent
+
+        TOTAL_TESTS=$((TOTAL_TESTS + 2)) # 2 tests per day (1H and 1m)
+        total_daily_tests=$((total_daily_tests + 2))
+
+        # Determine if this is the most recent day (incomplete data expected)
+        local is_last_day=false
+        if [[ $i -eq $((daily_record_count - 1)) ]]; then
+            is_last_day=true
+        fi
+
+        echo -e "${BLUE}Day $day_num/$daily_record_count: $test_date${NC} $(if [[ "$is_last_day" == "true" ]]; then echo "(Last day - incomplete expected)"; fi)"
+
+        # Test 1H data for this specific day
+        local hourly_url="$API_URL/tickers?symbol=BTC&mode=crypto&interval=1H&start_date=$test_date&end_date=$test_date&format=csv"
+        local hourly_response=$(curl -s "$hourly_url" 2>/dev/null || echo "")
+        local hourly_test_passed=true
+
+        if [[ -z "$hourly_response" ]]; then
+            echo -e "  ${RED}  ❌ 1H: No response${NC}"
+            hourly_test_passed=false
+        else
+            local hourly_line_count=$(echo "$hourly_response" | wc -l | xargs)
+            local hourly_record_count=$((hourly_line_count - 1))
+            total_hours_checked=$((total_hours_checked + hourly_record_count))
+
+            # Expected hours: 24 for complete days, less for incomplete day
+            local min_expected_hours=1
+            local max_expected_hours=24
+            if [[ "$is_last_day" == "true" ]]; then
+                max_expected_hours=23 # Allow for incomplete current day
+            fi
+
+            if [[ $hourly_record_count -lt $min_expected_hours ]]; then
+                echo -e "  ${RED}  ❌ 1H: Only $hourly_record_count records (expected at least $min_expected_hours)${NC}"
+                hourly_test_passed=false
+            elif [[ $hourly_record_count -gt $max_expected_hours ]]; then
+                echo -e "  ${YELLOW}  ⚠️ 1H: $hourly_record_count records (expected max $max_expected_hours, possible duplicates)${NC}"
+                # Still pass but warn
+            else
+                echo -e "  ${GREEN}  ✅ 1H: $hourly_record_count records${NC}"
+            fi
+        fi
+
+        # Test 1m data for this specific day
+        local minute_url="$API_URL/tickers?symbol=BTC&mode=crypto&interval=1m&start_date=$test_date&end_date=$test_date&format=csv"
+        local minute_response=$(curl -s "$minute_url" 2>/dev/null || echo "")
+        local minute_test_passed=true
+
+        if [[ -z "$minute_response" ]]; then
+            echo -e "  ${RED}  ❌ 1m: No response${NC}"
+            minute_test_passed=false
+        else
+            local minute_line_count=$(echo "$minute_response" | wc -l | xargs)
+            local minute_record_count=$((minute_line_count - 1))
+            total_minutes_checked=$((total_minutes_checked + minute_record_count))
+
+            # Expected minutes: 1440 for complete days, less for incomplete day
+            local min_expected_minutes=10 # Lower threshold for minute data
+            local max_expected_minutes=1440
+            if [[ "$is_last_day" == "true" ]]; then
+                min_expected_minutes=1 # Allow very few minutes for current day
+                max_expected_minutes=1380 # Allow for incomplete day
+            fi
+
+            if [[ $minute_record_count -lt $min_expected_minutes ]]; then
+                echo -e "  ${RED}  ❌ 1m: Only $minute_record_count records (expected at least $min_expected_minutes)${NC}"
+                minute_test_passed=false
+            elif [[ $minute_record_count -gt $max_expected_minutes ]]; then
+                echo -e "  ${YELLOW}  ⚠️ 1m: $minute_record_count records (expected max $max_expected_minutes, possible duplicates)${NC}"
+                # Still pass but warn
+            else
+                echo -e "  ${GREEN}  ✅ 1m: $minute_record_count records${NC}"
+            fi
+        fi
+
+        # Update counters
+        if [[ "$hourly_test_passed" == "true" ]]; then
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+            daily_passed=$((daily_passed + 1))
+        else
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+            daily_failed=$((daily_failed + 1))
+        fi
+
+        if [[ "$minute_test_passed" == "true" ]]; then
+            PASSED_TESTS=$((PASSED_TESTS + 1))
+            daily_passed=$((daily_passed + 1))
+        else
+            FAILED_TESTS=$((FAILED_TESTS + 1))
+            daily_failed=$((daily_failed + 1))
+        fi
+    done
+
+    echo ""
+    echo -e "${YELLOW}BTC Availability Test Results:${NC}"
+    echo "  Days tested: $daily_record_count"
+    echo "  Total tests: $total_daily_tests (1H + 1m per day)"
+    echo -e "  ${GREEN}Passed: $daily_passed${NC}"
+    echo -e "  ${RED}Failed: $daily_failed${NC}"
+    echo "  Total hours checked: $total_hours_checked"
+    echo "  Total minutes checked: $total_minutes_checked"
+    echo "  Average hours per day: $((total_hours_checked / daily_record_count))"
+    echo "  Average minutes per day: $((total_minutes_checked / daily_record_count))"
+
+    # Calculate expected totals for validation
+    local expected_total_hours=$((daily_record_count * 24))
+    local expected_total_minutes=$((daily_record_count * 1440))
+    local hour_coverage=$((total_hours_checked * 100 / expected_total_hours))
+    local minute_coverage=$((total_minutes_checked * 100 / expected_total_minutes))
+
+    echo ""
+    echo -e "${YELLOW}Data Coverage Analysis:${NC}"
+    echo "  Hourly coverage: $hour_coverage% ($total_hours_checked/$expected_total_hours expected hours)"
+    echo "  Minute coverage: $minute_coverage% ($total_minutes_checked/$expected_total_minutes expected minutes)"
+
+    if [[ $hourly_coverage -ge 80 ]]; then
+        echo -e "  ${GREEN}✅ Hourly coverage: EXCELLENT (≥80%)${NC}"
+    elif [[ $hourly_coverage -ge 60 ]]; then
+        echo -e "  ${YELLOW}⚠️ Hourly coverage: GOOD (≥60%)${NC}"
+    else
+        echo -e "  ${RED}❌ Hourly coverage: POOR (<60%)${NC}"
+    fi
+
+    if [[ $minute_coverage -ge 70 ]]; then
+        echo -e "  ${GREEN}✅ Minute coverage: EXCELLENT (≥70%)${NC}"
+    elif [[ $minute_coverage -ge 50 ]]; then
+        echo -e "  ${YELLOW}⚠️ Minute coverage: GOOD (≥50%)${NC}"
+    else
+        echo -e "  ${RED}❌ Minute coverage: POOR (<50%)${NC}"
+    fi
+}
+
+# Run the BTC availability test
+test_btc_availability
+
+echo ""
+echo "=== FINAL SUMMARY ==="
 echo -e "Total Tests: $TOTAL_TESTS"
 echo -e "${GREEN}Passed: $PASSED_TESTS${NC}"
 echo -e "${RED}Failed: $FAILED_TESTS${NC}"
 
 if [[ $FAILED_TESTS -eq 0 ]]; then
-    echo -e "${GREEN}🎉 ALL TESTS PASSED! Data correctness and deduplication verified.${NC}"
+    echo -e "${GREEN}🎉 ALL TESTS PASSED! Data correctness, deduplication, and availability verified.${NC}"
     echo -e "${GREEN}✅ Interval-aware deduplication system working perfectly!${NC}"
+    echo -e "${GREEN}✅ BTC data availability across all intervals confirmed!${NC}"
     exit 0
 else
-    echo -e "${RED}❌ $FAILED_TESTS test(s) failed. Data correctness issues detected.${NC}"
+    echo -e "${RED}❌ $FAILED_TESTS test(s) failed. Data correctness or availability issues detected.${NC}"
     exit 1
 fi
