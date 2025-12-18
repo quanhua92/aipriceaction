@@ -16,7 +16,7 @@ use axum_extra::extract::Query;
 use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use tracing::{debug, info, warn, instrument};
+use tracing::{debug, info, warn, error, instrument};
 
 /// Stock data response with VCI time format and optional technical indicators
 #[derive(Debug, Serialize)]
@@ -173,7 +173,44 @@ pub async fn get_tickers_handler(
         info!("[PROFILE] Aggregated interval request: {} - starting data retrieval", agg_interval_str);
     }
     debug!("[DEBUG:PERF] get_data_smart start: {} tickers, interval={}", query_params.tickers.len(), query_params.interval.to_filename());
+
+    // Strategic debug for VNINDEX historical requests
+    if query_params.tickers.len() == 1 {
+        let ticker = &query_params.tickers[0];
+        if ticker == "VNINDEX" {
+            if let Some(end_date) = &query_params.end_date {
+                let today = chrono::Utc::now().date_naive();
+                let parsed_end = end_date.date_naive();
+                if parsed_end != today {
+                    warn!("[DEBUG_API] VNINDEX_CSV_FALLBACK: ticker={}, interval={}, end_date={}, cache={}",
+                        ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"), query_params.use_cache);
+                }
+            }
+        }
+    }
+
     let mut result_data = data_state.get_data_smart(query_params.clone()).await;
+
+    // Log result of CSV fallback for VNINDEX
+    if query_params.tickers.len() == 1 {
+        let ticker = &query_params.tickers[0];
+        if ticker == "VNINDEX" {
+            if let Some(end_date) = &query_params.end_date {
+                let today = chrono::Utc::now().date_naive();
+                let parsed_end = end_date.date_naive();
+                if parsed_end != today {
+                    let record_count = result_data.get(ticker).map_or(0, |v| v.len());
+                    warn!("[DEBUG_API] VNINDEX_CSV_RESULT: ticker={}, interval={}, end_date={}, records_found={}",
+                        ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"), record_count);
+
+                    if record_count == 0 {
+                        error!("[DEBUG_API] VNINDEX_CSV_ISSUE: ticker={}, interval={}, end_date={} - NO RECORDS FOUND IN CSV!",
+                            ticker, query_params.interval.to_vci_format(), end_date.format("%Y-%m-%d"));
+                    }
+                }
+            }
+        }
+    }
 
     let ticker_count = result_data.len();
     let total_records: usize = result_data.values().map(|v| v.len()).sum();
@@ -215,6 +252,23 @@ pub async fn get_tickers_handler(
                 "[DEBUG_API] CSV_INPUT: tickers={}, total_records={}, limit={:?}",
                 ticker_count, total_records, query_params.limit
             );
+
+            // Special debug for VNINDEX with historical end dates
+            if ticker_count == 1 {
+                let ticker = &result_data.keys().next().unwrap();
+                if *ticker == "VNINDEX" {
+                    if let Some(end_date) = &query_params.end_date {
+                        let today = chrono::Utc::now().date_naive();
+                        let parsed_end = end_date.date_naive();
+                        if parsed_end != today {
+                            tracing::warn!(
+                                "[DEBUG_API] VNINDEX_HISTORICAL_REQUEST: ticker={}, end_date={}, today={}, interval={}, total_records={}",
+                                ticker, end_date.format("%Y-%m-%d"), today, query_params.interval.to_vci_format(), total_records
+                            );
+                        }
+                    }
+                }
+            }
 
             // Check for duplicates in each ticker's data
             for (ticker, records) in &result_data {
