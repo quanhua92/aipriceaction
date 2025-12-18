@@ -2,6 +2,7 @@ use crate::constants::{csv_column, DEFAULT_CACHE_AUTO_CLEAR_ENABLED, DEFAULT_CAC
 use crate::error::Error;
 use crate::models::{Interval, StockData, AggregatedInterval};
 use crate::utils::{parse_timestamp, deduplicate_stock_data_by_time, open_file_atomic_read};
+use crate::utils::deduplication::IntervalDeduplicator;
 use crate::services::mpsc::{TickerUpdate, ChangeType};
 use tracing::{debug, info, error};
 use chrono::{DateTime, Utc};
@@ -1747,9 +1748,9 @@ impl DataStore {
                             let mut dates = std::collections::HashSet::new();
                             let mut duplicates = Vec::new();
                             for record in filtered.iter() {
-                                let date_key = record.time.date_naive();
-                                if !dates.insert(date_key) {
-                                    duplicates.push(date_key);
+                                let key = IntervalDeduplicator::get_key(record, interval);
+                                if !dates.insert(key.clone()) {
+                                    duplicates.push(key);
                                 }
                             }
 
@@ -1767,8 +1768,8 @@ impl DataStore {
                                 let deduplicated_filtered: Vec<StockData> = filtered.iter()
                                     .rev() // Reverse to keep last occurrence
                                     .filter(|record| {
-                                        let date_key = record.time.date_naive();
-                                        seen_dates.insert(date_key)
+                                        let key = IntervalDeduplicator::get_key(record, interval);
+                                        seen_dates.insert(key)
                                     })
                                     .cloned()
                                     .collect::<Vec<_>>()

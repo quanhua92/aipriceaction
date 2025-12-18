@@ -5,6 +5,7 @@ use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics,
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
 use crate::utils::{get_public_dir, format_date, format_timestamp};
+use crate::utils::deduplication::IntervalDeduplicator;
 use axum::{
     extract::{State, Json},
     http::{HeaderMap, StatusCode, header::{CACHE_CONTROL, CONTENT_TYPE}},
@@ -221,9 +222,9 @@ pub async fn get_tickers_handler(
                     let mut dates = std::collections::HashSet::new();
                     let mut duplicates = Vec::new();
                     for record in records {
-                        let date_key = record.time.date_naive();
-                        if !dates.insert(date_key) {
-                            duplicates.push(date_key);
+                        let key = IntervalDeduplicator::get_key(record, query_params.interval);
+                        if !dates.insert(key.clone()) {
+                            duplicates.push(key);
                         }
                     }
 
@@ -251,8 +252,8 @@ pub async fn get_tickers_handler(
                     // Use retain to keep only the last occurrence of each date
                     records.reverse(); // Reverse to keep last occurrence when using retain
                     records.retain(|record| {
-                        let date_key = record.time.date_naive();
-                        seen_dates.insert(date_key) // Keep if this is the first time we've seen this date
+                        let key = IntervalDeduplicator::get_key(record, query_params.interval);
+                        seen_dates.insert(key) // Keep if this is the first time we've seen this key
                     });
                     records.reverse(); // Restore original order (ascending)
 
@@ -289,9 +290,9 @@ pub async fn get_tickers_handler(
                     let mut dates = std::collections::HashSet::new();
                     let mut duplicates_after = Vec::new();
                     for record in records {
-                        let date_key = record.time.date_naive();
-                        if !dates.insert(date_key) {
-                            duplicates_after.push(date_key);
+                        let key = IntervalDeduplicator::get_key(record, query_params.interval);
+                        if !dates.insert(key.clone()) {
+                            duplicates_after.push(key);
                         }
                     }
 
@@ -522,8 +523,8 @@ fn generate_csv_response(
             let mut date_set = std::collections::HashSet::new();
 
             for record in records {
-                let date = record.time.date_naive();
-                if !date_set.insert(date) {
+                let key = IntervalDeduplicator::get_key(record, interval);
+                if !date_set.insert(key) {
                     duplicate_count += 1;
                 }
             }
@@ -537,8 +538,8 @@ fn generate_csv_response(
                 // Show which dates are duplicated
                 let mut date_counts = std::collections::HashMap::new();
                 for record in records {
-                    let date = record.time.date_naive();
-                    *date_counts.entry(date).or_insert(0) += 1;
+                    let key = IntervalDeduplicator::get_key(record, interval);
+                    *date_counts.entry(key).or_insert(0) += 1;
                 }
 
                 let dup_dates: Vec<_> = date_counts.into_iter()
