@@ -1667,29 +1667,44 @@ impl DataStore {
             if let Some(ticker_data) = store.get(ticker) {
                 if let Some(interval_data) = ticker_data.get(&interval) {
                     // Check if cache has the requested date range
+                    // Get cache boundaries
+                    let cache_start = interval_data.first().map(|d| d.time);
+                    let cache_end = interval_data.last().map(|d| d.time);
+
                     let start_ok = if let Some(start) = start_date {
-                        if interval == Interval::Daily {
-                            // For daily data, compare dates only (not time component)
-                            interval_data.first()
-                                .map(|d| d.time.date_naive() <= start.date_naive())
-                                .unwrap_or(false)
+                        if let Some(cache_start_time) = cache_start {
+                            if interval == Interval::Daily {
+                                // For daily data, compare dates only (not time component)
+                                cache_start_time.date_naive() <= start.date_naive()
+                            } else {
+                                // For hourly/minute data, compare full timestamps
+                                cache_start_time <= start
+                            }
                         } else {
-                            // For hourly/minute data, compare full timestamps
-                            interval_data.first().map(|d| d.time <= start).unwrap_or(false)
+                            false
                         }
                     } else {
                         true // No specific start requested
                     };
 
                     let end_ok = if let Some(end) = end_date {
-                        if interval == Interval::Daily {
-                            // For daily data, compare dates only (not time component)
-                            interval_data.last()
-                                .map(|d| d.time.date_naive() >= end.date_naive())
-                                .unwrap_or(false)
+                        if let Some(cache_start_time) = cache_start {
+                            if let Some(cache_end_time) = cache_end {
+                                if interval == Interval::Daily {
+                                    // For daily data, compare dates only (not time component)
+                                    // Check if requested end date overlaps with cache range
+                                    end.date_naive() >= cache_start_time.date_naive() &&
+                                    end.date_naive() <= cache_end_time.date_naive()
+                                } else {
+                                    // For hourly/minute data, compare full timestamps
+                                    // Check if requested end time overlaps with cache range
+                                    end >= cache_start_time && end <= cache_end_time
+                                }
+                            } else {
+                                false
+                            }
                         } else {
-                            // For hourly/minute data, compare full timestamps
-                            interval_data.last().map(|d| d.time >= end).unwrap_or(false)
+                            false
                         }
                     } else {
                         true // No specific end requested
