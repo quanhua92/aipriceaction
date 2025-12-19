@@ -14,6 +14,7 @@ use std::time::SystemTime;
 use std::io::{Read, Seek};
 use tokio::sync::RwLock;
 use memmap2::Mmap;
+use crate::utils::deduplication::CachedStockData;
 
 #[derive(Debug)]
 enum ReadingStrategy {
@@ -38,8 +39,8 @@ pub const CACHE_TTL_SECONDS: i64 = 300; // 5 minutes TTL for memory cache (match
 pub const DEFAULT_MAX_CACHE_SIZE_MB: usize = 500; // 500MB default cache size
 pub const MAX_ITEM_CACHE_SIZE_MB: usize = 100; // Don't cache individual items larger than 100MB
 
-/// In-memory data store: HashMap<Ticker, HashMap<Interval, Vec<StockData>>>
-pub type IntervalData = HashMap<Interval, Vec<StockData>>;
+/// In-memory data store: HashMap<Ticker, HashMap<Interval, Vec<CachedStockData>>>
+pub type IntervalData = HashMap<Interval, Vec<CachedStockData>>;
 pub type InMemoryData = HashMap<String, IntervalData>;
 
 /// Cache entry for tracking individual cached items
@@ -354,8 +355,8 @@ impl DataStore {
                     "No changes detected"
                 );
             }
-            ChangeType::NewRecords { mut records } => {
-                // Append new records and enforce retention
+            ChangeType::NewRecords { records } => {
+                // Use unified merge function with proper deduplication
                 let mut cache = self.data.write().await;
                 let ticker = cache_key.0.clone(); // Clone to avoid move issue
                 let existing = cache.entry(ticker.clone()).or_insert_with(HashMap::new);
@@ -364,30 +365,15 @@ impl DataStore {
                 // Debug: Log state before update
                 if let Some(last_record) = interval_data.last() {
                     tracing::debug!("[MPSC::DEBUG] Cache state BEFORE update - ticker={}, interval={}, end_record.time={}, current_records={}",
-                         update.ticker, update.interval.to_filename(), last_record.time, interval_data.len());
+                         update.ticker, update.interval.to_filename(), last_record.data.time, interval_data.len());
                 }
 
-                // Append new records first
-                interval_data.append(&mut records);
-
-                // Sort by time
-                interval_data.sort_by_key(|d| d.time);
-
-                // Remove all duplicates (from both old and new records)
-                let mut seen_times = std::collections::HashSet::new();
-                interval_data.retain(|record| seen_times.insert(record.time));
-
-                // Apply retention limit (keep newest records)
-                if interval_data.len() > retention_limit {
-                    // Drop oldest records to maintain retention limit
-                    let excess = interval_data.len() - retention_limit;
-                    interval_data.drain(0..excess);
-                }
+                // Use unified merge function
+                self.merge_with_cache(interval_data, records, update.interval, retention_limit);
 
                 info!(
                     ticker = %update.ticker,
                     interval = ?update.interval,
-                    new_records = records.len(),
                     total_records = interval_data.len(),
                     retention_limit = retention_limit,
                     "Applied new records update"
@@ -396,7 +382,7 @@ impl DataStore {
                 // Debug: Log end record info from cache
                 if let Some(last_record) = interval_data.last() {
                     info!("[MPSC::DEBUG] Cache updated for ticker={}, interval={}, end_record.time={}, total_records={}",
-                         update.ticker, update.interval.to_filename(), last_record.time, interval_data.len());
+                         update.ticker, update.interval.to_filename(), last_record.data.time, interval_data.len());
                 }
 
                 // Check if we need to populate more from disk (gap > 500)
@@ -435,24 +421,19 @@ impl DataStore {
 
                                         // Create set of existing timestamps for O(1) lookup
                                         let existing_times: std::collections::HashSet<_> =
-                                            interval_data.iter().map(|d| d.time).collect();
+                                            interval_data.iter().map(|d| d.data.time).collect();
 
                                         // Add only non-duplicate records from disk
                                         let mut added_from_disk = 0;
                                         for record in disk_data {
                                             if !existing_times.contains(&record.time) {
-                                                interval_data.push(record);
+                                                interval_data.push(CachedStockData::new(record));
                                                 added_from_disk += 1;
                                             }
                                         }
 
-                                        // Sort and apply retention limit (keep newest records)
-                                        interval_data.sort_by_key(|d| d.time);
-                                        if interval_data.len() > retention_limit {
-                                            // Drop oldest records to maintain retention limit
-                                            let excess = interval_data.len() - retention_limit;
-                                            interval_data.drain(0..excess);
-                                        }
+                                        // Use merge function to deduplicate and apply retention
+                                        self.merge_with_cache(interval_data, Vec::new(), update.interval, retention_limit);
 
                                         if added_from_disk > 0 {
                                             info!(
@@ -475,50 +456,35 @@ impl DataStore {
                     }
                 }
             }
-            ChangeType::Truncated { from_record, mut new_records } => {
+            ChangeType::Truncated { from_record, new_records } => {
                 // Replace from specific record
                 let mut cache = self.data.write().await;
                 let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
                 let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
 
+                // Truncate at specified point, then merge
                 interval_data.truncate(from_record);
-                interval_data.append(&mut new_records);
-
-                // Remove all duplicates (same as FullFile handler)
-                let mut seen_times = std::collections::HashSet::new();
-                interval_data.retain(|record| seen_times.insert(record.time));
-
-                // Apply retention limit (keep newest records)
-                if interval_data.len() > retention_limit {
-                    // Drop oldest records to maintain retention limit
-                    interval_data.sort_by_key(|d| d.time);
-                    let excess = interval_data.len() - retention_limit;
-                    interval_data.drain(0..excess);
-                }
+                self.merge_with_cache(interval_data, new_records, update.interval, retention_limit);
 
                 info!(
                     ticker = %update.ticker,
                     interval = ?update.interval,
                     from_record = from_record,
-                    new_records = new_records.len(),
                     total_records = interval_data.len(),
                     "Applied truncated update"
                 );
             }
-            ChangeType::FullFile { mut records } => {
+            ChangeType::FullFile { records } => {
                 // Full replacement with retention and deduplication
                 let total_records = records.len();
-                if records.len() > retention_limit {
-                    records.truncate(retention_limit);
-                }
-
-                // Remove all duplicates (same as NewRecords handler)
-                let mut seen_times = std::collections::HashSet::new();
-                records.retain(|record| seen_times.insert(record.time));
 
                 let mut cache = self.data.write().await;
                 let existing = cache.entry(cache_key.0).or_insert_with(HashMap::new);
-                existing.insert(cache_key.1, records);
+                let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
+
+                // Clear existing and merge new records
+                interval_data.clear();
+                self.merge_with_cache(interval_data, records, update.interval, retention_limit);
 
                 info!(
                     ticker = %update.ticker,
@@ -534,6 +500,34 @@ impl DataStore {
         *self.cache_last_updated.write().await = Utc::now();
 
         Ok(())
+    }
+
+    /// Merge new records with existing cache using proper deduplication
+    fn merge_with_cache(
+        &self,
+        existing: &mut Vec<CachedStockData>,
+        new_records: Vec<StockData>,
+        interval: Interval,
+        retention_limit: usize,
+    ) {
+        // Convert new records to CachedStockData with current timestamp
+        let mut new_cached: Vec<CachedStockData> = new_records
+            .into_iter()
+            .map(CachedStockData::new)
+            .collect();
+
+        // Append new records to existing
+        existing.append(&mut new_cached);
+
+        // Use interval-aware deduplication that prefers newer created_at
+        let filtered = IntervalDeduplicator::filter_duplicates_cached(existing, interval);
+        *existing = filtered;
+
+        // Apply retention limit (keep newest records by stock time)
+        if existing.len() > retention_limit {
+            let excess = existing.len() - retention_limit;
+            existing.drain(0..excess);  // Drop oldest
+        }
     }
 
     /// Check if this DataStore is operating in crypto mode
@@ -620,7 +614,7 @@ impl DataStore {
             .iter()
             .rev()
             .take(10)
-            .map(|d| d.time.date_naive())
+            .map(|d| d.data.time.date_naive())
             .collect();
 
         if reference_dates.is_empty() {
@@ -646,7 +640,7 @@ impl DataStore {
             if let Some(daily_data) = intervals.get(&Interval::Daily) {
                 // Get dates this ticker has
                 let ticker_dates: std::collections::HashSet<chrono::NaiveDate> =
-                    daily_data.iter().map(|d| d.time.date_naive()).collect();
+                    daily_data.iter().map(|d| d.data.time.date_naive()).collect();
 
                 // Check for missing dates
                 let missing_dates: Vec<&chrono::NaiveDate> = reference_dates
@@ -666,7 +660,7 @@ impl DataStore {
 
                 // Check for duplicates in memory data
                 let total_records = daily_data.len();
-                let unique_dates: std::collections::HashSet<_> = daily_data.iter().map(|d| d.time.date_naive()).collect();
+                let unique_dates: std::collections::HashSet<_> = daily_data.iter().map(|d| d.data.time.date_naive()).collect();
                 let duplicate_count = total_records.saturating_sub(unique_dates.len());
 
                 if duplicate_count > 0 {
@@ -1668,8 +1662,8 @@ impl DataStore {
                 if let Some(interval_data) = ticker_data.get(&interval) {
                     // Check if cache has the requested date range
                     // Get cache boundaries
-                    let cache_start = interval_data.first().map(|d| d.time);
-                    let cache_end = interval_data.last().map(|d| d.time);
+                    let cache_start = interval_data.first().map(|d| d.data.time);
+                    let cache_end = interval_data.last().map(|d| d.data.time);
 
                     let start_ok = if let Some(start) = start_date {
                         if let Some(cache_start_time) = cache_start {
@@ -1718,9 +1712,9 @@ impl DataStore {
                             ticker,
                             interval_data.len(),
                             start_date,
-                            interval_data.first().map(|d| d.time),
+                            interval_data.first().map(|d| d.data.time),
                             end_date,
-                            interval_data.last().map(|d| d.time),
+                            interval_data.last().map(|d| d.data.time),
                             start_ok,
                             end_ok
                         );
@@ -1728,21 +1722,21 @@ impl DataStore {
                         // Debug: Log cache date range
                         if let (Some(first_record), Some(last_record)) = (interval_data.first(), interval_data.last()) {
                             info!("[CACHE_DEBUG] {} cached range: {} to {} ({} total records)",
-                                 ticker, first_record.time.date_naive(), last_record.time.date_naive(), interval_data.len());
+                                 ticker, first_record.data.time.date_naive(), last_record.data.time.date_naive(), interval_data.len());
                         }
 
                         // Cache has sufficient data - use binary search for date range
                         // Data is sorted by time (ascending), so we can binary search
                         let start_idx = if let Some(start) = start_date {
                             // Find first record >= start_date
-                            interval_data.partition_point(|d| d.time < start)
+                            interval_data.partition_point(|d| d.data.time < start)
                         } else {
                             0
                         };
 
                         let end_idx = if let Some(end) = end_date {
                             // Find first record > end_date
-                            interval_data.partition_point(|d| d.time <= end)
+                            interval_data.partition_point(|d| d.data.time <= end)
                         } else {
                             interval_data.len()
                         };
@@ -1751,7 +1745,7 @@ impl DataStore {
                         if start_idx < end_idx {
                             let filtered: Vec<StockData> = interval_data[start_idx..end_idx]
                                 .iter()
-                                .cloned()
+                                .map(|cached| cached.data.clone())
                                 .collect();
 
                             // Check if this is a small request for logging purposes only
@@ -1760,6 +1754,7 @@ impl DataStore {
 
                             // ALWAYS apply early duplicate detection and removal (for all requests)
                             // Only log warnings for small requests to avoid spam
+                            // Extract StockData for deduplication check (already extracted above)
                             let mut dates = std::collections::HashSet::new();
                             let mut duplicates = Vec::new();
                             for record in filtered.iter() {
@@ -1849,9 +1844,9 @@ impl DataStore {
                             "[PROFILE] CACHE MISS for {} - insufficient date range (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
                             ticker,
                             start_date,
-                            interval_data.first().map(|d| d.time),
+                            interval_data.first().map(|d| d.data.time),
                             end_date,
-                            interval_data.last().map(|d| d.time),
+                            interval_data.last().map(|d| d.data.time),
                             start_ok,
                             end_ok
                         );
@@ -2435,7 +2430,7 @@ pub fn estimate_memory_usage(data: &InMemoryData) -> usize {
             total_size += stock_data_vec.capacity() * std::mem::size_of::<StockData>();
 
             for stock_data in stock_data_vec {
-                total_size += stock_data.ticker.len(); // Ticker string in StockData
+                total_size += stock_data.data.ticker.len(); // Ticker string in StockData
             }
         }
     }

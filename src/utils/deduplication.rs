@@ -5,7 +5,23 @@
 
 use crate::models::{Interval, StockData};
 use std::collections::HashSet;
-use chrono::Timelike;
+use chrono::{Timelike, DateTime, Utc};
+
+/// Wrapper for StockData with creation timestamp for proper deduplication
+#[derive(Clone, Debug)]
+pub struct CachedStockData {
+    pub data: StockData,
+    pub created_at: DateTime<Utc>,
+}
+
+impl CachedStockData {
+    pub fn new(data: StockData) -> Self {
+        Self {
+            data,
+            created_at: Utc::now(),
+        }
+    }
+}
 
 /// Centralized deduplication with interval-aware granularity
 pub struct IntervalDeduplicator {
@@ -123,6 +139,53 @@ impl IntervalDeduplicator {
             .into_iter()
             .filter(|(_, count)| *count > 1)
             .collect()
+    }
+
+    /// Get appropriate deduplication key for CachedStockData
+    pub fn get_key_cached(record: &CachedStockData, interval: Interval) -> String {
+        match interval {
+            // For minute intervals, use full timestamp - no two records have same timestamp
+            Interval::Minute => record.data.time.to_rfc3339(),
+
+            // For hourly intervals, use YYYY-MM-DD-HH format
+            Interval::Hourly => format!("{}-{:02}",
+                record.data.time.date_naive(),
+                record.data.time.hour(),
+            ),
+
+            // For daily intervals, use date only (current behavior)
+            Interval::Daily => record.data.time.date_naive().to_string(),
+        }
+    }
+
+    /// Filter duplicates from CachedStockData vector, keeping last occurrence based on created_at
+    pub fn filter_duplicates_cached(
+        records: &[CachedStockData],
+        interval: Interval,
+    ) -> Vec<CachedStockData> {
+        let mut seen_data = std::collections::HashMap::new();
+        let mut filtered = Vec::new();
+
+        // Sort by stock time, then by created_at (newest first for same time)
+        let mut sorted_records: Vec<_> = records.iter().collect();
+        sorted_records.sort_by(|a, b| {
+            match a.data.time.cmp(&b.data.time) {
+                std::cmp::Ordering::Equal => b.created_at.cmp(&a.created_at), // Newer created_at first
+                other => other,
+            }
+        });
+
+        for record in sorted_records {
+            let key = Self::get_key_cached(record, interval);
+            if seen_data.insert(key, record.created_at).is_none() {
+                // First time seeing this key, keep it
+                filtered.push(record.clone());
+            }
+        }
+
+        // Restore chronological order by stock time
+        filtered.sort_by_key(|r| r.data.time);
+        filtered
     }
 }
 
