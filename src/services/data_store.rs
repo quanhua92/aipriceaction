@@ -419,28 +419,10 @@ impl DataStore {
                                         let existing = cache.entry(ticker).or_insert_with(HashMap::new);
                                         let interval_data = existing.entry(cache_key.1).or_insert_with(Vec::new);
 
-                                        // Create set of existing timestamps for O(1) lookup
-                                        let existing_times: std::collections::HashSet<_> =
-                                            interval_data.iter().map(|d| d.data.time).collect();
-
-                                        // Add records from disk with proper timestamp handling
-                                        let mut added_from_disk = 0;
-                                        for record in disk_data {
-                                            if !existing_times.contains(&record.time) {
-                                                // For disk records, use a timestamp based on the record time to preserve relative age
-                                                // Older records get older created_at times
-                                                let time_diff = Utc::now() - record.time;
-                                                let created_at = Utc::now() - chrono::Duration::seconds(time_diff.num_seconds().max(0) % 86400); // Max 1 day ago
-                                                interval_data.push(CachedStockData {
-                                                    data: record,
-                                                    created_at
-                                                });
-                                                added_from_disk += 1;
-                                            }
-                                        }
-
-                                        // Use merge function to deduplicate and apply retention
-                                        self.merge_with_cache(interval_data, Vec::new(), update.interval, retention_limit);
+                                        // Convert disk data to NewRecords update and use unified merge function
+                                        let before_count = interval_data.len();
+                                        self.merge_with_cache(interval_data, disk_data, update.interval, retention_limit);
+                                        let added_from_disk = interval_data.len() - before_count;
 
                                         if added_from_disk > 0 {
                                             info!(
