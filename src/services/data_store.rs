@@ -423,11 +423,18 @@ impl DataStore {
                                         let existing_times: std::collections::HashSet<_> =
                                             interval_data.iter().map(|d| d.data.time).collect();
 
-                                        // Add only non-duplicate records from disk
+                                        // Add records from disk with proper timestamp handling
                                         let mut added_from_disk = 0;
                                         for record in disk_data {
                                             if !existing_times.contains(&record.time) {
-                                                interval_data.push(CachedStockData::new(record));
+                                                // For disk records, use a timestamp based on the record time to preserve relative age
+                                                // Older records get older created_at times
+                                                let time_diff = Utc::now() - record.time;
+                                                let created_at = Utc::now() - chrono::Duration::seconds(time_diff.num_seconds().max(0) % 86400); // Max 1 day ago
+                                                interval_data.push(CachedStockData {
+                                                    data: record,
+                                                    created_at
+                                                });
                                                 added_from_disk += 1;
                                             }
                                         }
