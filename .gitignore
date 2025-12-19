@@ -92,7 +92,16 @@ uploads/*
 # Crypto Scraper
 scripts/crypto/node_modules
 
+# Python Virtual Environments
+venv/
+env/
+.venv/
+
+# Binance Historical Data
+spot/
+
 # Reference projects (external git repos)
 references/
 market_data.tar.gz
 crypto_data.tar.gz
+scripts/__pycache__/
