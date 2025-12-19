@@ -26,6 +26,15 @@ pub enum AppError {
     #[error("Rate limit exceeded")]
     RateLimit,
 
+    #[error("ZIP error: {0}")]
+    Zip(String),
+
+    #[error("Binance data error: {0}")]
+    Binance(String),
+
+    #[error("Invalid ticker format: {0}")]
+    InvalidTicker(String),
+
     #[error("{0}")]
     Other(String),
 }
@@ -39,6 +48,12 @@ impl From<std::io::Error> for AppError {
 impl From<csv::Error> for AppError {
     fn from(err: csv::Error) -> Self {
         AppError::Io(format!("CSV error: {}", err))
+    }
+}
+
+impl From<zip::result::ZipError> for AppError {
+    fn from(err: zip::result::ZipError) -> Self {
+        AppError::Zip(format!("ZIP error: {}", err))
     }
 }
 
