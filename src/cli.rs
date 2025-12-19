@@ -114,6 +114,27 @@ pub enum Commands {
         #[arg(long)]
         full: bool,
     },
+    /// Get cryptocurrency data with optional filtering
+    CryptoGet {
+        /// Cryptocurrency ticker symbol (required)
+        ticker: String,
+
+        /// Data interval: 1D, 1H, 1m (default: 1D)
+        #[arg(short, long, default_value = "1D")]
+        interval: String,
+
+        /// Start date filter (YYYY-MM-DD format)
+        #[arg(long)]
+        start_date: Option<String>,
+
+        /// End date filter (YYYY-MM-DD format)
+        #[arg(long)]
+        end_date: Option<String>,
+
+        /// Maximum number of records to return (default: 200)
+        #[arg(short, long, default_value = "200")]
+        limit: u32,
+    },
     /// Fix CSV files by removing last N rows (with safety features)
     FixCsv {
         /// Data mode: vn (default) or crypto
@@ -194,6 +215,9 @@ pub fn run() {
         }
         Commands::CryptoPull { symbol, interval, full } => {
             commands::crypto_pull::run(symbol, interval, full);
+        }
+        Commands::CryptoGet { ticker, interval, start_date, end_date, limit } => {
+            commands::crypto_get::run(ticker, interval, start_date, end_date, limit);
         }
         Commands::FixCsv { mode, intervals, rows, tickers, verbose, execute, backup } => {
             if let Err(e) = commands::fix_csv::run(mode, intervals, rows, tickers, verbose, execute, backup) {
