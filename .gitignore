@@ -104,4 +104,5 @@ spot/
 references/
 market_data.tar.gz
 crypto_data.tar.gz
+spot.tar.gz
 scripts/__pycache__/
