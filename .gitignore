@@ -66,24 +66,11 @@ vite.config.ts.timestamp-*
 .vscode/settings.json
 .tanstack
 
-# Market Data (CSV files only, keep structure)
-market_data/**/*.csv
-market_data/**/*.parquet
+# Market Data (completely ignored)
+market_data/
 
-# Exception: Include sample tickers for reference
-!market_data/VNINDEX/*.csv
-!market_data/VIC/*.csv
-
-# Crypto Data (gitignore all other cryptos, keep BTC)
-crypto_data/*
-!crypto_data/BTC/
-
-# Processing data directories (ignore all contents, keep structure)
-market_data/*/
-!market_data/VNINDEX/
-!market_data/VIC/
-crypto_data/*/
-!crypto_data/BTC/
+# Crypto Data (completely ignored)
+crypto_data/
 
 # Upload Data (gitignore all uploaded files, keep directory structure)
 uploads/*
