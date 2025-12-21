@@ -200,10 +200,10 @@ impl QueryParameters {
                 | AggregatedInterval::Minutes15
                 | AggregatedInterval::Minutes30 => 200 * multiplier,
 
-                // Weekly/ Monthly aggregations use smaller buffer (MA50 is sufficient)
+                // Weekly/ Monthly aggregations use minimal buffer for performance
                 AggregatedInterval::Week
                 | AggregatedInterval::Week2
-                | AggregatedInterval::Month => 50 * multiplier, // MA50 instead of MA200
+                | AggregatedInterval::Month => 10 * multiplier, // MA10 instead of MA50
             };
 
             (self.limit * multiplier) + ma_buffer
@@ -1552,6 +1552,7 @@ impl DataStore {
         limit: usize,
         _start_date: Option<DateTime<Utc>>,
     ) -> HashMap<String, Vec<StockData>> {
+
         // Apply limit if specified
         if limit > 0 {
             data = data
@@ -1673,15 +1674,17 @@ impl DataStore {
                     let end_ok = if let Some(end) = end_date {
                         if let Some(cache_start_time) = cache_start {
                             if let Some(cache_end_time) = cache_end {
+                                // Cache is valid if request end is after cache start (cache potentially covers request)
+                                // Examples:
+                                // - Historical: 2025-12-10 >= cache_start (✅ uses cached data from 2024-01-01)
+                                // - Weekend: 2025-12-21 >= cache_start (✅ uses cached data, handles weekend gap)
+                                // - Future: 2026-01-01 >= cache_start (✅ validation passes, filtered later if beyond cache)
                                 if interval == Interval::Daily {
-                                    // For daily data, compare dates only (not time component)
-                                    // Check if requested end date overlaps with cache range
-                                    end.date_naive() >= cache_start_time.date_naive() &&
-                                    end.date_naive() <= cache_end_time.date_naive()
+                                    // For daily data, check if request end is after cache start
+                                    end.date_naive() >= cache_start_time.date_naive()
                                 } else {
-                                    // For hourly/minute data, compare full timestamps
-                                    // Check if requested end time overlaps with cache range
-                                    end >= cache_start_time && end <= cache_end_time
+                                    // For hourly/minute data, check if request end is after cache start
+                                    end >= cache_start_time
                                 }
                             } else {
                                 false
