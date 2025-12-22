@@ -26,7 +26,7 @@ pub use csv_enhancer::{enhance_interval, enhance_data, EnhancementStats, save_en
 pub use csv_validator::{validate_and_repair_interval, CorruptionReport};
 pub use data_store::{DataStore, SharedDataStore, HealthStats, SharedHealthStats, estimate_memory_usage};
 pub use trading_hours::{is_trading_hours, get_sync_interval};
-pub use api_logging::{ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, determine_data_source};
+pub use api_logging::{ApiPerformanceMetrics, ApiStatus, DataSource, write_api_log_entry, write_api_log_entry_with_prefix, determine_data_source};
 pub use crypto_compare::{CryptoCompareClient, CryptoError};
 pub use crypto_api_client::AiPriceActionClient;
 pub use crypto_fetcher::{CryptoFetcher, CryptoCategory};

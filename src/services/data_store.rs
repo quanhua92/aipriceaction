@@ -1583,8 +1583,11 @@ impl DataStore {
         use_cache: bool,
     ) -> HashMap<String, Vec<StockData>> {
         let start_time = std::time::Instant::now();
+        let is_all_tickers = tickers.len() >= 387;
+
         tracing::debug!("[DEBUG:PERF] get_data_with_cache start: {} tickers, interval={}, limit={:?}", tickers.len(), interval.to_filename(), limit);
 
+        
         // OR when cache=false explicitly requested
         if !use_cache {
             tracing::debug!("[DEBUG:PERF] Using disk cache (cache=false)");
@@ -1647,7 +1650,8 @@ impl DataStore {
         let mut result = HashMap::new();
         let mut need_disk_read: Vec<String> = Vec::new();
 
-        for ticker in &tickers {
+  
+        for ticker in tickers.iter() {
             if let Some(ticker_data) = store.get(ticker) {
                 if let Some(interval_data) = ticker_data.get(&interval) {
                     // Check if cache has the requested date range
@@ -1699,17 +1703,19 @@ impl DataStore {
                     let has_required_range = start_ok && end_ok;
 
                     if has_required_range {
-                        tracing::info!(
-                            "[PROFILE] CACHE HIT for {} - {} records in memory (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
-                            ticker,
-                            interval_data.len(),
-                            start_date,
-                            interval_data.first().map(|d| d.data.time),
-                            end_date,
-                            interval_data.last().map(|d| d.data.time),
-                            start_ok,
-                            end_ok
-                        );
+                        if !is_all_tickers {
+                            tracing::info!(
+                                "[PROFILE] CACHE HIT for {} - {} records in memory (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
+                                ticker,
+                                interval_data.len(),
+                                start_date,
+                                interval_data.first().map(|d| d.data.time),
+                                end_date,
+                                interval_data.last().map(|d| d.data.time),
+                                start_ok,
+                                end_ok
+                            );
+                        }
 
                         // Debug: Log cache date range
                         if let (Some(first_record), Some(last_record)) = (interval_data.first(), interval_data.last()) {
@@ -1733,20 +1739,42 @@ impl DataStore {
                             interval_data.len()
                         };
 
-                        // Only clone the records in range (not all records)
-                        if start_idx < end_idx {
-                            let filtered: Vec<StockData> = interval_data[start_idx..end_idx]
-                                .iter()
-                                .map(|cached| cached.data.clone())
-                                .collect();
+                        // Optimized: Apply limit before cloning to reduce memory allocation
+                        let filtered: Vec<StockData> = if start_idx < end_idx {
+                            // Apply limit optimization: if we only need the last N records, start from the end
+                            if let Some(limit_count) = limit {
+                                let available_count = end_idx - start_idx;
+                                if limit_count < available_count {
+                                    // We need only the last N records, start from end_idx - limit_count
+                                    interval_data[(end_idx - limit_count)..end_idx]
+                                        .iter()
+                                        .map(|cached| cached.data.clone())
+                                        .collect()
+                                } else {
+                                    // Need all available records
+                                    interval_data[start_idx..end_idx]
+                                        .iter()
+                                        .map(|cached| cached.data.clone())
+                                        .collect()
+                                }
+                            } else {
+                                // No limit specified, get all records
+                                interval_data[start_idx..end_idx]
+                                    .iter()
+                                    .map(|cached| cached.data.clone())
+                                    .collect()
+                            }
+                        } else {
+                            Vec::new()
+                        };
 
-                            // Check if this is a small request for logging purposes only
-                            let is_small_request = tickers.len() < 3 &&
-                                                   limit.map_or(false, |l| l <= 20);
+                        // Check if this is a small request for logging purposes only
+                        let is_small_request = tickers.len() < 3 &&
+                                               limit.map_or(false, |l| l <= 20);
 
-                            // ALWAYS apply early duplicate detection and removal (for all requests)
-                            // Only log warnings for small requests to avoid spam
-                            // Extract StockData for deduplication check (already extracted above)
+                        // ALWAYS apply early duplicate detection and removal (for all requests)
+                        // Only log warnings for small requests to avoid spam
+                        // Extract StockData for deduplication check (already extracted above)
                             let mut dates = std::collections::HashSet::new();
                             let mut duplicates = Vec::new();
                             for record in filtered.iter() {
@@ -1791,83 +1819,53 @@ impl DataStore {
                                 filtered
                             };
 
-                            // Apply limit if specified (take last N records from filtered data)
-                            let limited = if let Some(limit_count) = limit {
-                                if filtered.len() > limit_count {
-                                    // Take last N records (most recent)
-                                    let filtered_len = filtered.len();
-                                    filtered.into_iter()
-                                        .skip(filtered_len - limit_count)
-                                        .collect()
-                                } else {
-                                    filtered
-                                }
-                            } else {
-                                filtered
-                            };
-
-                            // No need to check for duplicates after limit since we already removed them before
-                            // TODO: Remove this comment after confirming the early deduplication works correctly
-
-                            // Debug: Log response date range
-                            if let (Some(first_response), Some(last_response)) = (limited.first(), limited.last()) {
+                        // Debug: Log response date range
+                        if let (Some(first_response), Some(last_response)) = (filtered.first(), filtered.last()) {
+                            if !is_all_tickers {
                                 info!("[CACHE_DEBUG] {} response range: {} to {} ({} records)",
-                                     ticker, first_response.time.date_naive(), last_response.time.date_naive(), limited.len());
+                                     ticker, first_response.time.date_naive(), last_response.time.date_naive(), filtered.len());
                             }
+                        }
 
-                            // SAFETY CHECK: If cache returned fewer records than requested limit, fall back to CSV
-                            let needs_fallback = if limited.is_empty() && limit.map_or(false, |l| l > 0) {
+                        // SAFETY CHECK: If cache returned fewer records than requested limit, fall back to CSV
+                        let needs_fallback = if filtered.is_empty() && limit.map_or(false, |l| l > 0) {
+                            if !is_all_tickers {
                                 tracing::warn!(
                                     "[CACHE_FALLBACK_SAFETY] {} cache returned {} records but requested limit={}. Falling back to CSV for complete data.",
-                                    ticker, limited.len(), limit.unwrap_or(0)
+                                    ticker, filtered.len(), limit.unwrap_or(0)
                                 );
-                                true
-                            } else {
-                                false
-                            };
-
-                            if !limited.is_empty() && !needs_fallback {
-                                result.insert(ticker.clone(), limited);
                             }
+                            true
+                        } else {
+                            false
+                        };
+
+                        if !filtered.is_empty() && !needs_fallback {
+                            result.insert(ticker.clone(), filtered);
                         }
                     } else {
                         // Cache doesn't have full range - need disk read
-                        tracing::info!(
-                            "[PROFILE] CACHE MISS for {} - insufficient date range (requested start: {:?}, cache starts: {:?}, requested end: {:?}, cache ends: {:?}, start_ok: {}, end_ok: {})",
-                            ticker,
-                            start_date,
-                            interval_data.first().map(|d| d.data.time),
-                            end_date,
-                            interval_data.last().map(|d| d.data.time),
-                            start_ok,
-                            end_ok
-                        );
                         need_disk_read.push(ticker.clone());
                     }
                 } else {
                     // No data in cache for this ticker/interval
-                    tracing::info!("[PROFILE] CACHE MISS for {} - no data in cache for {}", ticker, interval.to_filename());
                     need_disk_read.push(ticker.clone());
                 }
             } else {
                 // Ticker not in cache
-                tracing::info!("[PROFILE] CACHE MISS for {} - ticker not in cache", ticker);
                 need_disk_read.push(ticker.clone());
             }
         }
 
         drop(store); // Release lock before disk read
-
-        let from_cache_count = result.len();
         tracing::debug!("[DEBUG:PERF] Cache lookup complete: {:.2}ms, {} from cache, {} need disk",
             perf_cache_lookup_start.elapsed().as_secs_f64() * 1000.0,
-            from_cache_count,
+            result.len(),
             need_disk_read.len()
         );
 
         // Read missing tickers from disk
         if !need_disk_read.is_empty() {
-            tracing::info!("[PROFILE] READING FROM DISK/CSV - {} tickers: {:?}", need_disk_read.len(), need_disk_read);
             let perf_disk_start = std::time::Instant::now();
             tracing::debug!("[DEBUG:PERF] Disk read start: {} tickers", need_disk_read.len());
             let disk_data = self.get_data_from_disk_with_cache(
@@ -1905,6 +1903,8 @@ impl DataStore {
 
         let duration = start_time.elapsed();
         let total_records: usize = result.values().map(|v| v.len()).sum();
+
+    
         tracing::debug!(
             "Cache lookup: {} tickers, {} records, {:.2}ms (interval: {})",
             tickers.len(),

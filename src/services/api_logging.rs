@@ -58,6 +58,11 @@ impl ApiPerformanceMetrics {
 
 /// Write compact API performance log entry to api_requests.log
 pub fn write_api_log_entry(metrics: &ApiPerformanceMetrics) {
+    write_api_log_entry_with_prefix(metrics, "")
+}
+
+/// Write compact API performance log entry with custom prefix
+pub fn write_api_log_entry_with_prefix(metrics: &ApiPerformanceMetrics, prefix: &str) {
     let log_path = get_market_data_dir().join("api_requests.log");
 
     let status_str = match metrics.status {
@@ -90,8 +95,15 @@ pub fn write_api_log_entry(metrics: &ApiPerformanceMetrics) {
         String::new()
     };
 
+    let prefix_str = if prefix.is_empty() {
+        String::new()
+    } else {
+        format!("{} ", prefix)
+    };
+
     let log_line = format!(
-        "{} | {} | {} | {} | {} | req:1 tickers:{} interval:{} cache:{} format:{} size:{} source:{}{}\n",
+        "{}{} | {} | {} | {} | {} | req:1 tickers:{} interval:{} cache:{} format:{} size:{} source:{}{}\n",
+        prefix_str,
         metrics.start_time.format("%Y-%m-%d %H:%M:%S"),
         metrics.end_time.format("%Y-%m-%d %H:%M:%S"),
         duration_str,

@@ -1,7 +1,7 @@
 use crate::constants::INDEX_TICKERS;
 use crate::models::{AggregatedInterval, Interval, Mode};
 use crate::server::AppState;
-use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, write_api_log_entry, determine_data_source};
+use crate::services::{SharedDataStore, SharedHealthStats, ApiPerformanceMetrics, ApiStatus, write_api_log_entry, write_api_log_entry_with_prefix, determine_data_source};
 use crate::services::data_store::QueryParameters;
 use crate::services::trading_hours::get_cache_max_age;
 use crate::utils::{get_public_dir, format_date, format_timestamp};
@@ -126,6 +126,7 @@ pub async fn get_tickers_handler(
 
     debug!("Received request for tickers with params: {:?}", params);
 
+    
     // Special logging for 1m USDT requests to track performance
     let is_usdt_1m = params.mode == Mode::Crypto
         && params.symbol.as_ref().map_or(false, |symbols| symbols.contains(&"USDT".to_string()))
@@ -146,16 +147,23 @@ pub async fn get_tickers_handler(
             performance_metrics.ticker_count = params.tickers.len();
             performance_metrics.cache_used = params.use_cache;
             debug!("[DEBUG:PERF] Parse params: {:.2}ms, {} tickers", perf_parse_start.elapsed().as_secs_f64() * 1000.0, params.tickers.len());
-            params
+
+                        params
         },
         Err(error_response) => {
             if is_usdt_1m {
                 info!("DEBUG:PERF:1m:USDT Request failed during parameter parsing");
             }
-            performance_metrics.status = ApiStatus::Fail;
+                        performance_metrics.status = ApiStatus::Fail;
             performance_metrics.complete();
             performance_metrics.error_message = Some("Invalid parameters".to_string());
-            write_api_log_entry(&performance_metrics);
+
+            // Use DEBUG_API_ALL prefix when all tickers are requested (387 tickers = all VN tickers)
+            if params.symbol.as_ref().map_or(true, |symbols| symbols.len() == 387) {
+                write_api_log_entry_with_prefix(&performance_metrics, "DEBUG_API_ALL");
+            } else {
+                write_api_log_entry(&performance_metrics);
+            }
             return error_response;
         },
     };
@@ -189,6 +197,7 @@ pub async fn get_tickers_handler(
         }
     }
 
+    
     let mut result_data = data_state.get_data_smart(query_params.clone()).await;
 
     // Log result of CSV fallback for VNINDEX and BTC
@@ -224,6 +233,7 @@ pub async fn get_tickers_handler(
         info!("[PROFILE] Data retrieval complete for {}: {:.2}ms, {} tickers, {} records", agg_interval_str, data_retrieval_time, ticker_count, total_records);
     }
 
+    
     info!(
         ticker_count,
         total_records,
@@ -369,14 +379,23 @@ pub async fn get_tickers_handler(
         let perf_csv_start = std::time::Instant::now();
         debug!("[DEBUG:PERF] CSV generation start: {} tickers, {} records", ticker_count, total_records);
         let response = generate_csv_response(result_data, query_params.interval, query_params.legacy_prices, params.mode, headers);
-        debug!("[DEBUG:PERF] CSV generation complete: {:.2}ms", perf_csv_start.elapsed().as_secs_f64() * 1000.0);
-        debug!("[DEBUG:PERF] Total request: {:.2}ms", perf_start.elapsed().as_secs_f64() * 1000.0);
+        let csv_time = perf_csv_start.elapsed().as_secs_f64() * 1000.0;
+        let total_time = perf_start.elapsed().as_secs_f64() * 1000.0;
+        debug!("[DEBUG:PERF] CSV generation complete: {:.2}ms", csv_time);
+        debug!("[DEBUG:PERF] Total request: {:.2}ms", total_time);
 
         // Complete performance metrics and log for CSV response
         performance_metrics.response_size_bytes = response.body().size_hint().lower() as usize;
         performance_metrics.data_source = determine_data_source(query_params.use_cache, !query_params.use_cache);
         performance_metrics.complete();
-        write_api_log_entry(&performance_metrics);
+
+        
+        // Use DEBUG_API_ALL prefix when all tickers are requested (387 tickers = all VN tickers)
+        if params.symbol.as_ref().map_or(true, |symbols| symbols.len() == 387) {
+            write_api_log_entry_with_prefix(&performance_metrics, "DEBUG_API_ALL");
+        } else {
+            write_api_log_entry(&performance_metrics);
+        }
 
         return response;
     }
@@ -432,6 +451,7 @@ pub async fn get_tickers_handler(
 
     // Complete performance metrics and log
     let json_gen_time = perf_json_start.elapsed().as_secs_f64() * 1000.0;
+    let total_time = perf_start.elapsed().as_secs_f64() * 1000.0;
     if is_usdt_1m {
         info!("DEBUG:PERF:1m:USDT JSON generation complete - {:.2}ms", json_gen_time);
     }
@@ -439,7 +459,13 @@ pub async fn get_tickers_handler(
     performance_metrics.response_size_bytes = response_data.len() * 200; // Approximate size
     performance_metrics.data_source = determine_data_source(query_params.use_cache, !query_params.use_cache);
     performance_metrics.complete();
-    write_api_log_entry(&performance_metrics);
+
+    // Use DEBUG_API_ALL prefix when all tickers are requested (387 tickers = all VN tickers)
+    if params.symbol.as_ref().map_or(true, |symbols| symbols.len() == 387) {
+        write_api_log_entry_with_prefix(&performance_metrics, "DEBUG_API_ALL");
+    } else {
+        write_api_log_entry(&performance_metrics);
+    }
 
     if is_usdt_1m {
         let total_time = perf_start.elapsed().as_secs_f64() * 1000.0;
