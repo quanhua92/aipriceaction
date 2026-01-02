@@ -16,9 +16,9 @@ const PRIORITY_CRYPTOS: &[&str] = &["BTC", "ETH", "XRP"];
 
 // CryptoCompare mode: staggered intervals to manage rate limits
 const REGULAR_DAILY_SYNC_INTERVAL_SECS: u64 = 3600;   // 1 hour
-const REGULAR_HOURLY_SYNC_INTERVAL_SECS: u64 = 10800; // 3 hours
+const REGULAR_HOURLY_SYNC_INTERVAL_SECS: u64 = 21600; // 6 hours
 const REGULAR_MINUTE_SYNC_INTERVAL_SECS: u64 = 21600; // 6 hours
-const LOOP_CHECK_INTERVAL_SECS: u64 = 900; // 15 minutes
+const LOOP_CHECK_INTERVAL_SECS: u64 = 1800; // 30 minutes
 
 // ApiProxy mode: faster intervals (no rate limit from CryptoCompare)
 const PROXY_SYNC_INTERVAL_SECS: u64 = 300; // 5 minutes for all intervals
@@ -64,13 +64,13 @@ pub async fn run(health_stats: SharedHealthStats) {
     };
 
     info!(
-        "  - Priority cryptos: {} (every {}s)",
-        PRIORITY_CRYPTOS.join(", "), loop_interval
+        "  - Priority cryptos: {} (every 30m)",
+        PRIORITY_CRYPTOS.join(", ")
     );
     if is_proxy_mode {
         info!("  - Regular cryptos: all intervals every {}s (proxy mode)", PROXY_SYNC_INTERVAL_SECS);
     } else {
-        info!("  - Regular cryptos: Daily=1h, Hourly=3h, Minute=6h (CryptoCompare mode)");
+        info!("  - Regular cryptos: Daily=1h, Hourly=6h, Minute=6h (CryptoCompare mode)");
     }
     info!(
         "  - Main loop interval: {}s",
@@ -670,9 +670,9 @@ pub async fn run_with_channel(
         info!("  Priority cryptos: {:?} (every {}s)", PRIORITY_CRYPTOS, sync_interval_secs);
     } else {
         info!("  Data Source: CryptoCompare API (default)");
-        info!("  Main loop interval: {}s", loop_check_interval_secs);
-        info!("  Priority cryptos: {:?} (every {}s)", PRIORITY_CRYPTOS, loop_check_interval_secs);
-        info!("  Regular cryptos: Daily=1h, Hourly=3h, Minute=6h (CryptoCompare mode)");
+        info!("  Main loop interval: {}s (30 min)", loop_check_interval_secs);
+        info!("  Priority cryptos: {:?} (every 30m)", PRIORITY_CRYPTOS);
+        info!("  Regular cryptos: Daily=1h, Hourly=6h, Minute=6h (CryptoCompare mode)");
     }
 
     // Setup sync info file path
