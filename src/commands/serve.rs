@@ -118,7 +118,7 @@ pub async fn run(port: u16) {
     let concurrent_batches = crate::utils::get_concurrent_batches();
     println!("   💻 CPU cores detected: {}", cpu_cores);
     println!("   🔧 Worker threads:     {} (1-2 cores→1, 3-4 cores→2, 5+ cores→4)", worker_threads);
-    println!("   ⚡ Concurrent batches: {} (1-2 cores→1, 3-4 cores→2, 5+ cores→3)", concurrent_batches);
+    println!("   ⚡ Concurrent batches: {} (1-2 cores→3, 3-4 cores→5, 5+ cores→8)", concurrent_batches);
     println!("   📝 Workers will use {} concurrent API batch requests", concurrent_batches);
     println!();
 

@@ -263,18 +263,20 @@ pub fn get_worker_threads() -> usize {
 /// Auto-detect optimal concurrent batches based on CPU cores
 ///
 /// Strategy:
-/// - 1-2 cores: 1 concurrent batch (sequential processing to avoid CPU contention)
-/// - 3-4 cores: 2 concurrent batches (moderate parallelism)
-/// - 5+ cores: 3 concurrent batches (maximum throughput)
+/// - 1-2 cores: 3 concurrent batches (3x parallelism for small VPS)
+/// - 3-4 cores: 5 concurrent batches (moderate parallelism)
+/// - 5+ cores: 8 concurrent batches (maximum throughput without rate limiting)
 ///
-/// This ensures that API batch fetching doesn't overwhelm small VPS systems.
+/// This balances parallelism with VCI API rate limits to avoid 429 errors.
+/// Each concurrent batch uses an independent VCI client clone with its own
+/// rate limit tracking, allowing 3-8x faster sync operations.
 pub fn get_concurrent_batches() -> usize {
     let cpus = num_cpus::get();
 
     match cpus {
-        1..=2 => 1,  // Small VPS - sequential processing
-        3..=4 => 2,  // Medium system - moderate parallelism
-        _ => 3,      // Larger system - maximum throughput
+        1..=2 => 3,  // Small VPS - 3x parallelism
+        3..=4 => 5,  // Medium system - 5x parallelism
+        _ => 8,      // Larger system - 8x parallelism
     }
 }
 
