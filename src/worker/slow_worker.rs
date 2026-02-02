@@ -241,7 +241,11 @@ async fn run_sync_with_channel(
     let config = SyncConfig::new(
         start_date,
         Some(end_date),
-        20, // batch_size (optimized for 1H/1m intervals)
+        match interval {
+            crate::models::Interval::Hourly => crate::constants::VCI_BATCH_SIZE_HOURLY,
+            crate::models::Interval::Minute => crate::constants::VCI_BATCH_SIZE_MINUTE,
+            _ => crate::constants::VCI_BATCH_SIZE_DAILY,
+        }, // batch_size (uses constants to avoid API blocking)
         Some(2), // resume_days: 2 days adaptive mode
         vec![interval],
         false, // not full sync

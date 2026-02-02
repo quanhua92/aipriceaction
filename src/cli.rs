@@ -54,8 +54,8 @@ pub enum Commands {
         #[arg(long)]
         no_validation: bool,
 
-        /// Batch size for API calls (default: 5, reduced from 10 to avoid VCI API blocking)
-        #[arg(long, default_value = "5")]
+        /// Batch size for API calls (uses VCI_BATCH_SIZE_DAILY constant)
+        #[arg(long, default_value_t = crate::constants::VCI_BATCH_SIZE_DAILY)]
         batch_size: usize,
     },
     /// Start the server

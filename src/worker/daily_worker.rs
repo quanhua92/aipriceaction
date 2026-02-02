@@ -145,7 +145,7 @@ async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
     let config = SyncConfig::new(
         start_date,
         Some(end_date),
-        10, // batch_size (default)
+        crate::constants::VCI_BATCH_SIZE_DAILY, // batch_size (uses constant)
         Some(5), // resume_days: 5 days for dividend detection
         vec![Interval::Daily],
         false, // not full sync
@@ -221,7 +221,7 @@ pub async fn run_with_channel(
                 intervals,
                 start_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
                 end_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
-                batch_size: 10, // Default batch size
+                batch_size: crate::constants::VCI_BATCH_SIZE_DAILY, // Use constant
                 resume_days: None,
                 force_full: false,
                 concurrent_batches, // Auto-detected based on CPU cores
@@ -235,7 +235,7 @@ pub async fn run_with_channel(
                 intervals: vec![Interval::Daily],
                 start_date: (Utc::now() - chrono::Days::new(7)).date_naive().format("%Y-%m-%d").to_string(),
                 end_date: Utc::now().date_naive().format("%Y-%m-%d").to_string(),
-                batch_size: 10, // Default batch size
+                batch_size: crate::constants::VCI_BATCH_SIZE_DAILY, // Use constant
                 resume_days: None,
                 force_full: false,
                 concurrent_batches, // Auto-detected based on CPU cores

@@ -156,3 +156,12 @@ pub const FULL_RELOAD_INTERVAL_SECS: i64 = FULL_RELOAD_INTERVAL_HOURS * 3600;
 
 /// Initial delay before starting full reload task (30 minutes to allow server startup)
 pub const FULL_RELOAD_INITIAL_DELAY_SECS: i64 = 1800;
+
+/// VCI API Batch Size Configuration
+///
+/// VCI API blocks requests with 10+ tickers per batch (returns all None).
+/// Use smaller batch sizes to avoid blocking.
+pub const VCI_BATCH_SIZE_DAILY: usize = 5;   // Was 50, reduced to avoid API blocking
+pub const VCI_BATCH_SIZE_HOURLY: usize = 5;  // Was 20, reduced to avoid API blocking
+pub const VCI_BATCH_SIZE_MINUTE: usize = 2;  // Was 3, minimal reduction
+

@@ -121,7 +121,7 @@ impl Default for SyncConfig {
         Self {
             start_date: "2015-01-05".to_string(),
             end_date: Utc::now().format("%Y-%m-%d").to_string(),
-            batch_size: 5, // Reduced from 10 to avoid VCI API blocking
+            batch_size: crate::constants::VCI_BATCH_SIZE_DAILY, // Use constant
             resume_days: None, // Use interval-specific defaults
             intervals: vec![Interval::Daily],
             force_full: false,
@@ -188,20 +188,16 @@ impl SyncConfig {
 
     /// Get batch size based on interval and mode
     ///
-    /// Reduced batch sizes to avoid VCI API blocking:
-    /// - Daily: 5 tickers/batch (was 50, too large)
-    /// - Hourly: 5 tickers/batch (was 20, too large)
-    /// - Minute: 2 tickers/batch (was 3)
-    ///
+    /// Uses constants from crate::constants to avoid VCI API blocking.
     /// VCI API blocks requests with 10+ tickers per batch.
     pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
             match interval {
-                Interval::Daily => 5,   // Reduced from 50 to avoid API blocking
-                Interval::Hourly => 5,  // Reduced from 20
-                Interval::Minute => 2,  // Reduced from 3
+                Interval::Daily => crate::constants::VCI_BATCH_SIZE_DAILY,
+                Interval::Hourly => crate::constants::VCI_BATCH_SIZE_HOURLY,
+                Interval::Minute => crate::constants::VCI_BATCH_SIZE_MINUTE,
             }
         }
     }
