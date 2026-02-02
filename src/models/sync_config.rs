@@ -121,7 +121,7 @@ impl Default for SyncConfig {
         Self {
             start_date: "2015-01-05".to_string(),
             end_date: Utc::now().format("%Y-%m-%d").to_string(),
-            batch_size: 10,
+            batch_size: 5, // Reduced from 10 to avoid VCI API blocking
             resume_days: None, // Use interval-specific defaults
             intervals: vec![Interval::Daily],
             force_full: false,
@@ -188,21 +188,20 @@ impl SyncConfig {
 
     /// Get batch size based on interval and mode
     ///
-    /// Optimized batch sizes for adaptive resume mode:
-    /// - Daily: 50 tickers/batch (lightweight, ~1-2 records per ticker)
-    /// - Hourly: 20 tickers/batch (moderate, adapts to actual date range)
-    /// - Minute: 3 tickers/batch (heavy, adapts to actual date range)
+    /// Reduced batch sizes to avoid VCI API blocking:
+    /// - Daily: 5 tickers/batch (was 50, too large)
+    /// - Hourly: 5 tickers/batch (was 20, too large)
+    /// - Minute: 2 tickers/batch (was 3)
     ///
-    /// These sizes work well with adaptive mode since fetch range
-    /// automatically adjusts based on actual last dates in CSV files.
+    /// VCI API blocks requests with 10+ tickers per batch.
     pub fn get_batch_size(&self, interval: Interval) -> usize {
         if self.force_full {
             2 // Smaller batches for full downloads
         } else {
             match interval {
-                Interval::Daily => 50,   // Adaptive: fetches only what's needed per ticker
-                Interval::Hourly => 20,  // Adaptive: scales with actual staleness
-                Interval::Minute => 3,   // Adaptive: handles varying date ranges
+                Interval::Daily => 5,   // Reduced from 50 to avoid API blocking
+                Interval::Hourly => 5,  // Reduced from 20
+                Interval::Minute => 2,  // Reduced from 3
             }
         }
     }

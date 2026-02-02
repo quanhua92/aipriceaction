@@ -120,26 +120,36 @@ impl DataSync {
     async fn sync_interval(&mut self, tickers: &[String], interval: Interval) -> Result<(), Error> {
         let interval_start_time = Instant::now();
 
+        println!("[DEBUG] sync_interval: interval={:?}, tickers_count={}", interval, tickers.len());
+
         // Categorize tickers (resume vs full history)
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
+
+        println!("[DEBUG] categorize_tickers result: resume_tickers={}, full_history={}, partial_history={}, stale_skipped={}",
+            category.resume_tickers.len(),
+            category.full_history_tickers.len(),
+            category.partial_history_tickers.len(),
+            category.skipped_stale_tickers.len()
+        );
 
         // Batch fetch resume tickers using adaptive date
         let resume_results = if !category.resume_tickers.is_empty() {
             let resume_ticker_names = category.get_resume_ticker_names();
 
             // Always use actual last date from CSV files for adaptive resume
-            // Apply resume_days offset for dividend detection
+            // Apply 2-day offset for dividend detection
             let fetch_start_date = match category.get_min_resume_date() {
                 Some(date) => {
-                    // Subtract resume_days to get proper fetch window
                     use chrono::{Duration, Utc};
                     let last_date = chrono::NaiveDate::parse_from_str(&date, "%Y-%m-%d")
                         .unwrap_or_else(|_| Utc::now().naive_utc().date());
-                    let start_date = last_date - Duration::days(self.config.resume_days.unwrap_or(2) as i64);
+                    let start_date = last_date - Duration::days(2); // 2-day offset
                     start_date.format("%Y-%m-%d").to_string()
                 }
-                None => self.config.get_effective_start_date(interval),  // New ticker fallback
+                None => self.config.get_effective_start_date(interval),
             };
+
+            println!("[DEBUG] fetch_start_date: {}, end_date: {}", fetch_start_date, self.config.end_date);
 
             // Calculate actual date range for dynamic batch sizing
             let date_range_days = {
@@ -154,17 +164,7 @@ impl DataSync {
             // Get dynamic batch size based on date range
             let dynamic_batch_size = self.config.get_dynamic_batch_size(interval, date_range_days);
 
-            tracing::info!(
-                interval = ?interval,
-                interval_type = interval.to_vci_format(),
-                tickers_count = resume_ticker_names.len(),
-                start_date = %fetch_start_date,
-                end_date = %self.config.end_date,
-                batch_size = dynamic_batch_size,
-                concurrent_batches = self.config.concurrent_batches,
-                resume_tickers = ?resume_ticker_names[..resume_ticker_names.len().min(5)],
-                "DATA_SYNC:: Calling batch_fetch"
-            );
+            println!("[DEBUG] Using batch_size={}, date_range_days={}", dynamic_batch_size, date_range_days);
 
             self.fetcher
                 .batch_fetch(
@@ -179,6 +179,34 @@ impl DataSync {
         } else {
             HashMap::new()
         };
+
+        println!("[DEBUG] resume_tickers count={}, first 3: {:?}",
+            category.resume_tickers.len(),
+            category.resume_tickers.iter().take(3).map(|(t, _)| t.clone()).collect::<Vec<_>>());
+        println!("[DEBUG] batch_fetch results count: {}", resume_results.len());
+
+        // Check if VTO got data
+        if let Some(vto_result) = resume_results.get("VTO") {
+            match vto_result {
+                Some(data) => println!("[DEBUG] VTO got data: {} records", data.len()),
+                None => println!("[DEBUG] VTO got NONE (no data from API)"),
+            }
+        } else {
+            println!("[DEBUG] VTO not in resume_results (unexpected!)");
+        }
+
+        // Count how many tickers got actual data vs None
+        let with_data = resume_results.values().filter(|r| r.is_some() && r.as_ref().unwrap().len() > 0).count();
+        let with_none = resume_results.values().filter(|r| r.is_none() || r.as_ref().unwrap().is_empty()).count();
+        println!("[DEBUG] Batch results summary: with_data={}, with_none/empty={}", with_data, with_none);
+
+        // WARNING: If we got no data at all, this might indicate API blocking or no data available
+        if with_data == 0 && !resume_results.is_empty() && !category.resume_tickers.is_empty() {
+            tracing::warn!(
+                tickers_requested = category.resume_tickers.len(),
+                "⚠️  BATCH FETCH RETURNED NO DATA - Possible API blocking! Try: 1) Reducing batch_size, 2) Checking if data exists for requested date range, 3) VCI API might be rate limiting"
+            );
+        }
         // println!("⏱️  Batch fetching took: {:.2}s", batch_start.elapsed().as_secs_f64());
 
         // Track batch API success/failure for smart fallback

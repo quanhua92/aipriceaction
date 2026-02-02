@@ -54,8 +54,8 @@ pub enum Commands {
         #[arg(long)]
         no_validation: bool,
 
-        /// Batch size for API calls (default: 10, try 20-50 for faster sync)
-        #[arg(long, default_value = "10")]
+        /// Batch size for API calls (default: 5, reduced from 10 to avoid VCI API blocking)
+        #[arg(long, default_value = "5")]
         batch_size: usize,
     },
     /// Start the server
