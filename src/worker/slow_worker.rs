@@ -11,12 +11,12 @@ use tokio::time::sleep;
 use tracing::{info, error, instrument};
 
 // Hourly sync intervals
-const HOURLY_TRADING_INTERVAL_SECS: u64 = 60; // 1 minute (trading hours)
-const HOURLY_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
+const HOURLY_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes (trading hours)
+const HOURLY_NON_TRADING_INTERVAL_SECS: u64 = 3600; // 1 hour (off hours)
 
 // Minute sync intervals
-const MINUTE_TRADING_INTERVAL_SECS: u64 = 300; // 5 minutes (trading hours)
-const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 1800; // 30 minutes (off hours)
+const MINUTE_TRADING_INTERVAL_SECS: u64 = 600; // 10 minutes (trading hours)
+const MINUTE_NON_TRADING_INTERVAL_SECS: u64 = 3600; // 1 hour (off hours)
 
 // NOTE: Legacy run() and run_interval_worker() functions removed since serve.rs uses run_with_channel()
 // and hour/minute workers now run in separate runtimes via run_hourly_worker_separate() and run_minute_worker_separate()
