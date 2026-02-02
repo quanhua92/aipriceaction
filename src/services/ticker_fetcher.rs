@@ -399,7 +399,16 @@ impl TickerFetcher {
                                                 all_results.insert(ticker.clone(), None);
                                             }
                                         } else {
-                                            warn!(ticker = ticker, "Batch failed - no data");
+                                            warn!(
+                                                ticker = ticker,
+                                                batch_num = batch_idx + 1,
+                                                total_batches = total_batches,
+                                                batch_size = ticker_batch.len(),
+                                                start_date = start_date,
+                                                end_date = end_date,
+                                                other_tickers_in_batch = ?ticker_batch.iter().filter(|t| t != &ticker).take(5).collect::<Vec<_>>(),
+                                                "Batch failed - no data"
+                                            );
                                             all_results.insert(ticker.clone(), None);
                                         }
                                     } else {
