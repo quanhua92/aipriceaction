@@ -159,9 +159,9 @@ pub const FULL_RELOAD_INITIAL_DELAY_SECS: i64 = 1800;
 
 /// VCI API Batch Size Configuration
 ///
-/// VCI API blocks requests with 10+ tickers per batch (returns all None).
-/// Use smaller batch sizes to avoid blocking.
-pub const VCI_BATCH_SIZE_DAILY: usize = 5;   // Was 50, reduced to avoid API blocking
-pub const VCI_BATCH_SIZE_HOURLY: usize = 5;  // Was 20, reduced to avoid API blocking
-pub const VCI_BATCH_SIZE_MINUTE: usize = 2;  // Was 3, minimal reduction
+/// VCI API blocks requests with 2+ tickers per batch.
+/// Only batch_size=1 works reliably.
+pub const VCI_BATCH_SIZE_DAILY: usize = 1;
+pub const VCI_BATCH_SIZE_HOURLY: usize = 1;
+pub const VCI_BATCH_SIZE_MINUTE: usize = 1;
 
