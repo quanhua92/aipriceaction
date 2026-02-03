@@ -12,7 +12,13 @@ RUN apk add --no-cache \
     ca-certificates \
     gcc \
     g++ \
-    make
+    make \
+    curl-dev \
+    openssl-dev \
+    openssl-libs-static \
+    nghttp2-dev \
+    libssh2 \
+    zlib-static
 
 # Install cargo-chef with cache mount to speed up installation
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
@@ -39,7 +45,11 @@ RUN apk add --no-cache \
     ca-certificates \
     gcc \
     g++ \
-    make
+    make \
+    curl-dev \
+    openssl-dev \
+    nghttp2-dev \
+    libssh2
 
 COPY --from=rust-planner /app/recipe.json recipe.json
 
@@ -61,7 +71,11 @@ RUN apk add --no-cache \
     ca-certificates \
     gcc \
     g++ \
-    make
+    make \
+    curl-dev \
+    openssl-dev \
+    nghttp2-dev \
+    libssh2
 
 # Copy cached dependencies and workspace structure
 COPY --from=rust-cacher /app/target target
@@ -84,8 +98,8 @@ WORKDIR /app
 ARG BUILD_DATE
 ARG GIT_COMMIT
 
-# Install ca-certificates and curl for HTTPS requests and health checks
-RUN apk add --no-cache ca-certificates curl
+# Install runtime libraries for isahc (libcurl) and curl for health checks
+RUN apk add --no-cache ca-certificates curl libcurl nghttp2 libssh2
 
 # Create non-root user for security
 RUN addgroup -S appgroup && adduser -S -G appgroup appuser
