@@ -12,7 +12,6 @@ use tracing::{info, warn, error, debug};
 /// Ticker data fetcher using VCI client
 pub struct TickerFetcher {
     vci_client: VciClient,
-    shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
 }
 
 impl TickerFetcher {
@@ -23,10 +22,7 @@ impl TickerFetcher {
             .await
             .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
 
-        Ok(Self {
-            vci_client,
-            shared_rate_limiter: None,
-        })
+        Ok(Self { vci_client })
     }
 
     /// Create new ticker fetcher with shared rate limiter (async, tests proxies)
@@ -41,10 +37,7 @@ impl TickerFetcher {
         .await
         .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
 
-        Ok(Self {
-            vci_client,
-            shared_rate_limiter: Some(shared_rate_limiter),
-        })
+        Ok(Self { vci_client })
     }
 
     /// Create new ticker fetcher with VCI client
@@ -53,10 +46,7 @@ impl TickerFetcher {
         let vci_client = VciClient::new(true, 60)
             .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
 
-        Ok(Self {
-            vci_client,
-            shared_rate_limiter: None,
-        })
+        Ok(Self { vci_client })
     }
 
     /// Create new ticker fetcher with shared rate limiter
@@ -70,10 +60,7 @@ impl TickerFetcher {
         )
         .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
 
-        Ok(Self {
-            vci_client,
-            shared_rate_limiter: Some(shared_rate_limiter),
-        })
+        Ok(Self { vci_client })
     }
 
     /// Read the last date from a CSV file (fast - reads only last few KB from end)
@@ -414,13 +401,8 @@ impl TickerFetcher {
                 let end_date = end_date.to_string();
                 let interval_str = interval.to_vci_format().to_string();
 
-                // Clone VCI client for concurrent use (with shared rate limiter if available)
-                let mut vci_client = if let Some(ref limiter) = self.shared_rate_limiter {
-                    VciClient::with_shared_rate_limiter(true, 60, Some(limiter.clone()))
-                        .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?
-                } else {
-                    self.vci_client.clone()
-                };
+                // Clone the existing VCI client (thread-safe via Arc<SharedRateLimiter>)
+                let mut vci_client = self.vci_client.clone();
 
                 let task = tokio::spawn(async move {
                     let api_start = std::time::Instant::now();
