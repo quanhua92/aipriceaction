@@ -153,7 +153,7 @@ async fn sync_daily_data() -> Result<crate::models::SyncStats, Error> {
     );
 
     // Run sync directly (already in async context)
-    let mut sync = DataSync::new(config)?;
+    let mut sync = DataSync::new_async(config).await?;
     sync.sync_all_intervals(false).await?;
     Ok(sync.get_stats().clone())
 }
@@ -302,10 +302,10 @@ async fn run_sync_with_channel(
     channel_sender: Option<&SyncSender<TickerUpdate>>,
 ) -> Result<SyncStats, Error> {
     // Create DataSync with channel support
-    let mut sync = DataSync::new_with_channel(
+    let mut sync = DataSync::new_with_channel_async(
         config,
         channel_sender.cloned()
-    )?;
+    ).await?;
 
     // Update health stats quickly - lock only for the brief moment needed
     {

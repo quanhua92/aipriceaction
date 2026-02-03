@@ -31,6 +31,39 @@ pub struct DataSync {
 }
 
 impl DataSync {
+    /// Create new data sync orchestrator (async, tests proxies)
+    pub async fn new_async(config: SyncConfig) -> Result<Self, Error> {
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let fetcher = TickerFetcher::with_shared_rate_limiter_async(shared_rate_limiter.clone()).await?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+            batch_failure_times: HashMap::new(),
+            channel_sender: None,
+            shared_rate_limiter,
+        })
+    }
+
+    /// Create new data sync orchestrator with MPSC channel support (async, tests proxies)
+    pub async fn new_with_channel_async(
+        config: SyncConfig,
+        channel_sender: Option<SyncSender<TickerUpdate>>,
+    ) -> Result<Self, Error> {
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let fetcher = TickerFetcher::with_shared_rate_limiter_async(shared_rate_limiter.clone()).await?;
+
+        Ok(Self {
+            config,
+            fetcher,
+            stats: SyncStats::new(),
+            batch_failure_times: HashMap::new(),
+            channel_sender,
+            shared_rate_limiter,
+        })
+    }
+
     /// Create new data sync orchestrator
     pub fn new(config: SyncConfig) -> Result<Self, Error> {
         let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));

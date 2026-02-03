@@ -254,10 +254,10 @@ async fn run_sync_with_channel(
 
     info!("[SYNC::SLOW] About to create DataSync with channel...");
     // Create DataSync with channel support (fresh client each time like pull)
-    let mut sync = DataSync::new_with_channel(
+    let mut sync = DataSync::new_with_channel_async(
         config,
         channel_sender.cloned()
-    )?;
+    ).await?;
     info!("[SYNC::SLOW] ✅ DataSync client created successfully - new HTTP connections!");
 
     info!("[SYNC::SLOW] About to call sync_all_intervals...");

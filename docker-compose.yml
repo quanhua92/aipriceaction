@@ -17,6 +17,7 @@ services:
     environment:
       - RUST_LOG=info
       - PORT=3000
+      # - HTTP_PROXIES=socks5://proxy-service:1080,http://backup-proxy:8080
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]

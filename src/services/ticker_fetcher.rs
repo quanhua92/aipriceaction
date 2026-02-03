@@ -16,6 +16,37 @@ pub struct TickerFetcher {
 }
 
 impl TickerFetcher {
+    /// Create new ticker fetcher with VCI client (async, tests proxies)
+    pub async fn new_async() -> Result<Self, Error> {
+        // Use 60 calls/minute to match Python implementation
+        let vci_client = VciClient::new_async(true, 60, None)
+            .await
+            .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
+
+        Ok(Self {
+            vci_client,
+            shared_rate_limiter: None,
+        })
+    }
+
+    /// Create new ticker fetcher with shared rate limiter (async, tests proxies)
+    pub async fn with_shared_rate_limiter_async(
+        shared_rate_limiter: Arc<SharedRateLimiter>,
+    ) -> Result<Self, Error> {
+        let vci_client = VciClient::new_async(
+            true,
+            60,
+            Some(shared_rate_limiter.clone()),
+        )
+        .await
+        .map_err(|e| Error::Config(format!("Failed to create VCI client: {:?}", e)))?;
+
+        Ok(Self {
+            vci_client,
+            shared_rate_limiter: Some(shared_rate_limiter),
+        })
+    }
+
     /// Create new ticker fetcher with VCI client
     pub fn new() -> Result<Self, Error> {
         // Use 60 calls/minute to match Python implementation

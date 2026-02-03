@@ -1,7 +1,8 @@
-use reqwest::{Client, Error as ReqwestError};
+use isahc::{HttpClient, config::Configurable, prelude::*};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::error::Error as StdError;
 use std::sync::Arc;
 use std::time::{Duration as StdDuration, SystemTime};
 use tokio::sync::Mutex as TokioMutex;
@@ -10,7 +11,7 @@ use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, Utc, Weekday, Time
 
 #[derive(Debug)]
 pub enum VciError {
-    Http(ReqwestError),
+    Http(isahc::Error),
     Serialization(serde_json::Error),
     InvalidInterval(String),
     InvalidResponse(String),
@@ -18,8 +19,8 @@ pub enum VciError {
     NoData,
 }
 
-impl From<ReqwestError> for VciError {
-    fn from(error: ReqwestError) -> Self {
+impl From<isahc::Error> for VciError {
+    fn from(error: isahc::Error) -> Self {
         VciError::Http(error)
     }
 }
@@ -27,6 +28,29 @@ impl From<ReqwestError> for VciError {
 impl From<serde_json::Error> for VciError {
     fn from(error: serde_json::Error) -> Self {
         VciError::Serialization(error)
+    }
+}
+
+impl std::fmt::Display for VciError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VciError::Http(e) => write!(f, "HTTP error: {}", e),
+            VciError::Serialization(e) => write!(f, "Serialization error: {}", e),
+            VciError::InvalidInterval(s) => write!(f, "Invalid interval: {}", s),
+            VciError::InvalidResponse(s) => write!(f, "Invalid response: {}", s),
+            VciError::RateLimit => write!(f, "Rate limit exceeded"),
+            VciError::NoData => write!(f, "No data available"),
+        }
+    }
+}
+
+impl std::error::Error for VciError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            VciError::Http(e) => Some(e),
+            VciError::Serialization(e) => Some(e),
+            _ => None,
+        }
     }
 }
 
@@ -149,7 +173,7 @@ impl SharedRateLimiter {
 
 #[derive(Clone)]
 pub struct VciClient {
-    client: Client,
+    clients: Vec<HttpClient>,
     base_url: String,
     rate_limit_per_minute: u32,
     request_timestamps: Vec<SystemTime>,  // Keep for backward compatibility
@@ -158,22 +182,98 @@ pub struct VciClient {
     resample_map: HashMap<String, String>,
     /// Optional shared rate limiter (if None, uses per-instance rate limiting)
     shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+    /// Whether direct connection (no proxy) is enabled
+    direct_connection: bool,
 }
 
 impl VciClient {
     pub fn new(random_agent: bool, rate_limit_per_minute: u32) -> Result<Self, VciError> {
-        Self::with_shared_rate_limiter(random_agent, rate_limit_per_minute, None)
+        Self::with_options(random_agent, rate_limit_per_minute, None, true)
     }
 
-    /// Create VCI client with optional shared rate limiter
-    pub fn with_shared_rate_limiter(
+    /// Create VCI client with options
+    pub fn with_options(
+        random_agent: bool,
+        rate_limit_per_minute: u32,
+        shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+        direct_connection: bool,
+    ) -> Result<Self, VciError> {
+        Self::with_shared_rate_limiter_internal(random_agent, rate_limit_per_minute, shared_rate_limiter, direct_connection)
+    }
+
+    /// Async builder that tests proxies with async connectivity checks
+    pub async fn new_async(
         random_agent: bool,
         rate_limit_per_minute: u32,
         shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
     ) -> Result<Self, VciError> {
-        let client = Client::builder()
-            .timeout(StdDuration::from_secs(30))
-            .build()?;
+        Self::new_async_with_options(random_agent, rate_limit_per_minute, shared_rate_limiter, true).await
+    }
+
+    /// Async builder with options
+    pub async fn new_async_with_options(
+        random_agent: bool,
+        rate_limit_per_minute: u32,
+        shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+        direct_connection: bool,
+    ) -> Result<Self, VciError> {
+        let mut clients = Vec::new();
+
+        // 1. Add direct client if enabled
+        if direct_connection {
+            let direct_client = HttpClient::builder()
+                .timeout(StdDuration::from_secs(30))
+                .build()?;
+            clients.push(direct_client);
+            eprintln!("✓ Direct connection enabled");
+        } else {
+            eprintln!("⚠️  Direct connection DISABLED (proxy-only mode)");
+        }
+
+        // 2. Read proxies from HTTP_PROXIES env, split by comma
+        if let Ok(proxy_urls) = std::env::var("HTTP_PROXIES") {
+            for proxy_url in proxy_urls.split(',') {
+                let proxy_url = proxy_url.trim();
+                if !proxy_url.is_empty() {
+                    // Test connectivity asynchronously
+                    let is_connected = Self::test_proxy_url(proxy_url).await;
+
+                    if is_connected {
+                        match proxy_url.parse::<isahc::http::Uri>() {
+                            Ok(proxy_uri) => {
+                                match HttpClient::builder()
+                                    .proxy(Some(proxy_uri))
+                                    .timeout(StdDuration::from_secs(30))
+                                    .build()
+                                {
+                                    Ok(client) => {
+                                        clients.push(client);
+                                        eprintln!("✅ Added proxy: {}", proxy_url);
+                                    }
+                                    Err(e) => {
+                                        eprintln!("❌ Failed to create client for proxy {}: {}", proxy_url, e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("❌ Failed to parse proxy URL {}: {}", proxy_url, e);
+                            }
+                        }
+                    } else {
+                        eprintln!("❌ Skipped proxy: {} (connectivity test failed)", proxy_url);
+                    }
+                }
+            }
+        }
+
+        // Log initialization summary
+        if !direct_connection {
+            eprintln!("📊 VciClient initialized with {} proxy-only client(s)",
+                      clients.len());
+        } else {
+            eprintln!("📊 VciClient initialized with {} client(s) (1 direct + {} proxies)",
+                      clients.len(), clients.len().saturating_sub(1));
+        }
 
         let user_agents = vec![
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".to_string(),
@@ -188,7 +288,7 @@ impl VciClient {
         resample_map.insert("1M".to_string(), "1M".to_string());
 
         Ok(VciClient {
-            client,
+            clients,
             base_url: "https://trading.vietcap.com.vn/api/".to_string(),
             rate_limit_per_minute,
             request_timestamps: Vec::new(),
@@ -196,6 +296,155 @@ impl VciClient {
             random_agent,
             resample_map,
             shared_rate_limiter,
+            direct_connection,
+        })
+    }
+
+    /// Test a proxy URL by connecting to httpbin.org (async)
+    async fn test_proxy_url(proxy_url: &str) -> bool {
+        eprintln!("🔍 Testing proxy: {}", proxy_url);
+
+        // Parse the proxy URL to isahc::http::Uri
+        let proxy_uri = match proxy_url.parse() {
+            Ok(uri) => uri,
+            Err(e) => {
+                eprintln!("  ✗ Proxy URL parse failed: {}", e);
+                return false;
+            }
+        };
+
+        // Build client with proxy
+        let client = match HttpClient::builder()
+            .proxy(Some(proxy_uri))
+            .timeout(StdDuration::from_secs(10))
+            .build()
+        {
+            Ok(c) => {
+                eprintln!("  ✓ Client built successfully");
+                c
+            }
+            Err(e) => {
+                eprintln!("  ✗ Client build failed: {}", e);
+                return false;
+            }
+        };
+
+        // Test connectivity (use httpbin.org as example.com may be blocked)
+        eprintln!("  → Connecting to http://httpbin.org/ip ...");
+        match client.get_async("http://httpbin.org/ip").await {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    eprintln!("  ✓ Connectivity test passed (status: {})", status);
+                    true
+                } else {
+                    eprintln!("  ✗ Connectivity test failed (status: {})", status);
+                    false
+                }
+            }
+            Err(e) => {
+                eprintln!("  ✗ Connectivity test failed: {}", e);
+                // Print error chain for more details
+                let mut source_opt = e.source();
+                while let Some(err) = source_opt {
+                    eprintln!("    caused by: {}", err);
+                    source_opt = err.source();
+                }
+                false
+            }
+        }
+    }
+
+    /// Create VCI client with optional shared rate limiter
+    pub fn with_shared_rate_limiter(
+        random_agent: bool,
+        rate_limit_per_minute: u32,
+        shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+    ) -> Result<Self, VciError> {
+        Self::with_shared_rate_limiter_internal(random_agent, rate_limit_per_minute, shared_rate_limiter, true)
+    }
+
+    /// Internal builder with direct connection option
+    fn with_shared_rate_limiter_internal(
+        random_agent: bool,
+        rate_limit_per_minute: u32,
+        shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+        direct_connection: bool,
+    ) -> Result<Self, VciError> {
+        let mut clients = Vec::new();
+
+        // 1. Add direct client if enabled
+        if direct_connection {
+            let direct_client = HttpClient::builder()
+                .timeout(StdDuration::from_secs(30))
+                .build()?;
+            clients.push(direct_client);
+            eprintln!("✓ Direct connection enabled");
+        } else {
+            eprintln!("⚠️  Direct connection DISABLED (proxy-only mode)");
+        }
+
+        // 2. Read proxies from HTTP_PROXIES env, split by comma
+        // Note: For sync constructor, we skip connectivity tests and just add all configured proxies
+        if let Ok(proxy_urls) = std::env::var("HTTP_PROXIES") {
+            for proxy_url in proxy_urls.split(',') {
+                let proxy_url = proxy_url.trim();
+                if !proxy_url.is_empty() {
+                    match proxy_url.parse::<isahc::http::Uri>() {
+                        Ok(proxy_uri) => {
+                            match HttpClient::builder()
+                                .proxy(Some(proxy_uri))
+                                .timeout(StdDuration::from_secs(30))
+                                .build()
+                            {
+                                Ok(client) => {
+                                    clients.push(client);
+                                    eprintln!("✅ Added proxy: {} (connectivity: skip - sync mode)", proxy_url);
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Failed to create client for proxy {}: {}", proxy_url, e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("❌ Invalid proxy URL {}: {}", proxy_url, e);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Log initialization summary
+        if !direct_connection {
+            eprintln!("📊 VciClient initialized with {} proxy-only client(s)",
+                      clients.len());
+        } else {
+            eprintln!("📊 VciClient initialized with {} client(s) (1 direct + {} proxies)",
+                      clients.len(), clients.len().saturating_sub(1));
+        }
+
+        let user_agents = vec![
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".to_string(),
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".to_string(),
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0".to_string(),
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15".to_string(),
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0".to_string(),
+        ];
+
+        let mut resample_map = HashMap::new();
+        resample_map.insert("1W".to_string(), "1W".to_string());
+        resample_map.insert("1M".to_string(), "1M".to_string());
+
+        Ok(VciClient {
+            clients,
+            base_url: "https://trading.vietcap.com.vn/api/".to_string(),
+            rate_limit_per_minute,
+            request_timestamps: Vec::new(),
+            user_agents,
+            random_agent,
+            resample_map,
+            shared_rate_limiter,
+            direct_connection,
         })
     }
 
@@ -256,97 +505,141 @@ impl VciClient {
 
     async fn make_request(&mut self, url: &str, payload: &Value) -> Result<Value, VciError> {
         const MAX_RETRIES: u32 = 5;
+
+        // 1. Get randomized indices for load balancing
+        let mut indices: Vec<usize> = (0..self.clients.len()).collect();
+        use rand::seq::SliceRandom;
+        indices.shuffle(&mut rand::thread_rng());
+
+        // 2. Try each client until one succeeds
         let mut last_error: Option<String> = None;
 
-        for attempt in 0..MAX_RETRIES {
-            self.enforce_rate_limit().await;
+        for (client_idx, &client_index) in indices.iter().enumerate() {
+            let client = self.clients[client_index].clone();
 
-            if attempt > 0 {
-                let delay = StdDuration::from_secs_f64(2.0_f64.powi(attempt as i32 - 1) + rand::random::<f64>());
-                let delay = delay.min(StdDuration::from_secs(60));
-                let reason = last_error.as_deref().unwrap_or("unknown error");
-                tracing::info!("VCI API retry backoff: attempt {}/{} - reason: {}, waiting {:.1}s before retry",
-                    attempt + 1, MAX_RETRIES, reason, delay.as_secs_f64());
-                sleep(delay).await;
-            }
+            // Determine label: check if this is direct connection or proxy
+            let label = if client_index == 0 && self.direct_connection {
+                "direct".to_string()
+            } else if client_index == 0 && !self.direct_connection {
+                "proxy-1".to_string()  // Only client is a proxy (proxy-only mode)
+            } else {
+                format!("proxy-{}", client_index)
+            };
 
-            let user_agent = self.get_user_agent();
+            // 3. Retry logic for this client (existing logic)
+            for attempt in 0..MAX_RETRIES {
+                self.enforce_rate_limit().await;
 
-            // Log the exact request details
-            tracing::debug!(
-                "VCI_MAKE_REQUEST: attempt={}, url={}, payload_size={}, headers_count=12",
-                attempt + 1,
-                url,
-                serde_json::to_string(payload).unwrap_or_default().len()
-            );
-            tracing::debug!(
-                "VCI_MAKE_REQUEST_DEBUG: url={}, payload={}",
-                url,
-                serde_json::to_string_pretty(payload).unwrap_or_default()
-            );
+                if attempt > 0 {
+                    let delay = StdDuration::from_secs_f64(2.0_f64.powi(attempt as i32 - 1) + rand::random::<f64>());
+                    let delay = delay.min(StdDuration::from_secs(60));
+                    let reason = last_error.as_deref().unwrap_or("unknown error");
+                    tracing::info!("VCI API retry backoff via {}: attempt {}/{} - reason: {}, waiting {:.1}s before retry",
+                        label, attempt + 1, MAX_RETRIES, reason, delay.as_secs_f64());
+                    sleep(delay).await;
+                }
 
-            let response = self.client
-                .post(url)
-                .header("Accept", "application/json, text/plain, */*")
-                .header("Accept-Language", "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7")
-                .header("Accept-Encoding", "gzip, deflate, br")
-                .header("Connection", "keep-alive")
-                .header("Content-Type", "application/json")
-                .header("Cache-Control", "no-cache")
-                .header("Pragma", "no-cache")
-                .header("DNT", "1")
-                .header("Sec-Fetch-Dest", "empty")
-                .header("Sec-Fetch-Mode", "cors")
-                .header("Sec-Fetch-Site", "same-site")
-                .header("sec-ch-ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
-                .header("sec-ch-ua-mobile", "?0")
-                .header("sec-ch-ua-platform", "\"Windows\"")
-                .header("User-Agent", user_agent)
-                .header("Referer", "https://trading.vietcap.com.vn/")
-                .header("Origin", "https://trading.vietcap.com.vn")
-                .json(payload)
-                .send()
-                .await;
+                let user_agent = self.get_user_agent();
+                let body = serde_json::to_string(payload)?;
 
-            match response {
-                Ok(resp) => {
-                    let status = resp.status();
+                // Log the exact request details
+                tracing::debug!(
+                    "VCI_MAKE_REQUEST: attempt={}, url={}, payload_size={}, headers_count=12, client={}",
+                    attempt + 1,
+                    url,
+                    body.len(),
+                    label
+                );
+                tracing::debug!(
+                    "VCI_MAKE_REQUEST_DEBUG: url={}, payload={}",
+                    url,
+                    serde_json::to_string_pretty(payload).unwrap_or_default()
+                );
 
-                    if status.is_success() {
-                        match resp.json::<Value>().await {
-                            Ok(data) => return Ok(data),
-                            Err(e) => {
-                                last_error = Some(format!("JSON parse error: {}", e));
+                // Build request with all headers using isahc Request builder
+                let request = isahc::Request::builder()
+                    .uri(url)
+                    .method("POST")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .header("Accept-Language", "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7")
+                    .header("Accept-Encoding", "gzip, deflate, br")
+                    .header("Connection", "keep-alive")
+                    .header("Content-Type", "application/json")
+                    .header("Cache-Control", "no-cache")
+                    .header("Pragma", "no-cache")
+                    .header("DNT", "1")
+                    .header("Sec-Fetch-Dest", "empty")
+                    .header("Sec-Fetch-Mode", "cors")
+                    .header("Sec-Fetch-Site", "same-site")
+                    .header("sec-ch-ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
+                    .header("sec-ch-ua-mobile", "?0")
+                    .header("sec-ch-ua-platform", "\"Windows\"")
+                    .header("User-Agent", &user_agent)
+                    .header("Referer", "https://trading.vietcap.com.vn/")
+                    .header("Origin", "https://trading.vietcap.com.vn")
+                    .body(body)
+                    .map_err(|e| VciError::InvalidResponse(format!("Request build error: {}", e)))?;
+
+                let response = client.send_async(request).await;
+
+                match response {
+                    Ok(mut resp) => {
+                        let status = resp.status();
+
+                        if status.is_success() {
+                            match resp.text().await {
+                                Ok(text) => {
+                                    match serde_json::from_str::<Value>(&text) {
+                                        Ok(data) => {
+                                            eprintln!("✅ Request succeeded via {} (attempt {}/{})", label, client_idx + 1, indices.len());
+                                            return Ok(data);
+                                        }
+                                        Err(e) => {
+                                            last_error = Some(format!("JSON parse error: {}", e));
+                                            continue;
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    last_error = Some(format!("Response body error: {}", e));
+                                    continue;
+                                }
+                            }
+                        } else {
+                            let status_text = status.canonical_reason().unwrap_or("Unknown");
+                            if status == 403 {
+                                last_error = Some(format!("Forbidden (403) - rate limit or auth issue"));
+                                continue;
+                            } else if status == 429 {
+                                last_error = Some(format!("Too Many Requests (429) - rate limited"));
+                                continue;
+                            } else if status.is_server_error() {
+                                last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
+                                continue;
+                            } else if status.is_client_error() {
+                                // Don't try other clients for client errors (4xx) - these are request problems
+                                return Err(VciError::InvalidResponse(format!("Client error ({}) - {} - not retryable", status.as_u16(), status_text)));
+                            } else {
+                                last_error = Some(format!("HTTP error ({}) - {}", status.as_u16(), status_text));
                                 continue;
                             }
                         }
-                    } else {
-                        let status_text = status.canonical_reason().unwrap_or("Unknown");
-                        if status == 403 {
-                            last_error = Some(format!("Forbidden (403) - rate limit or auth issue"));
-                            continue;
-                        } else if status == 429 {
-                            last_error = Some(format!("Too Many Requests (429) - rate limited"));
-                            continue;
-                        } else if status.is_server_error() {
-                            last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
-                            continue;
-                        } else if status.is_client_error() {
-                            return Err(VciError::InvalidResponse(format!("Client error ({}) - {} - not retryable", status.as_u16(), status_text)));
-                        } else {
-                            last_error = Some(format!("HTTP error ({}) - {}", status.as_u16(), status_text));
-                            continue;
-                        }
+                    }
+                    Err(e) => {
+                        last_error = Some(format!("Network error: {}", e));
+                        continue;
                     }
                 }
-                Err(e) => {
-                    last_error = Some(format!("Network error: {}", e));
-                    continue;
-                }
+            }
+
+            // Log that we're trying next client
+            if client_idx < indices.len() - 1 {
+                eprintln!("⚠️ Client {} failed, trying next client...", label);
             }
         }
 
-        Err(VciError::InvalidResponse("Max retries exceeded".to_string()))
+        // All clients failed
+        Err(VciError::InvalidResponse("Max retries exceeded - all clients failed".to_string()))
     }
 
     pub fn calculate_timestamp(&self, date_str: Option<&str>) -> i64 {
@@ -1099,13 +1392,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_vci_client_creation() {
-        let client = VciClient::new(true, 6);
+        let client = VciClient::new_async(true, 6, None).await;
         assert!(client.is_ok());
     }
 
     #[tokio::test]
     async fn test_interval_mapping() {
-        let client = VciClient::new(false, 6).unwrap();
+        let client = VciClient::new_async(false, 6, None).await.unwrap();
         assert_eq!(client.get_interval_value("1D").unwrap(), "ONE_DAY");
         assert_eq!(client.get_interval_value("1H").unwrap(), "ONE_HOUR");
         assert!(client.get_interval_value("invalid").is_err());

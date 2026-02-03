@@ -86,7 +86,8 @@ pub fn run(tickers: Option<Vec<String>>, force: bool, cache_days: Option<i64>) {
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
 
     let result = rt.block_on(async {
-        let mut vci_client = VciClient::new(true, 60)
+        let mut vci_client = VciClient::new_async(true, 60, None)
+            .await
             .expect("Failed to create VCI client");
         println!("   ✅ VCI client: 60 calls/minute");
 

@@ -128,7 +128,7 @@ fn run_sync(config: SyncConfig, debug: bool) -> Result<(), Error> {
 
     // Run async sync
     runtime.block_on(async {
-        let mut sync = DataSync::new(config)?;
+        let mut sync = DataSync::new_async(config).await?;
         sync.sync_all_intervals(debug).await
     })
 }
