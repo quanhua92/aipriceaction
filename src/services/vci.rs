@@ -171,6 +171,34 @@ impl SharedRateLimiter {
     }
 }
 
+/// Sanitize proxy URL for logging (removes credentials)
+fn sanitize_proxy_url(proxy_url: &str) -> String {
+    match proxy_url.parse::<isahc::http::Uri>() {
+        Ok(uri) => {
+            let scheme = uri.scheme_str().unwrap_or("unknown");
+            let host = uri.host().unwrap_or("unknown");
+            let port = uri.port_u16().map_or(String::new(), |p| format!(":{}", p));
+            format!("{}://{}{}", scheme, host, port)
+        }
+        Err(_) => {
+            // If parsing fails, return a masked version
+            if let Some(at_pos) = proxy_url.find('@') {
+                // Has credentials, mask them
+                if let Some(scheme_end) = proxy_url.find("://") {
+                    let scheme = &proxy_url[..scheme_end + 3];
+                    let after_at = &proxy_url[at_pos + 1..];
+                    format!("{}:***@{}", scheme, after_at)
+                } else {
+                    "***@***".to_string()
+                }
+            } else {
+                // No credentials, return as-is (already safe)
+                proxy_url.to_string()
+            }
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct VciClient {
     clients: Vec<HttpClient>,
@@ -248,19 +276,19 @@ impl VciClient {
                                 {
                                     Ok(client) => {
                                         clients.push(client);
-                                        eprintln!("✅ Added proxy: {}", proxy_url);
+                                        eprintln!("✅ Added proxy: {}", sanitize_proxy_url(proxy_url));
                                     }
                                     Err(e) => {
-                                        eprintln!("❌ Failed to create client for proxy {}: {}", proxy_url, e);
+                                        eprintln!("❌ Failed to create client for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
                                     }
                                 }
                             }
                             Err(e) => {
-                                eprintln!("❌ Failed to parse proxy URL {}: {}", proxy_url, e);
+                                eprintln!("❌ Failed to parse proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
                             }
                         }
                     } else {
-                        eprintln!("❌ Skipped proxy: {} (connectivity test failed)", proxy_url);
+                        eprintln!("❌ Skipped proxy: {} (connectivity test failed)", sanitize_proxy_url(proxy_url));
                     }
                 }
             }
@@ -302,7 +330,7 @@ impl VciClient {
 
     /// Test a proxy URL by connecting to httpbin.org (async)
     async fn test_proxy_url(proxy_url: &str) -> bool {
-        eprintln!("🔍 Testing proxy: {}", proxy_url);
+        eprintln!("🔍 Testing proxy: {}", sanitize_proxy_url(proxy_url));
 
         // Parse the proxy URL to isahc::http::Uri
         let proxy_uri = match proxy_url.parse() {
@@ -399,15 +427,15 @@ impl VciClient {
                             {
                                 Ok(client) => {
                                     clients.push(client);
-                                    eprintln!("✅ Added proxy: {} (connectivity: skip - sync mode)", proxy_url);
+                                    eprintln!("✅ Added proxy: {} (connectivity: skip - sync mode)", sanitize_proxy_url(proxy_url));
                                 }
                                 Err(e) => {
-                                    eprintln!("❌ Failed to create client for proxy {}: {}", proxy_url, e);
+                                    eprintln!("❌ Failed to create client for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
                                 }
                             }
                         }
                         Err(e) => {
-                            eprintln!("❌ Invalid proxy URL {}: {}", proxy_url, e);
+                            eprintln!("❌ Invalid proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
                         }
                     }
                 }
