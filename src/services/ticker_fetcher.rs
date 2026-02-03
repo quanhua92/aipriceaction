@@ -429,9 +429,12 @@ impl TickerFetcher {
 
                         match api_result {
                             Ok(batch_data) => {
-                                // Debug: show what data the API returned
-                                println!("[DEBUG] Batch API returned data for {} tickers out of {} requested",
-                                    batch_data.len(), ticker_batch.len());
+                                // Count actual data returned (not just HashMap entries)
+                                let with_data = batch_data.values().filter(|v| v.is_some() && v.as_ref().map(|d| !d.is_empty()).unwrap_or(false)).count();
+                                let with_none = batch_data.values().filter(|v| v.is_none() || v.as_ref().map(|d| d.is_empty()).unwrap_or(true)).count();
+
+                                println!("[DEBUG] Batch API returned: {} with data, {} None/empty (total: {} requested)",
+                                    with_data, with_none, ticker_batch.len());
 
                                 // Debug: show first ticker's data structure
                                 if let Some(first_ticker) = ticker_batch.first() {

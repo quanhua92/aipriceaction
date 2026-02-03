@@ -158,9 +158,6 @@ pub const FULL_RELOAD_INTERVAL_SECS: i64 = FULL_RELOAD_INTERVAL_HOURS * 3600;
 pub const FULL_RELOAD_INITIAL_DELAY_SECS: i64 = 1800;
 
 /// VCI API Batch Size Configuration
-///
-/// VCI API blocks requests with 2+ tickers per batch.
-/// Only batch_size=1 works reliably.
 pub const VCI_BATCH_SIZE_DAILY: usize = 1;
 pub const VCI_BATCH_SIZE_HOURLY: usize = 1;
 pub const VCI_BATCH_SIZE_MINUTE: usize = 1;
