@@ -2,7 +2,7 @@ use crate::constants::BATCH_FAILURE_THRESHOLD_MINUTES;
 use crate::error::Error;
 use crate::models::{Interval, SyncConfig, FetchProgress, SyncStats, TickerGroups};
 use crate::services::ticker_fetcher::TickerFetcher;
-use crate::services::vci::OhlcvData;
+use crate::services::vci::{OhlcvData, SharedRateLimiter};
 use crate::services::csv_enhancer::{enhance_data, save_enhanced_csv_with_changes};
 use crate::services::mpsc::{TickerUpdate, ChangeType};
 use crate::utils::{get_market_data_dir, parse_timestamp, format_date};
@@ -10,6 +10,7 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 use std::time::Instant;
 use tracing;
@@ -25,12 +26,15 @@ pub struct DataSync {
     batch_failure_times: HashMap<Interval, Option<DateTime<Utc>>>,
     /// Optional MPSC channel sender for real-time ticker updates
     channel_sender: Option<SyncSender<TickerUpdate>>,
+    /// Global shared rate limiter for all VCI API calls
+    shared_rate_limiter: Arc<SharedRateLimiter>,
 }
 
 impl DataSync {
     /// Create new data sync orchestrator
     pub fn new(config: SyncConfig) -> Result<Self, Error> {
-        let fetcher = TickerFetcher::new()?;
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let fetcher = TickerFetcher::with_shared_rate_limiter(shared_rate_limiter.clone())?;
 
         Ok(Self {
             config,
@@ -38,6 +42,7 @@ impl DataSync {
             stats: SyncStats::new(),
             batch_failure_times: HashMap::new(),
             channel_sender: None,
+            shared_rate_limiter,
         })
     }
 
@@ -46,7 +51,8 @@ impl DataSync {
         config: SyncConfig,
         channel_sender: Option<SyncSender<TickerUpdate>>,
     ) -> Result<Self, Error> {
-        let fetcher = TickerFetcher::new()?;
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let fetcher = TickerFetcher::with_shared_rate_limiter(shared_rate_limiter.clone())?;
 
         Ok(Self {
             config,
@@ -54,6 +60,7 @@ impl DataSync {
             stats: SyncStats::new(),
             batch_failure_times: HashMap::new(),
             channel_sender,
+            shared_rate_limiter,
         })
     }
 

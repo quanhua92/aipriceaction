@@ -2,7 +2,9 @@ use reqwest::{Client, Error as ReqwestError};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::{Duration as StdDuration, SystemTime};
+use tokio::sync::Mutex as TokioMutex;
 use tokio::time::sleep;
 use chrono::{DateTime, Duration as ChronoDuration, NaiveDate, Utc, Weekday, TimeZone, Datelike};
 
@@ -90,19 +92,85 @@ pub struct FinancialRatio {
     pub eps: Option<f64>,
 }
 
+/// Shared rate limiter for VCI API requests across all concurrent tasks
+#[derive(Debug)]
+pub struct SharedRateLimiter {
+    /// Timestamps of recent requests (sliding window)
+    request_timestamps: TokioMutex<Vec<SystemTime>>,
+    /// Maximum requests allowed per minute
+    rate_limit_per_minute: u32,
+}
+
+impl SharedRateLimiter {
+    /// Create a new shared rate limiter
+    pub fn new(rate_limit_per_minute: u32) -> Self {
+        Self {
+            request_timestamps: TokioMutex::new(Vec::new()),
+            rate_limit_per_minute,
+        }
+    }
+
+    /// Enforce rate limiting using sliding window algorithm
+    /// This method is async-safe and can be called from multiple concurrent tasks
+    pub async fn enforce_rate_limit(&self) {
+        let current_time = SystemTime::now();
+        let mut timestamps = self.request_timestamps.lock().await;
+
+        // Remove timestamps older than 1 minute
+        timestamps.retain(|&timestamp| {
+            current_time.duration_since(timestamp)
+                .unwrap_or(StdDuration::from_secs(0))
+                < StdDuration::from_secs(60)
+        });
+
+        // If at rate limit, wait until oldest request expires
+        if timestamps.len() >= self.rate_limit_per_minute as usize {
+            if let Some(&oldest_request) = timestamps.first() {
+                let wait_time = StdDuration::from_secs(60)
+                    - current_time.duration_since(oldest_request)
+                        .unwrap_or(StdDuration::from_secs(0));
+
+                if !wait_time.is_zero() {
+                    // Drop lock before sleeping to allow other tasks to check rate limit
+                    drop(timestamps);
+                    sleep(wait_time + StdDuration::from_millis(100)).await;
+                    // Re-acquire lock to add timestamp
+                    let mut timestamps = self.request_timestamps.lock().await;
+                    timestamps.push(current_time);
+                } else {
+                    timestamps.push(current_time);
+                }
+            }
+        } else {
+            timestamps.push(current_time);
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct VciClient {
     client: Client,
     base_url: String,
     rate_limit_per_minute: u32,
-    request_timestamps: Vec<SystemTime>,
+    request_timestamps: Vec<SystemTime>,  // Keep for backward compatibility
     user_agents: Vec<String>,
     random_agent: bool,
     resample_map: HashMap<String, String>,
+    /// Optional shared rate limiter (if None, uses per-instance rate limiting)
+    shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
 }
 
 impl VciClient {
     pub fn new(random_agent: bool, rate_limit_per_minute: u32) -> Result<Self, VciError> {
+        Self::with_shared_rate_limiter(random_agent, rate_limit_per_minute, None)
+    }
+
+    /// Create VCI client with optional shared rate limiter
+    pub fn with_shared_rate_limiter(
+        random_agent: bool,
+        rate_limit_per_minute: u32,
+        shared_rate_limiter: Option<Arc<SharedRateLimiter>>,
+    ) -> Result<Self, VciError> {
         let client = Client::builder()
             .timeout(StdDuration::from_secs(30))
             .build()?;
@@ -127,6 +195,7 @@ impl VciClient {
             user_agents,
             random_agent,
             resample_map,
+            shared_rate_limiter,
         })
     }
 
@@ -159,24 +228,30 @@ impl VciClient {
     }
 
     async fn enforce_rate_limit(&mut self) {
-        let current_time = SystemTime::now();
-        
-        // Remove timestamps older than 1 minute
-        self.request_timestamps.retain(|&timestamp| {
-            current_time.duration_since(timestamp).unwrap_or(StdDuration::from_secs(0)) < StdDuration::from_secs(60)
-        });
+        // Use shared rate limiter if available, otherwise use per-instance
+        if let Some(ref limiter) = self.shared_rate_limiter {
+            limiter.enforce_rate_limit().await;
+        } else {
+            // Original per-instance implementation (backward compatible)
+            let current_time = SystemTime::now();
 
-        // If we're at the rate limit, wait
-        if self.request_timestamps.len() >= self.rate_limit_per_minute as usize {
-            if let Some(&oldest_request) = self.request_timestamps.first() {
-                let wait_time = StdDuration::from_secs(60) - current_time.duration_since(oldest_request).unwrap_or(StdDuration::from_secs(0));
-                if !wait_time.is_zero() {
-                    sleep(wait_time + StdDuration::from_millis(100)).await;
+            // Remove timestamps older than 1 minute
+            self.request_timestamps.retain(|&timestamp| {
+                current_time.duration_since(timestamp).unwrap_or(StdDuration::from_secs(0)) < StdDuration::from_secs(60)
+            });
+
+            // If we're at the rate limit, wait
+            if self.request_timestamps.len() >= self.rate_limit_per_minute as usize {
+                if let Some(&oldest_request) = self.request_timestamps.first() {
+                    let wait_time = StdDuration::from_secs(60) - current_time.duration_since(oldest_request).unwrap_or(StdDuration::from_secs(0));
+                    if !wait_time.is_zero() {
+                        sleep(wait_time + StdDuration::from_millis(100)).await;
+                    }
                 }
             }
-        }
 
-        self.request_timestamps.push(current_time);
+            self.request_timestamps.push(current_time);
+        }
     }
 
     async fn make_request(&mut self, url: &str, payload: &Value) -> Result<Value, VciError> {
