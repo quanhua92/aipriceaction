@@ -174,8 +174,6 @@ impl TickerFetcher {
         tickers: &[String],
         interval: Interval,
     ) -> Result<TickerCategory, Error> {
-        println!("[DEBUG] categorize_tickers: tickers_count={}, interval={}", tickers.len(), interval.to_vci_format());
-
         info!(
             tickers_count = tickers.len(),
             interval = interval.to_vci_format(),
@@ -199,7 +197,6 @@ impl TickerFetcher {
 
             if !file_path.exists() {
                 if should_print {
-                    println!("[DEBUG] ticker={}, file does not exist", ticker);
                     debug!(ticker = ticker, file_path = ?file_path, "File does not exist - full history needed");
                 }
                 category.full_history_tickers.push(ticker.clone());
@@ -207,7 +204,7 @@ impl TickerFetcher {
                 // File exists - read last date and use resume mode
                 match self.read_last_date(&file_path) {
                     Ok(Some(last_date)) => {
-                        println!("[DEBUG] ticker={}, last_date={}", ticker, last_date);
+                        debug!(ticker = ticker, last_date = %last_date, "Resume from date");
                         // Skip stale tickers for minute interval (likely delisted/suspended)
                         if interval == Interval::Minute {
                             use chrono::NaiveDate;
@@ -295,13 +292,6 @@ impl TickerFetcher {
               interval = interval.to_vci_format(),
               "Categorization results");
 
-        println!("[DEBUG] Categorization summary: resume={}, full_history={}, partial={}, skipped={}",
-            category.resume_tickers.len(),
-            category.full_history_tickers.len(),
-            category.partial_history_tickers.len(),
-            category.skipped_stale_tickers.len()
-        );
-
         // Log details for each category if not empty
         if !category.partial_history_tickers.is_empty() {
             let threshold = match interval {
@@ -363,21 +353,22 @@ impl TickerFetcher {
         batch_size: usize,
         concurrent_batches: usize,
     ) -> Result<HashMap<String, Option<Vec<OhlcvData>>>, Error> {
-        println!("[DEBUG] batch_fetch called: tickers_count={}, start_date={}, end_date={}, batch_size={}",
-            tickers.len(), start_date, end_date, batch_size);
-
         if tickers.is_empty() {
-            println!("[DEBUG] batch_fetch: tickers is empty, returning empty HashMap");
+            debug!(interval = interval.to_vci_format(), "batch_fetch: tickers is empty, returning empty HashMap");
             return Ok(HashMap::new());
         }
 
         let concurrent_batches = concurrent_batches.max(1); // At least 1
 
-        info!(ticker_count = tickers.len(),
-              interval = interval.to_vci_format(),
-              batch_size = batch_size,
-              concurrent_batches = concurrent_batches,
-              "Processing batch of tickers using VCI batch history");
+        info!(
+            ticker_count = tickers.len(),
+            interval = interval.to_vci_format(),
+            start_date = %start_date,
+            end_date = %end_date,
+            batch_size = batch_size,
+            concurrent_batches = concurrent_batches,
+            "Processing batch of tickers using VCI batch history"
+        );
 
         let mut all_results = HashMap::new();
 
@@ -446,14 +437,22 @@ impl TickerFetcher {
                                 let with_data = batch_data.values().filter(|v| v.is_some() && v.as_ref().map(|d| !d.is_empty()).unwrap_or(false)).count();
                                 let with_none = batch_data.values().filter(|v| v.is_none() || v.as_ref().map(|d| d.is_empty()).unwrap_or(true)).count();
 
-                                println!("[DEBUG] Batch API returned: {} with data, {} None/empty (total: {} requested)",
-                                    with_data, with_none, ticker_batch.len());
+                                debug!(
+                                    batch_num = batch_idx + 1,
+                                    with_data = with_data,
+                                    with_none = with_none,
+                                    requested = ticker_batch.len(),
+                                    "Batch API returned data"
+                                );
 
                                 // Debug: show first ticker's data structure
                                 if let Some(first_ticker) = ticker_batch.first() {
                                     if let Some(data) = batch_data.get(first_ticker) {
-                                        println!("[DEBUG] First ticker ({}) data: {:?}", first_ticker,
-                                            data.as_ref().map(|d| d.len()));
+                                        debug!(
+                                            ticker = %first_ticker,
+                                            record_count = data.as_ref().map(|d| d.len()).unwrap_or(0),
+                                            "First ticker data"
+                                        );
                                     }
                                 }
 

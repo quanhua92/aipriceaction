@@ -534,6 +534,31 @@ impl VciClient {
     async fn make_request(&mut self, url: &str, payload: &Value) -> Result<Value, VciError> {
         const MAX_RETRIES: u32 = 5;
 
+        // Extract ticker(s) from payload for logging (VCI API uses "symbols" field)
+        let tickers: Vec<String> = payload
+            .get("symbols")
+            .and_then(|v| {
+                if v.is_array() {
+                    v.as_array().map(|arr| arr.iter().filter_map(|v| v.as_str()).map(String::from).collect())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
+
+        let ticker_display = if tickers.is_empty() {
+            "unknown".to_string()
+        } else if tickers.len() == 1 {
+            tickers[0].clone()
+        } else {
+            format!("{} tickers", tickers.len())
+        };
+
+        // Extract interval from payload for logging (VCI API uses "timeFrame" field)
+        let interval = payload.get("timeFrame")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown");
+
         // 1. Get randomized indices for load balancing
         let mut indices: Vec<usize> = (0..self.clients.len()).collect();
         use rand::seq::SliceRandom;
@@ -619,7 +644,15 @@ impl VciClient {
                                 Ok(text) => {
                                     match serde_json::from_str::<Value>(&text) {
                                         Ok(data) => {
-                                            eprintln!("✅ Request succeeded via {} (attempt {}/{})", label, client_idx + 1, indices.len());
+                                            tracing::info!(
+                                                ticker = %ticker_display,
+                                                interval = %interval,
+                                                via = %label,
+                                                attempt = client_idx + 1,
+                                                total_attempts = indices.len(),
+                                                "✅ Request succeeded via {} (attempt {}/{})",
+                                                label, client_idx + 1, indices.len()
+                                            );
                                             return Ok(data);
                                         }
                                         Err(e) => {
@@ -662,7 +695,14 @@ impl VciClient {
 
             // Log that we're trying next client
             if client_idx < indices.len() - 1 {
-                eprintln!("⚠️ Client {} failed, trying next client...", label);
+                tracing::warn!(
+                    ticker = %ticker_display,
+                    interval = %interval,
+                    via = %label,
+                    next_client = client_idx + 2,
+                    total_clients = indices.len(),
+                    "⚠️ Client {} failed, trying next client...", label
+                );
             }
         }
 

@@ -13,9 +13,35 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::SyncSender;
 use std::time::Instant;
-use tracing;
+use tracing::debug;
 
 const TICKER_GROUP_FILE: &str = "ticker_group.json";
+const BASE_RATE_LIMIT_PER_MINUTE: u32 = 60;
+
+/// Calculate rate limit based on number of proxies
+/// Each client (direct + each proxy) can handle BASE_RATE_LIMIT_PER_MINUTE requests
+fn calculate_rate_limit() -> u32 {
+    // Count proxies from HTTP_PROXIES env var
+    let proxy_count = if let Ok(proxy_urls) = std::env::var("HTTP_PROXIES") {
+        proxy_urls
+            .split(',')
+            .filter(|s| !s.trim().is_empty())
+            .count() as u32
+    } else {
+        0
+    };
+
+    // 1 direct connection + N proxies
+    let client_count = 1 + proxy_count;
+    let rate_limit = client_count * BASE_RATE_LIMIT_PER_MINUTE;
+
+    if proxy_count > 0 {
+        eprintln!("📊 Rate limit: {} req/min (1 direct + {} proxies = {} clients × {} req/min)",
+            rate_limit, proxy_count, client_count, BASE_RATE_LIMIT_PER_MINUTE);
+    }
+
+    rate_limit
+}
 
 /// High-level data synchronization orchestrator
 pub struct DataSync {
@@ -33,7 +59,8 @@ pub struct DataSync {
 impl DataSync {
     /// Create new data sync orchestrator (async, tests proxies)
     pub async fn new_async(config: SyncConfig) -> Result<Self, Error> {
-        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let rate_limit = calculate_rate_limit();
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(rate_limit));
         let fetcher = TickerFetcher::with_shared_rate_limiter_async(shared_rate_limiter.clone()).await?;
 
         Ok(Self {
@@ -51,7 +78,8 @@ impl DataSync {
         config: SyncConfig,
         channel_sender: Option<SyncSender<TickerUpdate>>,
     ) -> Result<Self, Error> {
-        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let rate_limit = calculate_rate_limit();
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(rate_limit));
         let fetcher = TickerFetcher::with_shared_rate_limiter_async(shared_rate_limiter.clone()).await?;
 
         Ok(Self {
@@ -66,7 +94,8 @@ impl DataSync {
 
     /// Create new data sync orchestrator
     pub fn new(config: SyncConfig) -> Result<Self, Error> {
-        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let rate_limit = calculate_rate_limit();
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(rate_limit));
         let fetcher = TickerFetcher::with_shared_rate_limiter(shared_rate_limiter.clone())?;
 
         Ok(Self {
@@ -84,7 +113,8 @@ impl DataSync {
         config: SyncConfig,
         channel_sender: Option<SyncSender<TickerUpdate>>,
     ) -> Result<Self, Error> {
-        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(60));
+        let rate_limit = calculate_rate_limit();
+        let shared_rate_limiter = Arc::new(SharedRateLimiter::new(rate_limit));
         let fetcher = TickerFetcher::with_shared_rate_limiter(shared_rate_limiter.clone())?;
 
         Ok(Self {
@@ -160,16 +190,17 @@ impl DataSync {
     async fn sync_interval(&mut self, tickers: &[String], interval: Interval) -> Result<(), Error> {
         let interval_start_time = Instant::now();
 
-        println!("[DEBUG] sync_interval: interval={:?}, tickers_count={}", interval, tickers.len());
+        debug!(interval = ?interval, tickers_count = tickers.len(), "sync_interval: starting");
 
         // Categorize tickers (resume vs full history)
         let category = self.fetcher.categorize_tickers(tickers, interval)?;
 
-        println!("[DEBUG] categorize_tickers result: resume_tickers={}, full_history={}, partial_history={}, stale_skipped={}",
-            category.resume_tickers.len(),
-            category.full_history_tickers.len(),
-            category.partial_history_tickers.len(),
-            category.skipped_stale_tickers.len()
+        debug!(
+            resume_tickers = category.resume_tickers.len(),
+            full_history_tickers = category.full_history_tickers.len(),
+            partial_history_tickers = category.partial_history_tickers.len(),
+            stale_skipped = category.skipped_stale_tickers.len(),
+            "categorize_tickers result"
         );
 
         // Batch fetch resume tickers using adaptive date
@@ -189,7 +220,7 @@ impl DataSync {
                 None => self.config.get_effective_start_date(interval),
             };
 
-            println!("[DEBUG] fetch_start_date: {}, end_date: {}", fetch_start_date, self.config.end_date);
+            debug!(fetch_start_date = %fetch_start_date, end_date = %self.config.end_date, "Date range for batch fetch");
 
             // Calculate actual date range for dynamic batch sizing
             let date_range_days = {
@@ -204,7 +235,7 @@ impl DataSync {
             // Get dynamic batch size based on date range
             let dynamic_batch_size = self.config.get_dynamic_batch_size(interval, date_range_days);
 
-            println!("[DEBUG] Using batch_size={}, date_range_days={}", dynamic_batch_size, date_range_days);
+            debug!(batch_size = dynamic_batch_size, date_range_days = date_range_days, "Dynamic batch size calculated");
 
             self.fetcher
                 .batch_fetch(
@@ -220,25 +251,27 @@ impl DataSync {
             HashMap::new()
         };
 
-        println!("[DEBUG] resume_tickers count={}, first 3: {:?}",
-            category.resume_tickers.len(),
-            category.resume_tickers.iter().take(3).map(|(t, _)| t.clone()).collect::<Vec<_>>());
-        println!("[DEBUG] batch_fetch results count: {}", resume_results.len());
+        debug!(
+            resume_tickers_count = category.resume_tickers.len(),
+            first_3 = ?category.resume_tickers.iter().take(3).map(|(t, _)| t.clone()).collect::<Vec<_>>(),
+            batch_fetch_results_count = resume_results.len(),
+            "Batch fetch completed"
+        );
 
         // Check if VTO got data
         if let Some(vto_result) = resume_results.get("VTO") {
             match vto_result {
-                Some(data) => println!("[DEBUG] VTO got data: {} records", data.len()),
-                None => println!("[DEBUG] VTO got NONE (no data from API)"),
+                Some(data) => debug!(ticker = "VTO", record_count = data.len(), "VTO got data"),
+                None => debug!(ticker = "VTO", "VTO got NONE (no data from API)"),
             }
         } else {
-            println!("[DEBUG] VTO not in resume_results (unexpected!)");
+            debug!(ticker = "VTO", "VTO not in resume_results (unexpected!)");
         }
 
         // Count how many tickers got actual data vs None
         let with_data = resume_results.values().filter(|r| r.is_some() && r.as_ref().unwrap().len() > 0).count();
         let with_none = resume_results.values().filter(|r| r.is_none() || r.as_ref().unwrap().is_empty()).count();
-        println!("[DEBUG] Batch results summary: with_data={}, with_none/empty={}", with_data, with_none);
+        debug!(with_data = with_data, with_none_empty = with_none, "Batch results summary");
 
         // WARNING: If we got no data at all, this might indicate API blocking or no data available
         if with_data == 0 && !resume_results.is_empty() && !category.resume_tickers.is_empty() {
