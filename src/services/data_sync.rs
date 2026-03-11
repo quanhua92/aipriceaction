@@ -175,7 +175,10 @@ impl DataSync {
             // println!("📊 Interval: {} ({})", interval.to_vci_format(), self.interval_name(*interval));
             // println!("{}", "=".repeat(70));
 
-            self.sync_interval(&tickers, *interval).await?;
+            // Process tickers in chunks to avoid OOM
+            for chunk in tickers.chunks(crate::constants::TICKER_BATCH_SIZE) {
+                self.sync_interval(chunk, *interval).await?;
+            }
         }
 
         let total_time = start_time.elapsed();

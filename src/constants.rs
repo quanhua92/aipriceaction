@@ -162,3 +162,7 @@ pub const VCI_BATCH_SIZE_DAILY: usize = 1;
 pub const VCI_BATCH_SIZE_HOURLY: usize = 1;
 pub const VCI_BATCH_SIZE_MINUTE: usize = 1;
 
+/// Ticker batch size for processing sync (to avoid OOM)
+/// Process tickers in chunks instead of all at once
+pub const TICKER_BATCH_SIZE: usize = 10;
+
