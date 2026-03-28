@@ -39,6 +39,12 @@ pub enum Commands {
         /// Row limit per query (default: 100)
         #[arg(long, default_value = "100")]
         limit: i64,
+        /// Include unoptimized limit-only queries (no date range, slow on 1h/1m)
+        #[arg(long)]
+        with_raw: bool,
+        /// Include full-history queries (no limit, very slow on 1h/1m)
+        #[arg(long)]
+        with_all: bool,
     },
     /// Import CSV files from market_data directory into PostgreSQL
     Import {
@@ -180,6 +186,8 @@ pub fn run() {
             tickers,
             intervals,
             limit,
+            with_raw,
+            with_all,
         } => {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
@@ -215,19 +223,21 @@ pub fn run() {
 
                 for ticker in &ticker_list {
                     for interval in &interval_list {
-                        // ── Q1: Single ticker, limit only ──
-                        let label = "limit-only";
-                        let start = Instant::now();
-                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
-                            Ok(rows) => {
-                                let ms = start.elapsed().as_millis();
-                                tracing::info!(
-                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
-                                    label, ticker, interval, rows.len(), ms
-                                );
-                                results.push((ticker, interval, label, rows.len(), ms));
+                        // ── Q1: Single ticker, limit only (unoptimized — no date range) ──
+                        if with_raw {
+                            let label = "limit-only (raw)";
+                            let start = Instant::now();
+                            match q::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
+                                Ok(rows) => {
+                                    let ms = start.elapsed().as_millis();
+                                    tracing::info!(
+                                        "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                        label, ticker, interval, rows.len(), ms
+                                    );
+                                    results.push((ticker, interval, label, rows.len(), ms));
+                                }
+                                Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                             }
-                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                         }
 
                         // ── Q2: Date range (last 30 days) ──
@@ -235,7 +245,7 @@ pub fn run() {
                         let now = chrono::Utc::now();
                         let start_time = now - chrono::Duration::days(30);
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_range(
+                        match ohlcv::get_ohlcv_joined_range(
                             &pool, &source, ticker, interval,
                             Some(limit), Some(start_time), None,
                         ).await {
@@ -250,14 +260,10 @@ pub fn run() {
                             Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                         }
 
-                        // ── Q3: Date range (last 1 year) ──
-                        let label = "1y-range";
-                        let start_time = now - chrono::Duration::days(365);
+                        // ── Q3: Smart heuristic (progressive date-range) ──
+                        let label = "smart";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_range(
-                            &pool, &source, ticker, interval,
-                            Some(limit), Some(start_time), None,
-                        ).await {
+                        match ohlcv::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
                             Ok(rows) => {
                                 let ms = start.elapsed().as_millis();
                                 tracing::info!(
@@ -269,19 +275,21 @@ pub fn run() {
                             Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                         }
 
-                        // ── Q4: Full history (no limit) ──
-                        let label = "all-rows";
-                        let start = Instant::now();
-                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, None).await {
-                            Ok(rows) => {
-                                let ms = start.elapsed().as_millis();
-                                tracing::info!(
-                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
-                                    label, ticker, interval, rows.len(), ms
-                                );
-                                results.push((ticker, interval, label, rows.len(), ms));
+                        // ── Q5: Full history (no limit) ──
+                        if with_all {
+                            let label = "all-rows";
+                            let start = Instant::now();
+                            match q::get_ohlcv_joined(&pool, &source, ticker, interval, None).await {
+                                Ok(rows) => {
+                                    let ms = start.elapsed().as_millis();
+                                    tracing::info!(
+                                        "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                        label, ticker, interval, rows.len(), ms
+                                    );
+                                    results.push((ticker, interval, label, rows.len(), ms));
+                                }
+                                Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                             }
-                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
                         }
                     }
                 }
@@ -293,7 +301,7 @@ pub fn run() {
                     let start = Instant::now();
                     let mut total_rows = 0usize;
                     for ticker in &ticker_list {
-                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
+                        match ohlcv::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
                             Ok(rows) => total_rows += rows.len(),
                             Err(_) => {}
                         }
@@ -303,6 +311,134 @@ pub fn run() {
                         "  {:>14} | {:>6} | {} rows ({} tickers x {limit}) | {} ms",
                         label, interval, total_rows, ticker_list.len(), ms
                     );
+                }
+
+                // ── Edge cases (progressive range heuristic) ──
+                tracing::info!("{}", "─".repeat(80));
+                tracing::info!("Edge cases (range heuristic on VCB 1m):");
+
+                let ec_ticker = "VCB";
+                let ec_interval = "1m";
+                use chrono::Utc;
+
+                // EC1: Narrow 1-day range — should stay in 1 partition
+                {
+                    let label = "range=1d";
+                    let start = Instant::now();
+                    let s = Utc::now() - chrono::Duration::days(1);
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, Some(limit), Some(s), None).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC2: Range spanning year boundary (Dec 2025 → now) — crosses 2 partitions
+                {
+                    let label = "range=cross-year";
+                    let start = Instant::now();
+                    let s = chrono::NaiveDate::from_ymd_opt(2025, 12, 1).unwrap().and_hms_opt(0,0,0).unwrap().and_utc();
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, Some(limit), Some(s), None).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC3: Very broad 2-year range — heuristic should clamp to narrow window
+                {
+                    let label = "range=2y";
+                    let start = Instant::now();
+                    let s = Utc::now() - chrono::Duration::days(730);
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, Some(limit), Some(s), None).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC4: Range entirely in the past (2024 Q1) — heuristic expands from end_time
+                {
+                    let label = "range=past-2024";
+                    let start = Instant::now();
+                    let s = chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(0,0,0).unwrap().and_utc();
+                    let e = chrono::NaiveDate::from_ymd_opt(2024, 3, 31).unwrap().and_hms_opt(23,59,59).unwrap().and_utc();
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, Some(limit), Some(s), Some(e)).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC4b: Broad historical range (2022-2024) — tests 730d window expansion
+                {
+                    let label = "range=2022-2024";
+                    let start = Instant::now();
+                    let s = chrono::NaiveDate::from_ymd_opt(2022, 1, 1).unwrap().and_hms_opt(0,0,0).unwrap().and_utc();
+                    let e = chrono::NaiveDate::from_ymd_opt(2024, 12, 31).unwrap().and_hms_opt(23,59,59).unwrap().and_utc();
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, Some(limit), Some(s), Some(e)).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC5: No limit with a range — heuristic should NOT activate
+                {
+                    let label = "range=30d, no-limit";
+                    let start = Instant::now();
+                    let s = Utc::now() - chrono::Duration::days(30);
+                    match ohlcv::get_ohlcv_joined_range(&pool, &source, ec_ticker, ec_interval, None, Some(s), None).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC6: Small limit (5 rows) — should resolve on first 30d window
+                {
+                    let label = "smart, limit=5";
+                    let start = Instant::now();
+                    match ohlcv::get_ohlcv_joined(&pool, &source, ec_ticker, ec_interval, Some(5)).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push((ec_ticker, ec_interval, label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
+                }
+
+                // EC7: Large limit (10000) on 1h — may need window expansion
+                {
+                    let label = "smart, limit=10k";
+                    let start = Instant::now();
+                    match ohlcv::get_ohlcv_joined(&pool, &source, "VCB", "1h", Some(10000)).await {
+                        Ok(rows) => {
+                            let ms = start.elapsed().as_millis();
+                            tracing::info!("  {:>16} | {} rows | {} ms", label, rows.len(), ms);
+                            results.push(("VCB", "1h", label, rows.len(), ms));
+                        }
+                        Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                    }
                 }
 
                 // ── Summary ──

@@ -1,3 +1,4 @@
+use chrono::{Duration, Utc};
 use sqlx::PgPool;
 
 use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
@@ -51,6 +52,14 @@ pub async fn get_indicators(
 }
 
 /// Get joined OHLCV + indicators matching the 20-column CSV format.
+///
+/// For `1h` and `1m` intervals without an explicit date range, uses a
+/// progressive date-range heuristic: queries a small window first, then
+/// expands until enough rows are collected. This enables PostgreSQL
+/// partition pruning and avoids expensive merge-sorts across year partitions.
+///
+/// For `1D` (no sub-partitions) or when no limit is requested, delegates
+/// directly to the simple query.
 pub async fn get_ohlcv_joined(
     pool: &PgPool,
     source: &str,
@@ -58,7 +67,91 @@ pub async fn get_ohlcv_joined(
     interval: &str,
     limit: Option<i64>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
+    if matches!(interval, "1h" | "1m") && limit.is_some() {
+        return progressive_query(pool, source, ticker, interval, limit, None, None).await;
+    }
     ohlcv::get_ohlcv_joined(pool, source, ticker, interval, limit).await
+}
+
+/// Get joined OHLCV + indicators with optional date range.
+///
+/// When a broad range + limit is provided for `1h`/`1m` intervals, uses
+/// progressive window expansion (clamped to the user's original bounds)
+/// to enable partition pruning.
+pub async fn get_ohlcv_joined_range(
+    pool: &PgPool,
+    source: &str,
+    ticker: &str,
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> sqlx::Result<Vec<OhlcvJoined>> {
+    if matches!(interval, "1h" | "1m") && limit.is_some() {
+        return progressive_query(pool, source, ticker, interval, limit, start_time, end_time).await;
+    }
+    ohlcv::get_ohlcv_joined_range(pool, source, ticker, interval, limit, start_time, end_time).await
+}
+
+/// Progressive date-range expansion for `1h`/`1m` intervals.
+///
+/// Starts with a narrow window anchored to `end_time` (defaults to now) and
+/// expands until `>= limit` rows are found. The window is clamped to the
+/// user's `[start_time, end_time]` bounds if provided.
+fn progressive_windows(
+    interval: &str,
+    end_time: chrono::DateTime<chrono::Utc>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> Vec<chrono::DateTime<chrono::Utc>> {
+    let windows: &[i64] = if interval == "1m" {
+        &[30, 90, 365, 730]
+    } else {
+        &[30, 365]
+    };
+
+    windows
+        .iter()
+        .map(|&days| {
+            let w = end_time - Duration::days(days);
+            match start_time {
+                Some(s) if w < s => s,
+                _ => w,
+            }
+        })
+        .collect()
+}
+
+async fn progressive_query(
+    pool: &PgPool,
+    source: &str,
+    ticker: &str,
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> sqlx::Result<Vec<OhlcvJoined>> {
+    let want = limit.unwrap() as usize;
+    let end = end_time.unwrap_or_else(Utc::now);
+
+    for effective_start in progressive_windows(interval, end, start_time) {
+        // Skip if window is inverted (user range narrower than smallest window)
+        if effective_start >= end {
+            continue;
+        }
+
+        let rows = ohlcv::get_ohlcv_joined_range(
+            pool, source, ticker, interval,
+            Some(want as i64), Some(effective_start), end_time,
+        )
+        .await?;
+
+        if rows.len() >= want {
+            return Ok(rows);
+        }
+    }
+
+    // Fallback: use the user's original range (or no range if none given).
+    ohlcv::get_ohlcv_joined_range(pool, source, ticker, interval, limit, start_time, end_time).await
 }
 
 /// Count tickers for a source.
