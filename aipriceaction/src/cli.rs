@@ -103,7 +103,15 @@ pub fn run() {
                 };
 
                 tracing::info!("Starting server on {host}:{port}");
-                // TODO: wire up actual server with pool
+
+                let app = crate::server::create_app(pool);
+                let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
+                    .await
+                    .expect("Failed to bind to address");
+                tracing::info!("Listening on {host}:{port}");
+                axum::serve(listener, app)
+                    .await
+                    .expect("Server error");
             });
         }
         Commands::Status => {

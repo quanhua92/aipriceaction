@@ -14,3 +14,8 @@ sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio", "tls-rustls", "postgres", "chrono", "migrate", "json", "uuid", "macros"
 ] }
 csv = "1.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+axum = { version = "0.8.4", features = ["multipart"] }
+axum-extra = { version = "0.10.1", features = ["query"] }
+tower-http = { version = "0.6.2", features = ["cors", "compression-gzip", "compression-deflate", "compression-br", "timeout"] }
