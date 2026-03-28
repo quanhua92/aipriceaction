@@ -169,10 +169,13 @@ async fn native_tickers(
             }
         };
 
-        let mapped: Vec<StockDataResponse> = rows
+        let mut mapped: Vec<StockDataResponse> = rows
             .into_iter()
             .map(|r| map_ohlcv_to_response(r, is_daily, params.legacy, params.mode))
             .collect();
+
+        // DB returns newest first (DESC index scan), but API contract is oldest first
+        mapped.reverse();
 
         result.insert(symbol.clone(), mapped);
     }
@@ -244,11 +247,10 @@ async fn aggregated_tickers(
 
     for symbol in &symbols {
         if let Some(data) = enhanced.get(symbol) {
-            let trimmed: Vec<StockDataResponse> = data
+            let len = data.len();
+            let start = if len > limit as usize { len - limit as usize } else { 0 };
+            let trimmed: Vec<StockDataResponse> = data[start..]
                 .iter()
-                .rev() // data is sorted ascending, we want latest first
-                .take(limit as usize)
-                .rev() // put back to ascending order
                 .map(|d| map_aggregated_to_response(d, is_daily, params.legacy, params.mode))
                 .collect();
 

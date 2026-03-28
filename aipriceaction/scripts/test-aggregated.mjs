@@ -30,6 +30,17 @@ function assert(cond, label, detail) {
   else fail(label, detail);
 }
 
+function assertOldestFirst(rows, label) {
+  if (rows.length < 2) return;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i].time < rows[i - 1].time) {
+      fail(`${label}: row[${i}] time '${rows[i].time}' < row[${i-1}] time '${rows[i-1].time}' (not oldest-first)`);
+      return;
+    }
+  }
+  ok(`${label}: data is oldest-first (ASC)`);
+}
+
 async function fetchJSON(path) {
   const url = `${BASE_URL}${path}`;
   const start = performance.now();
@@ -78,6 +89,7 @@ async function testFiveMinute() {
   const minute = parseInt(r.time.split(":")[1], 10);
   assert(minute % 5 === 0, `minute aligned to 5 (${minute})`);
   ok("5-minute bucket alignment correct");
+  assertOldestFirst(body.VCB, "5m aggregated");
 }
 
 async function testFifteenMinute() {
@@ -90,6 +102,7 @@ async function testFifteenMinute() {
   const minute = parseInt(r.time.split(":")[1], 10);
   assert(minute % 15 === 0, `minute aligned to 15 (${minute})`);
   ok("15-minute bucket alignment correct");
+  assertOldestFirst(body.VCB, "15m aggregated");
 }
 
 async function testThirtyMinute() {
@@ -102,6 +115,7 @@ async function testThirtyMinute() {
   const minute = parseInt(r.time.split(":")[1], 10);
   assert(minute % 30 === 0, `minute aligned to 30 (${minute})`);
   ok("30-minute bucket alignment correct");
+  assertOldestFirst(body.VCB, "30m aggregated");
 }
 
 // ──────────────────────────────────────────────
@@ -125,6 +139,7 @@ async function testWeekly() {
   const date = new Date(r.time);
   assert(date.getDay() === 1, `time is Monday (got day ${date.getDay()})`);
   ok("weekly bucket starts on Monday");
+  assertOldestFirst(body.VCB, "1W aggregated");
 }
 
 async function testBiWeekly() {
@@ -136,6 +151,7 @@ async function testBiWeekly() {
   const r = body.VCB[0];
   assert(typeof r.close === "number", "close is number");
   ok("bi-weekly aggregation works");
+  assertOldestFirst(body.VCB, "2W aggregated");
 }
 
 async function testMonthly() {
@@ -151,6 +167,7 @@ async function testMonthly() {
   const date = new Date(r.time);
   assert(date.getDate() === 1, `time is 1st of month (got day ${date.getDate()})`);
   ok("monthly bucket starts on 1st");
+  assertOldestFirst(body.VCB, "1M aggregated");
 }
 
 // ──────────────────────────────────────────────
@@ -173,6 +190,8 @@ async function testAggregatedVsNative() {
     "same response fields",
     `agg: ${aggFields.join(",")} vs nat: ${natFields.join(",")}`,
   );
+  assertOldestFirst(nat.VCB, "1m native (comparison)");
+  assertOldestFirst(agg.VCB, "5m aggregated (comparison)");
 }
 
 // ──────────────────────────────────────────────
@@ -188,6 +207,8 @@ async function testMultiTickerAggregated() {
   assert("VCB" in body && "FPT" in body, "has both VCB and FPT");
   assert(body.VCB.length === 5, `VCB has 5 (got ${body.VCB.length})`);
   assert(body.FPT.length === 5, `FPT has 5 (got ${body.FPT.length})`);
+  assertOldestFirst(body.VCB, "15m multi VCB");
+  assertOldestFirst(body.FPT, "15m multi FPT");
 }
 
 async function testAggregatedLimit100() {
@@ -197,6 +218,7 @@ async function testAggregatedLimit100() {
   console.log(`\n── GET /tickers?interval=5m&limit=100 ── ${ms}ms`);
   assert(status === 200, "returns 200");
   assert(body.VCB.length === 100, `got 100 records (got ${body.VCB.length})`);
+  assertOldestFirst(body.VCB, "5m limit=100");
 }
 
 // ──────────────────────────────────────────────
@@ -222,6 +244,7 @@ async function testAggregatedDateRange() {
   } else {
     ok("no data in range (acceptable)");
   }
+  assertOldestFirst(body.VCB, "1W date-range");
 }
 
 // ──────────────────────────────────────────────
@@ -243,6 +266,11 @@ async function testAggregatedCsv() {
     assert(lines[i].startsWith("VCB,"), `row ${i} starts with VCB`);
   }
   ok("all rows have VCB ticker");
+  // Verify CSV data is oldest-first
+  const csvDates = lines.slice(1).map((l) => l.split(",")[1]);
+  for (let i = 1; i < csvDates.length; i++) {
+    assert(csvDates[i] >= csvDates[i - 1], `CSV row ${i+1} date >= row ${i} date (oldest-first)`);
+  }
 }
 
 async function testMonthlyCsv() {
@@ -254,6 +282,10 @@ async function testMonthlyCsv() {
   const lines = text.trim().split("\n");
   assert(lines.length === 4, `header + 3 rows (got ${lines.length} lines)`);
   ok("monthly CSV export works");
+  const csvDates = lines.slice(1).map((l) => l.split(",")[1]);
+  for (let i = 1; i < csvDates.length; i++) {
+    assert(csvDates[i] >= csvDates[i - 1], `monthly CSV row ${i+1} date >= row ${i} date`);
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -278,6 +310,7 @@ async function testAggregatedIndicators() {
   assert(typeof mid.ma50 === "number", `ma50 present at index 50 (got ${mid.ma50})`);
   assert(typeof mid.ma10_score === "number", `ma10_score present at index 50`);
   ok("MA indicators calculated on aggregated data");
+  assertOldestFirst(body.VCB, "1W indicators");
 }
 
 async function testAggregatedChangeIndicators() {
@@ -300,6 +333,7 @@ async function testAggregatedChangeIndicators() {
     `volume_changed present at index 1 (got ${second.volume_changed})`,
   );
   ok("change indicators calculated on aggregated data");
+  assertOldestFirst(body.VCB, "1W change indicators");
 }
 
 // ──────────────────────────────────────────────

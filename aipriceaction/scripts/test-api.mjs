@@ -27,6 +27,17 @@ function assert(cond, label, detail) {
   else fail(label, detail);
 }
 
+function assertOldestFirst(rows, label) {
+  if (rows.length < 2) return;
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i].time < rows[i - 1].time) {
+      fail(`${label}: row[${i}] time '${rows[i].time}' < row[${i-1}] time '${rows[i-1].time}' (not oldest-first)`);
+      return;
+    }
+  }
+  ok(`${label}: data is oldest-first (ASC)`);
+}
+
 async function fetchJSON(path, opts = {}) {
   const url = `${BASE_URL}${path}`;
   const start = performance.now();
@@ -73,6 +84,7 @@ async function testSingleTicker() {
   assert(typeof r.ma10 === "number" || r.ma10 === undefined, "ma10 present or undefined");
   assert(typeof r.ma10_score === "number" || r.ma10_score === undefined, "ma10_score present or undefined");
   assert(typeof r.close_changed === "number" || r.close_changed === undefined, "close_changed present or undefined");
+  assertOldestFirst(body.VCB, "daily native");
 }
 
 async function testMultipleTickers() {
@@ -84,6 +96,8 @@ async function testMultipleTickers() {
   assert("VCB" in body && "FPT" in body, "has both VCB and FPT keys");
   assert(body.VCB.length === 3, `VCB has 3 rows (got ${body.VCB.length})`);
   assert(body.FPT.length === 3, `FPT has 3 rows (got ${body.FPT.length})`);
+  assertOldestFirst(body.VCB, "minute native VCB");
+  assertOldestFirst(body.FPT, "minute native FPT");
 }
 
 async function testCsvFormat() {
@@ -101,6 +115,11 @@ async function testCsvFormat() {
   assert(lines.length === 3, `header + 2 rows (got ${lines.length} lines)`);
   for (let i = 1; i < lines.length; i++) {
     assert(lines[i].startsWith("VCB,"), `row ${i} starts with VCB`);
+  }
+  // Verify CSV data is oldest-first
+  const csvDates = lines.slice(1).map((l) => l.split(",")[1]);
+  for (let i = 1; i < csvDates.length; i++) {
+    assert(csvDates[i] >= csvDates[i - 1], `CSV row ${i+1} date >= row ${i} date (oldest-first)`);
   }
 }
 
@@ -133,6 +152,7 @@ async function testDateRange() {
   for (const d of dates) {
     assert(d >= "2025-01-01" && d <= "2025-03-01", `date in range (${d})`);
   }
+  assertOldestFirst(rows, "daily date-range");
 }
 
 async function testHourlyTimeFormat() {
@@ -145,6 +165,7 @@ async function testHourlyTimeFormat() {
     r.time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
     `hourly time format YYYY-MM-DD HH:MM:SS (got '${r.time}')`,
   );
+  assertOldestFirst(body.VCB, "hourly native");
 }
 
 async function testMinuteTimeFormat() {
@@ -157,6 +178,7 @@ async function testMinuteTimeFormat() {
     r.time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
     `minute time format YYYY-MM-DD HH:MM:SS (got '${r.time}')`,
   );
+  assertOldestFirst(body.VCB, "minute native");
 }
 
 async function testNoSymbols() {
