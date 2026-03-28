@@ -133,6 +133,54 @@ pub async fn get_ohlcv_joined(
     .await
 }
 
+/// Get joined OHLCV + indicators for a ticker symbol + interval with optional date range.
+/// This mirrors the /tickers API query pattern.
+pub async fn get_ohlcv_joined_range(
+    pool: &PgPool,
+    source: &str,
+    ticker: &str,
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> sqlx::Result<Vec<OhlcvJoined>> {
+    let mut sql = String::from(r#"SELECT
+             t.ticker,
+             o.time,
+             o.open, o.high, o.low, o.close, o.volume,
+             i.ma10, i.ma20, i.ma50, i.ma100, i.ma200,
+             i.ma10_score, i.ma20_score, i.ma50_score, i.ma100_score, i.ma200_score,
+             i.close_changed, i.volume_changed, i.total_money_changed
+           FROM tickers t
+           JOIN ohlcv o ON o.ticker_id = t.id
+           LEFT JOIN ohlcv_indicators i
+             ON i.ticker_id = t.id AND i.interval = o.interval AND i.time = o.time
+           WHERE t.source = $1 AND t.ticker = $2 AND o.interval = $3"#);
+
+    match (start_time, end_time) {
+        (Some(_), Some(_)) => sql.push_str(" AND o.time >= $4 AND o.time <= $5"),
+        (Some(_), None)    => sql.push_str(" AND o.time >= $4"),
+        (None, Some(_))    => sql.push_str(" AND o.time <= $4"),
+        (None, None)       => {}
+    }
+    sql.push_str(" ORDER BY o.time DESC");
+
+    match (start_time, end_time) {
+        (Some(_), Some(_)) => sql.push_str(" LIMIT $6"),
+        (Some(_), None) | (None, Some(_)) => sql.push_str(" LIMIT $5"),
+        (None, None) => sql.push_str(" LIMIT $4"),
+    }
+
+    let mut q = sqlx::query_as::<_, OhlcvJoined>(&sql)
+        .bind(source).bind(ticker).bind(interval);
+
+    if let Some(s) = start_time { q = q.bind(s); }
+    if let Some(e) = end_time { q = q.bind(e); }
+    if let Some(l) = limit { q = q.bind(l); } else { q = q.bind(0i64); }
+
+    q.fetch_all(pool).await
+}
+
 /// Count total tickers for a source.
 pub async fn count_tickers(pool: &PgPool, source: &str) -> sqlx::Result<i64> {
     sqlx::query_scalar!(

@@ -25,6 +25,21 @@ pub enum Commands {
     },
     /// Show current status
     Status,
+    /// Run benchmark queries to estimate API timing
+    Stats {
+        /// Data source label (default: "vn")
+        #[arg(long, default_value = "vn")]
+        source: String,
+        /// Comma-separated ticker symbols (default: VCB,FPT,VNINDEX)
+        #[arg(long, default_value = "VCB,FPT,VNINDEX")]
+        tickers: String,
+        /// Comma-separated intervals to test (default: 1D,1h,1m)
+        #[arg(long, default_value = "1D,1h,1m")]
+        intervals: String,
+        /// Row limit per query (default: 100)
+        #[arg(long, default_value = "100")]
+        limit: i64,
+    },
     /// Import CSV files from market_data directory into PostgreSQL
     Import {
         /// Path to the market_data directory
@@ -158,6 +173,144 @@ pub fn run() {
                         tracing::info!("  {iv}: {count}");
                     }
                 }
+            });
+        }
+        Commands::Stats {
+            source,
+            tickers,
+            intervals,
+            limit,
+        } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                let database_url =
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| String::new());
+
+                if database_url.is_empty() {
+                    tracing::error!("DATABASE_URL not set");
+                    return;
+                }
+
+                let pool = match db::connect(&database_url).await {
+                    Ok(pool) => pool,
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database: {e}");
+                        return;
+                    }
+                };
+
+                let ticker_list: Vec<&str> = tickers.split(',').map(|s| s.trim()).collect();
+                let interval_list: Vec<&str> = intervals.split(',').map(|s| s.trim()).collect();
+
+                tracing::info!(
+                    "Stats: source={}, tickers=[{}], intervals=[{}], limit={}",
+                    source, tickers, intervals, limit
+                );
+                tracing::info!("{}", "─".repeat(80));
+
+                use crate::queries::ohlcv as q;
+                use std::time::Instant;
+
+                let mut results: Vec<(&str, &str, &str, usize, u128)> = Vec::new();
+
+                for ticker in &ticker_list {
+                    for interval in &interval_list {
+                        // ── Q1: Single ticker, limit only ──
+                        let label = "limit-only";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
+                            Ok(rows) => {
+                                let ms = start.elapsed().as_millis();
+                                tracing::info!(
+                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                    label, ticker, interval, rows.len(), ms
+                                );
+                                results.push((ticker, interval, label, rows.len(), ms));
+                            }
+                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
+                        }
+
+                        // ── Q2: Date range (last 30 days) ──
+                        let label = "30d-range";
+                        let now = chrono::Utc::now();
+                        let start_time = now - chrono::Duration::days(30);
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_range(
+                            &pool, &source, ticker, interval,
+                            Some(limit), Some(start_time), None,
+                        ).await {
+                            Ok(rows) => {
+                                let ms = start.elapsed().as_millis();
+                                tracing::info!(
+                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                    label, ticker, interval, rows.len(), ms
+                                );
+                                results.push((ticker, interval, label, rows.len(), ms));
+                            }
+                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
+                        }
+
+                        // ── Q3: Date range (last 1 year) ──
+                        let label = "1y-range";
+                        let start_time = now - chrono::Duration::days(365);
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_range(
+                            &pool, &source, ticker, interval,
+                            Some(limit), Some(start_time), None,
+                        ).await {
+                            Ok(rows) => {
+                                let ms = start.elapsed().as_millis();
+                                tracing::info!(
+                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                    label, ticker, interval, rows.len(), ms
+                                );
+                                results.push((ticker, interval, label, rows.len(), ms));
+                            }
+                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
+                        }
+
+                        // ── Q4: Full history (no limit) ──
+                        let label = "all-rows";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, None).await {
+                            Ok(rows) => {
+                                let ms = start.elapsed().as_millis();
+                                tracing::info!(
+                                    "  {:>10} | {:>8} | {:>6} | {} rows | {} ms",
+                                    label, ticker, interval, rows.len(), ms
+                                );
+                                results.push((ticker, interval, label, rows.len(), ms));
+                            }
+                            Err(e) => tracing::warn!("  {label} | {ticker} | {interval} | ERROR: {e}"),
+                        }
+                    }
+                }
+
+                // ── Q5: Multi-ticker simulation (sequential) ──
+                tracing::info!("{}", "─".repeat(80));
+                let label = "multi-ticker";
+                for interval in &interval_list {
+                    let start = Instant::now();
+                    let mut total_rows = 0usize;
+                    for ticker in &ticker_list {
+                        match q::get_ohlcv_joined(&pool, &source, ticker, interval, Some(limit)).await {
+                            Ok(rows) => total_rows += rows.len(),
+                            Err(_) => {}
+                        }
+                    }
+                    let ms = start.elapsed().as_millis();
+                    tracing::info!(
+                        "  {:>14} | {:>6} | {} rows ({} tickers x {limit}) | {} ms",
+                        label, interval, total_rows, ticker_list.len(), ms
+                    );
+                }
+
+                // ── Summary ──
+                tracing::info!("{}", "─".repeat(80));
+                tracing::info!("Summary:");
+                let max_ms = results.iter().map(|r| r.4).max().unwrap_or(0);
+                let avg_ms = if results.is_empty() { 0 } else { results.iter().map(|r| r.4).sum::<u128>() / results.len() as u128 };
+                tracing::info!("  Queries: {} | Avg: {} ms | Max: {} ms", results.len(), avg_ms, max_ms);
             });
         }
         Commands::Import {
