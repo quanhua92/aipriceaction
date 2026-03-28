@@ -81,20 +81,9 @@ ALTER TABLE ohlcv_indicators ADD CONSTRAINT ohlcv_indicators_pkey
 
 ### Indexes
 
-```sql
--- Latest N records for a ticker (most common query)
-CREATE INDEX idx_ohlcv_ticker_time
-    ON ohlcv (ticker_id, interval, time DESC);
+No secondary indexes are defined beyond the primary keys. Previous benchmarks showed that 4 secondary indexes (`idx_ohlcv_ticker_time`, `idx_indicators_interval_time_close`, `idx_ohlcv_updated`, and a ticker source index) consumed 3.2 GB and were not used by the query planner for the actual workload. They were dropped to reclaim space (12 GB -> 8.8 GB).
 
--- Top performers / sector analysis (on indicators table)
-CREATE INDEX idx_indicators_interval_time_close
-    ON ohlcv_indicators (interval, time DESC, close_changed)
-    WHERE close_changed IS NOT NULL;
-
--- Enhancer stale scan: find rows needing re-processing
-CREATE INDEX idx_ohlcv_updated
-    ON ohlcv (updated_at DESC);
-```
+The PK indexes `(ticker_id, interval, time)` are sufficient for all current query patterns when combined with the progressive date-range heuristic (see below).
 
 ### Partitions
 
@@ -112,39 +101,37 @@ CREATE TABLE ohlcv_weekly  PARTITION OF ohlcv FOR VALUES IN ('1W');
 CREATE TABLE ohlcv_2week   PARTITION OF ohlcv FOR VALUES IN ('2W');
 CREATE TABLE ohlcv_monthly PARTITION OF ohlcv FOR VALUES IN ('1M');
 
--- ohlcv_indicators partitions
+-- ohlcv_indicators partitions (identical structure)
 CREATE TABLE indicators_minute  PARTITION OF ohlcv_indicators FOR VALUES IN ('1m') PARTITION BY RANGE (time);
 CREATE TABLE indicators_hourly  PARTITION OF ohlcv_indicators FOR VALUES IN ('1h') PARTITION BY RANGE (time);
 CREATE TABLE indicators_daily   PARTITION OF ohlcv_indicators FOR VALUES IN ('1D');
-CREATE TABLE indicators_5min    PARTITION OF ohlcv_indicators FOR VALUES IN ('5m');
-CREATE TABLE indicators_15min   PARTITION OF ohlcv_indicators FOR VALUES IN ('15m');
-CREATE TABLE indicators_30min   PARTITION OF ohlcv_indicators FOR VALUES IN ('30m');
-CREATE TABLE indicators_weekly  PARTITION OF ohlcv_indicators FOR VALUES IN ('1W');
-CREATE TABLE indicators_2week   PARTITION OF ohlcv_indicators FOR VALUES IN ('2W');
-CREATE TABLE indicators_monthly PARTITION OF ohlcv_indicators FOR VALUES IN ('1M');
+-- ... same for 5m, 15m, 30m, 1W, 2W, 1M
 ```
 
 Sub-partitions for high-volume intervals (both tables):
 
+- `ohlcv_minute` and `indicators_minute` — yearly sub-partitions 2010-2050 (41 partitions each)
+- `ohlcv_hourly` and `indicators_hourly` — yearly sub-partitions 2010-2050 (41 partitions each)
+
 ```sql
--- ohlcv sub-partitions
+-- Examples (migrations create all 2010-2050)
 CREATE TABLE ohlcv_minute_2024 PARTITION OF ohlcv_minute FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
 CREATE TABLE ohlcv_minute_2025 PARTITION OF ohlcv_minute FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
 CREATE TABLE ohlcv_minute_2026 PARTITION OF ohlcv_minute FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
 CREATE TABLE ohlcv_hourly_2024 PARTITION OF ohlcv_hourly FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
-CREATE TABLE ohlcv_hourly_2025 PARTITION OF ohlcv_hourly FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
-CREATE TABLE ohlcv_hourly_2026 PARTITION OF ohlcv_hourly FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
-
--- indicators sub-partitions
-CREATE TABLE indicators_minute_2024 PARTITION OF indicators_minute FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
-CREATE TABLE indicators_minute_2025 PARTITION OF indicators_minute FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
-CREATE TABLE indicators_minute_2026 PARTITION OF indicators_minute FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
-CREATE TABLE indicators_hourly_2024 PARTITION OF indicators_hourly FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
-CREATE TABLE indicators_hourly_2025 PARTITION OF indicators_hourly FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
-CREATE TABLE indicators_hourly_2026 PARTITION OF indicators_hourly FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+-- ... and so on
 ```
 
-Partition table names use descriptive words (`minute`, `hourly`, `monthly`) instead of abbreviated interval values to avoid PostgreSQL case-folding collisions (e.g., `ohlcv_1m` vs `ohlcv_1M` both fold to lowercase). Daily and aggregated intervals are small enough to not need sub-partitioning. New year partitions are added via migration.
+Partition table names use descriptive words (`minute`, `hourly`, `monthly`) instead of abbreviated interval values to avoid PostgreSQL case-folding collisions (e.g., `ohlcv_1m` vs `ohlcv_1M` both fold to lowercase). Daily and aggregated intervals are small enough to not need sub-partitioning. Year partitions are pre-created through 2050 to prevent "partition not found" errors.
+
+### Migrations
+
+| File | Description |
+|------|-------------|
+| `20260328070524_add_ohlcv.sql` | Creates `tickers`, `ohlcv`, `ohlcv_indicators` tables + interval partitions |
+| `20260328093000_add_yearly_subpartitions.sql` | Creates yearly sub-partitions (2010-2050) for minute/hourly + autovacuum tuning |
+
+Migrations run automatically on startup via `sqlx::migrate!()`.
 
 ## Key design decisions
 
@@ -180,6 +167,15 @@ With `PARTITION BY LIST (interval)`, each interval is physically separate storag
 - Aggregated candles can also get enhanced data (MAs on 5m candles are valid)
 - Avoids CPU cost on every API request
 
+### Why no secondary indexes
+
+Secondary indexes on time-series partitioned tables are expensive to maintain and often unused:
+
+- The PK index `(ticker_id, interval, time)` covers all lookups when combined with date-range filters
+- `ORDER BY time DESC LIMIT N` with a date filter enables partition pruning — PostgreSQL scans only the relevant year partition(s) using the PK
+- Previous 4 indexes consumed 3.2 GB (40% of DB size) and the query planner never used them for actual workloads
+- The progressive date-range heuristic (see below) further reduces the number of partitions scanned
+
 ## Write patterns
 
 ### Ensure ticker exists (upsert)
@@ -187,22 +183,29 @@ With `PARTITION BY LIST (interval)`, each interval is physically separate storag
 ```sql
 INSERT INTO tickers (source, ticker, name)
 VALUES ($1, $2, $3)
-ON CONFLICT (source, ticker) DO NOTHING
+ON CONFLICT (source, ticker) DO UPDATE SET name = COALESCE($3, tickers.name)
 RETURNING id;
 ```
 
 Application code fetches `ticker_id` once at startup or on first use, then uses the integer FK for all subsequent operations.
 
-### UPSERT OHLCV (sync / resume)
+### Bulk UPSERT OHLCV (UNNEST)
+
+All writes go through a single bulk statement using PostgreSQL's `UNNEST` instead of row-by-row inserts:
 
 ```sql
 INSERT INTO ohlcv (ticker_id, interval, time, open, high, low, close, volume, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+SELECT * FROM UNNEST(
+    $1::int[], $2::text[], $3::timestamptz[], $4::float8[], $5::float8[],
+    $6::float8[], $7::float8[], $8::bigint[], $9::timestamptz[]
+)
 ON CONFLICT (ticker_id, interval, time) DO UPDATE SET
     open = EXCLUDED.open, high = EXCLUDED.high,
     low = EXCLUDED.low, close = EXCLUDED.close, volume = EXCLUDED.volume,
     updated_at = NOW();
 ```
+
+Indicator upserts use the same UNNEST pattern with 17 columns.
 
 ### Enhancer (compute MAs / scores)
 
@@ -287,13 +290,6 @@ UPDATE tickers SET status = 'ready'
 WHERE source = 'vn' AND ticker = 'VCB';
 ```
 
-This replaces the current CSV-based flow which required:
-- Deleting 3 CSV files (1D.csv, 1h.csv, 1m.csv)
-- Sending MPSC cache clear notifications
-- Triggering re-download for each interval separately
-
-With PostgreSQL, it's `status` update + DELETE + normal UPSERT on next sync + `status` update. The cache invalidation happens naturally — application cache entries for this ticker can be evicted by key.
-
 **Detection scope:**
 
 | Interval | Runs detection? | Why |
@@ -334,6 +330,29 @@ ON CONFLICT (ticker_id, interval, time) DO UPDATE SET
 
 ## Read patterns
 
+### Progressive date-range heuristic
+
+**Problem**: `ORDER BY time DESC LIMIT N` queries on minute/hourly data without a date range force PostgreSQL to scan all year partitions (2023-2026) and merge-sort them. This takes 6-8s for just 100 rows.
+
+**Solution**: The service layer (`src/services/ohlcv.rs`) uses progressive window expansion for `1h` and `1m` queries with a `limit`. Instead of scanning all partitions, it starts with a narrow date window and expands until enough rows are found.
+
+**When it activates**:
+- Interval is `1h` or `1m` (has year sub-partitions)
+- A `limit` is provided
+- Does NOT activate for `1D` (no sub-partitions, always fast) or when `limit` is `None`
+
+**Window sizes** (anchored from `end_time`, defaulting to `now`):
+- `1m`: 30d → 90d → 365d → 730d → fallback
+- `1h`: 30d → 365d → fallback
+
+**Clamping**: When a user provides an explicit date range, windows are clamped to the user's bounds. A 2-year user range with limit=100 on minute data will start with the 30-day window from the range end, not from `now`.
+
+**Fallback**: If no window produces enough rows, the query runs with the user's original bounds (or no bounds if none given).
+
+**Performance**: All queries under 140ms with the heuristic (vs 6-8s without).
+
+### Query examples
+
 ```sql
 -- Latest N records (OHLCV only, fast)
 SELECT o.time, o.open, o.high, o.low, o.close, o.volume
@@ -353,6 +372,9 @@ LEFT JOIN ohlcv_indicators oi ON o.ticker_id = oi.ticker_id
     AND o.interval = oi.interval AND o.time = oi.time
 WHERE t.source = 'vn' AND t.ticker = 'VCB' AND o.interval = '1D'
 ORDER BY o.time ASC;
+
+-- With date range (heuristic clamps for 1h/1m)
+-- Same JOIN pattern, plus: AND o.time >= $start_time [AND o.time <= $end_time]
 
 -- Top performers (indicators table only — avoids touching ohlcv)
 SELECT t.ticker, o.close, oi.close_changed, o.volume
@@ -381,7 +403,22 @@ WHERE t.source = 'vn' AND oi.interval = '1D'
   )
   AND oi.ma50_score IS NOT NULL
 ORDER BY oi.ma50_score DESC;
+
+-- Count queries use ANY() instead of JOIN for partition pruning
+SELECT COUNT(*) FROM ohlcv WHERE ticker_id = ANY($1) AND interval = '1m';
 ```
+
+### Code layer summary
+
+| Layer | File | Role |
+|-------|------|------|
+| Queries | `src/queries/ohlcv.rs` | Raw SQL (get_ohlcv_joined, get_ohlcv_joined_range, count, etc.) |
+| Queries | `src/queries/import.rs` | Bulk UNNEST upsert for ohlcv + indicators |
+| Services | `src/services/ohlcv.rs` | Wraps queries with progressive heuristic + caching |
+| Models | `src/models/ohlcv.rs` | `Ticker`, `OhlcvRow`, `IndicatorRow`, `OhlcvJoined` structs |
+| Models | `src/models/interval.rs` | `Interval` enum with DB string mappings |
+
+The service layer is the public API. Callers should use `ohlcv::get_ohlcv_joined()` and `ohlcv::get_ohlcv_joined_range()` — never the query-layer functions directly.
 
 ## Size estimates
 
@@ -426,9 +463,34 @@ ALTER TABLE indicators_minute_2026 SET (
 );
 ```
 
+Autovacuum tuning is applied to 2023-2026 year partitions for both minute and hourly tables.
+
 ## Application-level cache
 
 PostgreSQL replaces CSV files as the persistent store, but an application-level LRU/TTL cache (current `DataStore` pattern) should remain for hot paths. PG is fast but sub-millisecond repeated reads benefit from in-memory caching.
+
+## Benchmarking
+
+The `stats` CLI command benchmarks query performance:
+
+```bash
+# Default: fast queries only (30d-range, smart heuristic, multi-ticker)
+./target/release/aipriceaction stats --limit 100
+
+# Include unoptimized baseline
+./target/release/aipriceaction stats --limit 100 --with-raw
+
+# Include full-history scan
+./target/release/aipriceaction stats --limit 100 --with-all
+
+# Custom tickers/intervals
+./target/release/aipriceaction stats --source crypto --tickers BTC,ETH --intervals 1D,1h
+```
+
+Default run includes 8 edge case benchmarks testing the progressive heuristic:
+- Narrow 1d range, cross-year boundary, broad 2y range
+- Historical past ranges (2024, 2022-2024)
+- No-limit passthrough, small limit (5), large limit (10k on 1h)
 
 ## Migration plan
 
