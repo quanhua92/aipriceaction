@@ -2,12 +2,12 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json, Response};
 use axum_extra::extract::Query;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate, Timelike};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use crate::server::types::{
-    GroupQuery, HealthSourceStats, Mode, NormalizedInterval, StockDataResponse,
+    GroupQuery, Mode, NormalizedInterval, StockDataResponse,
     TickersQuery,
 };
 use crate::services::ohlcv;
@@ -17,99 +17,104 @@ use super::AppState;
 // ── /health ──
 
 pub async fn health(State(state): State<Arc<AppState>>) -> Response {
-    // Check DB connectivity
-    if sqlx::query_scalar!("SELECT 1 as ok")
-        .fetch_one(&state.pool)
-        .await
-        .is_err()
-    {
-        return (
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({
-                "status": "error",
-                "detail": "Database connection failed"
-            })),
-        )
-            .into_response();
+    use super::HealthRow;
+
+    // Run stats + sync times in parallel
+    let stats_fut = sqlx::query_as::<_, HealthRow>(
+        r#"SELECT
+               t.source,
+               array_length(t.ids, 1)::bigint AS ticker_count,
+               (SELECT COUNT(DISTINCT ticker_id)::bigint FROM ohlcv_daily
+                WHERE time > NOW() - INTERVAL '7 days') AS active_tickers,
+               (SELECT GREATEST(reltuples, 0)::bigint FROM pg_class
+                WHERE relname = 'ohlcv_daily') AS daily_records,
+               (SELECT COALESCE(SUM(GREATEST(reltuples, 0)), 0)::bigint
+                FROM pg_class WHERE relname LIKE 'ohlcv_hourly_%' AND relkind = 'r')
+               AS hourly_records,
+               (SELECT COALESCE(SUM(GREATEST(reltuples, 0)), 0)::bigint
+                FROM pg_class WHERE relname LIKE 'ohlcv_minute_%' AND relkind = 'r')
+               AS minute_records,
+               0::bigint AS ohlcv_total,
+               0::bigint AS indicator_records
+           FROM (SELECT source, array_agg(id) AS ids FROM tickers GROUP BY source) t"#,
+    )
+    .fetch_all(&state.pool);
+
+    let daily_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
+        "SELECT MAX(updated_at) FROM ohlcv_daily",
+    ).fetch_one(&state.pool);
+
+    let hourly_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
+        "SELECT MAX(updated_at) FROM ohlcv_hourly_2026",
+    ).fetch_one(&state.pool);
+
+    let minute_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
+        "SELECT MAX(updated_at) FROM ohlcv_minute_2026",
+    ).fetch_one(&state.pool);
+
+    let (stats_res, daily_sync_res, hourly_sync_res, minute_sync_res) =
+        tokio::join!(stats_fut, daily_sync_fut, hourly_sync_fut, minute_sync_fut);
+
+    let stats = match stats_res {
+        Ok(rows) => rows,
+        Err(_) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "status": "error",
+                    "detail": "Database connection failed"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    let daily_sync = daily_sync_res.ok().flatten();
+    let hourly_sync = hourly_sync_res.ok().flatten();
+    let minute_sync = minute_sync_res.ok().flatten();
+
+    let mut total_tickers = 0i64;
+    let mut active_tickers = 0i64;
+    let mut daily = 0i64;
+    let mut hourly = 0i64;
+    let mut minute = 0i64;
+
+    for row in &stats {
+        total_tickers += row.ticker_count;
+        active_tickers += row.active_tickers;
+        daily += row.daily_records;
+        hourly += row.hourly_records;
+        minute += row.minute_records;
     }
 
-    // Query stats in parallel for VN and crypto
-    let (vn_result, crypto_result) = tokio::join!(
-        query_source_stats(&state.pool, "vn"),
-        query_source_stats(&state.pool, "crypto"),
-    );
+    let uptime_secs = state.started_at.elapsed().as_secs();
 
-    let vn = vn_result.unwrap_or_else(|_| HealthSourceStats {
-        tickers: 0,
-        ohlcv_records: 0,
-        indicator_records: 0,
-        daily_records: 0,
-        hourly_records: 0,
-        minute_records: 0,
-    });
-
-    let crypto = crypto_result.unwrap_or_else(|_| HealthSourceStats {
-        tickers: 0,
-        ohlcv_records: 0,
-        indicator_records: 0,
-        daily_records: 0,
-        hourly_records: 0,
-        minute_records: 0,
-    });
-
-    let total_tickers = vn.tickers + crypto.tickers;
-    let daily_records = vn.daily_records + crypto.daily_records;
-    let hourly_records = vn.hourly_records + crypto.hourly_records;
-    let minute_records = vn.minute_records + crypto.minute_records;
+    // Trading hours: 9:00-15:00 ICT (UTC+7) = 02:00-08:00 UTC, Mon-Fri
+    let now = chrono::Utc::now();
+    let weekday = now.weekday();
+    let hour_utc = now.hour();
+    let is_trading_hours = weekday.num_days_from_monday() < 5
+        && hour_utc >= 2
+        && hour_utc < 8;
 
     (
         StatusCode::OK,
         Json(serde_json::json!({
             "total_tickers_count": total_tickers,
-            "daily_records_count": daily_records,
-            "hourly_records_count": hourly_records,
-            "minute_records_count": minute_records,
+            "active_tickers_count": active_tickers,
+            "daily_records_count": daily,
+            "hourly_records_count": hourly,
+            "minute_records_count": minute,
+            "daily_last_sync": daily_sync,
+            "hourly_last_sync": hourly_sync,
+            "minute_last_sync": minute_sync,
+            "is_trading_hours": is_trading_hours,
+            "trading_hours_timezone": "Asia/Ho_Chi_Minh",
+            "uptime_secs": uptime_secs,
             "current_system_time": chrono::Utc::now().to_rfc3339(),
-            "vn": {
-                "tickers": vn.tickers,
-                "ohlcv_records": vn.ohlcv_records,
-                "indicator_records": vn.indicator_records,
-                "daily_records": vn.daily_records,
-                "hourly_records": vn.hourly_records,
-                "minute_records": vn.minute_records,
-            },
-            "crypto": {
-                "tickers": crypto.tickers,
-                "ohlcv_records": crypto.ohlcv_records,
-                "indicator_records": crypto.indicator_records,
-                "daily_records": crypto.daily_records,
-                "hourly_records": crypto.hourly_records,
-                "minute_records": crypto.minute_records,
-            },
         })),
     )
         .into_response()
-}
-
-async fn query_source_stats(
-    pool: &sqlx::PgPool,
-    source: &str,
-) -> Result<HealthSourceStats, sqlx::Error> {
-    let tickers = ohlcv::count_tickers(pool, source).await?;
-    let ohlcv_records = ohlcv::count_ohlcv(pool, source, None, None).await?;
-    let indicator_records = ohlcv::count_indicators(pool, source, None, None).await?;
-    let daily_records = ohlcv::count_ohlcv(pool, source, None, Some("1D")).await?;
-    let hourly_records = ohlcv::count_ohlcv(pool, source, None, Some("1h")).await?;
-    let minute_records = ohlcv::count_ohlcv(pool, source, None, Some("1m")).await?;
-
-    Ok(HealthSourceStats {
-        tickers,
-        ohlcv_records,
-        indicator_records,
-        daily_records,
-        hourly_records,
-        minute_records,
-    })
 }
 
 // ── /tickers ──

@@ -137,23 +137,3 @@ const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
 pub fn is_index_ticker(ticker: &str) -> bool {
     INDEX_TICKERS.contains(&ticker.to_uppercase().as_str())
 }
-
-/// Health response structure matching parent project format.
-#[derive(Debug, Serialize)]
-pub struct HealthResponse {
-    pub status: String,
-    pub storage: String,
-    pub vn: HealthSourceStats,
-    pub crypto: HealthSourceStats,
-    pub current_system_time: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct HealthSourceStats {
-    pub tickers: i64,
-    pub ohlcv_records: i64,
-    pub indicator_records: i64,
-    pub daily_records: i64,
-    pub hourly_records: i64,
-    pub minute_records: i64,
-}

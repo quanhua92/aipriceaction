@@ -62,10 +62,17 @@ async function testHealth() {
   console.log(`\n── GET /health ── ${ms}ms`);
   assert(status === 200, "returns 200");
   assert(typeof body.total_tickers_count === "number", "has total_tickers_count");
+  assert(typeof body.active_tickers_count === "number", "has active_tickers_count");
   assert(typeof body.daily_records_count === "number", "has daily_records_count");
   assert(typeof body.hourly_records_count === "number", "has hourly_records_count");
   assert(typeof body.minute_records_count === "number", "has minute_records_count");
   assert(typeof body.current_system_time === "string", "has current_system_time");
+  assert(typeof body.uptime_secs === "number", "has uptime_secs");
+  assert(typeof body.daily_last_sync === "string", "has daily_last_sync");
+  assert(typeof body.hourly_last_sync === "string", "has hourly_last_sync");
+  assert(typeof body.minute_last_sync === "string", "has minute_last_sync");
+  assert(typeof body.is_trading_hours === "boolean", "has is_trading_hours");
+  assert(body.trading_hours_timezone === "Asia/Ho_Chi_Minh", "trading_hours_timezone");
 }
 
 async function testSingleTicker() {

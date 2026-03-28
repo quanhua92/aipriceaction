@@ -19,6 +19,17 @@ use std::time::Duration;
 
 pub struct AppState {
     pub pool: PgPool,
+    pub started_at: std::time::Instant,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct HealthRow {
+    pub source: String,
+    pub ticker_count: i64,
+    pub active_tickers: i64,
+    pub daily_records: i64,
+    pub hourly_records: i64,
+    pub minute_records: i64,
 }
 
 /// Middleware to add security headers to all responses
@@ -74,7 +85,7 @@ async fn add_cache_headers(request: Request, next: Next) -> Response {
 
 #[allow(deprecated)]
 pub fn create_app(pool: PgPool) -> axum::Router {
-    let state = Arc::new(AppState { pool });
+    let state = Arc::new(AppState { pool, started_at: std::time::Instant::now() });
 
     // Upload routes with 10MB body limit
     let upload_routes = axum::Router::new()
