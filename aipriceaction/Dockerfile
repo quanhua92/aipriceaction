@@ -10,7 +10,13 @@ RUN apk add --no-cache \
     ca-certificates \
     gcc \
     g++ \
-    make
+    make \
+    curl-dev \
+    openssl-dev \
+    openssl-libs-static \
+    nghttp2-dev \
+    libssh2 \
+    zlib-static
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
@@ -28,7 +34,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS rust-cacher
 WORKDIR /app
 
-RUN apk add --no-cache musl-dev gcc g++ make
+RUN apk add --no-cache musl-dev gcc g++ make curl-dev openssl-dev nghttp2-dev libssh2
 
 COPY --from=rust-planner /app/recipe.json recipe.json
 
@@ -40,7 +46,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM chef AS rust-builder
 WORKDIR /app
 
-RUN apk add --no-cache musl-dev gcc g++ make
+RUN apk add --no-cache musl-dev gcc g++ make curl-dev openssl-dev nghttp2-dev libssh2
 
 COPY --from=rust-cacher /app/target target
 COPY Cargo.lock Cargo.toml ./
@@ -62,7 +68,7 @@ WORKDIR /app
 ARG BUILD_DATE
 ARG GIT_COMMIT
 
-RUN apk add --no-cache ca-certificates curl
+RUN apk add --no-cache ca-certificates curl libcurl nghttp2 libssh2
 
 RUN addgroup -S appgroup && adduser -S -G appgroup appuser
 
