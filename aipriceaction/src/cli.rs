@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::db;
 use crate::models::interval::Interval;
+use crate::providers::vci::VciProvider;
 use crate::services::ohlcv;
 
 #[derive(Parser)]
@@ -60,6 +61,18 @@ pub enum Commands {
         /// Data source label (default: "vn")
         #[arg(long, default_value = "vn")]
         source: String,
+    },
+    /// Test VCI provider connectivity and data fetching
+    TestVci {
+        /// Ticker symbol to test (default: VNINDEX)
+        #[arg(long, default_value = "VNINDEX")]
+        ticker: String,
+        /// Rate limit per client (requests per minute, default: 30)
+        #[arg(long, default_value = "30")]
+        rate_limit: u32,
+        /// Number of data points to request (default: 10)
+        #[arg(long, default_value = "10")]
+        count_back: u32,
     },
 }
 
@@ -568,6 +581,142 @@ pub fn run() {
                         }
                     }
                 }
+            });
+        }
+        Commands::TestVci {
+            ticker,
+            rate_limit,
+            count_back,
+        } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                // 1. Create VciProvider
+                tracing::info!("Initializing Vci provider (rate_limit={}/min per client)...", rate_limit);
+                let provider = match VciProvider::new(rate_limit) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::error!("Failed to create Vci provider: {e}");
+                        return;
+                    }
+                };
+                tracing::info!("Connected with {} client(s)", provider.client_count());
+
+                // Detect if ticker is an index (indices don't have company/financial data)
+                let index_tickers = ["VNINDEX", "VN30", "HNX", "UPCOM", "HNX30", "UPCOMINDEX"];
+                let is_index = index_tickers.iter().any(|t| t.eq_ignore_ascii_case(&ticker.as_str()));
+
+                // 2. OHLCV test for each interval
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("OHLCV Test — ticker={}, count_back={}", ticker, count_back);
+
+                for interval in &["1D", "1H", "1m"] {
+                    tracing::info!("  Fetching {} ...", interval);
+                    match provider.get_history(&ticker, interval, count_back).await {
+                        Ok(data) => {
+                            let count = data.len();
+                            if count > 0 {
+                                let first = &data[0];
+                                let last = &data[count - 1];
+                                tracing::info!(
+                                    "    ✅ {} | {} records | {} → {}",
+                                    interval,
+                                    count,
+                                    first.time.format("%Y-%m-%d %H:%M"),
+                                    last.time.format("%Y-%m-%d %H:%M"),
+                                );
+                                // Print first 3 rows
+                                for row in data.iter().take(3) {
+                                    tracing::info!(
+                                        "       {} | O:{} H:{} L:{} C:{} V:{}",
+                                        row.time.format("%Y-%m-%d %H:%M"),
+                                        row.open,
+                                        row.high,
+                                        row.low,
+                                        row.close,
+                                        row.volume,
+                                    );
+                                }
+                                if count > 3 {
+                                    tracing::info!("       ... ({} more)", count - 3);
+                                }
+                            } else {
+                                tracing::info!("    ⚠️  {} | 0 records returned", interval);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ {} | error: {}", interval, e);
+                        }
+                    }
+
+                    // Sleep between intervals to respect rate limits
+                    if *interval != "1m" {
+                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    }
+                }
+
+                // 3. Company info test (skip for index tickers)
+                tracing::info!("{}", "─".repeat(60));
+                if is_index {
+                    tracing::info!(
+                        "Company Info Test — SKIPPED ({} is an index, use --ticker VCB to test)",
+                        ticker,
+                    );
+                } else {
+                    tracing::info!("Company Info Test — ticker={}", ticker);
+                    match provider.company_info(&ticker).await {
+                        Ok(info) => {
+                            tracing::info!(
+                                "    ✅ exchange={} | industry={}",
+                                info.exchange.unwrap_or_else(|| "-".to_string()),
+                                info.industry.unwrap_or_else(|| "-".to_string()),
+                            );
+                            if let Some(mcap) = info.market_cap {
+                                tracing::info!("    market_cap: {:.2}", mcap);
+                            }
+                            tracing::info!("    shareholders: {}", info.shareholders.len());
+                            for sh in info.shareholders.iter().take(3) {
+                                tracing::info!("      - {} ({:.2}%)", sh.name, sh.percentage);
+                            }
+                            if info.shareholders.len() > 3 {
+                                tracing::info!("      ... ({} more)", info.shareholders.len() - 3);
+                            }
+                            tracing::info!("    officers: {}", info.officers.len());
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ company_info error: {}", e);
+                        }
+                    }
+                }
+
+                // 4. Financial ratios test (skip for index tickers)
+                if !is_index {
+                    tracing::info!("{}", "─".repeat(60));
+                    tracing::info!("Financial Ratios Test — ticker={}, period=quarter", ticker);
+                    match provider.financial_ratios(&ticker, "quarter").await {
+                        Ok(ratios) => {
+                            tracing::info!("    ✅ {} ratio entries", ratios.len());
+                            if !ratios.is_empty() {
+                                // Print first entry's yearReport and a few key fields
+                                let first = &ratios[0];
+                                if let Some(year) = first.get("yearReport") {
+                                    tracing::info!("    latest yearReport: {}", year);
+                                }
+                                for key in &["revenue", "netProfit", "pe", "roe"] {
+                                    if let Some(val) = first.get(*key) {
+                                        tracing::info!("      {}: {}", key, val);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ financial_ratios error: {}", e);
+                        }
+                    }
+                }
+
+                // 5. Summary
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
             });
         }
     }
