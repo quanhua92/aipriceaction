@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) as \"count!\"\n                   FROM ohlcv_indicators i\n                   JOIN tickers t ON t.id = i.ticker_id\n                   WHERE t.source = $1 AND t.ticker = $2 AND i.interval = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "d9bb3e0b747aebc1fb7f615cf8f1202a71dcaf57a5e206f6a33a4f637351d087"
+}
