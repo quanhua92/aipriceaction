@@ -72,6 +72,8 @@ pub mod vci_worker {
     /// Concurrent API batches based on VCI client count.
     /// 3 concurrent requests per client, each with its own rate limiter.
     pub fn concurrent_batches(client_count: usize) -> usize {
-        (client_count * 3).min(24)
+        let batches = (client_count * 3).min(24);
+        tracing::debug!(client_count, batches, "concurrent_batches calculated");
+        batches
     }
 }
