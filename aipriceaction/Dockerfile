@@ -75,6 +75,7 @@ COPY --from=rust-builder /app/aipriceaction-bin ./aipriceaction
 
 COPY ticker_group.json ./ticker_group.json
 COPY crypto_top_100.json ./crypto_top_100.json
+COPY public/ ./public
 
 RUN chown -R appuser:appgroup /app
 USER appuser
