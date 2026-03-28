@@ -29,6 +29,7 @@ pub struct TickersQuery {
     pub interval: Option<String>,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
+    #[serde(default = "default_limit")]
     pub limit: Option<i64>,
     #[serde(default)]
     pub legacy: bool,
@@ -42,6 +43,10 @@ pub struct TickersQuery {
 
 fn default_format() -> String {
     "json".to_string()
+}
+
+fn default_limit() -> Option<i64> {
+    Some(252) // Default to 252 trading days per year
 }
 
 /// Query parameters for GET /tickers/group

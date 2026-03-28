@@ -273,7 +273,7 @@ async function testNoLimit() {
   console.log(`\n── GET /tickers?symbol=VCB&interval=1D (no limit) ── ${ms}ms`);
   assert(status === 200, "returns 200");
   assert("VCB" in body, "has VCB key");
-  assert(body.VCB.length > 10, `returns many rows (got ${body.VCB.length})`);
+  assert(body.VCB.length === 252, `defaults to 252 rows (got ${body.VCB.length})`);
   assertOldestFirst(body.VCB, "no-limit daily");
 }
 
