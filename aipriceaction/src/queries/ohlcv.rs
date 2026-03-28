@@ -283,3 +283,29 @@ async fn source_ticker_ids(pool: &PgPool, source: &str) -> sqlx::Result<Vec<i32>
         .fetch_all(pool)
         .await
 }
+
+/// Get the latest daily record for each ticker of a given source.
+/// Uses DISTINCT ON for a single efficient query.
+pub async fn get_latest_daily_per_ticker(
+    pool: &PgPool,
+    source: &str,
+) -> sqlx::Result<Vec<OhlcvJoined>> {
+    sqlx::query_as::<_, OhlcvJoined>(
+        r#"SELECT DISTINCT ON (t.ticker)
+            t.ticker,
+            o.time,
+            o.open, o.high, o.low, o.close, o.volume,
+            i.ma10, i.ma20, i.ma50, i.ma100, i.ma200,
+            i.ma10_score, i.ma20_score, i.ma50_score, i.ma100_score, i.ma200_score,
+            i.close_changed, i.volume_changed, i.total_money_changed
+        FROM tickers t
+        JOIN ohlcv o ON o.ticker_id = t.id AND o.interval = '1D'
+        LEFT JOIN ohlcv_indicators i
+            ON i.ticker_id = t.id AND i.interval = '1D' AND i.time = o.time
+        WHERE t.source = $1
+        ORDER BY t.ticker, o.time DESC"#,
+    )
+    .bind(source)
+    .fetch_all(pool)
+    .await
+}
