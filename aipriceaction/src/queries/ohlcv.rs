@@ -379,6 +379,18 @@ pub async fn delete_indicators_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx
     Ok(result.rows_affected())
 }
 
+/// Set a ticker's status to 'ready' only if it is currently NULL (newly inserted).
+/// Returns the number of rows updated (0 or 1).
+pub async fn set_ticker_ready_if_new(pool: &PgPool, ticker: &str) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
+        "UPDATE tickers SET status = 'ready' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
+        ticker
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
+}
+
 /// Get latest time for a ticker + interval. Returns None if no data exists.
 pub async fn get_latest_time(
     pool: &PgPool,

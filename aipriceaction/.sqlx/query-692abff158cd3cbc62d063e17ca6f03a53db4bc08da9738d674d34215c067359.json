@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickers SET status = 'ready' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "692abff158cd3cbc62d063e17ca6f03a53db4bc08da9738d674d34215c067359"
+}

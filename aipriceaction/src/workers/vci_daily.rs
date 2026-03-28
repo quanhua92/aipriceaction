@@ -21,6 +21,12 @@ pub async fn run(pool: PgPool) {
     loop {
         let trading = vci_shared::is_trading_hours();
 
+        // Discover new tickers from ticker_group.json and upsert them as 'ready'
+        let added = vci_shared::sync_tickers_from_json(&pool).await;
+        if added > 0 {
+            tracing::info!("VCI daily worker: synced {added} tickers from ticker_group.json");
+        }
+
         let tickers = match ohlcv::get_tickers_by_status(&pool, "vn", "ready").await {
             Ok(t) => t,
             Err(e) => {

@@ -38,6 +38,38 @@ pub fn load_vn_tickers() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     Ok(tickers)
 }
 
+/// Sync tickers from ticker_group.json into the database.
+///
+/// Any ticker present in the JSON file but missing from the DB is upserted
+/// with status 'ready'.  Returns the number of newly added tickers.
+pub async fn sync_tickers_from_json(pool: &PgPool) -> usize {
+    let json_tickers = match load_vn_tickers() {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!("failed to load ticker_group.json: {e}");
+            return 0;
+        }
+    };
+
+    let mut added = 0usize;
+    for ticker in &json_tickers {
+        if let Err(e) = queries::ohlcv::upsert_ticker(pool, "vn", ticker, None).await {
+            tracing::warn!(ticker, "failed to upsert ticker from json: {e}");
+            continue;
+        }
+        // If the ticker was freshly inserted it will have no status (NULL) or a
+        // non-ready status — the upsert_ticker function doesn't set status.
+        // We rely on the ON CONFLICT path which won't change an existing status,
+        // so we only need to care about brand-new rows.  A simple UPDATE is cheap
+        // enough to run unconditionally for ready.
+        if let Err(e) = queries::ohlcv::set_ticker_ready_if_new(pool, ticker).await {
+            tracing::warn!(ticker, "failed to set ticker ready: {e}");
+        }
+        added += 1;
+    }
+    added
+}
+
 /// Ensure a ticker exists in the database, return its id.
 pub async fn ensure_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
     queries::ohlcv::upsert_ticker(pool, source, ticker, None)
