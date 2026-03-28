@@ -60,4 +60,17 @@ pub mod vci_worker {
 
     /// Index tickers (no dividend detection)
     pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "HNX", "UPCOM"];
+
+    /// Concurrent API batches: auto-detected from CPU cores.
+    /// 1-2 cores → 3, 3-4 cores → 5, 5+ cores → 8
+    pub fn concurrent_batches() -> usize {
+        let cpus = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1);
+        match cpus {
+            1..=2 => 3,
+            3..=4 => 5,
+            _ => 8,
+        }
+    }
 }

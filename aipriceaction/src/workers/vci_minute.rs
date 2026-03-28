@@ -1,5 +1,6 @@
 use chrono::Utc;
 use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 use crate::constants::vci_worker;
@@ -8,10 +9,10 @@ use crate::queries::ohlcv;
 use crate::workers::vci_shared;
 
 pub async fn run(pool: PgPool) {
-    tracing::info!("VCI minute worker started");
+    tracing::info!("VCI minute worker started (concurrency={})", vci_worker::concurrent_batches());
 
     let provider = match VciProvider::new(30) {
-        Ok(p) => p,
+        Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("VCI minute worker: failed to create provider: {e}");
             return;
@@ -45,28 +46,37 @@ pub async fn run(pool: PgPool) {
                 ticker_symbols.shuffle(&mut rng);
             }
 
-            for ticker in &ticker_symbols {
-                let ticker_id = vci_shared::ensure_ticker(&pool, "vn", ticker).await;
-                let last_time = vci_shared::get_last_time(&pool, ticker_id, "1m").await;
+            let concurrency = vci_worker::concurrent_batches();
+            for chunk in ticker_symbols.chunks(concurrency) {
+                let mut handles = tokio::task::JoinSet::new();
+                for ticker in chunk {
+                    let pool = pool.clone();
+                    let provider = provider.clone();
+                    let ticker = ticker.clone();
+                    handles.spawn(async move {
+                        let ticker_id = vci_shared::ensure_ticker(&pool, "vn", &ticker).await;
+                        let last_time = vci_shared::get_last_time(&pool, ticker_id, "1m").await;
 
-                let count_back = match last_time {
-                    Some(t) if (Utc::now() - t).num_days() < vci_worker::MINUTE_GAP_THRESHOLD_DAYS => {
-                        vci_worker::MINUTE_COUNTBACK_RECENT
-                    }
-                    _ => vci_worker::MINUTE_COUNTBACK_GAP,
-                };
+                        let count_back = match last_time {
+                            Some(t) if (Utc::now() - t).num_days() < vci_worker::MINUTE_GAP_THRESHOLD_DAYS => {
+                                vci_worker::MINUTE_COUNTBACK_RECENT
+                            }
+                            _ => vci_worker::MINUTE_COUNTBACK_GAP,
+                        };
 
-                match provider.get_history(ticker, "1m", count_back, None).await {
-                    Ok(data) => {
-                        vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
-                        tracing::info!(ticker, count = data.len(), "minute sync OK");
-                    }
-                    Err(e) => {
-                        tracing::warn!(ticker, "minute fetch failed: {e}");
-                    }
+                        match provider.get_history(&ticker, "1m", count_back, None).await {
+                            Ok(data) => {
+                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+                                tracing::info!(ticker, count = data.len(), "minute sync OK");
+                            }
+                            Err(e) => {
+                                tracing::warn!(ticker, "minute fetch failed: {e}");
+                            }
+                        }
+                    });
                 }
 
-                sleep(Duration::from_secs(vci_worker::MINUTE_TICKER_SLEEP_SECS)).await;
+                while let Some(_result) = handles.join_next().await {}
             }
         } else {
             tracing::debug!("VCI minute worker: no ready tickers");
