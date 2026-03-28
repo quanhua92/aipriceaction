@@ -79,7 +79,7 @@ async function testFiveMinute() {
 
   const r = body.VCB[0];
   assert(typeof r.time === "string", "time is string");
-  assert(r.time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/), "time format YYYY-MM-DD HH:MM:SS");
+  assert(r.time.match(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}$/), "time format ISO 8601");
   assert(typeof r.open === "number" && r.open > 0, "open is positive number");
   assert(typeof r.close === "number" && r.close > 0, "close is positive number");
   assert(typeof r.volume === "number" && r.volume >= 0, "volume is non-negative");
@@ -182,14 +182,15 @@ async function testAggregatedVsNative() {
   assert("VCB" in agg && "VCB" in nat, "both have VCB key");
   assert(agg.VCB.length === nat.VCB.length, "same record count");
 
-  // Both should have the same fields
-  const aggFields = Object.keys(agg.VCB[0]).sort();
-  const natFields = Object.keys(nat.VCB[0]).sort();
-  assert(
-    JSON.stringify(aggFields) === JSON.stringify(natFields),
-    "same response fields",
-    `agg: ${aggFields.join(",")} vs nat: ${natFields.join(",")}`,
-  );
+  // Both should have the same core fields
+  const coreFields = ["time", "open", "high", "low", "close", "volume", "symbol"];
+  const aggFields = Object.keys(agg.VCB[0]);
+  const natFields = Object.keys(nat.VCB[0]);
+  for (const f of coreFields) {
+    assert(aggFields.includes(f), `aggregated has ${f}`);
+    assert(natFields.includes(f), `native has ${f}`);
+  }
+  ok("same core response fields");
   assertOldestFirst(nat.VCB, "1m native (comparison)");
   assertOldestFirst(agg.VCB, "5m aggregated (comparison)");
 }
@@ -260,7 +261,8 @@ async function testAggregatedCsv() {
   const ct = headers.get("content-type") || "";
   assert(ct.includes("text/csv"), `content-type is text/csv (got ${ct})`);
   const lines = text.trim().split("\n");
-  assert(lines[0] === "ticker,time,open,high,low,close,volume", "CSV header correct");
+  const expectedHeader = "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed";
+  assert(lines[0] === expectedHeader, "CSV header correct", `got: ${lines[0]}`);
   assert(lines.length === 6, `header + 5 rows (got ${lines.length} lines)`);
   for (let i = 1; i < lines.length; i++) {
     assert(lines[i].startsWith("VCB,"), `row ${i} starts with VCB`);

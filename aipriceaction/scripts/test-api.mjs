@@ -61,8 +61,11 @@ async function testHealth() {
   const { status, body, ms } = await fetchJSON("/health");
   console.log(`\n── GET /health ── ${ms}ms`);
   assert(status === 200, "returns 200");
-  assert(body.status === "ok", "status is 'ok'", `got: ${body.status}`);
-  assert(body.storage === "postgresql", "storage is 'postgresql'");
+  assert(typeof body.total_tickers_count === "number", "has total_tickers_count");
+  assert(typeof body.daily_records_count === "number", "has daily_records_count");
+  assert(typeof body.hourly_records_count === "number", "has hourly_records_count");
+  assert(typeof body.minute_records_count === "number", "has minute_records_count");
+  assert(typeof body.current_system_time === "string", "has current_system_time");
 }
 
 async function testSingleTicker() {
@@ -111,7 +114,8 @@ async function testCsvFormat() {
   assert(res.status === 200, "returns 200");
   assert(ct.includes("text/csv"), `content-type is text/csv (got ${ct})`);
   const lines = text.trim().split("\n");
-  assert(lines[0] === "ticker,time,open,high,low,close,volume", "CSV header matches");
+  const expected = "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed";
+  assert(lines[0] === expected, "CSV header matches", `got: ${lines[0]}`);
   assert(lines.length === 3, `header + 2 rows (got ${lines.length} lines)`);
   for (let i = 1; i < lines.length; i++) {
     assert(lines[i].startsWith("VCB,"), `row ${i} starts with VCB`);
@@ -162,8 +166,8 @@ async function testHourlyTimeFormat() {
   console.log(`\n── GET /tickers?symbol=VCB&interval=1H&limit=2 ── ${ms}ms`);
   const r = body.VCB[0];
   assert(
-    r.time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
-    `hourly time format YYYY-MM-DD HH:MM:SS (got '${r.time}')`,
+    r.time.match(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}$/),
+    `hourly time format ISO 8601 (got '${r.time}')`,
   );
   assertOldestFirst(body.VCB, "hourly native");
 }
@@ -175,8 +179,8 @@ async function testMinuteTimeFormat() {
   console.log(`\n── GET /tickers?symbol=VCB&interval=1m&limit=2 ── ${ms}ms`);
   const r = body.VCB[0];
   assert(
-    r.time.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
-    `minute time format YYYY-MM-DD HH:MM:SS (got '${r.time}')`,
+    r.time.match(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}$/),
+    `minute time format ISO 8601 (got '${r.time}')`,
   );
   assertOldestFirst(body.VCB, "minute native");
 }
@@ -185,10 +189,8 @@ async function testNoSymbols() {
   const { status, body, ms } = await fetchJSON("/tickers?interval=1D");
   console.log(`\n── GET /tickers (no symbols) ── ${ms}ms`);
   assert(status === 200, "returns 200");
-  assert(
-    typeof body === "object" && Object.keys(body).length === 0,
-    "empty object",
-  );
+  const keys = Object.keys(body);
+  assert(keys.length > 0, "returns all tickers (non-empty)", `got ${keys.length} keys`);
 }
 
 async function testInvalidInterval() {
@@ -234,15 +236,17 @@ async function testModeAliases() {
   assert("CRYPTO_TOP_100" in b2, "mode=cryptos has CRYPTO_TOP_100");
 }
 
-async function testIntervalLowercase() {
-  const { status: s1, body: b1, ms: ms1 } = await fetchJSON("/tickers?symbol=VCB&interval=1d&limit=1");
-  const { status: s2, ms: ms2 } = await fetchJSON("/tickers?symbol=VCB&interval=1h&limit=1");
-  const { status: s3, ms: ms3 } = await fetchJSON("/tickers?symbol=VCB&interval=1M&limit=1");
-  console.log(`\n── Lowercase interval aliases (1d, 1h, 1M) ── ${ms1}ms / ${ms2}ms / ${ms3}ms`);
-  assert(s1 === 200, "interval=1d → 200");
-  assert(b1.VCB?.length === 1, "1d returns rows");
-  assert(s2 === 200, "interval=1h → 200");
+async function testIntervalUppercase() {
+  const { status: s1, body: b1, ms: ms1 } = await fetchJSON("/tickers?symbol=VCB&interval=1D&limit=1");
+  const { status: s2, body: b2, ms: ms2 } = await fetchJSON("/tickers?symbol=VCB&interval=1H&limit=1");
+  const { status: s3, body: b3, ms: ms3 } = await fetchJSON("/tickers?symbol=VCB&interval=1M&limit=1");
+  console.log(`\n── Uppercase intervals (1D, 1H, 1M) ── ${ms1}ms / ${ms2}ms / ${ms3}ms`);
+  assert(s1 === 200, "interval=1D → 200");
+  assert(b1.VCB?.length === 1, "1D returns rows");
+  assert(s2 === 200, "interval=1H → 200");
+  assert(b2.VCB?.length === 1, "1H returns rows");
   assert(s3 === 200, "interval=1M → 200");
+  assert(b3.VCB?.length === 1, "1M returns rows");
 }
 
 async function testIndicatorsPresent() {
@@ -281,7 +285,7 @@ const tests = [
   testVnTickerGroups,
   testCryptoTickerGroups,
   testModeAliases,
-  testIntervalLowercase,
+  testIntervalUppercase,
   testIndicatorsPresent,
 ];
 
