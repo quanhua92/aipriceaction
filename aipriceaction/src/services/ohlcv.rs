@@ -60,3 +60,28 @@ pub async fn get_ohlcv_joined(
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
     ohlcv::get_ohlcv_joined(pool, source, ticker, interval, limit).await
 }
+
+/// Count tickers for a source.
+pub async fn count_tickers(pool: &PgPool, source: &str) -> sqlx::Result<i64> {
+    ohlcv::count_tickers(pool, source).await
+}
+
+/// Count OHLCV rows for a source, optionally filtered by ticker/interval.
+pub async fn count_ohlcv(
+    pool: &PgPool,
+    source: &str,
+    ticker: Option<&str>,
+    interval: Option<&str>,
+) -> sqlx::Result<i64> {
+    ohlcv::count_ohlcv(pool, source, ticker, interval).await
+}
+
+/// Count indicator rows for a source, optionally filtered by ticker/interval.
+pub async fn count_indicators(
+    pool: &PgPool,
+    source: &str,
+    ticker: Option<&str>,
+    interval: Option<&str>,
+) -> sqlx::Result<i64> {
+    ohlcv::count_indicators(pool, source, ticker, interval).await
+}

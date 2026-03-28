@@ -210,3 +210,131 @@ pub async fn get_ohlcv_joined(
     .fetch_all(pool)
     .await
 }
+
+/// Count total tickers for a source.
+pub async fn count_tickers(pool: &PgPool, source: &str) -> sqlx::Result<i64> {
+    sqlx::query_scalar!(
+        r#"SELECT COUNT(*) as "count!" FROM tickers WHERE source = $1"#,
+        source
+    )
+    .fetch_one(pool)
+    .await
+}
+
+/// Count OHLCV rows for a source, optionally filtered by ticker and/or interval.
+pub async fn count_ohlcv(
+    pool: &PgPool,
+    source: &str,
+    ticker: Option<&str>,
+    interval: Option<&str>,
+) -> sqlx::Result<i64> {
+    match (ticker, interval) {
+        (Some(ticker), Some(interval)) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv o
+                   JOIN tickers t ON t.id = o.ticker_id
+                   WHERE t.source = $1 AND t.ticker = $2 AND o.interval = $3"#,
+                source,
+                ticker,
+                interval
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (Some(ticker), None) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv o
+                   JOIN tickers t ON t.id = o.ticker_id
+                   WHERE t.source = $1 AND t.ticker = $2"#,
+                source,
+                ticker
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (None, Some(interval)) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv o
+                   JOIN tickers t ON t.id = o.ticker_id
+                   WHERE t.source = $1 AND o.interval = $2"#,
+                source,
+                interval
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (None, None) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv o
+                   JOIN tickers t ON t.id = o.ticker_id
+                   WHERE t.source = $1"#,
+                source
+            )
+            .fetch_one(pool)
+            .await
+        }
+    }
+}
+
+/// Count indicator rows for a source, optionally filtered by ticker and/or interval.
+pub async fn count_indicators(
+    pool: &PgPool,
+    source: &str,
+    ticker: Option<&str>,
+    interval: Option<&str>,
+) -> sqlx::Result<i64> {
+    match (ticker, interval) {
+        (Some(ticker), Some(interval)) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv_indicators i
+                   JOIN tickers t ON t.id = i.ticker_id
+                   WHERE t.source = $1 AND t.ticker = $2 AND i.interval = $3"#,
+                source,
+                ticker,
+                interval
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (Some(ticker), None) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv_indicators i
+                   JOIN tickers t ON t.id = i.ticker_id
+                   WHERE t.source = $1 AND t.ticker = $2"#,
+                source,
+                ticker
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (None, Some(interval)) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv_indicators i
+                   JOIN tickers t ON t.id = i.ticker_id
+                   WHERE t.source = $1 AND i.interval = $2"#,
+                source,
+                interval
+            )
+            .fetch_one(pool)
+            .await
+        }
+        (None, None) => {
+            sqlx::query_scalar!(
+                r#"SELECT COUNT(*) as "count!"
+                   FROM ohlcv_indicators i
+                   JOIN tickers t ON t.id = i.ticker_id
+                   WHERE t.source = $1"#,
+                source
+            )
+            .fetch_one(pool)
+            .await
+        }
+    }
+}

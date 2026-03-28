@@ -1,8 +1,7 @@
-use chrono::{TimeZone, Utc};
 use clap::{Parser, Subcommand};
 
 use crate::db;
-use crate::models::ohlcv::{IndicatorRow, OhlcvRow};
+use crate::models::interval::Interval;
 use crate::services::ohlcv;
 
 #[derive(Parser)]
@@ -26,6 +25,21 @@ pub enum Commands {
     },
     /// Show current status
     Status,
+    /// Import CSV files from market_data directory into PostgreSQL
+    Import {
+        /// Path to the market_data directory
+        #[arg(long)]
+        market_data: String,
+        /// Only import a specific ticker symbol (e.g. "VNINDEX")
+        #[arg(long)]
+        ticker: Option<String>,
+        /// Only import a specific interval (e.g. "1D", "1H", "1m")
+        #[arg(long)]
+        interval: Option<String>,
+        /// Data source label (default: "vn")
+        #[arg(long, default_value = "vn")]
+        source: String,
+    },
 }
 
 pub fn run() {
@@ -67,110 +81,6 @@ pub fn run() {
                     }
                 };
 
-                // Exercise the upsert pipeline with sample data
-                let ticker_id = ohlcv::ensure_ticker(&pool, "vn_example", "VCB")
-                    .await
-                    .expect("Failed to upsert ticker");
-                tracing::info!("Ticker VCB (vn_example) → id={ticker_id}");
-
-                let ohlcv_rows = vec![
-                    OhlcvRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 25, 0, 0, 0).unwrap(),
-                        open: 60500.0,
-                        high: 61200.0,
-                        low: 60100.0,
-                        close: 60800.0,
-                        volume: 1_500_000,
-                    },
-                    OhlcvRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 26, 0, 0, 0).unwrap(),
-                        open: 60800.0,
-                        high: 61500.0,
-                        low: 60500.0,
-                        close: 61200.0,
-                        volume: 1_800_000,
-                    },
-                    OhlcvRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 27, 0, 0, 0).unwrap(),
-                        open: 61200.0,
-                        high: 62000.0,
-                        low: 61000.0,
-                        close: 61800.0,
-                        volume: 2_100_000,
-                    },
-                ];
-                ohlcv::save_ohlcv(&pool, &ohlcv_rows)
-                    .await
-                    .expect("Failed to save OHLCV");
-                tracing::info!("Saved {} OHLCV rows", ohlcv_rows.len());
-
-                let indicator_rows = vec![
-                    IndicatorRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 25, 0, 0, 0).unwrap(),
-                        ma10: Some(60400.0),
-                        ma20: Some(60000.0),
-                        ma50: None,
-                        ma100: None,
-                        ma200: None,
-                        ma10_score: Some(0.66),
-                        ma20_score: Some(1.33),
-                        ma50_score: None,
-                        ma100_score: None,
-                        ma200_score: None,
-                        close_changed: Some(0.5),
-                        volume_changed: Some(10.2),
-                        total_money_changed: Some(15000000.0),
-                    },
-                    IndicatorRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 26, 0, 0, 0).unwrap(),
-                        ma10: Some(60600.0),
-                        ma20: Some(60200.0),
-                        ma50: None,
-                        ma100: None,
-                        ma200: None,
-                        ma10_score: Some(0.99),
-                        ma20_score: Some(1.66),
-                        ma50_score: None,
-                        ma100_score: None,
-                        ma200_score: None,
-                        close_changed: Some(0.66),
-                        volume_changed: Some(20.0),
-                        total_money_changed: Some(36000000.0),
-                    },
-                    IndicatorRow {
-                        ticker_id,
-                        interval: "1D".into(),
-                        time: Utc.with_ymd_and_hms(2025, 3, 27, 0, 0, 0).unwrap(),
-                        ma10: Some(60933.0),
-                        ma20: Some(60400.0),
-                        ma50: None,
-                        ma100: None,
-                        ma200: None,
-                        ma10_score: Some(1.42),
-                        ma20_score: Some(2.32),
-                        ma50_score: None,
-                        ma100_score: None,
-                        ma200_score: None,
-                        close_changed: Some(0.98),
-                        volume_changed: Some(16.67),
-                        total_money_changed: Some(12600000.0),
-                    },
-                ];
-                ohlcv::save_indicators(&pool, &indicator_rows)
-                    .await
-                    .expect("Failed to save indicators");
-                tracing::info!("Saved {} indicator rows", indicator_rows.len());
-
                 tracing::info!("Starting server on {host}:{port}");
                 // TODO: wire up actual server with pool
             });
@@ -202,41 +112,164 @@ pub fn run() {
                     Err(e) => tracing::error!("Database health check failed: {e}"),
                 }
 
-                // List tickers
-                let tickers = ohlcv::list_tickers(&pool, "vn_example")
+                let source = "vn";
+
+                // Total tickers
+                let ticker_count = ohlcv::count_tickers(&pool, source)
                     .await
-                    .expect("Failed to list tickers");
-                tracing::info!("Tickers (vn_example): {} found", tickers.len());
-                for t in &tickers {
-                    tracing::info!("  {t}");
+                    .expect("Failed to count tickers");
+
+                // Total OHLCV and indicator rows (all tickers)
+                let total_ohlcv = ohlcv::count_ohlcv(&pool, source, None, None)
+                    .await
+                    .expect("Failed to count OHLCV");
+                let total_indicators = ohlcv::count_indicators(&pool, source, None, None)
+                    .await
+                    .expect("Failed to count indicators");
+
+                tracing::info!("Source: {source} | Tickers: {ticker_count} | OHLCV: {total_ohlcv} | Indicators: {total_indicators}");
+
+                // Per-interval totals
+                for iv in &["1D", "1h", "1m"] {
+                    let ohlcv_count = ohlcv::count_ohlcv(&pool, source, None, Some(iv))
+                        .await
+                        .expect("Failed to count OHLCV");
+                    let ind_count = ohlcv::count_indicators(&pool, source, None, Some(iv))
+                        .await
+                        .expect("Failed to count indicators");
+                    if ohlcv_count > 0 || ind_count > 0 {
+                        tracing::info!("  {iv}: {ohlcv_count} OHLCV, {ind_count} indicators");
+                    }
                 }
 
-                // Read OHLCV for first ticker
-                if let Some(ticker) = tickers.first() {
-                    let ohlcv_rows = ohlcv::get_ohlcv(&pool, ticker.id, "1D", Some(10))
+                // VNINDEX breakdown
+                let vnindex_ohlcv = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), None)
+                    .await
+                    .expect("Failed to count VNINDEX OHLCV");
+                let vnindex_ind = ohlcv::count_indicators(&pool, source, Some("VNINDEX"), None)
+                    .await
+                    .expect("Failed to count VNINDEX indicators");
+                tracing::info!("VNINDEX: {vnindex_ohlcv} OHLCV, {vnindex_ind} indicators");
+                for iv in &["1D", "1h", "1m"] {
+                    let count = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), Some(iv))
                         .await
-                        .expect("Failed to get OHLCV");
-                    tracing::info!("OHLCV rows for {} (1D): {} rows", ticker.ticker, ohlcv_rows.len());
-                    for row in &ohlcv_rows {
-                        tracing::info!("  {row}");
-                    }
-
-                    let indicators = ohlcv::get_indicators(&pool, ticker.id, "1D", Some(10))
-                        .await
-                        .expect("Failed to get indicators");
-                    tracing::info!("Indicators for {} (1D): {} rows", ticker.ticker, indicators.len());
-                    for row in &indicators {
-                        tracing::info!("  {row}");
+                        .expect("Failed to count VNINDEX OHLCV");
+                    if count > 0 {
+                        tracing::info!("  {iv}: {count}");
                     }
                 }
+            });
+        }
+        Commands::Import {
+            market_data,
+            ticker,
+            interval,
+            source,
+        } => {
+            let market_data_path = std::path::Path::new(&market_data);
+            if !market_data_path.is_dir() {
+                tracing::error!("--market-data path does not exist or is not a directory: {market_data}");
+                return;
+            }
 
-                // Joined query (20-column CSV format)
-                let joined = ohlcv::get_ohlcv_joined(&pool, "vn_example", "VCB", "1D", Some(10))
+            let interval_filter = match interval {
+                Some(ref s) => match Interval::from_arg(s) {
+                    Ok(iv) => Some(iv),
+                    Err(e) => {
+                        tracing::error!("Invalid --interval: {e}");
+                        return;
+                    }
+                },
+                None => None,
+            };
+
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                let database_url =
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| String::new());
+
+                if database_url.is_empty() {
+                    tracing::error!("DATABASE_URL not set");
+                    return;
+                }
+
+                let pool = match db::connect(&database_url).await {
+                    Ok(pool) => {
+                        tracing::info!("Connected to PostgreSQL, migrations applied");
+                        pool
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database: {e}");
+                        return;
+                    }
+                };
+
+                tracing::info!(
+                    "Importing from {} (source={}, ticker={}, interval={})",
+                    market_data,
+                    source,
+                    ticker.as_deref().unwrap_or("all"),
+                    interval.as_deref().unwrap_or("all"),
+                );
+
+                let stats = crate::services::import::import_csv(
+                    &pool,
+                    market_data_path,
+                    &source,
+                    ticker.as_deref(),
+                    interval_filter.as_ref(),
+                )
+                .await;
+
+                tracing::info!(
+                    "Import complete: {} files, {} rows, {} batches, {} errors",
+                    stats.files_processed,
+                    stats.total_rows,
+                    stats.total_batches,
+                    stats.errors.len(),
+                );
+
+                for err in &stats.errors {
+                    tracing::warn!("  error: {err}");
+                }
+
+                // Verification: read back last 5 rows for the last imported ticker+interval
+                if stats.files_processed > 0 {
+                    let verify_ticker = ticker.as_deref().unwrap_or("VCB");
+                    let verify_interval = interval
+                        .as_deref()
+                        .map(|s| {
+                            if s.eq_ignore_ascii_case("1h") {
+                                "1h"
+                            } else {
+                                s
+                            }
+                        })
+                        .unwrap_or("1D");
+
+                    tracing::info!(
+                        "Verification: reading last 5 rows for {} ({})",
+                        verify_ticker,
+                        verify_interval,
+                    );
+                    match ohlcv::get_ohlcv_joined(
+                        &pool,
+                        &source,
+                        verify_ticker,
+                        verify_interval,
+                        Some(5),
+                    )
                     .await
-                    .expect("Failed to get joined data");
-                tracing::info!("Joined rows (VCB 1D): {} rows", joined.len());
-                for row in &joined {
-                    tracing::info!("  {row}");
+                    {
+                        Ok(rows) => {
+                            for row in &rows {
+                                tracing::info!("  {row}");
+                            }
+                        }
+                        Err(e) => {
+                            tracing::warn!("Verification query failed: {e}");
+                        }
+                    }
                 }
             });
         }
