@@ -1,0 +1,44 @@
+services:
+  # Single node deployment
+  aipriceaction:
+    build: .
+    container_name: aipriceaction
+    user: "${UID:-1000}:${GID:-1000}"
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - PORT=3000
+      - DATABASE_URL=postgres://aipriceaction:helloaipriceaction@postgres:5432/aipriceaction
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  postgres:
+    image: pgvector/pgvector:pg18-trixie
+    container_name: aipriceaction-postgres
+    user: "${UID:-999}:${GID:-999}"
+    environment:
+      - POSTGRES_USER=aipriceaction
+      - POSTGRES_PASSWORD=helloaipriceaction
+      - POSTGRES_DB=aipriceaction
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aipriceaction"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
