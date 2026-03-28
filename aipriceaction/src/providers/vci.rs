@@ -494,9 +494,10 @@ impl VciProvider {
         symbol: &str,
         interval: &str,
         count_back: u32,
+        end_timestamp: Option<i64>,
     ) -> Result<Vec<OhlcvData>, VciError> {
         let interval_value = Self::get_interval_value(interval)?;
-        let end_timestamp = Self::calculate_timestamp(None);
+        let end_timestamp = end_timestamp.unwrap_or_else(|| Self::calculate_timestamp(None));
 
         let url = format!("{}chart/OHLCChart/gap-chart", self.base_url);
         let payload = serde_json::json!({

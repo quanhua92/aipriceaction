@@ -117,6 +117,37 @@ pub fn run() {
 
                 tracing::info!("Starting server on {host}:{port}");
 
+                // Spawn VCI data workers if enabled
+                let vci_workers_enabled = std::env::var("VCI_WORKERS")
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(true);
+
+                if vci_workers_enabled {
+                    tracing::info!("VCI workers enabled");
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::vci_daily::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::vci_hourly::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::vci_minute::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::vci_dividend::run(pool_clone).await;
+                    });
+                } else {
+                    tracing::info!("VCI workers disabled (set VCI_WORKERS=true to enable)");
+                }
+
                 let app = crate::server::create_app(pool);
                 let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
                     .await
@@ -611,7 +642,7 @@ pub fn run() {
 
                 for interval in &["1D", "1H", "1m"] {
                     tracing::info!("  Fetching {} ...", interval);
-                    match provider.get_history(&ticker, interval, count_back).await {
+                    match provider.get_history(&ticker, interval, count_back, None).await {
                         Ok(data) => {
                             let count = data.len();
                             if count > 0 {

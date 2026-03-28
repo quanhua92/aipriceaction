@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 
 use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
@@ -311,5 +312,76 @@ pub async fn get_latest_daily_per_ticker(
     )
     .bind(source)
     .fetch_all(pool)
+    .await
+}
+
+// ── Worker queries ──
+
+/// Get tickers by status for a source.
+pub async fn get_tickers_by_status(
+    pool: &PgPool,
+    source: &str,
+    status: &str,
+) -> sqlx::Result<Vec<Ticker>> {
+    sqlx::query_as!(
+        Ticker,
+        r#"SELECT id, source, ticker, name, status
+           FROM tickers WHERE source = $1 AND status = $2
+           ORDER BY ticker"#,
+        source,
+        status
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Update ticker status.
+pub async fn update_ticker_status(
+    pool: &PgPool,
+    ticker_id: i32,
+    status: &str,
+) -> sqlx::Result<()> {
+    sqlx::query!(
+        "UPDATE tickers SET status = $1 WHERE id = $2",
+        status,
+        ticker_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Delete all OHLCV data for a ticker. Returns number of deleted rows.
+pub async fn delete_ohlcv_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Result<u64> {
+    let result = sqlx::query("DELETE FROM ohlcv WHERE ticker_id = $1")
+        .bind(ticker_id)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
+}
+
+/// Delete all indicators for a ticker. Returns number of deleted rows.
+pub async fn delete_indicators_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Result<u64> {
+    let result = sqlx::query("DELETE FROM ohlcv_indicators WHERE ticker_id = $1")
+        .bind(ticker_id)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected())
+}
+
+/// Get latest time for a ticker + interval. Returns None if no data exists.
+pub async fn get_latest_time(
+    pool: &PgPool,
+    ticker_id: i32,
+    interval: &str,
+) -> sqlx::Result<Option<DateTime<Utc>>> {
+    sqlx::query_scalar!(
+        r#"SELECT time FROM ohlcv
+           WHERE ticker_id = $1 AND interval = $2
+           ORDER BY time DESC LIMIT 1"#,
+        ticker_id,
+        interval
+    )
+    .fetch_optional(pool)
     .await
 }
