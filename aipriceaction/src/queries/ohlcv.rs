@@ -165,10 +165,14 @@ pub async fn get_ohlcv_joined_range(
     }
     sql.push_str(" ORDER BY o.time DESC");
 
-    match (start_time, end_time) {
-        (Some(_), Some(_)) => sql.push_str(" LIMIT $6"),
-        (Some(_), None) | (None, Some(_)) => sql.push_str(" LIMIT $5"),
-        (None, None) => sql.push_str(" LIMIT $4"),
+    // Add LIMIT only when a specific limit is requested
+    if limit.is_some() {
+        let param_idx = match (start_time, end_time) {
+            (Some(_), Some(_)) => "$6",
+            (Some(_), None) | (None, Some(_)) => "$5",
+            (None, None) => "$4",
+        };
+        sql.push_str(&format!(" LIMIT {param_idx}"));
     }
 
     let mut q = sqlx::query_as::<_, OhlcvJoined>(&sql)
@@ -176,7 +180,7 @@ pub async fn get_ohlcv_joined_range(
 
     if let Some(s) = start_time { q = q.bind(s); }
     if let Some(e) = end_time { q = q.bind(e); }
-    if let Some(l) = limit { q = q.bind(l); } else { q = q.bind(0i64); }
+    if let Some(l) = limit { q = q.bind(l); }
 
     q.fetch_all(pool).await
 }

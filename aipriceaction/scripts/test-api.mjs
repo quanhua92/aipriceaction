@@ -266,6 +266,36 @@ async function testIndicatorsPresent() {
   assert(typeof r.total_money_changed === "number", "total_money_changed is number");
 }
 
+async function testNoLimit() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1D (no limit) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body, "has VCB key");
+  assert(body.VCB.length > 10, `returns many rows (got ${body.VCB.length})`);
+  assertOldestFirst(body.VCB, "no-limit daily");
+}
+
+async function testNoLimitEmptyTicker() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=NOTEXIST&interval=1D",
+  );
+  console.log(`\n── GET /tickers?symbol=NOTEXIST&interval=1D (no limit) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(!("NOTEXIST" in body), "no key for non-existent ticker");
+  assert(typeof body === "object", "empty object");
+}
+
+async function testNoLimitFutureRange() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D&start_date=2099-01-01",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB (future date range, no limit) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(!("VCB" in body), "no key for future-only range");
+}
+
 // ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
@@ -287,6 +317,9 @@ const tests = [
   testModeAliases,
   testIntervalUppercase,
   testIndicatorsPresent,
+  testNoLimit,
+  testNoLimitEmptyTicker,
+  testNoLimitFutureRange,
 ];
 
 async function main() {

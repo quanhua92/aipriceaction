@@ -216,6 +216,9 @@ async fn native_tickers(
         result.insert(symbol.clone(), mapped);
     }
 
+    // Remove tickers with no data (matches production behavior)
+    result.retain(|_, v| !v.is_empty());
+
     if is_csv {
         csv_response(&result)
     } else {
@@ -293,6 +296,9 @@ async fn aggregated_tickers(
             result.insert(symbol.clone(), trimmed);
         }
     }
+
+    // Remove tickers with no data (matches production behavior)
+    result.retain(|_, v| !v.is_empty());
 
     if is_csv {
         csv_response(&result)
