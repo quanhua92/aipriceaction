@@ -72,15 +72,28 @@ pub async fn run(pool: PgPool) {
                             Ok(data) => {
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1h").await;
                                 tracing::info!(ticker, count = data.len(), "hourly sync OK");
+                                false
                             }
                             Err(e) => {
+                                let rate_limited = e.to_string().contains("429");
                                 tracing::warn!(ticker, "hourly fetch failed: {e}");
+                                rate_limited
                             }
                         }
                     });
                 }
 
-                while let Some(_result) = handles.join_next().await {}
+                let mut rate_limited = 0usize;
+                while let Some(result) = handles.join_next().await {
+                    if result.unwrap_or(false) {
+                        rate_limited += 1;
+                    }
+                }
+
+                if rate_limited > 0 {
+                    tracing::warn!(rate_limited, total = chunk.len(), "rate limited in batch, cooling down {}s", vci_worker::RATE_LIMIT_COOLDOWN_SECS);
+                    sleep(Duration::from_secs(vci_worker::RATE_LIMIT_COOLDOWN_SECS)).await;
+                }
             }
         } else {
             tracing::debug!("VCI hourly worker: no ready tickers");

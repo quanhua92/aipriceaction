@@ -29,23 +29,23 @@ pub mod vci_worker {
     pub const DIVIDEND_CHECK_BARS: i64 = 20;
 
     /// Adaptive countBack: daily (recent data, < 14 days gap)
-    pub const DAILY_COUNTBACK_RECENT: u32 = 7;
+    pub const DAILY_COUNTBACK_RECENT: u32 = 30;
     /// Adaptive countBack: daily (gap or first sync)
-    pub const DAILY_COUNTBACK_GAP: u32 = 30;
+    pub const DAILY_COUNTBACK_GAP: u32 = 100;
     /// Gap threshold in days for daily data
     pub const DAILY_GAP_THRESHOLD_DAYS: i64 = 14;
 
     /// Adaptive countBack: hourly (recent)
-    pub const HOURLY_COUNTBACK_RECENT: u32 = 48;
+    pub const HOURLY_COUNTBACK_RECENT: u32 = 200;
     /// Adaptive countBack: hourly (gap)
-    pub const HOURLY_COUNTBACK_GAP: u32 = 78;
+    pub const HOURLY_COUNTBACK_GAP: u32 = 500;
     /// Gap threshold in days for hourly data
     pub const HOURLY_GAP_THRESHOLD_DAYS: i64 = 14;
 
     /// Adaptive countBack: minute (recent)
-    pub const MINUTE_COUNTBACK_RECENT: u32 = 960;
+    pub const MINUTE_COUNTBACK_RECENT: u32 = 3000;
     /// Adaptive countBack: minute (gap)
-    pub const MINUTE_COUNTBACK_GAP: u32 = 2400;
+    pub const MINUTE_COUNTBACK_GAP: u32 = 5000;
     /// Gap threshold in days for minute data
     pub const MINUTE_GAP_THRESHOLD_DAYS: i64 = 5;
 
@@ -57,6 +57,9 @@ pub mod vci_worker {
     pub const DIVIDEND_CHUNK_SIZE_MINUTE: u32 = 5000;
     /// Sleep between dividend chunk fetches
     pub const DIVIDEND_CHUNK_SLEEP_SECS: u64 = 2;
+
+    /// Cooldown when rate limited (HTTP 429) detected in a batch
+    pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
 
     /// Hourly worker: initial delay before first sync
     pub const HOURLY_INITIAL_DELAY_SECS: u64 = 300;
