@@ -58,19 +58,28 @@ pub mod vci_worker {
     /// Sleep between dividend chunk fetches
     pub const DIVIDEND_CHUNK_SLEEP_SECS: u64 = 2;
 
+    /// Hourly worker: initial delay before first sync
+    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 300;
+    /// Minute worker: initial delay before first sync
+    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 300;
+
     /// Index tickers (no dividend detection)
     pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "HNX", "UPCOM"];
 
-    /// Concurrent API batches: auto-detected from CPU cores.
-    /// 1-2 cores → 3, 3-4 cores → 5, 5+ cores → 8
-    pub fn concurrent_batches() -> usize {
-        let cpus = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1);
-        match cpus {
-            1..=2 => 3,
-            3..=4 => 5,
-            _ => 8,
-        }
+    /// Concurrent API batches based on CPU cores and VCI client count.
+    /// Caps concurrency to 3 per client to avoid rate limit exhaustion.
+    pub fn concurrent_batches(client_count: usize) -> usize {
+        let cpu_based = {
+            let cpus = std::thread::available_parallelism()
+                .map(|n| n.get())
+                .unwrap_or(1);
+            match cpus {
+                1..=2 => 3,
+                3..=4 => 5,
+                _ => 8,
+            }
+        };
+        let client_based = client_count * 3;
+        cpu_based.min(client_based)
     }
 }

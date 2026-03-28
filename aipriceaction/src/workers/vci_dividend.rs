@@ -9,7 +9,7 @@ use crate::workers::vci_shared;
 pub async fn run(pool: PgPool) {
     tracing::info!("VCI dividend worker started");
 
-    let provider = match VciProvider::new(30) {
+    let provider = match VciProvider::new(60) {
         Ok(p) => p,
         Err(e) => {
             tracing::error!("VCI dividend worker: failed to create provider: {e}");

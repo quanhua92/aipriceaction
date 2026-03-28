@@ -9,15 +9,15 @@ use crate::queries::ohlcv;
 use crate::workers::vci_shared;
 
 pub async fn run(pool: PgPool) {
-    tracing::info!("VCI daily worker started (concurrency={})", vci_worker::concurrent_batches());
-
-    let provider = match VciProvider::new(30) {
+    let provider = match VciProvider::new(60) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("VCI daily worker: failed to create provider: {e}");
             return;
         }
     };
+
+    tracing::info!("VCI daily worker started (clients={}, concurrency={})", provider.client_count(), vci_worker::concurrent_batches(provider.client_count()));
 
     loop {
         let trading = vci_shared::is_trading_hours();
@@ -46,7 +46,7 @@ pub async fn run(pool: PgPool) {
                 ticker_symbols.shuffle(&mut rng);
             }
 
-            let concurrency = vci_worker::concurrent_batches();
+            let concurrency = vci_worker::concurrent_batches(provider.client_count());
             for chunk in ticker_symbols.chunks(concurrency) {
                 let mut handles = tokio::task::JoinSet::new();
                 for ticker in chunk {
