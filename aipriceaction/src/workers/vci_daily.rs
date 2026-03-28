@@ -64,6 +64,17 @@ pub async fn run(pool: PgPool) {
                             continue;
                         }
                         vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
+
+                        // Flag for full download if daily data is insufficient
+                        if let Ok(count) = ohlcv::count_ohlcv(&pool, "vn", Some(ticker), Some("1D")).await {
+                            if count < 3 {
+                                tracing::warn!(ticker, count, "daily records < 3, requesting full download");
+                                if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await {
+                                    tracing::error!(ticker, "failed to set full-download-requested: {e}");
+                                }
+                            }
+                        }
+
                         tracing::info!(ticker, count = data.len(), "daily sync OK");
                     }
                     Err(e) => {

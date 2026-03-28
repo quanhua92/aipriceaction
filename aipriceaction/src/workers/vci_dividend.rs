@@ -57,11 +57,15 @@ pub async fn run(pool: PgPool) {
                     "1h" => vci_worker::DIVIDEND_CHUNK_SIZE_HOURLY,
                     _ => vci_worker::DIVIDEND_CHUNK_SIZE_DAILY,
                 };
+                let api_interval = match *interval {
+                    "1h" => "1H",
+                    other => other,
+                };
                 let mut all_data = Vec::new();
                 let mut end_ts = chrono::Utc::now().timestamp();
 
                 loop {
-                    match provider.get_history(ticker, interval, chunk_size, Some(end_ts)).await {
+                    match provider.get_history(ticker, api_interval, chunk_size, Some(end_ts)).await {
                         Ok(data) => {
                             if data.is_empty() {
                                 break;
