@@ -69,20 +69,9 @@ pub mod vci_worker {
     /// Index tickers (no dividend detection)
     pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "HNX", "UPCOM"];
 
-    /// Concurrent API batches based on CPU cores and VCI client count.
-    /// Caps concurrency to 3 per client to avoid rate limit exhaustion.
+    /// Concurrent API batches based on VCI client count.
+    /// 3 concurrent requests per client, each with its own rate limiter.
     pub fn concurrent_batches(client_count: usize) -> usize {
-        let cpu_based = {
-            let cpus = std::thread::available_parallelism()
-                .map(|n| n.get())
-                .unwrap_or(1);
-            match cpus {
-                1..=2 => 3,
-                3..=4 => 5,
-                _ => 8,
-            }
-        };
-        let client_based = client_count * 3;
-        cpu_based.min(client_based)
+        (client_count * 3).min(24)
     }
 }
