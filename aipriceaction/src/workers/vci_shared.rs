@@ -202,7 +202,7 @@ pub async fn detect_dividend(
                         ratio = ratio,
                         "dividend detected"
                     );
-                    if let Err(e) = queries::ohlcv::update_ticker_status(pool, ticker_id, "dividend_detected").await {
+                    if let Err(e) = queries::ohlcv::update_ticker_status(pool, ticker_id, "dividend-detected").await {
                         tracing::error!(ticker_id, "failed to update ticker status: {e}");
                     }
                     return true;

@@ -18,8 +18,8 @@ pub async fn run(pool: PgPool) {
     };
 
     loop {
-        // Find tickers flagged for dividend recovery
-        let tickers = match ohlcv::get_tickers_by_status(&pool, "vn", "dividend_detected").await {
+        // Find tickers flagged for full re-download
+        let tickers = match ohlcv::get_tickers_by_statuses(&pool, "vn", &["dividend-detected", "full-download-requested"]).await {
             Ok(t) => t,
             Err(e) => {
                 tracing::warn!("VCI dividend worker: failed to load flagged tickers: {e}");
@@ -51,20 +51,26 @@ pub async fn run(pool: PgPool) {
             tracing::info!(ticker, "deleted all existing data, re-downloading");
 
             // Re-download full history for each interval
-            for interval in &["1D", "1H", "1m"] {
+            for interval in &["1D", "1h", "1m"] {
+                let chunk_size = match *interval {
+                    "1m" => vci_worker::DIVIDEND_CHUNK_SIZE_MINUTE,
+                    "1h" => vci_worker::DIVIDEND_CHUNK_SIZE_HOURLY,
+                    _ => vci_worker::DIVIDEND_CHUNK_SIZE_DAILY,
+                };
                 let mut all_data = Vec::new();
                 let mut end_ts = chrono::Utc::now().timestamp();
 
                 loop {
-                    match provider.get_history(ticker, interval, vci_worker::DIVIDEND_CHUNK_SIZE, Some(end_ts)).await {
+                    match provider.get_history(ticker, interval, chunk_size, Some(end_ts)).await {
                         Ok(data) => {
                             if data.is_empty() {
                                 break;
                             }
                             let earliest = data.first().unwrap().time.timestamp();
+                            let fetched = data.len() as u32;
                             all_data.extend(data);
 
-                            if (all_data.len() as u32) < vci_worker::DIVIDEND_CHUNK_SIZE {
+                            if fetched < chunk_size {
                                 break;
                             }
                             end_ts = earliest - 1;

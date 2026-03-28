@@ -323,13 +323,23 @@ pub async fn get_tickers_by_status(
     source: &str,
     status: &str,
 ) -> sqlx::Result<Vec<Ticker>> {
+    get_tickers_by_statuses(pool, source, &[status]).await
+}
+
+/// Get tickers matching any of the given statuses for a source.
+pub async fn get_tickers_by_statuses(
+    pool: &PgPool,
+    source: &str,
+    statuses: &[&str],
+) -> sqlx::Result<Vec<Ticker>> {
+    let statuses: Vec<String> = statuses.iter().map(|s| s.to_string()).collect();
     sqlx::query_as!(
         Ticker,
         r#"SELECT id, source, ticker, name, status
-           FROM tickers WHERE source = $1 AND status = $2
+           FROM tickers WHERE source = $1 AND status = ANY($2)
            ORDER BY ticker"#,
         source,
-        status
+        &statuses
     )
     .fetch_all(pool)
     .await
