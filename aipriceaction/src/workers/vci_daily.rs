@@ -1,4 +1,3 @@
-use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
@@ -55,16 +54,8 @@ pub async fn run(pool: PgPool) {
                     let ticker = ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = vci_shared::ensure_ticker(&pool, "vn", &ticker).await;
-                        let last_time = vci_shared::get_last_time(&pool, ticker_id, "1D").await;
 
-                        let count_back = match last_time {
-                            Some(t) if (Utc::now() - t).num_days() < vci_worker::DAILY_GAP_THRESHOLD_DAYS => {
-                                vci_worker::DAILY_COUNTBACK_RECENT
-                            }
-                            _ => vci_worker::DAILY_COUNTBACK_GAP,
-                        };
-
-                        match provider.get_history(&ticker, "1D", count_back, None).await {
+                        match provider.get_history(&ticker, "1D", vci_worker::DAILY_COUNTBACK, None).await {
                             Ok(data) => {
                                 if vci_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
                                     tracing::warn!(ticker, "dividend detected, skipping");

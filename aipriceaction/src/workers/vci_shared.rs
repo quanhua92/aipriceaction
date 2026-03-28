@@ -56,7 +56,29 @@ pub async fn get_last_time(
         .unwrap_or(None)
 }
 
+/// Get historical closes and volumes from DB for accurate indicator calculation.
+/// Returns (closes, volumes) in chronological order (oldest first).
+async fn get_historical(pool: &PgPool, ticker_id: i32, interval: &str, limit: usize) -> (Vec<f64>, Vec<f64>) {
+    match queries::ohlcv::get_ohlcv(pool, ticker_id, interval, Some(limit as i64)).await {
+        Ok(rows) => {
+            let mut closes: Vec<f64> = rows.iter().map(|r| r.close).collect();
+            let mut volumes: Vec<f64> = rows.iter().map(|r| r.volume as f64).collect();
+            closes.reverse();
+            volumes.reverse();
+            (closes, volumes)
+        }
+        Err(_) => (Vec::new(), Vec::new()),
+    }
+}
+
+/// Maximum SMA period — fetch this many historical closes from DB
+/// to ensure all moving averages are accurate.
+const SMA_MAX_PERIOD: usize = 200;
+
 /// Calculate technical indicators and bulk-upsert OHLCV + indicator rows.
+///
+/// Fetches historical closes from DB to ensure SMA(200) and other indicators
+/// are calculated accurately even when the new data window is small.
 pub async fn enhance_and_save(
     pool: &PgPool,
     ticker_id: i32,
@@ -71,12 +93,23 @@ pub async fn enhance_and_save(
     let mut sorted = data.to_vec();
     sorted.sort_by_key(|d| d.time);
 
-    let closes: Vec<f64> = sorted.iter().map(|d| d.close).collect();
-    let ma10 = calculate_sma(&closes, 10);
-    let ma20 = calculate_sma(&closes, 20);
-    let ma50 = calculate_sma(&closes, 50);
-    let ma100 = calculate_sma(&closes, 100);
-    let ma200 = calculate_sma(&closes, 200);
+    // Fetch historical closes and volumes from DB for accurate SMA calculation
+    let (historical_closes, historical_volumes) = get_historical(pool, ticker_id, interval, SMA_MAX_PERIOD).await;
+    let offset = historical_closes.len();
+
+    // Combine: historical + new data
+    let mut all_closes = historical_closes;
+    all_closes.extend(sorted.iter().map(|d| d.close));
+
+    let mut all_volumes = historical_volumes;
+    all_volumes.extend(sorted.iter().map(|d| d.volume as f64));
+
+    // Calculate SMAs on the combined dataset
+    let ma10 = calculate_sma(&all_closes, 10);
+    let ma20 = calculate_sma(&all_closes, 20);
+    let ma50 = calculate_sma(&all_closes, 50);
+    let ma100 = calculate_sma(&all_closes, 100);
+    let ma200 = calculate_sma(&all_closes, 200);
 
     let ohlcv_rows: Vec<OhlcvRow> = sorted
         .iter()
@@ -96,6 +129,8 @@ pub async fn enhance_and_save(
         .iter()
         .enumerate()
         .map(|(i, d)| {
+            // Global index into all_closes (historical + new)
+            let gi = offset + i;
             let make_opt = |vals: &[f64], idx: usize| -> Option<f64> {
                 if idx < vals.len() && vals[idx] > 0.0 {
                     Some(vals[idx])
@@ -108,33 +143,28 @@ pub async fn enhance_and_save(
                 ticker_id,
                 interval: interval.to_string(),
                 time: d.time,
-                ma10: make_opt(&ma10, i),
-                ma20: make_opt(&ma20, i),
-                ma50: make_opt(&ma50, i),
-                ma100: make_opt(&ma100, i),
-                ma200: make_opt(&ma200, i),
-                ma10_score: make_opt(&ma10, i).map(|v| calculate_ma_score(d.close, v)),
-                ma20_score: make_opt(&ma20, i).map(|v| calculate_ma_score(d.close, v)),
-                ma50_score: make_opt(&ma50, i).map(|v| calculate_ma_score(d.close, v)),
-                ma100_score: make_opt(&ma100, i).map(|v| calculate_ma_score(d.close, v)),
-                ma200_score: make_opt(&ma200, i).map(|v| calculate_ma_score(d.close, v)),
-                close_changed: if i > 0 && closes[i - 1] > 0.0 {
-                    Some(((d.close - closes[i - 1]) / closes[i - 1]) * 100.0)
+                ma10: make_opt(&ma10, gi),
+                ma20: make_opt(&ma20, gi),
+                ma50: make_opt(&ma50, gi),
+                ma100: make_opt(&ma100, gi),
+                ma200: make_opt(&ma200, gi),
+                ma10_score: make_opt(&ma10, gi).map(|v| calculate_ma_score(d.close, v)),
+                ma20_score: make_opt(&ma20, gi).map(|v| calculate_ma_score(d.close, v)),
+                ma50_score: make_opt(&ma50, gi).map(|v| calculate_ma_score(d.close, v)),
+                ma100_score: make_opt(&ma100, gi).map(|v| calculate_ma_score(d.close, v)),
+                ma200_score: make_opt(&ma200, gi).map(|v| calculate_ma_score(d.close, v)),
+                close_changed: if gi > 0 && all_closes[gi - 1] > 0.0 {
+                    Some(((d.close - all_closes[gi - 1]) / all_closes[gi - 1]) * 100.0)
                 } else {
                     None
                 },
-                volume_changed: if i > 0 {
-                    let prev_vol = sorted[i - 1].volume as f64;
-                    if prev_vol > 0.0 {
-                        Some(((d.volume as f64 - prev_vol) / prev_vol) * 100.0)
-                    } else {
-                        None
-                    }
+                volume_changed: if gi > 0 && all_volumes[gi - 1] > 0.0 {
+                    Some(((d.volume as f64 - all_volumes[gi - 1]) / all_volumes[gi - 1]) * 100.0)
                 } else {
                     None
                 },
-                total_money_changed: if i > 0 {
-                    Some((d.close - closes[i - 1]) * d.volume as f64)
+                total_money_changed: if gi > 0 && all_closes[gi - 1] > 0.0 {
+                    Some((d.close - all_closes[gi - 1]) * d.volume as f64)
                 } else {
                     None
                 },

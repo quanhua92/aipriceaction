@@ -28,12 +28,8 @@ pub mod vci_worker {
     /// Number of recent daily bars to compare for dividend detection
     pub const DIVIDEND_CHECK_BARS: i64 = 20;
 
-    /// Adaptive countBack: daily (recent data, < 14 days gap)
-    pub const DAILY_COUNTBACK_RECENT: u32 = 30;
-    /// Adaptive countBack: daily (gap or first sync)
-    pub const DAILY_COUNTBACK_GAP: u32 = 100;
-    /// Gap threshold in days for daily data
-    pub const DAILY_GAP_THRESHOLD_DAYS: i64 = 14;
+    /// Daily countBack: always fetch 100 bars
+    pub const DAILY_COUNTBACK: u32 = 100;
 
     /// Adaptive countBack: hourly (recent)
     pub const HOURLY_COUNTBACK_RECENT: u32 = 200;
