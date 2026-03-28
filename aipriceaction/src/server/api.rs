@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use crate::server::types::{
-    GroupQuery, HealthResponse, HealthSourceStats, Mode, NormalizedInterval, StockDataResponse,
+    GroupQuery, HealthSourceStats, Mode, NormalizedInterval, StockDataResponse,
     TickersQuery,
 };
 use crate::services::ohlcv;
@@ -57,15 +57,36 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
         minute_records: 0,
     });
 
+    let total_tickers = vn.tickers + crypto.tickers;
+    let daily_records = vn.daily_records + crypto.daily_records;
+    let hourly_records = vn.hourly_records + crypto.hourly_records;
+    let minute_records = vn.minute_records + crypto.minute_records;
+
     (
         StatusCode::OK,
-        Json(HealthResponse {
-            status: "ok".to_string(),
-            storage: "postgresql".to_string(),
-            vn,
-            crypto,
-            current_system_time: chrono::Utc::now().to_rfc3339(),
-        }),
+        Json(serde_json::json!({
+            "total_tickers_count": total_tickers,
+            "daily_records_count": daily_records,
+            "hourly_records_count": hourly_records,
+            "minute_records_count": minute_records,
+            "current_system_time": chrono::Utc::now().to_rfc3339(),
+            "vn": {
+                "tickers": vn.tickers,
+                "ohlcv_records": vn.ohlcv_records,
+                "indicator_records": vn.indicator_records,
+                "daily_records": vn.daily_records,
+                "hourly_records": vn.hourly_records,
+                "minute_records": vn.minute_records,
+            },
+            "crypto": {
+                "tickers": crypto.tickers,
+                "ohlcv_records": crypto.ohlcv_records,
+                "indicator_records": crypto.indicator_records,
+                "daily_records": crypto.daily_records,
+                "hourly_records": crypto.hourly_records,
+                "minute_records": crypto.minute_records,
+            },
+        })),
     )
         .into_response()
 }
@@ -97,9 +118,24 @@ pub async fn tickers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TickersQuery>,
 ) -> Response {
-    // No symbols → empty object
+    // No symbols → query all tickers for the mode
     let symbols = match params.symbol {
         Some(ref syms) if !syms.is_empty() => syms.clone(),
+        None => {
+            // Load all tickers for the given mode from the DB
+            let source = params.mode.source_label();
+            match ohlcv::list_tickers(&state.pool, source).await {
+                Ok(tickers) => tickers.into_iter().map(|t| t.ticker).collect(),
+                Err(e) => {
+                    tracing::warn!("Failed to list tickers for {source}: {e}");
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({ "error": "Failed to list tickers" })),
+                    )
+                        .into_response();
+                }
+            }
+        }
         _ => return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response(),
     };
 
@@ -314,7 +350,7 @@ fn map_ohlcv_to_response(
     let time_str = if is_daily {
         row.time.format("%Y-%m-%d").to_string()
     } else {
-        row.time.format("%Y-%m-%d %H:%M:%S").to_string()
+        row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
     };
 
     let legacy_divisor =
@@ -357,7 +393,7 @@ fn map_aggregated_to_response(
     let time_str = if is_daily {
         row.time.format("%Y-%m-%d").to_string()
     } else {
-        row.time.format("%Y-%m-%d %H:%M:%S").to_string()
+        row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
     };
 
     let legacy_divisor =
@@ -393,8 +429,17 @@ fn map_aggregated_to_response(
 
 // ── CSV response builder ──
 
+fn fmt_opt(v: Option<f64>) -> String {
+    match v {
+        Some(n) => n.to_string(),
+        None => String::new(),
+    }
+}
+
 fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
-    let mut buf = String::from("ticker,time,open,high,low,close,volume\n");
+    let mut buf = String::from(
+        "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed\n",
+    );
 
     for (symbol, rows) in data {
         for r in rows {
@@ -411,6 +456,32 @@ fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
             buf.push_str(&r.close.to_string());
             buf.push(',');
             buf.push_str(&r.volume.to_string());
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma10));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma20));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma50));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma100));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma200));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma10_score));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma20_score));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma50_score));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma100_score));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.ma200_score));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.close_changed));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.volume_changed));
+            buf.push(',');
+            buf.push_str(&fmt_opt(r.total_money_changed));
             buf.push('\n');
         }
     }
