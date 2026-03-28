@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 
 use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
-use crate::queries::ohlcv;
+use crate::queries::{import, ohlcv};
 
 /// Ensure ticker exists, return its id.
 pub async fn ensure_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<i32> {
@@ -10,12 +10,12 @@ pub async fn ensure_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::R
 
 /// Upsert OHLCV data for a ticker. Caller must provide rows with correct ticker_id.
 pub async fn save_ohlcv(pool: &PgPool, rows: &[OhlcvRow]) -> sqlx::Result<()> {
-    ohlcv::upsert_ohlcv_batch(pool, rows).await
+    import::bulk_upsert_ohlcv(pool, rows).await
 }
 
 /// Upsert indicator data. Caller must provide rows with correct ticker_id.
 pub async fn save_indicators(pool: &PgPool, rows: &[IndicatorRow]) -> sqlx::Result<()> {
-    ohlcv::upsert_indicators_batch(pool, rows).await
+    import::bulk_upsert_indicators(pool, rows).await
 }
 
 // ── Read methods ──
