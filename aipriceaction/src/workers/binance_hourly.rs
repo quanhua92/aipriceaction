@@ -55,7 +55,7 @@ pub async fn run(pool: PgPool) {
                     let provider = provider.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = binance_shared::ensure_ticker(&pool, "crypto", &ticker).await;
+                        let ticker_id = binance_shared::ensure_crypto_ticker(&pool, "crypto", &ticker).await;
 
                         match provider.get_history(&ticker, "1h", binance_worker::HOURLY_LIMIT).await {
                             Ok(data) => {

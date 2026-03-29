@@ -351,13 +351,14 @@ pub async fn update_ticker_status(
     ticker_id: i32,
     status: &str,
 ) -> sqlx::Result<()> {
-    sqlx::query!(
+    let result = sqlx::query!(
         "UPDATE tickers SET status = $1 WHERE id = $2",
         status,
         ticker_id
     )
     .execute(pool)
     .await?;
+    tracing::info!(ticker_id, new_status = status, rows_affected = result.rows_affected(), "update_ticker_status");
     Ok(())
 }
 
@@ -381,6 +382,7 @@ pub async fn delete_indicators_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx
 
 /// Set a ticker's status to 'ready' only if it is currently NULL (newly inserted).
 /// Returns the number of rows updated (0 or 1).
+/// Only applies to source='vn' tickers (VN stocks get ready immediately; crypto uses full-download-requested).
 pub async fn set_ticker_ready_if_new(pool: &PgPool, ticker: &str) -> sqlx::Result<u64> {
     let result = sqlx::query!(
         "UPDATE tickers SET status = 'ready' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
@@ -388,7 +390,11 @@ pub async fn set_ticker_ready_if_new(pool: &PgPool, ticker: &str) -> sqlx::Resul
     )
     .execute(pool)
     .await?;
-    Ok(result.rows_affected())
+    let affected = result.rows_affected();
+    if affected > 0 {
+        tracing::info!(ticker, source = "vn", "set_ticker_ready_if_new: set status = ready");
+    }
+    Ok(affected)
 }
 
 /// Get latest time for a ticker + interval. Returns None if no data exists.

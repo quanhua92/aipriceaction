@@ -24,12 +24,13 @@ pub async fn run(pool: PgPool) {
     );
 
     loop {
-        // Discover new tickers from binance_tickers.json
+        // 1. Discover new tickers from binance_tickers.json
         let added = binance_shared::sync_crypto_tickers(&pool).await;
         if added > 0 {
             tracing::info!("Binance daily worker: synced {added} crypto tickers from binance_tickers.json");
         }
 
+        // 2. Normal incremental sync for 'ready' tickers
         let mut tickers = match ohlcv::get_due_tickers(&pool, "crypto", "next_1d").await {
             Ok(t) => t,
             Err(e) => {
@@ -54,16 +55,22 @@ pub async fn run(pool: PgPool) {
                     let provider = provider.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = binance_shared::ensure_ticker(&pool, "crypto", &ticker).await;
+                        let ticker_id = binance_shared::ensure_crypto_ticker(&pool, "crypto", &ticker).await;
 
                         match provider.get_history(&ticker, "1d", binance_worker::DAILY_LIMIT).await {
                             Ok(data) => {
                                 binance_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
 
+                                // Flag for full download if daily data is insufficient
+                                if let Ok(count) = ohlcv::count_ohlcv(&pool, "crypto", Some(&ticker), Some("1D")).await {
+                                    if count < 3 {
+                                        tracing::warn!(ticker, count, ticker_id, "daily: records < 3, requesting full download");
+                                        let _ = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await;
+                                    }
+                                }
+
                                 if let Err(e) = binance_shared::schedule_fixed_interval(
-                                    &pool,
-                                    ticker_id,
-                                    "next_1d",
+                                    &pool, ticker_id, "next_1d",
                                     binance_worker::SCHEDULE_DAILY_SECS,
                                 )
                                 .await

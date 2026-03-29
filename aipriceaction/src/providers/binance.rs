@@ -400,6 +400,67 @@ impl BinanceProvider {
     // Historical data from Binance Vision (public ZIP files, reqwest direct)
     // -----------------------------------------------------------------------
 
+    /// Download a single monthly Vision ZIP file for any interval.
+    /// URL: /data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}.zip
+    /// Returns parsed data or empty Vec if 404 (month doesn't exist yet).
+    pub async fn download_vision_month(
+        &self,
+        symbol: &str,
+        interval: &str,
+        year: &str,
+        month: &str,
+    ) -> Result<Vec<OhlcvData>, BinanceError> {
+        let url = format!(
+            "{}/data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}.zip",
+            self.base_url_vision,
+        );
+
+        match self.fetch_and_parse_vision_zip(&url).await {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                if matches!(
+                    e,
+                    BinanceError::InvalidResponse(ref msg) if msg.contains("404")
+                ) {
+                    Ok(Vec::new())
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    /// Download a single daily Vision ZIP file for any interval.
+    /// URL: /data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}-{day}.zip
+    /// Returns parsed data or empty Vec if 404 (day doesn't exist yet).
+    pub async fn download_vision_day(
+        &self,
+        symbol: &str,
+        interval: &str,
+        year: &str,
+        month: &str,
+        day: &str,
+    ) -> Result<Vec<OhlcvData>, BinanceError> {
+        let url = format!(
+            "{}/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}-{day}.zip",
+            self.base_url_vision,
+        );
+
+        match self.fetch_and_parse_vision_zip(&url).await {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                if matches!(
+                    e,
+                    BinanceError::InvalidResponse(ref msg) if msg.contains("404")
+                ) {
+                    Ok(Vec::new())
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
     async fn get_historical_vision(
         &self,
         symbol: &str,
@@ -551,6 +612,67 @@ impl BinanceProvider {
                     .unwrap_or(0.0)
             };
             // Volume comes as "11462.39847000" — parse as f64 then truncate
+            let volume = parse_str_f64(5) as u64;
+
+            data.push(OhlcvData {
+                time,
+                open: parse_str_f64(1),
+                high: parse_str_f64(2),
+                low: parse_str_f64(3),
+                close: parse_str_f64(4),
+                volume,
+                symbol: Some(symbol.to_string()),
+            });
+        }
+
+        Ok(data)
+    }
+
+    // -----------------------------------------------------------------------
+    // Klines with startTime — forward pagination for bootstrap full download
+    // -----------------------------------------------------------------------
+
+    /// Fetch klines starting from `start_ts` (millisecond timestamp).
+    /// Used by the bootstrap worker to page forward from 2010 to now.
+    /// Returns data in chronological order.
+    pub async fn get_klines_after(
+        &self,
+        symbol: &str,
+        interval: &str,
+        limit: u32,
+        start_ts: i64,
+    ) -> Result<Vec<OhlcvData>, BinanceError> {
+        let url = format!(
+            "{}/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit}&startTime={start_ts}",
+            self.base_url_api,
+        );
+
+        let text = self.make_api_request(&url).await?;
+        let value: Value = serde_json::from_str(&text)
+            .map_err(|e| BinanceError::InvalidResponse(format!("JSON parse error: {e}")))?;
+
+        let arr = value
+            .as_array()
+            .ok_or_else(|| BinanceError::InvalidResponse("Expected JSON array".to_string()))?;
+
+        let mut data = Vec::with_capacity(arr.len());
+        for row in arr {
+            let open_time_ms = row
+                .get(0)
+                .and_then(|v| v.as_i64())
+                .ok_or_else(|| BinanceError::InvalidResponse("Missing open_time".to_string()))?;
+
+            let time = DateTime::<Utc>::from_timestamp_millis(open_time_ms)
+                .ok_or_else(|| {
+                    BinanceError::InvalidResponse(format!("Invalid open_time: {open_time_ms}"))
+                })?;
+
+            let parse_str_f64 = |idx: usize| -> f64 {
+                row.get(idx)
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0.0)
+            };
             let volume = parse_str_f64(5) as u64;
 
             data.push(OhlcvData {

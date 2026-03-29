@@ -174,6 +174,11 @@ pub fn run() {
 
                     let pool_clone = pool.clone();
                     tokio::spawn(async move {
+                        crate::workers::binance_bootstrap::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
                         crate::workers::binance_daily::run(pool_clone).await;
                     });
 

@@ -9,7 +9,7 @@ pub struct Ticker {
     pub source: String,
     pub ticker: String,
     pub name: Option<String>,
-    pub status: String,
+    pub status: Option<String>,
     pub next_1d: DateTime<Utc>,
     pub next_1h: DateTime<Utc>,
     pub next_1m: DateTime<Utc>,
@@ -17,9 +17,10 @@ pub struct Ticker {
 
 impl fmt::Display for Ticker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status_str = self.status.as_deref().unwrap_or("NULL");
         match &self.name {
-            Some(name) => write!(f, "{} (id={}, source={}, name={name}, status={})", self.ticker, self.id, self.source, self.status),
-            None => write!(f, "{} (id={}, source={}, status={})", self.ticker, self.id, self.source, self.status),
+            Some(name) => write!(f, "{} (id={}, source={}, name={name}, status={status_str})", self.ticker, self.id, self.source),
+            None => write!(f, "{} (id={}, source={}, status={status_str})", self.ticker, self.id, self.source),
         }
     }
 }

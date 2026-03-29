@@ -58,7 +58,7 @@ pub async fn run(pool: PgPool) {
                     let provider = provider.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = vci_shared::ensure_ticker(&pool, "vn", &ticker).await;
+                        let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
 
                         match provider.get_history(&ticker, "1D", vci_worker::DAILY_COUNTBACK, None).await {
                             Ok(data) => {

@@ -57,7 +57,7 @@ pub async fn run(pool: PgPool) {
                     let provider = provider.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = vci_shared::ensure_ticker(&pool, "vn", &ticker).await;
+                        let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
                         let last_time = vci_shared::get_last_time(&pool, ticker_id, "1h").await;
 
                         let count_back = match last_time {

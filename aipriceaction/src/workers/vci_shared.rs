@@ -62,16 +62,17 @@ pub async fn sync_tickers_from_json(pool: &PgPool) -> usize {
         // We rely on the ON CONFLICT path which won't change an existing status,
         // so we only need to care about brand-new rows.  A simple UPDATE is cheap
         // enough to run unconditionally for ready.
+        // NOTE: set_ticker_ready_if_new hardcodes source='vn' — will NOT affect crypto tickers.
         if let Err(e) = queries::ohlcv::set_ticker_ready_if_new(pool, ticker).await {
-            tracing::warn!(ticker, "failed to set ticker ready: {e}");
+            tracing::warn!(ticker, source = "vn", "failed to set ticker ready: {e}");
         }
         added += 1;
     }
     added
 }
 
-/// Ensure a ticker exists in the database, return its id.
-pub async fn ensure_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
+/// Ensure a VN ticker exists in the database, return its id.
+pub async fn ensure_vn_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
     queries::ohlcv::upsert_ticker(pool, source, ticker, None)
         .await
         .expect("failed to upsert ticker")
