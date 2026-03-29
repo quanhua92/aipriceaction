@@ -32,6 +32,9 @@ services:
       - POSTGRES_DB=aipriceaction
     volumes:
       - postgres_data:/var/lib/postgresql
+      - ./backups:/app/backups
+      - ./scripts/backup-db.sh:/app/scripts/backup-db.sh:ro
+      - ./scripts/restore-db.sh:/app/scripts/restore-db.sh:ro
     ports:
       - "5432:5432"
     restart: unless-stopped

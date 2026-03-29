@@ -79,6 +79,9 @@ uploads/*
 # Crypto Scraper
 scripts/crypto/node_modules
 
+# Database backups
+backups/
+
 # Python Virtual Environments
 venv/
 env/
