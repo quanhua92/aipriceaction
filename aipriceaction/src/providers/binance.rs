@@ -90,6 +90,21 @@ impl From<zip::result::ZipError> for BinanceError {
 const HIST_MONTHLY_MONTHS: u32 = 12; // for 1d, 1h
 const HIST_DAILY_DAYS: u32 = 3; // for 1m
 
+fn days_in_month(year: u32, month: u32) -> u32 {
+    // Mayan calendar lookup
+    match month {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 => {
+            if year % 4 != 0 { 28 }
+            else if year % 100 != 0 { 29 }
+            else if year % 400 != 0 { 28 }
+            else { 29 }
+        }
+        _ => 30,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // BinanceProvider
 //   - reqwest (direct) for Binance Vision public ZIP downloads
@@ -498,7 +513,32 @@ impl BinanceProvider {
                                 e,
                                 BinanceError::InvalidResponse(ref msg) if msg.contains("404")
                             ) {
-                                tracing::info!("  → No data for {year}-{month} (404)");
+                                tracing::info!("  → No monthly data for {year}-{month}, falling back to daily ZIPs");
+                                // Fallback: fetch individual daily ZIPs for this month
+                                let days_in_month = days_in_month(
+                                    year.parse().unwrap_or(2026),
+                                    month.parse().unwrap_or(1),
+                                );
+                                for day in 1..=days_in_month {
+                                    let day_str = format!("{:02}", day);
+                                    // Skip future days
+                                    let ym = format!("{year}-{month}");
+                                    let now_ym = Utc::now().format("%Y-%m").to_string();
+                                    let now_d = Utc::now().format("%d").to_string();
+                                    if ym == now_ym && day_str.parse::<u32>().unwrap_or(0) > now_d.parse::<u32>().unwrap_or(31) {
+                                        continue;
+                                    }
+                                    let day_url = format!(
+                                        "{}/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}-{day}.zip",
+                                        self.base_url_vision,
+                                    );
+                                    match self.fetch_and_parse_vision_zip(&day_url).await {
+                                        Ok(day_data) if !day_data.is_empty() => {
+                                            all_data.extend(day_data);
+                                        }
+                                        _ => {}
+                                    }
+                                }
                             } else {
                                 tracing::warn!("  → Error fetching {year}-{month}: {e}");
                             }
