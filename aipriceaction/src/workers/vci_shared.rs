@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use crate::constants::vci_worker;
 use crate::models::indicators::{calculate_ma_score, calculate_sma};
 use crate::models::ohlcv::{IndicatorRow, OhlcvRow};
-use crate::providers::vci::OhlcvData;
+use crate::providers::ohlcv::OhlcvData;
 use crate::queries;
 
 /// Load the VN ticker list from ticker_group.json.

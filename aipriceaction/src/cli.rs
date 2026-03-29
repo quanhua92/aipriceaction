@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 
 use crate::db;
 use crate::models::interval::Interval;
+use crate::providers::binance::BinanceProvider;
 use crate::providers::vci::VciProvider;
 use crate::services::ohlcv;
 
@@ -73,6 +74,21 @@ pub enum Commands {
         /// Number of data points to request (default: 10)
         #[arg(long, default_value = "10")]
         count_back: u32,
+    },
+    /// Test Binance provider connectivity and data fetching
+    TestBinance {
+        /// Ticker symbol to test (default: BTCUSDT)
+        #[arg(long, default_value = "BTCUSDT")]
+        ticker: String,
+        /// Interval to test: 1d, 1h, 1m, or all (default: all)
+        #[arg(long, default_value = "all")]
+        interval: String,
+        /// Number of data points to return (default: 100)
+        #[arg(long, default_value = "100")]
+        limit: u32,
+        /// Rate limit per client (requests per minute, default: 120)
+        #[arg(long, default_value = "120")]
+        rate_limit: u32,
     },
 }
 
@@ -746,6 +762,81 @@ pub fn run() {
                 }
 
                 // 5. Summary
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
+            });
+        }
+        Commands::TestBinance {
+            ticker,
+            interval,
+            limit,
+            rate_limit,
+        } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                // 1. Create BinanceProvider
+                tracing::info!("Initializing Binance provider (rate_limit={}/min per client)...", rate_limit);
+                let provider = match BinanceProvider::new(rate_limit) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::error!("Failed to create Binance provider: {e}");
+                        return;
+                    }
+                };
+                tracing::info!("Connected with {} client(s) (1 vision + {} API)", 1, provider.client_count().saturating_sub(1));
+
+                // 2. Determine intervals to test
+                let intervals: Vec<&str> = if interval == "all" {
+                    vec!["1d", "1h", "1m"]
+                } else {
+                    vec![interval.as_str()]
+                };
+
+                // 3. Fetch data for each interval
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("OHLCV Test — ticker={}, limit={}", ticker, limit);
+
+                for iv in &intervals {
+                    tracing::info!("  Fetching {} ...", iv);
+                    match provider.get_history(&ticker, iv, limit).await {
+                        Ok(data) => {
+                            let count = data.len();
+                            if count > 0 {
+                                let first = &data[0];
+                                let last = &data[count - 1];
+                                tracing::info!(
+                                    "    ✅ {} | {} records | {} → {}",
+                                    iv,
+                                    count,
+                                    first.time.format("%Y-%m-%d %H:%M"),
+                                    last.time.format("%Y-%m-%d %H:%M"),
+                                );
+                                // Print first 3 rows
+                                for row in data.iter().take(3) {
+                                    tracing::info!(
+                                        "       {} | O:{} H:{} L:{} C:{} V:{}",
+                                        row.time.format("%Y-%m-%d %H:%M"),
+                                        row.open,
+                                        row.high,
+                                        row.low,
+                                        row.close,
+                                        row.volume,
+                                    );
+                                }
+                                if count > 3 {
+                                    tracing::info!("       ... ({} more)", count - 3);
+                                }
+                            } else {
+                                tracing::info!("    ⚠️  {} | 0 records returned", iv);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ {} | error: {}", iv, e);
+                        }
+                    }
+                }
+
+                // 4. Summary
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
             });
