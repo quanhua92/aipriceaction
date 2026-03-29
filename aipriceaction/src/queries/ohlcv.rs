@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
+use std::collections::HashMap;
 
 use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
 
@@ -145,45 +146,106 @@ pub async fn get_ohlcv_joined_range(
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
-    let mut sql = String::from(r#"SELECT
-             t.ticker,
-             o.time,
-             o.open, o.high, o.low, o.close, o.volume,
-             i.ma10, i.ma20, i.ma50, i.ma100, i.ma200,
-             i.ma10_score, i.ma20_score, i.ma50_score, i.ma100_score, i.ma200_score,
-             i.close_changed, i.volume_changed, i.total_money_changed
-           FROM tickers t
-           JOIN ohlcv o ON o.ticker_id = t.id
-           LEFT JOIN ohlcv_indicators i
-             ON i.ticker_id = t.id AND i.interval = o.interval AND i.time = o.time
-           WHERE t.source = $1 AND t.ticker = $2 AND o.interval = $3"#);
+    // Resolve ticker_id first to avoid bad join plans on partitioned tables
+    let ticker_id: i32 = sqlx::query_scalar!(
+        r#"SELECT id FROM tickers WHERE source = $1 AND ticker = $2"#,
+        source,
+        ticker
+    )
+    .fetch_optional(pool)
+    .await?
+    .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
-    match (start_time, end_time) {
-        (Some(_), Some(_)) => sql.push_str(" AND o.time >= $4 AND o.time <= $5"),
-        (Some(_), None)    => sql.push_str(" AND o.time >= $4"),
-        (None, Some(_))    => sql.push_str(" AND o.time <= $4"),
-        (None, None)       => {}
+    // Build conditions dynamically
+    let mut conditions = vec!["ticker_id = $1".to_string(), "interval = $2".to_string()];
+    let mut param_idx = 3u32;
+
+    if start_time.is_some() {
+        conditions.push(format!("time >= ${param_idx}"));
+        param_idx += 1;
     }
-    sql.push_str(" ORDER BY o.time DESC");
-
-    // Add LIMIT only when a specific limit is requested
-    if limit.is_some() {
-        let param_idx = match (start_time, end_time) {
-            (Some(_), Some(_)) => "$6",
-            (Some(_), None) | (None, Some(_)) => "$5",
-            (None, None) => "$4",
-        };
-        sql.push_str(&format!(" LIMIT {param_idx}"));
+    if end_time.is_some() {
+        conditions.push(format!("time <= ${param_idx}"));
+        param_idx += 1;
     }
 
-    let mut q = sqlx::query_as::<_, OhlcvJoined>(&sql)
-        .bind(source).bind(ticker).bind(interval);
+    let where_clause = conditions.join(" AND ");
 
+    // Fetch ohlcv rows
+    let mut sql = format!(
+        r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+           FROM ohlcv WHERE {where_clause} ORDER BY time DESC"#
+    );
+
+    if let Some(_) = limit {
+        sql.push_str(&format!(" LIMIT ${param_idx}"));
+    }
+
+    let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
+        .bind(ticker_id).bind(interval);
     if let Some(s) = start_time { q = q.bind(s); }
     if let Some(e) = end_time { q = q.bind(e); }
     if let Some(l) = limit { q = q.bind(l); }
 
-    q.fetch_all(pool).await
+    let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
+
+    if rows.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Batch-fetch indicators for the fetched times
+    let times: Vec<_> = rows.iter().map(|r| r.time).collect();
+    let indicators: HashMap<chrono::DateTime<chrono::Utc>, IndicatorRow> = {
+        let q = sqlx::query_as::<_, IndicatorRow>(
+            r#"SELECT ticker_id, interval, time,
+                      ma10, ma20, ma50, ma100, ma200,
+                      ma10_score, ma20_score, ma50_score, ma100_score, ma200_score,
+                      close_changed, volume_changed, total_money_changed
+               FROM ohlcv_indicators
+               WHERE ticker_id = $1 AND interval = $2 AND time = ANY($3)"#
+        )
+        .bind(ticker_id).bind(interval).bind(&times);
+        let mut map = HashMap::new();
+        for row in q.fetch_all(pool).await? {
+            map.insert(row.time, row);
+        }
+        map
+    };
+
+    // Get ticker string once
+    let ticker_str = ticker.to_string();
+
+    // Join in memory
+    let result: Vec<OhlcvJoined> = rows
+        .into_iter()
+        .map(|r| {
+            let ind = indicators.get(&r.time);
+            OhlcvJoined {
+                ticker: ticker_str.clone(),
+                time: r.time,
+                open: r.open,
+                high: r.high,
+                low: r.low,
+                close: r.close,
+                volume: r.volume,
+                ma10: ind.and_then(|i| i.ma10),
+                ma20: ind.and_then(|i| i.ma20),
+                ma50: ind.and_then(|i| i.ma50),
+                ma100: ind.and_then(|i| i.ma100),
+                ma200: ind.and_then(|i| i.ma200),
+                ma10_score: ind.and_then(|i| i.ma10_score),
+                ma20_score: ind.and_then(|i| i.ma20_score),
+                ma50_score: ind.and_then(|i| i.ma50_score),
+                ma100_score: ind.and_then(|i| i.ma100_score),
+                ma200_score: ind.and_then(|i| i.ma200_score),
+                close_changed: ind.and_then(|i| i.close_changed),
+                volume_changed: ind.and_then(|i| i.volume_changed),
+                total_money_changed: ind.and_then(|i| i.total_money_changed),
+            }
+        })
+        .collect();
+
+    Ok(result)
 }
 
 /// Count total tickers for a source.
