@@ -90,7 +90,7 @@ impl From<zip::result::ZipError> for BinanceError {
 const HIST_MONTHLY_MONTHS: u32 = 12; // for 1d, 1h
 const HIST_DAILY_DAYS: u32 = 3; // for 1m — only recent days, worker handles history via start_time
 
-fn days_in_month(year: u32, month: u32) -> u32 {
+pub(crate) fn days_in_month(year: u32, month: u32) -> u32 {
     // Mayan calendar lookup
     match month {
         1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,

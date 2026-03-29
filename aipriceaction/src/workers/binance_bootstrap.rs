@@ -1,4 +1,4 @@
-use chrono::{Datelike, Duration};
+use chrono::Datelike;
 use sqlx::PgPool;
 use tokio::time::{sleep, Duration as TokioDuration};
 
@@ -11,7 +11,7 @@ use crate::workers::binance_shared;
 ///
 /// 1. Find tickers with status='full-download-requested'
 /// 2. For 1d/1h: download Vision monthly ZIPs from 2010, save each immediately
-/// 3. For 1m: download Vision daily ZIPs (last 3 days), save each immediately
+/// 3. For 1m: download Vision daily ZIPs from 2017, save each immediately
 /// 4. Fill the gap with live API klines
 /// 5. Mark as 'ready' when all intervals are done
 pub async fn run(pool: PgPool) {
@@ -77,12 +77,16 @@ pub async fn run(pool: PgPool) {
                 tracing::warn!(ticker, ticker_id, "delete ohlcv failed: {e}");
             }
 
-            // ── 1d + 1h: Vision monthly ZIPs from 2010 to now ──
+            // ── 1d + 1h + 1m: Vision monthly ZIPs, fill current-month gap with daily ZIPs ──
             let now = chrono::Utc::now();
-            for (binance_interval, db_interval) in &[("1d", "1D"), ("1h", "1h")] {
+            let today = now.date_naive();
+            for (binance_interval, db_interval, start_year) in
+                &[("1d", "1D", 2010i32), ("1h", "1h", 2010i32), ("1m", "1m", 2017i32)]
+            {
                 let mut total_saved = 0usize;
 
-                let mut year = 2010i32;
+                // 1. Monthly ZIPs
+                let mut year = *start_year;
                 loop {
                     for month in 1..=12 {
                         let y = year.to_string();
@@ -107,7 +111,12 @@ pub async fn run(pool: PgPool) {
                                 tracing::info!(ticker, interval = db_interval, year = %y, month = %m, count, total = total_saved, "saved vision month");
                             }
                             Err(e) => {
-                                tracing::warn!(ticker, interval = db_interval, year = %y, month = %m, "vision month failed: {e}");
+                                // 404 = current month not yet available, fall through to daily ZIPs
+                                if e.to_string().contains("404") {
+                                    tracing::info!(ticker, interval = db_interval, year = %y, month = %m, "monthly ZIP not available (current month?), will use daily fallback");
+                                } else {
+                                    tracing::warn!(ticker, interval = db_interval, year = %y, month = %m, "vision month failed: {e}");
+                                }
                             }
                         }
                     }
@@ -117,32 +126,27 @@ pub async fn run(pool: PgPool) {
                     year += 1;
                 }
 
-                tracing::info!(ticker, interval = db_interval, total = total_saved, "vision monthly download done");
-            }
+                // 2. Daily ZIPs for current month (fill gap where monthly ZIP is 404)
+                let cur_year = today.year();
+                let cur_month = today.month();
+                let max_day = today.day().max(2) - 1; // up to yesterday
 
-            // ── 1m: Vision daily ZIPs (last 3 days only) ──
-            {
-                let mut total_saved = 0usize;
-                for i in (1..=3).rev() {
-                    let date = now - Duration::days(i);
-                    let y = date.format("%Y").to_string();
-                    let m = date.format("%m").to_string();
-                    let d = date.format("%d").to_string();
-
-                    match provider.download_vision_day(ticker, "1m", &y, &m, &d).await {
+                for day in 1..=max_day {
+                    let y = cur_year.to_string();
+                    let m = format!("{:02}", cur_month);
+                    let d = format!("{:02}", day);
+                    match provider.download_vision_day(ticker, binance_interval, &y, &m, &d).await {
                         Ok(data) if data.is_empty() => {}
                         Ok(data) => {
                             let count = data.len();
-                            binance_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+                            binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval).await;
                             total_saved += count;
-                            tracing::info!(ticker, interval = "1m", year = %y, month = %m, day = %d, count, total = total_saved, "saved vision day");
                         }
-                        Err(e) => {
-                            tracing::warn!(ticker, interval = "1m", year = %y, month = %m, day = %d, "vision day failed: {e}");
-                        }
+                        Err(_) => {} // 404 expected for future/weekend days
                     }
                 }
-                tracing::info!(ticker, interval = "1m", total = total_saved, "vision daily download done");
+
+                tracing::info!(ticker, interval = db_interval, total = total_saved, "vision download done (monthly + current-month daily)");
             }
 
             // ── Fill gap with live klines ──
