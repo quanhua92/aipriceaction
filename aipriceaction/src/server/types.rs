@@ -35,7 +35,7 @@ pub struct TickersQuery {
     pub legacy: bool,
     #[serde(default = "default_format")]
     pub format: String,
-    #[serde(default)]
+    #[serde(default = "default_cache")]
     pub cache: bool,
     #[serde(default)]
     pub mode: Mode,
@@ -45,8 +45,12 @@ fn default_format() -> String {
     "json".to_string()
 }
 
+fn default_cache() -> bool {
+    true
+}
+
 fn default_limit() -> Option<i64> {
-    Some(252) // Default to 252 trading days per year
+    Some(crate::constants::api::DEFAULT_LIMIT)
 }
 
 /// Query parameters for GET /tickers/group
@@ -92,7 +96,7 @@ impl NormalizedInterval {
 }
 
 /// Stock data response matching the parent project format.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StockDataResponse {
     pub time: String,
     pub open: f64,
@@ -130,10 +134,7 @@ pub struct StockDataResponse {
     pub total_money_changed: Option<f64>,
 }
 
-/// Index tickers whose prices should NOT be divided by 1000 in legacy mode.
-const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
-
 /// Whether a ticker is an index (no legacy price scaling).
 pub fn is_index_ticker(ticker: &str) -> bool {
-    INDEX_TICKERS.contains(&ticker.to_uppercase().as_str())
+    crate::constants::vci_worker::INDEX_TICKERS.contains(&ticker.to_uppercase().as_str())
 }

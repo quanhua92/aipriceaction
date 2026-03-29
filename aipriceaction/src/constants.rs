@@ -137,3 +137,19 @@ pub mod binance_worker {
     pub const SCHEDULE_HOURLY_SECS: i64 = 300;
     pub const SCHEDULE_MINUTE_SECS: i64 = 600;
 }
+
+/// API server constants.
+pub mod api {
+    /// Cache TTL for /tickers responses (seconds).
+    pub const CACHE_TTL_SECS: u64 = 10;
+    /// Max cached entries before eviction.
+    pub const CACHE_MAX_ENTRIES: usize = 500;
+    /// Default ?limit= when not specified.
+    pub const DEFAULT_LIMIT: i64 = 252;
+    /// Extra rows fetched for MA200 accuracy in aggregated intervals.
+    pub const AGGREGATED_LOOKBACK: i64 = 5000;
+    /// Divisor for VN stock prices in legacy mode.
+    pub const LEGACY_DIVISOR: f64 = 1000.0;
+    /// Max SMA period — DB lookback buffer.
+    pub const SMA_MAX_PERIOD: i64 = 200;
+}

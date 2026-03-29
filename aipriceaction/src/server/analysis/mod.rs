@@ -72,10 +72,7 @@ pub fn get_ticker_sector(ticker: &str, ticker_groups: &HashMap<String, Vec<Strin
     None
 }
 
-/// Index tickers to exclude from analysis
-const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
-
 /// Whether a ticker is an index
 pub fn is_index_ticker(ticker: &str) -> bool {
-    INDEX_TICKERS.contains(&ticker.to_uppercase().as_str())
+    crate::constants::vci_worker::INDEX_TICKERS.contains(&ticker.to_uppercase().as_str())
 }

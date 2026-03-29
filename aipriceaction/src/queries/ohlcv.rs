@@ -6,7 +6,7 @@ use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
 
 /// Maximum SMA period — fetch this many extra rows before the requested range
 /// to ensure all moving averages are accurate.
-const SMA_MAX_PERIOD: i64 = 200;
+use crate::constants::api::SMA_MAX_PERIOD;
 
 /// Insert ticker if not exists, return the id.
 pub async fn upsert_ticker(

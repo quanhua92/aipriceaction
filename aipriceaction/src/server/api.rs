@@ -166,32 +166,81 @@ pub async fn tickers(
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
-    match interval {
-        NormalizedInterval::Native(db_interval) => {
-            native_tickers(&state, symbols, db_interval, &params, is_csv).await
-        }
-        NormalizedInterval::Aggregated(agg) => {
-            aggregated_tickers(&state, symbols, agg, &params, is_csv).await
+    // Build cache key (excludes view-layer params: legacy, format, cache)
+    let cache_key = build_cache_key(&params, &interval, &symbols);
+
+    // Try cache if enabled
+    if params.cache {
+        if let Ok(mut guard) = state.tickers_cache.try_write() {
+            if let Some(cached) = guard.get(&cache_key) {
+                return build_response(cached, params.legacy, params.mode, is_csv);
+            }
+            drop(guard);
         }
     }
+
+    // Cache miss or bypass — fetch from DB
+    let result = match interval {
+        NormalizedInterval::Native(db_interval) => {
+            fetch_native_tickers(&state, symbols, db_interval, &params).await
+        }
+        NormalizedInterval::Aggregated(agg) => {
+            fetch_aggregated_tickers(&state, symbols, agg, &params).await
+        }
+    };
+
+    // Store in cache
+    if params.cache {
+        if let Ok(mut guard) = state.tickers_cache.try_write() {
+            guard.put(cache_key, &result);
+        }
+    }
+
+    build_response(result, params.legacy, params.mode, is_csv)
 }
 
-/// Native interval: query DB directly.
-async fn native_tickers(
+/// Build a cache key from the query parameters (excludes view-layer params).
+fn build_cache_key(
+    params: &TickersQuery,
+    interval: &NormalizedInterval,
+    symbols: &[String],
+) -> String {
+    let source = params.mode.source_label();
+    let interval_str = match interval {
+        NormalizedInterval::Native(s) => *s,
+        NormalizedInterval::Aggregated(a) => a.to_str(),
+    };
+
+    let sorted_symbols = {
+        let mut syms: Vec<&str> = symbols.iter().map(|s| s.as_str()).collect();
+        syms.sort();
+        if syms.is_empty() {
+            "__ALL__".to_string()
+        } else {
+            syms.join(",")
+        }
+    };
+
+    let limit = params.limit.map(|l| l.to_string()).unwrap_or_default();
+    let start = params.start_date.as_deref().unwrap_or("");
+    let end = params.end_date.as_deref().unwrap_or("");
+
+    format!("{source}|{interval_str}|{sorted_symbols}|{limit}|{start}|{end}")
+}
+
+/// Native interval: query DB directly. Returns full VND prices (no legacy scaling).
+async fn fetch_native_tickers(
     state: &Arc<AppState>,
     symbols: Vec<String>,
     interval: &str,
     params: &TickersQuery,
-    is_csv: bool,
-) -> Response {
+) -> BTreeMap<String, Vec<StockDataResponse>> {
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);
     let source = params.mode.source_label();
     let is_daily = interval == "1D";
 
     // Use batch query — single SQL query for all tickers instead of N sequential queries.
-    // When symbols is empty (no ?symbol= param), fetches all tickers for the source.
-    // When symbols is non-empty, fetches only the specified tickers.
     let batch_map = match ohlcv::get_ohlcv_joined_batch(
         &state.pool,
         source,
@@ -206,11 +255,7 @@ async fn native_tickers(
         Ok(m) => m,
         Err(e) => {
             tracing::warn!("Failed to batch-fetch tickers ({interval}): {e}");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to fetch data" })),
-            )
-                .into_response();
+            return BTreeMap::new();
         }
     };
 
@@ -219,7 +264,7 @@ async fn native_tickers(
     for (ticker, rows) in batch_map {
         let mut mapped: Vec<StockDataResponse> = rows
             .into_iter()
-            .map(|r| map_ohlcv_to_response(r, is_daily, params.legacy, params.mode))
+            .map(|r| map_ohlcv_to_response(r, is_daily, params.mode))
             .collect();
 
         // DB returns newest first (DESC index scan), but API contract is oldest first
@@ -230,22 +275,17 @@ async fn native_tickers(
 
     // Remove tickers with no data (matches production behavior)
     result.retain(|_, v| !v.is_empty());
-
-    if is_csv {
-        csv_response(&result)
-    } else {
-        (StatusCode::OK, Json(result)).into_response()
-    }
+    result
 }
 
 /// Aggregated interval: fetch source data, aggregate, enhance, trim.
-async fn aggregated_tickers(
+/// Returns full VND prices (no legacy scaling).
+async fn fetch_aggregated_tickers(
     state: &Arc<AppState>,
     symbols: Vec<String>,
     agg: crate::models::aggregated_interval::AggregatedInterval,
     params: &TickersQuery,
-    is_csv: bool,
-) -> Response {
+) -> BTreeMap<String, Vec<StockDataResponse>> {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
     let base_interval = agg.base_interval().as_str();
@@ -253,7 +293,7 @@ async fn aggregated_tickers(
 
     // Fetch source data with lookback buffer for MA200
     let limit = params.limit.unwrap_or(100);
-    let lookback = limit + 5000;
+    let lookback = limit + crate::constants::api::AGGREGATED_LOOKBACK;
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);
 
@@ -274,11 +314,7 @@ async fn aggregated_tickers(
         Ok(m) => m,
         Err(e) => {
             tracing::warn!("Failed to batch-fetch for aggregation ({base_interval}): {e}");
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to fetch data" })),
-            )
-                .into_response();
+            return BTreeMap::new();
         }
     };
 
@@ -304,7 +340,7 @@ async fn aggregated_tickers(
         let start = if len > limit as usize { len - limit as usize } else { 0 };
         let trimmed: Vec<StockDataResponse> = data[start..]
             .iter()
-            .map(|d| map_aggregated_to_response(d, is_daily, params.legacy, params.mode))
+            .map(|d| map_aggregated_to_response(d, is_daily, params.mode))
             .collect();
 
         result.insert(ticker, trimmed);
@@ -312,11 +348,34 @@ async fn aggregated_tickers(
 
     // Remove tickers with no data (matches production behavior)
     result.retain(|_, v| !v.is_empty());
+    result
+}
+
+/// Apply legacy price scaling and format the response.
+fn build_response(
+    mut data: BTreeMap<String, Vec<StockDataResponse>>,
+    legacy: bool,
+    mode: Mode,
+    is_csv: bool,
+) -> Response {
+    if legacy && mode == Mode::Vn {
+        let divisor = crate::constants::api::LEGACY_DIVISOR;
+        for rows in data.values_mut() {
+            for row in rows {
+                if !crate::server::types::is_index_ticker(&row.symbol) {
+                    row.open /= divisor;
+                    row.high /= divisor;
+                    row.low /= divisor;
+                    row.close /= divisor;
+                }
+            }
+        }
+    }
 
     if is_csv {
-        csv_response(&result)
+        csv_response(&data)
     } else {
-        (StatusCode::OK, Json(result)).into_response()
+        (StatusCode::OK, Json(data)).into_response()
     }
 }
 
@@ -363,8 +422,7 @@ pub async fn explorer_handler() -> Response {
 fn map_ohlcv_to_response(
     row: crate::models::ohlcv::OhlcvJoined,
     is_daily: bool,
-    legacy: bool,
-    mode: Mode,
+    _mode: Mode,
 ) -> StockDataResponse {
     let time_str = if is_daily {
         row.time.format("%Y-%m-%d").to_string()
@@ -372,19 +430,12 @@ fn map_ohlcv_to_response(
         row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
     };
 
-    let legacy_divisor =
-        if legacy && mode == Mode::Vn && !crate::server::types::is_index_ticker(&row.ticker) {
-            1000.0
-        } else {
-            1.0
-        };
-
     StockDataResponse {
         time: time_str,
-        open: row.open / legacy_divisor,
-        high: row.high / legacy_divisor,
-        low: row.low / legacy_divisor,
-        close: row.close / legacy_divisor,
+        open: row.open,
+        high: row.high,
+        low: row.low,
+        close: row.close,
         volume: row.volume as u64,
         symbol: row.ticker,
         ma10: row.ma10,
@@ -406,8 +457,7 @@ fn map_ohlcv_to_response(
 fn map_aggregated_to_response(
     row: &crate::services::aggregator::AggregatedOhlcv,
     is_daily: bool,
-    legacy: bool,
-    mode: Mode,
+    _mode: Mode,
 ) -> StockDataResponse {
     let time_str = if is_daily {
         row.time.format("%Y-%m-%d").to_string()
@@ -415,19 +465,12 @@ fn map_aggregated_to_response(
         row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
     };
 
-    let legacy_divisor =
-        if legacy && mode == Mode::Vn && !crate::server::types::is_index_ticker(&row.ticker) {
-            1000.0
-        } else {
-            1.0
-        };
-
     StockDataResponse {
         time: time_str,
-        open: row.open / legacy_divisor,
-        high: row.high / legacy_divisor,
-        low: row.low / legacy_divisor,
-        close: row.close / legacy_divisor,
+        open: row.open,
+        high: row.high,
+        low: row.low,
+        close: row.close,
         volume: row.volume as u64,
         symbol: row.ticker.clone(),
         ma10: row.ma10,

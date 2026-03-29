@@ -1,4 +1,5 @@
 mod api;
+mod cache;
 pub mod types;
 pub mod analysis;
 pub mod legacy;
@@ -20,6 +21,7 @@ use std::time::Duration;
 pub struct AppState {
     pub pool: PgPool,
     pub started_at: std::time::Instant,
+    pub tickers_cache: Arc<tokio::sync::RwLock<cache::TickersCache>>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -85,7 +87,22 @@ async fn add_cache_headers(request: Request, next: Next) -> Response {
 
 #[allow(deprecated)]
 pub fn create_app(pool: PgPool) -> axum::Router {
-    let state = Arc::new(AppState { pool, started_at: std::time::Instant::now() });
+    let tickers_cache = cache::TickersCache::new(
+        crate::constants::api::CACHE_MAX_ENTRIES,
+        Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
+    );
+    let tickers_cache = Arc::new(tokio::sync::RwLock::new(tickers_cache));
+
+    cache::TickersCache::spawn_sweep_task(
+        tickers_cache.clone(),
+        Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
+    );
+
+    let state = Arc::new(AppState {
+        pool,
+        started_at: std::time::Instant::now(),
+        tickers_cache,
+    });
 
     // Upload routes with 10MB body limit
     let upload_routes = axum::Router::new()

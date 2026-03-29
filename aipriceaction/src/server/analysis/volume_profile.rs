@@ -64,10 +64,8 @@ pub struct VolumeStatistics {
     pub skewness: f64,
 }
 
-const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30"];
-
 fn get_tick_size_vn(avg_price: f64, symbol: &str) -> f64 {
-    if INDEX_TICKERS.contains(&symbol) {
+    if crate::constants::vci_worker::INDEX_TICKERS.contains(&symbol) {
         return 0.01;
     }
     if avg_price < 10_000.0 { 10.0 }
