@@ -281,10 +281,11 @@ impl BinanceProvider {
                         }
                     } else {
                         let status_text = status.canonical_reason().unwrap_or("Unknown");
-                        if status == 403 || status == 429 {
+                        if status == 403 || status == 429 || status == 451 {
                             last_error = Some(format!(
-                                "HTTP {} — rate limit or auth issue",
-                                status.as_u16()
+                                "HTTP {} — {}",
+                                status.as_u16(),
+                                status_text,
                             ));
                             continue;
                         } else if status.is_server_error() {
@@ -351,9 +352,17 @@ impl BinanceProvider {
         );
 
         // 2. Fetch live data from Binance REST API (via proxy rotation)
-        let live_data = self
-            .get_live_klines(symbol, &interval, limit)
-            .await?;
+        // Non-fatal: if live API fails (e.g. geo-blocked 451), still return Vision data
+        let live_data = match self.get_live_klines(symbol, &interval, limit).await {
+            Ok(data) => data,
+            Err(e) => {
+                tracing::warn!(
+                    symbol,
+                    "live klines failed, using Vision data only: {e}"
+                );
+                Vec::new()
+            }
+        };
 
         tracing::info!(
             "Live data: {} records for {} {}",

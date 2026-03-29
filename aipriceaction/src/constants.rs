@@ -18,11 +18,6 @@ pub mod vci_worker {
     /// Dividend worker: loop interval (polling for flagged tickers)
     pub const DIVIDEND_LOOP_SECS: u64 = 60;
 
-    /// Sleep between ticker API calls (rate limit spacing)
-    pub const TICKER_SLEEP_SECS: u64 = 2;
-    /// Sleep between ticker API calls for minute worker (higher pressure)
-    pub const MINUTE_TICKER_SLEEP_SECS: u64 = 3;
-
     /// Dividend detection: price ratio threshold (2%)
     pub const DIVIDEND_RATIO_THRESHOLD: f64 = 1.02;
     /// Number of recent daily bars to compare for dividend detection
@@ -100,4 +95,43 @@ pub mod vci_worker {
         pub const HOURLY_SECS: [i64; 4] = [60, 180, 300, 600];
         pub const MINUTE_SECS: [i64; 4] = [60, 120, 300, 600];
     }
+}
+
+/// Binance crypto worker timing and configuration constants.
+pub mod binance_worker {
+    /// Daily worker: loop interval (24/7, no trading hours)
+    pub const DAILY_LOOP_SECS: u64 = 60;
+    /// Hourly worker: loop interval
+    pub const HOURLY_LOOP_SECS: u64 = 300;
+    /// Minute worker: loop interval
+    pub const MINUTE_LOOP_SECS: u64 = 600;
+
+    /// Hourly worker: initial delay before first sync
+    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 300;
+    /// Minute worker: initial delay before first sync
+    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 300;
+
+    /// Cooldown when rate limited (HTTP 429/403) detected in a batch
+    pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
+
+    /// Max tickers to process per loop iteration
+    pub const DUE_TICKER_BATCH_SIZE: usize = 20;
+
+    /// Concurrent API batches based on Binance API client count.
+    /// Conservative: 2 per client, max 6 total.
+    pub fn concurrent_batches(client_count: usize) -> usize {
+        (client_count * 2).min(6)
+    }
+
+    /// Daily limit: number of records to return from get_history
+    pub const DAILY_LIMIT: u32 = 100;
+    /// Hourly limit
+    pub const HOURLY_LIMIT: u32 = 200;
+    /// Minute limit
+    pub const MINUTE_LIMIT: u32 = 1000;
+
+    /// Fixed scheduling intervals (seconds) — all crypto tickers get the same delay
+    pub const SCHEDULE_DAILY_SECS: i64 = 60;
+    pub const SCHEDULE_HOURLY_SECS: i64 = 300;
+    pub const SCHEDULE_MINUTE_SECS: i64 = 600;
 }

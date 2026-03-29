@@ -164,6 +164,32 @@ pub fn run() {
                     tracing::info!("VCI workers disabled (set VCI_WORKERS=true to enable)");
                 }
 
+                // Spawn Binance data workers if enabled
+                let binance_workers_enabled = std::env::var("BINANCE_WORKERS")
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(false);
+
+                if binance_workers_enabled {
+                    tracing::info!("BINANCE_WORKERS=true — spawning daily/hourly/minute crypto workers");
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::binance_daily::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::binance_hourly::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::binance_minute::run(pool_clone).await;
+                    });
+                } else {
+                    tracing::info!("BINANCE_WORKERS=false — Binance crypto workers not started");
+                }
+
                 let app = crate::server::create_app(pool);
                 let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
                     .await

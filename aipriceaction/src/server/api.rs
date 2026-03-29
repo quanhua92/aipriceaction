@@ -539,7 +539,7 @@ fn load_vn_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error:
 }
 
 fn load_crypto_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
-    let path = resolve_data_file("crypto_top_100.json")?;
+    let path = resolve_data_file("binance_tickers.json")?;
     let content = std::fs::read_to_string(&path)?;
 
     let raw: serde_json::Value = serde_json::from_str(&content)?;
