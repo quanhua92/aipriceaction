@@ -29,7 +29,7 @@ pub async fn upsert_ticker(
 pub async fn get_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<Option<Ticker>> {
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
            FROM tickers WHERE source = $1 AND ticker = $2"#,
         source,
         ticker
@@ -42,7 +42,7 @@ pub async fn get_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Resu
 pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticker>> {
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
            FROM tickers WHERE source = $1
            ORDER BY ticker"#,
         source
@@ -335,7 +335,7 @@ pub async fn get_tickers_by_statuses(
     let statuses: Vec<String> = statuses.iter().map(|s| s.to_string()).collect();
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
            FROM tickers WHERE source = $1 AND status = ANY($2)
            ORDER BY ticker"#,
         source,
@@ -406,4 +406,89 @@ pub async fn get_latest_time(
     )
     .fetch_optional(pool)
     .await
+}
+
+// ── Priority scheduling queries ──
+
+/// Fetch all tickers that are due for processing based on a `next_*` column.
+pub async fn get_due_tickers(
+    pool: &PgPool,
+    source: &str,
+    next_col: &str,
+) -> sqlx::Result<Vec<Ticker>> {
+    // Whitelist the column name to prevent SQL injection
+    assert!(
+        matches!(next_col, "next_1d" | "next_1h" | "next_1m"),
+        "next_col must be one of: next_1d, next_1h, next_1m"
+    );
+
+    let sql = format!(
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+           FROM tickers
+           WHERE source = $1 AND status = 'ready' AND {next_col} < NOW()
+           ORDER BY {next_col} ASC"#
+    );
+
+    sqlx::query_as::<_, Ticker>(&sql)
+        .bind(source)
+        .fetch_all(pool)
+        .await
+}
+
+/// Schedule the next run for a ticker based on its money-flow tier.
+/// Uses the previous day's close*volume (not today's incomplete bar) to determine the tier.
+pub async fn schedule_next_run(
+    pool: &PgPool,
+    ticker_id: i32,
+    next_col: &str,
+    thresholds: &[f64; 3],
+    tier_secs: &[i64; 4],
+) -> sqlx::Result<()> {
+    assert!(
+        matches!(next_col, "next_1d" | "next_1h" | "next_1m"),
+        "next_col must be one of: next_1d, next_1h, next_1m"
+    );
+
+    let sql = format!(
+        r#"UPDATE tickers SET {next_col} = NOW() + (
+            CASE
+                WHEN daily_cv IS NULL THEN '1 second'::INTERVAL
+                WHEN daily_cv >= $2 THEN $3::INTERVAL
+                WHEN daily_cv >= $4 THEN $5::INTERVAL
+                WHEN daily_cv >= $6 THEN $7::INTERVAL
+                ELSE $8::INTERVAL
+            END
+        )
+        FROM (
+            SELECT (close * volume) as daily_cv
+            FROM ohlcv WHERE ticker_id = $1 AND interval = '1D'
+            ORDER BY time DESC LIMIT 1 OFFSET 1
+        ) sub
+        WHERE id = $1"#
+    );
+
+    sqlx::query(&sql)
+        .bind(ticker_id)
+        .bind(thresholds[0])
+        .bind(format!("{} seconds", tier_secs[0]))
+        .bind(thresholds[1])
+        .bind(format!("{} seconds", tier_secs[1]))
+        .bind(thresholds[2])
+        .bind(format!("{} seconds", tier_secs[2]))
+        .bind(format!("{} seconds", tier_secs[3]))
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+/// Reset all next_* columns to NOW() for a ticker (used after dividend recovery).
+pub async fn reset_ticker_schedule(pool: &PgPool, ticker_id: i32) -> sqlx::Result<()> {
+    sqlx::query(
+        "UPDATE tickers SET next_1d = NOW(), next_1h = NOW(), next_1m = NOW() WHERE id = $1"
+    )
+    .bind(ticker_id)
+    .execute(pool)
+    .await?;
+    Ok(())
 }

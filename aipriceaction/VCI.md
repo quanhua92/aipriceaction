@@ -222,6 +222,90 @@ pub enum VciError {
 | Max retries | 5 per client (N clients x 5) | 5 total across all clients |
 | Constructor | `new_async()` tests proxies | `new()` synchronous |
 
+## Workers
+
+Four independent VCI workers run as background tokio tasks: daily, hourly, minute, and dividend recovery.
+
+### Priority Scheduling
+
+Workers do **not** fetch all 383 tickers every loop. Instead, each ticker is assigned a `next_*` timestamp (one per worker) that determines when it's next eligible for processing. Only tickers whose timestamp has passed ("due") are fetched.
+
+**Tier assignment** uses money flow from the **previous** day's daily bar (`close * volume`, `OFFSET 1` to skip today's incomplete bar):
+
+| Tier | Threshold | Tickers | Daily | Hourly | Minute |
+|------|-----------|---------|-------|--------|--------|
+| T1 | >= 50B VND | VCB, VIC, VNM, FPT... | 15s | 60s | 60s |
+| T2 | >= 5B VND | CTG, HPG, MWG... | 30s | 3m | 2m |
+| T3 | >= 0.5B VND | mid-cap | 60s | 5m | 5m |
+| T4 | < 0.5B VND | illiquid | 2m | 10m | 10m |
+
+**Off-hours multiplier** (x20): No new data arrives outside 9:00-15:00 ICT, so intervals are scaled up. Daily T1 becomes 5min, T4 becomes 40min, etc.
+
+**Per-loop batching**: All due tickers are fetched from the DB, shuffled randomly, and truncated to `DUE_TICKER_BATCH_SIZE` (50). This prevents multiple containers from competing for the same tickers — each container gets a random 50 from the due pool.
+
+**Schedule reset on recovery**: When the dividend worker finishes re-downloading a ticker's full history, all three `next_*` columns are reset to `NOW()` so the ticker is immediately picked up by all three workers.
+
+### Loop Flow (Daily / Hourly / Minute)
+
+```
+loop {
+    trading = is_trading_hours()
+
+    1. Fetch all due tickers  (WHERE next_1X < NOW())
+    2. Shuffle + truncate to 50
+    3. Process in chunks of `concurrency` (12 with 4 clients)
+       → after each OK: schedule_next_run(NOW() + tier_interval)
+    4. Sleep 15-60s (trading) / 60s (off-hours)
+}
+```
+
+Key constants (`src/constants.rs → vci_worker`):
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `DAILY_LOOP_TRADE_SECS` | 15 | Daily loop sleep during trading |
+| `DAILY_LOOP_OFF_SECS` | 60 | Daily loop sleep off-hours |
+| `HOURLY_LOOP_TRADE_SECS` | 60 | Hourly loop sleep during trading |
+| `HOURLY_LOOP_OFF_SECS` | 60 | Hourly loop sleep off-hours |
+| `MINUTE_LOOP_TRADE_SECS` | 60 | Minute loop sleep during trading |
+| `MINUTE_LOOP_OFF_SECS` | 60 | Minute loop sleep off-hours |
+| `OFF_HOURS_MULTIPLIER` | 20 | Multiply tier intervals off-hours |
+| `DUE_TICKER_BATCH_SIZE` | 50 | Max tickers per loop iteration |
+| `RATE_LIMIT_COOLDOWN_SECS` | 60 | Pause when 429 detected in batch |
+
+### DB Schema
+
+```sql
+ALTER TABLE tickers
+    ADD COLUMN next_1d TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ADD COLUMN next_1h TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ADD COLUMN next_1m TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Partial indexes for fast due-ticker queries
+CREATE INDEX ix_tickers_next_1d ON tickers (next_1d) WHERE source = 'vn' AND status = 'ready';
+CREATE INDEX ix_tickers_next_1h ON tickers (next_1h) WHERE source = 'vn' AND status = 'ready';
+CREATE INDEX ix_tickers_next_1m ON tickers (next_1m) WHERE source = 'vn' AND status = 'ready';
+```
+
+`DEFAULT NOW()` ensures all tickers are immediately due on first run — no bootstrap needed.
+
+### Dividend Worker
+
+The dividend worker handles tickers flagged with `dividend-detected` or `full-download-requested` status:
+
+1. Delete all OHLCV + indicator data for the ticker
+2. Re-download full history for all intervals (1D, 1h, 1m) in backward chunks
+3. Enhance with technical indicators
+4. Set status back to `ready` and reset all `next_*` to `NOW()`
+
+### Multi-Container Deployment
+
+With multiple containers running against the same database:
+
+- The **shuffle + truncate to 50** ensures each container picks a different random subset from the due pool
+- The `schedule_next_run` SQL uses `NOW()` server-side, so even if two containers process the same ticker, the later one just re-schedules it
+- Rate limit cooldowns (60s on 429) apply per container independently
+
 ## Dependencies
 
 Added to `Cargo.toml`:

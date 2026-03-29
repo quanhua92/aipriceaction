@@ -98,10 +98,13 @@ pub async fn run(pool: PgPool) {
                 sleep(Duration::from_secs(vci_worker::DIVIDEND_CHUNK_SLEEP_SECS)).await;
             }
 
-            // Mark as ready again
+            // Mark as ready again and reset priority schedule
             if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "ready").await {
                 tracing::error!(ticker, ticker_id, "failed to set status ready: {e}");
             } else {
+                if let Err(e) = ohlcv::reset_ticker_schedule(&pool, ticker_id).await {
+                    tracing::warn!(ticker, ticker_id, "failed to reset schedule: {e}");
+                }
                 tracing::info!(ticker, "dividend recovery complete");
             }
         }

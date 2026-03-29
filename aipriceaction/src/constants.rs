@@ -3,17 +3,17 @@ pub mod vci_worker {
     /// Daily worker: loop interval during trading hours
     pub const DAILY_LOOP_TRADE_SECS: u64 = 15;
     /// Daily worker: loop interval outside trading hours
-    pub const DAILY_LOOP_OFF_SECS: u64 = 300;
+    pub const DAILY_LOOP_OFF_SECS: u64 = 60;
 
     /// Hourly worker: loop interval during trading hours
-    pub const HOURLY_LOOP_TRADE_SECS: u64 = 300;
+    pub const HOURLY_LOOP_TRADE_SECS: u64 = 60;
     /// Hourly worker: loop interval outside trading hours
-    pub const HOURLY_LOOP_OFF_SECS: u64 = 1800;
+    pub const HOURLY_LOOP_OFF_SECS: u64 = 60;
 
     /// Minute worker: loop interval during trading hours
-    pub const MINUTE_LOOP_TRADE_SECS: u64 = 300;
+    pub const MINUTE_LOOP_TRADE_SECS: u64 = 60;
     /// Minute worker: loop interval outside trading hours
-    pub const MINUTE_LOOP_OFF_SECS: u64 = 1800;
+    pub const MINUTE_LOOP_OFF_SECS: u64 = 60;
 
     /// Dividend worker: loop interval (polling for flagged tickers)
     pub const DIVIDEND_LOOP_SECS: u64 = 60;
@@ -71,5 +71,33 @@ pub mod vci_worker {
         let batches = (client_count * 3).min(24);
         tracing::debug!(client_count, batches, "concurrent_batches calculated");
         batches
+    }
+
+    /// Multiplier applied to tier intervals outside trading hours.
+    /// No new data arrives off-hours, so less frequent polling is fine.
+    pub const OFF_HOURS_MULTIPLIER: i64 = 20;
+
+    /// Max tickers to process per loop iteration.
+    /// All due tickers are fetched, shuffled, and this many are taken.
+    /// Shuffling avoids multiple containers competing for the same tickers.
+    pub const DUE_TICKER_BATCH_SIZE: usize = 50;
+
+    /// Priority scheduling based on money flow (close * volume).
+    pub mod priority {
+        /// Money flow thresholds (close * volume in VND) for tier boundaries.
+        /// Tier 1: >= 50B VND  (VCB, VIC, VNM, FPT, HPG...)
+        /// Tier 2: >=  5B VND
+        /// Tier 3: >=  0.5B VND
+        /// Tier 4: <  0.5B VND  (illiquid / small-cap)
+        pub const THRESHOLDS: [f64; 3] = [
+            50_000_000_000.0,
+             5_000_000_000.0,
+               500_000_000.0,
+        ];
+
+        /// Check interval per tier (seconds, trading hours). Index 0 = top tier.
+        pub const DAILY_SECS:  [i64; 4] = [15, 30, 60, 120];
+        pub const HOURLY_SECS: [i64; 4] = [60, 180, 300, 600];
+        pub const MINUTE_SECS: [i64; 4] = [60, 120, 300, 600];
     }
 }

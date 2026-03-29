@@ -4,6 +4,7 @@ use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 use crate::constants::vci_worker;
+use crate::constants::vci_worker::priority;
 use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv;
 use crate::workers::vci_shared;
@@ -26,10 +27,10 @@ pub async fn run(pool: PgPool) {
     loop {
         let trading = vci_shared::is_trading_hours();
 
-        let tickers = match ohlcv::get_tickers_by_status(&pool, "vn", "ready").await {
+        let mut tickers = match ohlcv::get_due_tickers(&pool, "vn", "next_1m").await {
             Ok(t) => t,
             Err(e) => {
-                tracing::warn!("VCI minute worker: failed to load tickers: {e}");
+                tracing::warn!("VCI minute worker: failed to load due tickers: {e}");
                 let sleep_secs = if trading {
                     vci_worker::MINUTE_LOOP_TRADE_SECS
                 } else {
@@ -39,24 +40,22 @@ pub async fn run(pool: PgPool) {
                 continue;
             }
         };
+        use rand::seq::SliceRandom;
+        tickers.shuffle(&mut rand::thread_rng());
+        tickers.truncate(vci_worker::DUE_TICKER_BATCH_SIZE);
 
         if !tickers.is_empty() {
-            tracing::info!("VCI minute worker: syncing {} tickers (trading={})", tickers.len(), trading);
+            tracing::info!("VCI minute worker: syncing {} due tickers (trading={})", tickers.len(), trading);
 
-            let mut ticker_symbols: Vec<String> = tickers.iter().map(|t| t.ticker.clone()).collect();
-            {
-                use rand::seq::SliceRandom;
-                let mut rng = rand::thread_rng();
-                ticker_symbols.shuffle(&mut rng);
-            }
-
+            let mult = if trading { 1 } else { vci_worker::OFF_HOURS_MULTIPLIER };
+            let tier_secs: [i64; 4] = priority::MINUTE_SECS.map(|s| s * mult);
             let concurrency = vci_worker::concurrent_batches(provider.client_count());
-            for chunk in ticker_symbols.chunks(concurrency) {
+            for chunk in tickers.chunks(concurrency) {
                 let mut handles = tokio::task::JoinSet::new();
-                for ticker in chunk {
+                for ticker_entry in chunk {
                     let pool = pool.clone();
                     let provider = provider.clone();
-                    let ticker = ticker.clone();
+                    let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = vci_shared::ensure_ticker(&pool, "vn", &ticker).await;
                         let last_time = vci_shared::get_last_time(&pool, ticker_id, "1m").await;
@@ -71,6 +70,15 @@ pub async fn run(pool: PgPool) {
                         match provider.get_history(&ticker, "1m", count_back, None).await {
                             Ok(data) => {
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+
+                                // Schedule next minute run based on money-flow tier
+                                if let Err(e) = ohlcv::schedule_next_run(
+                                    &pool, ticker_id, "next_1m",
+                                    &priority::THRESHOLDS, &tier_secs,
+                                ).await {
+                                    tracing::warn!(ticker, "failed to schedule next run: {e}");
+                                }
+
                                 tracing::info!(ticker, count = data.len(), "minute sync OK");
                                 false
                             }
@@ -96,7 +104,7 @@ pub async fn run(pool: PgPool) {
                 }
             }
         } else {
-            tracing::debug!("VCI minute worker: no ready tickers");
+            tracing::debug!("VCI minute worker: no due tickers");
         }
 
         let sleep_secs = if trading {
