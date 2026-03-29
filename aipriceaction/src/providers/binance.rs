@@ -414,12 +414,6 @@ impl BinanceProvider {
             all_data = merged;
         }
 
-        // 4. Apply limit (take the last N records)
-        if all_data.len() > limit as usize {
-            let start = all_data.len() - limit as usize;
-            all_data = all_data[start..].to_vec();
-        }
-
         Ok(all_data)
     }
 
