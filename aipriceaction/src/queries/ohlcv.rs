@@ -1,8 +1,12 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
-use std::collections::HashMap;
 
-use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
+use crate::models::indicators::{calculate_ma_score, calculate_sma};
+use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
+
+/// Maximum SMA period — fetch this many extra rows before the requested range
+/// to ensure all moving averages are accurate.
+const SMA_MAX_PERIOD: i64 = 200;
 
 /// Insert ticker if not exists, return the id.
 pub async fn upsert_ticker(
@@ -75,34 +79,10 @@ pub async fn get_ohlcv(
     .await
 }
 
-/// Get indicator rows for a ticker_id + interval, ordered by time DESC.
-/// Optionally limit the number of rows.
-pub async fn get_indicators(
-    pool: &PgPool,
-    ticker_id: i32,
-    interval: &str,
-    limit: Option<i64>,
-) -> sqlx::Result<Vec<IndicatorRow>> {
-    sqlx::query_as!(
-        IndicatorRow,
-        r#"SELECT ticker_id, interval, time,
-             ma10, ma20, ma50, ma100, ma200,
-             ma10_score, ma20_score, ma50_score, ma100_score, ma200_score,
-             close_changed, volume_changed, total_money_changed
-           FROM ohlcv_indicators
-           WHERE ticker_id = $1 AND interval = $2
-           ORDER BY time DESC
-           LIMIT $3"#,
-        ticker_id,
-        interval,
-        limit
-    )
-    .fetch_all(pool)
-    .await
-}
-
 /// Get joined OHLCV + indicators for a ticker symbol + interval.
 /// Returns rows matching the 20-column CSV format, ordered by time DESC.
+///
+/// Indicators (MA, scores, changes) are calculated in-memory from OHLCV data.
 pub async fn get_ohlcv_joined(
     pool: &PgPool,
     source: &str,
@@ -110,41 +90,40 @@ pub async fn get_ohlcv_joined(
     interval: &str,
     limit: Option<i64>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
-    sqlx::query_as!(
-        OhlcvJoined,
-        r#"SELECT
-             t.ticker,
-             o.time,
-             o.open, o.high, o.low, o.close, o.volume,
-             i.ma10, i.ma20, i.ma50, i.ma100, i.ma200,
-             i.ma10_score, i.ma20_score, i.ma50_score, i.ma100_score, i.ma200_score,
-             i.close_changed, i.volume_changed, i.total_money_changed
-           FROM tickers t
-           JOIN ohlcv o ON o.ticker_id = t.id
-           LEFT JOIN ohlcv_indicators i
-             ON i.ticker_id = t.id AND i.interval = o.interval AND i.time = o.time
-           WHERE t.source = $1 AND t.ticker = $2 AND o.interval = $3
-           ORDER BY o.time DESC
-           LIMIT $4"#,
-        source,
-        ticker,
-        interval,
-        limit
+    // Resolve ticker_id
+    let ticker_id: i32 = sqlx::query_scalar(
+        r#"SELECT id FROM tickers WHERE source = $1 AND ticker = $2"#
     )
-    .fetch_all(pool)
-    .await
+    .bind(source)
+    .bind(ticker)
+    .fetch_optional(pool)
+    .await?
+    .ok_or_else(|| sqlx::Error::RowNotFound)?;
+
+    // Fetch extra rows for SMA accuracy: limit + SMA_MAX_PERIOD
+    let effective_limit = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
+    let rows = get_ohlcv(pool, ticker_id, interval, effective_limit).await?;
+    if rows.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let ticker_str = ticker.to_string();
+    let result = enhance_rows(&ticker_str, rows, limit);
+    Ok(result)
 }
 
 /// Get joined OHLCV + indicators for a ticker symbol + interval with optional date range.
 /// This mirrors the /tickers API query pattern.
+///
+/// Indicators are calculated in-memory from OHLCV data.
 pub async fn get_ohlcv_joined_range(
     pool: &PgPool,
     source: &str,
     ticker: &str,
     interval: &str,
     limit: Option<i64>,
-    start_time: Option<chrono::DateTime<chrono::Utc>>,
-    end_time: Option<chrono::DateTime<chrono::Utc>>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
     // Resolve ticker_id first to avoid bad join plans on partitioned tables
     let ticker_id: i32 = sqlx::query_scalar(
@@ -156,11 +135,18 @@ pub async fn get_ohlcv_joined_range(
     .await?
     .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
+    // Calculate effective start time: shift back by SMA_MAX_PERIOD rows worth of time
+    // for accurate SMA calculation at the beginning of the requested range.
+    let effective_start = start_time.map(|st| {
+        let lookback = interval_duration(interval) * (SMA_MAX_PERIOD as i32);
+        st - lookback
+    });
+
     // Build conditions dynamically
     let mut conditions = vec!["ticker_id = $1".to_string(), "interval = $2".to_string()];
     let mut param_idx = 3u32;
 
-    if start_time.is_some() {
+    if effective_start.is_some() {
         conditions.push(format!("time >= ${param_idx}"));
         param_idx += 1;
     }
@@ -169,83 +155,143 @@ pub async fn get_ohlcv_joined_range(
         param_idx += 1;
     }
 
+    // If there's a user-provided start_time but no limit, we need to enforce
+    // the original start_time as a post-filter. Fetch without start_time limit
+    // to get enough historical rows for SMA, then filter.
+    let needs_post_filter = start_time.is_some();
+
     let where_clause = conditions.join(" AND ");
 
-    // Fetch ohlcv rows
+    // Fetch ohlcv rows with expanded range for SMA accuracy
+    let effective_limit = limit.map(|l| l + SMA_MAX_PERIOD);
     let mut sql = format!(
         r#"SELECT ticker_id, interval, time, open, high, low, close, volume
            FROM ohlcv WHERE {where_clause} ORDER BY time DESC"#
     );
 
-    if let Some(_) = limit {
+    if let Some(_) = effective_limit {
         sql.push_str(&format!(" LIMIT ${param_idx}"));
     }
 
     let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
         .bind(ticker_id).bind(interval);
-    if let Some(s) = start_time { q = q.bind(s); }
+    if let Some(s) = effective_start { q = q.bind(s); }
     if let Some(e) = end_time { q = q.bind(e); }
-    if let Some(l) = limit { q = q.bind(l); }
+    if let Some(l) = effective_limit { q = q.bind(l); }
 
-    let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
+    let mut rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
 
     if rows.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Batch-fetch indicators for the fetched times
-    let times: Vec<_> = rows.iter().map(|r| r.time).collect();
-    let indicators: HashMap<chrono::DateTime<chrono::Utc>, IndicatorRow> = {
-        let q = sqlx::query_as::<_, IndicatorRow>(
-            r#"SELECT ticker_id, interval, time,
-                      ma10, ma20, ma50, ma100, ma200,
-                      ma10_score, ma20_score, ma50_score, ma100_score, ma200_score,
-                      close_changed, volume_changed, total_money_changed
-               FROM ohlcv_indicators
-               WHERE ticker_id = $1 AND interval = $2 AND time = ANY($3)"#
-        )
-        .bind(ticker_id).bind(interval).bind(&times);
-        let mut map = HashMap::new();
-        for row in q.fetch_all(pool).await? {
-            map.insert(row.time, row);
-        }
-        map
-    };
+    // Post-filter: remove rows that fall before the user's original start_time
+    if needs_post_filter {
+        let st = start_time.unwrap();
+        rows.retain(|r| r.time >= st);
+    }
 
-    // Get ticker string once
     let ticker_str = ticker.to_string();
+    let result = enhance_rows(&ticker_str, rows, limit);
+    Ok(result)
+}
 
-    // Join in memory
-    let result: Vec<OhlcvJoined> = rows
-        .into_iter()
-        .map(|r| {
-            let ind = indicators.get(&r.time);
+/// Enhance a set of OHLCV rows with in-memory calculated indicators.
+///
+/// The rows must be in time DESC order (as returned from the DB).
+/// If `limit` is provided, the result will be trimmed to that many rows
+/// from the newest end.
+fn enhance_rows(ticker: &str, rows: Vec<OhlcvRow>, limit: Option<i64>) -> Vec<OhlcvJoined> {
+    if rows.is_empty() {
+        return Vec::new();
+    }
+
+    // Reverse to chronological order (oldest first) for SMA calculation
+    let mut chrono_rows = rows;
+    chrono_rows.reverse();
+
+    // Extract closes and volumes in chronological order
+    let closes: Vec<f64> = chrono_rows.iter().map(|r| r.close).collect();
+    let volumes: Vec<f64> = chrono_rows.iter().map(|r| r.volume as f64).collect();
+
+    // Calculate SMAs on the full dataset
+    let ma10 = calculate_sma(&closes, 10);
+    let ma20 = calculate_sma(&closes, 20);
+    let ma50 = calculate_sma(&closes, 50);
+    let ma100 = calculate_sma(&closes, 100);
+    let ma200 = calculate_sma(&closes, 200);
+
+    // Build joined rows with indicators
+    let mut joined: Vec<OhlcvJoined> = chrono_rows
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let make_opt = |vals: &[f64], idx: usize| -> Option<f64> {
+                if idx < vals.len() && vals[idx] > 0.0 {
+                    Some(vals[idx])
+                } else {
+                    None
+                }
+            };
+
             OhlcvJoined {
-                ticker: ticker_str.clone(),
+                ticker: ticker.to_string(),
                 time: r.time,
                 open: r.open,
                 high: r.high,
                 low: r.low,
                 close: r.close,
                 volume: r.volume,
-                ma10: ind.and_then(|i| i.ma10),
-                ma20: ind.and_then(|i| i.ma20),
-                ma50: ind.and_then(|i| i.ma50),
-                ma100: ind.and_then(|i| i.ma100),
-                ma200: ind.and_then(|i| i.ma200),
-                ma10_score: ind.and_then(|i| i.ma10_score),
-                ma20_score: ind.and_then(|i| i.ma20_score),
-                ma50_score: ind.and_then(|i| i.ma50_score),
-                ma100_score: ind.and_then(|i| i.ma100_score),
-                ma200_score: ind.and_then(|i| i.ma200_score),
-                close_changed: ind.and_then(|i| i.close_changed),
-                volume_changed: ind.and_then(|i| i.volume_changed),
-                total_money_changed: ind.and_then(|i| i.total_money_changed),
+                ma10: make_opt(&ma10, i),
+                ma20: make_opt(&ma20, i),
+                ma50: make_opt(&ma50, i),
+                ma100: make_opt(&ma100, i),
+                ma200: make_opt(&ma200, i),
+                ma10_score: make_opt(&ma10, i).map(|v| calculate_ma_score(r.close, v)),
+                ma20_score: make_opt(&ma20, i).map(|v| calculate_ma_score(r.close, v)),
+                ma50_score: make_opt(&ma50, i).map(|v| calculate_ma_score(r.close, v)),
+                ma100_score: make_opt(&ma100, i).map(|v| calculate_ma_score(r.close, v)),
+                ma200_score: make_opt(&ma200, i).map(|v| calculate_ma_score(r.close, v)),
+                close_changed: if i > 0 && closes[i - 1] > 0.0 {
+                    Some(((r.close - closes[i - 1]) / closes[i - 1]) * 100.0)
+                } else {
+                    None
+                },
+                volume_changed: if i > 0 && volumes[i - 1] > 0.0 {
+                    Some(((volumes[i] - volumes[i - 1]) / volumes[i - 1]) * 100.0)
+                } else {
+                    None
+                },
+                total_money_changed: if i > 0 && closes[i - 1] > 0.0 {
+                    Some((r.close - closes[i - 1]) * r.volume as f64)
+                } else {
+                    None
+                },
             }
         })
         .collect();
 
-    Ok(result)
+    // Reverse back to newest-first order
+    joined.reverse();
+
+    // Apply limit (trim from the newest end)
+    if let Some(l) = limit {
+        let l = l as usize;
+        if joined.len() > l {
+            joined.truncate(l);
+        }
+    }
+
+    joined
+}
+
+/// Get the duration of one row for the given interval.
+fn interval_duration(interval: &str) -> Duration {
+    match interval {
+        "1m" => Duration::minutes(1),
+        "1h" => Duration::hours(1),
+        _ => Duration::days(1),
+    }
 }
 
 /// Count total tickers for a source.
@@ -302,47 +348,6 @@ pub async fn count_ohlcv(
     }
 }
 
-/// Count indicator rows for a source, optionally filtered by ticker and/or interval.
-pub async fn count_indicators(
-    pool: &PgPool,
-    source: &str,
-    ticker: Option<&str>,
-    interval: Option<&str>,
-) -> sqlx::Result<i64> {
-    match (ticker, interval) {
-        (Some(ticker), Some(interval)) => {
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv_indicators WHERE ticker_id = (SELECT id FROM tickers WHERE source = '{source}' AND ticker = '{ticker}') AND interval = '{interval}'"
-            );
-            sqlx::query_scalar(&sql).fetch_one(pool).await
-        }
-        (Some(ticker), None) => {
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv_indicators WHERE ticker_id = (SELECT id FROM tickers WHERE source = '{source}' AND ticker = '{ticker}')"
-            );
-            sqlx::query_scalar(&sql).fetch_one(pool).await
-        }
-        (None, Some(interval)) => {
-            let ids = source_ticker_ids(pool, source).await?;
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv_indicators WHERE ticker_id = ANY($1) AND interval = '{interval}'"
-            );
-            sqlx::query_scalar(&sql)
-                .bind(&ids)
-                .fetch_one(pool)
-                .await
-        }
-        (None, None) => {
-            let ids = source_ticker_ids(pool, source).await?;
-            let sql = "SELECT COUNT(*) FROM ohlcv_indicators WHERE ticker_id = ANY($1)".to_string();
-            sqlx::query_scalar(&sql)
-                .bind(&ids)
-                .fetch_one(pool)
-                .await
-        }
-    }
-}
-
 /// Resolve all ticker IDs for a given source.
 async fn source_ticker_ids(pool: &PgPool, source: &str) -> sqlx::Result<Vec<i32>> {
     sqlx::query_scalar("SELECT id FROM tickers WHERE source = $1")
@@ -353,28 +358,63 @@ async fn source_ticker_ids(pool: &PgPool, source: &str) -> sqlx::Result<Vec<i32>
 
 /// Get the latest daily record for each ticker of a given source.
 /// Uses DISTINCT ON for a single efficient query.
+///
+/// Indicators are calculated in-memory from the last 200+ daily rows per ticker.
 pub async fn get_latest_daily_per_ticker(
     pool: &PgPool,
     source: &str,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
-    sqlx::query_as::<_, OhlcvJoined>(
-        r#"SELECT DISTINCT ON (t.ticker)
-            t.ticker,
-            o.time,
-            o.open, o.high, o.low, o.close, o.volume,
-            i.ma10, i.ma20, i.ma50, i.ma100, i.ma200,
-            i.ma10_score, i.ma20_score, i.ma50_score, i.ma100_score, i.ma200_score,
-            i.close_changed, i.volume_changed, i.total_money_changed
-        FROM tickers t
-        JOIN ohlcv o ON o.ticker_id = t.id AND o.interval = '1D'
-        LEFT JOIN ohlcv_indicators i
-            ON i.ticker_id = t.id AND i.interval = '1D' AND i.time = o.time
-        WHERE t.source = $1
-        ORDER BY t.ticker, o.time DESC"#,
+    // Fetch latest 200+1 daily rows per ticker for accurate SMA(200)
+    let rows = sqlx::query_as::<_, OhlcvRow>(
+        r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+           FROM ohlcv
+           WHERE ticker_id = ANY(
+               SELECT id FROM tickers WHERE source = $1
+           ) AND interval = '1D'
+           ORDER BY ticker_id, time DESC"#,
     )
     .bind(source)
     .fetch_all(pool)
-    .await
+    .await?;
+
+    // Group by ticker_id, keep at most SMA_MAX_PERIOD + 1 rows per ticker (for accuracy)
+    let mut by_ticker: std::collections::HashMap<i32, Vec<OhlcvRow>> = std::collections::HashMap::new();
+    for row in rows {
+        by_ticker
+            .entry(row.ticker_id)
+            .or_default()
+            .push(row);
+    }
+
+    // Also fetch ticker strings
+    let tickers: Vec<Ticker> = list_tickers(pool, source).await?;
+    let ticker_names: std::collections::HashMap<i32, String> = tickers
+        .into_iter()
+        .map(|t| (t.id, t.ticker))
+        .collect();
+
+    let mut result = Vec::new();
+    for (ticker_id, mut ticker_rows) in by_ticker {
+        // Already in DESC order, trim to SMA_MAX_PERIOD + 1
+        if ticker_rows.len() > SMA_MAX_PERIOD as usize + 1 {
+            ticker_rows.truncate(SMA_MAX_PERIOD as usize + 1);
+        }
+
+        if ticker_rows.is_empty() {
+            continue;
+        }
+
+        let ticker_str = ticker_names
+            .get(&ticker_id)
+            .cloned()
+            .unwrap_or_default();
+
+        // Enhance with all rows for accurate indicators
+        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1));
+        result.extend(joined);
+    }
+
+    Ok(result)
 }
 
 // ── Worker queries ──
@@ -427,15 +467,6 @@ pub async fn update_ticker_status(
 /// Delete all OHLCV data for a ticker. Returns number of deleted rows.
 pub async fn delete_ohlcv_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Result<u64> {
     let result = sqlx::query("DELETE FROM ohlcv WHERE ticker_id = $1")
-        .bind(ticker_id)
-        .execute(pool)
-        .await?;
-    Ok(result.rows_affected())
-}
-
-/// Delete all indicators for a ticker. Returns number of deleted rows.
-pub async fn delete_indicators_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Result<u64> {
-    let result = sqlx::query("DELETE FROM ohlcv_indicators WHERE ticker_id = $1")
         .bind(ticker_id)
         .execute(pool)
         .await?;

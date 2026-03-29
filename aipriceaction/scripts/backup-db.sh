@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Backup PostgreSQL database to a timestamped dump file.
+# Backup PostgreSQL database to a timestamped gzipped SQL dump.
 #
 # Usage:
 #   docker exec aipriceaction-postgres /app/scripts/backup-db.sh       # in postgres container

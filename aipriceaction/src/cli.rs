@@ -239,26 +239,20 @@ pub fn run() {
                     .await
                     .expect("Failed to count tickers");
 
-                // Total OHLCV and indicator rows (all tickers)
+                // Total OHLCV rows (all tickers)
                 let total_ohlcv = ohlcv::count_ohlcv(&pool, source, None, None)
                     .await
                     .expect("Failed to count OHLCV");
-                let total_indicators = ohlcv::count_indicators(&pool, source, None, None)
-                    .await
-                    .expect("Failed to count indicators");
 
-                tracing::info!("Source: {source} | Tickers: {ticker_count} | OHLCV: {total_ohlcv} | Indicators: {total_indicators}");
+                tracing::info!("Source: {source} | Tickers: {ticker_count} | OHLCV: {total_ohlcv}");
 
                 // Per-interval totals
                 for iv in &["1D", "1h", "1m"] {
                     let ohlcv_count = ohlcv::count_ohlcv(&pool, source, None, Some(iv))
                         .await
                         .expect("Failed to count OHLCV");
-                    let ind_count = ohlcv::count_indicators(&pool, source, None, Some(iv))
-                        .await
-                        .expect("Failed to count indicators");
-                    if ohlcv_count > 0 || ind_count > 0 {
-                        tracing::info!("  {iv}: {ohlcv_count} OHLCV, {ind_count} indicators");
+                    if ohlcv_count > 0 {
+                        tracing::info!("  {iv}: {ohlcv_count} OHLCV");
                     }
                 }
 
@@ -266,10 +260,7 @@ pub fn run() {
                 let vnindex_ohlcv = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), None)
                     .await
                     .expect("Failed to count VNINDEX OHLCV");
-                let vnindex_ind = ohlcv::count_indicators(&pool, source, Some("VNINDEX"), None)
-                    .await
-                    .expect("Failed to count VNINDEX indicators");
-                tracing::info!("VNINDEX: {vnindex_ohlcv} OHLCV, {vnindex_ind} indicators");
+                tracing::info!("VNINDEX: {vnindex_ohlcv} OHLCV");
                 for iv in &["1D", "1h", "1m"] {
                     let count = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), Some(iv))
                         .await

@@ -51,10 +51,6 @@ pub async fn run(pool: PgPool) {
             tracing::info!(ticker, ticker_id, "starting dividend recovery");
 
             // Delete all existing data for this ticker
-            if let Err(e) = ohlcv::delete_indicators_for_ticker(&pool, ticker_id).await {
-                tracing::error!(ticker, ticker_id, "delete indicators failed: {e}");
-                continue;
-            }
             if let Err(e) = ohlcv::delete_ohlcv_for_ticker(&pool, ticker_id).await {
                 tracing::error!(ticker, ticker_id, "delete ohlcv failed: {e}");
                 continue;

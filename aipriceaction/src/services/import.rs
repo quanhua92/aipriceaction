@@ -5,7 +5,7 @@ use tracing::{info, warn};
 
 use crate::csv::legacy;
 use crate::models::interval::Interval;
-use crate::models::ohlcv::{IndicatorRow, OhlcvRow};
+use crate::models::ohlcv::OhlcvRow;
 use crate::queries::import as bulk;
 use crate::services::ohlcv;
 
@@ -20,6 +20,9 @@ pub struct ImportStats {
 }
 
 /// Import CSV files from a market_data directory into PostgreSQL.
+///
+/// Only OHLCV data (columns 1-7) is imported. Indicators (columns 8-20) are
+/// no longer stored — they are calculated on-the-fly at query time.
 ///
 /// - `market_data_dir`: root of the market_data tree (e.g. `/path/to/market_data`)
 /// - `source`: data source label (e.g. "vn")
@@ -134,15 +137,6 @@ async fn import_single_csv(
         })
         .collect();
 
-    let indicator_rows: Vec<IndicatorRow> = parsed
-        .indicators
-        .into_iter()
-        .map(|mut r| {
-            r.ticker_id = ticker_id;
-            r
-        })
-        .collect();
-
     // Batch upsert
     let total_rows = ohlcv_rows.len();
     let mut batches = 0;
@@ -151,13 +145,6 @@ async fn import_single_csv(
         bulk::bulk_upsert_ohlcv(pool, chunk)
             .await
             .map_err(|e| format!("bulk_upsert_ohlcv failed: {e}"))?;
-        batches += 1;
-    }
-
-    for chunk in indicator_rows.chunks(BATCH_SIZE) {
-        bulk::bulk_upsert_indicators(pool, chunk)
-            .await
-            .map_err(|e| format!("bulk_upsert_indicators failed: {e}"))?;
         batches += 1;
     }
 

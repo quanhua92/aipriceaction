@@ -3,14 +3,16 @@ use std::path::Path;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 
 use crate::models::interval::Interval;
-use crate::models::ohlcv::{IndicatorRow, OhlcvRow};
+use crate::models::ohlcv::OhlcvRow;
 
 /// Result of parsing a single 20-column CSV file.
+///
+/// Only OHLCV data (columns 1-7) is extracted. Indicator columns (8-20)
+/// are ignored — they are calculated on-the-fly at query time.
 pub struct ParsedCsv {
     pub ticker: String,
     pub interval: Interval,
     pub rows: Vec<OhlcvRow>,
-    pub indicators: Vec<IndicatorRow>,
 }
 
 /// Extract the ticker symbol from the parent directory name of the CSV file.
@@ -52,25 +54,16 @@ fn parse_time(s: &str, interval: Interval) -> Result<DateTime<Utc>, String> {
     }
 }
 
-/// Parse an optional f64: empty string → None.
-fn parse_opt_f64(s: &str) -> Option<f64> {
-    let trimmed = s.trim();
-    if trimmed.is_empty() {
-        None
-    } else {
-        trimmed.parse().ok()
-    }
-}
-
-/// Parse a single CSV record (20 columns) into OHLCV + indicator rows.
+/// Parse a single CSV record (20 columns) into an OHLCV row.
+/// Columns 8-20 (indicators) are parsed but discarded.
 fn parse_record(
     record: &csv::StringRecord,
     ticker_id: i32,
     interval: Interval,
     interval_str: &str,
-) -> Result<(OhlcvRow, IndicatorRow), String> {
-    if record.len() < 20 {
-        return Err(format!("expected 20 columns, got {}", record.len()));
+) -> Result<OhlcvRow, String> {
+    if record.len() < 7 {
+        return Err(format!("expected at least 7 columns, got {}", record.len()));
     }
 
     let time = parse_time(&record[1], interval)?;
@@ -96,7 +89,7 @@ fn parse_record(
         .parse()
         .map_err(|e| format!("invalid volume '{}': {e}", record[6].trim()))?;
 
-    let ohlcv = OhlcvRow {
+    Ok(OhlcvRow {
         ticker_id,
         interval: interval_str.to_owned(),
         time,
@@ -105,31 +98,10 @@ fn parse_record(
         low,
         close,
         volume,
-    };
-
-    let indicators = IndicatorRow {
-        ticker_id,
-        interval: interval_str.to_owned(),
-        time,
-        ma10: parse_opt_f64(&record[7]),
-        ma20: parse_opt_f64(&record[8]),
-        ma50: parse_opt_f64(&record[9]),
-        ma100: parse_opt_f64(&record[10]),
-        ma200: parse_opt_f64(&record[11]),
-        ma10_score: parse_opt_f64(&record[12]),
-        ma20_score: parse_opt_f64(&record[13]),
-        ma50_score: parse_opt_f64(&record[14]),
-        ma100_score: parse_opt_f64(&record[15]),
-        ma200_score: parse_opt_f64(&record[16]),
-        close_changed: parse_opt_f64(&record[17]),
-        volume_changed: parse_opt_f64(&record[18]),
-        total_money_changed: parse_opt_f64(&record[19]),
-    };
-
-    Ok((ohlcv, indicators))
+    })
 }
 
-/// Parse a 20-column CSV file into structured rows.
+/// Parse a CSV file into structured OHLCV rows.
 /// `ticker_id` fields are left as 0 — the caller must fill them in before DB insertion.
 pub fn parse_csv(path: &Path) -> Result<ParsedCsv, String> {
     let ticker = ticker_from_path(path)?;
@@ -142,7 +114,6 @@ pub fn parse_csv(path: &Path) -> Result<ParsedCsv, String> {
     let mut reader = csv::ReaderBuilder::new().from_reader(file);
 
     let mut rows = Vec::new();
-    let mut indicators = Vec::new();
 
     for (i, result) in reader.records().enumerate() {
         let record = result.map_err(|e| format!("CSV read error at row {i}: {e}"))?;
@@ -150,15 +121,13 @@ pub fn parse_csv(path: &Path) -> Result<ParsedCsv, String> {
         if i == 0 && record.len() >= 2 && record[1].trim() == "time" {
             continue;
         }
-        let (ohlcv, indicator) = parse_record(&record, 0, interval, &interval_str)?;
+        let ohlcv = parse_record(&record, 0, interval, &interval_str)?;
         rows.push(ohlcv);
-        indicators.push(indicator);
     }
 
     Ok(ParsedCsv {
         ticker,
         interval,
         rows,
-        indicators,
     })
 }

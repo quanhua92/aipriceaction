@@ -1,7 +1,7 @@
 use chrono::{Duration, Utc};
 use sqlx::PgPool;
 
-use crate::models::ohlcv::{IndicatorRow, OhlcvJoined, OhlcvRow, Ticker};
+use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
 use crate::queries::{import, ohlcv};
 
 /// Ensure ticker exists, return its id.
@@ -12,11 +12,6 @@ pub async fn ensure_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::R
 /// Upsert OHLCV data for a ticker. Caller must provide rows with correct ticker_id.
 pub async fn save_ohlcv(pool: &PgPool, rows: &[OhlcvRow]) -> sqlx::Result<()> {
     import::bulk_upsert_ohlcv(pool, rows).await
-}
-
-/// Upsert indicator data. Caller must provide rows with correct ticker_id.
-pub async fn save_indicators(pool: &PgPool, rows: &[IndicatorRow]) -> sqlx::Result<()> {
-    import::bulk_upsert_indicators(pool, rows).await
 }
 
 // ── Read methods ──
@@ -41,17 +36,9 @@ pub async fn get_ohlcv(
     ohlcv::get_ohlcv(pool, ticker_id, interval, limit).await
 }
 
-/// Get indicator rows for a ticker + interval, newest first.
-pub async fn get_indicators(
-    pool: &PgPool,
-    ticker_id: i32,
-    interval: &str,
-    limit: Option<i64>,
-) -> sqlx::Result<Vec<IndicatorRow>> {
-    ohlcv::get_indicators(pool, ticker_id, interval, limit).await
-}
-
 /// Get joined OHLCV + indicators matching the 20-column CSV format.
+///
+/// Indicators are calculated in-memory from OHLCV data at query time.
 ///
 /// For `1h` and `1m` intervals without an explicit date range, uses a
 /// progressive date-range heuristic: queries a small window first, then
@@ -167,14 +154,4 @@ pub async fn count_ohlcv(
     interval: Option<&str>,
 ) -> sqlx::Result<i64> {
     ohlcv::count_ohlcv(pool, source, ticker, interval).await
-}
-
-/// Count indicator rows for a source, optionally filtered by ticker/interval.
-pub async fn count_indicators(
-    pool: &PgPool,
-    source: &str,
-    ticker: Option<&str>,
-    interval: Option<&str>,
-) -> sqlx::Result<i64> {
-    ohlcv::count_indicators(pool, source, ticker, interval).await
 }

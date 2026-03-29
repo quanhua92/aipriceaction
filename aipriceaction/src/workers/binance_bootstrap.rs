@@ -70,9 +70,6 @@ pub async fn run(pool: PgPool) {
             tracing::info!(ticker, ticker_id, "starting full download");
 
             // Delete any existing data (in case of retry)
-            if let Err(e) = ohlcv::delete_indicators_for_ticker(&pool, ticker_id).await {
-                tracing::warn!(ticker, ticker_id, "delete indicators failed: {e}");
-            }
             if let Err(e) = ohlcv::delete_ohlcv_for_ticker(&pool, ticker_id).await {
                 tracing::warn!(ticker, ticker_id, "delete ohlcv failed: {e}");
             }

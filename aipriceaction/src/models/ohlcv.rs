@@ -59,47 +59,6 @@ impl fmt::Debug for OhlcvRow {
     }
 }
 
-#[derive(Clone, FromRow)]
-pub struct IndicatorRow {
-    pub ticker_id: i32,
-    pub interval: String,
-    pub time: DateTime<Utc>,
-    pub ma10: Option<f64>,
-    pub ma20: Option<f64>,
-    pub ma50: Option<f64>,
-    pub ma100: Option<f64>,
-    pub ma200: Option<f64>,
-    pub ma10_score: Option<f64>,
-    pub ma20_score: Option<f64>,
-    pub ma50_score: Option<f64>,
-    pub ma100_score: Option<f64>,
-    pub ma200_score: Option<f64>,
-    pub close_changed: Option<f64>,
-    pub volume_changed: Option<f64>,
-    pub total_money_changed: Option<f64>,
-}
-
-impl fmt::Display for IndicatorRow {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} ma10={} ma20={} ma50={} close_changed={}",
-            self.interval,
-            self.time.format("%Y-%m-%dT%H:%M:%S"),
-            opt_fmt(self.ma10),
-            opt_fmt(self.ma20),
-            opt_fmt(self.ma50),
-            opt_fmt(self.close_changed),
-        )
-    }
-}
-
-impl fmt::Debug for IndicatorRow {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{self}")
-    }
-}
-
 /// Joined row matching the 20-column CSV format:
 /// ticker,time,open,high,low,close,volume,
 /// ma10,ma20,ma50,ma100,ma200,
