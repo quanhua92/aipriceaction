@@ -417,10 +417,15 @@ impl VciProvider {
             }
         }
 
+        let error_msg = last_error.unwrap_or_else(|| "all clients failed".to_string());
+        // Return RateLimit if all attempts failed with 429/403
+        if error_msg.contains("429") {
+            return Err(VciError::RateLimit);
+        }
         Err(VciError::InvalidResponse(format!(
             "Max attempts exceeded ({}): {}",
             MAX_TOTAL_ATTEMPTS,
-            last_error.unwrap_or_else(|| "all clients failed".to_string()),
+            error_msg,
         )))
     }
 
