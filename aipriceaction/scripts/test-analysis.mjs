@@ -125,7 +125,7 @@ async function testTopPerformersCrypto() {
 
   assert(body.data.performers.length > 0, "crypto performers not empty");
   const symbols = body.data.performers.map((p) => p.symbol);
-  if (symbols.includes("BTC") || symbols.includes("ETH")) {
+  if (symbols.includes("BTCUSDT") || symbols.includes("ETHUSDT")) {
     ok("BTC or ETH in results");
   } else {
     ok(`crypto top performers returned (top: ${symbols[0]})`);
@@ -252,9 +252,9 @@ async function testVolumeProfileDateRange() {
 
 async function testVolumeProfileCrypto() {
   const { status, body, ms } = await fetchJSON(
-    "/analysis/volume-profile?symbol=BTC&date=2025-03-20&mode=crypto",
+    "/analysis/volume-profile?symbol=BTCUSDT&date=2025-03-20&mode=crypto",
   );
-  console.log(`\n── GET /analysis/volume-profile?symbol=BTC&mode=crypto ── ${ms}ms`);
+  console.log(`\n── GET /analysis/volume-profile?symbol=BTCUSDT&mode=crypto ── ${ms}ms`);
 
   if (status === 404) {
     ok("skipped (404 - no crypto minute data for that date)");
@@ -262,7 +262,7 @@ async function testVolumeProfileCrypto() {
   }
 
   assert(status === 200, "returns 200");
-  assert(body.data.symbol === "BTC", `symbol = 'BTC'`);
+  assert(body.data.symbol === "BTCUSDT", `symbol = 'BTCUSDT'`);
   assert(typeof body.data.poc.price === "number", "POC price is number");
 }
 

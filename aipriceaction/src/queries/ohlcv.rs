@@ -147,11 +147,11 @@ pub async fn get_ohlcv_joined_range(
     end_time: Option<chrono::DateTime<chrono::Utc>>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
     // Resolve ticker_id first to avoid bad join plans on partitioned tables
-    let ticker_id: i32 = sqlx::query_scalar!(
-        r#"SELECT id FROM tickers WHERE source = $1 AND ticker = $2"#,
-        source,
-        ticker
+    let ticker_id: i32 = sqlx::query_scalar(
+        r#"SELECT id FROM tickers WHERE source = $1 AND ticker = $2"#
     )
+    .bind(source)
+    .bind(ticker)
     .fetch_optional(pool)
     .await?
     .ok_or_else(|| sqlx::Error::RowNotFound)?;

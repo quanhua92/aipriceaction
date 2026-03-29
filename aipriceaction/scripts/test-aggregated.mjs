@@ -382,18 +382,18 @@ async function testAggregatedLegacyIndexNotDivided() {
 
 async function testCryptoAggregated() {
   const { status, body, ms } = await fetchJSON(
-    "/tickers?symbol=BTC&mode=crypto&interval=1W&limit=5",
+    "/tickers?symbol=BTCUSDT&mode=crypto&interval=1W&limit=5",
   );
-  console.log(`\n── GET /tickers?symbol=BTC&mode=crypto&interval=1W&limit=5 ── ${ms}ms`);
+  console.log(`\n── GET /tickers?symbol=BTCUSDT&mode=crypto&interval=1W&limit=5 ── ${ms}ms`);
 
-  if (status !== 200 || !body.BTC || body.BTC.length === 0) {
+  if (status !== 200 || !body.BTCUSDT || body.BTCUSDT.length === 0) {
     ok("skipped - no crypto data");
     return;
   }
 
-  assert(body.BTC.length === 5, `got 5 records (got ${body.BTC.length})`);
-  assert(body.BTC[0].symbol === "BTC", "symbol = BTC");
-  assert(typeof body.BTC[0].close === "number", "close is number");
+  assert(body.BTCUSDT.length === 5, `got 5 records (got ${body.BTCUSDT.length})`);
+  assert(body.BTCUSDT[0].symbol === "BTCUSDT", "symbol = BTCUSDT");
+  assert(typeof body.BTCUSDT[0].close === "number", "close is number");
   ok("crypto weekly aggregation works");
 }
 

@@ -230,8 +230,8 @@ async function testCryptoTickerGroups() {
   const symbols = body.CRYPTO_TOP_100;
   assert(Array.isArray(symbols), "is array");
   assert(symbols.length > 0, `has symbols (got ${symbols.length})`);
-  assert(symbols.includes("BTC"), "includes BTC");
-  assert(symbols.includes("ETH"), "includes ETH");
+  assert(symbols.includes("BTCUSDT"), "includes BTCUSDT");
+  assert(symbols.includes("ETHUSDT"), "includes ETHUSDT");
 }
 
 async function testModeAliases() {
