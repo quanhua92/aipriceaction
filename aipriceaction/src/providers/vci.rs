@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration as StdDuration;
 use tokio::sync::Semaphore;
-use tokio::time::sleep;
+use tokio::time::{sleep, Duration};
 use chrono::{DateTime, NaiveDate, Utc};
 
 pub use super::ohlcv::OhlcvData;
@@ -394,6 +394,8 @@ impl VciProvider {
                         let status_text = status.canonical_reason().unwrap_or("Unknown");
                         if status == 403 || status == 429 {
                             last_error = Some(format!("HTTP {} - rate limit or auth issue", status.as_u16()));
+                            // Back off before trying next client to avoid hammering the API
+                            sleep(Duration::from_secs(5)).await;
                             continue;
                         } else if status.is_server_error() {
                             last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
@@ -420,6 +422,8 @@ impl VciProvider {
         let error_msg = last_error.unwrap_or_else(|| "all clients failed".to_string());
         // Return RateLimit if all attempts failed with 429/403
         if error_msg.contains("429") {
+            tracing::warn!("all clients rate limited, sleeping 60s");
+            sleep(Duration::from_secs(60)).await;
             return Err(VciError::RateLimit);
         }
         Err(VciError::InvalidResponse(format!(
