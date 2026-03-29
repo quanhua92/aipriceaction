@@ -284,6 +284,140 @@ fn enhance_rows(
     joined
 }
 
+/// Batch-fetch joined OHLCV + indicators for tickers of a source + interval.
+///
+/// Instead of querying each ticker individually (N queries), this fetches rows
+/// in a single query and computes indicators per-ticker in-memory.
+///
+/// When `symbols` is empty, fetches ALL tickers for the source.
+/// When `symbols` is non-empty, fetches only the specified tickers.
+///
+/// For `limit`, each ticker gets at most `limit` result rows. The underlying query
+/// fetches up to `limit + SMA_MAX_PERIOD` rows per ticker for accurate SMA.
+pub async fn get_ohlcv_joined_batch(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    use std::collections::HashMap;
+
+    // Fetch ticker IDs + names
+    let tickers: Vec<Ticker> = if symbols.is_empty() {
+        list_tickers(pool, source).await?
+    } else {
+        // Fetch only the requested tickers
+        sqlx::query_as!(
+            Ticker,
+            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+               FROM tickers WHERE source = $1 AND ticker = ANY($2)
+               ORDER BY ticker"#,
+            source,
+            symbols
+        )
+        .fetch_all(pool)
+        .await?
+    };
+
+    if tickers.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let ticker_ids: Vec<i32> = tickers.iter().map(|t| t.id).collect();
+    let ticker_names: HashMap<i32, String> = tickers
+        .into_iter()
+        .map(|t| (t.id, t.ticker))
+        .collect();
+
+    // Calculate effective start time with lookback for SMA accuracy
+    let effective_start = start_time.map(|st| {
+        let lookback_minutes = interval_duration(interval) * SMA_MAX_PERIOD;
+        st - Duration::minutes(lookback_minutes)
+    });
+
+    // Build query: fetch OHLCV rows for the target tickers + interval.
+    //
+    // Uses ROW_NUMBER() to limit per-ticker rows while still getting enough
+    // for SMA calculation. PostgreSQL can use the (ticker_id, interval, time DESC)
+    // index to efficiently serve this without scanning the full table.
+    let effective_per_ticker = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
+
+    let mut conditions = vec![
+        "ticker_id = ANY($1)".to_string(),
+        "interval = $2".to_string(),
+    ];
+    let mut param_idx: u32 = 3;
+
+    if effective_start.is_some() {
+        conditions.push(format!("time >= ${param_idx}"));
+        param_idx += 1;
+    }
+    if end_time.is_some() {
+        conditions.push(format!("time <= ${param_idx}"));
+        param_idx += 1;
+    }
+
+    let where_clause = conditions.join(" AND ");
+
+    let sql = if let Some(per_ticker) = effective_per_ticker {
+        format!(
+            r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+               FROM (
+                   SELECT *, ROW_NUMBER() OVER (
+                       PARTITION BY ticker_id ORDER BY time DESC
+                   ) AS rn
+                   FROM ohlcv WHERE {where_clause}
+               ) sub
+               WHERE rn <= {per_ticker}
+               ORDER BY ticker_id, time DESC"#
+        )
+    } else {
+        format!(
+            r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+               FROM ohlcv WHERE {where_clause}
+               ORDER BY ticker_id, time DESC"#
+        )
+    };
+
+    let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
+        .bind(&ticker_ids)
+        .bind(interval);
+    if let Some(s) = effective_start {
+        q = q.bind(s);
+    }
+    if let Some(e) = end_time {
+        q = q.bind(e);
+    }
+
+    let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
+
+    // Group by ticker_id
+    let mut by_ticker: HashMap<i32, Vec<OhlcvRow>> = HashMap::new();
+    for row in rows {
+        by_ticker.entry(row.ticker_id).or_default().push(row);
+    }
+
+    // Enhance each group and map to ticker name
+    let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
+    for (ticker_id, ticker_rows) in by_ticker {
+        if ticker_rows.is_empty() {
+            continue;
+        }
+        let ticker_str = ticker_names
+            .get(&ticker_id)
+            .cloned()
+            .unwrap_or_default();
+
+        let joined = enhance_rows(&ticker_str, ticker_rows, limit, start_time);
+        result.insert(ticker_str, joined);
+    }
+
+    Ok(result)
+}
+
 /// Get the duration of one row for the given interval.
 /// For daily, uses 1.4 days per trading day to account for weekends/holidays
 /// (200 trading days ≈ 280 calendar days).

@@ -189,27 +189,34 @@ async fn native_tickers(
     let source = params.mode.source_label();
     let is_daily = interval == "1D";
 
+    // Use batch query — single SQL query for all tickers instead of N sequential queries.
+    // When symbols is empty (no ?symbol= param), fetches all tickers for the source.
+    // When symbols is non-empty, fetches only the specified tickers.
+    let batch_map = match ohlcv::get_ohlcv_joined_batch(
+        &state.pool,
+        source,
+        &symbols,
+        interval,
+        params.limit,
+        start_time,
+        end_time,
+    )
+    .await
+    {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::warn!("Failed to batch-fetch tickers ({interval}): {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to fetch data" })),
+            )
+                .into_response();
+        }
+    };
+
     let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
 
-    for symbol in &symbols {
-        let rows = match ohlcv::get_ohlcv_joined_range(
-            &state.pool,
-            source,
-            symbol,
-            interval,
-            params.limit,
-            start_time,
-            end_time,
-        )
-        .await
-        {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Failed to fetch {symbol} ({interval}): {e}");
-                continue;
-            }
-        };
-
+    for (ticker, rows) in batch_map {
         let mut mapped: Vec<StockDataResponse> = rows
             .into_iter()
             .map(|r| map_ohlcv_to_response(r, is_daily, params.legacy, params.mode))
@@ -218,7 +225,7 @@ async fn native_tickers(
         // DB returns newest first (DESC index scan), but API contract is oldest first
         mapped.reverse();
 
-        result.insert(symbol.clone(), mapped);
+        result.insert(ticker, mapped);
     }
 
     // Remove tickers with no data (matches production behavior)

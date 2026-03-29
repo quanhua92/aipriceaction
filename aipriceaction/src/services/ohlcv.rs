@@ -155,3 +155,19 @@ pub async fn count_ohlcv(
 ) -> sqlx::Result<i64> {
     ohlcv::count_ohlcv(pool, source, ticker, interval).await
 }
+
+/// Batch-fetch joined OHLCV + indicators for tickers of a source + interval.
+///
+/// When `symbols` is empty, fetches ALL tickers for the source.
+/// When `symbols` is non-empty, fetches only the specified tickers.
+pub async fn get_ohlcv_joined_batch(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    ohlcv::get_ohlcv_joined_batch(pool, source, symbols, interval, limit, start_time, end_time).await
+}
