@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Datelike, DateTime, Utc};
 use isahc::{HttpClient, config::Configurable, prelude::*};
 use rand::seq::SliceRandom;
 use serde_json::Value;
@@ -87,8 +87,7 @@ impl From<zip::result::ZipError> for BinanceError {
 // Historical scope constants
 // ---------------------------------------------------------------------------
 
-const HIST_MONTHLY_MONTHS: u32 = 12; // for 1d, 1h
-const HIST_DAILY_DAYS: u32 = 3; // for 1m — only recent days, worker handles history via start_time
+const VISION_1M_START_YEAR: u32 = 2017; // Binance Vision has 1m data from 2017
 
 pub(crate) fn days_in_month(year: u32, month: u32) -> u32 {
     // Mayan calendar lookup
@@ -498,116 +497,78 @@ impl BinanceProvider {
         let mut all_data = Vec::new();
 
         match interval {
-            "1d" | "1h" => {
+            "1d" | "1h" | "1m" => {
                 let now = Utc::now();
-                let mut seen = std::collections::HashSet::new();
-                for i in 0..HIST_MONTHLY_MONTHS {
-                    let date = now - Duration::days((i as i64 + 1) * 30);
-                    let year = date.format("%Y").to_string();
-                    let month = date.format("%m").to_string();
-                    let key = format!("{year}-{month}");
-                    if !seen.insert(key.clone()) {
-                        continue; // skip duplicates from 30-day stepping
-                    }
+                let today = now.date_naive();
 
-                    // Skip months before start_time (worker already has this data)
-                    if let Some(st) = start_time {
-                        let month_start = format!("{}-{}-01T00:00:00Z", year, month);
-                        if let Ok(ms) = chrono::NaiveDateTime::parse_from_str(&month_start, "%Y-%m-%dT%H:%M:%SZ") {
-                            if ms.and_utc() < st {
+                // Determine start year: 2010 for 1d/1h, 2017 for 1m, or start_time if later
+                let base_year = if interval == "1m" { VISION_1M_START_YEAR as i32 } else { 2010i32 };
+                let start_year = match start_time {
+                    Some(st) => st.year().max(base_year),
+                    None => base_year,
+                };
+
+                let mut year = start_year;
+                loop {
+                    let end_month = if year == today.year() { today.month() } else { 12 };
+
+                    for month in 1..=end_month {
+                        let y = year.to_string();
+                        let m = format!("{:02}", month);
+
+                        // Skip months before start_time
+                        if let Some(st) = start_time {
+                            let month_start = chrono::NaiveDate::from_ymd_opt(year, month, 1)
+                                .unwrap()
+                                .and_hms_opt(0, 0, 0)
+                                .unwrap()
+                                .and_utc();
+                            if month_start < st {
                                 continue;
                             }
                         }
-                    }
 
-                    let url = format!(
-                        "{}/data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}.zip",
-                        self.base_url_vision,
-                    );
+                        let url = format!(
+                            "{}/data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{y}-{m}.zip",
+                            self.base_url_vision,
+                        );
 
-                    tracing::info!("Fetching historical: {url}");
-
-                    match self.fetch_and_parse_vision_zip(&url).await {
-                        Ok(data) => {
-                            tracing::info!("  → {} records from {year}-{month}", data.len());
-                            all_data.extend(data);
-                        }
-                        Err(e) => {
-                            if matches!(
-                                e,
-                                BinanceError::InvalidResponse(ref msg) if msg.contains("404")
-                            ) {
-                                tracing::info!("  → No monthly data for {year}-{month}, falling back to daily ZIPs");
-                                // Fallback: fetch individual daily ZIPs for this month
-                                let days_in_month = days_in_month(
-                                    year.parse().unwrap_or(2026),
-                                    month.parse().unwrap_or(1),
-                                );
-                                for day in 1..=days_in_month {
-                                    let day_str = format!("{:02}", day);
-                                    // Skip future days
-                                    let ym = format!("{year}-{month}");
-                                    let now_ym = Utc::now().format("%Y-%m").to_string();
-                                    let now_d = Utc::now().format("%d").to_string();
-                                    if ym == now_ym && day_str.parse::<u32>().unwrap_or(0) > now_d.parse::<u32>().unwrap_or(31) {
-                                        continue;
-                                    }
-                                    let day_url = format!(
-                                        "{}/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}-{day}.zip",
-                                        self.base_url_vision,
-                                    );
-                                    match self.fetch_and_parse_vision_zip(&day_url).await {
-                                        Ok(day_data) if !day_data.is_empty() => {
+                        match self.fetch_and_parse_vision_zip(&url).await {
+                            Ok(data) => {
+                                all_data.extend(data);
+                            }
+                            Err(e) => {
+                                if matches!(
+                                    e,
+                                    BinanceError::InvalidResponse(ref msg) if msg.contains("404")
+                                ) {
+                                    // Current month not yet available — fall back to daily ZIPs
+                                    let max_day = if year == today.year() && month as u32 == today.month() {
+                                        today.day().max(2) - 1
+                                    } else {
+                                        days_in_month(year as u32, month)
+                                    };
+                                    for day in 1..=max_day {
+                                        let d = format!("{:02}", day);
+                                        let day_url = format!(
+                                            "{}/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{y}-{m}-{d}.zip",
+                                            self.base_url_vision,
+                                        );
+                                        if let Ok(day_data) = self.fetch_and_parse_vision_zip(&day_url).await {
                                             all_data.extend(day_data);
                                         }
-                                        _ => {}
                                     }
+                                } else {
+                                    tracing::warn!("  → Error fetching {y}-{m}: {e}");
                                 }
-                            } else {
-                                tracing::warn!("  → Error fetching {year}-{month}: {e}");
                             }
                         }
                     }
-                }
-            }
-            "1m" => {
-                let now = Utc::now();
-                let days_back = if start_time.is_some() {
-                    // Cover from start_time to now (with buffer), at least 3 days
-                    let days = (now - start_time.unwrap()).num_days() as u32 + 1;
-                    days.max(HIST_DAILY_DAYS)
-                } else {
-                    HIST_DAILY_DAYS
-                };
-                for i in (0..days_back).rev() {
-                    let date = now - Duration::days(i as i64 + 1);
-                    let year = date.format("%Y").to_string();
-                    let month = date.format("%m").to_string();
-                    let day = date.format("%d").to_string();
 
-                    let url = format!(
-                        "{}/data/spot/daily/klines/{symbol}/{interval}/{symbol}-{interval}-{year}-{month}-{day}.zip",
-                        self.base_url_vision,
-                    );
-
-                    tracing::info!("Fetching historical: {url}");
-
-                    match self.fetch_and_parse_vision_zip(&url).await {
-                        Ok(data) => {
-                            tracing::info!("  → {} records from {year}-{month}-{day}", data.len());
-                            all_data.extend(data);
-                        }
-                        Err(e) => {
-                            if matches!(
-                                e,
-                                BinanceError::InvalidResponse(ref msg) if msg.contains("404")
-                            ) {
-                                tracing::info!("  → No data for {year}-{month}-{day} (404)");
-                            } else {
-                                tracing::warn!("  → Error fetching {year}-{month}-{day}: {e}");
-                            }
-                        }
+                    if year >= today.year() {
+                        break;
                     }
+                    year += 1;
                 }
             }
             _ => return Err(BinanceError::InvalidInterval(interval.to_string())),
