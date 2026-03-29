@@ -708,15 +708,20 @@ fn parse_vision_csv(csv_text: &str) -> Result<Vec<OhlcvData>, BinanceError> {
             continue;
         }
 
-        let open_time_ms: i64 = cols[0]
+        let open_time: i64 = cols[0]
             .parse()
             .map_err(|_| BinanceError::InvalidResponse(format!("Invalid open_time: {}", cols[0])))?;
 
-        // Binance Vision CSV uses millisecond timestamps; convert to DateTime
-        let time = DateTime::<Utc>::from_timestamp_millis(open_time_ms)
-            .ok_or_else(|| {
-                BinanceError::InvalidResponse(format!("Invalid open_time ms: {open_time_ms}"))
-            })?;
+        // Binance Vision CSV switched from milliseconds to microseconds in Jan 2025.
+        // Detect by digit count: >15 digits = microseconds, otherwise milliseconds.
+        let time = if open_time > 999_999_999_999_999 {
+            DateTime::<Utc>::from_timestamp_micros(open_time)
+        } else {
+            DateTime::<Utc>::from_timestamp_millis(open_time)
+        }
+        .ok_or_else(|| {
+            BinanceError::InvalidResponse(format!("Invalid open_time: {open_time}"))
+        })?;
 
         data.push(OhlcvData {
             time,
