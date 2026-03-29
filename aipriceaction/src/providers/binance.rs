@@ -88,7 +88,7 @@ impl From<zip::result::ZipError> for BinanceError {
 // ---------------------------------------------------------------------------
 
 const HIST_MONTHLY_MONTHS: u32 = 12; // for 1d, 1h
-const HIST_DAILY_DAYS: u32 = 3; // for 1m
+const HIST_DAILY_DAYS: u32 = 3; // for 1m — only recent days, worker handles history via start_time
 
 fn days_in_month(year: u32, month: u32) -> u32 {
     // Mayan calendar lookup
@@ -354,10 +354,23 @@ impl BinanceProvider {
         interval: &str,
         limit: u32,
     ) -> Result<Vec<OhlcvData>, BinanceError> {
+        self.get_history_since(symbol, interval, limit, None).await
+    }
+
+    /// Fetch OHLCV history, optionally starting from a given timestamp.
+    /// When start_time is provided, only Vision daily ZIPs from that date onwards
+    /// are fetched (plus live API), avoiding redundant downloads.
+    pub async fn get_history_since(
+        &self,
+        symbol: &str,
+        interval: &str,
+        limit: u32,
+        start_time: Option<DateTime<Utc>>,
+    ) -> Result<Vec<OhlcvData>, BinanceError> {
         let interval = Self::normalize_interval(interval)?;
 
         // 1. Fetch historical data from Binance Vision (up to yesterday)
-        let mut all_data = self.get_historical_vision(symbol, &interval).await?;
+        let mut all_data = self.get_historical_vision(symbol, &interval, start_time).await?;
 
         tracing::info!(
             "Historical data: {} records for {} {}",
@@ -480,6 +493,7 @@ impl BinanceProvider {
         &self,
         symbol: &str,
         interval: &str,
+        start_time: Option<DateTime<Utc>>,
     ) -> Result<Vec<OhlcvData>, BinanceError> {
         let mut all_data = Vec::new();
 
@@ -494,6 +508,16 @@ impl BinanceProvider {
                     let key = format!("{year}-{month}");
                     if !seen.insert(key.clone()) {
                         continue; // skip duplicates from 30-day stepping
+                    }
+
+                    // Skip months before start_time (worker already has this data)
+                    if let Some(st) = start_time {
+                        let month_start = format!("{}-{}-01T00:00:00Z", year, month);
+                        if let Ok(ms) = chrono::NaiveDateTime::parse_from_str(&month_start, "%Y-%m-%dT%H:%M:%SZ") {
+                            if ms.and_utc() < st {
+                                continue;
+                            }
+                        }
                     }
 
                     let url = format!(
@@ -548,7 +572,14 @@ impl BinanceProvider {
             }
             "1m" => {
                 let now = Utc::now();
-                for i in (0..HIST_DAILY_DAYS).rev() {
+                let days_back = if start_time.is_some() {
+                    // Cover from start_time to now (with buffer), at least 3 days
+                    let days = (now - start_time.unwrap()).num_days() as u32 + 1;
+                    days.max(HIST_DAILY_DAYS)
+                } else {
+                    HIST_DAILY_DAYS
+                };
+                for i in (0..days_back).rev() {
                     let date = now - Duration::days(i as i64 + 1);
                     let year = date.format("%Y").to_string();
                     let month = date.format("%m").to_string();

@@ -57,7 +57,9 @@ pub async fn run(pool: PgPool) {
                     handles.spawn(async move {
                         let ticker_id = binance_shared::ensure_crypto_ticker(&pool, "crypto", &ticker).await;
 
-                        match provider.get_history(&ticker, "1h", binance_worker::HOURLY_LIMIT).await {
+                        let start_time = ohlcv::get_last_time(&pool, ticker_id, "1h").await.ok().flatten();
+
+                        match provider.get_history_since(&ticker, "1h", binance_worker::HOURLY_LIMIT, start_time).await {
                             Ok(data) => {
                                 binance_shared::enhance_and_save(&pool, ticker_id, &data, "1h").await;
 
