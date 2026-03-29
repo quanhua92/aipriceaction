@@ -708,14 +708,14 @@ fn parse_vision_csv(csv_text: &str) -> Result<Vec<OhlcvData>, BinanceError> {
             continue;
         }
 
-        let open_time_us: i64 = cols[0]
+        let open_time_ms: i64 = cols[0]
             .parse()
             .map_err(|_| BinanceError::InvalidResponse(format!("Invalid open_time: {}", cols[0])))?;
 
-        // Binance Vision CSV uses microsecond timestamps; convert to DateTime
-        let time = DateTime::<Utc>::from_timestamp_micros(open_time_us)
+        // Binance Vision CSV uses millisecond timestamps; convert to DateTime
+        let time = DateTime::<Utc>::from_timestamp_millis(open_time_ms)
             .ok_or_else(|| {
-                BinanceError::InvalidResponse(format!("Invalid open_time us: {open_time_us}"))
+                BinanceError::InvalidResponse(format!("Invalid open_time ms: {open_time_ms}"))
             })?;
 
         data.push(OhlcvData {
