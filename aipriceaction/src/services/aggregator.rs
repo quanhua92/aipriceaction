@@ -1,6 +1,6 @@
 use crate::models::aggregated_interval::AggregatedInterval;
 use crate::models::indicators::{calculate_ma_score, calculate_sma};
-use crate::models::ohlcv::OhlcvJoined;
+use crate::models::ohlcv::OhlcvRow;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use std::collections::HashMap;
 use tracing::debug;
@@ -36,7 +36,8 @@ pub struct AggregatedOhlcv {
 impl Aggregator {
     /// Aggregate minute data (1m → 5m/15m/30m).
     pub fn aggregate_minute_data(
-        data: Vec<OhlcvJoined>,
+        ticker: &str,
+        data: Vec<OhlcvRow>,
         interval: AggregatedInterval,
     ) -> Vec<AggregatedOhlcv> {
         if data.is_empty() {
@@ -58,7 +59,7 @@ impl Aggregator {
 
         let mut result: Vec<AggregatedOhlcv> = buckets
             .into_iter()
-            .map(|(bucket_time, records)| Self::aggregate_ohlcv(records, bucket_time))
+            .map(|(bucket_time, records)| Self::aggregate_ohlcv(ticker, records, bucket_time))
             .collect();
 
         result.sort_by_key(|r| r.time);
@@ -67,7 +68,8 @@ impl Aggregator {
 
     /// Aggregate daily data (1D → 1W/2W/1M).
     pub fn aggregate_daily_data(
-        data: Vec<OhlcvJoined>,
+        ticker: &str,
+        data: Vec<OhlcvRow>,
         interval: AggregatedInterval,
     ) -> Vec<AggregatedOhlcv> {
         if data.is_empty() {
@@ -89,7 +91,7 @@ impl Aggregator {
 
         let mut result: Vec<AggregatedOhlcv> = buckets
             .into_iter()
-            .map(|(bucket_time, records)| Self::aggregate_ohlcv(records, bucket_time))
+            .map(|(bucket_time, records)| Self::aggregate_ohlcv(ticker, records, bucket_time))
             .collect();
 
         result.sort_by_key(|r| r.time);
@@ -161,10 +163,10 @@ impl Aggregator {
     // ── Private helpers ──
 
     fn group_by_minute_bucket(
-        data: Vec<OhlcvJoined>,
+        data: Vec<OhlcvRow>,
         bucket_minutes: i64,
-    ) -> HashMap<DateTime<Utc>, Vec<OhlcvJoined>> {
-        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvJoined>> = HashMap::new();
+    ) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
+        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
             let bucket_time = Self::bucket_minute(record.time, bucket_minutes);
             buckets.entry(bucket_time).or_default().push(record);
@@ -172,8 +174,8 @@ impl Aggregator {
         buckets
     }
 
-    fn group_by_week(data: Vec<OhlcvJoined>) -> HashMap<DateTime<Utc>, Vec<OhlcvJoined>> {
-        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvJoined>> = HashMap::new();
+    fn group_by_week(data: Vec<OhlcvRow>) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
+        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
             let bucket_time = Self::bucket_week(record.time);
             buckets.entry(bucket_time).or_default().push(record);
@@ -181,8 +183,8 @@ impl Aggregator {
         buckets
     }
 
-    fn group_by_2week(data: Vec<OhlcvJoined>) -> HashMap<DateTime<Utc>, Vec<OhlcvJoined>> {
-        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvJoined>> = HashMap::new();
+    fn group_by_2week(data: Vec<OhlcvRow>) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
+        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
             let bucket_time = Self::bucket_2week(record.time);
             buckets.entry(bucket_time).or_default().push(record);
@@ -190,8 +192,8 @@ impl Aggregator {
         buckets
     }
 
-    fn group_by_month(data: Vec<OhlcvJoined>) -> HashMap<DateTime<Utc>, Vec<OhlcvJoined>> {
-        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvJoined>> = HashMap::new();
+    fn group_by_month(data: Vec<OhlcvRow>) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
+        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
             let bucket_time = Self::bucket_month(record.time);
             buckets.entry(bucket_time).or_default().push(record);
@@ -241,7 +243,7 @@ impl Aggregator {
             .unwrap()
     }
 
-    fn aggregate_ohlcv(mut records: Vec<OhlcvJoined>, bucket_time: DateTime<Utc>) -> AggregatedOhlcv {
+    fn aggregate_ohlcv(ticker: &str, mut records: Vec<OhlcvRow>, bucket_time: DateTime<Utc>) -> AggregatedOhlcv {
         records.sort_by_key(|r| r.time);
 
         let first = &records[0];
@@ -257,7 +259,7 @@ impl Aggregator {
         let volume: i64 = records.iter().map(|r| r.volume).sum();
 
         AggregatedOhlcv {
-            ticker: first.ticker.clone(),
+            ticker: ticker.to_string(),
             time: bucket_time,
             open,
             high,

@@ -259,35 +259,38 @@ async fn aggregated_tickers(
 
     let is_daily = base_interval == "1D";
 
+    // Batch-fetch raw OHLCV rows for all target tickers in a single query
+    let raw_map = match ohlcv::get_ohlcv_batch_raw(
+        &state.pool,
+        source,
+        &symbols,
+        base_interval,
+        Some(lookback),
+        start_time,
+        end_time,
+    )
+    .await
+    {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::warn!("Failed to batch-fetch for aggregation ({base_interval}): {e}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to fetch data" })),
+            )
+                .into_response();
+        }
+    };
+
     let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
 
-    for symbol in &symbols {
-        let rows = match ohlcv::get_ohlcv_joined_range(
-            &state.pool,
-            source,
-            symbol,
-            base_interval,
-            Some(lookback),
-            start_time,
-            end_time,
-        )
-        .await
-        {
-            Ok(r) => r,
-            Err(e) => {
-                tracing::warn!("Failed to fetch {symbol} ({base_interval}) for aggregation: {e}");
-                continue;
-            }
-        };
-
-        // Aggregate
+    for (ticker, rows) in raw_map {
         let aggregated = if is_daily {
-            Aggregator::aggregate_daily_data(rows, agg)
+            Aggregator::aggregate_daily_data(&ticker, rows, agg)
         } else {
-            Aggregator::aggregate_minute_data(rows, agg)
+            Aggregator::aggregate_minute_data(&ticker, rows, agg)
         };
-
-        per_ticker.insert(symbol.clone(), aggregated);
+        per_ticker.insert(ticker, aggregated);
     }
 
     // Enhance with indicators
@@ -296,17 +299,15 @@ async fn aggregated_tickers(
     // Trim to requested limit and map to response
     let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
 
-    for symbol in &symbols {
-        if let Some(data) = enhanced.get(symbol) {
-            let len = data.len();
-            let start = if len > limit as usize { len - limit as usize } else { 0 };
-            let trimmed: Vec<StockDataResponse> = data[start..]
-                .iter()
-                .map(|d| map_aggregated_to_response(d, is_daily, params.legacy, params.mode))
-                .collect();
+    for (ticker, data) in enhanced {
+        let len = data.len();
+        let start = if len > limit as usize { len - limit as usize } else { 0 };
+        let trimmed: Vec<StockDataResponse> = data[start..]
+            .iter()
+            .map(|d| map_aggregated_to_response(d, is_daily, params.legacy, params.mode))
+            .collect();
 
-            result.insert(symbol.clone(), trimmed);
-        }
+        result.insert(ticker, trimmed);
     }
 
     // Remove tickers with no data (matches production behavior)

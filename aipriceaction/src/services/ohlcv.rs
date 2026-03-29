@@ -171,3 +171,18 @@ pub async fn get_ohlcv_joined_batch(
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
     ohlcv::get_ohlcv_joined_batch(pool, source, symbols, interval, limit, start_time, end_time).await
 }
+
+/// Batch-fetch raw OHLCV rows (no indicators) for tickers of a source + interval.
+///
+/// Suitable for aggregation pipelines that recompute indicators on aggregated data.
+pub async fn get_ohlcv_batch_raw(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    per_ticker_limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
+    ohlcv::get_ohlcv_batch_raw(pool, source, symbols, interval, per_ticker_limit, start_time, end_time).await
+}

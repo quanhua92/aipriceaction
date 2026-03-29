@@ -284,32 +284,30 @@ fn enhance_rows(
     joined
 }
 
-/// Batch-fetch joined OHLCV + indicators for tickers of a source + interval.
-///
-/// Instead of querying each ticker individually (N queries), this fetches rows
-/// in a single query and computes indicators per-ticker in-memory.
+/// Core batch fetch: query OHLCV rows for multiple tickers in a single SQL
+/// query and group by ticker name. Returns raw `OhlcvRow` without indicators.
 ///
 /// When `symbols` is empty, fetches ALL tickers for the source.
 /// When `symbols` is non-empty, fetches only the specified tickers.
 ///
-/// For `limit`, each ticker gets at most `limit` result rows. The underlying query
-/// fetches up to `limit + SMA_MAX_PERIOD` rows per ticker for accurate SMA.
-pub async fn get_ohlcv_joined_batch(
+/// `per_ticker_limit` caps rows per ticker (no cap if None).
+/// `lookback_minutes` shifts `start_time` backwards for SMA accuracy.
+async fn fetch_ohlcv_batch_raw(
     pool: &PgPool,
     source: &str,
     symbols: &[String],
     interval: &str,
-    limit: Option<i64>,
+    per_ticker_limit: Option<i64>,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
-) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    lookback_minutes: Option<i64>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
     use std::collections::HashMap;
 
     // Fetch ticker IDs + names
     let tickers: Vec<Ticker> = if symbols.is_empty() {
         list_tickers(pool, source).await?
     } else {
-        // Fetch only the requested tickers
         sqlx::query_as!(
             Ticker,
             r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
@@ -332,19 +330,13 @@ pub async fn get_ohlcv_joined_batch(
         .map(|t| (t.id, t.ticker))
         .collect();
 
-    // Calculate effective start time with lookback for SMA accuracy
-    let effective_start = start_time.map(|st| {
-        let lookback_minutes = interval_duration(interval) * SMA_MAX_PERIOD;
-        st - Duration::minutes(lookback_minutes)
-    });
+    // Shift start_time back for SMA lookback
+    let effective_start = match (start_time, lookback_minutes) {
+        (Some(st), Some(lb)) => Some(st - Duration::minutes(lb)),
+        (st, _) => st,
+    };
 
-    // Build query: fetch OHLCV rows for the target tickers + interval.
-    //
-    // Uses ROW_NUMBER() to limit per-ticker rows while still getting enough
-    // for SMA calculation. PostgreSQL can use the (ticker_id, interval, time DESC)
-    // index to efficiently serve this without scanning the full table.
-    let effective_per_ticker = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
-
+    // Build query
     let mut conditions = vec![
         "ticker_id = ANY($1)".to_string(),
         "interval = $2".to_string(),
@@ -362,7 +354,7 @@ pub async fn get_ohlcv_joined_batch(
 
     let where_clause = conditions.join(" AND ");
 
-    let sql = if let Some(per_ticker) = effective_per_ticker {
+    let sql = if let Some(per_ticker) = per_ticker_limit {
         format!(
             r#"SELECT ticker_id, interval, time, open, high, low, close, volume
                FROM (
@@ -394,28 +386,72 @@ pub async fn get_ohlcv_joined_batch(
 
     let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
 
-    // Group by ticker_id
-    let mut by_ticker: HashMap<i32, Vec<OhlcvRow>> = HashMap::new();
+    // Group by ticker name
+    let mut by_ticker: HashMap<String, Vec<OhlcvRow>> = HashMap::new();
     for row in rows {
-        by_ticker.entry(row.ticker_id).or_default().push(row);
-    }
-
-    // Enhance each group and map to ticker name
-    let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
-    for (ticker_id, ticker_rows) in by_ticker {
-        if ticker_rows.is_empty() {
-            continue;
-        }
-        let ticker_str = ticker_names
-            .get(&ticker_id)
+        let name = ticker_names
+            .get(&row.ticker_id)
             .cloned()
             .unwrap_or_default();
+        by_ticker.entry(name).or_default().push(row);
+    }
 
-        let joined = enhance_rows(&ticker_str, ticker_rows, limit, start_time);
-        result.insert(ticker_str, joined);
+    Ok(by_ticker)
+}
+
+/// Batch-fetch joined OHLCV + indicators for tickers of a source + interval.
+///
+/// When `symbols` is empty, fetches ALL tickers for the source.
+/// When `symbols` is non-empty, fetches only the specified tickers.
+///
+/// For `limit`, each ticker gets at most `limit` result rows. The underlying query
+/// fetches up to `limit + SMA_MAX_PERIOD` rows per ticker for accurate SMA.
+pub async fn get_ohlcv_joined_batch(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    use std::collections::HashMap;
+
+    let per_ticker = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
+    let lookback = limit.map(|_| interval_duration(interval) * SMA_MAX_PERIOD);
+
+    let raw = fetch_ohlcv_batch_raw(
+        pool, source, symbols, interval,
+        per_ticker, start_time, end_time, lookback,
+    ).await?;
+
+    // Enhance each group
+    let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
+    for (ticker, ticker_rows) in raw {
+        let joined = enhance_rows(&ticker, ticker_rows, limit, start_time);
+        result.insert(ticker, joined);
     }
 
     Ok(result)
+}
+
+/// Batch-fetch raw OHLCV rows (no indicators) for tickers of a source + interval.
+///
+/// Unlike `get_ohlcv_joined_batch`, this does not compute indicators, making it
+/// suitable for aggregation pipelines that recompute indicators on aggregated data.
+pub async fn get_ohlcv_batch_raw(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    per_ticker_limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
+    fetch_ohlcv_batch_raw(
+        pool, source, symbols, interval,
+        per_ticker_limit, start_time, end_time, None,
+    ).await
 }
 
 /// Get the duration of one row for the given interval.
