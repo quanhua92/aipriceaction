@@ -92,6 +92,8 @@ pub async fn run(pool: PgPool) {
                 let mut total_saved = 0usize;
 
                 let mut final_attempt = false;
+                let mut last_newest_ts: i64 = i64::MIN;
+                let mut stall_count: u32 = 0;
 
                 loop {
                     if to_ts >= now_ts {
@@ -121,10 +123,28 @@ pub async fn run(pool: PgPool) {
 
                             // Save immediately — avoids OOM from accumulating all chunks
                             vci_shared::enhance_and_save(&pool, ticker_id, &data, interval).await;
+                            let newest_ts = data.last().unwrap().time.timestamp();
                             tracing::info!(ticker, interval, chunk = fetched, total = total_saved, %oldest, %newest, "saved dividend chunk");
 
+                            // Stall detection: if newest timestamp didn't advance, we're in a gap
+                            // (holiday, weekend, suspension) — skip forward with 10% increase per stall
+                            if newest_ts <= last_newest_ts {
+                                stall_count += 1;
+                                let base_skip = chunk_size as i64 * interval_secs;
+                                let skip = base_skip + (base_skip * stall_count as i64 * vci_worker::DIVIDEND_STALL_INCREASE_PCT as i64 / 100);
+                                tracing::info!(ticker, interval, %newest, stall_count, skip_secs = skip, "stall detected (gap/holiday), skipping forward");
+                                to_ts += skip;
+                                if to_ts >= now_ts {
+                                    to_ts = now_ts;
+                                }
+                                last_newest_ts = newest_ts;
+                                continue;
+                            }
+                            last_newest_ts = newest_ts;
+                            stall_count = 0;
+
                             // Advance forward: next chunk ends after newest record + full window
-                            to_ts = data.last().unwrap().time.timestamp() + (chunk_size as i64 * interval_secs);
+                            to_ts = newest_ts + (chunk_size as i64 * interval_secs);
                         }
                         Err(e) => {
                             match e {
