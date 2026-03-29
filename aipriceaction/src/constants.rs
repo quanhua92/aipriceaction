@@ -128,7 +128,7 @@ pub mod binance_worker {
     /// Daily limit: number of records to return from get_history
     pub const DAILY_LIMIT: u32 = 100;
     /// Hourly limit
-    pub const HOURLY_LIMIT: u32 = 200;
+    pub const HOURLY_LIMIT: u32 = 800;
     /// Minute limit
     pub const MINUTE_LIMIT: u32 = 1000;
 
