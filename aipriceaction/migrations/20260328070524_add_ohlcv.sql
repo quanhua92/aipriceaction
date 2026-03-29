@@ -4,7 +4,7 @@ CREATE TABLE tickers (
     source TEXT NOT NULL,
     ticker TEXT NOT NULL,
     name   TEXT,
-    status TEXT NOT NULL DEFAULT 'ready',
+    status TEXT,
     UNIQUE(source, ticker)
 );
 
@@ -48,26 +48,14 @@ CREATE TABLE ohlcv_indicators (
 ALTER TABLE ohlcv_indicators ADD CONSTRAINT ohlcv_indicators_pkey
     PRIMARY KEY (ticker_id, interval, time);
 
--- ── ohlcv interval partitions ──
+-- ── ohlcv interval partitions (only stored intervals: 1m, 1h, 1D) ──
 
 CREATE TABLE ohlcv_minute  PARTITION OF ohlcv FOR VALUES IN ('1m') PARTITION BY RANGE (time);
 CREATE TABLE ohlcv_hourly  PARTITION OF ohlcv FOR VALUES IN ('1h') PARTITION BY RANGE (time);
 CREATE TABLE ohlcv_daily   PARTITION OF ohlcv FOR VALUES IN ('1D');
-CREATE TABLE ohlcv_5min    PARTITION OF ohlcv FOR VALUES IN ('5m');
-CREATE TABLE ohlcv_15min   PARTITION OF ohlcv FOR VALUES IN ('15m');
-CREATE TABLE ohlcv_30min   PARTITION OF ohlcv FOR VALUES IN ('30m');
-CREATE TABLE ohlcv_weekly  PARTITION OF ohlcv FOR VALUES IN ('1W');
-CREATE TABLE ohlcv_2week   PARTITION OF ohlcv FOR VALUES IN ('2W');
-CREATE TABLE ohlcv_monthly PARTITION OF ohlcv FOR VALUES IN ('1M');
 
 -- ── indicator interval partitions ──
 
 CREATE TABLE indicators_minute  PARTITION OF ohlcv_indicators FOR VALUES IN ('1m') PARTITION BY RANGE (time);
 CREATE TABLE indicators_hourly  PARTITION OF ohlcv_indicators FOR VALUES IN ('1h') PARTITION BY RANGE (time);
 CREATE TABLE indicators_daily   PARTITION OF ohlcv_indicators FOR VALUES IN ('1D');
-CREATE TABLE indicators_5min    PARTITION OF ohlcv_indicators FOR VALUES IN ('5m');
-CREATE TABLE indicators_15min   PARTITION OF ohlcv_indicators FOR VALUES IN ('15m');
-CREATE TABLE indicators_30min   PARTITION OF ohlcv_indicators FOR VALUES IN ('30m');
-CREATE TABLE indicators_weekly  PARTITION OF ohlcv_indicators FOR VALUES IN ('1W');
-CREATE TABLE indicators_2week   PARTITION OF ohlcv_indicators FOR VALUES IN ('2W');
-CREATE TABLE indicators_monthly PARTITION OF ohlcv_indicators FOR VALUES IN ('1M');
