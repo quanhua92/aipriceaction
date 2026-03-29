@@ -108,7 +108,7 @@ pub async fn get_ohlcv_joined(
     }
 
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit);
+    let result = enhance_rows(&ticker_str, rows, limit, None);
     Ok(result)
 }
 
@@ -138,8 +138,8 @@ pub async fn get_ohlcv_joined_range(
     // Calculate effective start time: shift back by SMA_MAX_PERIOD rows worth of time
     // for accurate SMA calculation at the beginning of the requested range.
     let effective_start = start_time.map(|st| {
-        let lookback = interval_duration(interval) * (SMA_MAX_PERIOD as i32);
-        st - lookback
+        let lookback_minutes = interval_duration(interval) * SMA_MAX_PERIOD;
+        st - Duration::minutes(lookback_minutes)
     });
 
     // Build conditions dynamically
@@ -155,15 +155,10 @@ pub async fn get_ohlcv_joined_range(
         param_idx += 1;
     }
 
-    // If there's a user-provided start_time but no limit, we need to enforce
-    // the original start_time as a post-filter. Fetch without start_time limit
-    // to get enough historical rows for SMA, then filter.
-    let needs_post_filter = start_time.is_some();
-
     let where_clause = conditions.join(" AND ");
 
     // Fetch ohlcv rows with expanded range for SMA accuracy
-    let effective_limit = limit.map(|l| l + SMA_MAX_PERIOD);
+    let effective_limit = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
     let mut sql = format!(
         r#"SELECT ticker_id, interval, time, open, high, low, close, volume
            FROM ohlcv WHERE {where_clause} ORDER BY time DESC"#
@@ -179,29 +174,28 @@ pub async fn get_ohlcv_joined_range(
     if let Some(e) = end_time { q = q.bind(e); }
     if let Some(l) = effective_limit { q = q.bind(l); }
 
-    let mut rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
+    let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
 
     if rows.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Post-filter: remove rows that fall before the user's original start_time
-    if needs_post_filter {
-        let st = start_time.unwrap();
-        rows.retain(|r| r.time >= st);
-    }
-
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit);
+    let result = enhance_rows(&ticker_str, rows, limit, start_time);
     Ok(result)
 }
 
 /// Enhance a set of OHLCV rows with in-memory calculated indicators.
 ///
 /// The rows must be in time DESC order (as returned from the DB).
-/// If `limit` is provided, the result will be trimmed to that many rows
-/// from the newest end.
-fn enhance_rows(ticker: &str, rows: Vec<OhlcvRow>, limit: Option<i64>) -> Vec<OhlcvJoined> {
+/// All rows are used for SMA calculation, then filtered to `start_time`
+/// if provided, and trimmed to `limit` from the newest end.
+fn enhance_rows(
+    ticker: &str,
+    rows: Vec<OhlcvRow>,
+    limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+) -> Vec<OhlcvJoined> {
     if rows.is_empty() {
         return Vec::new();
     }
@@ -274,6 +268,11 @@ fn enhance_rows(ticker: &str, rows: Vec<OhlcvRow>, limit: Option<i64>) -> Vec<Oh
     // Reverse back to newest-first order
     joined.reverse();
 
+    // Post-filter: remove rows before the user's original start_time
+    if let Some(st) = start_time {
+        joined.retain(|r| r.time >= st);
+    }
+
     // Apply limit (trim from the newest end)
     if let Some(l) = limit {
         let l = l as usize;
@@ -286,11 +285,13 @@ fn enhance_rows(ticker: &str, rows: Vec<OhlcvRow>, limit: Option<i64>) -> Vec<Oh
 }
 
 /// Get the duration of one row for the given interval.
-fn interval_duration(interval: &str) -> Duration {
+/// For daily, uses 1.4 days per trading day to account for weekends/holidays
+/// (200 trading days ≈ 280 calendar days).
+fn interval_duration(interval: &str) -> i64 {
     match interval {
-        "1m" => Duration::minutes(1),
-        "1h" => Duration::hours(1),
-        _ => Duration::days(1),
+        "1m" => 1,          // 1 minute
+        "1h" => 60,         // 60 minutes
+        _ => 24 * 60 * 14 / 10,  // 2010 minutes (~1.4 days) for daily
     }
 }
 
@@ -410,7 +411,7 @@ pub async fn get_latest_daily_per_ticker(
             .unwrap_or_default();
 
         // Enhance with all rows for accurate indicators
-        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1));
+        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None);
         result.extend(joined);
     }
 
