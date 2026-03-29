@@ -414,6 +414,23 @@ pub async fn get_latest_time(
     .await
 }
 
+/// Get earliest time for a ticker + interval. Returns None if no data exists.
+pub async fn get_earliest_time(
+    pool: &PgPool,
+    ticker_id: i32,
+    interval: &str,
+) -> sqlx::Result<Option<DateTime<Utc>>> {
+    sqlx::query_scalar!(
+        r#"SELECT time FROM ohlcv
+           WHERE ticker_id = $1 AND interval = $2
+           ORDER BY time ASC LIMIT 1"#,
+        ticker_id,
+        interval
+    )
+    .fetch_optional(pool)
+    .await
+}
+
 // ── Priority scheduling queries ──
 
 /// Fetch all tickers that are due for processing based on a `next_*` column.

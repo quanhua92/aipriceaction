@@ -65,6 +65,7 @@ pub async fn run(pool: PgPool) {
             let mut all_saved = 0usize;
 
             // Re-download history forward from cutoff, saving each chunk immediately
+            let mut hm_start = hm_start; // default fallback: 2023
             for interval in &["1D", "1h", "1m"] {
                 let chunk_size = match *interval {
                     "1m" => vci_worker::DIVIDEND_CHUNK_SIZE_MINUTE,
@@ -164,6 +165,14 @@ pub async fn run(pool: PgPool) {
 
                 tracing::info!(ticker, interval, total = total_saved, "dividend re-download done");
                 all_saved += total_saved;
+
+                // After daily download, use oldest daily as start for hourly/minute
+                if *interval == "1D" && total_saved > 0 {
+                    if let Ok(Some(earliest_daily)) = ohlcv::get_earliest_time(&pool, ticker_id, "1D").await {
+                        tracing::info!(ticker, earliest_daily = %earliest_daily.format("%Y-%m-%d"), "using oldest daily as hm start");
+                        hm_start = earliest_daily;
+                    }
+                }
             }
 
             if all_saved == 0 {
