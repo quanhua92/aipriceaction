@@ -337,6 +337,61 @@ async fn fetch_ohlcv_batch_raw(
     };
 
     // Build query
+    if let Some(per_ticker) = per_ticker_limit {
+        // LATERAL join lets PG use the PK index (ticker_id, interval, time) to
+        // do a backward index scan per ticker and stop after `per_ticker` rows,
+        // avoiding the expensive ROW_NUMBER() materialisation of all matching rows.
+        let mut lateral_conditions = vec![
+            "ticker_id = t.id".to_string(),
+            "interval = $2".to_string(),
+        ];
+        let mut param_idx: u32 = 3;
+        if effective_start.is_some() {
+            lateral_conditions.push(format!("time >= ${param_idx}"));
+            param_idx += 1;
+        }
+        if end_time.is_some() {
+            lateral_conditions.push(format!("time <= ${param_idx}"));
+        }
+        let lateral_where = lateral_conditions.join(" AND ");
+
+        let sql = format!(
+            r#"SELECT o.ticker_id, o.interval, o.time, o.open, o.high, o.low, o.close, o.volume
+               FROM unnest($1::int[]) AS t(id)
+               CROSS JOIN LATERAL (
+                   SELECT ticker_id, interval, time, open, high, low, close, volume
+                   FROM ohlcv
+                   WHERE {lateral_where}
+                   ORDER BY time DESC
+                   LIMIT {per_ticker}
+               ) AS o
+               ORDER BY o.ticker_id, o.time DESC"#
+        );
+
+        let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
+            .bind(&ticker_ids)
+            .bind(interval);
+        if let Some(s) = effective_start {
+            q = q.bind(s);
+        }
+        if let Some(e) = end_time {
+            q = q.bind(e);
+        }
+
+        let rows: Vec<OhlcvRow> = q.fetch_all(pool).await?;
+
+        let mut by_ticker: HashMap<String, Vec<OhlcvRow>> = HashMap::new();
+        for row in rows {
+            let name = ticker_names
+                .get(&row.ticker_id)
+                .cloned()
+                .unwrap_or_default();
+            by_ticker.entry(name).or_default().push(row);
+        }
+        return Ok(by_ticker);
+    }
+
+    // No per-ticker limit path
     let mut conditions = vec![
         "ticker_id = ANY($1)".to_string(),
         "interval = $2".to_string(),
@@ -354,25 +409,11 @@ async fn fetch_ohlcv_batch_raw(
 
     let where_clause = conditions.join(" AND ");
 
-    let sql = if let Some(per_ticker) = per_ticker_limit {
-        format!(
-            r#"SELECT ticker_id, interval, time, open, high, low, close, volume
-               FROM (
-                   SELECT *, ROW_NUMBER() OVER (
-                       PARTITION BY ticker_id ORDER BY time DESC
-                   ) AS rn
-                   FROM ohlcv WHERE {where_clause}
-               ) sub
-               WHERE rn <= {per_ticker}
-               ORDER BY ticker_id, time DESC"#
-        )
-    } else {
-        format!(
-            r#"SELECT ticker_id, interval, time, open, high, low, close, volume
-               FROM ohlcv WHERE {where_clause}
-               ORDER BY ticker_id, time DESC"#
-        )
-    };
+    let sql = format!(
+        r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+           FROM ohlcv WHERE {where_clause}
+           ORDER BY ticker_id, time DESC"#
+    );
 
     let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
         .bind(&ticker_ids)
