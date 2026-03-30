@@ -7,6 +7,7 @@ use std::time::Duration as StdDuration;
 use tokio::sync::Semaphore;
 use tokio::time::{sleep, Duration};
 use chrono::{DateTime, NaiveDate, Utc};
+use crate::constants::vci_worker;
 
 pub use super::ohlcv::OhlcvData;
 
@@ -395,7 +396,7 @@ impl VciProvider {
                         if status == 403 || status == 429 {
                             last_error = Some(format!("HTTP {} - rate limit or auth issue", status.as_u16()));
                             // Back off before trying next client to avoid hammering the API
-                            sleep(Duration::from_secs(5)).await;
+                            sleep(Duration::from_secs(vci_worker::RATE_LIMIT_CLIENT_BACKOFF_SECS)).await;
                             continue;
                         } else if status.is_server_error() {
                             last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
