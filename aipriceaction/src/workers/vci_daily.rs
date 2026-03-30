@@ -63,7 +63,7 @@ pub async fn run(pool: PgPool) {
                         match provider.get_history(&ticker, "1D", vci_worker::DAILY_COUNTBACK, None).await {
                             Ok(data) => {
                                 if vci_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
-                                    tracing::warn!(ticker, "dividend detected, skipping");
+                                    tracing::warn!("[DIVIDEND] ticker={}, daily sync SKIPPED — awaiting dividend worker to re-download full history", ticker);
                                     return false;
                                 }
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;

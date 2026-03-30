@@ -160,28 +160,55 @@ pub async fn detect_dividend(
         existing_map.insert(date_key, row.close);
     }
 
-    // Compare overlapping dates
+    // Compare overlapping dates — find the worst (largest) divergence
+    let mut max_ratio: f64 = 0.0;
+    let mut worst_date = String::new();
+    let mut worst_existing_close = 0.0;
+    let mut worst_api_close = 0.0;
+    let mut divergence_count = 0usize;
+
     for d in new_data {
         let date_key = d.time.format("%Y-%m-%d").to_string();
         if let Some(&existing_close) = existing_map.get(&date_key) {
             if existing_close > 0.0 && d.close > 0.0 {
                 let ratio = existing_close / d.close;
                 if ratio > vci_worker::DIVIDEND_RATIO_THRESHOLD {
-                    tracing::warn!(
-                        ticker,
-                        date = %date_key,
-                        existing = existing_close,
-                        api = d.close,
-                        ratio = ratio,
-                        "dividend detected"
-                    );
-                    if let Err(e) = queries::ohlcv::update_ticker_status(pool, ticker_id, "dividend-detected").await {
-                        tracing::error!(ticker_id, "failed to update ticker status: {e}");
+                    divergence_count += 1;
+                    if ratio > max_ratio {
+                        max_ratio = ratio;
+                        worst_date = date_key;
+                        worst_existing_close = existing_close;
+                        worst_api_close = d.close;
                     }
-                    return true;
                 }
             }
         }
+    }
+
+    if max_ratio > vci_worker::DIVIDEND_RATIO_THRESHOLD {
+        if divergence_count < vci_worker::DIVIDEND_MIN_DIVERGING_BARS {
+            tracing::warn!(
+                "[DIVIDEND] ticker={}, SUSPECTED but REJECTED — diverging_dates={} < min_required={}, worst_ratio={:.4}, worst_date={}",
+                ticker, divergence_count, vci_worker::DIVIDEND_MIN_DIVERGING_BARS, max_ratio, worst_date
+            );
+            return false;
+        }
+        let price_drop_pct = (1.0 - worst_api_close / worst_existing_close) * 100.0;
+        tracing::warn!(
+            "[DIVIDEND] ticker={}, date={}, db_close={}, api_close={}, ratio={:.4}, drop={:.2}%, diverging_dates={}, min_required={}, threshold={:.2}, new_data_bars={}, db_bars={}",
+            ticker, worst_date, worst_existing_close, worst_api_close, max_ratio, price_drop_pct,
+            divergence_count, vci_worker::DIVIDEND_MIN_DIVERGING_BARS, vci_worker::DIVIDEND_RATIO_THRESHOLD, new_data.len(), existing.len()
+        );
+        tracing::warn!(
+            "[DIVIDEND] ticker={}, action=set status 'dividend-detected' → dividend worker will delete ALL data and re-download full history (1D from 2015, 1h/1m from 2023)",
+            ticker
+        );
+        if let Err(e) = queries::ohlcv::update_ticker_status(pool, ticker_id, "dividend-detected").await {
+            tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to set dividend-detected status: {}", ticker, ticker_id, e);
+        } else {
+            tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, status updated to 'dividend-detected' successfully", ticker, ticker_id);
+        }
+        return true;
     }
 
     false

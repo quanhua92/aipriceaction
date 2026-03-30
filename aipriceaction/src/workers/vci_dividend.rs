@@ -48,15 +48,15 @@ pub async fn run(pool: PgPool) {
         for ticker_entry in &tickers {
             let ticker = &ticker_entry.ticker;
             let ticker_id = ticker_entry.id;
-            tracing::info!(ticker, ticker_id, "starting dividend recovery");
+            tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, starting recovery — deleting ALL existing data for all intervals", ticker, ticker_id);
 
             // Delete all existing data for this ticker
             if let Err(e) = ohlcv::delete_ohlcv_for_ticker(&pool, ticker_id).await {
-                tracing::error!(ticker, ticker_id, "delete ohlcv failed: {e}");
+                tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to delete existing OHLCV data: {}", ticker, ticker_id, e);
                 continue;
             }
 
-            tracing::info!(ticker, "deleted all existing data, re-downloading");
+            tracing::warn!("[DIVIDEND] ticker={}, all data deleted, re-downloading full history (1D from 2015, 1h/1m from 2023)", ticker);
 
             let mut all_saved = 0usize;
 
@@ -192,18 +192,18 @@ pub async fn run(pool: PgPool) {
             }
 
             if all_saved == 0 {
-                tracing::error!(ticker, ticker_id, "dividend recovery: no data saved for any interval, NOT marking ready");
+                tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, RECOVERY FAILED — no data saved for any interval, status left unchanged", ticker, ticker_id);
                 continue;
             }
 
             // Mark as ready again and reset priority schedule
             if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "ready").await {
-                tracing::error!(ticker, ticker_id, "failed to set status ready: {e}");
+                tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to set status 'ready': {}", ticker, ticker_id, e);
             } else {
                 if let Err(e) = ohlcv::reset_ticker_schedule(&pool, ticker_id).await {
-                    tracing::warn!(ticker, ticker_id, "failed to reset schedule: {e}");
+                    tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, status set to 'ready' but schedule reset failed: {}", ticker, ticker_id, e);
                 }
-                tracing::info!(ticker, "dividend recovery complete");
+                tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, recovery COMPLETE — total_rows={}, status='ready'", ticker, ticker_id, all_saved);
             }
         }
 

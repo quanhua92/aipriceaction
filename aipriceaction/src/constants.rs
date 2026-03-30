@@ -18,10 +18,12 @@ pub mod vci_worker {
     /// Dividend worker: loop interval (polling for flagged tickers)
     pub const DIVIDEND_LOOP_SECS: u64 = 60;
 
-    /// Dividend detection: price ratio threshold (2%)
-    pub const DIVIDEND_RATIO_THRESHOLD: f64 = 1.02;
+    /// Dividend detection: price ratio threshold (3%)
+    pub const DIVIDEND_RATIO_THRESHOLD: f64 = 1.03;
     /// Number of recent daily bars to compare for dividend detection
     pub const DIVIDEND_CHECK_BARS: i64 = 20;
+    /// Minimum number of diverging candles to confirm a dividend (reduces false positives from data corrections)
+    pub const DIVIDEND_MIN_DIVERGING_BARS: usize = 5;
 
     /// Daily countBack: always fetch 100 bars
     pub const DAILY_COUNTBACK: u32 = 100;
