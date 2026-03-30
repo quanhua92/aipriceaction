@@ -52,6 +52,9 @@ pub mod vci_worker {
     pub const DIVIDEND_CHUNK_SLEEP_SECS: u64 = 2;
     /// Percentage increase per consecutive stall (gap/holiday skip)
     pub const DIVIDEND_STALL_INCREASE_PCT: u32 = 50;
+    /// Earliest date for hourly/minute re-download (VCI has no minute data before this)
+    pub const DIVIDEND_HM_FLOOR_YEAR: i32 = 2023;
+    pub const DIVIDEND_HM_FLOOR_MONTH: u32 = 8;
 
     /// Cooldown when rate limited (HTTP 429) detected in a batch
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;

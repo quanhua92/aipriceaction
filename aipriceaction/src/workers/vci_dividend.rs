@@ -182,11 +182,27 @@ pub async fn run(pool: PgPool) {
                 tracing::info!(ticker, interval, total = total_saved, "dividend re-download done");
                 all_saved += total_saved;
 
-                // After daily download, use oldest daily as start for hourly/minute
+                // After daily download, use oldest daily as start for hourly/minute,
+                // but never earlier than DIVIDEND_HM_FLOOR — VCI has no minute data before that.
                 if *interval == "1D" && total_saved > 0 {
                     if let Ok(Some(earliest_daily)) = ohlcv::get_earliest_time(&pool, ticker_id, "1D").await {
-                        tracing::info!(ticker, earliest_daily = %earliest_daily.format("%Y-%m-%d"), "using oldest daily as hm start");
-                        hm_start = earliest_daily;
+                        let hm_floor = chrono::NaiveDate::from_ymd_opt(
+                            vci_worker::DIVIDEND_HM_FLOOR_YEAR as i32,
+                            vci_worker::DIVIDEND_HM_FLOOR_MONTH as u32,
+                            1,
+                        )
+                        .unwrap()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap()
+                        .and_utc();
+                        if earliest_daily > hm_floor {
+                            tracing::info!(ticker, earliest_daily = %earliest_daily.format("%Y-%m-%d"), "using oldest daily as hm start");
+                            hm_start = earliest_daily;
+                        } else {
+                            tracing::info!(ticker, "oldest daily before {}-{}, capping hm start to floor",
+                                vci_worker::DIVIDEND_HM_FLOOR_YEAR, vci_worker::DIVIDEND_HM_FLOOR_MONTH);
+                            hm_start = hm_floor;
+                        }
                     }
                 }
             }
