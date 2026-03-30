@@ -158,10 +158,19 @@ pub fn run() {
                         crate::workers::vci_minute::run(pool_clone).await;
                     });
 
-                    let pool_clone = pool.clone();
-                    tokio::spawn(async move {
-                        crate::workers::vci_dividend::run(pool_clone).await;
-                    });
+                    // Dividend worker has its own toggle
+                    let dividend_worker_enabled = std::env::var("VCI_DIVIDEND_WORKER")
+                        .map(|v| v == "true" || v == "1")
+                        .unwrap_or(true);
+
+                    if dividend_worker_enabled {
+                        let pool_clone = pool.clone();
+                        tokio::spawn(async move {
+                            crate::workers::vci_dividend::run(pool_clone).await;
+                        });
+                    } else {
+                        tracing::info!("VCI dividend worker disabled (set VCI_DIVIDEND_WORKER=true to enable)");
+                    }
                 } else {
                     tracing::info!("VCI workers disabled (set VCI_WORKERS=true to enable)");
                 }
