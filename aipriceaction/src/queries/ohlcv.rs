@@ -659,6 +659,18 @@ pub async fn get_tickers_by_statuses(
     .await
 }
 
+/// Get a single ticker by ID, returning its current status.
+pub async fn get_ticker_by_id(pool: &PgPool, ticker_id: i32) -> sqlx::Result<Option<Ticker>> {
+    sqlx::query_as!(
+        Ticker,
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+           FROM tickers WHERE id = $1"#,
+        ticker_id
+    )
+    .fetch_optional(pool)
+    .await
+}
+
 /// Update ticker status.
 pub async fn update_ticker_status(
     pool: &PgPool,

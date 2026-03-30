@@ -1,3 +1,4 @@
+use rand::seq::SliceRandom;
 use sqlx::PgPool;
 use tokio::time::{sleep, Duration};
 
@@ -45,7 +46,23 @@ pub async fn run(pool: PgPool) {
             continue;
         }
 
-        for ticker_entry in &tickers {
+        let Some(ticker_entry) = tickers.choose(&mut rand::thread_rng()) else {
+            sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
+            continue;
+        };
+
+        // Re-check status to avoid duplicate work if another instance already picked it
+        if let Ok(Some(current)) = ohlcv::get_ticker_by_id(&pool, ticker_entry.id).await {
+            let still_pending = current.status.as_deref()
+                .map(|s| s == "dividend-detected" || s == "full-download-requested")
+                .unwrap_or(false);
+            if !still_pending {
+                tracing::info!("ticker={}, already being handled (status={:?}), skipping", ticker_entry.ticker, current.status);
+                continue;
+            }
+        }
+
+        {
             let ticker = &ticker_entry.ticker;
             let ticker_id = ticker_entry.id;
             tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, starting recovery — deleting ALL existing data for all intervals", ticker, ticker_id);
