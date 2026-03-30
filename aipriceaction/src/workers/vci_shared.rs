@@ -139,9 +139,13 @@ pub async fn detect_dividend(
         return false;
     }
 
-    if new_data.is_empty() {
+    if new_data.len() < 2 {
         return false;
     }
+
+    // Exclude the last candle — it may be today's intraday data saved by a
+    // previous sync cycle and can diverge due to normal price movement.
+    let compare_data = &new_data[..new_data.len() - 1];
 
     // Get existing daily data from DB
     let existing = match queries::ohlcv::get_ohlcv(pool, ticker_id, "1D", Some(vci_worker::DIVIDEND_CHECK_BARS)).await {
@@ -167,7 +171,7 @@ pub async fn detect_dividend(
     let mut worst_api_close = 0.0;
     let mut divergence_count = 0usize;
 
-    for d in new_data {
+    for d in compare_data {
         let date_key = d.time.format("%Y-%m-%d").to_string();
         if let Some(&existing_close) = existing_map.get(&date_key) {
             if existing_close > 0.0 && d.close > 0.0 {
@@ -195,9 +199,9 @@ pub async fn detect_dividend(
         }
         let price_drop_pct = (1.0 - worst_api_close / worst_existing_close) * 100.0;
         tracing::warn!(
-            "[DIVIDEND] ticker={}, date={}, db_close={}, api_close={}, ratio={:.4}, drop={:.2}%, diverging_dates={}, min_required={}, threshold={:.2}, new_data_bars={}, db_bars={}",
+            "[DIVIDEND] ticker={}, date={}, db_close={}, api_close={}, ratio={:.4}, drop={:.2}%, diverging_dates={}, min_required={}, threshold={:.2}, compared_bars={}, db_bars={}",
             ticker, worst_date, worst_existing_close, worst_api_close, max_ratio, price_drop_pct,
-            divergence_count, vci_worker::DIVIDEND_MIN_DIVERGING_BARS, vci_worker::DIVIDEND_RATIO_THRESHOLD, new_data.len(), existing.len()
+            divergence_count, vci_worker::DIVIDEND_MIN_DIVERGING_BARS, vci_worker::DIVIDEND_RATIO_THRESHOLD, compare_data.len(), existing.len()
         );
         tracing::warn!(
             "[DIVIDEND] ticker={}, action=set status 'dividend-detected' → dividend worker will delete ALL data and re-download full history (1D from 2015, 1h/1m from 2023)",
