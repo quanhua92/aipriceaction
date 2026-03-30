@@ -63,7 +63,7 @@ pub async fn run(pool: PgPool) {
                             Ok(data) => {
                                 binance_shared::enhance_and_save(&pool, ticker_id, &data, "1h").await;
 
-                                if let Err(e) = binance_shared::schedule_fixed_interval(
+                                match binance_shared::schedule_fixed_interval(
                                     &pool,
                                     ticker_id,
                                     "next_1h",
@@ -71,10 +71,9 @@ pub async fn run(pool: PgPool) {
                                 )
                                 .await
                                 {
-                                    tracing::warn!(ticker, "failed to schedule next hourly run: {e}");
+                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "hourly sync OK"),
+                                    Err(e) => tracing::warn!(ticker, count = data.len(), "hourly sync OK but scheduling failed: {e}"),
                                 }
-
-                                tracing::info!(ticker, count = data.len(), "hourly sync OK");
                                 false
                             }
                             Err(e) => {

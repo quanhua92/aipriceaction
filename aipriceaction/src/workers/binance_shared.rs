@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use sqlx::PgPool;
 
@@ -92,23 +93,23 @@ pub async fn schedule_fixed_interval(
     ticker_id: i32,
     next_col: &str,
     secs: i64,
-) -> Result<(), sqlx::Error> {
+) -> Result<DateTime<Utc>, sqlx::Error> {
     assert!(
         matches!(next_col, "next_1d" | "next_1h" | "next_1m"),
         "next_col must be one of: next_1d, next_1h, next_1m"
     );
 
     let sql = format!(
-        "UPDATE tickers SET {next_col} = NOW() + ($2 || ' seconds')::INTERVAL WHERE id = $1"
+        "UPDATE tickers SET {next_col} = NOW() + ($2 || ' seconds')::INTERVAL WHERE id = $1 RETURNING {next_col}"
     );
 
-    sqlx::query(&sql)
+    let row: (DateTime<Utc>,) = sqlx::query_as(&sql)
         .bind(ticker_id)
         .bind(secs)
-        .execute(pool)
+        .fetch_one(pool)
         .await?;
 
-    Ok(())
+    Ok(row.0)
 }
 
 /// Re-export commonly used vci_shared functions for convenience.

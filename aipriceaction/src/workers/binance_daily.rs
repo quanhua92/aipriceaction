@@ -71,16 +71,15 @@ pub async fn run(pool: PgPool) {
                                     }
                                 }
 
-                                if let Err(e) = binance_shared::schedule_fixed_interval(
+                                match binance_shared::schedule_fixed_interval(
                                     &pool, ticker_id, "next_1d",
                                     binance_worker::SCHEDULE_DAILY_SECS,
                                 )
                                 .await
                                 {
-                                    tracing::warn!(ticker, "failed to schedule next daily run: {e}");
+                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
+                                    Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
                                 }
-
-                                tracing::info!(ticker, count = data.len(), "daily sync OK");
                                 false
                             }
                             Err(e) => {
