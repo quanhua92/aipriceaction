@@ -14,7 +14,7 @@ pub async fn run(pool: PgPool) {
     tracing::info!("VCI hourly worker: waiting {} seconds before first sync...", vci_worker::HOURLY_INITIAL_DELAY_SECS);
     sleep(Duration::from_secs(vci_worker::HOURLY_INITIAL_DELAY_SECS)).await;
 
-    let provider = match VciProvider::new(60) {
+    let provider = match VciProvider::new(30) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("VCI hourly worker: failed to create provider: {e}");
@@ -72,14 +72,13 @@ pub async fn run(pool: PgPool) {
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1h").await;
 
                                 // Schedule next hourly run based on money-flow tier
-                                if let Err(e) = ohlcv::schedule_next_run(
+                                match ohlcv::schedule_next_run(
                                     &pool, ticker_id, "next_1h",
                                     &priority::THRESHOLDS, &tier_secs,
                                 ).await {
-                                    tracing::warn!(ticker, "failed to schedule next run: {e}");
+                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "hourly sync OK"),
+                                    Err(e) => tracing::warn!(ticker, count = data.len(), "hourly sync OK but scheduling failed: {e}"),
                                 }
-
-                                tracing::info!(ticker, count = data.len(), "hourly sync OK");
                                 false
                             }
                             Err(e) => {

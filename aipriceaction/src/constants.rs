@@ -94,8 +94,8 @@ pub mod vci_worker {
 
         /// Check interval per tier (seconds, trading hours). Index 0 = top tier.
         pub const DAILY_SECS:  [i64; 4] = [15, 30, 60, 120];
-        pub const HOURLY_SECS: [i64; 4] = [60, 180, 300, 600];
-        pub const MINUTE_SECS: [i64; 4] = [60, 120, 300, 600];
+        pub const HOURLY_SECS: [i64; 4] = [120, 300, 600, 1200];
+        pub const MINUTE_SECS: [i64; 4] = [180, 600, 1200, 2400];
     }
 }
 

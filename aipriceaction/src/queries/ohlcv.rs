@@ -788,7 +788,7 @@ pub async fn schedule_next_run(
     next_col: &str,
     thresholds: &[f64; 3],
     tier_secs: &[i64; 4],
-) -> sqlx::Result<()> {
+) -> sqlx::Result<DateTime<Utc>> {
     assert!(
         matches!(next_col, "next_1d" | "next_1h" | "next_1m"),
         "next_col must be one of: next_1d, next_1h, next_1m"
@@ -809,10 +809,11 @@ pub async fn schedule_next_run(
             FROM ohlcv WHERE ticker_id = $1 AND interval = '1D'
             ORDER BY time DESC LIMIT 1 OFFSET 1
         ) sub
-        WHERE id = $1"#
+        WHERE id = $1
+        RETURNING {next_col}"#
     );
 
-    sqlx::query(&sql)
+    let row: (DateTime<Utc>,) = sqlx::query_as(&sql)
         .bind(ticker_id)
         .bind(thresholds[0])
         .bind(format!("{} seconds", tier_secs[0]))
@@ -821,10 +822,10 @@ pub async fn schedule_next_run(
         .bind(thresholds[2])
         .bind(format!("{} seconds", tier_secs[2]))
         .bind(format!("{} seconds", tier_secs[3]))
-        .execute(pool)
+        .fetch_one(pool)
         .await?;
 
-    Ok(())
+    Ok(row.0)
 }
 
 /// Reset all next_* columns to NOW() for a ticker (used after dividend recovery).

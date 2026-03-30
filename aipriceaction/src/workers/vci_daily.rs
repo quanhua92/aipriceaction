@@ -77,14 +77,13 @@ pub async fn run(pool: PgPool) {
                                 }
 
                                 // Schedule next daily run based on money-flow tier
-                                if let Err(e) = ohlcv::schedule_next_run(
+                                match ohlcv::schedule_next_run(
                                     &pool, ticker_id, "next_1d",
                                     &priority::THRESHOLDS, &tier_secs,
                                 ).await {
-                                    tracing::warn!(ticker, "failed to schedule next run: {e}");
+                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
+                                    Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
                                 }
-
-                                tracing::info!(ticker, count = data.len(), "daily sync OK");
                                 false
                             }
                             Err(e) => {
