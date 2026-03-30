@@ -75,6 +75,8 @@ pub enum Commands {
         #[arg(long, default_value = "10")]
         count_back: u32,
     },
+    /// Benchmark critical API query paths directly against the database
+    TestPerf,
     /// Test Binance provider connectivity and data fetching
     TestBinance {
         /// Ticker symbol to test (default: BTCUSDT)
@@ -786,6 +788,452 @@ pub fn run() {
                 // 5. Summary
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
+            });
+        }
+        Commands::TestPerf => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                let database_url =
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| String::new());
+
+                if database_url.is_empty() {
+                    tracing::error!("DATABASE_URL not set");
+                    return;
+                }
+
+                let pool = match db::connect(&database_url).await {
+                    Ok(pool) => pool,
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database: {e}");
+                        return;
+                    }
+                };
+
+                use crate::queries::ohlcv as q;
+                use chrono::Utc;
+                use std::time::Instant;
+
+                struct BenchResult {
+                    label: String,
+                    rows: usize,
+                    ms: u128,
+                }
+
+                let mut all_results: Vec<BenchResult> = Vec::new();
+                let separator = "────";
+                let slow_threshold_ms: u128 = 2000;
+
+                let print_bench = |results: &[BenchResult], width: usize| {
+                    for r in results {
+                        let slow = if r.ms >= slow_threshold_ms {
+                            format!("  ← SLOW")
+                        } else {
+                            String::new()
+                        };
+                        tracing::info!("  {:<width$} | {:>6} rows | {:>6} ms{}", r.label, r.rows, r.ms, slow, width = width);
+                    }
+                };
+
+                // ── Section 1: VN single ticker (VCB) ──
+                {
+                    let src = "vn";
+                    let tk = "VCB";
+                    tracing::info!("{separator} VN: single ticker ({tk}) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #1 vn VCB 1D
+                    {
+                        let label = format!("vn {tk} 1D");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1D", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #2 vn VCB 1H
+                    {
+                        let label = format!("vn {tk} 1H");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1H", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #3 vn VCB 1m
+                    {
+                        let label = format!("vn {tk} 1m");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1m", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #4 vn VCB 1m limit=1000
+                    {
+                        let label = format!("vn {tk} 1m limit=1000");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1m", Some(1000)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Section 2: VN batch (get_ohlcv_joined_batch) ──
+                {
+                    let src = "vn";
+                    tracing::info!("{separator} VN: batch (get_ohlcv_joined_batch) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #5 vn batch 1D
+                    {
+                        let label = "vn batch 1D";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1D", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #6 vn batch 1H
+                    {
+                        let label = "vn batch 1H";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1H", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #7 vn batch 1m
+                    {
+                        let label = "vn batch 1m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #8 vn batch 1m multi
+                    {
+                        let label = "vn batch 1m multi";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into(), "FPT".into()], "1m", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #9 vn batch 1m start_date
+                    {
+                        let label = "vn batch 1m start_date";
+                        let start_time = Some(Utc::now() - chrono::Duration::days(30));
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), start_time, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Section 3: VN aggregated (get_ohlcv_batch_raw) ──
+                {
+                    let src = "vn";
+                    tracing::info!("{separator} VN: aggregated (get_ohlcv_batch_raw from 1m) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #10 vn agg 5m
+                    {
+                        let label = "vn agg 5m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["VCB".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #11 vn agg 15m
+                    {
+                        let label = "vn agg 15m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["VCB".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #12 vn agg 30m
+                    {
+                        let label = "vn agg 30m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["VCB".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #13 vn agg 1W
+                    {
+                        let label = "vn agg 1W";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["VCB".into()], "1D", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #14 vn agg 1M
+                    {
+                        let label = "vn agg 1M";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["VCB".into()], "1D", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Section 4: Crypto single ticker (BTCUSDT) ──
+                {
+                    let src = "crypto";
+                    let tk = "BTCUSDT";
+                    tracing::info!("{separator} Crypto: single ticker ({tk}) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #15 crypto BTCUSDT 1D
+                    {
+                        let label = format!("crypto {tk} 1D");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1D", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #16 crypto BTCUSDT 1H
+                    {
+                        let label = format!("crypto {tk} 1H");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1H", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #17 crypto BTCUSDT 1m
+                    {
+                        let label = format!("crypto {tk} 1m");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1m", Some(100)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #18 crypto BTCUSDT 1m limit=1000
+                    {
+                        let label = format!("crypto {tk} 1m limit=1000");
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined(&pool, src, tk, "1m", Some(1000)).await {
+                            Ok(rows) => section_results.push(BenchResult { label, rows: rows.len(), ms: start.elapsed().as_millis() }),
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Section 5: Crypto batch (get_ohlcv_joined_batch) ──
+                {
+                    let src = "crypto";
+                    tracing::info!("{separator} Crypto: batch (get_ohlcv_joined_batch) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #19 crypto batch 1D
+                    {
+                        let label = "crypto batch 1D";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1D", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #20 crypto batch 1H
+                    {
+                        let label = "crypto batch 1H";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1H", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #21 crypto batch 1m
+                    {
+                        let label = "crypto batch 1m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #22 crypto batch 1m multi
+                    {
+                        let label = "crypto batch 1m multi";
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into(), "ETHUSDT".into()], "1m", Some(100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #23 crypto batch 1m start_date
+                    {
+                        let label = "crypto batch 1m start_date";
+                        let start_time = Some(Utc::now() - chrono::Duration::days(30));
+                        let start = Instant::now();
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), start_time, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Section 6: Crypto aggregated (get_ohlcv_batch_raw) ──
+                {
+                    let src = "crypto";
+                    tracing::info!("{separator} Crypto: aggregated (get_ohlcv_batch_raw from 1m) {separator}");
+                    let mut section_results: Vec<BenchResult> = Vec::new();
+
+                    // #24 crypto agg 5m
+                    {
+                        let label = "crypto agg 5m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["BTCUSDT".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #25 crypto agg 15m
+                    {
+                        let label = "crypto agg 15m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["BTCUSDT".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #26 crypto agg 30m
+                    {
+                        let label = "crypto agg 30m";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["BTCUSDT".into()], "1m", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #27 crypto agg 1W
+                    {
+                        let label = "crypto agg 1W";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["BTCUSDT".into()], "1D", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+                    // #28 crypto agg 1M
+                    {
+                        let label = "crypto agg 1M";
+                        let start = Instant::now();
+                        match q::get_ohlcv_batch_raw(&pool, src, &["BTCUSDT".into()], "1D", Some(5100), None, None).await {
+                            Ok(map) => {
+                                let total: usize = map.values().map(|v| v.len()).sum();
+                                section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
+                            }
+                            Err(e) => tracing::warn!("  {label} | ERROR: {e}"),
+                        }
+                    }
+
+                    print_bench(&section_results, 28);
+                    all_results.extend(section_results);
+                }
+
+                // ── Summary ──
+                tracing::info!("{separator} Summary {separator}");
+                if all_results.is_empty() {
+                    tracing::info!("  No queries executed successfully.");
+                    return;
+                }
+                let max_result = all_results.iter().max_by_key(|r| r.ms).unwrap();
+                let avg_ms = all_results.iter().map(|r| r.ms).sum::<u128>() / all_results.len() as u128;
+                let slow_count = all_results.iter().filter(|r| r.ms >= slow_threshold_ms).count();
+                tracing::info!(
+                    "  Queries: {} | Avg: {} ms | Max: {} ms ({}) | Slow (≥{}ms): {}",
+                    all_results.len(),
+                    avg_ms,
+                    max_result.ms,
+                    max_result.label,
+                    slow_threshold_ms,
+                    slow_count,
+                );
             });
         }
         Commands::TestBinance {
