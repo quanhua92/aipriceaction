@@ -2,7 +2,7 @@ use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 
 use crate::models::indicators::{calculate_ma_score, calculate_sma};
-use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
+pub use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
 
 /// Maximum SMA period — fetch this many extra rows before the requested range
 /// to ensure all moving averages are accurate.
@@ -695,6 +695,28 @@ pub async fn delete_ohlcv_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Res
         .execute(pool)
         .await?;
     Ok(result.rows_affected())
+}
+
+/// Atomically delete all OHLCV data for a ticker and set its status in a single transaction.
+///
+/// This prevents race conditions when multiple instances run simultaneously:
+/// - Instance A picks a pending ticker, deletes data + sets `full-download-processing` atomically
+/// - Instance B queries pending statuses — ticker no longer there, picks a different one
+pub async fn delete_ohlcv_and_set_status(
+    pool: &PgPool,
+    ticker_id: i32,
+    new_status: &str,
+) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query!("DELETE FROM ohlcv WHERE ticker_id = $1", ticker_id)
+        .execute(tx.as_mut())
+        .await?;
+    sqlx::query!("UPDATE tickers SET status = $1 WHERE id = $2", new_status, ticker_id)
+        .execute(tx.as_mut())
+        .await?;
+    tx.commit().await?;
+    tracing::info!(ticker_id, new_status, "delete_ohlcv_and_set_status: committed");
+    Ok(())
 }
 
 /// Set a ticker's status to 'ready' only if it is currently NULL (newly inserted).

@@ -31,49 +31,45 @@ pub async fn run(pool: PgPool) {
         .and_utc();
 
     loop {
-        // Find tickers flagged for full re-download
-        let tickers = match ohlcv::get_tickers_by_statuses(&pool, "vn", &["dividend-detected", "full-download-requested"]).await {
-            Ok(t) => t,
-            Err(e) => {
-                tracing::warn!("VCI dividend worker: failed to load flagged tickers: {e}");
-                sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
-                continue;
-            }
+        // ── Pass 1: claim a fresh ticker (dividend-detected / full-download-requested) ──
+        let candidate = pick_fresh_ticker(&pool).await;
+
+        // ── Pass 2: resume a crashed/abandoned download (full-download-processing) ──
+        let candidate = if candidate.is_none() {
+            pick_resumable_ticker(&pool).await
+        } else {
+            candidate
         };
 
-        if tickers.is_empty() {
-            sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
-            continue;
-        }
-
-        let Some(ticker_entry) = tickers.choose(&mut rand::thread_rng()) else {
+        let Some((ticker_entry, is_fresh)) = candidate else {
             sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
             continue;
         };
-
-        // Re-check status to avoid duplicate work if another instance already picked it
-        if let Ok(Some(current)) = ohlcv::get_ticker_by_id(&pool, ticker_entry.id).await {
-            let still_pending = current.status.as_deref()
-                .map(|s| s == "dividend-detected" || s == "full-download-requested")
-                .unwrap_or(false);
-            if !still_pending {
-                tracing::info!("ticker={}, already being handled (status={:?}), skipping", ticker_entry.ticker, current.status);
-                continue;
-            }
-        }
 
         {
             let ticker = &ticker_entry.ticker;
             let ticker_id = ticker_entry.id;
-            tracing::warn!("[DIVIDEND] ticker={}, ticker_id={}, starting recovery — deleting ALL existing data for all intervals", ticker, ticker_id);
 
-            // Delete all existing data for this ticker
-            if let Err(e) = ohlcv::delete_ohlcv_for_ticker(&pool, ticker_id).await {
-                tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to delete existing OHLCV data: {}", ticker, ticker_id, e);
-                continue;
+            if is_fresh {
+                // Atomically delete data + transition to full-download-processing
+                tracing::warn!(
+                    "[DIVIDEND] ticker={}, ticker_id={}, claiming — deleting ALL existing data for all intervals",
+                    ticker, ticker_id
+                );
+                if let Err(e) = ohlcv::delete_ohlcv_and_set_status(&pool, ticker_id, "full-download-processing").await {
+                    tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to claim (delete+set status): {}", ticker, ticker_id, e);
+                    continue;
+                }
+                tracing::warn!(
+                    "[DIVIDEND] ticker={}, data deleted + status set to full-download-processing, re-downloading full history",
+                    ticker
+                );
+            } else {
+                tracing::warn!(
+                    "[DIVIDEND] ticker={}, ticker_id={}, resuming abandoned full-download (data already deleted)",
+                    ticker, ticker_id
+                );
             }
-
-            tracing::warn!("[DIVIDEND] ticker={}, all data deleted, re-downloading full history (1D from 2015, 1h/1m from 2023)", ticker);
 
             let mut all_saved = 0usize;
 
@@ -242,4 +238,68 @@ pub async fn run(pool: PgPool) {
 
         sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
     }
+}
+
+/// Pass 1: Pick a random ticker from `dividend-detected` or `full-download-requested`.
+/// Re-checks status before claiming to avoid racing with another instance.
+/// Returns `(ticker, is_fresh = true)` if a fresh candidate was found and still pending.
+async fn pick_fresh_ticker(pool: &PgPool) -> Option<(ohlcv::Ticker, bool)> {
+    let tickers = match ohlcv::get_tickers_by_statuses(pool, "vn", &["dividend-detected", "full-download-requested"]).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!("VCI dividend worker: failed to load flagged tickers: {e}");
+            return None;
+        }
+    };
+
+    if tickers.is_empty() {
+        return None;
+    }
+
+    let ticker_entry = tickers.choose(&mut rand::thread_rng())?;
+    let ticker_id = ticker_entry.id;
+
+    // Re-check status to avoid duplicate work if another instance already grabbed it
+    if let Ok(Some(current)) = ohlcv::get_ticker_by_id(pool, ticker_id).await {
+        let still_pending = current.status.as_deref()
+            .map(|s| s == "dividend-detected" || s == "full-download-requested")
+            .unwrap_or(false);
+        if !still_pending {
+            tracing::info!("ticker={}, already being handled (status={:?}), skipping", ticker_entry.ticker, current.status);
+            return None;
+        }
+    }
+
+    Some((ticker_entry.clone(), true))
+}
+
+/// Pass 2: Pick a random ticker from `full-download-processing` to resume an abandoned download.
+/// Re-checks status because another instance may have finished and set it to `ready`.
+/// Returns `(ticker, is_fresh = false)` — caller should skip the delete step.
+async fn pick_resumable_ticker(pool: &PgPool) -> Option<(ohlcv::Ticker, bool)> {
+    let tickers = match ohlcv::get_tickers_by_status(pool, "vn", "full-download-processing").await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!("VCI dividend worker: failed to load processing tickers: {e}");
+            return None;
+        }
+    };
+
+    if tickers.is_empty() {
+        return None;
+    }
+
+    let ticker_entry = tickers.choose(&mut rand::thread_rng())?;
+    let ticker_id = ticker_entry.id;
+
+    // Re-check status — another instance may have already completed this download
+    if let Ok(Some(current)) = ohlcv::get_ticker_by_id(pool, ticker_id).await {
+        let still_processing = current.status.as_deref() == Some("full-download-processing");
+        if !still_processing {
+            tracing::info!("ticker={}, already completed (status={:?}), skipping resume", ticker_entry.ticker, current.status);
+            return None;
+        }
+    }
+
+    Some((ticker_entry.clone(), false))
 }
