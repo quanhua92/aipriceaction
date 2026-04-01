@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO tickers (source, ticker, name) VALUES ($1, $2, $3)\n           ON CONFLICT (source, ticker) DO UPDATE SET name = COALESCE($3, tickers.name)\n           RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c1910b1cb0207a6fcf81fb2260ca4645e80f23a02f6e60e2d1d48b8cb1180ff3"
+}

@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Price Action - API Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+      .active-tab {
+        border-color: #4f46e5 !important;
+        color: #4f46e5 !important;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+      <div class="container mx-auto px-4 py-4 md:py-6">
+        <h1 class="text-xl md:text-3xl font-bold">AI Price Action</h1>
+        <p class="text-blue-100 text-xs md:text-base mt-1">API Explorer & Debug Tool</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-3 md:px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+
+      <!-- API Overview Section -->
+      <section class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md p-4 md:p-6 border border-blue-200">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3">📊 API Overview</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-sm">
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Available Endpoints</div>
+            <div class="text-xl md:text-2xl font-bold text-blue-600">6</div>
+            <div class="text-xs text-gray-500 mt-1">/tickers, /health, /tickers/group, /analysis/*, /raw/*</div>
+          </div>
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Supported Formats</div>
+            <div class="text-xl md:text-2xl font-bold text-green-600">2</div>
+            <div class="text-xs text-gray-500 mt-1">JSON, CSV</div>
+          </div>
+          <div class="bg-white rounded p-3 md:p-4 shadow-sm">
+            <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Time Intervals</div>
+            <div class="text-xl md:text-2xl font-bold text-purple-600">9</div>
+            <div class="text-xs text-gray-500 mt-1">Base: 1D, 1H, 1m | Aggregated: 5m, 15m, 30m, 1W, 2W, 1M</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- System Health Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">🏥 System Health & Performance</h2>
+          <button
+            onclick="fetchHealth()"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
+            Check Health
+          </button>
+        </div>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Monitor system status, cache performance, and data availability. This endpoint provides real-time insights into the API's health.
+        </div>
+        <div id="health-result" class="mt-4 p-3 md:p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-xs md:text-sm overflow-x-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Ticker Groups Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📋 Available Tickers</h2>
+          <button
+            onclick="fetchGroups()"
+            class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
+            Load Groups
+          </button>
+        </div>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Browse all available stock symbols organized by category. See which tickers have data for different time intervals.
+        </div>
+        <div id="groups-result" class="mt-4 p-3 md:p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <pre class="text-xs md:text-sm overflow-x-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Ticker Data Explorer Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">🔍 Ticker Data Explorer</h2>
+        <div class="text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
+          Query historical price data with flexible date ranges and formats. Perfect for backtesting and analysis.
+        </div>
+
+        <div class="space-y-3 md:space-y-4">
+          <!-- Symbol Input -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Symbol</label>
+            <input
+              type="text"
+              id="symbol"
+              value="VCB"
+              placeholder="e.g., VCB, FPT, VIC"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+          </div>
+
+          <!-- Interval Select -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Interval</label>
+            <select
+              id="interval"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <optgroup label="Base Intervals">
+                <option value="1D" selected>1 Day (1D)</option>
+                <option value="1H">1 Hour (1H)</option>
+                <option value="1m">1 Minute (1m)</option>
+              </optgroup>
+              <optgroup label="Minute Aggregations">
+                <option value="5m">5 Minutes (5m)</option>
+                <option value="15m">15 Minutes (15m)</option>
+                <option value="30m">30 Minutes (30m)</option>
+              </optgroup>
+              <optgroup label="Day Aggregations">
+                <option value="1W">Weekly (1W)</option>
+                <option value="2W">Bi-Weekly (2W)</option>
+                <option value="1M">Monthly (1M)</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- End Date Input -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
+              End Date <span class="text-gray-500">(optional)</span>
+            </label>
+            <div class="relative">
+              <input
+                type="date"
+                id="end_date"
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <button
+                type="button"
+                onclick="clearDate('end_date')"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                title="Clear date">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
+          </div>
+
+          <!-- Limit Input -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
+              Limit <span class="text-gray-500">(optional)</span>
+            </label>
+            <input
+              type="number"
+              id="limit"
+              min="1"
+              max="10000"
+              placeholder="e.g., 100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Number of records to return. Ignored if start_date is provided</p>
+          </div>
+
+          <!-- Start Date Input -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
+              Start Date <span class="text-gray-500">(optional)</span>
+            </label>
+            <div class="relative">
+              <input
+                type="date"
+                id="start_date"
+                placeholder="Leave empty to use limit"
+                class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <button
+                type="button"
+                onclick="clearDate('start_date')"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                title="Clear date">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Specifying start_date will ignore limit parameter</p>
+          </div>
+
+          <!-- Mode Select -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Market Mode</label>
+            <select
+              id="mode"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <option value="vn" selected>Vietnamese Stocks (VN)</option>
+              <option value="crypto">Cryptocurrency</option>
+            </select>
+          </div>
+
+          <!-- Format Select -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">Format</label>
+            <select
+              id="format"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <option value="csv" selected>CSV</option>
+              <option value="json">JSON</option>
+            </select>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
+            <button
+              onclick="fetchTicker()"
+              class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+              Fetch Data
+            </button>
+            <button
+              onclick="copyApiUrl()"
+              class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+              Copy API URL
+            </button>
+          </div>
+        </div>
+
+        <!-- API URL Display -->
+        <div id="api-url" class="mt-4 p-3 bg-blue-50 rounded border border-blue-200 hidden">
+          <p class="text-xs text-gray-600 mb-1">API URL:</p>
+          <code class="text-sm text-blue-800 break-all"></code>
+        </div>
+
+        <!-- Result Display -->
+        <div id="ticker-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-medium text-gray-700">Response:</span>
+            <span id="result-count" class="text-xs text-gray-500"></span>
+          </div>
+          <pre class="text-sm overflow-x-auto max-h-96 overflow-y-auto"></pre>
+        </div>
+      </section>
+
+      <!-- Quick Examples Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">⚡ Quick Examples</h2>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Try these pre-configured queries to explore different intervals and aggregations.
+        </div>
+
+        <!-- Base Intervals -->
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Base Intervals</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 mb-4">
+          <button
+            onclick="quickFetchWithParams('VCB', '1D', null, null, 100)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded border border-blue-200 transition duration-200">
+            <span class="font-medium text-gray-800">🏦 VCB - Daily</span>
+            <p class="text-xs text-gray-600 mt-1">Last 100 trading days</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('FPT', '1H', null, null, 100)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded border border-green-200 transition duration-200">
+            <span class="font-medium text-gray-800">💻 FPT - Hourly</span>
+            <p class="text-xs text-gray-600 mt-1">Last 100 hourly candles</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('VIC', '1m', null, null, 200)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded border border-purple-200 transition duration-200">
+            <span class="font-medium text-gray-800">🏢 VIC - Minute</span>
+            <p class="text-xs text-gray-600 mt-1">Last 200 minutes of trading</p>
+          </button>
+        </div>
+
+        <!-- Minute Aggregations -->
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Minute Aggregations</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 mb-4">
+          <button
+            onclick="quickFetchWithParams('VCB', '5m', null, null, 50)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 rounded border border-indigo-200 transition duration-200">
+            <span class="font-medium text-gray-800">📊 VCB - 5 Minutes</span>
+            <p class="text-xs text-gray-600 mt-1">Last 50 5-minute candles</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('FPT', '15m', null, null, 50)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 rounded border border-cyan-200 transition duration-200">
+            <span class="font-medium text-gray-800">⏱️ FPT - 15 Minutes</span>
+            <p class="text-xs text-gray-600 mt-1">Last 50 15-minute candles</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('VIC', '30m', null, null, 50)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 rounded border border-teal-200 transition duration-200">
+            <span class="font-medium text-gray-800">🕐 VIC - 30 Minutes</span>
+            <p class="text-xs text-gray-600 mt-1">Last 50 30-minute candles</p>
+          </button>
+        </div>
+
+        <!-- Day Aggregations -->
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Day Aggregations</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+          <button
+            onclick="quickFetchWithParams('VNINDEX', '1W', null, null, 52)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 rounded border border-orange-200 transition duration-200">
+            <span class="font-medium text-gray-800">📈 VN-INDEX - Weekly</span>
+            <p class="text-xs text-gray-600 mt-1">Last 52 weeks (1 year)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('VCB', '2W', null, null, 26)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 rounded border border-pink-200 transition duration-200">
+            <span class="font-medium text-gray-800">📅 VCB - Bi-Weekly</span>
+            <p class="text-xs text-gray-600 mt-1">Last 26 bi-weeks (1 year)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('FPT', '1M', null, null, 12)"
+            class="text-left px-4 py-3 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 rounded border border-amber-200 transition duration-200">
+            <span class="font-medium text-gray-800">📆 FPT - Monthly</span>
+            <p class="text-xs text-gray-600 mt-1">Last 12 months (1 year)</p>
+          </button>
+        </div>
+
+        <!-- Cryptocurrency Examples -->
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Cryptocurrency Markets</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 mb-4">
+          <button
+            onclick="quickFetchWithParams('BTC', '1D', null, null, 30, 'crypto')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 rounded border border-yellow-200 transition duration-200">
+            <span class="font-medium text-gray-800">₿ BTC - Daily</span>
+            <p class="text-xs text-gray-600 mt-1">Last 30 days (Crypto)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('ETH', '1H', null, null, 48, 'crypto')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded border border-purple-200 transition duration-200">
+            <span class="font-medium text-gray-800">💎 ETH - Hourly</span>
+            <p class="text-xs text-gray-600 mt-1">Last 48 hours (Crypto)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('XRP', '5m', null, null, 100, 'crypto')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 rounded border border-teal-200 transition duration-200">
+            <span class="font-medium text-gray-800">⚡ XRP - 5 Minutes</span>
+            <p class="text-xs text-gray-600 mt-1">Last 100 5-minute candles (Crypto)</p>
+          </button>
+        </div>
+      </section>
+
+      <!-- Analysis API Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📊 Analysis API</h2>
+        <div class="text-xs md:text-sm text-gray-600 mb-4">
+          Advanced market analysis endpoints for discovering top performers and sector trends.
+        </div>
+
+        <!-- Analysis Tabs -->
+        <div class="border-b border-gray-200 mb-4">
+          <nav class="flex space-x-4" aria-label="Analysis Tabs">
+            <button onclick="showAnalysisTab('top-performers')" id="tab-btn-top-performers" class="analysis-tab-btn border-b-2 border-blue-500 px-4 py-2 text-sm font-medium text-blue-600">
+              🚀 Top Performers
+            </button>
+            <button onclick="showAnalysisTab('ma-scores')" id="tab-btn-ma-scores" class="analysis-tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">
+              📈 MA Scores by Sector
+            </button>
+          </nav>
+        </div>
+
+        <!-- Top Performers Tab -->
+        <div id="analysis-tab-top-performers" class="analysis-tab-content">
+          <h3 class="text-md font-semibold text-gray-800 mb-3">Top/Bottom Performers</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <!-- Date -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Analysis Date <span class="text-gray-500">(optional)</span></label>
+              <input type="date" id="analysis-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <p class="text-xs text-gray-500 mt-1">Defaults to latest data</p>
+            </div>
+
+            <!-- Sort By -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Sort By</label>
+              <select id="analysis-sort-by" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="close_changed">Close Change %</option>
+                <option value="volume">Volume</option>
+                <option value="volume_changed">Volume Change %</option>
+                <option value="total_money_changed" selected>Total Money Changed (VND)</option>
+                <option value="ma10_score">MA10 Score</option>
+                <option value="ma20_score">MA20 Score</option>
+                <option value="ma50_score">MA50 Score</option>
+                <option value="ma100_score">MA100 Score</option>
+                <option value="ma200_score">MA200 Score</option>
+              </select>
+            </div>
+
+            <!-- Direction -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Direction</label>
+              <select id="analysis-direction" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="desc" selected>Descending (Top)</option>
+                <option value="asc">Ascending (Bottom)</option>
+              </select>
+            </div>
+
+            <!-- Limit -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Limit</label>
+              <input type="number" id="analysis-limit" value="10" min="1" max="100" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            </div>
+
+            <!-- Sector Filter -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Sector <span class="text-gray-500">(optional)</span></label>
+              <input type="text" id="analysis-sector" placeholder="e.g., VN30, NGAN_HANG" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            </div>
+
+            <!-- Min Volume -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Min Volume</label>
+              <input type="number" id="analysis-min-volume" value="10000" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            </div>
+
+            <!-- Include Hourly Breakdown -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Include Hourly Breakdown</label>
+              <select id="analysis-with-hour" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="false">No (Daily Only)</option>
+                <option value="true" selected>Yes (Daily + Hourly)</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Returns performers for each trading hour (5 hours total)</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="fetchTopPerformers()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              Fetch Top Performers
+            </button>
+            <button onclick="copyAnalysisUrl('top-performers')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              Copy API URL
+            </button>
+          </div>
+
+          <div id="analysis-top-performers-result" class="mt-4 bg-white rounded border border-gray-200 hidden">
+            <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+              <span class="text-sm font-medium text-gray-700">Top Performers Analysis</span>
+              <span id="analysis-top-performers-count" class="text-xs text-gray-500"></span>
+            </div>
+            <div id="analysis-top-performers-content" class="p-4">
+              <!-- Content will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- MA Scores by Sector Tab -->
+        <div id="analysis-tab-ma-scores" class="analysis-tab-content hidden">
+          <h3 class="text-md font-semibold text-gray-800 mb-3">Moving Average Scores by Sector</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            <!-- Date -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Analysis Date <span class="text-gray-500">(optional)</span></label>
+              <input type="date" id="ma-analysis-date" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+              <p class="text-xs text-gray-500 mt-1">Defaults to latest data</p>
+            </div>
+
+            <!-- MA Period -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">MA Period</label>
+              <select id="ma-period" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                <option value="10">MA10 (10 periods)</option>
+                <option value="20" selected>MA20 (20 periods)</option>
+                <option value="50">MA50 (50 periods)</option>
+                <option value="100">MA100 (100 periods)</option>
+                <option value="200">MA200 (200 periods)</option>
+              </select>
+            </div>
+
+            <!-- Min Score -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Min Score</label>
+              <input type="number" id="ma-min-score" value="0.0" step="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            </div>
+
+            <!-- Above Threshold Only -->
+            <div class="flex items-center">
+              <input type="checkbox" id="ma-above-threshold" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+              <label for="ma-above-threshold" class="ml-2 text-xs font-medium text-gray-700">Above Threshold Only</label>
+            </div>
+
+            <!-- Top Per Sector -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">Top Per Sector</label>
+              <input type="number" id="ma-top-per-sector" value="10" min="1" max="50" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            </div>
+          </div>
+
+          <div class="flex gap-2">
+            <button onclick="fetchMAScores()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              Fetch MA Scores
+            </button>
+            <button onclick="copyAnalysisUrl('ma-scores')" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm">
+              Copy API URL
+            </button>
+          </div>
+
+          <div id="analysis-ma-scores-result" class="mt-4 p-4 bg-gray-50 rounded border border-gray-200 hidden">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-gray-700">Response:</span>
+              <span id="analysis-ma-scores-count" class="text-xs text-gray-500"></span>
+            </div>
+            <pre class="text-sm overflow-x-auto max-h-96 overflow-y-auto"></pre>
+          </div>
+        </div>
+      </section>
+
+  
+      <!-- Sector Analysis & Visualization Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📊 Sector Analysis & Momentum</h2>
+          <button
+            onclick="loadSectorAnalysis()"
+            class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
+            Analyze Sectors
+          </button>
+        </div>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Compare sector performance using MA20 and MA50 scores. Identify sector rotation and momentum shifts across the market.
+        </div>
+
+        <!-- Loading State -->
+        <div id="sector-loading" class="hidden text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <p class="text-sm text-gray-600 mt-2">Analyzing sectors...</p>
+        </div>
+
+        <!-- Sector Summary Stats -->
+        <div id="sector-summary" class="hidden mb-4 md:mb-6">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+            <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-2 md:p-3 border border-green-200">
+              <div class="text-xs text-gray-600">Strong Sectors</div>
+              <div id="strong-sectors-count" class="text-xl md:text-2xl font-bold text-green-700">--</div>
+              <div class="text-xs text-gray-500">Combined > 0</div>
+            </div>
+            <div class="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-2 md:p-3 border border-red-200">
+              <div class="text-xs text-gray-600">Weak Sectors</div>
+              <div id="weak-sectors-count" class="text-xl md:text-2xl font-bold text-red-700">--</div>
+              <div class="text-xs text-gray-500">Combined < 0</div>
+            </div>
+            <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2 md:p-3 border border-blue-200">
+              <div class="text-xs text-gray-600">Best Sector</div>
+              <div id="best-sector" class="text-sm md:text-xl font-bold text-blue-700 truncate">--</div>
+              <div id="best-sector-score" class="text-xs text-gray-500">--</div>
+            </div>
+            <div class="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-2 md:p-3 border border-orange-200">
+              <div class="text-xs text-gray-600">Worst Sector</div>
+              <div id="worst-sector" class="text-sm md:text-xl font-bold text-orange-700 truncate">--</div>
+              <div id="worst-sector-score" class="text-xs text-gray-500">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sector Visualization Tabs -->
+        <div id="sector-tabs" class="hidden mb-4">
+          <div class="border-b border-gray-200 overflow-x-auto">
+            <nav class="flex space-x-2 md:space-x-4 min-w-max md:min-w-0" aria-label="Sector Tabs">
+              <button onclick="showSectorTab('heatmap')" class="sector-tab active-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 whitespace-nowrap">
+                🔥 Heatmap
+              </button>
+              <button onclick="showSectorTab('quadrant')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📍 Quadrant
+              </button>
+              <button onclick="showSectorTab('breadth')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📊 Breadth
+              </button>
+              <button onclick="showSectorTab('details')" class="sector-tab px-2 md:px-3 py-2 text-xs md:text-sm font-medium border-b-2 border-transparent whitespace-nowrap">
+                📋 Details
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        <!-- Heatmap Tab -->
+        <div id="sector-tab-heatmap" class="sector-tab-content">
+          <div class="bg-gray-50 rounded-lg p-3 md:p-4">
+            <h3 class="text-xs md:text-sm font-semibold text-gray-700 mb-2">Sector Strength (Average of MA20 & MA50 Scores)</h3>
+            <p class="text-xs text-gray-600 mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+              <strong>How it works:</strong> Each sector's score is the average of all stocks' MA20 and MA50 positions.
+              Positive (green) = trading above moving averages (bullish), Negative (red) = below averages (bearish).
+              Larger bars indicate stronger trends.
+            </p>
+            <div id="sector-heatmap" class="space-y-2">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Quadrant Analysis Tab -->
+        <div id="sector-tab-quadrant" class="sector-tab-content hidden">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4 mb-3 md:mb-4">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 md:p-4 border-2 border-green-300">
+              <div class="text-sm md:text-base font-bold text-green-800 mb-1 md:mb-2">Q-I: STRONG UPTREND</div>
+              <div class="text-xs text-gray-600 mb-2">MA20 > 0 & MA50 > 0</div>
+              <div id="q1-sectors" class="space-y-1 text-xs">--</div>
+            </div>
+            <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 md:p-4 border-2 border-yellow-300">
+              <div class="text-sm md:text-base font-bold text-yellow-800 mb-1 md:mb-2">Q-II: LOSING MOMENTUM</div>
+              <div class="text-xs text-gray-600 mb-2">MA20 < 0 & MA50 > 0</div>
+              <div id="q2-sectors" class="space-y-1 text-xs">--</div>
+            </div>
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 md:p-4 border-2 border-red-300">
+              <div class="text-sm md:text-base font-bold text-red-800 mb-1 md:mb-2">Q-III: STRONG DOWNTREND</div>
+              <div class="text-xs text-gray-600 mb-2">MA20 < 0 & MA50 < 0</div>
+              <div id="q3-sectors" class="space-y-1 text-xs">--</div>
+            </div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 md:p-4 border-2 border-blue-300">
+              <div class="text-sm md:text-base font-bold text-blue-800 mb-1 md:mb-2">Q-IV: GAINING MOMENTUM</div>
+              <div class="text-xs text-gray-600 mb-2">MA20 > 0 & MA50 < 0</div>
+              <div id="q4-sectors" class="space-y-1 text-xs">--</div>
+            </div>
+          </div>
+          <div class="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded">
+            💡 <strong>Tip:</strong> Q-I sectors show consistent strength. Q-IV sectors may be early reversals or breakouts.
+          </div>
+        </div>
+
+        <!-- Breadth Analysis Tab -->
+        <div id="sector-tab-breadth" class="sector-tab-content hidden">
+          <div class="bg-gray-50 rounded-lg p-3 md:p-4">
+            <h3 class="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3">Sector Breadth (% of Stocks Above MAs)</h3>
+            <div class="overflow-x-auto -mx-3 md:mx-0">
+              <table class="min-w-full text-xs">
+                <thead class="bg-gray-100">
+                  <tr>
+                    <th class="px-2 md:px-3 py-2 text-left font-semibold">Sector</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">MA20</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">MA50</th>
+                    <th class="px-2 md:px-3 py-2 text-right font-semibold whitespace-nowrap">Avg</th>
+                  </tr>
+                </thead>
+                <tbody id="sector-breadth-table" class="divide-y divide-gray-200">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed View Tab -->
+        <div id="sector-tab-details" class="sector-tab-content hidden">
+          <div class="space-y-3" id="sector-details-container">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Volume Profile Analysis Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <h2 class="text-lg md:text-xl font-bold text-gray-800">📊 Volume Profile Analysis</h2>
+          <button
+            onclick="fetchVolumeProfile()"
+            class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-2 px-4 rounded transition duration-200 w-full sm:w-auto text-sm md:text-base">
+            Analyze Volume Profile
+          </button>
+        </div>
+        <div class="text-xs md:text-sm text-gray-600 mb-3">
+          Discover where the most trading occurred at different price levels. Identify Point of Control (POC), Value Area, High Volume Nodes (HVN), and Low Volume Nodes (LVN) for better trading decisions.
+        </div>
+
+        <!-- Form Inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <!-- Symbol Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Symbol</label>
+            <input
+              type="text"
+              id="vp-symbol"
+              value="VJC"
+              placeholder="e.g., VJC, VCB, FPT, BTC"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+          </div>
+
+          <!-- Start Date Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              id="vp-start-date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Defaults to today if not specified</p>
+          </div>
+
+          <!-- End Date Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">End Date <span class="text-gray-400">(optional)</span></label>
+            <input
+              type="date"
+              id="vp-end-date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Leave empty for single day analysis</p>
+          </div>
+
+          <!-- Bins Input -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Price Bins</label>
+            <input
+              type="number"
+              id="vp-bins"
+              value="10"
+              min="2"
+              max="100"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Number of price levels (2-100, default: 10 for readability)</p>
+          </div>
+
+          <!-- Value Area Percentage -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Value Area %</label>
+            <input
+              type="number"
+              id="vp-value-area-pct"
+              value="70"
+              min="50"
+              max="90"
+              step="5"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <p class="text-xs text-gray-500 mt-1">Default: 70% of volume</p>
+          </div>
+
+          <!-- Mode Select -->
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Market Mode</label>
+            <select
+              id="vp-mode"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+              <option value="vn" selected>Vietnamese Stocks (VN)</option>
+              <option value="crypto">Cryptocurrency</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <button
+            onclick="fetchVolumeProfile()"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+            Fetch Volume Profile
+          </button>
+          <button
+            onclick="copyVolumeProfileUrl()"
+            class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition duration-200 text-sm md:text-base">
+            Copy API URL
+          </button>
+        </div>
+
+        <!-- Important Note -->
+        <div class="mt-3 p-3 bg-yellow-50 rounded border border-yellow-200">
+          <p class="text-xs text-yellow-800">
+            <strong>⚠️ Note:</strong> Volume Profile analysis requires minute-level (1m) data.
+            Best used for intraday analysis. Historical analysis limited by minute data availability.
+          </p>
+        </div>
+
+        <!-- Result Display -->
+        <div id="volume-profile-result" class="mt-4 bg-white rounded border border-gray-200 hidden">
+          <div class="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+            <span class="text-sm font-medium text-gray-700">Volume Profile Analysis</span>
+            <span id="volume-profile-count" class="text-xs text-gray-500"></span>
+          </div>
+          <div id="volume-profile-content" class="p-4">
+            <!-- Content will be populated by JavaScript -->
+          </div>
+        </div>
+      </section>
+
+      <!-- API Documentation Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📚 API Reference</h2>
+        <div class="space-y-3 md:space-y-4">
+          <!-- /tickers endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/tickers</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Retrieve historical price data with 20 technical indicators.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Parameters:</span>
+                <div class="flex-1">
+                  <div><code>symbol</code> - Ticker symbol(s) (optional, repeatable: symbol=VCB&symbol=FPT)</div>
+                  <div><code>interval</code> - Time interval (optional, default: 1D)</div>
+                  <div class="ml-4 text-gray-600">Base intervals: 1D, 1H, 1m (raw data)</div>
+                  <div class="ml-4 text-gray-600">Minute aggregations: 5m, 15m, 30m (computed from 1m)</div>
+                  <div class="ml-4 text-gray-600">Day aggregations: 1W, 2W, 1M (computed from 1D)</div>
+                  <div><code>start_date</code> - Start date YYYY-MM-DD (optional, overrides limit)</div>
+                  <div><code>end_date</code> - End date YYYY-MM-DD (optional, defaults to today)</div>
+                  <div><code>limit</code> - Number of records from end_date (optional, ignored if start_date provided)</div>
+                  <div><code>format</code> - Response format: json, csv (default: json)</div>
+                  <div><code>legacy</code> - Divide stock prices by 1000 (optional, default: false)</div>
+                  <div class="ml-4 text-orange-600">Note: Legacy format only applies to stocks, not indices</div>
+                  <div><code>cache</code> - Use 60s cache (optional, default: true)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON array with performance metrics or CSV download</div>
+                  <div class="text-gray-600">Includes: response_time_ms, data_source, cache_hit</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Errors:</span>
+                <div class="flex-1">
+                  <div><code>400</code> - Invalid date format or parameters</div>
+                  <div><code>404</code> - Ticker not found</div>
+                  <div><code>500</code> - Server error (JSON: {"error": "message"})</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- /tickers/group endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/tickers/group</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">List all available ticker symbols grouped by data availability.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Returns:</span>
+                <span class="flex-1">Groups of tickers with their available intervals</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /health endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/health</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Check API health status and performance metrics.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>System status with performance and cache metrics</div>
+                  <div class="ml-4 text-gray-600">Fields: status, uptime_secs, memory_usage_mb, memory_usage_percent</div>
+                  <div class="ml-4 text-gray-600">Data counts: active_tickers_count, daily_records_count, hourly_records_count, minute_records_count</div>
+                  <div class="ml-4 text-gray-600">Cache: disk_cache_stats {size_mb, hit_rate_percent}</div>
+                  <div class="ml-4 text-gray-600">Workers: last_sync_times {daily, hourly, minute}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- /analysis/top-performers endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/analysis/top-performers</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Get top/bottom performing stocks with hourly breakdown option.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Parameters:</span>
+                <div class="flex-1">
+                  <div><code>date</code> - Analysis date YYYY-MM-DD (optional, defaults to latest)</div>
+                  <div><code>sort_by</code> - Sort metric (optional, default: close_changed)</div>
+                  <div class="ml-4 text-gray-600">Options: close_changed, volume, volume_changed, total_money_changed, ma10_score, ma20_score, ma50_score, ma100_score, ma200_score</div>
+                  <div><code>direction</code> - Sort direction: asc, desc (optional, default: desc)</div>
+                  <div><code>limit</code> - Number of results (optional, default: 10, max: 100)</div>
+                  <div><code>sector</code> - Filter by sector name (optional, e.g., VN30, NGAN_HANG)</div>
+                  <div><code>min_volume</code> - Minimum trading volume (optional, default: 10000)</div>
+                  <div><code>with_hour</code> - Include hourly breakdown (optional, default: false)</div>
+                  <div class="ml-4 text-gray-600">When true: Returns performers for each trading hour (5 hours total)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON object with daily performers + optional hourly breakdown</div>
+                  <div class="text-gray-600">Structure: {date, performers: [...], hourly_performers: {hour: [...]}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- /analysis/ma-scores-by-sector endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/analysis/ma-scores-by-sector</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Moving average analysis grouped by stock sectors with filtering options.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Parameters:</span>
+                <div class="flex-1">
+                  <div><code>date</code> - Analysis date YYYY-MM-DD (optional, defaults to latest)</div>
+                  <div><code>ma_period</code> - MA period: 10, 20, 50, 100, 200 (optional, default: 20)</div>
+                  <div><code>min_score</code> - Minimum MA score threshold (optional, default: 0.0)</div>
+                  <div><code>above_threshold_only</code> - Only stocks above threshold (optional, default: false)</div>
+                  <div><code>top_per_sector</code> - Max stocks per sector (optional, default: 10, max: 50)</div>
+                </div>
+              </div>
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Response:</span>
+                <div class="flex-1">
+                  <div>JSON object with sector-wise MA analysis</div>
+                  <div class="text-gray-600">Structure: {date, ma_period, sectors: [{name, stocks: [...]}]}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- /raw/* endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/raw/*</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Legacy GitHub proxy for backward compatibility.</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Note:</span>
+                <span class="flex-1 text-orange-600">⚠️ Deprecated - use /tickers endpoint instead</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /explorer endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/explorer</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Serves the API Explorer UI (this page).</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Returns:</span>
+                <span class="flex-1">HTML interface for API testing and exploration</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- /public/* endpoint -->
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">GET</span>
+              <code class="text-sm font-mono text-gray-800">/public/*</code>
+            </div>
+            <p class="text-sm text-gray-600 mb-3">Static assets for the Explorer UI (CSS, JS, images).</p>
+            <div class="text-xs space-y-1">
+              <div class="flex gap-2">
+                <span class="font-semibold text-gray-700 w-24">Examples:</span>
+                <span class="flex-1">/public/js/app.js, /public/css/styles.css</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Technical Details Section -->
+      <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">⚙️ Technical Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
+          <!-- Performance & Caching -->
+          <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            <div class="font-semibold text-blue-800 mb-2">⚡ Performance & Caching</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Cache TTL:</strong> 60 seconds for all endpoints</li>
+              <li><strong>Memory Cache:</strong> Last 1 year of daily data (4GB limit)</li>
+              <li><strong>Disk Cache:</strong> Hourly/minute data with LRU eviction (500MB limit)</li>
+              <li><strong>Cache Control:</strong> Use <code>cache=false</code> to force refresh</li>
+              <li><strong>Response Time:</strong> Typically 50-200ms with cache, 500ms-2s without</li>
+            </ul>
+          </div>
+
+          <!-- Rate Limiting & Security -->
+          <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+            <div class="font-semibold text-green-800 mb-2">🔒 Rate Limiting & Security</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>VCI API Rate:</strong> ~30 requests/minute (upstream limit)</li>
+              <li><strong>CORS:</strong> Enabled for subdomains and localhost</li>
+              <li><strong>No Authentication:</strong> Public API (rate-limited by design)</li>
+              <li><strong>Request Size:</strong> No hard limit, practical limit ~100MB</li>
+              <li><strong>Retry Logic:</strong> Exponential backoff, max 5 retries</li>
+            </ul>
+          </div>
+
+          <!-- Data Processing -->
+          <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <div class="font-semibold text-purple-800 mb-2">🔄 Data Processing</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Aggregated Intervals:</strong> Computed on-demand from base data</li>
+              <li><strong>5m/15m/30m:</strong> Derived from 1m data (OHLCV aggregation)</li>
+              <li><strong>1W/2W/1M:</strong> Derived from 1D data (weekly/monthly aggregation)</li>
+              <li><strong>Processing Time:</strong> 100-500ms for aggregated intervals</li>
+              <li><strong>Indicators:</strong> 20 technical indicators calculated during sync</li>
+            </ul>
+          </div>
+
+          <!-- Error Handling -->
+          <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+            <div class="font-semibold text-red-800 mb-2">⚠️ Error Handling</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>400 Bad Request:</strong> Invalid parameters, date format errors</li>
+              <li><strong>404 Not Found:</strong> Ticker symbol not available</li>
+              <li><strong>429 Too Many Requests:</strong> Upstream rate limit exceeded</li>
+              <li><strong>500 Server Error:</strong> Internal processing errors</li>
+              <li><strong>Error Format:</strong> JSON: {"error": "descriptive message"}</li>
+            </ul>
+          </div>
+
+          <!-- CSV Format Details -->
+          <div class="bg-orange-50 rounded-lg p-4 border border-orange-200">
+            <div class="font-semibold text-orange-800 mb-2">📊 CSV Format (20 Columns)</div>
+            <div class="text-gray-600 text-xs space-y-1">
+              <div><strong>OHLCV:</strong> ticker,time,open,high,low,close,volume</div>
+              <div><strong>Moving Averages:</strong> ma10,ma20,ma50,ma100,ma200</div>
+              <div><strong>MA Scores:</strong> ma10_score,ma20_score,ma50_score,ma100_score,ma200_score</div>
+              <div><strong>Changes:</strong> close_changed,volume_changed,total_money_changed</div>
+              <div class="text-orange-600"><strong>Note:</strong> All prices stored in full VND (no division)</div>
+            </div>
+          </div>
+
+          <!-- Trading Hours -->
+          <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+            <div class="font-semibold text-teal-800 mb-2">🕐 Trading Hours & Sync</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li><strong>Market Hours:</strong> 9:00-15:00 ICT (UTC+7) Monday-Friday</li>
+              <li><strong>Daily Sync:</strong> Every 15s (trading), 5min (off-hours)</li>
+              <li><strong>Hourly/Minute Sync:</strong> Every 5min (trading), 30min (off-hours)</li>
+              <li><strong>Weekends:</strong> Reduced sync frequency</li>
+              <li><strong>Time Zone:</strong> All timestamps in ICT (Vietnam time)</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tips & Best Practices Section -->
+      <section class="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg shadow-md p-4 md:p-6 border border-green-200">
+        <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">💡 Tips & Best Practices</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-sm">
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">🚀 Performance</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>CSV format is faster for large datasets</li>
+              <li>Use start_date to limit data range</li>
+              <li>Disk cache improves repeat queries</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">📊 Data Quality</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>Check /health for data freshness</li>
+              <li>1m data has limited history</li>
+              <li>Use 1D for long-term analysis</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">🔧 Integration</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>CORS enabled for subdomains</li>
+              <li>JSON format for web apps</li>
+              <li>CSV format for data science tools</li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="font-semibold text-gray-800 mb-2">⚠️ Common Issues</div>
+            <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
+              <li>Check ticker availability first</li>
+              <li>Verify date format (YYYY-MM-DD)</li>
+              <li>Ensure interval matches data</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-6 mt-12">
+      <div class="container mx-auto px-4 text-center text-sm">
+        <p>AI Price Action API Explorer</p>
+        <p class="mt-2">Server: <span id="server-url" class="text-blue-400">http://localhost:3000</span></p>
+      </div>
+    </footer>
+
+    <!-- JavaScript Modules -->
+    <script src="/public/js/utils.js"></script>
+    <script src="/public/js/health.js"></script>
+    <script src="/public/js/groups.js"></script>
+    <script src="/public/js/ticker-explorer.js"></script>
+    <script src="/public/js/analysis.js"></script>
+      <script src="/public/js/sector-analysis.js"></script>
+    <script src="/public/js/volume-profile.js"></script>
+    <script src="/public/js/app.js"></script>
+
+    <!-- Set end_date to today by default -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('end_date').value = today;
+      });
+    </script>
+  </body>
+</html>
