@@ -114,7 +114,9 @@ impl RateLimiter {
         let handle = tokio::spawn(async move {
             loop {
                 sleep(StdDuration::from_millis(refill_interval_ms)).await;
-                sem_clone.add_permits(1);
+                if sem_clone.available_permits() < requests_per_minute as usize {
+                    sem_clone.add_permits(1);
+                }
             }
         });
 

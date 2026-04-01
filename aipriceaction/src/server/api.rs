@@ -157,6 +157,15 @@ pub async fn tickers(
         _ => return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response(),
     };
 
+    // Compute effective limit: user-provided value wins; otherwise default depends on symbol count
+    let effective_limit = params.limit.unwrap_or_else(|| {
+        if symbols.len() == 1 {
+            crate::constants::api::DEFAULT_LIMIT
+        } else {
+            1
+        }
+    });
+
     // Validate interval
     let interval = match NormalizedInterval::parse(
         params.interval.as_deref().unwrap_or("1D"),
@@ -180,33 +189,31 @@ pub async fn tickers(
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
     // Build cache key (excludes view-layer params: legacy, format, cache)
-    let cache_key = build_cache_key(&params, &interval, &symbols);
+    let cache_key = build_cache_key(&params, &interval, &symbols, Some(effective_limit));
 
     // Try cache if enabled
     if params.cache {
-        if let Ok(mut guard) = state.tickers_cache.try_write() {
-            if let Some(cached) = guard.get(&cache_key) {
-                return build_response(cached, params.legacy, params.mode, is_csv);
-            }
-            drop(guard);
+        let mut guard = state.tickers_cache.write().await;
+        if let Some(cached) = guard.get(&cache_key) {
+            return build_response(cached, params.legacy, params.mode, is_csv);
         }
+        drop(guard);
     }
 
     // Cache miss or bypass — fetch from DB
     let result = match interval {
         NormalizedInterval::Native(db_interval) => {
-            fetch_native_tickers(&state, symbols, db_interval, &params).await
+            fetch_native_tickers(&state, symbols, db_interval, &params, Some(effective_limit)).await
         }
         NormalizedInterval::Aggregated(agg) => {
-            fetch_aggregated_tickers(&state, symbols, agg, &params).await
+            fetch_aggregated_tickers(&state, symbols, agg, &params, effective_limit).await
         }
     };
 
     // Store in cache
     if params.cache {
-        if let Ok(mut guard) = state.tickers_cache.try_write() {
-            guard.put(cache_key, &result);
-        }
+        let mut guard = state.tickers_cache.write().await;
+        guard.put(cache_key, &result);
     }
 
     build_response(result, params.legacy, params.mode, is_csv)
@@ -217,6 +224,7 @@ fn build_cache_key(
     params: &TickersQuery,
     interval: &NormalizedInterval,
     symbols: &[String],
+    effective_limit: Option<i64>,
 ) -> String {
     let source = params.mode.source_label();
     let interval_str = match interval {
@@ -234,7 +242,7 @@ fn build_cache_key(
         }
     };
 
-    let limit = params.limit.map(|l| l.to_string()).unwrap_or_default();
+    let limit = effective_limit.map(|l| l.to_string()).unwrap_or_default();
     let start = params.start_date.as_deref().unwrap_or("");
     let end = params.end_date.as_deref().unwrap_or("");
 
@@ -247,6 +255,7 @@ async fn fetch_native_tickers(
     symbols: Vec<String>,
     interval: &str,
     params: &TickersQuery,
+    limit: Option<i64>,
 ) -> BTreeMap<String, Vec<StockDataResponse>> {
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);
@@ -259,7 +268,7 @@ async fn fetch_native_tickers(
         source,
         &symbols,
         interval,
-        params.limit,
+        limit,
         start_time,
         end_time,
     )
@@ -298,6 +307,7 @@ async fn fetch_aggregated_tickers(
     symbols: Vec<String>,
     agg: crate::models::aggregated_interval::AggregatedInterval,
     params: &TickersQuery,
+    limit: i64,
 ) -> BTreeMap<String, Vec<StockDataResponse>> {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
@@ -305,7 +315,6 @@ async fn fetch_aggregated_tickers(
     let source = params.mode.source_label();
 
     // Fetch source data with lookback buffer for MA200
-    let limit = params.limit.unwrap_or(100);
     let lookback = limit + crate::constants::api::AGGREGATED_LOOKBACK;
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);

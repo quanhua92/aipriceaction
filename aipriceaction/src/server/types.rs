@@ -50,7 +50,7 @@ fn default_cache() -> bool {
 }
 
 fn default_limit() -> Option<i64> {
-    Some(crate::constants::api::DEFAULT_LIMIT)
+    None
 }
 
 /// Query parameters for GET /tickers/group
