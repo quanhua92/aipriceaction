@@ -9,29 +9,53 @@ Vietnamese stock market and cryptocurrency data management system with PostgreSQ
 ```bash
 cd aipriceaction
 
-# Create .env file (optional, for worker configuration)
+# Create .env from template
 cp .env.example .env
 
-# Build and start (includes PostgreSQL + pgvector)
+# Build and start (includes PostgreSQL 18 + pgvector)
 docker compose up -d
 
 # View logs
 docker logs aipriceaction -f
+docker logs aipriceaction-postgres -f
 ```
 
 This starts two containers:
 - **aipriceaction** -- API server on port 3000, runs migrations on startup
-- **postgres** -- PostgreSQL 18 with pgvector on port 5432
+- **aipriceaction-postgres** -- PostgreSQL 18 with pgvector on port 5432
+
+Edit `.env` to configure `DATABASE_URL` (required by the API server) and enable or disable background workers:
+
+```bash
+# Disable crypto workers
+# BINANCE_WORKERS=false
+```
+
+After changing `.env`, restart: `docker compose up -d`.
 
 ### Build from source
 
+Requires a running PostgreSQL instance.
+
 ```bash
 cd aipriceaction
+
+# Create .env and set DATABASE_URL to your PostgreSQL instance
+cp .env.example .env
+# Edit .env — update DATABASE_URL, e.g.:
+#   DATABASE_URL=postgresql://user:pass@localhost:5432/aipriceaction
+
+# Build and run
 cargo build --release
 ./target/release/aipriceaction serve --port 3000
 ```
 
-Requires PostgreSQL running and `DATABASE_URL` set (e.g. `postgres://user:pass@localhost:5432/aipriceaction`).
+If using the Docker PostgreSQL container for local dev, you can start it standalone:
+
+```bash
+cd aipriceaction
+docker compose up -d postgres
+```
 
 ## CLI Commands
 
@@ -96,8 +120,8 @@ curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 | `RUST_LOG` | No | `info` | Log level |
 | `VCI_WORKERS` | No | `true` | Enable VN stock data workers |
 | `VCI_DIVIDEND_WORKER` | No | `true` | Enable dividend detection worker |
-| `BINANCE_WORKERS` | No | `false` | Enable crypto data workers |
-| `HTTP_PROXIES` | No | -- | Comma-separated proxy list |
+| `BINANCE_WORKERS` | No | `true` | Enable crypto data workers |
+| `HTTP_PROXIES` | No | -- | Comma-separated proxy list (VCI & Binance) |
 
 ## Database
 
