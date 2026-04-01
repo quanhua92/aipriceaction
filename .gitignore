@@ -3,20 +3,11 @@
 .env.*
 !.env.example
 !.env.test
-!.env.public-node-example
-.idx/.data
-*Zone.Identifier
 
 # Temporary Files
 /.sqlx/
 local/
-.fastembed_cache
 tmp
-combined*
-combined*
-temp*.sh
-worker.pid
-server.pid
 *.log
 
 # Compiled Files and Executables
@@ -39,60 +30,24 @@ docker-compose.local.yml
 playwright-report
 test-results
 node_modules
-.DS_Store
 dist
 dist-ssr
 *.local
-count.txt
-.env
 
 # Build Output
 .output
 .vercel
 .netlify
 .wrangler
-.svelte-kit
 build/
 
 # OS-specific Files
 .DS_Store
 Thumbs.db
 
-# Vite Config Artifacts
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
-
 # Editor
 .vscode/settings.json
 .tanstack
 
-# Market Data (completely ignored)
-market_data/
-
-# Crypto Data (completely ignored)
-crypto_data/
-
-# Upload Data (gitignore all uploaded files, keep directory structure)
-uploads/*
-!uploads/.gitkeep
-
-# Crypto Scraper
-scripts/crypto/node_modules
-
 # Database backups
 backups/
-
-# Python Virtual Environments
-venv/
-env/
-.venv/
-
-# Binance Historical Data
-spot/
-
-# Reference projects (external git repos)
-references/
-market_data.tar.gz
-crypto_data.tar.gz
-spot.tar.gz
-scripts/__pycache__/
