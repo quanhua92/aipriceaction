@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickers SET status = 'full-download-requested' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9b2ada24edd5bdd2904e627704974b679cea567d6c47ae29dc87bc303f0c8d54"
+}

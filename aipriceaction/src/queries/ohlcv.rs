@@ -719,19 +719,19 @@ pub async fn delete_ohlcv_and_set_status(
     Ok(())
 }
 
-/// Set a ticker's status to 'ready' only if it is currently NULL (newly inserted).
+/// Set a new ticker's status to 'full-download-requested' so the dividend worker
+/// picks it up for a full historical download. Only applies to source='vn' tickers.
 /// Returns the number of rows updated (0 or 1).
-/// Only applies to source='vn' tickers (VN stocks get ready immediately; crypto uses full-download-requested).
 pub async fn set_ticker_ready_if_new(pool: &PgPool, ticker: &str) -> sqlx::Result<u64> {
     let result = sqlx::query!(
-        "UPDATE tickers SET status = 'ready' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
+        "UPDATE tickers SET status = 'full-download-requested' WHERE source = 'vn' AND ticker = $1 AND status IS NULL",
         ticker
     )
     .execute(pool)
     .await?;
     let affected = result.rows_affected();
     if affected > 0 {
-        tracing::info!(ticker, source = "vn", "set_ticker_ready_if_new: set status = ready");
+        tracing::info!(ticker, source = "vn", "set_ticker_ready_if_new: set status = full-download-requested");
     }
     Ok(affected)
 }
@@ -831,7 +831,7 @@ pub async fn schedule_next_run(
     let sql = format!(
         r#"UPDATE tickers SET {next_col} = NOW() + (
             CASE
-                WHEN daily_cv IS NULL THEN '1 second'::INTERVAL
+                WHEN daily_cv IS NULL THEN $8::INTERVAL
                 WHEN daily_cv >= $2 THEN $3::INTERVAL
                 WHEN daily_cv >= $4 THEN $5::INTERVAL
                 WHEN daily_cv >= $6 THEN $7::INTERVAL
@@ -839,9 +839,13 @@ pub async fn schedule_next_run(
             END
         )
         FROM (
-            SELECT (close * volume) as daily_cv
-            FROM ohlcv WHERE ticker_id = $1 AND interval = '1D'
-            ORDER BY time DESC LIMIT 1 OFFSET 1
+            SELECT daily_cv FROM (
+                SELECT (close * volume) as daily_cv
+                FROM ohlcv WHERE ticker_id = $1 AND interval = '1D'
+                ORDER BY time DESC LIMIT 1 OFFSET 1
+            ) t
+            UNION ALL SELECT NULL
+            LIMIT 1
         ) sub
         WHERE id = $1
         RETURNING {next_col}"#
