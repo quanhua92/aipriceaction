@@ -60,6 +60,21 @@ pub async fn run(pool: PgPool) {
                     handles.spawn(async move {
                         let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
 
+                        // Check existing daily count before fetching — the fetch itself
+                        // adds records so checking after would always show >= 100.
+                        let needs_full_download = match ohlcv::count_ohlcv(&pool, "vn", Some(&ticker), Some("1D")).await {
+                            Ok(count) if count < 3 => {
+                                tracing::warn!(ticker, count, "daily records < 3, requesting full download");
+                                let _ = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await;
+                                true
+                            }
+                            _ => false,
+                        };
+
+                        if needs_full_download {
+                            return false;
+                        }
+
                         match provider.get_history(&ticker, "1D", vci_worker::DAILY_COUNTBACK, None).await {
                             Ok(data) => {
                                 if vci_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
@@ -67,14 +82,6 @@ pub async fn run(pool: PgPool) {
                                     return false;
                                 }
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
-
-                                // Flag for full download if daily data is insufficient
-                                if let Ok(count) = ohlcv::count_ohlcv(&pool, "vn", Some(&ticker), Some("1D")).await {
-                                    if count < 3 {
-                                        tracing::warn!(ticker, count, "daily records < 3, requesting full download");
-                                        let _ = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await;
-                                    }
-                                }
 
                                 // Schedule next daily run based on money-flow tier
                                 match ohlcv::schedule_next_run(

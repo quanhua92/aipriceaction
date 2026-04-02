@@ -57,19 +57,26 @@ pub async fn run(pool: PgPool) {
                     handles.spawn(async move {
                         let ticker_id = binance_shared::ensure_crypto_ticker(&pool, "crypto", &ticker).await;
 
+                        // Check existing daily count before fetching — the fetch itself
+                        // adds records so checking after would always show >= limit.
+                        let needs_full_download = match ohlcv::count_ohlcv(&pool, "crypto", Some(&ticker), Some("1D")).await {
+                            Ok(count) if count < 3 => {
+                                tracing::warn!(ticker, count, ticker_id, "daily: records < 3, requesting full download");
+                                let _ = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await;
+                                true
+                            }
+                            _ => false,
+                        };
+
+                        if needs_full_download {
+                            return false;
+                        }
+
                         let start_time = ohlcv::get_last_time(&pool, ticker_id, "1D").await.ok().flatten();
 
                         match provider.get_history_since(&ticker, "1d", binance_worker::DAILY_LIMIT, start_time).await {
                             Ok(data) => {
                                 binance_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
-
-                                // Flag for full download if daily data is insufficient
-                                if let Ok(count) = ohlcv::count_ohlcv(&pool, "crypto", Some(&ticker), Some("1D")).await {
-                                    if count < 3 {
-                                        tracing::warn!(ticker, count, ticker_id, "daily: records < 3, requesting full download");
-                                        let _ = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-requested").await;
-                                    }
-                                }
 
                                 match binance_shared::schedule_fixed_interval(
                                     &pool, ticker_id, "next_1d",
