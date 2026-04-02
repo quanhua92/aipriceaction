@@ -682,8 +682,9 @@ pub fn run() {
                 tracing::info!("Connected with {} client(s)", provider.client_count());
 
                 // Detect if ticker is an index (indices don't have company/financial data)
-                let index_tickers = ["VNINDEX", "VN30", "HNX", "UPCOM", "HNX30", "UPCOMINDEX"];
-                let is_index = index_tickers.iter().any(|t| t.eq_ignore_ascii_case(&ticker.as_str()));
+                let is_index = crate::constants::vci_worker::INDEX_TICKERS
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case(&ticker.as_str()));
 
                 // 2. OHLCV test for each interval
                 tracing::info!("{}", "─".repeat(60));

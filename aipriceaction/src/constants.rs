@@ -67,7 +67,7 @@ pub mod vci_worker {
     pub const MINUTE_INITIAL_DELAY_SECS: u64 = 300;
 
     /// Index tickers (no dividend detection)
-    pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "HNX", "UPCOM"];
+    pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "VN30F1M"];
 
     /// Concurrent API batches based on VCI client count.
     /// 3 concurrent requests per client, each with its own rate limiter.

@@ -10,7 +10,7 @@ use crate::queries;
 
 /// Load the VN ticker list from ticker_group.json.
 ///
-/// Flattens all sector groups, prepends VNINDEX/VN30, deduplicates.
+/// Flattens all sector groups, prepends INDEX_TICKERS, deduplicates.
 pub fn load_vn_tickers() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let content = std::fs::read_to_string("ticker_group.json")?;
     let groups: HashMap<String, Vec<String>> = serde_json::from_str(&content)?;
@@ -19,7 +19,7 @@ pub fn load_vn_tickers() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut tickers = Vec::new();
 
     // Prepend index tickers
-    for &idx in &["VNINDEX", "VN30"] {
+    for &idx in vci_worker::INDEX_TICKERS {
         if seen.insert(idx.to_string()) {
             tickers.push(idx.to_string());
         }
