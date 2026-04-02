@@ -122,6 +122,7 @@ curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 | `VCI_DIVIDEND_WORKER` | No | `true` | Enable dividend detection worker |
 | `BINANCE_WORKERS` | No | `true` | Enable crypto data workers |
 | `HTTP_PROXIES` | No | -- | Comma-separated proxy list (VCI & Binance) |
+| `CORS_ORIGINS` | No | `https://aipriceaction.com` | Comma-separated allowed CORS origins |
 
 ## Database
 

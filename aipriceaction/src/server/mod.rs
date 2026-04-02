@@ -12,7 +12,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::limit::RequestBodyLimitLayer;
-use axum::http::{HeaderValue, HeaderName};
+use axum::http::{HeaderValue, HeaderName, Method};
 use axum::response::Response;
 use axum::middleware::{self, Next};
 use axum::extract::Request;
@@ -148,7 +148,35 @@ pub fn create_app(pool: PgPool) -> axum::Router {
         .layer(TimeoutLayer::new(Duration::from_secs(180)))
         .layer(middleware::from_fn(add_security_headers))
         .layer(CompressionLayer::new())
-        .layer(CorsLayer::permissive())
+        .layer(build_cors_layer())
+}
+
+fn build_cors_layer() -> CorsLayer {
+    let origins_str = std::env::var("CORS_ORIGINS").unwrap_or_else(|_| "https://aipriceaction.com".to_string());
+
+    if origins_str.trim() == "*" {
+        tracing::info!("CORS: permissive mode (all origins allowed)");
+        return CorsLayer::permissive();
+    }
+
+    let origins: Vec<HeaderValue> = origins_str
+        .split(',')
+        .filter_map(|s| HeaderValue::from_str(s.trim()).ok())
+        .collect();
+
+    if origins.is_empty() {
+        tracing::info!("CORS: no valid origins parsed, falling back to permissive mode");
+        return CorsLayer::permissive();
+    }
+
+    tracing::info!("CORS: allowed origins = {:?}", origins_str);
+    CorsLayer::new()
+        .allow_origin(origins)
+        .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
+        .allow_headers([
+            HeaderName::from_static("content-type"),
+            HeaderName::from_static("authorization"),
+        ])
 }
 
 fn analysis_routes() -> axum::Router<Arc<AppState>> {
