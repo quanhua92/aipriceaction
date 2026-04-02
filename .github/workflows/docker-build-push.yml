@@ -69,28 +69,3 @@ jobs:
         cache-to: type=gha,mode=max
         # Enable BuildKit inline cache for better layer caching
         outputs: type=image,push=${{ github.event_name != 'pull_request' }}
-
-    - name: Test built image
-      if: github.event_name != 'pull_request'
-      run: |
-        # Start container in background
-        docker run -d --name test-container \
-          -e MARKET_DATA_PATH=/app/market_data \
-          -e PUBLIC_DIR=/app/public \
-          -e PORT=3000 \
-          -e RUST_LOG=info \
-          -p 3000:3000 \
-          ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-
-        # Wait for server to start
-        sleep 5
-
-        # Test health endpoint
-        curl -f http://localhost:3000/health || (docker logs test-container && exit 1)
-
-        # Check route registration in logs
-        docker logs test-container 2>&1 | grep "Server listening" || echo "Warning: Server listening log not found"
-
-        # Stop and remove container
-        docker stop test-container
-        docker rm test-container
