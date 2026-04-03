@@ -49,7 +49,7 @@ pub async fn run(pool: PgPool) {
             tracing::info!("VCI daily worker: syncing {} due tickers (trading={})", tickers.len(), trading);
 
             let mult = if trading { 1 } else { vci_worker::OFF_HOURS_MULTIPLIER };
-            let tier_secs: [i64; 4] = priority::DAILY_SECS.map(|s| s * mult);
+            let tier_secs: [i64; 4] = priority::DAILY_SECS.map(|s| (s * mult).min(vci_worker::MAX_SCHEDULE_SECS));
             let concurrency = vci_worker::concurrent_batches(provider.client_count());
             for chunk in tickers.chunks(concurrency) {
                 let mut handles = tokio::task::JoinSet::new();

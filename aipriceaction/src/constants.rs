@@ -1,5 +1,7 @@
 /// VCI worker timing and configuration constants.
 pub mod vci_worker {
+    /// Hard cap on next_* schedule delay regardless of tier or off-hours multiplier.
+    pub const MAX_SCHEDULE_SECS: i64 = 900; // 15 minutes
     /// Daily worker: loop interval during trading hours
     pub const DAILY_LOOP_TRADE_SECS: u64 = 15;
     /// Daily worker: loop interval outside trading hours
