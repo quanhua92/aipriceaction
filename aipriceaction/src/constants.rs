@@ -64,9 +64,9 @@ pub mod vci_worker {
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
 
     /// Hourly worker: initial delay before first sync
-    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 300;
+    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 60;
     /// Minute worker: initial delay before first sync
-    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 300;
+    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 60;
 
     /// Index tickers (no dividend detection)
     pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "VN30F1M"];
@@ -118,9 +118,9 @@ pub mod binance_worker {
     pub const MINUTE_LOOP_SECS: u64 = 600;
 
     /// Hourly worker: initial delay before first sync
-    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 300;
+    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 60;
     /// Minute worker: initial delay before first sync
-    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 300;
+    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 60;
 
     /// Cooldown when rate limited (HTTP 429/403) detected in a batch
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
