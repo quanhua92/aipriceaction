@@ -67,10 +67,14 @@ impl Aggregator {
     }
 
     /// Aggregate hourly data (1h → 4h).
+    ///
+    /// `offset_hours` shifts bucket alignment. For VN stocks use 2 (market open
+    /// 09:00 ICT = 02:00 UTC), for crypto use 0 (midnight UTC alignment).
     pub fn aggregate_hourly_data(
         ticker: &str,
         data: Vec<OhlcvRow>,
         interval: AggregatedInterval,
+        offset_hours: i64,
     ) -> Vec<AggregatedOhlcv> {
         if data.is_empty() {
             return vec![];
@@ -82,12 +86,13 @@ impl Aggregator {
         };
 
         debug!(
-            "Aggregating {} hourly records into {} buckets",
+            "Aggregating {} hourly records into {} buckets (offset {}h)",
             data.len(),
-            interval
+            interval,
+            offset_hours
         );
 
-        let buckets = Self::group_by_hour_bucket(data, bucket_hours);
+        let buckets = Self::group_by_hour_bucket(data, bucket_hours, offset_hours);
 
         let mut result: Vec<AggregatedOhlcv> = buckets
             .into_iter()
@@ -209,10 +214,11 @@ impl Aggregator {
     fn group_by_hour_bucket(
         data: Vec<OhlcvRow>,
         bucket_hours: i64,
+        offset_hours: i64,
     ) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
         let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
-            let bucket_time = Self::bucket_hour(record.time, bucket_hours);
+            let bucket_time = Self::bucket_hour(record.time, bucket_hours, offset_hours);
             buckets.entry(bucket_time).or_default().push(record);
         }
         buckets
@@ -260,12 +266,15 @@ impl Aggregator {
         .unwrap()
     }
 
-    fn bucket_hour(time: DateTime<Utc>, bucket_hours: i64) -> DateTime<Utc> {
-        let hours_since_midnight = time.hour() as i64;
+    fn bucket_hour(time: DateTime<Utc>, bucket_hours: i64, offset_hours: i64) -> DateTime<Utc> {
+        // Shift time back by offset, bucket to midnight-aligned boundaries, then shift forward.
+        let shifted = time - Duration::hours(offset_hours);
+        let hours_since_midnight = shifted.hour() as i64;
         let bucket_start_hour = (hours_since_midnight / bucket_hours) * bucket_hours;
 
-        Utc.with_ymd_and_hms(time.year(), time.month(), time.day(), bucket_start_hour as u32, 0, 0)
+        Utc.with_ymd_and_hms(shifted.year(), shifted.month(), shifted.day(), bucket_start_hour as u32, 0, 0)
             .unwrap()
+            + Duration::hours(offset_hours)
     }
 
     fn bucket_week(time: DateTime<Utc>) -> DateTime<Utc> {

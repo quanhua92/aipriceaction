@@ -321,6 +321,10 @@ async fn fetch_aggregated_tickers(
 
     let is_daily = base_interval == "1D";
 
+    // Hourly offset: VN stocks align to market open (09:00 ICT = 02:00 UTC),
+    // crypto aligns to midnight UTC.
+    let hourly_offset: i64 = if params.mode == Mode::Vn { 2 } else { 0 };
+
     // Batch-fetch raw OHLCV rows for all target tickers in a single query
     let raw_map = match ohlcv::get_ohlcv_batch_raw(
         &state.pool,
@@ -348,7 +352,7 @@ async fn fetch_aggregated_tickers(
                 Aggregator::aggregate_daily_data(&ticker, rows, agg)
             }
             crate::models::interval::Interval::Hourly => {
-                Aggregator::aggregate_hourly_data(&ticker, rows, agg)
+                Aggregator::aggregate_hourly_data(&ticker, rows, agg, hourly_offset)
             }
             _ => Aggregator::aggregate_minute_data(&ticker, rows, agg),
         };
