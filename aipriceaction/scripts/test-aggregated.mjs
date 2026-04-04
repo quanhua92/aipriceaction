@@ -1,7 +1,7 @@
 /**
  * Test suite for aggregated interval endpoints on the PostgreSQL backend.
  *
- * Tests 5m, 15m, 30m, 1W, 2W, 1M aggregation, CSV export,
+ * Tests 5m, 15m, 30m, 4h, 1W, 2W, 1M aggregation, CSV export,
  * limit handling, multi-ticker, date range filtering.
  *
  * Usage:

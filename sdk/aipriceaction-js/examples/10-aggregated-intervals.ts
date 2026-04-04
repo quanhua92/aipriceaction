@@ -1,9 +1,10 @@
 /**
  * Example 10: Aggregated Intervals
  *
- * Demonstrates using aggregated intervals (5m, 15m, 30m, 1W, 2W, 1M).
+ * Demonstrates using aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M).
  * Aggregated intervals compute OHLCV data from base intervals:
  * - Minute-based (5m, 15m, 30m): Aggregated from 1m data
+ * - Hourly-based (4h): Aggregated from 1h data
  * - Day-based (1W, 2W, 1M): Aggregated from 1D data
  *
  * Run: pnpx tsx examples/10-aggregated-intervals.ts
@@ -175,6 +176,7 @@ async function main() {
     console.log("✅ Aggregated intervals examples completed successfully!");
     console.log("\n📚 Key Points:");
     console.log("   • Minute aggregations (5m, 15m, 30m) are computed from 1m base data");
+    console.log("   • Hourly aggregation (4h) is computed from 1h base data");
     console.log("   • Day aggregations (1W, 2W, 1M) are computed from 1D base data");
     console.log("   • OHLCV: open=first, high=max, low=min, close=last, volume=sum");
     console.log("   • MA indicators: taken from last record (end-of-period state)");

@@ -41,7 +41,7 @@
           <div class="bg-white rounded p-3 md:p-4 shadow-sm">
             <div class="text-xs md:text-sm text-gray-600 font-medium mb-1">Time Intervals</div>
             <div class="text-xl md:text-2xl font-bold text-purple-600">9</div>
-            <div class="text-xs text-gray-500 mt-1">Base: 1D, 1H, 1m | Aggregated: 5m, 15m, 30m, 1W, 2W, 1M</div>
+            <div class="text-xs text-gray-500 mt-1">Base: 1D, 1H, 1m | Aggregated: 5m, 15m, 30m, 4h, 1W, 2W, 1M</div>
           </div>
         </div>
       </section>
@@ -116,6 +116,9 @@
                 <option value="5m">5 Minutes (5m)</option>
                 <option value="15m">15 Minutes (15m)</option>
                 <option value="30m">30 Minutes (30m)</option>
+              </optgroup>
+              <optgroup label="Hour Aggregations">
+                <option value="4h">4 Hours (4h)</option>
               </optgroup>
               <optgroup label="Day Aggregations">
                 <option value="1W">Weekly (1W)</option>
@@ -786,6 +789,7 @@
                   <div><code>interval</code> - Time interval (optional, default: 1D)</div>
                   <div class="ml-4 text-gray-600">Base intervals: 1D, 1H, 1m (raw data)</div>
                   <div class="ml-4 text-gray-600">Minute aggregations: 5m, 15m, 30m (computed from 1m)</div>
+                  <div class="ml-4 text-gray-600">Hour aggregation: 4h (computed from 1h)</div>
                   <div class="ml-4 text-gray-600">Day aggregations: 1W, 2W, 1M (computed from 1D)</div>
                   <div><code>start_date</code> - Start date YYYY-MM-DD (optional, overrides limit)</div>
                   <div><code>end_date</code> - End date YYYY-MM-DD (optional, defaults to today)</div>
@@ -991,6 +995,7 @@
             <ul class="space-y-1 text-gray-600 text-xs list-disc list-inside">
               <li><strong>Aggregated Intervals:</strong> Computed on-demand from base data</li>
               <li><strong>5m/15m/30m:</strong> Derived from 1m data (OHLCV aggregation)</li>
+              <li><strong>4h:</strong> Derived from 1h data (OHLCV aggregation)</li>
               <li><strong>1W/2W/1M:</strong> Derived from 1D data (weekly/monthly aggregation)</li>
               <li><strong>Processing Time:</strong> 100-500ms for aggregated intervals</li>
               <li><strong>Indicators:</strong> 20 technical indicators calculated during sync</li>

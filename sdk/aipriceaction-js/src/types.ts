@@ -14,6 +14,8 @@ export enum Interval {
   Minutes5 = "5m",
   Minutes15 = "15m",
   Minutes30 = "30m",
+  // Aggregated intervals (hourly-based, computed from 1h)
+  Hours4 = "4h",
   // Aggregated intervals (day-based, computed from 1D)
   Weekly = "1W",
   BiWeekly = "2W",

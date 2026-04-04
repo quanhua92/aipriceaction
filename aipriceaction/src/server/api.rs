@@ -343,10 +343,14 @@ async fn fetch_aggregated_tickers(
     let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
 
     for (ticker, rows) in raw_map {
-        let aggregated = if is_daily {
-            Aggregator::aggregate_daily_data(&ticker, rows, agg)
-        } else {
-            Aggregator::aggregate_minute_data(&ticker, rows, agg)
+        let aggregated = match agg.base_interval() {
+            crate::models::interval::Interval::Daily => {
+                Aggregator::aggregate_daily_data(&ticker, rows, agg)
+            }
+            crate::models::interval::Interval::Hourly => {
+                Aggregator::aggregate_hourly_data(&ticker, rows, agg)
+            }
+            _ => Aggregator::aggregate_minute_data(&ticker, rows, agg),
         };
         per_ticker.insert(ticker, aggregated);
     }

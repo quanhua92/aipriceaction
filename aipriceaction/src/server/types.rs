@@ -91,7 +91,7 @@ impl NormalizedInterval {
 
     /// Display string for error messages.
     pub fn all_valid() -> &'static str {
-        "1D, 1H, 1m, 5m, 15m, 30m, 1W, 2W, 1M (or daily, hourly, minute)"
+        "1D, 1H, 1m, 5m, 15m, 30m, 4h, 1W, 2W, 1M (or daily, hourly, minute)"
     }
 }
 

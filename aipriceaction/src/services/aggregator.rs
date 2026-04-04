@@ -66,6 +66,38 @@ impl Aggregator {
         result
     }
 
+    /// Aggregate hourly data (1h → 4h).
+    pub fn aggregate_hourly_data(
+        ticker: &str,
+        data: Vec<OhlcvRow>,
+        interval: AggregatedInterval,
+    ) -> Vec<AggregatedOhlcv> {
+        if data.is_empty() {
+            return vec![];
+        }
+
+        let bucket_hours = match interval.bucket_hours() {
+            Some(hours) => hours,
+            None => return vec![],
+        };
+
+        debug!(
+            "Aggregating {} hourly records into {} buckets",
+            data.len(),
+            interval
+        );
+
+        let buckets = Self::group_by_hour_bucket(data, bucket_hours);
+
+        let mut result: Vec<AggregatedOhlcv> = buckets
+            .into_iter()
+            .map(|(bucket_time, records)| Self::aggregate_ohlcv(ticker, records, bucket_time))
+            .collect();
+
+        result.sort_by_key(|r| r.time);
+        result
+    }
+
     /// Aggregate daily data (1D → 1W/2W/1M).
     pub fn aggregate_daily_data(
         ticker: &str,
@@ -174,6 +206,18 @@ impl Aggregator {
         buckets
     }
 
+    fn group_by_hour_bucket(
+        data: Vec<OhlcvRow>,
+        bucket_hours: i64,
+    ) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
+        let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
+        for record in data {
+            let bucket_time = Self::bucket_hour(record.time, bucket_hours);
+            buckets.entry(bucket_time).or_default().push(record);
+        }
+        buckets
+    }
+
     fn group_by_week(data: Vec<OhlcvRow>) -> HashMap<DateTime<Utc>, Vec<OhlcvRow>> {
         let mut buckets: HashMap<DateTime<Utc>, Vec<OhlcvRow>> = HashMap::new();
         for record in data {
@@ -214,6 +258,14 @@ impl Aggregator {
             0,
         )
         .unwrap()
+    }
+
+    fn bucket_hour(time: DateTime<Utc>, bucket_hours: i64) -> DateTime<Utc> {
+        let hours_since_midnight = time.hour() as i64;
+        let bucket_start_hour = (hours_since_midnight / bucket_hours) * bucket_hours;
+
+        Utc.with_ymd_and_hms(time.year(), time.month(), time.day(), bucket_start_hour as u32, 0, 0)
+            .unwrap()
     }
 
     fn bucket_week(time: DateTime<Utc>) -> DateTime<Utc> {

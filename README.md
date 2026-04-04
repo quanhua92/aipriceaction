@@ -102,7 +102,7 @@ curl "http://localhost:3000/tickers?symbol=VCB&symbol=FPT&interval=1D"
 # Date range
 curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&start_date=2024-01-01&end_date=2024-12-31"
 
-# Aggregated intervals (5m, 15m, 30m, 1W, 2W, 1M)
+# Aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M)
 curl "http://localhost:3000/tickers?symbol=ETHUSDT&mode=crypto&interval=5m&limit=100"
 
 # CSV export
