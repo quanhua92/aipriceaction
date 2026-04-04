@@ -1,5 +1,7 @@
 # aipriceaction
 
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web)
+
 Vietnamese stock market and cryptocurrency data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
 
 ## Quick Start
@@ -136,7 +138,7 @@ curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 When enabled via environment variables, the server runs background sync workers:
 
 - **VCI daily worker** -- Syncs daily VN stock data every 15s during trading hours (9:00-15:00 ICT)
-- **VCI hourly/minute worker** -- Syncs hourly and minute data every 5min during trading hours
+- **VCI hourly/minute worker** -- Syncs hourly and minute data every minute during trading hours
 - **VCI dividend worker** -- Detects dividend-adjusted prices and re-downloads full history
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
 
