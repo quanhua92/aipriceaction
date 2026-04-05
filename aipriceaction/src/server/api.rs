@@ -428,6 +428,25 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
     }
 }
 
+// ── /tickers/name ──
+
+pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
+    let result: Result<BTreeMap<String, String>, Box<dyn std::error::Error>> = match params.mode {
+        Mode::Vn => load_vn_names(),
+        Mode::Crypto => load_crypto_names(),
+        Mode::Yahoo => load_yahoo_names(),
+    };
+
+    match result {
+        Ok(names) => (StatusCode::OK, Json(names)).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
 // ── /explorer ──
 
 pub async fn explorer_handler() -> Response {
@@ -658,4 +677,54 @@ fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::err
     let mut map = BTreeMap::new();
     map.insert("GLOBAL".to_string(), symbols);
     Ok(map)
+}
+
+// ── Name loaders ──
+
+fn load_vn_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("ticker_group.json")?;
+    let content = std::fs::read_to_string(&path)?;
+    let groups: BTreeMap<String, Vec<String>> = serde_json::from_str(&content)?;
+
+    let mut names = BTreeMap::new();
+    for tickers in groups.values() {
+        for ticker in tickers {
+            if !names.contains_key(ticker) {
+                names.insert(ticker.clone(), ticker.clone());
+            }
+        }
+    }
+    Ok(names)
+}
+
+fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("binance_tickers.json")?;
+    let content = std::fs::read_to_string(&path)?;
+    let raw: serde_json::Value = serde_json::from_str(&content)?;
+
+    let mut names = BTreeMap::new();
+    if let Some(data) = raw["data"].as_array() {
+        for item in data {
+            if let (Some(symbol), Some(name)) = (item["symbol"].as_str(), item["name"].as_str()) {
+                names.insert(symbol.to_string(), name.to_string());
+            }
+        }
+    }
+    Ok(names)
+}
+
+fn load_yahoo_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("global_tickers.json")?;
+    let content = std::fs::read_to_string(&path)?;
+    let raw: serde_json::Value = serde_json::from_str(&content)?;
+
+    let mut names = BTreeMap::new();
+    if let Some(data) = raw["data"].as_array() {
+        for item in data {
+            if let (Some(symbol), Some(name)) = (item["symbol"].as_str(), item["name"].as_str()) {
+                names.insert(symbol.to_string(), name.to_string());
+            }
+        }
+    }
+    Ok(names)
 }
