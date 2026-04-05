@@ -104,6 +104,18 @@ pub enum Commands {
     },
     /// Test SOCKS5 proxy connectivity against Yahoo Finance API
     TestProxy,
+    /// Fetch company info and financial ratios for VN tickers from VCI
+    GenerateCompanyInfo {
+        /// Optional: query a single ticker (e.g. VCB)
+        #[arg(long)]
+        ticker: Option<String>,
+        /// Rate limit per VCI client (default: 30)
+        #[arg(long, default_value = "30")]
+        rate_limit: u32,
+        /// Save fetched data to company_info.json
+        #[arg(long)]
+        save: bool,
+    },
 }
 
 pub fn run() {
@@ -1446,6 +1458,12 @@ pub fn run() {
         }
         Commands::TestProxy => {
             crate::test_proxy::run();
+        }
+        Commands::GenerateCompanyInfo { ticker, rate_limit, save } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                crate::generate_company_info::run(ticker, rate_limit, save).await;
+            });
         }
     }
 }

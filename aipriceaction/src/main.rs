@@ -1,6 +1,7 @@
 mod cli;
 mod constants;
 mod test_proxy;
+mod generate_company_info;
 mod csv;
 mod db;
 mod models;
