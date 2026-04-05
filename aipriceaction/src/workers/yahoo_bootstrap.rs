@@ -217,7 +217,7 @@ pub async fn run(pool: PgPool) {
                         }
                     }
 
-                    sleep(Duration::from_secs(yahoo_worker::BOOTSTRAP_LOOP_SECS)).await;
+                    sleep(Duration::from_secs(yahoo_worker::BOOTSTRAP_CHUNK_SLEEP_SECS)).await;
                 }
 
                 tracing::info!(ticker, interval = db_interval, total = total_saved, "yahoo bootstrap interval done");

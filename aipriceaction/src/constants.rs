@@ -187,6 +187,8 @@ pub mod yahoo_worker {
     pub const BOOTSTRAP_HOURLY_CHUNK_DAYS: i64 = 30;
     pub const BOOTSTRAP_MINUTE_CHUNK_DAYS: i64 = 7;
     pub const BOOTSTRAP_LOOP_SECS: u64 = 60;
+    /// Sleep between chunk fetches while actively downloading a ticker
+    pub const BOOTSTRAP_CHUNK_SLEEP_SECS: u64 = 2;
     /// Earliest year for hourly/minute bootstrap data
     pub const BOOTSTRAP_HM_FLOOR_YEAR: i32 = 2023;
     /// Yahoo Finance only serves hourly data within this many days from now
