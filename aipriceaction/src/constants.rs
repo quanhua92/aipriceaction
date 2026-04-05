@@ -189,6 +189,8 @@ pub mod yahoo_worker {
     pub const BOOTSTRAP_LOOP_SECS: u64 = 60;
     /// Earliest year for hourly/minute bootstrap data
     pub const BOOTSTRAP_HM_FLOOR_YEAR: i32 = 2023;
+    /// Yahoo Finance only serves hourly/minute data within this many days from now
+    pub const BOOTSTRAP_HM_LOOKBACK_DAYS: i64 = 730;
 }
 
 /// API server constants.
