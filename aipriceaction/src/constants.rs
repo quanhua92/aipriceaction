@@ -113,9 +113,9 @@ pub mod binance_worker {
     /// Daily worker: loop interval (24/7, no trading hours)
     pub const DAILY_LOOP_SECS: u64 = 60;
     /// Hourly worker: loop interval
-    pub const HOURLY_LOOP_SECS: u64 = 300;
+    pub const HOURLY_LOOP_SECS: u64 = 60;
     /// Minute worker: loop interval
-    pub const MINUTE_LOOP_SECS: u64 = 600;
+    pub const MINUTE_LOOP_SECS: u64 = 60;
 
     /// Hourly worker: initial delay before first sync
     pub const HOURLY_INITIAL_DELAY_SECS: u64 = 60;
@@ -152,9 +152,9 @@ pub mod yahoo_worker {
     /// Daily worker: loop interval
     pub const DAILY_LOOP_SECS: u64 = 60;
     /// Hourly worker: loop interval
-    pub const HOURLY_LOOP_SECS: u64 = 300;
+    pub const HOURLY_LOOP_SECS: u64 = 60;
     /// Minute worker: loop interval
-    pub const MINUTE_LOOP_SECS: u64 = 600;
+    pub const MINUTE_LOOP_SECS: u64 = 60;
 
     /// Hourly worker: initial delay before first sync
     pub const HOURLY_INITIAL_DELAY_SECS: u64 = 60;
