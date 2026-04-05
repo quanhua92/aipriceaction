@@ -203,7 +203,7 @@ pub async fn run(pool: PgPool) {
                                 sleep(Duration::from_secs(60)).await;
                                 continue;
                             }
-                            // Other errors: skip forward
+                            // Other errors: skip forward by one chunk
                             tracing::warn!(
                                 ticker,
                                 interval = db_interval,
@@ -211,6 +211,9 @@ pub async fn run(pool: PgPool) {
                                 "fetch failed, skipping forward"
                             );
                             chunk_start = chunk_end;
+                            if chunk_start >= now {
+                                chunk_start = now;
+                            }
                         }
                     }
 
