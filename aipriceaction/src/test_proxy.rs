@@ -12,46 +12,50 @@ const CHART_BASE: &str =
 
 /// Fetch Yahoo cookie + crumb using a reqwest client.
 /// Returns `(cookie_str, crumb_str)`.
-fn fetch_crumb(client: &reqwest::Client) -> Result<(String, String), String> {
-    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-    rt.block_on(async {
-        // Step 1: GET fc.yahoo.com to obtain cookie
-        let cookie_resp = client
-            .get(COOKIE_URL)
-            .send()
-            .await
-            .map_err(|e| format!("cookie fetch: {}", e))?;
-        let cookie_header = cookie_resp
-            .headers()
-            .get("set-cookie")
-            .ok_or_else(|| "no set-cookie header in response".to_string())?
-            .to_str()
-            .map_err(|e| format!("cookie header parse: {}", e))?
-            .to_string();
+async fn fetch_crumb(client: &reqwest::Client) -> Result<(String, String), String> {
+    // Step 1: GET fc.yahoo.com to obtain cookie
+    let cookie_resp = client
+        .get(COOKIE_URL)
+        .send()
+        .await
+        .map_err(|e| format!("cookie fetch: {}", e))?;
+    let cookie_header = cookie_resp
+        .headers()
+        .get("set-cookie")
+        .ok_or_else(|| "no set-cookie header in response".to_string())?
+        .to_str()
+        .map_err(|e| format!("cookie header parse: {}", e))?
+        .to_string();
 
-        // Step 2: GET crumb with cookie
-        let crumb_resp = client
-            .get(CRUMB_URL)
-            .header("Cookie", &cookie_header)
-            .send()
-            .await
-            .map_err(|e| format!("crumb fetch: {}", e))?;
-        let crumb = crumb_resp
-            .text()
-            .await
-            .map_err(|e| format!("crumb read: {}", e))?;
-        let crumb = crumb.trim().to_string();
-        if crumb.is_empty()
-            || crumb.contains("Too Many Requests")
-            || crumb.contains("Invalid Cookie")
-        {
-            return Err(format!("bad crumb response: {}", crumb));
-        }
-        Ok((cookie_header, crumb))
-    })
+    // Step 2: GET crumb with cookie
+    let crumb_resp = client
+        .get(CRUMB_URL)
+        .header("Cookie", &cookie_header)
+        .send()
+        .await
+        .map_err(|e| format!("crumb fetch: {}", e))?;
+    let crumb = crumb_resp
+        .text()
+        .await
+        .map_err(|e| format!("crumb read: {}", e))?;
+    let crumb = crumb.trim().to_string();
+    if crumb.is_empty()
+        || crumb.contains("Too Many Requests")
+        || crumb.contains("Invalid Cookie")
+    {
+        return Err(format!("bad crumb response: {}", crumb));
+    }
+    Ok((cookie_header, crumb))
 }
 
 pub fn run() {
+    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+    rt.block_on(async {
+        run_inner().await;
+    });
+}
+
+async fn run_inner() {
     let proxies_str = std::env::var("HTTP_PROXIES").unwrap_or_default();
     let proxies: Vec<&str> = proxies_str
         .split(',')
@@ -79,29 +83,25 @@ pub fn run() {
             .build()
             .map_err(|e| format!("{}", e));
         match client {
-            Ok(client) => match fetch_crumb(&client) {
+            Ok(client) => match fetch_crumb(&client).await {
                 Ok((cookie, crumb)) => {
                     let chart_url = format!("{}&crumb={}", CHART_BASE, crumb);
-                    let rt =
-                        tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                    rt.block_on(async {
-                        match client
-                            .get(&chart_url)
-                            .header("Cookie", &cookie)
-                            .send()
-                            .await
-                        {
-                            Ok(resp) if resp.status().is_success() => {
-                                tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
-                            }
-                            Ok(resp) => {
-                                tracing::info!("  [FAIL] {}: {}ms — HTTP {}", label, start.elapsed().as_millis(), resp.status());
-                            }
-                            Err(e) => {
-                                tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
-                            }
+                    match client
+                        .get(&chart_url)
+                        .header("Cookie", &cookie)
+                        .send()
+                        .await
+                    {
+                        Ok(resp) if resp.status().is_success() => {
+                            tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
                         }
-                    });
+                        Ok(resp) => {
+                            tracing::info!("  [FAIL] {}: {}ms — HTTP {}", label, start.elapsed().as_millis(), resp.status());
+                        }
+                        Err(e) => {
+                            tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
+                        }
+                    }
                 }
                 Err(e) => {
                     tracing::info!("  [FAIL] {}: {}ms — crumb error: {}", label, start.elapsed().as_millis(), e);
@@ -122,17 +122,14 @@ pub fn run() {
             .build()
         {
             Ok(connector) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(async {
-                    match connector.get_quote_range("GC=F", "5d", "1d").await {
-                        Ok(_resp) => {
-                            tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
-                        }
-                        Err(e) => {
-                            tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
-                        }
+                match connector.get_quote_range("GC=F", "5d", "1d").await {
+                    Ok(_resp) => {
+                        tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
                     }
-                });
+                    Err(e) => {
+                        tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
+                    }
+                }
             }
             Err(e) => {
                 tracing::info!("  [FAIL] {}: build error — {}", label, e);
@@ -249,28 +246,25 @@ pub fn run() {
                         .user_agent(USER_AGENT)
                         .build()
                     {
-                        Ok(client) => match fetch_crumb(&client) {
+                        Ok(client) => match fetch_crumb(&client).await {
                             Ok((cookie, crumb)) => {
                                 let chart_url = format!("{}&crumb={}", CHART_BASE, crumb);
-                                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                                rt.block_on(async {
-                                    match client
-                                        .get(&chart_url)
-                                        .header("Cookie", &cookie)
-                                        .send()
-                                        .await
-                                    {
-                                        Ok(resp) if resp.status().is_success() => {
-                                            tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
-                                        }
-                                        Ok(resp) => {
-                                            tracing::info!("  [FAIL] {}: {}ms — HTTP {}", label, start.elapsed().as_millis(), resp.status());
-                                        }
-                                        Err(e) => {
-                                            tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
-                                        }
+                                match client
+                                    .get(&chart_url)
+                                    .header("Cookie", &cookie)
+                                    .send()
+                                    .await
+                                {
+                                    Ok(resp) if resp.status().is_success() => {
+                                        tracing::info!("  [PASS] {}: {}ms", label, start.elapsed().as_millis());
                                     }
-                                });
+                                    Ok(resp) => {
+                                        tracing::info!("  [FAIL] {}: {}ms — HTTP {}", label, start.elapsed().as_millis(), resp.status());
+                                    }
+                                    Err(e) => {
+                                        tracing::info!("  [FAIL] {}: {}ms — {}", label, start.elapsed().as_millis(), e);
+                                    }
+                                }
                             }
                             Err(e) => {
                                 tracing::info!("  [FAIL] {}: {}ms — crumb error: {}", label, start.elapsed().as_millis(), e);

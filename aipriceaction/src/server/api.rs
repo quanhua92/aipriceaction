@@ -697,8 +697,8 @@ fn load_vn_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error
     Ok(names)
 }
 
-fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
-    let path = resolve_data_file("binance_tickers.json")?;
+fn load_names_from_file(filename: &str) -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file(filename)?;
     let content = std::fs::read_to_string(&path)?;
     let raw: serde_json::Value = serde_json::from_str(&content)?;
 
@@ -713,18 +713,10 @@ fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::E
     Ok(names)
 }
 
-fn load_yahoo_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
-    let path = resolve_data_file("global_tickers.json")?;
-    let content = std::fs::read_to_string(&path)?;
-    let raw: serde_json::Value = serde_json::from_str(&content)?;
+fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    load_names_from_file("binance_tickers.json")
+}
 
-    let mut names = BTreeMap::new();
-    if let Some(data) = raw["data"].as_array() {
-        for item in data {
-            if let (Some(symbol), Some(name)) = (item["symbol"].as_str(), item["name"].as_str()) {
-                names.insert(symbol.to_string(), name.to_string());
-            }
-        }
-    }
-    Ok(names)
+fn load_yahoo_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    load_names_from_file("global_tickers.json")
 }

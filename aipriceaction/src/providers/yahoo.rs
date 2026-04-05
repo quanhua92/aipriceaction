@@ -58,6 +58,7 @@ struct RateLimiter {
 
 impl RateLimiter {
     pub fn new(requests_per_minute: u32) -> Self {
+        assert!(requests_per_minute > 0, "requests_per_minute must be positive");
         let semaphore = Arc::new(Semaphore::new(requests_per_minute as usize));
         let refill_interval_ms = 60_000 / requests_per_minute as u64;
 
@@ -158,14 +159,14 @@ impl YahooProvider {
                 Ok(connector) => {
                     rate_limiters.push(RateLimiter::new(requests_per_minute));
                     connectors.push(connector);
-                    eprintln!("✓ Direct connection enabled");
+                    tracing::info!("Direct connection enabled");
                 }
                 Err(e) => {
-                    eprintln!("❌ Failed to create direct connector: {}", e);
+                    tracing::error!("Failed to create direct connector: {}", e);
                 }
             }
         } else {
-            eprintln!("⚠️  Direct connection DISABLED (proxy-only mode)");
+            tracing::warn!("Direct connection DISABLED (proxy-only mode)");
         }
 
         // 2. Proxy connectors from HTTP_PROXIES env var (using custom reqwest::Client for SOCKS5 support)
@@ -188,20 +189,20 @@ impl YahooProvider {
                                         Ok(connector) => {
                                             rate_limiters.push(RateLimiter::new(requests_per_minute));
                                             connectors.push(connector);
-                                            eprintln!("✅ Added proxy (socks5): {}", sanitize_proxy_url(proxy_url));
+                                            tracing::info!("Added proxy (socks5): {}", sanitize_proxy_url(proxy_url));
                                         }
                                         Err(e) => {
-                                            eprintln!("❌ Failed to create connector for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
+                                            tracing::error!("Failed to create connector for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
                                         }
                                     }
                                 }
                                 Err(e) => {
-                                    eprintln!("❌ Failed to build reqwest client for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
+                                    tracing::error!("Failed to build reqwest client for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
                                 }
                             }
                         }
                         Err(e) => {
-                            eprintln!("❌ Invalid proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
+                            tracing::error!("Invalid proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
                         }
                     }
                 }
@@ -210,10 +211,10 @@ impl YahooProvider {
 
         // Summary
         if !direct_connection {
-            eprintln!("📊 YahooProvider initialized with {} proxy-only connector(s)", connectors.len());
+            tracing::info!("YahooProvider initialized with {} proxy-only connector(s)", connectors.len());
         } else {
-            eprintln!(
-                "📊 YahooProvider initialized with {} connector(s) (1 direct + {} proxies, {}/min each)",
+            tracing::info!(
+                "YahooProvider initialized with {} connector(s) (1 direct + {} proxies, {}/min each)",
                 connectors.len(),
                 connectors.len().saturating_sub(1),
                 requests_per_minute,
@@ -270,6 +271,108 @@ impl YahooProvider {
     }
 
     // -----------------------------------------------------------------------
+    // Generic retry helper with connector rotation
+    // -----------------------------------------------------------------------
+
+    const MAX_TOTAL_ATTEMPTS: usize = 5;
+
+    fn connector_label(&self, conn_index: usize) -> String {
+        if conn_index == 0 && self.direct_connection {
+            "direct".to_string()
+        } else if conn_index == 0 && !self.direct_connection {
+            "proxy-1".to_string()
+        } else {
+            format!("proxy-{}", conn_index)
+        }
+    }
+
+    /// Generic retry loop: shuffle connectors, attempt the API call on each,
+    /// log errors, and return the first success or the last error.
+    async fn retry_with_rotation<'a, F, Fut, T>(
+        &'a self,
+        context: &str,
+        f: F,
+    ) -> Result<T, YahooError>
+    where
+        F: Fn(usize, &'a yahoo_finance_api::YahooConnector) -> Fut,
+        Fut: std::future::Future<Output = Result<T, yahoo_finance_api::YahooError>>,
+    {
+        let mut indices: Vec<usize> = (0..self.connectors.len()).collect();
+        use rand::seq::SliceRandom;
+        indices.shuffle(&mut rand::thread_rng());
+
+        let mut last_error: Option<YahooError> = None;
+
+        for attempt_idx in 0..Self::MAX_TOTAL_ATTEMPTS {
+            let conn_index = indices[attempt_idx % indices.len()];
+            let connector = &self.connectors[conn_index];
+            let label = self.connector_label(conn_index);
+
+            self.rate_limiters[conn_index].acquire().await;
+
+            match f(conn_index, connector).await {
+                Ok(result) => {
+                    tracing::info!(
+                        context = %context,
+                        via = %label,
+                        attempt = attempt_idx + 1,
+                        "Request succeeded via {} (attempt {}/{})",
+                        label,
+                        attempt_idx + 1,
+                        Self::MAX_TOTAL_ATTEMPTS,
+                    );
+                    return Ok(result);
+                }
+                Err(e) => {
+                    let err_str = e.to_string();
+                    last_error = Some(YahooError::Api(e));
+
+                    if err_str.contains("Too many requests")
+                        || err_str.contains("429")
+                        || err_str.contains("Unauthorized")
+                    {
+                        tracing::warn!(
+                            context = %context,
+                            via = %label,
+                            attempt = attempt_idx + 1,
+                            error_kind = "rate_limit",
+                            "Request failed via {label}: {err_str}",
+                        );
+                        sleep(Duration::from_secs(1)).await;
+                        continue;
+                    }
+
+                    let kind = if err_str.contains("connection")
+                        || err_str.contains("connect error")
+                        || err_str.contains("timeout")
+                        || err_str.contains("Could not resolve")
+                    {
+                        "connection_error"
+                    } else {
+                        "other_error"
+                    };
+
+                    tracing::warn!(
+                        context = %context,
+                        via = %label,
+                        attempt = attempt_idx + 1,
+                        error_kind = kind,
+                        "Request failed via {label}: {err_str}",
+                    );
+                    continue;
+                }
+            }
+        }
+
+        Err(last_error.unwrap_or_else(|| {
+            YahooError::InvalidResponse(format!(
+                "Max attempts exceeded ({})",
+                Self::MAX_TOTAL_ATTEMPTS
+            ))
+        }))
+    }
+
+    // -----------------------------------------------------------------------
     // get_history — OHLCV via get_quote_range with multi-connector rotation
     // -----------------------------------------------------------------------
 
@@ -293,90 +396,19 @@ impl YahooProvider {
         interval: &str,
         range: &str,
     ) -> Result<YResponse, YahooError> {
-        const MAX_TOTAL_ATTEMPTS: usize = 5;
-
-        let mut indices: Vec<usize> = (0..self.connectors.len()).collect();
-        use rand::seq::SliceRandom;
-        indices.shuffle(&mut rand::thread_rng());
-
-        let mut last_error: Option<YahooError> = None;
-
-        for attempt_idx in 0..MAX_TOTAL_ATTEMPTS {
-            let conn_index = indices[attempt_idx % indices.len()];
-            let connector = &self.connectors[conn_index];
-
-            let label = if conn_index == 0 && self.direct_connection {
-                "direct".to_string()
-            } else if conn_index == 0 && !self.direct_connection {
-                "proxy-1".to_string()
-            } else {
-                format!("proxy-{}", conn_index)
-            };
-
-            // Per-connector rate limit
-            self.rate_limiters[conn_index].acquire().await;
-
-            match connector.get_quote_range(ticker, interval, range).await {
-                Ok(response) => {
-                    tracing::info!(
-                        ticker = %ticker,
-                        interval = %interval,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        "✅ Request succeeded via {} (attempt {}/{})",
-                        label,
-                        attempt_idx + 1,
-                        MAX_TOTAL_ATTEMPTS,
-                    );
-                    return Ok(response);
-                }
-                Err(e) => {
-                    let err_str = e.to_string();
-                    last_error = Some(YahooError::Api(e));
-
-                    if err_str.contains("Too many requests")
-                        || err_str.contains("429")
-                        || err_str.contains("Unauthorized")
-                    {
-                        tracing::warn!(
-                            ticker = %ticker,
-                            via = %label,
-                            attempt = attempt_idx + 1,
-                            error_kind = "rate_limit",
-                            "Request failed via {label}: {err_str}",
-                        );
-                        sleep(Duration::from_secs(1)).await;
-                        continue;
-                    }
-
-                    let kind = if err_str.contains("connection")
-                        || err_str.contains("connect error")
-                        || err_str.contains("timeout")
-                        || err_str.contains("Could not resolve")
-                    {
-                        "connection_error"
-                    } else {
-                        "other_error"
-                    };
-
-                    tracing::warn!(
-                        ticker = %ticker,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        error_kind = kind,
-                        "Request failed via {label}: {err_str}",
-                    );
-                    continue;
-                }
-            }
-        }
-
-        Err(last_error.unwrap_or_else(|| {
-            YahooError::InvalidResponse(format!(
-                "Max attempts exceeded ({})",
-                MAX_TOTAL_ATTEMPTS
-            ))
-        }))
+        let t = ticker.to_string();
+        let i = interval.to_string();
+        let r = range.to_string();
+        self.retry_with_rotation(
+            &format!("get_quote_range {}", ticker),
+            |_conn_idx, connector| {
+                let t = t.clone();
+                let i = i.clone();
+                let r = r.clone();
+                async move { connector.get_quote_range(&t, &i, &r).await }
+            },
+        )
+        .await
     }
 
     fn extract_quotes(
@@ -438,94 +470,17 @@ impl YahooProvider {
             .unwrap_or(OffsetDateTime::UNIX_EPOCH)
             .to_offset(UtcOffset::UTC);
 
-        const MAX_TOTAL_ATTEMPTS: usize = 5;
-
-        let mut indices: Vec<usize> = (0..self.connectors.len()).collect();
-        use rand::seq::SliceRandom;
-        indices.shuffle(&mut rand::thread_rng());
-
-        let mut last_error: Option<YahooError> = None;
-
-        for attempt_idx in 0..MAX_TOTAL_ATTEMPTS {
-            let conn_index = indices[attempt_idx % indices.len()];
-            let connector = &self.connectors[conn_index];
-
-            let label = if conn_index == 0 && self.direct_connection {
-                "direct".to_string()
-            } else if conn_index == 0 && !self.direct_connection {
-                "proxy-1".to_string()
-            } else {
-                format!("proxy-{}", conn_index)
-            };
-
-            self.rate_limiters[conn_index].acquire().await;
-
-            match connector
-                .get_quote_history_interval(ticker, start_odt, end_odt, interval)
-                .await
-            {
-                Ok(response) => {
-                    tracing::info!(
-                        ticker = %ticker,
-                        interval = %interval,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        start = %start.format("%Y-%m-%d"),
-                        end = %end.format("%Y-%m-%d"),
-                        "Request succeeded via {} (attempt {}/{})",
-                        label,
-                        attempt_idx + 1,
-                        MAX_TOTAL_ATTEMPTS,
-                    );
-                    return Ok(response);
-                }
-                Err(e) => {
-                    let err_str = e.to_string();
-                    last_error = Some(YahooError::Api(e));
-
-                    if err_str.contains("Too many requests")
-                        || err_str.contains("429")
-                        || err_str.contains("Unauthorized")
-                    {
-                        tracing::warn!(
-                            ticker = %ticker,
-                            via = %label,
-                            attempt = attempt_idx + 1,
-                            error_kind = "rate_limit",
-                            "Request failed via {label}: {err_str}",
-                        );
-                        sleep(Duration::from_secs(1)).await;
-                        continue;
-                    }
-
-                    let kind = if err_str.contains("connection")
-                        || err_str.contains("connect error")
-                        || err_str.contains("timeout")
-                        || err_str.contains("Could not resolve")
-                    {
-                        "connection_error"
-                    } else {
-                        "other_error"
-                    };
-
-                    tracing::warn!(
-                        ticker = %ticker,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        error_kind = kind,
-                        "Request failed via {label}: {err_str}",
-                    );
-                    continue;
-                }
-            }
-        }
-
-        Err(last_error.unwrap_or_else(|| {
-            YahooError::InvalidResponse(format!(
-                "Max attempts exceeded ({})",
-                MAX_TOTAL_ATTEMPTS
-            ))
-        }))
+        let t = ticker.to_string();
+        let i = interval.to_string();
+        self.retry_with_rotation(
+            &format!("get_quote_history_interval {}", ticker),
+            |_conn_idx, connector| {
+                let t = t.clone();
+                let i = i.clone();
+                async move { connector.get_quote_history_interval(&t, start_odt, end_odt, &i).await }
+            },
+        )
+        .await
     }
 
     // -----------------------------------------------------------------------
@@ -533,77 +488,14 @@ impl YahooProvider {
     // -----------------------------------------------------------------------
 
     pub async fn search_ticker(&self, name: &str) -> Result<YSearchResult, YahooError> {
-        const MAX_TOTAL_ATTEMPTS: usize = 5;
-
-        let mut indices: Vec<usize> = (0..self.connectors.len()).collect();
-        use rand::seq::SliceRandom;
-        indices.shuffle(&mut rand::thread_rng());
-
-        let mut last_error: Option<YahooError> = None;
-
-        for attempt_idx in 0..MAX_TOTAL_ATTEMPTS {
-            let conn_index = indices[attempt_idx % indices.len()];
-            let connector = &self.connectors[conn_index];
-
-            let label = if conn_index == 0 && self.direct_connection {
-                "direct".to_string()
-            } else if conn_index == 0 && !self.direct_connection {
-                "proxy-1".to_string()
-            } else {
-                format!("proxy-{}", conn_index)
-            };
-
-            self.rate_limiters[conn_index].acquire().await;
-
-            match connector.search_ticker(name).await {
-                Ok(result) => {
-                    tracing::info!(
-                        query = %name,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        "✅ Search succeeded via {} — {} result(s)",
-                        label,
-                        result.count,
-                    );
-                    return Ok(result);
-                }
-                Err(e) => {
-                    let err_str = e.to_string();
-                    last_error = Some(YahooError::Api(e));
-
-                    if err_str.contains("Too many requests")
-                        || err_str.contains("429")
-                        || err_str.contains("Unauthorized")
-                    {
-                        tracing::warn!(
-                            query = %name,
-                            via = %label,
-                            attempt = attempt_idx + 1,
-                            "Rate limit hit via {}, backing off 1s",
-                            label,
-                        );
-                        sleep(Duration::from_secs(1)).await;
-                        continue;
-                    }
-
-                    tracing::warn!(
-                        query = %name,
-                        via = %label,
-                        attempt = attempt_idx + 1,
-                        "Search failed via {}: {}",
-                        label,
-                        err_str,
-                    );
-                    continue;
-                }
-            }
-        }
-
-        Err(last_error.unwrap_or_else(|| {
-            YahooError::InvalidResponse(format!(
-                "Max attempts exceeded ({})",
-                MAX_TOTAL_ATTEMPTS
-            ))
-        }))
+        let n = name.to_string();
+        self.retry_with_rotation(
+            &format!("search_ticker {}", name),
+            |_conn_idx, connector| {
+                let n = n.clone();
+                async move { connector.search_ticker(&n).await }
+            },
+        )
+        .await
     }
 }

@@ -226,25 +226,19 @@ pub fn run() {
                 if yahoo_workers_enabled {
                     tracing::info!("YAHOO_WORKERS=true — spawning bootstrap/daily/hourly/minute yahoo workers");
 
-                    let pool_clone = pool.clone();
-                    tokio::spawn(async move {
-                        crate::workers::yahoo_bootstrap::run(pool_clone).await;
-                    });
+                    let yahoo_workers: &[fn(sqlx::PgPool) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>] = &[
+                        |p| Box::pin(crate::workers::yahoo_bootstrap::run(p)),
+                        |p| Box::pin(crate::workers::yahoo_daily::run(p)),
+                        |p| Box::pin(crate::workers::yahoo_hourly::run(p)),
+                        |p| Box::pin(crate::workers::yahoo_minute::run(p)),
+                    ];
 
-                    let pool_clone = pool.clone();
-                    tokio::spawn(async move {
-                        crate::workers::yahoo_daily::run(pool_clone).await;
-                    });
-
-                    let pool_clone = pool.clone();
-                    tokio::spawn(async move {
-                        crate::workers::yahoo_hourly::run(pool_clone).await;
-                    });
-
-                    let pool_clone = pool.clone();
-                    tokio::spawn(async move {
-                        crate::workers::yahoo_minute::run(pool_clone).await;
-                    });
+                    for worker in yahoo_workers {
+                        let pool_clone = pool.clone();
+                        tokio::spawn(async move {
+                            worker(pool_clone).await;
+                        });
+                    }
                 } else {
                     tracing::info!("YAHOO_WORKERS=false — Yahoo Finance workers not started");
                 }
