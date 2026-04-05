@@ -1,5 +1,6 @@
 mod cli;
 mod constants;
+mod test_proxy;
 mod csv;
 mod db;
 mod models;

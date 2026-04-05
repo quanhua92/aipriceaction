@@ -11,6 +11,8 @@ pub enum Mode {
     Vn,
     #[serde(alias = "cryptos")]
     Crypto,
+    #[serde(alias = "yahoo")]
+    Yahoo,
 }
 
 impl Mode {
@@ -18,6 +20,7 @@ impl Mode {
         match self {
             Mode::Vn => "vn",
             Mode::Crypto => "crypto",
+            Mode::Yahoo => "yahoo",
         }
     }
 }

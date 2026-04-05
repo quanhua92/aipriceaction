@@ -8,3 +8,8 @@ pub mod binance_hourly;
 pub mod binance_minute;
 pub mod binance_bootstrap;
 pub mod binance_shared;
+pub mod yahoo_bootstrap;
+pub mod yahoo_daily;
+pub mod yahoo_hourly;
+pub mod yahoo_minute;
+pub mod yahoo_shared;

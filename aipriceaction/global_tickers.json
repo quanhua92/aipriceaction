@@ -1,0 +1,16 @@
+{
+  "source": "yahoo",
+  "fetched_at": "2026-04-05T08:00:00Z",
+  "count": 9,
+  "data": [
+    { "symbol": "GC=F", "name": "Gold Futures" },
+    { "symbol": "SI=F", "name": "Silver Futures" },
+    { "symbol": "CL=F", "name": "Crude Oil Futures" },
+    { "symbol": "DX-Y.NYB", "name": "US Dollar Index" },
+    { "symbol": "^GSPC", "name": "S&P 500 Index" },
+    { "symbol": "^DJI", "name": "Dow Jones Industrial Average" },
+    { "symbol": "^NDX", "name": "Nasdaq 100" },
+    { "symbol": "^N225", "name": "Nikkei 225" },
+    { "symbol": "^HSI", "name": "Hang Seng Index" }
+  ]
+}
