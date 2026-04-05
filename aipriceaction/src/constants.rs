@@ -74,7 +74,7 @@ pub mod vci_worker {
     /// Concurrent API batches based on VCI client count.
     /// 3 concurrent requests per client, each with its own rate limiter.
     pub fn concurrent_batches(client_count: usize) -> usize {
-        let batches = (client_count * 3).min(24);
+        let batches = (client_count * 3).min(24).max(1);
         tracing::debug!(client_count, batches, "concurrent_batches calculated");
         batches
     }
@@ -131,7 +131,7 @@ pub mod binance_worker {
     /// Concurrent API batches based on Binance API client count.
     /// Conservative: 2 per client, max 6 total.
     pub fn concurrent_batches(client_count: usize) -> usize {
-        (client_count * 2).min(6)
+        (client_count * 2).min(6).max(1)
     }
 
     /// Daily limit: number of records to return from get_history
@@ -169,7 +169,7 @@ pub mod yahoo_worker {
 
     /// Concurrent API batches based on Yahoo client count.
     pub fn concurrent_batches(client_count: usize) -> usize {
-        (client_count * 2).min(4)
+        (client_count * 2).min(4).max(1)
     }
 
     /// Ranges for incremental fetches

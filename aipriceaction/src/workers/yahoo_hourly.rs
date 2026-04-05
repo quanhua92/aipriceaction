@@ -22,7 +22,7 @@ pub async fn run(pool: PgPool) {
         }
     };
 
-    let api_clients = provider.client_count().saturating_sub(1);
+    let api_clients = provider.client_count();
     tracing::info!(
         "Yahoo hourly worker started (api_clients={}, concurrency={})",
         api_clients,
