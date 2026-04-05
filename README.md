@@ -121,6 +121,11 @@ curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&format=csv"
 curl "http://localhost:3000/tickers/group"              # VN sectors
 curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 curl "http://localhost:3000/tickers/group?mode=yahoo"    # Yahoo symbols
+
+# Ticker name lookup (symbol -> human-readable name)
+curl "http://localhost:3000/tickers/name"              # VN: ticker maps to itself
+curl "http://localhost:3000/tickers/name?mode=crypto"   # e.g. BTCUSDT -> Bitcoin
+curl "http://localhost:3000/tickers/name?mode=yahoo"    # e.g. GC=F -> Gold Futures
 ```
 
 ## Environment Variables
