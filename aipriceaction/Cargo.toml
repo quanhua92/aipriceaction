@@ -25,3 +25,4 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "gzi
 isahc = { version = "1.7", features = ["json"] }
 rand = "0.8"
 zip = "8"
+yahoo_finance_api = "4.1"

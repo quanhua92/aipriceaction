@@ -4,6 +4,7 @@ use crate::db;
 use crate::models::interval::Interval;
 use crate::providers::binance::BinanceProvider;
 use crate::providers::vci::VciProvider;
+use crate::providers::yahoo::YahooProvider;
 use crate::services::ohlcv;
 
 #[derive(Parser)]
@@ -90,6 +91,15 @@ pub enum Commands {
         limit: u32,
         /// Rate limit per client (requests per minute, default: 120)
         #[arg(long, default_value = "120")]
+        rate_limit: u32,
+    },
+    /// Test Yahoo Finance provider connectivity and data fetching
+    TestYahoo {
+        /// Ticker symbol to test (default: AAPL)
+        #[arg(long, default_value = "AAPL")]
+        ticker: String,
+        /// Rate limit per client (requests per minute, default: 60)
+        #[arg(long, default_value = "60")]
         rate_limit: u32,
     },
 }
@@ -1313,6 +1323,92 @@ pub fn run() {
                         Err(e) => {
                             tracing::error!("    ❌ {} | error: {}", iv, e);
                         }
+                    }
+                }
+
+                // 4. Summary
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
+            });
+        }
+        Commands::TestYahoo { ticker, rate_limit } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                // 1. Create YahooProvider
+                tracing::info!("Initializing Yahoo Finance provider (rate_limit={}/min per client)...", rate_limit);
+                let provider = match YahooProvider::new(rate_limit) {
+                    Ok(p) => p,
+                    Err(e) => {
+                        tracing::error!("Failed to create Yahoo provider: {e}");
+                        return;
+                    }
+                };
+                tracing::info!("Connected with {} client(s)", provider.client_count());
+
+                // 2. OHLCV test for each interval
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("OHLCV Test — ticker={}", ticker);
+
+                for (interval, range) in &[("1d", "1mo"), ("1h", "5d"), ("1m", "1d")] {
+                    tracing::info!("  Fetching {} (range={}) ...", interval, range);
+                    match provider.get_history(&ticker, interval, range).await {
+                        Ok(data) => {
+                            let count = data.len();
+                            if count > 0 {
+                                let first = &data[0];
+                                let last = &data[count - 1];
+                                tracing::info!(
+                                    "    ✅ {} | {} records | {} → {}",
+                                    interval,
+                                    count,
+                                    first.time.format("%Y-%m-%d %H:%M"),
+                                    last.time.format("%Y-%m-%d %H:%M"),
+                                );
+                                for row in data.iter().take(3) {
+                                    tracing::info!(
+                                        "       {} | O:{} H:{} L:{} C:{} V:{}",
+                                        row.time.format("%Y-%m-%d %H:%M"),
+                                        row.open,
+                                        row.high,
+                                        row.low,
+                                        row.close,
+                                        row.volume,
+                                    );
+                                }
+                                if count > 3 {
+                                    tracing::info!("       ... ({} more)", count - 3);
+                                }
+                            } else {
+                                tracing::info!("    ⚠️  {} | 0 records returned", interval);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ {} | error: {}", interval, e);
+                        }
+                    }
+                }
+
+                // 3. Search ticker test
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("Search Test — query=\"{}\"", ticker);
+                match provider.search_ticker(&ticker).await {
+                    Ok(result) => {
+                        tracing::info!("    ✅ {} result(s)", result.count);
+                        for item in result.quotes.iter().take(5) {
+                            tracing::info!(
+                                "       {} | {} | {} | {}",
+                                item.symbol,
+                                item.exchange,
+                                item.short_name,
+                                item.quote_type,
+                            );
+                        }
+                        if result.quotes.len() > 5 {
+                            tracing::info!("       ... ({} more)", result.quotes.len() - 5);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("    ❌ search_ticker error: {}", e);
                     }
                 }
 
