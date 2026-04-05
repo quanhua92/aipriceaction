@@ -102,6 +102,8 @@ pub enum Commands {
         #[arg(long, default_value = "60")]
         rate_limit: u32,
     },
+    /// Test SOCKS5 proxy connectivity against Yahoo Finance API
+    TestProxy,
 }
 
 pub fn run() {
@@ -1447,6 +1449,9 @@ pub fn run() {
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
             });
+        }
+        Commands::TestProxy => {
+            crate::test_proxy::run();
         }
     }
 }
