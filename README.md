@@ -2,7 +2,7 @@
 
 **Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web)
 
-Vietnamese stock market and cryptocurrency data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
+Vietnamese stock, US stock, and cryptocurrency data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
 
 ## Quick Start
 
@@ -74,11 +74,17 @@ docker compose up -d postgres
 # Run benchmark queries
 ./target/release/aipriceaction stats --tickers VCB,FPT --intervals 1D
 
-# Test VCI provider connectivity
+# Test VCI provider connectivity (Vietnamese stocks)
 ./target/release/aipriceaction test-vci --ticker VNINDEX
 
-# Test Binance provider connectivity
+# Test Binance provider connectivity (crypto)
 ./target/release/aipriceaction test-binance --ticker BTCUSDT --interval all
+
+# Test Yahoo Finance provider connectivity (US/international stocks)
+./target/release/aipriceaction test-yahoo --ticker AAPL
+
+# Test SOCKS5 proxy connectivity against Yahoo Finance API
+./target/release/aipriceaction test-proxy
 
 # Benchmark database query performance
 ./target/release/aipriceaction test-perf
@@ -92,6 +98,9 @@ curl http://localhost:3000/health
 
 # Vietnamese stock (default mode)
 curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&limit=100"
+
+# US/international stock (Yahoo Finance)
+curl "http://localhost:3000/tickers?symbol=AAPL&mode=yahoo&interval=1D&limit=100"
 
 # Cryptocurrency
 curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&interval=1D&limit=100"
@@ -111,6 +120,7 @@ curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&format=csv"
 # Ticker groups
 curl "http://localhost:3000/tickers/group"              # VN sectors
 curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
+curl "http://localhost:3000/tickers/group?mode=yahoo"    # Yahoo symbols
 ```
 
 ## Environment Variables
@@ -123,7 +133,8 @@ curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 | `VCI_WORKERS` | No | `true` | Enable VN stock data workers |
 | `VCI_DIVIDEND_WORKER` | No | `true` | Enable dividend detection worker |
 | `BINANCE_WORKERS` | No | `true` | Enable crypto data workers |
-| `HTTP_PROXIES` | No | -- | Comma-separated proxy list (VCI & Binance) |
+| `YAHOO_WORKERS` | No | `true` | Enable Yahoo Finance data workers |
+| `HTTP_PROXIES` | No | -- | Comma-separated SOCKS5 proxy list |
 | `CORS_ORIGINS` | No | `https://aipriceaction.com` | Comma-separated allowed CORS origins |
 
 ## Database
@@ -141,6 +152,7 @@ When enabled via environment variables, the server runs background sync workers:
 - **VCI hourly/minute worker** -- Syncs hourly and minute data every minute during trading hours
 - **VCI dividend worker** -- Detects dividend-adjusted prices and re-downloads full history
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
+- **Yahoo Finance workers** -- Syncs US/international stock data for daily, hourly, and minute intervals
 
 ## Development
 
