@@ -105,14 +105,16 @@ pub async fn run(pool: PgPool) {
                     "1h" => {
                         let mut s = hm_start;
                         if s < hourly_lookback {
-                            s = hourly_lookback;
+                            // Add 1-day buffer to avoid hitting Yahoo's exact boundary
+                            s = hourly_lookback + chrono::Duration::days(1);
                         }
                         s
                     }
                     "1m" => {
                         let mut s = hm_start;
                         if s < minute_lookback {
-                            s = minute_lookback;
+                            // Add 1-day buffer to avoid hitting Yahoo's exact boundary
+                            s = minute_lookback + chrono::Duration::days(1);
                         }
                         s
                     }
@@ -189,8 +191,11 @@ pub async fn run(pool: PgPool) {
                             last_newest_ts = newest_ts;
                             stall_count = 0;
 
-                            // Advance to next chunk starting after the newest record
-                            chunk_start = data.last().unwrap().time + chrono::Duration::seconds(1);
+                            // Advance to the end of the requested chunk window.
+                            // Yahoo may return more data than requested (e.g. 2 years of hourly
+                            // when only 30 days were requested), so we must NOT jump to the
+                            // newest record — that would skip the entire remaining range.
+                            chunk_start = fetch_end + chrono::Duration::seconds(1);
                         }
                         Err(e) => {
                             let err_str = e.to_string();
