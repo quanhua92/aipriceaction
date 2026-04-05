@@ -82,6 +82,8 @@ COPY --from=rust-builder /app/aipriceaction-bin ./aipriceaction
 COPY ticker_group.json ./ticker_group.json
 COPY binance_tickers.json ./binance_tickers.json
 COPY global_tickers.json ./global_tickers.json
+COPY company_info.json ./company_info.json
+COPY vn.csv ./vn.csv
 COPY public/ ./public
 
 RUN chown -R appuser:appgroup /app

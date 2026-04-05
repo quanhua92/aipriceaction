@@ -133,7 +133,16 @@ pub async fn run(ticker_filter: Option<String>, rate_limit: u32, save: bool) {
                     tracing::info!("  outstanding_shares: {shares}");
                 }
                 if let Some(ref profile) = info.company_profile {
-                    let truncated = if profile.len() > 200 { &profile[..200] } else { profile };
+                    let truncated = if profile.len() > 200 {
+                        let end = profile.char_indices()
+                            .take_while(|(i, _)| *i < 200)
+                            .last()
+                            .map(|(i, c)| i + c.len_utf8())
+                            .unwrap_or(profile.len());
+                        &profile[..end]
+                    } else {
+                        profile
+                    };
                     tracing::info!("  profile: {truncated}{}", if profile.len() > 200 { "..." } else { "" });
                 }
                 if !info.shareholders.is_empty() {

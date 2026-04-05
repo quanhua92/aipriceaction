@@ -131,6 +131,7 @@ pub fn create_app(pool: PgPool) -> axum::Router {
         .route("/health", axum::routing::get(api::health))
         .route("/tickers/group", axum::routing::get(api::tickers_group))
         .route("/tickers/name", axum::routing::get(api::tickers_name))
+        .route("/tickers/info", axum::routing::get(api::tickers_info))
         .nest("/analysis", analysis_routes())
         .route("/raw/{*path}", axum::routing::get(legacy::raw_proxy_handler))
         .layer(RequestBodyLimitLayer::new(1024 * 1024));

@@ -24,8 +24,9 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
         r#"SELECT
                t.source,
                array_length(t.ids, 1)::bigint AS ticker_count,
-               (SELECT COUNT(DISTINCT ticker_id)::bigint FROM ohlcv_daily
-                WHERE time > NOW() - INTERVAL '7 days') AS active_tickers,
+               (SELECT COUNT(DISTINCT o2.ticker_id)::bigint FROM ohlcv_daily o2
+                JOIN tickers t2 ON t2.id = o2.ticker_id AND t2.source = t.source
+                WHERE o2.time > NOW() - INTERVAL '7 days') AS active_tickers,
                (SELECT GREATEST(reltuples, 0)::bigint FROM pg_class
                 WHERE relname = 'ohlcv_daily') AS daily_records,
                (SELECT COALESCE(SUM(GREATEST(reltuples, 0)), 0)::bigint
@@ -447,6 +448,136 @@ pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
     }
 }
 
+// ── /tickers/info ──
+
+#[derive(serde::Deserialize)]
+pub struct InfoQuery {
+    pub ticker: Option<String>,
+}
+
+pub async fn tickers_info(Query(params): Query<InfoQuery>) -> Response {
+    let result: Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> = load_merged_info();
+
+    match result {
+        Ok(data) => {
+            if let Some(ref ticker) = params.ticker {
+                let found = data.iter().find(|item| {
+                    item.get("ticker")
+                        .and_then(|t| t.as_str())
+                        .map(|t| t.eq_ignore_ascii_case(ticker))
+                        .unwrap_or(false)
+                });
+                match found {
+                    Some(entry) => (StatusCode::OK, Json(entry.clone())).into_response(),
+                    None => (
+                        StatusCode::NOT_FOUND,
+                        Json(serde_json::json!({ "error": format!("Ticker '{}' not found", ticker) })),
+                    )
+                        .into_response(),
+                }
+            } else {
+                (StatusCode::OK, Json(data)).into_response()
+            }
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+/// Load vn.csv rows as a HashMap keyed by symbol (uppercase).
+fn load_vn_csv() -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("vn.csv")?;
+    let content = std::fs::read_to_string(&path)?;
+    let mut map = HashMap::new();
+
+    let mut rdr = csv::Reader::from_reader(content.as_bytes());
+    for result in rdr.records() {
+        let record = result?;
+        let symbol = record.get(0).unwrap_or("").trim();
+        if symbol.is_empty() {
+            continue;
+        }
+        let organ_name = record.get(1).unwrap_or("").trim();
+        let en_organ_name = record.get(2).unwrap_or("").trim();
+        let exchange = record.get(3).unwrap_or("").trim();
+        let stock_type = record.get(4).unwrap_or("").trim();
+        let val = serde_json::json!({
+            "ticker": symbol,
+            "organ_name": organ_name,
+            "en_organ_name": en_organ_name,
+            "exchange": exchange,
+            "type": stock_type,
+        });
+        map.insert(symbol.to_uppercase(), val);
+    }
+
+    Ok(map)
+}
+
+/// Load company_info.json array.
+fn load_company_info() -> Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("company_info.json")?;
+    let content = std::fs::read_to_string(&path)?;
+    let data: Vec<serde_json::Value> = serde_json::from_str(&content)?;
+    Ok(data)
+}
+
+/// Merge vn.csv baseline with company_info.json details.
+/// Only tickers present in both vn.csv and company_info.json are included.
+/// vn.csv provides name/exchange; company_info.json adds profile + financial_ratios.
+fn load_merged_info() -> Result<Vec<serde_json::Value>, Box<dyn std::error::Error>> {
+    let vn_map = load_vn_csv()
+        .map_err(|e| {
+            tracing::warn!("vn.csv not available: {e}");
+        })
+        .unwrap_or_default();
+
+    let company_entries = load_company_info()
+        .map_err(|e| {
+            tracing::warn!("company_info.json not available: {e}");
+        })
+        .unwrap_or_default();
+
+    let mut result = Vec::new();
+
+    for entry in &company_entries {
+        let ticker = entry
+            .get("ticker")
+            .and_then(|t| t.as_str())
+            .unwrap_or("")
+            .to_uppercase();
+
+        let mut merged = if let Some(base) = vn_map.get(&ticker) {
+            base.clone()
+        } else {
+            // Not in vn.csv — skip this entry
+            continue;
+        };
+
+        // Merge company_info fields into base (company fields take precedence)
+        if let Some(obj) = entry.as_object() {
+            if let Some(merged_obj) = merged.as_object_mut() {
+                for (key, val) in obj {
+                    merged_obj.insert(key.clone(), val.clone());
+                }
+            }
+        }
+
+        result.push(merged);
+    }
+
+    result.sort_by(|a, b| {
+        a.get("ticker")
+            .and_then(|t| t.as_str())
+            .unwrap_or("")
+            .cmp(b.get("ticker").and_then(|t| t.as_str()).unwrap_or(""))
+    });
+    Ok(result)
+}
+
 // ── /explorer ──
 
 pub async fn explorer_handler() -> Response {
@@ -682,19 +813,26 @@ fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::err
 // ── Name loaders ──
 
 fn load_vn_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    // Load valid tickers from ticker_group.json
     let path = resolve_data_file("ticker_group.json")?;
     let content = std::fs::read_to_string(&path)?;
     let groups: BTreeMap<String, Vec<String>> = serde_json::from_str(&content)?;
+    let valid_tickers: std::collections::HashSet<String> = groups
+        .values()
+        .flat_map(|v| v.iter().cloned())
+        .collect();
 
-    let mut names = BTreeMap::new();
-    for tickers in groups.values() {
-        for ticker in tickers {
-            if !names.contains_key(ticker) {
-                names.insert(ticker.clone(), ticker.clone());
-            }
-        }
-    }
-    Ok(names)
+    // Load names from vn.csv, only keeping valid tickers
+    let vn_map = load_vn_csv()?;
+    Ok(vn_map
+        .into_iter()
+        .filter(|(ticker, _)| valid_tickers.contains(ticker))
+        .filter_map(|(ticker, val)| {
+            val.get("organ_name")
+                .and_then(|v| v.as_str())
+                .map(|name| (ticker, name.to_string()))
+        })
+        .collect())
 }
 
 fn load_names_from_file(filename: &str) -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {

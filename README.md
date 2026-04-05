@@ -126,6 +126,10 @@ curl "http://localhost:3000/tickers/group?mode=yahoo"    # Yahoo symbols
 curl "http://localhost:3000/tickers/name"              # VN: ticker maps to itself
 curl "http://localhost:3000/tickers/name?mode=crypto"   # e.g. BTCUSDT -> Bitcoin
 curl "http://localhost:3000/tickers/name?mode=yahoo"    # e.g. GC=F -> Gold Futures
+
+# Company info (from company_info.json)
+curl "http://localhost:3000/tickers/info"              # All tickers
+curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 ```
 
 ## Environment Variables
