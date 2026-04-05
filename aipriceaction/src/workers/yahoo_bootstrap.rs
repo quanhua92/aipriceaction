@@ -88,12 +88,9 @@ pub async fn run(pool: PgPool) {
 
             let mut hm_start = hm_floor;
 
-            // Yahoo Finance only serves hourly/minute data within the last N days.
-            // Cap hm_start so we never request data that will be rejected.
-            let max_lookback = chrono::Utc::now() - chrono::Duration::days(yahoo_worker::BOOTSTRAP_HM_LOOKBACK_DAYS);
-            if hm_start < max_lookback {
-                hm_start = max_lookback;
-            }
+            // Yahoo Finance only serves hourly data within 730 days, minute within 30 days.
+            let hourly_lookback = chrono::Utc::now() - chrono::Duration::days(yahoo_worker::BOOTSTRAP_HOURLY_LOOKBACK_DAYS);
+            let minute_lookback = chrono::Utc::now() - chrono::Duration::days(yahoo_worker::BOOTSTRAP_MINUTE_LOOKBACK_DAYS);
 
             for interval in &["1D", "1h", "1m"] {
                 let (chunk_days, yahoo_interval, db_interval) = match *interval {
@@ -105,7 +102,21 @@ pub async fn run(pool: PgPool) {
 
                 let start = match *interval {
                     "1D" => daily_start,
-                    _ => hm_start,
+                    "1h" => {
+                        let mut s = hm_start;
+                        if s < hourly_lookback {
+                            s = hourly_lookback;
+                        }
+                        s
+                    }
+                    "1m" => {
+                        let mut s = hm_start;
+                        if s < minute_lookback {
+                            s = minute_lookback;
+                        }
+                        s
+                    }
+                    _ => unreachable!(),
                 };
 
                 let now = chrono::Utc::now();
