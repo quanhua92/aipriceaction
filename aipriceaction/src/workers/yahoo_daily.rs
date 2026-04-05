@@ -75,6 +75,10 @@ pub async fn run(pool: PgPool) {
 
                         match provider.get_history(&ticker, "1d", yahoo_worker::DAILY_RANGE).await {
                             Ok(data) => {
+                                if yahoo_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
+                                    tracing::warn!("[YAHOO-DIVIDEND] ticker={}, daily sync SKIPPED — awaiting bootstrap worker to re-download full history", ticker);
+                                    return false;
+                                }
                                 yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
 
                                 match yahoo_shared::schedule_fixed_interval(

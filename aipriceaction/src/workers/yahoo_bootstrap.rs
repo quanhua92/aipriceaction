@@ -9,7 +9,7 @@ use crate::workers::yahoo_shared;
 
 /// Full-download worker for Yahoo Finance tickers.
 ///
-/// 1. Find tickers with status='full-download-requested'
+/// 1. Find tickers with status='dividend-detected' or 'full-download-requested'
 /// 2. Delete all existing data
 /// 3. Download full history chunked by time windows for 1D, 1h, 1m
 /// 4. Mark as 'ready' when all intervals are done
@@ -250,9 +250,9 @@ pub async fn run(pool: PgPool) {
     }
 }
 
-/// Pass 1: Pick a random ticker from `full-download-requested`.
+/// Pass 1: Pick a random ticker from `dividend-detected` or `full-download-requested`.
 async fn pick_fresh_ticker(pool: &PgPool) -> Option<(ohlcv::Ticker, bool)> {
-    let tickers = match ohlcv::get_tickers_by_statuses(pool, "yahoo", &["full-download-requested"]).await {
+    let tickers = match ohlcv::get_tickers_by_statuses(pool, "yahoo", &["dividend-detected", "full-download-requested"]).await {
         Ok(t) => t,
         Err(e) => {
             tracing::warn!("Yahoo bootstrap worker: failed to load flagged tickers: {e}");
@@ -269,7 +269,9 @@ async fn pick_fresh_ticker(pool: &PgPool) -> Option<(ohlcv::Ticker, bool)> {
 
     // Re-check status
     if let Ok(Some(current)) = ohlcv::get_ticker_by_id(pool, ticker_id).await {
-        let still_pending = current.status.as_deref() == Some("full-download-requested");
+        let still_pending = current.status.as_deref()
+            .map(|s| s == "dividend-detected" || s == "full-download-requested")
+            .unwrap_or(false);
         if !still_pending {
             tracing::info!("ticker={}, already being handled (status={:?}), skipping", ticker_entry.ticker, current.status);
             return None;

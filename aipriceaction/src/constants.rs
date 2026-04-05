@@ -191,6 +191,11 @@ pub mod yahoo_worker {
     pub const BOOTSTRAP_HM_FLOOR_YEAR: i32 = 2023;
     /// Yahoo Finance only serves hourly/minute data within this many days from now
     pub const BOOTSTRAP_HM_LOOKBACK_DAYS: i64 = 730;
+
+    /// Dividend / stock-split detection for Yahoo tickers
+    pub const DIVIDEND_RATIO_THRESHOLD: f64 = 1.03;
+    pub const DIVIDEND_CHECK_BARS: i64 = 20;
+    pub const DIVIDEND_MIN_DIVERGING_BARS: usize = 5;
 }
 
 /// API server constants.
