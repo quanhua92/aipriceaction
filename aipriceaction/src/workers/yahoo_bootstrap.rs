@@ -10,9 +10,8 @@ use crate::workers::yahoo_shared;
 /// Full-download worker for Yahoo Finance tickers.
 ///
 /// 1. Find tickers with status='dividend-detected' or 'full-download-requested'
-/// 2. Delete all existing data
-/// 3. Download full history chunked by time windows for 1D, 1h, 1m
-/// 4. Mark as 'ready' when all intervals are done
+/// 2. Download full history chunked by time windows for 1D, 1h, 1m (upsert, no delete)
+/// 3. Mark as 'ready' when all intervals are done
 pub async fn run(pool: PgPool) {
     let provider = match YahooProvider::with_options(60, true, true) {
         Ok(p) => p,
@@ -58,10 +57,10 @@ pub async fn run(pool: PgPool) {
 
             if is_fresh {
                 tracing::warn!(
-                    "[YAHOO-BOOTSTRAP] ticker={}, ticker_id={}, claiming — deleting ALL existing data",
+                    "[YAHOO-BOOTSTRAP] ticker={}, ticker_id={}, claiming — upserting (no delete)",
                     ticker, ticker_id
                 );
-                if let Err(e) = ohlcv::delete_ohlcv_and_set_status(&pool, ticker_id, "full-download-processing").await {
+                if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-processing").await {
                     tracing::error!("[YAHOO-BOOTSTRAP] ticker={}, ticker_id={}, FAILED to claim: {}", ticker, ticker_id, e);
                     continue;
                 }

@@ -51,22 +51,18 @@ pub async fn run(pool: PgPool) {
             let ticker_id = ticker_entry.id;
 
             if is_fresh {
-                // Atomically delete data + transition to full-download-processing
+                // Transition to full-download-processing (upsert, no delete)
                 tracing::warn!(
-                    "[DIVIDEND] ticker={}, ticker_id={}, claiming — deleting ALL existing data for all intervals",
+                    "[DIVIDEND] ticker={}, ticker_id={}, claiming — upserting (no delete)",
                     ticker, ticker_id
                 );
-                if let Err(e) = ohlcv::delete_ohlcv_and_set_status(&pool, ticker_id, "full-download-processing").await {
-                    tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to claim (delete+set status): {}", ticker, ticker_id, e);
+                if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "full-download-processing").await {
+                    tracing::error!("[DIVIDEND] ticker={}, ticker_id={}, FAILED to claim: {}", ticker, ticker_id, e);
                     continue;
                 }
-                tracing::warn!(
-                    "[DIVIDEND] ticker={}, data deleted + status set to full-download-processing, re-downloading full history",
-                    ticker
-                );
             } else {
                 tracing::warn!(
-                    "[DIVIDEND] ticker={}, ticker_id={}, resuming abandoned full-download (data already deleted)",
+                    "[DIVIDEND] ticker={}, ticker_id={}, resuming abandoned full-download",
                     ticker, ticker_id
                 );
             }
