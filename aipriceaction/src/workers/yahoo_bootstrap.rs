@@ -14,7 +14,7 @@ use crate::workers::yahoo_shared;
 /// 3. Download full history chunked by time windows for 1D, 1h, 1m
 /// 4. Mark as 'ready' when all intervals are done
 pub async fn run(pool: PgPool) {
-    let provider = match YahooProvider::new(60) {
+    let provider = match YahooProvider::with_options(60, true, true) {
         Ok(p) => p,
         Err(e) => {
             tracing::error!("Yahoo bootstrap worker: failed to create provider: {e}");

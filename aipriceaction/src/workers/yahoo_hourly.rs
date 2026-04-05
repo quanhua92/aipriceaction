@@ -14,7 +14,7 @@ pub async fn run(pool: PgPool) {
     );
     sleep(Duration::from_secs(yahoo_worker::HOURLY_INITIAL_DELAY_SECS)).await;
 
-    let provider = match YahooProvider::new(60) {
+    let provider = match YahooProvider::with_options(60, true, true) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Yahoo hourly worker: failed to create provider: {e}");

@@ -8,7 +8,7 @@ use crate::queries::ohlcv;
 use crate::workers::yahoo_shared;
 
 pub async fn run(pool: PgPool) {
-    let provider = match YahooProvider::new(60) {
+    let provider = match YahooProvider::with_options(60, true, true) {
         Ok(p) => Arc::new(p),
         Err(e) => {
             tracing::error!("Yahoo daily worker: failed to create provider: {e}");

@@ -142,10 +142,10 @@ impl YahooProvider {
     /// - Each connector gets its own `RateLimiter`.
     /// - `requests_per_minute` controls the per-connector rate limit.
     pub fn new(requests_per_minute: u32) -> Result<Self, YahooError> {
-        Self::with_options(requests_per_minute, true)
+        Self::with_options(requests_per_minute, true, false)
     }
 
-    pub fn with_options(requests_per_minute: u32, direct_connection: bool) -> Result<Self, YahooError> {
+    pub fn with_options(requests_per_minute: u32, direct_connection: bool, skip_proxies: bool) -> Result<Self, YahooError> {
         let mut connectors = Vec::new();
         let mut rate_limiters = Vec::new();
 
@@ -168,32 +168,41 @@ impl YahooProvider {
             eprintln!("⚠️  Direct connection DISABLED (proxy-only mode)");
         }
 
-        // 2. Proxy connectors from HTTP_PROXIES env var
-        if let Ok(proxy_urls) = std::env::var("HTTP_PROXIES") {
-            for proxy_url in proxy_urls.split(',') {
-                let proxy_url = proxy_url.trim();
-                if proxy_url.is_empty() {
-                    continue;
-                }
-                match reqwest::Proxy::all(proxy_url) {
-                    Ok(proxy) => {
-                        match yahoo_finance_api::YahooConnector::builder()
-                            .proxy(proxy)
-                            .timeout(StdDuration::from_secs(30))
-                            .build()
-                        {
-                            Ok(connector) => {
-                                rate_limiters.push(RateLimiter::new(requests_per_minute));
-                                connectors.push(connector);
-                                eprintln!("✅ Added proxy: {}", sanitize_proxy_url(proxy_url));
-                            }
-                            Err(e) => {
-                                eprintln!("❌ Failed to create connector for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
+        // 2. Proxy connectors from HTTP_PROXIES env var (using custom reqwest::Client for SOCKS5 support)
+        if !skip_proxies {
+            if let Ok(proxy_urls) = std::env::var("HTTP_PROXIES") {
+                for proxy_url in proxy_urls.split(',') {
+                    let proxy_url = proxy_url.trim();
+                    if proxy_url.is_empty() {
+                        continue;
+                    }
+                    match reqwest::Proxy::all(proxy_url) {
+                        Ok(proxy) => {
+                            match reqwest::Client::builder()
+                                .proxy(proxy)
+                                .timeout(StdDuration::from_secs(30))
+                                .build()
+                            {
+                                Ok(client) => {
+                                    match yahoo_finance_api::YahooConnectorBuilder::build_with_client(client) {
+                                        Ok(connector) => {
+                                            rate_limiters.push(RateLimiter::new(requests_per_minute));
+                                            connectors.push(connector);
+                                            eprintln!("✅ Added proxy (socks5): {}", sanitize_proxy_url(proxy_url));
+                                        }
+                                        Err(e) => {
+                                            eprintln!("❌ Failed to create connector for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("❌ Failed to build reqwest client for proxy {}: {}", sanitize_proxy_url(proxy_url), e);
+                                }
                             }
                         }
-                    }
-                    Err(e) => {
-                        eprintln!("❌ Invalid proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
+                        Err(e) => {
+                            eprintln!("❌ Invalid proxy URL {}: {}", sanitize_proxy_url(proxy_url), e);
+                        }
                     }
                 }
             }
@@ -333,20 +342,29 @@ impl YahooProvider {
                             ticker = %ticker,
                             via = %label,
                             attempt = attempt_idx + 1,
-                            "Rate limit hit via {}, backing off 1s",
-                            label,
+                            error_kind = "rate_limit",
+                            "Request failed via {label}: {err_str}",
                         );
                         sleep(Duration::from_secs(1)).await;
                         continue;
                     }
 
+                    let kind = if err_str.contains("connection")
+                        || err_str.contains("connect error")
+                        || err_str.contains("timeout")
+                        || err_str.contains("Could not resolve")
+                    {
+                        "connection_error"
+                    } else {
+                        "other_error"
+                    };
+
                     tracing::warn!(
                         ticker = %ticker,
                         via = %label,
                         attempt = attempt_idx + 1,
-                        "Request failed via {}: {}",
-                        label,
-                        err_str,
+                        error_kind = kind,
+                        "Request failed via {label}: {err_str}",
                     );
                     continue;
                 }
@@ -473,20 +491,29 @@ impl YahooProvider {
                             ticker = %ticker,
                             via = %label,
                             attempt = attempt_idx + 1,
-                            "Rate limit hit via {}, backing off 1s",
-                            label,
+                            error_kind = "rate_limit",
+                            "Request failed via {label}: {err_str}",
                         );
                         sleep(Duration::from_secs(1)).await;
                         continue;
                     }
 
+                    let kind = if err_str.contains("connection")
+                        || err_str.contains("connect error")
+                        || err_str.contains("timeout")
+                        || err_str.contains("Could not resolve")
+                    {
+                        "connection_error"
+                    } else {
+                        "other_error"
+                    };
+
                     tracing::warn!(
                         ticker = %ticker,
                         via = %label,
                         attempt = attempt_idx + 1,
-                        "Request failed via {}: {}",
-                        label,
-                        err_str,
+                        error_kind = kind,
+                        "Request failed via {label}: {err_str}",
                     );
                     continue;
                 }
