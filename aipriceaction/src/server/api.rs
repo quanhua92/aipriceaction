@@ -415,6 +415,7 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
     let result: Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> = match params.mode {
         Mode::Vn => load_vn_groups(),
         Mode::Crypto => load_crypto_groups(),
+        Mode::Yahoo => load_yahoo_groups(),
     };
 
     match result {
@@ -636,5 +637,25 @@ fn load_crypto_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::er
 
     let mut map = BTreeMap::new();
     map.insert("CRYPTO_TOP_100".to_string(), symbols);
+    Ok(map)
+}
+
+fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
+    let path = resolve_data_file("global_tickers.json")?;
+    let content = std::fs::read_to_string(&path)?;
+
+    let raw: serde_json::Value = serde_json::from_str(&content)?;
+
+    let symbols: Vec<String> = raw["data"]
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| item["symbol"].as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut map = BTreeMap::new();
+    map.insert("GLOBAL".to_string(), symbols);
     Ok(map)
 }

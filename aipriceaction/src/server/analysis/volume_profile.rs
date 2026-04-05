@@ -119,6 +119,7 @@ pub async fn volume_profile_handler(
 
     let mode = match params.mode.to_lowercase().as_str() {
         "crypto" => Mode::Crypto,
+        "yahoo" => Mode::Yahoo,
         _ => Mode::Vn,
     };
 
@@ -186,7 +187,7 @@ pub async fn volume_profile_handler(
 
     let tick_size = match mode {
         Mode::Vn => get_tick_size_vn(avg_price, &params.symbol),
-        Mode::Crypto => get_tick_size_crypto(avg_price),
+        Mode::Crypto | Mode::Yahoo => get_tick_size_crypto(avg_price),
     };
 
     // Build volume profile

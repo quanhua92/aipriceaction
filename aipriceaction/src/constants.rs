@@ -147,6 +147,50 @@ pub mod binance_worker {
     pub const SCHEDULE_MINUTE_SECS: i64 = 600;
 }
 
+/// Yahoo Finance worker timing and configuration constants.
+pub mod yahoo_worker {
+    /// Daily worker: loop interval
+    pub const DAILY_LOOP_SECS: u64 = 60;
+    /// Hourly worker: loop interval
+    pub const HOURLY_LOOP_SECS: u64 = 300;
+    /// Minute worker: loop interval
+    pub const MINUTE_LOOP_SECS: u64 = 600;
+
+    /// Hourly worker: initial delay before first sync
+    pub const HOURLY_INITIAL_DELAY_SECS: u64 = 60;
+    /// Minute worker: initial delay before first sync
+    pub const MINUTE_INITIAL_DELAY_SECS: u64 = 60;
+
+    /// Cooldown when rate limited (HTTP 429) detected in a batch
+    pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
+
+    /// Max tickers to process per loop iteration
+    pub const DUE_TICKER_BATCH_SIZE: usize = 10;
+
+    /// Concurrent API batches based on Yahoo client count.
+    pub fn concurrent_batches(client_count: usize) -> usize {
+        (client_count * 2).min(4)
+    }
+
+    /// Ranges for incremental fetches
+    pub const DAILY_RANGE: &str = "5d";
+    pub const HOURLY_RANGE: &str = "5d";
+    pub const MINUTE_RANGE: &str = "1d";
+
+    /// Fixed scheduling intervals (seconds)
+    pub const SCHEDULE_DAILY_SECS: i64 = 300;
+    pub const SCHEDULE_HOURLY_SECS: i64 = 300;
+    pub const SCHEDULE_MINUTE_SECS: i64 = 600;
+
+    /// Bootstrap chunk sizes (days)
+    pub const BOOTSTRAP_DAILY_CHUNK_DAYS: i64 = 365;
+    pub const BOOTSTRAP_HOURLY_CHUNK_DAYS: i64 = 30;
+    pub const BOOTSTRAP_MINUTE_CHUNK_DAYS: i64 = 7;
+    pub const BOOTSTRAP_LOOP_SECS: u64 = 60;
+    /// Earliest year for hourly/minute bootstrap data
+    pub const BOOTSTRAP_HM_FLOOR_YEAR: i32 = 2023;
+}
+
 /// API server constants.
 pub mod api {
     /// Cache TTL for /tickers responses (seconds).

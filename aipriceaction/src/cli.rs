@@ -216,6 +216,37 @@ pub fn run() {
                     tracing::info!("BINANCE_WORKERS=false — Binance crypto workers not started");
                 }
 
+                // Spawn Yahoo Finance workers if enabled
+                let yahoo_workers_enabled = std::env::var("YAHOO_WORKERS")
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(false);
+
+                if yahoo_workers_enabled {
+                    tracing::info!("YAHOO_WORKERS=true — spawning bootstrap/daily/hourly/minute yahoo workers");
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_bootstrap::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_daily::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_hourly::run(pool_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_minute::run(pool_clone).await;
+                    });
+                } else {
+                    tracing::info!("YAHOO_WORKERS=false — Yahoo Finance workers not started");
+                }
+
                 let app = crate::server::create_app(pool);
                 let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
                     .await
