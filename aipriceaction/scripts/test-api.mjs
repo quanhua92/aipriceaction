@@ -383,6 +383,81 @@ async function testModeAllAggregated() {
 }
 
 // ──────────────────────────────────────────────
+// Duplicate timestamp detection
+// ──────────────────────────────────────────────
+
+function assertNoDuplicateTimes(rows, label) {
+  if (rows.length < 2) return;
+  const seen = new Map();
+  for (let i = 0; i < rows.length; i++) {
+    const t = rows[i].time;
+    if (seen.has(t)) {
+      fail(
+        `${label}: duplicate time '${t}' at rows ${seen.get(t)} and ${i}`,
+        `total rows=${rows.length}, duplicate times=${[...seen.entries()].filter(([, v]) => v > 1).length + 1}`,
+      );
+      return;
+    }
+    seen.set(t, i);
+  }
+  ok(`${label}: no duplicate times (${rows.length} rows)`);
+}
+
+async function testVnNoDuplicates() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D&limit=40",
+  );
+  console.log(`\n── No duplicates: VCB (vn) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("VCB" in body) {
+    assertNoDuplicateTimes(body.VCB, "VCB daily");
+  } else {
+    ok("VCB not in response (skipped)");
+  }
+}
+
+async function testYahooNoDuplicates() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=CL=F&interval=1D&limit=40&mode=yahoo",
+  );
+  console.log(`\n── No duplicates: CL=F (yahoo) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("CL=F" in body) {
+    assertNoDuplicateTimes(body["CL=F"], "CL=F daily yahoo");
+  } else {
+    ok("CL=F not in response (skipped)");
+  }
+}
+
+async function testCryptoNoDuplicates() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=BTCUSDT&interval=1D&limit=40&mode=crypto",
+  );
+  console.log(`\n── No duplicates: BTCUSDT (crypto) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("BTCUSDT" in body) {
+    assertNoDuplicateTimes(body.BTCUSDT, "BTCUSDT daily crypto");
+  } else {
+    ok("BTCUSDT not in response (skipped)");
+  }
+}
+
+async function testModeAllNoDuplicates() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=CL=F&symbol=VCB&symbol=BTCUSDT&interval=1D&limit=40&mode=all",
+  );
+  console.log(`\n── No duplicates: mode=all (CL=F + VCB + BTCUSDT) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  for (const sym of ["CL=F", "VCB", "BTCUSDT"]) {
+    if (sym in body && body[sym].length > 0) {
+      assertNoDuplicateTimes(body[sym], `${sym} daily mode=all`);
+    } else {
+      ok(`${sym} not in response (skipped)`);
+    }
+  }
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -412,6 +487,10 @@ const tests = [
   testModeAllGroups,
   testModeAllNames,
   testModeAllAggregated,
+  testVnNoDuplicates,
+  testYahooNoDuplicates,
+  testCryptoNoDuplicates,
+  testModeAllNoDuplicates,
 ];
 
 async function main() {
