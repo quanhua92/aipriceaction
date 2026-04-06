@@ -1024,17 +1024,17 @@ fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::err
 
     let raw: serde_json::Value = serde_json::from_str(&content)?;
 
-    let symbols: Vec<String> = raw["data"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|item| item["symbol"].as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-
     let mut map = BTreeMap::new();
-    map.insert("GLOBAL".to_string(), symbols);
+    if let Some(data) = raw["data"].as_array() {
+        for item in data {
+            let (symbol, category) = match (item["symbol"].as_str(), item["category"].as_str()) {
+                (Some(s), Some(c)) => (s.to_string(), c.to_string()),
+                (Some(s), None) => (s.to_string(), "Other".to_string()),
+                _ => continue,
+            };
+            map.entry(category).or_insert_with(Vec::new).push(symbol);
+        }
+    }
     Ok(map)
 }
 
