@@ -111,7 +111,7 @@ pub async fn enhance_and_save(
         .map(|d| OhlcvRow {
             ticker_id,
             interval: interval.to_string(),
-            time: d.time,
+            time: normalize_time(d.time, interval),
             open: d.open,
             high: d.high,
             low: d.low,
@@ -122,6 +122,34 @@ pub async fn enhance_and_save(
 
     if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &ohlcv_rows).await {
         tracing::error!(ticker_id, interval, "bulk_upsert_ohlcv failed: {e}");
+    }
+}
+
+/// Normalize a timestamp to the start of its interval boundary.
+///
+/// This ensures consistent timestamps so that the `(ticker_id, interval, time)` PK
+/// constraint deduplicates rows correctly. Some providers (e.g. Yahoo Finance) return
+/// slightly different timestamptz values for the same daily bar on each fetch, causing
+/// duplicate rows that only differ by seconds.
+///
+/// - `"1D"` → midnight UTC
+/// - `"1h"` → top of the hour (seconds/nanoseconds zeroed)
+/// - `"1m"` → top of the minute (seconds/nanoseconds zeroed)
+fn normalize_time(time: DateTime<Utc>, interval: &str) -> DateTime<Utc> {
+    match interval {
+        "1D" => time
+            .with_hour(0).unwrap()
+            .with_minute(0).unwrap()
+            .with_second(0).unwrap()
+            .with_nanosecond(0).unwrap(),
+        "1h" => time
+            .with_minute(0).unwrap()
+            .with_second(0).unwrap()
+            .with_nanosecond(0).unwrap(),
+        "1m" => time
+            .with_second(0).unwrap()
+            .with_nanosecond(0).unwrap(),
+        _ => time,
     }
 }
 
