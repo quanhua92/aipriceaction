@@ -83,7 +83,7 @@ pub async fn run(pool: PgPool) {
 
                                 match yahoo_shared::schedule_fixed_interval(
                                     &pool, ticker_id, "next_1d",
-                                    yahoo_worker::SCHEDULE_DAILY_SECS,
+                                    yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_DAILY_SECS),
                                 )
                                 .await
                                 {

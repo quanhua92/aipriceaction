@@ -108,6 +108,18 @@ pub mod vci_worker {
     }
 }
 
+/// Major crypto tickers — synced every 60s for all intervals.
+pub const MAJOR_CRYPTO: &[&str] = &["BTCUSDT", "ETHUSDT", "XRPUSDT", "TONUSDT"];
+
+/// Major global tickers (indices, commodities) — synced every 60s for all intervals.
+pub const MAJOR_GLOBAL: &[&str] = &["^GSPC", "^DJI", "^NDX", "GC=F", "CL=F"];
+
+/// Major VN stock index tickers — synced every 60s for all intervals.
+pub const MAJOR_VN: &[&str] = &["VNINDEX", "VN30", "VN30F1M"];
+
+/// Schedule interval for major tickers (all intervals).
+pub const MAJOR_SCHEDULE_SECS: i64 = 60;
+
 /// Binance crypto worker timing and configuration constants.
 pub mod binance_worker {
     /// Daily worker: loop interval (24/7, no trading hours)
@@ -145,6 +157,16 @@ pub mod binance_worker {
     pub const SCHEDULE_DAILY_SECS: i64 = 60;
     pub const SCHEDULE_HOURLY_SECS: i64 = 300;
     pub const SCHEDULE_MINUTE_SECS: i64 = 600;
+
+    /// Schedule interval for a ticker: major crypto tickers get MAJOR_SCHEDULE_SECS,
+    /// others get the standard interval for their timeframe.
+    pub fn schedule_secs(ticker: &str, default_secs: i64) -> i64 {
+        if super::MAJOR_CRYPTO.contains(&ticker) {
+            super::MAJOR_SCHEDULE_SECS
+        } else {
+            default_secs
+        }
+    }
 }
 
 /// Yahoo Finance worker timing and configuration constants.
@@ -181,6 +203,16 @@ pub mod yahoo_worker {
     pub const SCHEDULE_DAILY_SECS: i64 = 60;
     pub const SCHEDULE_HOURLY_SECS: i64 = 300;
     pub const SCHEDULE_MINUTE_SECS: i64 = 600;
+
+    /// Schedule interval for a ticker: major global tickers get MAJOR_SCHEDULE_SECS,
+    /// others get the standard interval for their timeframe.
+    pub fn schedule_secs(ticker: &str, default_secs: i64) -> i64 {
+        if super::MAJOR_GLOBAL.contains(&ticker) {
+            super::MAJOR_SCHEDULE_SECS
+        } else {
+            default_secs
+        }
+    }
 
     /// Bootstrap chunk sizes (days)
     pub const BOOTSTRAP_DAILY_CHUNK_DAYS: i64 = 365;

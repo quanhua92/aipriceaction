@@ -169,9 +169,9 @@ pub async fn run(pool: PgPool) {
             if let Err(e) = ohlcv::update_ticker_status(&pool, ticker_id, "ready").await {
                 tracing::error!(ticker, ticker_id, "bootstrap: failed to set status ready: {e}");
             } else {
-                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1d", binance_worker::SCHEDULE_DAILY_SECS).await.ok();
-                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1h", binance_worker::SCHEDULE_HOURLY_SECS).await.ok();
-                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1m", binance_worker::SCHEDULE_MINUTE_SECS).await.ok();
+                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1d", binance_worker::schedule_secs(ticker, binance_worker::SCHEDULE_DAILY_SECS)).await.ok();
+                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1h", binance_worker::schedule_secs(ticker, binance_worker::SCHEDULE_HOURLY_SECS)).await.ok();
+                binance_shared::schedule_fixed_interval(&pool, ticker_id, "next_1m", binance_worker::schedule_secs(ticker, binance_worker::SCHEDULE_MINUTE_SECS)).await.ok();
                 tracing::info!(ticker, ticker_id, "bootstrap: full download complete, marked ready");
             }
         }

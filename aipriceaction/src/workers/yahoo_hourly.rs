@@ -68,7 +68,7 @@ pub async fn run(pool: PgPool) {
                                     &pool,
                                     ticker_id,
                                     "next_1h",
-                                    yahoo_worker::SCHEDULE_HOURLY_SECS,
+                                    yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_HOURLY_SECS),
                                 )
                                 .await
                                 {

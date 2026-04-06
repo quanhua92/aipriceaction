@@ -68,7 +68,7 @@ pub async fn run(pool: PgPool) {
                                     &pool,
                                     ticker_id,
                                     "next_1m",
-                                    binance_worker::SCHEDULE_MINUTE_SECS,
+                                    binance_worker::schedule_secs(&ticker, binance_worker::SCHEDULE_MINUTE_SECS),
                                 )
                                 .await
                                 {

@@ -80,7 +80,7 @@ pub async fn run(pool: PgPool) {
 
                                 match binance_shared::schedule_fixed_interval(
                                     &pool, ticker_id, "next_1d",
-                                    binance_worker::SCHEDULE_DAILY_SECS,
+                                    binance_worker::schedule_secs(&ticker, binance_worker::SCHEDULE_DAILY_SECS),
                                 )
                                 .await
                                 {

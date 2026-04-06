@@ -3,11 +3,11 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
-use crate::constants::vci_worker;
+use crate::constants::{MAJOR_SCHEDULE_SECS, MAJOR_VN, vci_worker};
 use crate::constants::vci_worker::priority;
 use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv;
-use crate::workers::vci_shared;
+use crate::workers::{binance_shared, vci_shared};
 
 pub async fn run(pool: PgPool) {
     // Initial delay before first sync (3 minutes)
@@ -71,13 +71,22 @@ pub async fn run(pool: PgPool) {
                             Ok(data) => {
                                 vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
 
-                                // Schedule next minute run based on money-flow tier
-                                match ohlcv::schedule_next_run(
-                                    &pool, ticker_id, "next_1m",
-                                    &priority::THRESHOLDS, &tier_secs,
-                                ).await {
-                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
-                                    Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                // Major VN tickers get fixed 60s schedule; others use money-flow tier
+                                if MAJOR_VN.contains(&ticker.as_str()) {
+                                    match binance_shared::schedule_fixed_interval(
+                                        &pool, ticker_id, "next_1m", MAJOR_SCHEDULE_SECS,
+                                    ).await {
+                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK (major)"),
+                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                    }
+                                } else {
+                                    match ohlcv::schedule_next_run(
+                                        &pool, ticker_id, "next_1m",
+                                        &priority::THRESHOLDS, &tier_secs,
+                                    ).await {
+                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
+                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                    }
                                 }
                                 false
                             }
