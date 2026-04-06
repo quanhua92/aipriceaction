@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::server::types::{
     GroupQuery, Mode, NormalizedInterval, StockDataResponse,
-    TickersQuery,
+    TickersQuery, is_vn_ticker,
 };
 use crate::services::ohlcv;
 
@@ -137,6 +137,31 @@ pub async fn tickers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TickersQuery>,
 ) -> Response {
+    // Validate interval first (needed for all modes)
+    let interval = match NormalizedInterval::parse(
+        params.interval.as_deref().unwrap_or("1D"),
+    ) {
+        Some(iv) => iv,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": format!(
+                        "Invalid interval '{}'. Must be one of: {}",
+                        params.interval.as_deref().unwrap_or(""),
+                        NormalizedInterval::all_valid()
+                    )
+                })),
+            )
+                .into_response()
+        }
+    };
+
+    // mode=all: query across all sources
+    if params.mode == Mode::All {
+        return handle_mode_all(&state, params, interval).await;
+    }
+
     // No symbols → query all tickers for the mode
     let symbols = match params.symbol {
         Some(ref syms) if !syms.is_empty() => syms.clone(),
@@ -166,26 +191,6 @@ pub async fn tickers(
             1
         }
     });
-
-    // Validate interval
-    let interval = match NormalizedInterval::parse(
-        params.interval.as_deref().unwrap_or("1D"),
-    ) {
-        Some(iv) => iv,
-        None => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": format!(
-                        "Invalid interval '{}'. Must be one of: {}",
-                        params.interval.as_deref().unwrap_or(""),
-                        NormalizedInterval::all_valid()
-                    )
-                })),
-            )
-                .into_response()
-        }
-    };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
@@ -218,6 +223,220 @@ pub async fn tickers(
     }
 
     build_response(result, params.legacy, params.mode, is_csv)
+}
+
+/// Handle mode=all: query tickers across all sources in parallel, then merge.
+async fn handle_mode_all(
+    state: &Arc<AppState>,
+    params: TickersQuery,
+    interval: NormalizedInterval,
+) -> Response {
+    // 1. Resolve symbols → sources
+    let source_map: HashMap<String, Vec<String>> = if let Some(ref syms) = params.symbol {
+        if syms.is_empty() {
+            return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response();
+        }
+        match ohlcv::resolve_ticker_sources(&state.pool, syms).await {
+            Ok(map) => {
+                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+                for (sym, source) in &map {
+                    grouped.entry(source.clone()).or_default().push(sym.clone());
+                }
+                grouped
+            }
+            Err(e) => {
+                tracing::warn!("Failed to resolve ticker sources: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Failed to resolve ticker sources" })),
+                ).into_response();
+            }
+        }
+    } else {
+        // No symbols → fetch all tickers across all sources
+        match ohlcv::list_all_tickers(&state.pool).await {
+            Ok(tickers) => {
+                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+                for t in tickers {
+                    grouped.entry(t.source).or_default().push(t.ticker);
+                }
+                grouped
+            }
+            Err(e) => {
+                tracing::warn!("Failed to list all tickers: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Failed to list tickers" })),
+                ).into_response();
+            }
+        }
+    };
+
+    // Collect all symbols for cache key and limit calculation
+    let all_symbols: Vec<String> = source_map.values().flat_map(|v| v.iter().cloned()).collect();
+
+    let effective_limit = params.limit.unwrap_or_else(|| {
+        if all_symbols.len() == 1 {
+            crate::constants::api::DEFAULT_LIMIT
+        } else {
+            1
+        }
+    });
+
+    let is_csv = params.format.eq_ignore_ascii_case("csv");
+
+    // Cache check
+    let cache_key = build_cache_key(&params, &interval, &all_symbols, Some(effective_limit));
+    if params.cache {
+        let mut guard = state.tickers_cache.write().await;
+        if let Some(cached) = guard.get(&cache_key) {
+            return build_response(cached, params.legacy, params.mode, is_csv);
+        }
+        drop(guard);
+    }
+
+    // 2. Fetch per source in parallel
+    let (native_interval_str, agg_interval) = match &interval {
+        NormalizedInterval::Native(s) => (Some(s.to_string()), None),
+        NormalizedInterval::Aggregated(a) => (None, Some(*a)),
+    };
+    let base_interval_str = agg_interval.map(|a| a.base_interval().as_str().to_string());
+    let lookback = effective_limit + crate::constants::api::AGGREGATED_LOOKBACK;
+    let is_daily_native = native_interval_str.as_deref() == Some("1D");
+
+    let mut handles = Vec::new();
+    for (source, syms) in &source_map {
+        let pool = state.pool.clone();
+        let syms = syms.clone();
+        let source = source.clone();
+        let limit = effective_limit;
+        let start_time = params.start_date.as_deref().and_then(parse_date);
+        let end_time = params.end_date.as_deref().and_then(parse_date_end);
+
+        if let Some(ref db_interval) = native_interval_str {
+            let db_interval = db_interval.clone();
+            let is_daily = is_daily_native;
+            handles.push(tokio::spawn(async move {
+                let batch_map = ohlcv::get_ohlcv_joined_batch(
+                    &pool, &source, &syms, &db_interval,
+                    Some(limit), start_time, end_time,
+                ).await.unwrap_or_default();
+                let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+                for (ticker, rows) in batch_map {
+                    let mapped: Vec<StockDataResponse> = rows
+                        .into_iter()
+                        .map(|r| {
+                            let time_str = if is_daily {
+                                r.time.format("%Y-%m-%d").to_string()
+                            } else {
+                                r.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                            };
+                            StockDataResponse {
+                                time: time_str,
+                                open: r.open, high: r.high, low: r.low, close: r.close,
+                                volume: r.volume as u64,
+                                symbol: r.ticker,
+                                ma10: r.ma10, ma20: r.ma20, ma50: r.ma50,
+                                ma100: r.ma100, ma200: r.ma200,
+                                ma10_score: r.ma10_score, ma20_score: r.ma20_score,
+                                ma50_score: r.ma50_score, ma100_score: r.ma100_score,
+                                ma200_score: r.ma200_score,
+                                close_changed: r.close_changed,
+                                volume_changed: r.volume_changed,
+                                total_money_changed: r.total_money_changed,
+                            }
+                        })
+                        .collect();
+                    result.insert(ticker, mapped);
+                }
+                result.retain(|_, v| !v.is_empty());
+                (source, result)
+            }));
+        } else if let Some(agg) = agg_interval {
+            let base_interval = base_interval_str.clone().unwrap();
+            let lb = lookback;
+            handles.push(tokio::spawn(async move {
+                use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
+                let hourly_offset: i64 = if source == "vn" { 2 } else { 0 };
+                let raw_map = ohlcv::get_ohlcv_batch_raw(
+                    &pool, &source, &syms, &base_interval,
+                    Some(lb), start_time, end_time,
+                ).await.unwrap_or_default();
+
+                let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
+                for (ticker, rows) in raw_map {
+                    let aggregated = match base_interval.as_str() {
+                        "1D" => Aggregator::aggregate_daily_data(&ticker, rows, agg),
+                        "1h" => Aggregator::aggregate_hourly_data(&ticker, rows, agg, hourly_offset),
+                        _ => Aggregator::aggregate_minute_data(&ticker, rows, agg),
+                    };
+                    per_ticker.insert(ticker, aggregated);
+                }
+                let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+
+                let is_daily = base_interval == "1D";
+                let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+                for (ticker, data) in enhanced {
+                    let len = data.len();
+                    let start = if len > limit as usize { len - limit as usize } else { 0 };
+                    let trimmed: Vec<StockDataResponse> = data[start..]
+                        .iter()
+                        .map(|d| {
+                            let time_str = if is_daily {
+                                d.time.format("%Y-%m-%d").to_string()
+                            } else {
+                                d.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                            };
+                            StockDataResponse {
+                                time: time_str,
+                                open: d.open, high: d.high, low: d.low, close: d.close,
+                                volume: d.volume as u64,
+                                symbol: d.ticker.clone(),
+                                ma10: d.ma10, ma20: d.ma20, ma50: d.ma50,
+                                ma100: d.ma100, ma200: d.ma200,
+                                ma10_score: d.ma10_score, ma20_score: d.ma20_score,
+                                ma50_score: d.ma50_score, ma100_score: d.ma100_score,
+                                ma200_score: d.ma200_score,
+                                close_changed: d.close_changed,
+                                volume_changed: d.volume_changed,
+                                total_money_changed: d.total_money_changed,
+                            }
+                        })
+                        .collect();
+                    result.insert(ticker, trimmed);
+                }
+                result.retain(|_, v| !v.is_empty());
+                (source, result)
+            }));
+        }
+    }
+
+    // 3. Merge results from all sources
+    let mut merged: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+    for handle in handles {
+        match handle.await {
+            Ok((_source, mut source_data)) => {
+                // For native intervals, reverse each ticker's rows to oldest-first
+                if matches!(interval, NormalizedInterval::Native(_)) {
+                    for rows in source_data.values_mut() {
+                        rows.reverse();
+                    }
+                }
+                merged.append(&mut source_data);
+            }
+            Err(e) => {
+                tracing::warn!("Task failed in mode=all: {e}");
+            }
+        }
+    }
+
+    // Store in cache
+    if params.cache {
+        let mut guard = state.tickers_cache.write().await;
+        guard.put(cache_key, &merged);
+    }
+
+    build_response(merged, params.legacy, params.mode, is_csv)
 }
 
 /// Build a cache key from the query parameters (excludes view-layer params).
@@ -389,11 +608,18 @@ fn build_response(
     mode: Mode,
     is_csv: bool,
 ) -> Response {
-    if legacy && mode == Mode::Vn {
+    if legacy {
         let divisor = crate::constants::api::LEGACY_DIVISOR;
         for rows in data.values_mut() {
             for row in rows {
-                if !crate::server::types::is_index_ticker(&row.symbol) {
+                let apply = if mode == Mode::Vn {
+                    !crate::server::types::is_index_ticker(&row.symbol)
+                } else if mode == Mode::All && is_vn_ticker(&row.symbol) {
+                    !crate::server::types::is_index_ticker(&row.symbol)
+                } else {
+                    false
+                };
+                if apply {
                     row.open /= divisor;
                     row.high /= divisor;
                     row.low /= divisor;
@@ -417,6 +643,7 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
         Mode::Vn => load_vn_groups(),
         Mode::Crypto => load_crypto_groups(),
         Mode::Yahoo => load_yahoo_groups(),
+        Mode::All => load_all_groups(),
     };
 
     match result {
@@ -436,6 +663,7 @@ pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
         Mode::Vn => load_vn_names(),
         Mode::Crypto => load_crypto_names(),
         Mode::Yahoo => load_yahoo_names(),
+        Mode::All => load_all_names(),
     };
 
     match result {
@@ -857,4 +1085,32 @@ fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::E
 
 fn load_yahoo_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
     load_names_from_file("global_tickers.json")
+}
+
+/// Merge groups from all sources (vn > yahoo > crypto priority on key conflicts).
+fn load_all_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
+    type LoadFn = fn() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>>;
+    let load_fns: [LoadFn; 3] = [load_vn_groups, load_yahoo_groups, load_crypto_groups];
+    let mut merged = BTreeMap::new();
+    for load_fn in load_fns {
+        let groups = load_fn()?;
+        for (k, v) in groups {
+            merged.entry(k).or_insert(v);
+        }
+    }
+    Ok(merged)
+}
+
+/// Merge names from all sources (vn > yahoo > crypto priority on symbol conflicts).
+fn load_all_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
+    type LoadFn = fn() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>>;
+    let load_fns: [LoadFn; 3] = [load_vn_names, load_yahoo_names, load_crypto_names];
+    let mut merged = BTreeMap::new();
+    for load_fn in load_fns {
+        let names = load_fn()?;
+        for (k, v) in names {
+            merged.entry(k).or_insert(v);
+        }
+    }
+    Ok(merged)
 }

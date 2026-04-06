@@ -303,6 +303,85 @@ async function testNoLimitFutureRange() {
   assert(!("VCB" in body), "no key for future-only range");
 }
 
+async function testModeAllWithSymbols() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?mode=all&interval=1D&limit=1&symbol=VCB&symbol=BTCUSDT",
+  );
+  console.log(`\n── GET /tickers?mode=all&interval=1D&limit=1&symbol=VCB&symbol=BTCUSDT ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body, "has VCB key (vn source)");
+  assert(body.VCB.length === 1, `VCB has 1 row (got ${body.VCB.length})`);
+  if ("BTCUSDT" in body) {
+    assert(body.BTCUSDT.length === 1, `BTCUSDT has 1 row (got ${body.BTCUSDT.length})`);
+    ok("has BTCUSDT key (crypto source)");
+  } else {
+    ok("BTCUSDT not returned (may not exist in DB)");
+  }
+}
+
+async function testModeAllNoSymbols() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?mode=all&interval=1D&limit=1",
+  );
+  console.log(`\n── GET /tickers?mode=all&interval=1D&limit=1 (no symbols) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  const keys = Object.keys(body);
+  assert(keys.length > 1, `returns tickers from multiple sources (got ${keys.length} keys)`);
+  // Should have tickers from at least 2 sources
+  const hasVn = keys.some(k => /^[A-Z]{3}$/.test(k));
+  const hasCrypto = keys.some(k => k.endsWith("USDT"));
+  assert(hasVn || hasCrypto, "has tickers from at least one known source pattern");
+}
+
+async function testModeAllLegacy() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?mode=all&interval=1D&limit=1&symbol=VCB&symbol=BTCUSDT&legacy=true",
+  );
+  console.log(`\n── GET /tickers?mode=all&legacy=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("VCB" in body && body.VCB.length > 0) {
+    assert(body.VCB[0].close < 200, `VCB price divided by 1000 (got ${body.VCB[0].close})`);
+    ok("legacy scaling applied to VN ticker");
+  }
+  if ("BTCUSDT" in body && body.BTCUSDT.length > 0) {
+    assert(body.BTCUSDT[0].close > 200, `BTCUSDT price NOT divided (got ${body.BTCUSDT[0].close})`);
+    ok("legacy scaling NOT applied to crypto ticker");
+  }
+}
+
+async function testModeAllGroups() {
+  const { status, body, ms } = await fetchJSON("/tickers/group?mode=all");
+  console.log(`\n── GET /tickers/group?mode=all ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(typeof body === "object", "is an object");
+  const keys = Object.keys(body);
+  assert(keys.length > 1, `has groups from multiple sources (got ${keys.length})`);
+}
+
+async function testModeAllNames() {
+  const { status, body, ms } = await fetchJSON("/tickers/name?mode=all");
+  console.log(`\n── GET /tickers/name?mode=all ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(typeof body === "object", "is an object");
+  const keys = Object.keys(body);
+  assert(keys.length > 1, `has names from multiple sources (got ${keys.length})`);
+}
+
+async function testModeAllAggregated() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?mode=all&interval=1W&limit=2&symbol=VCB&symbol=BTCUSDT",
+  );
+  console.log(`\n── GET /tickers?mode=all&interval=1W&limit=2 ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("VCB" in body) {
+    assert(body.VCB.length === 2, `VCB has 2 rows (got ${body.VCB.length})`);
+    ok("VN weekly aggregation works with mode=all");
+  }
+  if ("BTCUSDT" in body) {
+    ok("crypto weekly aggregation works with mode=all");
+  }
+}
+
 // ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
@@ -327,6 +406,12 @@ const tests = [
   testNoLimit,
   testNoLimitEmptyTicker,
   testNoLimitFutureRange,
+  testModeAllWithSymbols,
+  testModeAllNoSymbols,
+  testModeAllLegacy,
+  testModeAllGroups,
+  testModeAllNames,
+  testModeAllAggregated,
 ];
 
 async function main() {

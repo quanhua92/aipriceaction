@@ -56,6 +56,56 @@ pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticke
     .await
 }
 
+/// List all tickers across all sources.
+pub async fn list_all_tickers(pool: &PgPool) -> sqlx::Result<Vec<Ticker>> {
+    sqlx::query_as!(
+        Ticker,
+        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+           FROM tickers
+           ORDER BY ticker"#,
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Resolve which DB source each symbol belongs to.
+///
+/// Returns a map of `symbol -> source`. When a symbol exists in multiple sources,
+/// priority is vn > yahoo > crypto (first match wins).
+pub async fn resolve_ticker_sources(
+    pool: &PgPool,
+    symbols: &[String],
+) -> sqlx::Result<std::collections::HashMap<String, String>> {
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT ticker, source FROM tickers WHERE ticker = ANY($1)",
+    )
+    .bind(symbols)
+    .fetch_all(pool)
+    .await?;
+
+    // Priority order: vn > yahoo > crypto
+    let priority = |source: &str| match source {
+        "vn" => 0,
+        "yahoo" => 1,
+        "crypto" => 2,
+        _ => 3,
+    };
+
+    let mut map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for (ticker, source) in rows {
+        // Keep lowest priority number (vn=0 wins over yahoo=1 wins over crypto=2)
+        let should_insert = match map.get(&ticker) {
+            Some(existing) if priority(&source) < priority(existing) => true,
+            Some(_) => false,
+            None => true,
+        };
+        if should_insert {
+            map.insert(ticker, source);
+        }
+    }
+    Ok(map)
+}
+
 /// Get OHLCV rows for a ticker_id + interval, ordered by time DESC.
 /// Optionally limit the number of rows.
 pub async fn get_ohlcv(

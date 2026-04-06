@@ -267,6 +267,26 @@ async function testVolumeProfileCrypto() {
 }
 
 // ──────────────────────────────────────────────
+// mode=all rejection tests
+// ──────────────────────────────────────────────
+
+async function testTopPerformersModeAllRejected() {
+  const { status, body, ms } = await fetchJSON("/analysis/top-performers?mode=all");
+  console.log(`\n── GET /analysis/top-performers?mode=all ── ${ms}ms`);
+  assert(status === 400, `returns 400 (got ${status})`);
+  assert(typeof body.error === "string", "has error message");
+  assert(body.error.includes("mode=all"), `error mentions mode=all (got '${body.error}')`);
+}
+
+async function testMaScoresModeAllRejected() {
+  const { status, body, ms } = await fetchJSON("/analysis/ma-scores-by-sector?mode=all");
+  console.log(`\n── GET /analysis/ma-scores-by-sector?mode=all ── ${ms}ms`);
+  assert(status === 400, `returns 400 (got ${status})`);
+  assert(typeof body.error === "string", "has error message");
+  assert(body.error.includes("mode=all"), `error mentions mode=all (got '${body.error}')`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -284,6 +304,8 @@ const tests = [
   testVolumeProfileInvalidDate,
   testVolumeProfileDateRange,
   testVolumeProfileCrypto,
+  testTopPerformersModeAllRejected,
+  testMaScoresModeAllRejected,
 ];
 
 async function main() {

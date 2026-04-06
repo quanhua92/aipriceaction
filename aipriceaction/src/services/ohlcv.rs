@@ -26,6 +26,20 @@ pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticke
     ohlcv::list_tickers(pool, source).await
 }
 
+/// List all tickers across all sources.
+pub async fn list_all_tickers(pool: &PgPool) -> sqlx::Result<Vec<Ticker>> {
+    ohlcv::list_all_tickers(pool).await
+}
+
+/// Resolve which DB source each symbol belongs to.
+/// Priority: vn > yahoo > crypto.
+pub async fn resolve_ticker_sources(
+    pool: &PgPool,
+    symbols: &[String],
+) -> sqlx::Result<std::collections::HashMap<String, String>> {
+    ohlcv::resolve_ticker_sources(pool, symbols).await
+}
+
 /// Get OHLCV rows for a ticker + interval, newest first.
 pub async fn get_ohlcv(
     pool: &PgPool,

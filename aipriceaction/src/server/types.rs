@@ -13,6 +13,7 @@ pub enum Mode {
     Crypto,
     #[serde(alias = "yahoo")]
     Yahoo,
+    All,
 }
 
 impl Mode {
@@ -21,8 +22,16 @@ impl Mode {
             Mode::Vn => "vn",
             Mode::Crypto => "crypto",
             Mode::Yahoo => "yahoo",
+            Mode::All => "all",
         }
     }
+}
+
+/// Heuristic: a VN ticker is exactly 3 uppercase ASCII letters (e.g. VCB, FPT).
+/// Used when mode=all to decide whether to apply legacy price scaling.
+pub fn is_vn_ticker(symbol: &str) -> bool {
+    let bytes = symbol.as_bytes();
+    bytes.len() == 3 && bytes.iter().all(|b| b.is_ascii_uppercase())
 }
 
 /// Query parameters for GET /tickers

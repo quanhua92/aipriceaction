@@ -80,9 +80,16 @@ pub async fn ma_scores_by_sector_handler(
         }
     };
 
-    let source = params.mode.source_label();
+    if params.mode == Mode::All {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "mode=all is not supported for this endpoint; specify vn, crypto, or yahoo"
+            })),
+        ).into_response();
+    }
 
-    // Fetch all latest daily data in one query
+    let source = params.mode.source_label();
     let rows = match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
         Ok(r) => r,
         Err(e) => {
