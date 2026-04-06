@@ -120,7 +120,31 @@ pub async fn enhance_and_save(
         })
         .collect();
 
-    if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &ohlcv_rows).await {
+    // Deduplicate: some providers (e.g. Yahoo) return multiple rows that
+    // normalize to the same timestamp. ON CONFLICT DO UPDATE can only
+    // resolve one conflict per unique key per statement, so we must
+    // collapse duplicates before upserting. Keep the last occurrence.
+    let orig_len = ohlcv_rows.len();
+
+    let deduped: Vec<OhlcvRow> = {
+        let mut map = HashMap::new();
+        for row in ohlcv_rows {
+            map.insert(row.time, row);
+        }
+        let mut rows: Vec<_> = map.into_values().collect();
+        rows.sort_by_key(|r| r.time);
+        rows
+    };
+
+    if deduped.len() < orig_len {
+        tracing::warn!(
+            ticker_id, interval,
+            dropped = orig_len - deduped.len(),
+            "deduplicated normalized timestamps before upsert"
+        );
+    }
+
+    if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &deduped).await {
         tracing::error!(ticker_id, interval, "bulk_upsert_ohlcv failed: {e}");
     }
 }
