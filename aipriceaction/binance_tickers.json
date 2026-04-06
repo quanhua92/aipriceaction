@@ -15,7 +15,6 @@
     { "rank": 13, "symbol": "BCHUSDT", "name": "Bitcoin Cash" },
     { "rank": 14, "symbol": "LINKUSDT", "name": "Chainlink" },
     { "rank": 16, "symbol": "XLMUSDT", "name": "Stellar" },
-    { "rank": 18, "symbol": "XMRUSDT", "name": "Monero" },
     { "rank": 19, "symbol": "LTCUSDT", "name": "Litecoin" },
     { "rank": 20, "symbol": "AVAXUSDT", "name": "Avalanche" },
     { "rank": 21, "symbol": "HBARUSDT", "name": "Hedera" },
