@@ -108,6 +108,10 @@ curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&interval=1D&limit
 # Multiple tickers
 curl "http://localhost:3000/tickers?symbol=VCB&symbol=FPT&interval=1D"
 
+# All sources at once (vn + yahoo + crypto)
+curl "http://localhost:3000/tickers?mode=all&interval=1D&limit=100"
+curl "http://localhost:3000/tickers?mode=all&symbol=CL=F&symbol=BTCUSDT&interval=1D"
+
 # Date range
 curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&start_date=2024-01-01&end_date=2024-12-31"
 
@@ -121,11 +125,13 @@ curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&format=csv"
 curl "http://localhost:3000/tickers/group"              # VN sectors
 curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
 curl "http://localhost:3000/tickers/group?mode=yahoo"    # Yahoo symbols
+curl "http://localhost:3000/tickers/group?mode=all"      # All sources
 
 # Ticker name lookup (symbol -> human-readable name)
 curl "http://localhost:3000/tickers/name"              # VN: ticker maps to itself
 curl "http://localhost:3000/tickers/name?mode=crypto"   # e.g. BTCUSDT -> Bitcoin
 curl "http://localhost:3000/tickers/name?mode=yahoo"    # e.g. GC=F -> Gold Futures
+curl "http://localhost:3000/tickers/name?mode=all"      # All sources
 
 # Company info (from company_info.json)
 curl "http://localhost:3000/tickers/info"              # All tickers
