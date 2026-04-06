@@ -165,7 +165,7 @@ pub mod yahoo_worker {
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
 
     /// Max tickers to process per loop iteration
-    pub const DUE_TICKER_BATCH_SIZE: usize = 10;
+    pub const DUE_TICKER_BATCH_SIZE: usize = 20;
 
     /// Concurrent API batches based on Yahoo client count.
     pub fn concurrent_batches(client_count: usize) -> usize {
@@ -178,7 +178,7 @@ pub mod yahoo_worker {
     pub const MINUTE_RANGE: &str = "1d";
 
     /// Fixed scheduling intervals (seconds)
-    pub const SCHEDULE_DAILY_SECS: i64 = 300;
+    pub const SCHEDULE_DAILY_SECS: i64 = 60;
     pub const SCHEDULE_HOURLY_SECS: i64 = 300;
     pub const SCHEDULE_MINUTE_SECS: i64 = 600;
 
