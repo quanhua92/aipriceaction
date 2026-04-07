@@ -14,6 +14,10 @@ use crate::workers::sjc_shared;
 pub async fn run(pool: PgPool) {
     tracing::info!("SJC bootstrap worker started");
 
+    // Ensure the SJC ticker exists with waiting-import status before entering the loop.
+    // This avoids a race where sjc_daily creates the ticker after bootstrap's first query.
+    sjc_shared::ensure_sjc_ticker(&pool).await;
+
     loop {
         // Find SJC tickers flagged for import
         let tickers = match ohlcv::get_tickers_by_statuses(
