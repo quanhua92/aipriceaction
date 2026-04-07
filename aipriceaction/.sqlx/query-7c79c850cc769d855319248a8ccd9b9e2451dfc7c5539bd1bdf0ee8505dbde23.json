@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickers SET status = 'waiting-import' WHERE source = $1 AND ticker = $2 AND status IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c79c850cc769d855319248a8ccd9b9e2451dfc7c5539bd1bdf0ee8505dbde23"
+}
