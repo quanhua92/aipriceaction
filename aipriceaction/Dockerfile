@@ -84,6 +84,8 @@ COPY binance_tickers.json ./binance_tickers.json
 COPY global_tickers.json ./global_tickers.json
 COPY company_info.json ./company_info.json
 COPY vn.csv ./vn.csv
+COPY sjc_tickers.json ./sjc_tickers.json
+COPY scripts/helpers/sjc-batch.csv ./sjc-batch.csv
 COPY public/ ./public
 
 RUN chown -R appuser:appgroup /app

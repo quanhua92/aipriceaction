@@ -83,12 +83,13 @@ pub async fn resolve_ticker_sources(
     .fetch_all(pool)
     .await?;
 
-    // Priority order: vn > yahoo > crypto
+    // Priority order: vn > yahoo > sjc > crypto
     let priority = |source: &str| match source {
         "vn" => 0,
         "yahoo" => 1,
-        "crypto" => 2,
-        _ => 3,
+        "sjc" => 2,
+        "crypto" => 3,
+        _ => 4,
     };
 
     let mut map: std::collections::HashMap<String, String> = std::collections::HashMap::new();

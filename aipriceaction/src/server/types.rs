@@ -13,6 +13,7 @@ pub enum Mode {
     Crypto,
     #[serde(alias = "yahoo")]
     Yahoo,
+    Sjc,
     All,
 }
 
@@ -22,6 +23,7 @@ impl Mode {
             Mode::Vn => "vn",
             Mode::Crypto => "crypto",
             Mode::Yahoo => "yahoo",
+            Mode::Sjc => "sjc",
             Mode::All => "all",
         }
     }

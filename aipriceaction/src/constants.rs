@@ -234,6 +234,35 @@ pub mod yahoo_worker {
     pub const DIVIDEND_MIN_DIVERGING_BARS: usize = 5;
 }
 
+/// SJC gold price worker timing and configuration constants.
+pub mod sjc_worker {
+    /// Daily worker: loop interval during trading hours (5 min)
+    pub const DAILY_LOOP_TRADE_SECS: u64 = 300;
+    /// Daily worker: loop interval outside trading hours (30 min)
+    pub const DAILY_LOOP_OFF_SECS: u64 = 1800;
+
+    /// Schedule interval for next daily sync (seconds)
+    pub const SCHEDULE_DAILY_SECS: i64 = 300;
+    /// Cooldown after API error (seconds)
+    pub const API_ERROR_COOLDOWN_SECS: u64 = 60;
+
+    /// Ticker symbol for SJC gold
+    pub const TICKER: &str = "SJC-GOLD";
+    /// Data source label
+    pub const SOURCE: &str = "sjc";
+    /// Display name
+    pub const NAME: &str = "SJC Gold Bar (Ho Chi Minh)";
+    /// CSV file name (historical data)
+    pub const CSV_PATH: &str = "sjc-batch.csv";
+    /// Import batch size
+    pub const IMPORT_BATCH_SIZE: usize = 500;
+
+    /// SJC API endpoint
+    pub const API_URL: &str = "https://sjc.com.vn/api/gold/prices";
+    /// Branch filter for Ho Chi Minh prices
+    pub const BRANCH: &str = "Hồ Chí Minh";
+}
+
 /// API server constants.
 pub mod api {
     /// Cache TTL for /tickers responses (seconds).
