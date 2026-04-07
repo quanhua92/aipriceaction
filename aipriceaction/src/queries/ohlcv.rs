@@ -45,13 +45,34 @@ pub async fn get_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Resu
 
 /// List all tickers for a given source.
 pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticker>> {
-    sqlx::query_as!(
-        Ticker,
+    list_tickers_with_extra(pool, source, &[]).await
+}
+
+/// Like `list_tickers` but also includes tickers from `extra_sources`.
+pub async fn list_tickers_with_extra(
+    pool: &PgPool,
+    source: &str,
+    extra_sources: &[&str],
+) -> sqlx::Result<Vec<Ticker>> {
+    if extra_sources.is_empty() {
+        return sqlx::query_as!(
+            Ticker,
+            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+               FROM tickers WHERE source = $1
+               ORDER BY ticker"#,
+            source
+        )
+        .fetch_all(pool)
+        .await;
+    }
+
+    sqlx::query_as::<_, Ticker>(
         r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
-           FROM tickers WHERE source = $1
+           FROM tickers WHERE source = $1 OR source = ANY($2)
            ORDER BY ticker"#,
-        source
     )
+    .bind(source)
+    .bind(extra_sources)
     .fetch_all(pool)
     .await
 }
@@ -347,6 +368,7 @@ async fn fetch_ohlcv_batch_raw(
     pool: &PgPool,
     source: &str,
     symbols: &[String],
+    extra_sources: &[&str],
     interval: &str,
     per_ticker_limit: Option<i64>,
     start_time: Option<DateTime<Utc>>,
@@ -357,8 +379,8 @@ async fn fetch_ohlcv_batch_raw(
 
     // Fetch ticker IDs + names
     let tickers: Vec<Ticker> = if symbols.is_empty() {
-        list_tickers(pool, source).await?
-    } else {
+        list_tickers_with_extra(pool, source, extra_sources).await?
+    } else if extra_sources.is_empty() {
         sqlx::query_as!(
             Ticker,
             r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
@@ -367,6 +389,17 @@ async fn fetch_ohlcv_batch_raw(
             source,
             symbols
         )
+        .fetch_all(pool)
+        .await?
+    } else {
+        sqlx::query_as::<_, Ticker>(
+            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+               FROM tickers WHERE (source = $1 OR source = ANY($2)) AND ticker = ANY($3)
+               ORDER BY ticker"#,
+        )
+        .bind(source)
+        .bind(extra_sources)
+        .bind(symbols)
         .fetch_all(pool)
         .await?
     };
@@ -507,13 +540,26 @@ pub async fn get_ohlcv_joined_batch(
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[]).await
+}
+
+pub async fn get_ohlcv_joined_batch_with_extra(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
+    extra_sources: &[&str],
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
     use std::collections::HashMap;
 
     let per_ticker = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
     let lookback = limit.map(|_| interval_duration(interval) * SMA_MAX_PERIOD);
 
     let raw = fetch_ohlcv_batch_raw(
-        pool, source, symbols, interval,
+        pool, source, symbols, extra_sources, interval,
         per_ticker, start_time, end_time, lookback,
     ).await?;
 
@@ -540,8 +586,21 @@ pub async fn get_ohlcv_batch_raw(
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
+    get_ohlcv_batch_raw_with_extra(pool, source, symbols, interval, per_ticker_limit, start_time, end_time, &[]).await
+}
+
+pub async fn get_ohlcv_batch_raw_with_extra(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    per_ticker_limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    end_time: Option<DateTime<Utc>>,
+    extra_sources: &[&str],
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
     fetch_ohlcv_batch_raw(
-        pool, source, symbols, interval,
+        pool, source, symbols, extra_sources, interval,
         per_ticker_limit, start_time, end_time, None,
     ).await
 }

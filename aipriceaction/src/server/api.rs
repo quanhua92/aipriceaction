@@ -162,13 +162,19 @@ pub async fn tickers(
         return handle_mode_all(&state, params, interval).await;
     }
 
+    let extra_sources = if params.mode == Mode::Yahoo {
+        crate::constants::MERGE_WITH_YAHOO
+    } else {
+        &[][..]
+    };
+
     // No symbols → query all tickers for the mode
     let symbols = match params.symbol {
         Some(ref syms) if !syms.is_empty() => syms.clone(),
         None => {
             // Load all tickers for the given mode from the DB
             let source = params.mode.source_label();
-            match ohlcv::list_tickers(&state.pool, source).await {
+            match ohlcv::list_tickers_with_extra(&state.pool, source, extra_sources).await {
                 Ok(tickers) => tickers.into_iter().map(|t| t.ticker).collect(),
                 Err(e) => {
                     tracing::warn!("Failed to list tickers for {source}: {e}");
@@ -209,10 +215,10 @@ pub async fn tickers(
     // Cache miss or bypass — fetch from DB
     let result = match interval {
         NormalizedInterval::Native(db_interval) => {
-            fetch_native_tickers(&state, symbols, db_interval, &params, Some(effective_limit)).await
+            fetch_native_tickers(&state, symbols, db_interval, &params, Some(effective_limit), extra_sources).await
         }
         NormalizedInterval::Aggregated(agg) => {
-            fetch_aggregated_tickers(&state, symbols, agg, &params, effective_limit).await
+            fetch_aggregated_tickers(&state, symbols, agg, &params, effective_limit, extra_sources).await
         }
     };
 
@@ -476,6 +482,7 @@ async fn fetch_native_tickers(
     interval: &str,
     params: &TickersQuery,
     limit: Option<i64>,
+    extra_sources: &[&str],
 ) -> BTreeMap<String, Vec<StockDataResponse>> {
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);
@@ -483,7 +490,7 @@ async fn fetch_native_tickers(
     let is_daily = interval == "1D";
 
     // Use batch query — single SQL query for all tickers instead of N sequential queries.
-    let batch_map = match ohlcv::get_ohlcv_joined_batch(
+    let batch_map = match ohlcv::get_ohlcv_joined_batch_with_extra(
         &state.pool,
         source,
         &symbols,
@@ -491,6 +498,7 @@ async fn fetch_native_tickers(
         limit,
         start_time,
         end_time,
+        extra_sources,
     )
     .await
     {
@@ -528,6 +536,7 @@ async fn fetch_aggregated_tickers(
     agg: crate::models::aggregated_interval::AggregatedInterval,
     params: &TickersQuery,
     limit: i64,
+    extra_sources: &[&str],
 ) -> BTreeMap<String, Vec<StockDataResponse>> {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
@@ -546,7 +555,7 @@ async fn fetch_aggregated_tickers(
     let hourly_offset: i64 = if params.mode == Mode::Vn { 2 } else { 0 };
 
     // Batch-fetch raw OHLCV rows for all target tickers in a single query
-    let raw_map = match ohlcv::get_ohlcv_batch_raw(
+    let raw_map = match ohlcv::get_ohlcv_batch_raw_with_extra(
         &state.pool,
         source,
         &symbols,
@@ -554,6 +563,7 @@ async fn fetch_aggregated_tickers(
         Some(lookback),
         start_time,
         end_time,
+        extra_sources,
     )
     .await
     {

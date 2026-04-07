@@ -1,6 +1,6 @@
 {
   "source": "sjc",
   "data": [
-    { "symbol": "SJC-GOLD", "name": "SJC Gold Bar (Ho Chi Minh)", "category": "Commodities" }
+    { "symbol": "SJC-GOLD", "name": "SJC Gold Bar (Ho Chi Minh)", "category": "Commodity" }
   ]
 }

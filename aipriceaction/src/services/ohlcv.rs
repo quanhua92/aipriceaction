@@ -26,6 +26,15 @@ pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticke
     ohlcv::list_tickers(pool, source).await
 }
 
+/// List tickers for a source, also including tickers from extra_sources.
+pub async fn list_tickers_with_extra(
+    pool: &PgPool,
+    source: &str,
+    extra_sources: &[&str],
+) -> sqlx::Result<Vec<Ticker>> {
+    ohlcv::list_tickers_with_extra(pool, source, extra_sources).await
+}
+
 /// List all tickers across all sources.
 pub async fn list_all_tickers(pool: &PgPool) -> sqlx::Result<Vec<Ticker>> {
     ohlcv::list_all_tickers(pool).await
@@ -183,7 +192,21 @@ pub async fn get_ohlcv_joined_batch(
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
-    ohlcv::get_ohlcv_joined_batch(pool, source, symbols, interval, limit, start_time, end_time).await
+    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[]).await
+}
+
+/// Like `get_ohlcv_joined_batch` but also includes tickers from extra_sources.
+pub async fn get_ohlcv_joined_batch_with_extra(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+    extra_sources: &[&str],
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
+    ohlcv::get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, extra_sources).await
 }
 
 /// Batch-fetch raw OHLCV rows (no indicators) for tickers of a source + interval.
@@ -198,5 +221,19 @@ pub async fn get_ohlcv_batch_raw(
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
-    ohlcv::get_ohlcv_batch_raw(pool, source, symbols, interval, per_ticker_limit, start_time, end_time).await
+    get_ohlcv_batch_raw_with_extra(pool, source, symbols, interval, per_ticker_limit, start_time, end_time, &[]).await
+}
+
+/// Like `get_ohlcv_batch_raw` but also includes tickers from extra_sources.
+pub async fn get_ohlcv_batch_raw_with_extra(
+    pool: &PgPool,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    per_ticker_limit: Option<i64>,
+    start_time: Option<chrono::DateTime<chrono::Utc>>,
+    end_time: Option<chrono::DateTime<chrono::Utc>>,
+    extra_sources: &[&str],
+) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvRow>>> {
+    ohlcv::get_ohlcv_batch_raw_with_extra(pool, source, symbols, interval, per_ticker_limit, start_time, end_time, extra_sources).await
 }
