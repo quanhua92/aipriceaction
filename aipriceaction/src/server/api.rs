@@ -643,7 +643,6 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
         Mode::Vn => load_vn_groups(),
         Mode::Crypto => load_crypto_groups(),
         Mode::Yahoo => load_yahoo_groups(),
-        Mode::Sjc => load_sjc_groups(),
         Mode::All => load_all_groups(),
     };
 
@@ -664,7 +663,6 @@ pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
         Mode::Vn => load_vn_names(),
         Mode::Crypto => load_crypto_names(),
         Mode::Yahoo => load_yahoo_names(),
-        Mode::Sjc => load_sjc_names(),
         Mode::All => load_all_names(),
     };
 
@@ -1021,27 +1019,22 @@ fn load_crypto_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::er
 }
 
 fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
-    let path = resolve_data_file("global_tickers.json")?;
-    let content = std::fs::read_to_string(&path)?;
+    let mut map = load_groups_from_source("global")?;
 
-    let raw: serde_json::Value = serde_json::from_str(&content)?;
-
-    let mut map = BTreeMap::new();
-    if let Some(data) = raw["data"].as_array() {
-        for item in data {
-            let (symbol, category) = match (item["symbol"].as_str(), item["category"].as_str()) {
-                (Some(s), Some(c)) => (s.to_string(), c.to_string()),
-                (Some(s), None) => (s.to_string(), "Other".to_string()),
-                _ => continue,
-            };
-            map.entry(category).or_insert_with(Vec::new).push(symbol);
+    // Merge additional sources (e.g. SJC)
+    for source in crate::constants::MERGE_WITH_YAHOO {
+        let extra = load_groups_from_source(source)?;
+        for (category, symbols) in extra {
+            map.entry(category).or_insert_with(Vec::new).extend(symbols);
         }
     }
+
     Ok(map)
 }
 
-fn load_sjc_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
-    let path = resolve_data_file("sjc_tickers.json")?;
+fn load_groups_from_source(source: &str) -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
+    let filename = format!("{source}_tickers.json");
+    let path = resolve_data_file(&filename)?;
     let content = std::fs::read_to_string(&path)?;
 
     let raw: serde_json::Value = serde_json::from_str(&content)?;
@@ -1106,17 +1099,23 @@ fn load_crypto_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::E
 }
 
 fn load_yahoo_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
-    load_names_from_file("global_tickers.json")
+    let mut names = load_names_from_file("global_tickers.json")?;
+
+    // Merge additional sources (e.g. SJC)
+    for source in crate::constants::MERGE_WITH_YAHOO {
+        let extra = load_names_from_file(&format!("{source}_tickers.json"))?;
+        for (symbol, name) in extra {
+            names.entry(symbol).or_insert(name);
+        }
+    }
+
+    Ok(names)
 }
 
-fn load_sjc_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
-    load_names_from_file("sjc_tickers.json")
-}
-
-/// Merge groups from all sources (vn > yahoo > sjc > crypto priority on key conflicts).
+/// Merge groups from all sources (vn > yahoo > crypto priority on key conflicts).
 fn load_all_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>> {
     type LoadFn = fn() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error>>;
-    let load_fns: [LoadFn; 4] = [load_vn_groups, load_yahoo_groups, load_sjc_groups, load_crypto_groups];
+    let load_fns: [LoadFn; 3] = [load_vn_groups, load_yahoo_groups, load_crypto_groups];
     let mut merged = BTreeMap::new();
     for load_fn in load_fns {
         let groups = load_fn()?;
@@ -1127,10 +1126,10 @@ fn load_all_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error
     Ok(merged)
 }
 
-/// Merge names from all sources (vn > yahoo > sjc > crypto priority on symbol conflicts).
+/// Merge names from all sources (vn > yahoo > crypto priority on symbol conflicts).
 fn load_all_names() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>> {
     type LoadFn = fn() -> Result<BTreeMap<String, String>, Box<dyn std::error::Error>>;
-    let load_fns: [LoadFn; 4] = [load_vn_names, load_yahoo_names, load_sjc_names, load_crypto_names];
+    let load_fns: [LoadFn; 3] = [load_vn_names, load_yahoo_names, load_crypto_names];
     let mut merged = BTreeMap::new();
     for load_fn in load_fns {
         let names = load_fn()?;

@@ -263,6 +263,10 @@ pub mod sjc_worker {
     pub const BRANCH: &str = "Hồ Chí Minh";
 }
 
+/// Additional data sources whose tickers should appear under the yahoo/global mode.
+/// Each source maps to its ticker JSON file: {source}_tickers.json
+pub const MERGE_WITH_YAHOO: &[&str] = &["sjc"];
+
 /// API server constants.
 pub mod api {
     /// Cache TTL for /tickers responses (seconds).
