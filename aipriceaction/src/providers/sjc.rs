@@ -52,24 +52,22 @@ impl SjcProvider {
     }
 
     /// Fetch gold prices for a specific date (or today if None).
+    ///
+    /// Uses the working PriceService.ashx endpoint matching gold-price.py.
     pub async fn fetch_price(
         &self,
         date: Option<NaiveDate>,
     ) -> Result<SjcPriceRecord, Box<dyn std::error::Error + Send + Sync>> {
-        let date_str = date
-            .map(|d| d.format("%d/%m/%Y").to_string())
-            .unwrap_or_default();
+        let target_date = date.unwrap_or_else(|| chrono::Local::now().date_naive());
+        let formatted_date = target_date.format("%d/%m/%Y").to_string();
 
-        let mut form = std::collections::HashMap::new();
-        form.insert("Type", "1");
-        if !date_str.is_empty() {
-            form.insert("GoldDate", date_str.as_str());
-        }
+        let payload = format!("method=GetSJCGoldPriceByDate&toDate={formatted_date}");
 
         let resp = self
             .client
             .post(sjc_worker::API_URL)
-            .form(&form)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(payload)
             .send()
             .await?
             .error_for_status()?

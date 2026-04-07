@@ -251,14 +251,14 @@ pub mod sjc_worker {
     /// Data source label
     pub const SOURCE: &str = "sjc";
     /// Display name
-    pub const NAME: &str = "SJC Gold Bar (Ho Chi Minh)";
+    pub const NAME: &str = "SJC Gold Bar";
     /// CSV file name (historical data)
     pub const CSV_PATH: &str = "sjc-batch.csv";
     /// Import batch size
     pub const IMPORT_BATCH_SIZE: usize = 500;
 
-    /// SJC API endpoint
-    pub const API_URL: &str = "https://sjc.com.vn/api/gold/prices";
+    /// SJC API endpoint (PriceService.ashx — the working legacy endpoint)
+    pub const API_URL: &str = "https://sjc.com.vn/GoldPrice/Services/PriceService.ashx";
     /// Branch filter for Ho Chi Minh prices
     pub const BRANCH: &str = "Hồ Chí Minh";
 }

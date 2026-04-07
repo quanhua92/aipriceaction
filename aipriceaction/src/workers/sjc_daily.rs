@@ -10,7 +10,8 @@ use crate::workers::sjc_shared;
 ///
 /// 1. Ensure SJC-GOLD ticker exists (creates with waiting-import if new)
 /// 2. Wait for bootstrap worker to import CSV (status must be 'ready')
-/// 3. Fetch SJC API every 5 min during VN trading hours, 30 min off-hours
+/// 3. Fetch SJC API immediately on startup, then every 5 min during
+///    VN trading hours, 30 min off-hours
 /// 4. Upsert today's daily candle preserving the opening price
 pub async fn run(pool: PgPool) {
     let provider = match SjcProvider::new() {
@@ -22,6 +23,10 @@ pub async fn run(pool: PgPool) {
     };
 
     tracing::info!("SJC daily worker started");
+
+    // Track whether we've done the first fetch — on startup we fetch
+    // immediately regardless of next_1d scheduling.
+    let mut first_fetch_done = false;
 
     loop {
         // 1. Ensure ticker exists
@@ -54,8 +59,8 @@ pub async fn run(pool: PgPool) {
             continue;
         }
 
-        // 4. Check if next_1d is in the future
-        if ticker.next_1d > chrono::Utc::now() {
+        // 4. Check if next_1d is in the future (skip this check on first fetch)
+        if first_fetch_done && ticker.next_1d > chrono::Utc::now() {
             let wait_secs = (ticker.next_1d - chrono::Utc::now()).num_seconds().unsigned_abs().min(60) as u64;
             sleep(TokioDuration::from_secs(wait_secs)).await;
             continue;
@@ -74,6 +79,7 @@ pub async fn run(pool: PgPool) {
                 if let Err(e) = sjc_shared::upsert_live_price(&pool, ticker_id, price.buy, price.sell).await {
                     tracing::warn!("SJC daily worker: failed to upsert price: {e}");
                 } else {
+                    first_fetch_done = true;
                     // Schedule next run
                     sjc_shared::schedule_next(&pool, ticker_id).await;
                 }
