@@ -458,6 +458,58 @@ async function testModeAllNoDuplicates() {
 }
 
 // ──────────────────────────────────────────────
+// SJC-GOLD merged into yahoo mode
+// ──────────────────────────────────────────────
+
+async function testSjcGoldInYahooGroups() {
+  const { status, body, ms } = await fetchJSON("/tickers/group?mode=yahoo");
+  console.log(`\n── SJC-GOLD in yahoo groups ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("Commodity" in body, "has Commodity group");
+  assert(body.Commodity.includes("SJC-GOLD"), "SJC-GOLD is in Commodity group");
+}
+
+async function testSjcGoldInYahooNames() {
+  const { status, body, ms } = await fetchJSON("/tickers/name?mode=yahoo");
+  console.log(`\n── SJC-GOLD in yahoo names ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("SJC-GOLD" in body, "has SJC-GOLD key");
+  assert(body["SJC-GOLD"] === "SJC Gold Bar (Ho Chi Minh)", `name matches (got '${body["SJC-GOLD"]}')`);
+}
+
+async function testSjcGoldInYahooTickers() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=SJC-GOLD&mode=yahoo&interval=1D&limit=3",
+  );
+  console.log(`\n── SJC-GOLD OHLCV via mode=yahoo ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("SJC-GOLD" in body, "has SJC-GOLD key");
+  assert(body["SJC-GOLD"].length === 3, `got 3 rows (got ${body["SJC-GOLD"].length})`);
+  assertOldestFirst(body["SJC-GOLD"], "SJC-GOLD daily yahoo");
+}
+
+async function testSjcGoldInAllGroups() {
+  const { status, body, ms } = await fetchJSON("/tickers/group?mode=all");
+  console.log(`\n── SJC-GOLD in mode=all groups ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("Commodity" in body, "has Commodity group");
+  assert(body.Commodity.includes("SJC-GOLD"), "SJC-GOLD is in Commodity group under mode=all");
+}
+
+async function testSjcGoldNoDuplicates() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=SJC-GOLD&interval=1D&limit=40&mode=yahoo",
+  );
+  console.log(`\n── No duplicates: SJC-GOLD (yahoo) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("SJC-GOLD" in body) {
+    assertNoDuplicateTimes(body["SJC-GOLD"], "SJC-GOLD daily yahoo");
+  } else {
+    ok("SJC-GOLD not in response (skipped)");
+  }
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -491,6 +543,11 @@ const tests = [
   testYahooNoDuplicates,
   testCryptoNoDuplicates,
   testModeAllNoDuplicates,
+  testSjcGoldInYahooGroups,
+  testSjcGoldInYahooNames,
+  testSjcGoldInYahooTickers,
+  testSjcGoldInAllGroups,
+  testSjcGoldNoDuplicates,
 ];
 
 async function main() {
