@@ -2,7 +2,7 @@
 
 **Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web)
 
-Vietnamese stock, US stock, and cryptocurrency data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
+Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
 
 ## Quick Start
 
@@ -108,7 +108,10 @@ curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&interval=1D&limit
 # Multiple tickers
 curl "http://localhost:3000/tickers?symbol=VCB&symbol=FPT&interval=1D"
 
-# All sources at once (vn + yahoo + crypto)
+# SJC gold (served under yahoo/global mode as a commodity)
+curl "http://localhost:3000/tickers?symbol=SJC-GOLD&mode=yahoo&interval=1D&limit=100"
+
+# All sources at once (vn + yahoo + crypto + sjc)
 curl "http://localhost:3000/tickers?mode=all&interval=1D&limit=100"
 curl "http://localhost:3000/tickers?mode=all&symbol=CL=F&symbol=BTCUSDT&interval=1D"
 
@@ -148,6 +151,7 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `VCI_WORKERS` | No | `true` | Enable VN stock data workers |
 | `VCI_DIVIDEND_WORKER` | No | `true` | Enable dividend detection worker |
 | `BINANCE_WORKERS` | No | `true` | Enable crypto data workers |
+| `SJC_WORKERS` | No | `true` | Enable SJC gold price workers |
 | `YAHOO_WORKERS` | No | `true` | Enable Yahoo Finance data workers |
 | `HTTP_PROXIES` | No | -- | Comma-separated SOCKS5 proxy list |
 | `CORS_ORIGINS` | No | `https://aipriceaction.com` | Comma-separated allowed CORS origins |
@@ -168,6 +172,7 @@ When enabled via environment variables, the server runs background sync workers:
 - **VCI dividend worker** -- Detects dividend-adjusted prices and re-downloads full history
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
 - **Yahoo Finance workers** -- Syncs US/international stock data for daily, hourly, and minute intervals
+- **SJC gold workers** -- Syncs SJC gold bar prices (HCM branch) via sjc.com.vn API; bootstrap imports historical CSV, then live syncs every 5min during trading hours. SJC-GOLD appears under `mode=yahoo` as a commodity alongside GC=F, CL=F, etc.
 
 ## Development
 
