@@ -4,13 +4,14 @@ use axum::{
     response::{IntoResponse, Json},
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::queries::ohlcv;
 use crate::server::types::Mode;
 use crate::server::AppState;
 
-use super::{load_ticker_groups, get_tickers_in_sector, is_index_ticker, AnalysisResponse};
+use super::{get_all_sources, get_tickers_in_sector, is_index_ticker, load_crypto_groups, load_ticker_groups, load_yahoo_groups, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct MaScoresBySectorQuery {
@@ -54,6 +55,8 @@ pub struct StockMaInfo {
     pub ma_score: f64,
     pub close_changed: Option<f64>,
     pub volume_changed: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 pub async fn ma_scores_by_sector_handler(
@@ -80,42 +83,82 @@ pub async fn ma_scores_by_sector_handler(
         }
     };
 
-    if params.mode == Mode::All {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "mode=all is not supported for this endpoint; specify vn, crypto, or yahoo"
-            })),
-        ).into_response();
-    }
+    let is_all = params.mode == Mode::All;
 
-    let source = params.mode.source_label();
-    let rows = match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("Failed to fetch daily data: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-            ).into_response();
+    // Fetch latest daily data; for mode=all, also collect source per row
+    let rows: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = if is_all {
+        let sources = get_all_sources();
+        let (r1, r2, r3, r4) = tokio::join!(
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[0]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[1]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[2]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[3]),
+        );
+        let mut merged = Vec::new();
+        for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            match r {
+                Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
+                Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+            }
+        }
+        merged
+    } else {
+        let source = params.mode.source_label();
+        match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+            Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+            Err(e) => {
+                tracing::error!("Failed to fetch daily data: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                ).into_response();
+            }
         }
     };
 
-    // Build a lookup: ticker -> row
-    let mut data_map: std::collections::HashMap<String, _> = std::collections::HashMap::new();
-    for row in rows {
-        data_map.insert(row.ticker.clone(), row);
+    // Build a lookup: keyed by "source:symbol" for mode=all, plain symbol for single-mode
+    let mut data_map: HashMap<String, (&str, _)> = HashMap::new();
+    for (row, row_source) in rows {
+        if is_all {
+            let key = format!("{row_source}:{}", row.ticker);
+            data_map.insert(key, (row_source, row));
+        } else {
+            data_map.insert(row.ticker.clone(), ("", row));
+        }
+    }
+
+    // Collect all sector definitions: VN groups + (for mode=all) yahoo/global + crypto groups
+    // Each entry: (sector_name, tickers, is_vn, preferred_source)
+    // preferred_source is used when mode=all to disambiguate symbols that exist in multiple sources
+    let mut all_sector_tickers: Vec<(String, Vec<String>, bool, Option<&str>)> = Vec::new();
+
+    // VN sectors — preferred source is "vn"
+    for sector_name in ticker_groups.keys() {
+        let tickers: Vec<String> = get_tickers_in_sector(sector_name, &ticker_groups)
+            .into_iter()
+            .filter(|t| !is_index_ticker(t))
+            .collect();
+        all_sector_tickers.push((sector_name.clone(), tickers, true, Some("vn")));
+    }
+
+    // For mode=all, add yahoo/global and crypto sector groups
+    if is_all {
+        if let Ok(yahoo_groups) = load_yahoo_groups() {
+            for (sector_name, tickers) in yahoo_groups {
+                all_sector_tickers.push((sector_name, tickers, false, Some("yahoo")));
+            }
+        }
+        if let Ok(crypto_groups) = load_crypto_groups() {
+            for (sector_name, tickers) in crypto_groups {
+                all_sector_tickers.push((sector_name, tickers, false, Some("crypto")));
+            }
+        }
     }
 
     let mut sector_analyses = Vec::new();
     let mut total_analyzed = 0;
 
-    for sector_name in ticker_groups.keys() {
-        let sector_tickers: Vec<String> = get_tickers_in_sector(sector_name, &ticker_groups)
-            .into_iter()
-            .filter(|t| !is_index_ticker(t))
-            .collect();
-
+    for (sector_name, sector_tickers, is_vn_sector, preferred_source) in &all_sector_tickers {
         if sector_tickers.is_empty() {
             continue;
         }
@@ -125,10 +168,24 @@ pub async fn ma_scores_by_sector_handler(
         let mut scores_count = 0;
         let mut above_threshold_count = 0;
 
-        for ticker in &sector_tickers {
-            let current = match data_map.get(ticker) {
-                Some(r) => r,
-                None => continue,
+        for ticker in sector_tickers {
+            // Only apply index ticker filter to VN tickers
+            if *is_vn_sector && is_index_ticker(ticker) {
+                continue;
+            }
+
+            let current = if is_all {
+                // Look up the ticker using the preferred source for this sector group
+                let ticker_source = preferred_source.unwrap_or("unknown");
+                match data_map.get(&format!("{ticker_source}:{ticker}")) {
+                    Some((_, r)) => r,
+                    None => continue,
+                }
+            } else {
+                match data_map.get(ticker) {
+                    Some((_, r)) => r,
+                    None => continue,
+                }
             };
 
             let (ma_value, ma_score) = match params.ma_period {
@@ -153,6 +210,12 @@ pub async fn ma_scores_by_sector_handler(
                 scores_sum += ma_scr;
                 scores_count += 1;
 
+                let ticker_source = if is_all {
+                    preferred_source.map(|s| s.to_string())
+                } else {
+                    None
+                };
+
                 sector_stocks.push(StockMaInfo {
                     symbol: ticker.clone(),
                     close: current.close,
@@ -161,6 +224,7 @@ pub async fn ma_scores_by_sector_handler(
                     ma_score: ma_scr,
                     close_changed: current.close_changed,
                     volume_changed: current.volume_changed,
+                    source: ticker_source,
                 });
             }
         }

@@ -267,23 +267,42 @@ async function testVolumeProfileCrypto() {
 }
 
 // ──────────────────────────────────────────────
-// mode=all rejection tests
+// mode=all support tests
 // ──────────────────────────────────────────────
 
-async function testTopPerformersModeAllRejected() {
-  const { status, body, ms } = await fetchJSON("/analysis/top-performers?mode=all");
+async function testTopPerformersModeAll() {
+  const { status, body, ms } = await fetchJSON("/analysis/top-performers?mode=all&limit=10");
   console.log(`\n── GET /analysis/top-performers?mode=all ── ${ms}ms`);
-  assert(status === 400, `returns 400 (got ${status})`);
-  assert(typeof body.error === "string", "has error message");
-  assert(body.error.includes("mode=all"), `error mentions mode=all (got '${body.error}')`);
+  assert(status === 200, `returns 200 (got ${status})`);
+  assert(body.analysis_type === "top_performers", "analysis_type correct");
+  assert(body.data.performers.length > 0, "performers not empty");
+
+  // Every performer should have a source field in mode=all
+  const allHaveSource = body.data.performers.every((p) => typeof p.source === "string" && p.source.length > 0);
+  assert(allHaveSource, "all performers have source field");
+
+  // Should have tickers from multiple sources
+  const sources = new Set(body.data.performers.map((p) => p.source));
+  assert(sources.size >= 2, `tickers from multiple sources (got ${[...sources].join(", ")})`);
 }
 
-async function testMaScoresModeAllRejected() {
-  const { status, body, ms } = await fetchJSON("/analysis/ma-scores-by-sector?mode=all");
+async function testMaScoresModeAll() {
+  const { status, body, ms } = await fetchJSON("/analysis/ma-scores-by-sector?mode=all&ma_period=20");
   console.log(`\n── GET /analysis/ma-scores-by-sector?mode=all ── ${ms}ms`);
-  assert(status === 400, `returns 400 (got ${status})`);
-  assert(typeof body.error === "string", "has error message");
-  assert(body.error.includes("mode=all"), `error mentions mode=all (got '${body.error}')`);
+  assert(status === 200, `returns 200 (got ${status})`);
+  assert(body.analysis_type === "ma_scores_by_sector", "analysis_type correct");
+  assert(body.data.sectors.length > 0, "sectors not empty");
+
+  // Should have VN sectors plus synthetic ones like CRYPTO
+  const sectorNames = body.data.sectors.map((s) => s.sector_name);
+  const hasCrypto = sectorNames.includes("CRYPTO");
+  assert(hasCrypto, "has CRYPTO sector");
+
+  // Top stocks should have source field in mode=all
+  const allHaveSource = body.data.sectors.every((s) =>
+    s.top_stocks.every((t) => typeof t.source === "string" && t.source.length > 0),
+  );
+  assert(allHaveSource, "all top_stocks have source field");
 }
 
 // ──────────────────────────────────────────────
@@ -304,8 +323,8 @@ const tests = [
   testVolumeProfileInvalidDate,
   testVolumeProfileDateRange,
   testVolumeProfileCrypto,
-  testTopPerformersModeAllRejected,
-  testMaScoresModeAllRejected,
+  testTopPerformersModeAll,
+  testMaScoresModeAll,
 ];
 
 async function main() {

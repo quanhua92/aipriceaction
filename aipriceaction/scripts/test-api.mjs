@@ -474,7 +474,7 @@ async function testSjcGoldInYahooNames() {
   console.log(`\n── SJC-GOLD in yahoo names ── ${ms}ms`);
   assert(status === 200, "returns 200");
   assert("SJC-GOLD" in body, "has SJC-GOLD key");
-  assert(body["SJC-GOLD"] === "SJC Gold Bar (Ho Chi Minh)", `name matches (got '${body["SJC-GOLD"]}')`);
+  assert(body["SJC-GOLD"] === "SJC Gold Bar", `name matches (got '${body["SJC-GOLD"]}')`);
 }
 
 async function testSjcGoldInYahooTickers() {

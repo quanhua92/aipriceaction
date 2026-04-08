@@ -7,10 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::queries::ohlcv;
-use crate::server::types::Mode;
+use crate::server::types::{is_vn_ticker, Mode};
 use crate::server::AppState;
 
-use super::{validate_limit, parse_analysis_date, load_ticker_groups, get_ticker_sector, is_index_ticker, AnalysisResponse};
+use super::{get_all_sources, get_ticker_sector, is_index_ticker, parse_analysis_date, validate_limit, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct TopPerformersQuery {
@@ -63,6 +63,8 @@ pub struct PerformerInfo {
     pub ma200_score: Option<f64>,
     pub sector: Option<String>,
     pub total_money_changed: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 fn sort_optional_f64_desc(a: &Option<f64>, b: &Option<f64>) -> std::cmp::Ordering {
@@ -112,7 +114,7 @@ pub async fn top_performers_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TopPerformersQuery>,
 ) -> impl IntoResponse {
-    let ticker_groups = match load_ticker_groups() {
+    let ticker_groups = match super::load_ticker_groups() {
         Ok(groups) => groups,
         Err(e) => {
             tracing::error!("Failed to load ticker groups: {}", e);
@@ -123,41 +125,52 @@ pub async fn top_performers_handler(
         }
     };
 
-    if params.mode == Mode::All {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "mode=all is not supported for this endpoint; specify vn, crypto, or yahoo"
-            })),
-        ).into_response();
-    }
-
-    let source = params.mode.source_label();
+    let is_all = params.mode == Mode::All;
     let analysis_date = parse_analysis_date(params.date.as_deref());
 
-    // Fetch latest daily data for all tickers
-    let rows = match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-        Ok(r) => r,
-        Err(e) => {
-            tracing::error!("Failed to fetch daily data: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-            ).into_response();
+    // Fetch latest daily data; for mode=all, also collect source per row
+    let rows: Vec<_> = if is_all {
+        let sources = get_all_sources();
+        let (r1, r2, r3, r4) = tokio::join!(
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[0]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[1]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[2]),
+            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[3]),
+        );
+        let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
+        for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            match r {
+                Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
+                Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+            }
+        }
+        merged
+    } else {
+        let source = params.mode.source_label();
+        match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+            Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+            Err(e) => {
+                tracing::error!("Failed to fetch daily data: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                ).into_response();
+            }
         }
     };
 
     let min_volume = params.min_volume.unwrap_or(10000);
 
     let mut daily_performers = Vec::new();
-    for row in &rows {
+    for (row, row_source) in &rows {
         if row.time > analysis_date {
             continue;
         }
         if is_index_ticker(&row.ticker) {
             continue;
         }
-        if params.mode == Mode::Vn && (row.volume as u64) < min_volume {
+        // Only apply min_volume filter to VN tickers
+        if is_vn_ticker(&row.ticker) && (row.volume as u64) < min_volume {
             continue;
         }
 
@@ -181,6 +194,7 @@ pub async fn top_performers_handler(
             ma200_score: row.ma200_score,
             sector,
             total_money_changed: row.total_money_changed,
+            source: if is_all { Some(row_source.to_string()) } else { None },
         });
     }
 
