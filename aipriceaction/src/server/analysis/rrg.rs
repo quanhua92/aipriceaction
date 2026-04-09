@@ -319,11 +319,9 @@ async fn handle_mascore(
         }
     }
 
-    let trail_length = params.trails.clamp(10, 120) as i64;
-
     // When trails=0, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
     // When trails>0, use get_ohlcv_joined_batch to get historical rows
-    if trail_length == 0 {
+    if params.trails == 0 {
         // Efficient path: only latest row per ticker
         let rows: Vec<(OhlcvJoined, &str)> = if is_all {
             let sources = get_all_sources();
@@ -402,6 +400,8 @@ async fn handle_mascore(
         )
             .into_response();
     }
+
+    let trail_length = params.trails.clamp(10, 120) as i64;
 
     // Trails path: fetch historical rows per source
     let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
