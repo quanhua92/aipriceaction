@@ -41,6 +41,8 @@ pub struct RrgQuery {
     pub period: usize,
     #[serde(default = "default_trails")]
     pub trails: usize,
+    #[serde(default = "default_min_volume")]
+    pub min_volume: i64,
     #[serde(default)]
     pub mode: Mode,
 }
@@ -50,6 +52,9 @@ fn default_period() -> usize {
 }
 fn default_trails() -> usize {
     10
+}
+fn default_min_volume() -> i64 {
+    100_000
 }
 
 // ---------------------------------------------------------------------------
@@ -356,6 +361,9 @@ async fn handle_mascore(
             if is_index_ticker(&row.ticker) {
                 continue;
             }
+            if row.volume < params.min_volume {
+                continue;
+            }
             let x = match row.ma20_score {
                 Some(v) => v,
                 None => continue,
@@ -445,6 +453,12 @@ async fn handle_mascore(
                 continue;
             }
 
+            // Latest row for volume check
+            let latest = chrono_rows.last().unwrap();
+            if latest.volume < params.min_volume {
+                continue;
+            }
+
             // Take the last trail_length rows
             let start = chrono_rows.len().saturating_sub(trail_length as usize);
             chrono_rows = chrono_rows[start..].to_vec();
@@ -459,7 +473,7 @@ async fn handle_mascore(
                 })
                 .collect();
 
-            // Latest point is the last row
+            // Re-get latest after trimming to trail_length
             let latest = chrono_rows.last().unwrap();
             let sector = get_ticker_sector(ticker, ticker_groups);
 
@@ -660,6 +674,11 @@ async fn handle_jdk(
                 .first()
                 .map(|r| r.volume)
                 .unwrap_or(0);
+
+            // Skip low-volume tickers early to save computation
+            if latest_volume < params.min_volume {
+                continue;
+            }
 
             // Raw RS for latest point
             let raw_rs = if latest_close != 0.0 && !aligned.bench_closes.is_empty() {

@@ -49,6 +49,9 @@ function buildRrgUrl() {
   const trailLength = document.getElementById('rrg-trail-length').value;
   if (trailLength && parseInt(trailLength) > 0) params.trails = trailLength;
 
+  const minVolume = document.getElementById('rrg-min-volume').value;
+  if (minVolume) params.min_volume = minVolume;
+
   if (mode && mode !== 'vn') params.mode = mode;
 
   return buildApiUrl('/analysis/rrg', params);

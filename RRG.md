@@ -140,6 +140,8 @@ GET /analysis/rrg?algorithm=mascore&mode=crypto  # MA Score: crypto
 GET /analysis/rrg?algorithm=mascore&mode=all   # MA Score: all sources
 GET /analysis/rrg?algorithm=mascore&trails=30  # MA Score: with 30 trail points
 GET /analysis/rrg?trails=0                    # No trails (both algorithms)
+GET /analysis/rrg?min_volume=100000           # Exclude low-volume tickers
+GET /analysis/rrg?algorithm=mascore&min_volume=50000  # MA Score with volume filter
 ```
 
 ### Query Parameters
@@ -150,6 +152,7 @@ GET /analysis/rrg?trails=0                    # No trails (both algorithms)
 | `benchmark` | VNINDEX | jdk only | Reference ticker symbol (ignored by mascore) |
 | `period` | 10 | jdk only | WMA smoothing period, clamped [4..=50] (ignored by mascore) |
 | `trails` | 10 | both | Number of trail points (0 = no trails, clamped to 10-120 when > 0) |
+| `min_volume` | 100000 | both | Exclude tickers with latest volume below this value |
 | `mode` | vn | both | Data source: vn, crypto, yahoo, all |
 
 ### Response Differences by Algorithm
