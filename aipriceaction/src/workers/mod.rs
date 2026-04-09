@@ -16,3 +16,4 @@ pub mod yahoo_shared;
 pub mod sjc_bootstrap;
 pub mod sjc_daily;
 pub mod sjc_shared;
+pub mod health;

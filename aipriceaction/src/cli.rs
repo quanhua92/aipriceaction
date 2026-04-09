@@ -276,7 +276,16 @@ pub fn run() {
                     tracing::info!("SJC_WORKERS=false — SJC gold workers not started");
                 }
 
-                let app = crate::server::create_app(pool);
+                let (app, health_snapshot) = crate::server::create_app(pool.clone());
+
+                // Spawn health-stats worker (always enabled — lightweight)
+                {
+                    let pool_clone = pool.clone();
+                    tokio::spawn(async move {
+                        crate::workers::health::run(pool_clone, health_snapshot).await;
+                    });
+                }
+
                 let listener = tokio::net::TcpListener::bind(format!("{host}:{port}"))
                     .await
                     .expect("Failed to bind to address");

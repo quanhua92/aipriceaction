@@ -17,128 +17,7 @@ use super::AppState;
 // ── /health ──
 
 pub async fn health(State(state): State<Arc<AppState>>) -> Response {
-    use super::HealthRow;
-
-    // Pick major ticker IDs to sample for sync-time queries.
-    // During VN trading hours (Mon-Fri 02:00-08:00 UTC) use VN tickers;
-    // otherwise use global/crypto tickers which sync 24/7.
-    let now = chrono::Utc::now();
-    let is_trading = now.weekday().num_days_from_monday() < 5
-        && now.hour() >= 2 && now.hour() < 8;
-
-    let major_tickers: Vec<i32> = if is_trading {
-        // Major VN tickers (VCB, FPT, etc.) — high liquidity, always synced during trading
-        sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM tickers WHERE source = 'vn' AND ticker = ANY($1) ORDER BY id",
-        )
-        .bind(&crate::constants::MAJOR_VN[..])
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default()
-    } else {
-        // Global + crypto major tickers — sync 24/7
-        let mut ids: Vec<i32> = sqlx::query_scalar::<_, i32>(
-            "SELECT id FROM tickers WHERE ticker = ANY($1) ORDER BY id",
-        )
-        .bind(&crate::constants::MAJOR_GLOBAL[..])
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default();
-        ids.extend(
-            sqlx::query_scalar::<_, i32>(
-                "SELECT id FROM tickers WHERE ticker = ANY($1) ORDER BY id",
-            )
-            .bind(&crate::constants::MAJOR_CRYPTO[..])
-            .fetch_all(&state.pool)
-            .await
-            .unwrap_or_default(),
-        );
-        ids
-    };
-
-    let year = now.year();
-    let hourly_table = format!("ohlcv_hourly_{year}");
-    let minute_table = format!("ohlcv_minute_{year}");
-
-    // Run stats + sync times in parallel
-    let stats_fut = sqlx::query_as::<_, HealthRow>(
-        r#"SELECT
-               t.source,
-               array_length(t.ids, 1)::bigint AS ticker_count,
-               (SELECT COUNT(DISTINCT o2.ticker_id)::bigint FROM ohlcv_daily o2
-                JOIN tickers t2 ON t2.id = o2.ticker_id AND t2.source = t.source
-                WHERE o2.time > NOW() - INTERVAL '7 days') AS active_tickers,
-               (SELECT GREATEST(reltuples, 0)::bigint FROM pg_class
-                WHERE relname = 'ohlcv_daily') AS daily_records,
-               (SELECT COALESCE(SUM(GREATEST(reltuples, 0)), 0)::bigint
-                FROM pg_class WHERE relname LIKE 'ohlcv_hourly_%' AND relkind = 'r')
-               AS hourly_records,
-               (SELECT COALESCE(SUM(GREATEST(reltuples, 0)), 0)::bigint
-                FROM pg_class WHERE relname LIKE 'ohlcv_minute_%' AND relkind = 'r')
-               AS minute_records,
-               0::bigint AS ohlcv_total,
-               0::bigint AS indicator_records
-           FROM (SELECT source, array_agg(id) AS ids FROM tickers GROUP BY source) t"#,
-    )
-    .fetch_all(&state.pool);
-
-    // Use DISTINCT ON to get the latest row per major ticker via PK index,
-    // then MAX(updated_at) on that small set (~7 rows). Returns the real sync
-    // timestamp without a full-table scan on updated_at.
-    let daily_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
-        "SELECT MAX(updated_at) FROM (SELECT DISTINCT ON (ticker_id) updated_at FROM ohlcv_daily WHERE ticker_id = ANY($1) ORDER BY ticker_id, time DESC) s",
-    )
-    .bind(&major_tickers)
-    .fetch_optional(&state.pool);
-
-    let hourly_sql = format!("SELECT MAX(updated_at) FROM (SELECT DISTINCT ON (ticker_id) updated_at FROM {hourly_table} WHERE ticker_id = ANY($1) ORDER BY ticker_id, time DESC) s");
-    let hourly_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
-        &hourly_sql,
-    )
-    .bind(&major_tickers)
-    .fetch_optional(&state.pool);
-
-    let minute_sql = format!("SELECT MAX(updated_at) FROM (SELECT DISTINCT ON (ticker_id) updated_at FROM {minute_table} WHERE ticker_id = ANY($1) ORDER BY ticker_id, time DESC) s");
-    let minute_sync_fut = sqlx::query_scalar::<_, Option<chrono::DateTime<chrono::Utc>>>(
-        &minute_sql,
-    )
-    .bind(&major_tickers)
-    .fetch_optional(&state.pool);
-
-    let (stats_res, daily_sync_res, hourly_sync_res, minute_sync_res) =
-        tokio::join!(stats_fut, daily_sync_fut, hourly_sync_fut, minute_sync_fut);
-
-    let stats = match stats_res {
-        Ok(rows) => rows,
-        Err(_) => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({
-                    "status": "error",
-                    "detail": "Database connection failed"
-                })),
-            )
-                .into_response();
-        }
-    };
-
-    let daily_sync = daily_sync_res.ok().flatten().flatten();
-    let hourly_sync = hourly_sync_res.ok().flatten().flatten();
-    let minute_sync = minute_sync_res.ok().flatten().flatten();
-
-    let mut total_tickers = 0i64;
-    let mut active_tickers = 0i64;
-    let mut daily = 0i64;
-    let mut hourly = 0i64;
-    let mut minute = 0i64;
-
-    for row in &stats {
-        total_tickers += row.ticker_count;
-        active_tickers += row.active_tickers;
-        daily += row.daily_records;
-        hourly += row.hourly_records;
-        minute += row.minute_records;
-    }
+    let snap = state.health_snapshot.read().await;
 
     let uptime_secs = state.started_at.elapsed().as_secs();
 
@@ -153,14 +32,14 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
     (
         StatusCode::OK,
         Json(serde_json::json!({
-            "total_tickers_count": total_tickers,
-            "active_tickers_count": active_tickers,
-            "daily_records_count": daily,
-            "hourly_records_count": hourly,
-            "minute_records_count": minute,
-            "daily_last_sync": daily_sync,
-            "hourly_last_sync": hourly_sync,
-            "minute_last_sync": minute_sync,
+            "total_tickers_count": snap.total_tickers,
+            "active_tickers_count": snap.active_tickers,
+            "daily_records_count": snap.daily_records,
+            "hourly_records_count": snap.hourly_records,
+            "minute_records_count": snap.minute_records,
+            "daily_last_sync": snap.daily_last_sync,
+            "hourly_last_sync": snap.hourly_last_sync,
+            "minute_last_sync": snap.minute_last_sync,
             "is_trading_hours": is_trading_hours,
             "trading_hours_timezone": "Asia/Ho_Chi_Minh",
             "uptime_secs": uptime_secs,

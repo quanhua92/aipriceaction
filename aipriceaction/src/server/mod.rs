@@ -18,20 +18,37 @@ use axum::middleware::{self, Next};
 use axum::extract::Request;
 use std::time::Duration;
 
-pub struct AppState {
-    pub pool: PgPool,
-    pub started_at: std::time::Instant,
-    pub tickers_cache: Arc<tokio::sync::RwLock<cache::TickersCache>>,
-}
-
-#[derive(sqlx::FromRow)]
-pub struct HealthRow {
-    pub source: String,
-    pub ticker_count: i64,
+pub struct HealthSnapshot {
+    pub total_tickers: i64,
     pub active_tickers: i64,
     pub daily_records: i64,
     pub hourly_records: i64,
     pub minute_records: i64,
+    pub daily_last_sync: Option<chrono::DateTime<chrono::Utc>>,
+    pub hourly_last_sync: Option<chrono::DateTime<chrono::Utc>>,
+    pub minute_last_sync: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+impl Default for HealthSnapshot {
+    fn default() -> Self {
+        Self {
+            total_tickers: 0,
+            active_tickers: 0,
+            daily_records: 0,
+            hourly_records: 0,
+            minute_records: 0,
+            daily_last_sync: None,
+            hourly_last_sync: None,
+            minute_last_sync: None,
+        }
+    }
+}
+
+pub struct AppState {
+    pub pool: PgPool,
+    pub started_at: std::time::Instant,
+    pub tickers_cache: Arc<tokio::sync::RwLock<cache::TickersCache>>,
+    pub health_snapshot: Arc<tokio::sync::RwLock<HealthSnapshot>>,
 }
 
 /// Middleware to add security headers to all responses
@@ -86,7 +103,7 @@ async fn add_cache_headers(request: Request, next: Next) -> Response {
 }
 
 #[allow(deprecated)]
-pub fn create_app(pool: PgPool) -> axum::Router {
+pub fn create_app(pool: PgPool) -> (axum::Router, Arc<tokio::sync::RwLock<HealthSnapshot>>) {
     let tickers_cache = cache::TickersCache::new(
         crate::constants::api::CACHE_MAX_ENTRIES,
         Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
@@ -98,10 +115,13 @@ pub fn create_app(pool: PgPool) -> axum::Router {
         Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
     );
 
+    let health_snapshot = Arc::new(tokio::sync::RwLock::new(HealthSnapshot::default()));
+
     let state = Arc::new(AppState {
         pool,
         started_at: std::time::Instant::now(),
         tickers_cache,
+        health_snapshot: health_snapshot.clone(),
     });
 
     // Upload routes with 10MB body limit
@@ -142,7 +162,7 @@ pub fn create_app(pool: PgPool) -> axum::Router {
         .nest_service("/public", ServeDir::new(public_dir).precompressed_br())
         .layer(middleware::from_fn(add_cache_headers));
 
-    axum::Router::new()
+    let router = axum::Router::new()
         .merge(upload_routes)
         .merge(main_routes)
         .merge(public_routes)
@@ -150,7 +170,9 @@ pub fn create_app(pool: PgPool) -> axum::Router {
         .layer(TimeoutLayer::new(Duration::from_secs(180)))
         .layer(middleware::from_fn(add_security_headers))
         .layer(CompressionLayer::new())
-        .layer(build_cors_layer())
+        .layer(build_cors_layer());
+
+    (router, health_snapshot)
 }
 
 fn build_cors_layer() -> CorsLayer {
