@@ -130,27 +130,27 @@ function displayRRG(data) {
 
   let html = '';
 
-  // Quadrant summary
-  html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">';
-  html += '<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border-2 border-green-300">';
+  // Quadrant summary (2x2 grid matching RRG chart layout)
+  html += '<div class="grid grid-cols-2 gap-2 md:gap-3 mb-4">';
+  html += '<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border-2 border-blue-300 row-start-1 col-start-1">';
+  html += '<div class="text-sm font-bold text-blue-800">Improving</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &lt; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &ge; ' + threshold + '</div>';
+  html += '<div class="text-xl font-bold text-blue-700 mt-1">' + improving.length + '</div>';
+  html += '</div>';
+  html += '<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border-2 border-green-300 row-start-1 col-start-2">';
   html += '<div class="text-sm font-bold text-green-800">Leading</div>';
   html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &ge; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &ge; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-green-700 mt-1">' + leading.length + '</div>';
   html += '</div>';
-  html += '<div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 border-2 border-yellow-300">';
-  html += '<div class="text-sm font-bold text-yellow-800">Weakening</div>';
-  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &ge; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &lt; ' + threshold + '</div>';
-  html += '<div class="text-xl font-bold text-yellow-700 mt-1">' + weakening.length + '</div>';
-  html += '</div>';
-  html += '<div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border-2 border-red-300">';
+  html += '<div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border-2 border-red-300 row-start-2 col-start-1">';
   html += '<div class="text-sm font-bold text-red-800">Lagging</div>';
   html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &lt; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &lt; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-red-700 mt-1">' + lagging.length + '</div>';
   html += '</div>';
-  html += '<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border-2 border-blue-300">';
-  html += '<div class="text-sm font-bold text-blue-800">Improving</div>';
-  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &lt; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &ge; ' + threshold + '</div>';
-  html += '<div class="text-xl font-bold text-blue-700 mt-1">' + improving.length + '</div>';
+  html += '<div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 border-2 border-yellow-300 row-start-2 col-start-2">';
+  html += '<div class="text-sm font-bold text-yellow-800">Weakening</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &ge; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &lt; ' + threshold + '</div>';
+  html += '<div class="text-xl font-bold text-yellow-700 mt-1">' + weakening.length + '</div>';
   html += '</div>';
   html += '</div>';
 
