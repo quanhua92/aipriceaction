@@ -1,21 +1,56 @@
 // RRG (Relative Rotation Graph) Analysis
 
+let currentRrgIsMascore = false;
+
+// Toggle fields visibility and description based on algorithm
+function toggleRrgAlgorithmFields() {
+  const algorithm = document.getElementById('rrg-algorithm').value;
+  const isMascore = algorithm === 'mascore';
+  const containers = ['rrg-benchmark-container', 'rrg-period-container'];
+  containers.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (isMascore) el.classList.add('hidden');
+      else el.classList.remove('hidden');
+    }
+  });
+
+  const desc = document.getElementById('rrg-description');
+  if (desc) {
+    desc.textContent = isMascore
+      ? 'Plot tickers in a 2D quadrant chart (MA20 Score vs MA100 Score) using pre-computed moving average scores. No benchmark needed — each ticker is self-compared against its own moving averages.'
+      : 'Plot tickers in a 2D quadrant chart (RS-Ratio vs RS-Momentum) relative to a benchmark. Identify leading, weakening, lagging, and improving stocks using the JdK double-smoothed WMA algorithm.';
+  }
+
+  const infoBox = document.getElementById('rrg-info-box');
+  if (infoBox) {
+    infoBox.querySelector('p').innerHTML = isMascore
+      ? '<strong>How MA Score RRG works:</strong> MA20 Score &ge; 0 means price is above its 20-day MA. MA100 Score &ge; 0 means price is above its 100-day MA. <strong>Leading</strong> (top-right) = above both MAs. <strong>Weakening</strong> (bottom-right) = above MA20 but below MA100. <strong>Lagging</strong> (bottom-left) = below both MAs. <strong>Improving</strong> (top-left) = below MA20 but above MA100.'
+      : '<strong>How RRG works:</strong> RS-Ratio &ge; 100 means outperforming the benchmark. RS-Momentum &ge; 100 means relative strength is improving. <strong>Leading</strong> (top-right) = outperforming + improving. <strong>Weakening</strong> (bottom-right) = outperforming but losing steam. <strong>Lagging</strong> (bottom-left) = underperforming + deteriorating. <strong>Improving</strong> (top-left) = underperforming but recovering.';
+  }
+}
+
 // Build RRG API URL
 function buildRrgUrl() {
   const params = {};
 
-  const benchmark = document.getElementById('rrg-benchmark').value;
   const algorithm = document.getElementById('rrg-algorithm').value;
-  const period = document.getElementById('rrg-period').value;
-  const trails = document.getElementById('rrg-trails').value;
-  const trailLength = document.getElementById('rrg-trail-length').value;
   const mode = document.getElementById('rrg-mode').value;
 
-  if (benchmark) params.benchmark = benchmark;
   if (algorithm) params.algorithm = algorithm;
-  if (period) params.period = period;
+
+  if (algorithm !== 'mascore') {
+    const benchmark = document.getElementById('rrg-benchmark').value;
+    const period = document.getElementById('rrg-period').value;
+    if (benchmark) params.benchmark = benchmark;
+    if (period) params.period = period;
+  }
+
+  const trails = document.getElementById('rrg-trails').value;
+  const trailLength = document.getElementById('rrg-trail-length').value;
   if (trails === 'true') params.trails = 'true';
   if (trails === 'true' && trailLength) params.trail_length = trailLength;
+
   if (mode && mode !== 'vn') params.mode = mode;
 
   return buildApiUrl('/analysis/rrg', params);
@@ -61,6 +96,12 @@ function displayRRG(data) {
   const benchmark = rrgData.benchmark || 'N/A';
   const algorithm = rrgData.algorithm || 'N/A';
   const period = rrgData.period || 'N/A';
+  const isMascore = algorithm === 'mascore';
+  currentRrgIsMascore = isMascore;
+
+  const threshold = isMascore ? 0 : 100;
+  const xAxisLabel = isMascore ? 'MA20 Score' : 'RS-Ratio';
+  const yAxisLabel = isMascore ? 'MA100 Score' : 'Momentum';
 
   // Classify into quadrants
   const leading = [];
@@ -72,13 +113,19 @@ function displayRRG(data) {
     const x = t.rs_ratio;
     const y = t.rs_momentum;
     const entry = t;
-    if (x >= 100 && y >= 100) leading.push(entry);
-    else if (x >= 100 && y < 100) weakening.push(entry);
-    else if (x < 100 && y < 100) lagging.push(entry);
+    if (x >= threshold && y >= threshold) leading.push(entry);
+    else if (x >= threshold && y < threshold) weakening.push(entry);
+    else if (x < threshold && y < threshold) lagging.push(entry);
     else improving.push(entry);
   });
 
-  countSpan.textContent = 'Benchmark: ' + benchmark + ' | Algorithm: ' + algorithm + ' | Period: ' + period + ' | Total: ' + tickers.length;
+  let summaryParts = ['Algorithm: ' + algorithm];
+  if (!isMascore) {
+    summaryParts.push('Benchmark: ' + benchmark);
+    summaryParts.push('Period: ' + period);
+  }
+  summaryParts.push('Total: ' + tickers.length);
+  countSpan.textContent = summaryParts.join(' | ');
 
   let html = '';
 
@@ -86,22 +133,22 @@ function displayRRG(data) {
   html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">';
   html += '<div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 border-2 border-green-300">';
   html += '<div class="text-sm font-bold text-green-800">Leading</div>';
-  html += '<div class="text-xs text-gray-600">RS-Ratio &ge; 100, Momentum &ge; 100</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &ge; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &ge; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-green-700 mt-1">' + leading.length + '</div>';
   html += '</div>';
   html += '<div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-3 border-2 border-yellow-300">';
   html += '<div class="text-sm font-bold text-yellow-800">Weakening</div>';
-  html += '<div class="text-xs text-gray-600">RS-Ratio &ge; 100, Momentum &lt; 100</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &ge; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &lt; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-yellow-700 mt-1">' + weakening.length + '</div>';
   html += '</div>';
   html += '<div class="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border-2 border-red-300">';
   html += '<div class="text-sm font-bold text-red-800">Lagging</div>';
-  html += '<div class="text-xs text-gray-600">RS-Ratio &lt; 100, Momentum &lt; 100</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &lt; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &lt; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-red-700 mt-1">' + lagging.length + '</div>';
   html += '</div>';
   html += '<div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border-2 border-blue-300">';
   html += '<div class="text-sm font-bold text-blue-800">Improving</div>';
-  html += '<div class="text-xs text-gray-600">RS-Ratio &lt; 100, Momentum &ge; 100</div>';
+  html += '<div class="text-xs text-gray-600">' + escHtml(xAxisLabel) + ' &lt; ' + threshold + ', ' + escHtml(yAxisLabel) + ' &ge; ' + threshold + '</div>';
   html += '<div class="text-xl font-bold text-blue-700 mt-1">' + improving.length + '</div>';
   html += '</div>';
   html += '</div>';
@@ -165,14 +212,21 @@ function renderRrgQuadrantTable(tickers, label, color) {
 
 // Render rows shared by table and quadrant views
 function renderRrgTickerRows(tickers) {
+  const xAxisLabel = currentRrgIsMascore ? 'MA20 Score' : 'RS-Ratio';
+  const yAxisLabel = currentRrgIsMascore ? 'MA100 Score' : 'RS-Momentum';
+  const threshold = currentRrgIsMascore ? 0 : 100;
+  const showRawRs = !currentRrgIsMascore;
+
   let html = '<div class="overflow-x-auto border border-gray-200 rounded-lg">';
   html += '<table class="min-w-full divide-y divide-gray-200">';
   html += '<thead class="bg-gray-50">';
   html += '<tr>';
   html += '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Symbol</th>';
-  html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">RS-Ratio</th>';
-  html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">RS-Momentum</th>';
-  html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Raw RS</th>';
+  html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">' + escHtml(xAxisLabel) + '</th>';
+  html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">' + escHtml(yAxisLabel) + '</th>';
+  if (showRawRs) {
+    html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Raw RS</th>';
+  }
   html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Close</th>';
   html += '<th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Volume</th>';
   html += '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sector</th>';
@@ -181,14 +235,16 @@ function renderRrgTickerRows(tickers) {
   html += '<tbody class="bg-white divide-y divide-gray-200">';
 
   tickers.forEach(t => {
-    const ratioClass = t.rs_ratio >= 100 ? 'text-green-600' : 'text-red-600';
-    const momClass = t.rs_momentum >= 100 ? 'text-green-600' : 'text-red-600';
+    const ratioClass = t.rs_ratio >= threshold ? 'text-green-600' : 'text-red-600';
+    const momClass = t.rs_momentum >= threshold ? 'text-green-600' : 'text-red-600';
 
     html += '<tr class="hover:bg-gray-50">';
     html += '<td class="px-3 py-2 text-sm font-mono font-semibold text-gray-900">' + escHtml(t.symbol) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right font-medium ' + ratioClass + '">' + t.rs_ratio.toFixed(2) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right font-medium ' + momClass + '">' + t.rs_momentum.toFixed(2) + '</td>';
-    html += '<td class="px-3 py-2 text-sm text-right text-gray-700">' + t.raw_rs.toFixed(4) + '</td>';
+    if (showRawRs) {
+      html += '<td class="px-3 py-2 text-sm text-right text-gray-700">' + t.raw_rs.toFixed(4) + '</td>';
+    }
     html += '<td class="px-3 py-2 text-sm text-right text-gray-700">' + formatNumber(t.close) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-right text-gray-700">' + formatVolume(t.volume) + '</td>';
     html += '<td class="px-3 py-2 text-sm text-gray-500">' + escHtml(t.sector || '-') + '</td>';

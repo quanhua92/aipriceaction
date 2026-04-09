@@ -2,19 +2,36 @@
 
 ## Overview
 
-A Relative Rotation Graph (RRG) plots securities in a 2D quadrant chart using two metrics:
+A Relative Rotation Graph (RRG) plots securities in a 2D quadrant chart using two metrics.
+
+Two algorithms are available:
+
+### JdK RS-Ratio (default)
+
+Compares each security against a **benchmark**:
 
 - **RS-Ratio (X-axis):** How a security is performing relative to a benchmark
 - **RS-Momentum (Y-axis):** Whether the relative performance is improving or deteriorating
 
-The four quadrants represent:
+Quadrant threshold: **100** (above = outperforming, below = underperforming).
 
-| Quadrant | RS-Ratio | RS-Momentum | Interpretation |
-|----------|----------|-------------|----------------|
-| Leading | > 100 | > 100 | Outperforming and accelerating |
-| Weakening | > 100 | < 100 | Outperforming but losing steam |
-| Lagging | < 100 | < 100 | Underperforming and deteriorating |
-| Improving | < 100 | > 100 | Underperforming but recovering |
+### MA Score
+
+Self-comparison using pre-computed moving average scores — **no benchmark needed**:
+
+- **MA20 Score (X-axis):** How price relates to its 20-day moving average
+- **MA100 Score (Y-axis):** How price relates to its 100-day moving average
+
+Quadrant threshold: **0** (above = above MA, below = below MA).
+
+### Quadrant Interpretation
+
+| Quadrant | X-axis | Y-axis | JdK Meaning | MA Score Meaning |
+|----------|--------|--------|-------------|------------------|
+| Leading | > threshold | > threshold | Outperforming and accelerating | Above both MA20 and MA100 |
+| Weakening | > threshold | < threshold | Outperforming but losing steam | Above MA20 but below MA100 |
+| Lagging | < threshold | < threshold | Underperforming and deteriorating | Below both MA20 and MA100 |
+| Improving | < threshold | > threshold | Underperforming but recovering | Below MA20 but above MA100 |
 
 ## JdK Algorithm
 
@@ -96,38 +113,68 @@ for i in (period-1)..rs_mom_norm.len():
 
 With default period=10: 31 bars minimum.
 
+## MA Score Algorithm
+
+Plots each ticker using its pre-computed MA scores from `OhlcvJoined`:
+
+- **X-axis:** `ma20_score` — distance of close from MA20 (positive = above)
+- **Y-axis:** `ma100_score` — distance of close from MA100 (positive = above)
+- **raw_rs:** always `0.0` (not applicable)
+- **trails:** array of trail points when `trails=true`, `null` when `trails=false`
+- **benchmark:** `null` in response (not applicable)
+- **period:** `null` in response (not applicable)
+
+No benchmark fetch, no OHLCV alignment, no `RrgComputeFn` call. When `trails=false`, reads directly from `get_latest_daily_per_ticker`. When `trails=true`, uses `get_ohlcv_joined_batch` to fetch historical rows and builds trail points from `ma20_score` / `ma100_score` over time.
+
 ## API Usage
 
 ```
-GET /analysis/rrg                             # VN stocks vs VNINDEX
-GET /analysis/rrg?benchmark=VN30              # VN stocks vs VN30
-GET /analysis/rrg?mode=crypto                 # crypto vs BTCUSDT
-GET /analysis/rrg?mode=all&benchmark=BTCUSDT  # all tickers vs BTCUSDT
-GET /analysis/rrg?trails=true&trail_length=30 # with trail history
-GET /analysis/rrg?algorithm=jdk&period=14     # explicit algorithm + period
+GET /analysis/rrg                             # JdK: VN stocks vs VNINDEX
+GET /analysis/rrg?benchmark=VN30              # JdK: VN stocks vs VN30
+GET /analysis/rrg?mode=crypto                 # JdK: crypto vs BTCUSDT
+GET /analysis/rrg?mode=all&benchmark=BTCUSDT  # JdK: all tickers vs BTCUSDT
+GET /analysis/rrg?trails=true&trail_length=30 # JdK: with trail history
+GET /analysis/rrg?algorithm=jdk&period=14     # JdK: explicit algorithm + period
+GET /analysis/rrg?algorithm=mascore           # MA Score: VN stocks
+GET /analysis/rrg?algorithm=mascore&mode=crypto  # MA Score: crypto
+GET /analysis/rrg?algorithm=mascore&mode=all   # MA Score: all sources
+GET /analysis/rrg?algorithm=mascore&trails=true&trail_length=30  # MA Score: with trail history
 ```
 
 ### Query Parameters
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `benchmark` | VNINDEX | Reference ticker symbol |
-| `algorithm` | jdk | Algorithm to use (only `jdk` available) |
-| `period` | 10 | WMA smoothing period, clamped [4..=50] |
-| `trails` | false | Include historical trail points |
-| `trail_length` | 60 | Number of trail points, clamped [10..=120] |
-| `mode` | vn | Data source: vn, crypto, yahoo, all |
+| Parameter | Default | Applicable | Description |
+|-----------|---------|------------|-------------|
+| `algorithm` | jdk | both | Algorithm: `jdk` or `mascore` |
+| `benchmark` | VNINDEX | jdk only | Reference ticker symbol (ignored by mascore) |
+| `period` | 10 | jdk only | WMA smoothing period, clamped [4..=50] (ignored by mascore) |
+| `trails` | false | both | Include historical trail points |
+| `trail_length` | 60 | both | Number of trail points, clamped [10..=120] |
+| `mode` | vn | both | Data source: vn, crypto, yahoo, all |
+
+### Response Differences by Algorithm
+
+| Field | JdK | MA Score |
+|-------|-----|----------|
+| `benchmark` | ticker symbol (e.g. `"VNINDEX"`) | `null` |
+| `period` | number (e.g. `10`) | `null` |
+| `tickers[].rs_ratio` | JdK RS-Ratio | MA20 Score |
+| `tickers[].rs_momentum` | JdK RS-Momentum | MA100 Score |
+| `tickers[].raw_rs` | security/benchmark ratio | `0.0` |
+| `tickers[].trails` | array of trail points or `null` | array of trail points or `null` |
 
 ## Adding New Algorithms
 
-Each algorithm implements the same signature:
+The JdK path uses a shared compute signature:
 
 ```rust
 type RrgComputeFn = fn(security: &[f64], benchmark: &[f64], period: usize) -> Option<(Vec<f64>, Vec<f64>)>;
 ```
 
+The MA Score path uses a different data flow (`get_latest_daily_per_ticker` or `get_ohlcv_joined_batch` for trails → read pre-computed scores), so it does not implement `RrgComputeFn`.
+
 To add a new algorithm:
 
 1. Add a variant to the `RrgAlgorithm` enum in `rrg.rs`
-2. Implement a function matching `RrgComputeFn`
-3. Add the dispatch case in the handler
+2. For benchmark-based algorithms: implement a function matching `RrgComputeFn` and add a handler in the dispatch
+3. For pre-computed-score algorithms: add a handler that reads from `OhlcvJoined` fields directly

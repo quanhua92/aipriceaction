@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::models::indicators::calculate_wma;
-use crate::models::ohlcv::OhlcvRow;
+use crate::models::ohlcv::{OhlcvJoined, OhlcvRow};
 use crate::queries::ohlcv;
 use crate::server::types::Mode;
 use crate::server::AppState;
@@ -29,6 +29,7 @@ use super::{
 pub enum RrgAlgorithm {
     #[default]
     Jdk,
+    Mascore,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,9 +60,11 @@ fn default_trail_length() -> usize {
 
 #[derive(Debug, Serialize)]
 pub struct RrgResponse {
-    pub benchmark: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub benchmark: Option<String>,
     pub algorithm: String,
-    pub period: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub period: Option<usize>,
     pub tickers: Vec<RrgTickerSnapshot>,
 }
 
@@ -222,28 +225,14 @@ fn align_closes_by_date(
 }
 
 // ---------------------------------------------------------------------------
-// Handler
+// Handler (dispatch)
 // ---------------------------------------------------------------------------
 
 pub async fn rrg_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<RrgQuery>,
 ) -> impl IntoResponse {
-    // Validate params
-    let period = params.period.clamp(4, 50);
-    let trail_length = params.trail_length.clamp(10, 120);
-    let benchmark = params
-        .benchmark
-        .unwrap_or_else(|| "VNINDEX".to_string());
-    let benchmark_upper = benchmark.to_uppercase();
-    let is_all = params.mode == Mode::All;
-
-    let compute_fn: RrgComputeFn = match params.algorithm {
-        RrgAlgorithm::Jdk => compute_jdk,
-    };
-    let algorithm_name = "jdk";
-
-    // Load sector info
+    // Load sector info (shared by both algorithms)
     let ticker_groups = match load_ticker_groups() {
         Ok(g) => g,
         Err(e) => {
@@ -255,6 +244,278 @@ pub async fn rrg_handler(
                 .into_response();
         }
     };
+
+    let is_all = params.mode == Mode::All;
+
+    match params.algorithm {
+        RrgAlgorithm::Mascore => {
+            handle_mascore(state, &params, &ticker_groups, is_all).await
+        }
+        RrgAlgorithm::Jdk => {
+            handle_jdk(state, params, &ticker_groups, is_all).await
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mascore handler
+// ---------------------------------------------------------------------------
+
+async fn handle_mascore(
+    state: Arc<AppState>,
+    params: &RrgQuery,
+    ticker_groups: &std::collections::HashMap<String, Vec<String>>,
+    is_all: bool,
+) -> axum::response::Response {
+    // Collect ticker symbols per source (reuse handle_jdk pattern)
+    let mut source_symbols: Vec<(&str, Vec<String>)> = Vec::new();
+    match params.mode {
+        Mode::Vn => {
+            let symbols = ticker_groups
+                .values()
+                .flat_map(|v| v.iter().cloned())
+                .collect::<Vec<_>>();
+            source_symbols.push(("vn", symbols));
+        }
+        Mode::Crypto => {
+            if let Ok(groups) = load_crypto_groups() {
+                let symbols = groups
+                    .values()
+                    .flat_map(|v| v.iter().cloned())
+                    .collect::<Vec<_>>();
+                source_symbols.push(("crypto", symbols));
+            }
+        }
+        Mode::Yahoo => {
+            if let Ok(groups) = load_yahoo_groups() {
+                let symbols = groups
+                    .values()
+                    .flat_map(|v| v.iter().cloned())
+                    .collect::<Vec<_>>();
+                source_symbols.push(("yahoo", symbols));
+            }
+        }
+        Mode::All => {
+            let sources = get_all_sources();
+            for &src in &sources {
+                let symbols = match src {
+                    "vn" => ticker_groups
+                        .values()
+                        .flat_map(|v| v.iter().cloned())
+                        .collect(),
+                    "crypto" => load_crypto_groups()
+                        .map(|g| g.into_values().flatten().collect())
+                        .unwrap_or_default(),
+                    "yahoo" => load_yahoo_groups()
+                        .map(|g| g.into_values().flatten().collect())
+                        .unwrap_or_default(),
+                    _ => Vec::new(),
+                };
+                source_symbols.push((src, symbols));
+            }
+        }
+    }
+
+    let trail_length = params.trail_length.clamp(10, 120) as i64;
+
+    // When trails=false, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
+    // When trails=true, use get_ohlcv_joined_batch to get historical rows
+    if !params.trails {
+        // Efficient path: only latest row per ticker
+        let rows: Vec<(OhlcvJoined, &str)> = if is_all {
+            let sources = get_all_sources();
+            let (r1, r2, r3, r4) = tokio::join!(
+                ohlcv::get_latest_daily_per_ticker(&state.pool, sources[0]),
+                ohlcv::get_latest_daily_per_ticker(&state.pool, sources[1]),
+                ohlcv::get_latest_daily_per_ticker(&state.pool, sources[2]),
+                ohlcv::get_latest_daily_per_ticker(&state.pool, sources[3]),
+            );
+            let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
+            for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+                match r {
+                    Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
+                    Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+                }
+            }
+            merged
+        } else {
+            let source = params.mode.source_label();
+            match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+                Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+                Err(e) => {
+                    tracing::error!("Failed to fetch daily data: {}", e);
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                    )
+                        .into_response();
+                }
+            }
+        };
+
+        let mut snapshots = Vec::new();
+        for (row, row_source) in &rows {
+            if is_index_ticker(&row.ticker) {
+                continue;
+            }
+            let x = match row.ma20_score {
+                Some(v) => v,
+                None => continue,
+            };
+            let y = match row.ma100_score {
+                Some(v) => v,
+                None => continue,
+            };
+            let sector = get_ticker_sector(&row.ticker, ticker_groups);
+            snapshots.push(RrgTickerSnapshot {
+                symbol: row.ticker.clone(),
+                rs_ratio: x,
+                rs_momentum: y,
+                raw_rs: 0.0,
+                close: row.close,
+                volume: row.volume,
+                sector,
+                source: if is_all { Some((*row_source).to_string()) } else { None },
+                trails: None,
+            });
+        }
+        let total_analyzed = snapshots.len();
+        return (
+            StatusCode::OK,
+            Json(AnalysisResponse {
+                analysis_date: "latest".to_string(),
+                analysis_type: "rrg".to_string(),
+                total_analyzed,
+                data: RrgResponse {
+                    benchmark: None,
+                    algorithm: "mascore".to_string(),
+                    period: None,
+                    tickers: snapshots,
+                },
+            }),
+        )
+            .into_response();
+    }
+
+    // Trails path: fetch historical rows per source
+    let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
+
+    if is_all {
+        let sources = get_all_sources();
+        let (r1, r2, r3, r4) = tokio::join!(
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[0], &[], "1D", Some(trail_length), None, None),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[1], &[], "1D", Some(trail_length), None, None),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[2], &[], "1D", Some(trail_length), None, None),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[3], &[], "1D", Some(trail_length), None, None),
+        );
+        for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            match r {
+                Ok(map) => all_joined.push((map, src)),
+                Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+            }
+        }
+    } else {
+        let source = params.mode.source_label();
+        match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", Some(trail_length), None, None).await {
+            Ok(map) => all_joined.push((map, source)),
+            Err(e) => {
+                tracing::error!("Failed to fetch daily data: {}", e);
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    let mut snapshots = Vec::new();
+
+    for (joined_map, src) in &all_joined {
+        for (ticker, rows) in joined_map {
+            if is_index_ticker(ticker) {
+                continue;
+            }
+
+            // DB returns DESC order; reverse to chronological
+            let mut chrono_rows: Vec<&OhlcvJoined> = rows.iter().rev().collect();
+
+            // Filter rows that have both ma20_score and ma100_score
+            chrono_rows.retain(|r| r.ma20_score.is_some() && r.ma100_score.is_some());
+
+            if chrono_rows.is_empty() {
+                continue;
+            }
+
+            // Take the last trail_length rows
+            let start = chrono_rows.len().saturating_sub(trail_length as usize);
+            chrono_rows = chrono_rows[start..].to_vec();
+
+            // Build trail points
+            let trail_points: Vec<RrgTrailPoint> = chrono_rows
+                .iter()
+                .map(|r| RrgTrailPoint {
+                    date: r.time.format("%Y-%m-%d").to_string(),
+                    rs_ratio: r.ma20_score.unwrap(),
+                    rs_momentum: r.ma100_score.unwrap(),
+                })
+                .collect();
+
+            // Latest point is the last row
+            let latest = chrono_rows.last().unwrap();
+            let sector = get_ticker_sector(ticker, ticker_groups);
+
+            snapshots.push(RrgTickerSnapshot {
+                symbol: ticker.clone(),
+                rs_ratio: latest.ma20_score.unwrap(),
+                rs_momentum: latest.ma100_score.unwrap(),
+                raw_rs: 0.0,
+                close: latest.close,
+                volume: latest.volume,
+                sector,
+                source: if is_all { Some((*src).to_string()) } else { None },
+                trails: Some(trail_points),
+            });
+        }
+    }
+
+    let total_analyzed = snapshots.len();
+
+    (
+        StatusCode::OK,
+        Json(AnalysisResponse {
+            analysis_date: "latest".to_string(),
+            analysis_type: "rrg".to_string(),
+            total_analyzed,
+            data: RrgResponse {
+                benchmark: None,
+                algorithm: "mascore".to_string(),
+                period: None,
+                tickers: snapshots,
+            },
+        }),
+    )
+        .into_response()
+}
+
+// ---------------------------------------------------------------------------
+// JdK handler (original logic)
+// ---------------------------------------------------------------------------
+
+async fn handle_jdk(
+    state: Arc<AppState>,
+    params: RrgQuery,
+    ticker_groups: &std::collections::HashMap<String, Vec<String>>,
+    is_all: bool,
+) -> axum::response::Response {
+    let period = params.period.clamp(4, 50);
+    let trail_length = params.trail_length.clamp(10, 120);
+    let benchmark = params
+        .benchmark
+        .unwrap_or_else(|| "VNINDEX".to_string());
+    let benchmark_upper = benchmark.to_uppercase();
+
+    let compute_fn: RrgComputeFn = compute_jdk;
 
     // Collect all ticker symbols per source
     let mut source_symbols: Vec<(&str, Vec<String>)> = Vec::new();
@@ -419,10 +680,6 @@ pub async fn rrg_handler(
                 let start = x_vals.len().saturating_sub(trail_length);
                 let trail_points: Vec<RrgTrailPoint> = (start..x_vals.len())
                     .filter_map(|i| {
-                        // AlignedData.dates has the same length as sec_closes/bench_closes.
-                        // x_vals/y_vals are shorter due to smoothing offsets.
-                        // We need to map x_vals[i] back to the corresponding date.
-                        // The offset between aligned data and output: aligned.len() - x_vals.len()
                         let date_idx = aligned.dates.len() - x_vals.len() + i;
                         aligned.dates.get(date_idx).map(|dt| RrgTrailPoint {
                             date: dt.format("%Y-%m-%d").to_string(),
@@ -440,7 +697,7 @@ pub async fn rrg_handler(
                 None
             };
 
-            let sector = get_ticker_sector(sym, &ticker_groups);
+            let sector = get_ticker_sector(sym, ticker_groups);
 
             snapshots.push(RrgTickerSnapshot {
                 symbol: sym.clone(),
@@ -465,9 +722,9 @@ pub async fn rrg_handler(
             analysis_type: "rrg".to_string(),
             total_analyzed,
             data: RrgResponse {
-                benchmark: benchmark_upper,
-                algorithm: algorithm_name.to_string(),
-                period,
+                benchmark: Some(benchmark_upper),
+                algorithm: "jdk".to_string(),
+                period: Some(period),
                 tickers: snapshots,
             },
         }),
