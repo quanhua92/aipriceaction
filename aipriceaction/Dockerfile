@@ -88,7 +88,7 @@ COPY sjc_tickers.json ./sjc_tickers.json
 COPY scripts/helpers/sjc-batch.csv ./sjc-batch.csv
 COPY public/ ./public
 
-RUN chown -R appuser:appgroup /app
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app && chown 1000:1000 /app/uploads
 USER appuser
 
 EXPOSE 3000
