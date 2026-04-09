@@ -120,25 +120,26 @@ Plots each ticker using its pre-computed MA scores from `OhlcvJoined`:
 - **X-axis:** `ma20_score` — distance of close from MA20 (positive = above)
 - **Y-axis:** `ma100_score` — distance of close from MA100 (positive = above)
 - **raw_rs:** always `0.0` (not applicable)
-- **trails:** array of trail points when `trails=true`, `null` when `trails=false`
+- **trails:** array of trail points when `trails > 0`, `null` when `trails = 0`
 - **benchmark:** `null` in response (not applicable)
 - **period:** `null` in response (not applicable)
 
-No benchmark fetch, no OHLCV alignment, no `RrgComputeFn` call. When `trails=false`, reads directly from `get_latest_daily_per_ticker`. When `trails=true`, uses `get_ohlcv_joined_batch` to fetch historical rows and builds trail points from `ma20_score` / `ma100_score` over time.
+No benchmark fetch, no OHLCV alignment, no `RrgComputeFn` call. When `trails=0`, reads directly from `get_latest_daily_per_ticker`. When `trails>0`, uses `get_ohlcv_joined_batch` to fetch historical rows and builds trail points from `ma20_score` / `ma100_score` over time.
 
 ## API Usage
 
 ```
-GET /analysis/rrg                             # JdK: VN stocks vs VNINDEX
+GET /analysis/rrg                             # JdK: VN stocks vs VNINDEX (with 10 trail points)
 GET /analysis/rrg?benchmark=VN30              # JdK: VN stocks vs VN30
 GET /analysis/rrg?mode=crypto                 # JdK: crypto vs BTCUSDT
 GET /analysis/rrg?mode=all&benchmark=BTCUSDT  # JdK: all tickers vs BTCUSDT
-GET /analysis/rrg?trails=true&trail_length=30 # JdK: with trail history
+GET /analysis/rrg?trails=30                   # JdK: with 30 trail points
 GET /analysis/rrg?algorithm=jdk&period=14     # JdK: explicit algorithm + period
 GET /analysis/rrg?algorithm=mascore           # MA Score: VN stocks
 GET /analysis/rrg?algorithm=mascore&mode=crypto  # MA Score: crypto
 GET /analysis/rrg?algorithm=mascore&mode=all   # MA Score: all sources
-GET /analysis/rrg?algorithm=mascore&trails=true&trail_length=30  # MA Score: with trail history
+GET /analysis/rrg?algorithm=mascore&trails=30  # MA Score: with 30 trail points
+GET /analysis/rrg?trails=0                    # No trails (both algorithms)
 ```
 
 ### Query Parameters
@@ -148,8 +149,7 @@ GET /analysis/rrg?algorithm=mascore&trails=true&trail_length=30  # MA Score: wit
 | `algorithm` | jdk | both | Algorithm: `jdk` or `mascore` |
 | `benchmark` | VNINDEX | jdk only | Reference ticker symbol (ignored by mascore) |
 | `period` | 10 | jdk only | WMA smoothing period, clamped [4..=50] (ignored by mascore) |
-| `trails` | false | both | Include historical trail points |
-| `trail_length` | 60 | both | Number of trail points, clamped [10..=120] |
+| `trails` | 10 | both | Number of trail points (0 = no trails, clamped to 10-120 when > 0) |
 | `mode` | vn | both | Data source: vn, crypto, yahoo, all |
 
 ### Response Differences by Algorithm

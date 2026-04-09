@@ -39,10 +39,8 @@ pub struct RrgQuery {
     pub algorithm: RrgAlgorithm,
     #[serde(default = "default_period")]
     pub period: usize,
-    #[serde(default)]
-    pub trails: bool,
-    #[serde(default = "default_trail_length")]
-    pub trail_length: usize,
+    #[serde(default = "default_trails")]
+    pub trails: usize,
     #[serde(default)]
     pub mode: Mode,
 }
@@ -50,8 +48,8 @@ pub struct RrgQuery {
 fn default_period() -> usize {
     10
 }
-fn default_trail_length() -> usize {
-    60
+fn default_trails() -> usize {
+    10
 }
 
 // ---------------------------------------------------------------------------
@@ -316,11 +314,11 @@ async fn handle_mascore(
         }
     }
 
-    let trail_length = params.trail_length.clamp(10, 120) as i64;
+    let trail_length = params.trails.clamp(10, 120) as i64;
 
-    // When trails=false, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
-    // When trails=true, use get_ohlcv_joined_batch to get historical rows
-    if !params.trails {
+    // When trails=0, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
+    // When trails>0, use get_ohlcv_joined_batch to get historical rows
+    if trail_length == 0 {
         // Efficient path: only latest row per ticker
         let rows: Vec<(OhlcvJoined, &str)> = if is_all {
             let sources = get_all_sources();
@@ -509,7 +507,7 @@ async fn handle_jdk(
     is_all: bool,
 ) -> axum::response::Response {
     let period = params.period.clamp(4, 50);
-    let trail_length = params.trail_length.clamp(10, 120);
+    let trail_length = params.trails.clamp(10, 120);
     let benchmark = params
         .benchmark
         .unwrap_or_else(|| "VNINDEX".to_string());
@@ -676,7 +674,7 @@ async fn handle_jdk(
             };
 
             // Trails
-            let trails = if params.trails {
+            let trails = if params.trails > 0 {
                 let start = x_vals.len().saturating_sub(trail_length);
                 let trail_points: Vec<RrgTrailPoint> = (start..x_vals.len())
                     .filter_map(|i| {

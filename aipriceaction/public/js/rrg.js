@@ -46,10 +46,8 @@ function buildRrgUrl() {
     if (period) params.period = period;
   }
 
-  const trails = document.getElementById('rrg-trails').value;
   const trailLength = document.getElementById('rrg-trail-length').value;
-  if (trails === 'true') params.trails = 'true';
-  if (trails === 'true' && trailLength) params.trail_length = trailLength;
+  if (trailLength && parseInt(trailLength) > 0) params.trails = trailLength;
 
   if (mode && mode !== 'vn') params.mode = mode;
 
@@ -268,17 +266,6 @@ function showRrgTab(tabName) {
   if (btn) {
     btn.classList.add('border-indigo-500', 'text-indigo-600');
     btn.classList.remove('border-transparent', 'text-gray-500');
-  }
-}
-
-// Toggle trail length visibility
-function toggleRrgTrailLength() {
-  const trails = document.getElementById('rrg-trails').value;
-  const container = document.getElementById('rrg-trail-length-container');
-  if (trails === 'true') {
-    container.classList.remove('hidden');
-  } else {
-    container.classList.add('hidden');
   }
 }
 
