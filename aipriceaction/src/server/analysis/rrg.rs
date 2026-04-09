@@ -401,7 +401,7 @@ async fn handle_mascore(
             .into_response();
     }
 
-    let trail_length = params.trails.clamp(10, 120) as i64;
+    let trail_length = params.trails.clamp(1, 120) as i64;
 
     // Trails path: fetch historical rows per source
     let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
@@ -521,7 +521,7 @@ async fn handle_jdk(
     is_all: bool,
 ) -> axum::response::Response {
     let period = params.period.clamp(4, 50);
-    let trail_length = params.trails.clamp(10, 120);
+    let trail_length = params.trails.clamp(1, 120);
     let benchmark = params
         .benchmark
         .unwrap_or_else(|| "VNINDEX".to_string());

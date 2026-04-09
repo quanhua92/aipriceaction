@@ -103,13 +103,13 @@ async function testJdkNoTrails() {
 }
 
 async function testJdkTrailClampMin() {
-  const { status, body, ms } = await fetchJSON("/analysis/rrg?trails=5");
-  console.log(`\n── GET /analysis/rrg?trails=5 (clamped to 10) ── ${ms}ms`);
+  const { status, body, ms } = await fetchJSON("/analysis/rrg?trails=3");
+  console.log(`\n── GET /analysis/rrg?trails=3 (clamped to 3) ── ${ms}ms`);
   assert(status === 200, "returns 200");
 
   const t = body.data.tickers[0];
   assert(t.trails !== null, "trails is not null");
-  assert(t.trails.length >= 10, `trail length >= 10 (got ${t.trails.length})`);
+  assert(t.trails.length === 3, `trail length = 3 (got ${t.trails.length})`);
 }
 
 async function testJdkTrailClampMax() {

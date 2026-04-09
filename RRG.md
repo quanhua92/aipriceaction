@@ -151,7 +151,7 @@ GET /analysis/rrg?algorithm=mascore&min_volume=50000  # MA Score with volume fil
 | `algorithm` | jdk | both | Algorithm: `jdk` or `mascore` |
 | `benchmark` | VNINDEX | jdk only | Reference ticker symbol (ignored by mascore) |
 | `period` | 10 | jdk only | WMA smoothing period, clamped [4..=50] (ignored by mascore) |
-| `trails` | 10 | both | Number of trail points (0 = no trails, clamped to 10-120 when > 0) |
+| `trails` | 10 | both | Number of trail points (0 = no trails, clamped to 1-120 when > 0) |
 | `min_volume` | 100000 | both | Exclude tickers with latest volume below this value |
 | `mode` | vn | both | Data source: vn, crypto, yahoo, all |
 
