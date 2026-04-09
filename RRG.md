@@ -142,6 +142,9 @@ GET /analysis/rrg?algorithm=mascore&trails=30  # MA Score: with 30 trail points
 GET /analysis/rrg?trails=0                    # No trails (both algorithms)
 GET /analysis/rrg?min_volume=100000           # Exclude low-volume tickers
 GET /analysis/rrg?algorithm=mascore&min_volume=50000  # MA Score with volume filter
+GET /analysis/rrg?date=2025-01-15                       # JdK: snapshot at 2025-01-15
+GET /analysis/rrg?date=2025-01-15&trails=20             # JdK: snapshot with 20 trail points
+GET /analysis/rrg?algorithm=mascore&date=2025-01-15      # MA Score: snapshot at 2025-01-15
 ```
 
 ### Query Parameters
@@ -153,6 +156,7 @@ GET /analysis/rrg?algorithm=mascore&min_volume=50000  # MA Score with volume fil
 | `period` | 10 | jdk only | WMA smoothing period, clamped [4..=50] (ignored by mascore) |
 | `trails` | 10 | both | Number of trail points (0 = no trails, clamped to 1-120 when > 0) |
 | `min_volume` | 100000 | both | Exclude tickers with latest volume below this value |
+| `date` | none (today) | both | Cutoff date YYYY-MM-DD — compute RRG using data up to this date |
 | `mode` | vn | both | Data source: vn, crypto, yahoo, all |
 
 ### Response Differences by Algorithm

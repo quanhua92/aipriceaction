@@ -52,6 +52,9 @@ function buildRrgUrl() {
   const minVolume = document.getElementById('rrg-min-volume').value;
   if (minVolume) params.min_volume = minVolume;
 
+  const date = document.getElementById('rrg-date').value;
+  if (date) params.date = date;
+
   if (mode && mode !== 'vn') params.mode = mode;
 
   return buildApiUrl('/analysis/rrg', params);

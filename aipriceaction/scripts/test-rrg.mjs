@@ -214,6 +214,63 @@ async function testMascoreModeAll() {
 }
 
 // ──────────────────────────────────────────────
+// Date param tests
+// ──────────────────────────────────────────────
+
+async function testJdkWithDate() {
+  // Use a date well in the past to ensure data exists
+  const date = "2025-01-15";
+  const { status, body, ms } = await fetchJSON(`/analysis/rrg?date=${date}&trails=0`);
+  console.log(`\n── GET /analysis/rrg?date=${date}&trails=0 (JdK with date) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.analysis_date === date, `analysis_date = '${date}' (got '${body.analysis_date}')`);
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  // All trail dates should be <= cutoff (trails=0 means no trails)
+  const t = body.data.tickers[0];
+  assert(t.trails === null || t.trails === undefined, `trails is null when trails=0 (got ${JSON.stringify(t.trails)})`);
+}
+
+async function testJdkWithDateTrails() {
+  const date = "2025-01-15";
+  const { status, body, ms } = await fetchJSON(`/analysis/rrg?date=${date}&trails=10`);
+  console.log(`\n── GET /analysis/rrg?date=${date}&trails=10 (JdK with date + trails) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.analysis_date === date, `analysis_date = '${date}' (got '${body.analysis_date}')`);
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  // All trail dates should be <= cutoff date
+  const allTrailDatesValid = body.data.tickers.every((t) => {
+    if (!t.trails) return true;
+    return t.trails.every((tp) => tp.date <= date);
+  });
+  assert(allTrailDatesValid, "all trail dates <= cutoff date");
+}
+
+async function testMascoreWithDate() {
+  const date = "2025-01-15";
+  const { status, body, ms } = await fetchJSON(`/analysis/rrg?algorithm=mascore&date=${date}&trails=5`);
+  console.log(`\n── GET /analysis/rrg?algorithm=mascore&date=${date}&trails=5 (mascore with date) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.analysis_date === date, `analysis_date = '${date}' (got '${body.analysis_date}')`);
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  // All trail dates should be <= cutoff date
+  const allTrailDatesValid = body.data.tickers.every((t) => {
+    if (!t.trails) return true;
+    return t.trails.every((tp) => tp.date <= date);
+  });
+  assert(allTrailDatesValid, "all trail dates <= cutoff date");
+}
+
+async function testInvalidDate() {
+  const { status, body, ms } = await fetchJSON("/analysis/rrg?date=not-a-date");
+  console.log(`\n── GET /analysis/rrg?date=not-a-date (invalid date) ── ${ms}ms`);
+  assert(status === 400, `returns 400 (got ${status})`);
+  assert(body.error && body.error.includes("Invalid date"), `error mentions invalid date (got ${body.error})`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -232,6 +289,10 @@ const tests = [
   testMascoreNoTrails,
   testMascoreMinVolume,
   testMascoreModeAll,
+  testJdkWithDate,
+  testJdkWithDateTrails,
+  testMascoreWithDate,
+  testInvalidDate,
 ];
 
 async function main() {

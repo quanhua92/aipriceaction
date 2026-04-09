@@ -43,6 +43,7 @@ pub struct RrgQuery {
     pub trails: usize,
     #[serde(default = "default_min_volume")]
     pub min_volume: i64,
+    pub date: Option<String>,
     #[serde(default)]
     pub mode: Mode,
 }
@@ -55,6 +56,13 @@ fn default_trails() -> usize {
 }
 fn default_min_volume() -> i64 {
     100_000
+}
+
+fn parse_rrg_date(date_str: &str) -> Option<DateTime<Utc>> {
+    chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| d.and_hms_opt(23, 59, 59))
+        .map(|dt| dt.and_utc())
 }
 
 // ---------------------------------------------------------------------------
@@ -250,12 +258,32 @@ pub async fn rrg_handler(
 
     let is_all = params.mode == Mode::All;
 
+    // Validate date format early if provided
+    let end_time: Option<DateTime<Utc>> = match &params.date {
+        Some(date_str) => match parse_rrg_date(date_str) {
+            Some(dt) => Some(dt),
+            None => {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({ "error": format!("Invalid date format '{}'. Use YYYY-MM-DD", date_str) })),
+                )
+                    .into_response();
+            }
+        },
+        None => None,
+    };
+
+    let analysis_date = match &end_time {
+        Some(dt) => dt.format("%Y-%m-%d").to_string(),
+        None => "latest".to_string(),
+    };
+
     match params.algorithm {
         RrgAlgorithm::Mascore => {
-            handle_mascore(state, &params, &ticker_groups, is_all).await
+            handle_mascore(state, &params, &ticker_groups, is_all, end_time, &analysis_date).await
         }
         RrgAlgorithm::Jdk => {
-            handle_jdk(state, params, &ticker_groups, is_all).await
+            handle_jdk(state, params, &ticker_groups, is_all, end_time, &analysis_date).await
         }
     }
 }
@@ -269,6 +297,8 @@ async fn handle_mascore(
     params: &RrgQuery,
     ticker_groups: &std::collections::HashMap<String, Vec<String>>,
     is_all: bool,
+    end_time: Option<DateTime<Utc>>,
+    analysis_date: &str,
 ) -> axum::response::Response {
     // Collect ticker symbols per source (reuse handle_jdk pattern)
     let mut source_symbols: Vec<(&str, Vec<String>)> = Vec::new();
@@ -319,9 +349,9 @@ async fn handle_mascore(
         }
     }
 
-    // When trails=0, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
-    // When trails>0, use get_ohlcv_joined_batch to get historical rows
-    if params.trails == 0 {
+    // When trails=0 and no date filter, use the efficient get_latest_daily_per_ticker (DISTINCT ON)
+    // When trails>0 or date is specified, use get_ohlcv_joined_batch to get historical rows
+    if params.trails == 0 && end_time.is_none() {
         // Efficient path: only latest row per ticker
         let rows: Vec<(OhlcvJoined, &str)> = if is_all {
             let sources = get_all_sources();
@@ -387,7 +417,7 @@ async fn handle_mascore(
         return (
             StatusCode::OK,
             Json(AnalysisResponse {
-                analysis_date: "latest".to_string(),
+                analysis_date: analysis_date.to_string(),
                 analysis_type: "rrg".to_string(),
                 total_analyzed,
                 data: RrgResponse {
@@ -401,18 +431,28 @@ async fn handle_mascore(
             .into_response();
     }
 
-    let trail_length = params.trails.clamp(1, 120) as i64;
+    // When date is specified with trails=0, we still need to fetch data via batch path.
+    // Use limit=1 to get just the latest row before the cutoff date.
+    let effective_limit = if params.trails == 0 {
+        Some(1)
+    } else {
+        Some(params.trails.clamp(1, 120) as i64)
+    };
+
+    let effective_trails = if params.trails == 0 { 0 } else { params.trails.clamp(1, 120) };
 
     // Trails path: fetch historical rows per source
     let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
 
     if is_all {
         let sources = get_all_sources();
+        let et = end_time;
+        let el = effective_limit;
         let (r1, r2, r3, r4) = tokio::join!(
-            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[0], &[], "1D", Some(trail_length), None, None),
-            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[1], &[], "1D", Some(trail_length), None, None),
-            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[2], &[], "1D", Some(trail_length), None, None),
-            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[3], &[], "1D", Some(trail_length), None, None),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[0], &[], "1D", el, None, et),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[1], &[], "1D", el, None, et),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[2], &[], "1D", el, None, et),
+            ohlcv::get_ohlcv_joined_batch(&state.pool, sources[3], &[], "1D", el, None, et),
         );
         for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
             match r {
@@ -422,7 +462,7 @@ async fn handle_mascore(
         }
     } else {
         let source = params.mode.source_label();
-        match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", Some(trail_length), None, None).await {
+        match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time).await {
             Ok(map) => all_joined.push((map, source)),
             Err(e) => {
                 tracing::error!("Failed to fetch daily data: {}", e);
@@ -459,19 +499,24 @@ async fn handle_mascore(
                 continue;
             }
 
-            // Take the last trail_length rows
-            let start = chrono_rows.len().saturating_sub(trail_length as usize);
+            // Take the last effective_trails rows
+            let start = chrono_rows.len().saturating_sub(effective_trails as usize);
             chrono_rows = chrono_rows[start..].to_vec();
 
-            // Build trail points
-            let trail_points: Vec<RrgTrailPoint> = chrono_rows
-                .iter()
-                .map(|r| RrgTrailPoint {
-                    date: r.time.format("%Y-%m-%d").to_string(),
-                    rs_ratio: r.ma20_score.unwrap(),
-                    rs_momentum: r.ma100_score.unwrap(),
-                })
-                .collect();
+            // Build trail points (only when effective_trails > 0)
+            let trails = if effective_trails > 0 {
+                let trail_points: Vec<RrgTrailPoint> = chrono_rows
+                    .iter()
+                    .map(|r| RrgTrailPoint {
+                        date: r.time.format("%Y-%m-%d").to_string(),
+                        rs_ratio: r.ma20_score.unwrap(),
+                        rs_momentum: r.ma100_score.unwrap(),
+                    })
+                    .collect();
+                if trail_points.is_empty() { None } else { Some(trail_points) }
+            } else {
+                None
+            };
 
             // Re-get latest after trimming to trail_length
             let latest = chrono_rows.last().unwrap();
@@ -486,7 +531,7 @@ async fn handle_mascore(
                 volume: latest.volume,
                 sector,
                 source: if is_all { Some((*src).to_string()) } else { None },
-                trails: Some(trail_points),
+                trails,
             });
         }
     }
@@ -496,7 +541,7 @@ async fn handle_mascore(
     (
         StatusCode::OK,
         Json(AnalysisResponse {
-            analysis_date: "latest".to_string(),
+            analysis_date: analysis_date.to_string(),
             analysis_type: "rrg".to_string(),
             total_analyzed,
             data: RrgResponse {
@@ -519,6 +564,8 @@ async fn handle_jdk(
     params: RrgQuery,
     ticker_groups: &std::collections::HashMap<String, Vec<String>>,
     is_all: bool,
+    end_time: Option<DateTime<Utc>>,
+    analysis_date: &str,
 ) -> axum::response::Response {
     let period = params.period.clamp(4, 50);
     let trail_length = params.trails.clamp(1, 120);
@@ -599,7 +646,7 @@ async fn handle_jdk(
             "1D",
             Some(250),
             None,
-            None,
+            end_time,
         )
         .await
         {
@@ -735,7 +782,7 @@ async fn handle_jdk(
     (
         StatusCode::OK,
         Json(AnalysisResponse {
-            analysis_date: "latest".to_string(),
+            analysis_date: analysis_date.to_string(),
             analysis_type: "rrg".to_string(),
             total_analyzed,
             data: RrgResponse {
