@@ -220,11 +220,43 @@ pub async fn tickers(
         &[][..]
     };
 
-    // No symbols → query all tickers for the mode
+    // Early return for empty or blank explicit symbol list
+    if let Some(ref syms) = params.symbol {
+        if syms.is_empty() || syms.iter().all(|s| s.is_empty()) {
+            return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response();
+        }
+    }
+
+    // Compute effective limit before any DB call
+    let effective_limit = params.limit.unwrap_or_else(|| {
+        if params.symbol.as_ref().map(|s| s.len()) == Some(1) {
+            crate::constants::api::DEFAULT_LIMIT
+        } else {
+            1
+        }
+    });
+
+    let is_csv = params.format.eq_ignore_ascii_case("csv");
+
+    // Build cache key with symbols available so far:
+    // - explicit symbols → use them directly
+    // - no symbols → empty vec (build_cache_key converts to "__ALL__")
+    let cache_key_symbols = params.symbol.as_deref().unwrap_or(&[]);
+    let cache_key = build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
+
+    // Try cache BEFORE any DB call
+    if params.cache {
+        let mut guard = state.tickers_cache.write().await;
+        if let Some(cached) = guard.get(&cache_key) {
+            return build_response(cached, params.legacy, params.mode, is_csv);
+        }
+        drop(guard);
+    }
+
+    // Cache miss — now load symbols from DB if needed, then fetch data
     let symbols = match params.symbol {
-        Some(ref syms) if !syms.is_empty() => syms.clone(),
+        Some(ref syms) => syms.clone(),
         None => {
-            // Load all tickers for the given mode from the DB
             let source = params.mode.source_label();
             match ohlcv::list_tickers_with_extra(&state.pool, source, extra_sources).await {
                 Ok(tickers) => tickers.into_iter().map(|t| t.ticker).collect(),
@@ -238,33 +270,7 @@ pub async fn tickers(
                 }
             }
         }
-        _ => return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response(),
     };
-
-    // Compute effective limit: user-provided value wins; otherwise default depends on symbol count
-    let effective_limit = params.limit.unwrap_or_else(|| {
-        if symbols.len() == 1 {
-            crate::constants::api::DEFAULT_LIMIT
-        } else {
-            1
-        }
-    });
-
-    let is_csv = params.format.eq_ignore_ascii_case("csv");
-
-    // Build cache key (excludes view-layer params: legacy, format, cache)
-    let cache_key = build_cache_key(&params, &interval, &symbols, Some(effective_limit));
-
-    // Try cache if enabled
-    if params.cache {
-        let mut guard = state.tickers_cache.write().await;
-        if let Some(cached) = guard.get(&cache_key) {
-            return build_response(cached, params.legacy, params.mode, is_csv);
-        }
-        drop(guard);
-    }
-
-    // Cache miss or bypass — fetch from DB
     let result = match interval {
         NormalizedInterval::Native(db_interval) => {
             fetch_native_tickers(&state, symbols, db_interval, &params, Some(effective_limit), extra_sources).await
@@ -289,11 +295,40 @@ async fn handle_mode_all(
     params: TickersQuery,
     interval: NormalizedInterval,
 ) -> Response {
-    // 1. Resolve symbols → sources
-    let source_map: HashMap<String, Vec<String>> = if let Some(ref syms) = params.symbol {
-        if syms.is_empty() {
+    // Early return for empty or blank explicit symbol list
+    if let Some(ref syms) = params.symbol {
+        if syms.is_empty() || syms.iter().all(|s| s.is_empty()) {
             return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response();
         }
+    }
+
+    // Compute effective_limit and is_csv before any DB call
+    let has_explicit_symbols = params.symbol.is_some();
+    let effective_limit = params.limit.unwrap_or_else(|| {
+        if has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1) {
+            crate::constants::api::DEFAULT_LIMIT
+        } else {
+            1
+        }
+    });
+
+    let is_csv = params.format.eq_ignore_ascii_case("csv");
+
+    // Build cache key before any DB call
+    let cache_key_symbols = params.symbol.as_deref().unwrap_or(&[]);
+    let cache_key = build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
+
+    // Check cache BEFORE any DB call
+    if params.cache {
+        let mut guard = state.tickers_cache.write().await;
+        if let Some(cached) = guard.get(&cache_key) {
+            return build_response(cached, params.legacy, params.mode, is_csv);
+        }
+        drop(guard);
+    }
+
+    // Cache miss — now resolve symbols → sources from DB
+    let source_map: HashMap<String, Vec<String>> = if let Some(ref syms) = params.symbol {
         match ohlcv::resolve_ticker_sources(&state.pool, syms).await {
             Ok(map) => {
                 let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
@@ -329,29 +364,6 @@ async fn handle_mode_all(
             }
         }
     };
-
-    // Collect all symbols for cache key and limit calculation
-    let all_symbols: Vec<String> = source_map.values().flat_map(|v| v.iter().cloned()).collect();
-
-    let effective_limit = params.limit.unwrap_or_else(|| {
-        if all_symbols.len() == 1 {
-            crate::constants::api::DEFAULT_LIMIT
-        } else {
-            1
-        }
-    });
-
-    let is_csv = params.format.eq_ignore_ascii_case("csv");
-
-    // Cache check
-    let cache_key = build_cache_key(&params, &interval, &all_symbols, Some(effective_limit));
-    if params.cache {
-        let mut guard = state.tickers_cache.write().await;
-        if let Some(cached) = guard.get(&cache_key) {
-            return build_response(cached, params.legacy, params.mode, is_csv);
-        }
-        drop(guard);
-    }
 
     // 2. Fetch per source in parallel
     let (native_interval_str, agg_interval) = match &interval {
