@@ -208,4 +208,5 @@ fn analysis_routes() -> axum::Router<Arc<AppState>> {
         .route("/top-performers", axum::routing::get(analysis::top_performers_handler))
         .route("/ma-scores-by-sector", axum::routing::get(analysis::ma_scores_by_sector_handler))
         .route("/volume-profile", axum::routing::get(analysis::volume_profile_handler))
+        .route("/rrg", axum::routing::get(analysis::rrg_handler))
 }

@@ -1,6 +1,7 @@
 pub mod performers;
 pub mod ma_scores;
 pub mod volume_profile;
+pub mod rrg;
 
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap};
@@ -8,6 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 pub use performers::top_performers_handler;
 pub use ma_scores::ma_scores_by_sector_handler;
 pub use volume_profile::volume_profile_handler;
+pub use rrg::rrg_handler;
 
 /// All data sources used by mode=all
 pub fn get_all_sources() -> Vec<&'static str> {
