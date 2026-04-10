@@ -271,6 +271,43 @@ async function testInvalidDate() {
 }
 
 // ──────────────────────────────────────────────
+// Sector assignment tests
+// ──────────────────────────────────────────────
+
+async function testYahooHasSectors() {
+  const { status, body, ms } = await fetchJSON("/analysis/rrg?mode=yahoo&algorithm=mascore&trails=0");
+  console.log(`\n── GET /analysis/rrg?mode=yahoo (global sectors) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  const withSector = body.data.tickers.filter((t) => t.sector !== null && t.sector !== undefined);
+  assert(withSector.length > 0, `yahoo tickers have sectors (${withSector.length}/${body.data.tickers.length})`);
+
+  const sectors = new Set(withSector.map((t) => t.sector));
+  ok(`yahoo sectors: ${[...sectors].join(", ")}`);
+}
+
+async function testCryptoHasSectors() {
+  const { status, body, ms } = await fetchJSON("/analysis/rrg?mode=crypto&algorithm=mascore&trails=0");
+  console.log(`\n── GET /analysis/rrg?mode=crypto (crypto sectors) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  const withSector = body.data.tickers.filter((t) => t.sector !== null && t.sector !== undefined);
+  assert(withSector.length > 0, `crypto tickers have sectors (${withSector.length}/${body.data.tickers.length})`);
+}
+
+async function testVnHasSectors() {
+  const { status, body, ms } = await fetchJSON("/analysis/rrg?mode=vn&algorithm=mascore&trails=0");
+  console.log(`\n── GET /analysis/rrg?mode=vn (VN sectors) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.data.tickers.length > 0, `tickers not empty (${body.data.tickers.length})`);
+
+  const withSector = body.data.tickers.filter((t) => t.sector !== null && t.sector !== undefined);
+  assert(withSector.length > 0, `VN tickers have sectors (${withSector.length}/${body.data.tickers.length})`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -293,6 +330,9 @@ const tests = [
   testJdkWithDateTrails,
   testMascoreWithDate,
   testInvalidDate,
+  testYahooHasSectors,
+  testCryptoHasSectors,
+  testVnHasSectors,
 ];
 
 async function main() {

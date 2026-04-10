@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use axum::{
     extract::{Query, State},
@@ -63,6 +63,24 @@ fn parse_rrg_date(date_str: &str) -> Option<DateTime<Utc>> {
         .ok()
         .and_then(|d| d.and_hms_opt(23, 59, 59))
         .map(|dt| dt.and_utc())
+}
+
+/// Build a source → sector-groups lookup so each source gets its own sector mapping.
+fn build_source_sector_groups(
+    vn_groups: &HashMap<String, Vec<String>>,
+) -> HashMap<&'static str, BTreeMap<String, Vec<String>>> {
+    let mut map = HashMap::new();
+    // VN: convert HashMap → BTreeMap
+    map.insert("vn", vn_groups.iter().map(|(k, v)| (k.clone(), v.clone())).collect());
+    // Crypto
+    if let Ok(groups) = load_crypto_groups() {
+        map.insert("crypto", groups);
+    }
+    // Yahoo/global
+    if let Ok(groups) = load_yahoo_groups() {
+        map.insert("yahoo", groups);
+    }
+    map
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +318,9 @@ async fn handle_mascore(
     end_time: Option<DateTime<Utc>>,
     analysis_date: &str,
 ) -> axum::response::Response {
+    // Build per-source sector groups for correct sector assignment
+    let source_groups = build_source_sector_groups(ticker_groups);
+
     // Collect ticker symbols per source (reuse handle_jdk pattern)
     let mut source_symbols: Vec<(&str, Vec<String>)> = Vec::new();
     match params.mode {
@@ -372,7 +393,7 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-                Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+                Ok(r) => r.into_iter().map(|row| (row, source)).collect(),
                 Err(e) => {
                     tracing::error!("Failed to fetch daily data: {}", e);
                     return (
@@ -400,7 +421,9 @@ async fn handle_mascore(
                 Some(v) => v,
                 None => continue,
             };
-            let sector = get_ticker_sector(&row.ticker, ticker_groups);
+            let sector = source_groups
+                .get(*row_source)
+                .and_then(|g| get_ticker_sector(&row.ticker, g));
             snapshots.push(RrgTickerSnapshot {
                 symbol: row.ticker.clone(),
                 rs_ratio: x,
@@ -520,7 +543,9 @@ async fn handle_mascore(
 
             // Re-get latest after trimming to trail_length
             let latest = chrono_rows.last().unwrap();
-            let sector = get_ticker_sector(ticker, ticker_groups);
+            let sector = source_groups
+                .get(src)
+                .and_then(|g| get_ticker_sector(ticker, g));
 
             snapshots.push(RrgTickerSnapshot {
                 symbol: ticker.clone(),
@@ -567,6 +592,8 @@ async fn handle_jdk(
     end_time: Option<DateTime<Utc>>,
     analysis_date: &str,
 ) -> axum::response::Response {
+    let source_groups = build_source_sector_groups(ticker_groups);
+
     let period = params.period.clamp(4, 50);
     let trail_length = params.trails.clamp(1, 120);
     let benchmark = params
@@ -761,7 +788,9 @@ async fn handle_jdk(
                 None
             };
 
-            let sector = get_ticker_sector(sym, ticker_groups);
+            let sector = source_groups
+                .get(source)
+                .and_then(|g| get_ticker_sector(sym, g));
 
             snapshots.push(RrgTickerSnapshot {
                 symbol: sym.clone(),

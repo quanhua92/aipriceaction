@@ -127,9 +127,13 @@ pub fn get_tickers_in_sector(sector: &str, ticker_groups: &HashMap<String, Vec<S
         .unwrap_or_default()
 }
 
-/// Get sector for a specific ticker
-pub fn get_ticker_sector(ticker: &str, ticker_groups: &HashMap<String, Vec<String>>) -> Option<String> {
-    for (sector, tickers) in ticker_groups {
+/// Get sector for a specific ticker from a map of group → tickers.
+/// Works with both HashMap and BTreeMap via iteration.
+pub fn get_ticker_sector<'a, I>(ticker: &str, groups: I) -> Option<String>
+where
+    I: IntoIterator<Item = (&'a String, &'a Vec<String>)>,
+{
+    for (sector, tickers) in groups {
         if tickers.contains(&ticker.to_string()) {
             return Some(sector.clone());
         }
