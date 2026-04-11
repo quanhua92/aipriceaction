@@ -14,7 +14,13 @@ pub async fn connect() -> Option<RedisClient> {
 
     tracing::info!("Connecting to Redis at {redis_url}...");
 
-    let config = Config::from_url(&redis_url).expect("Invalid REDIS_URL");
+    let config = match Config::from_url(&redis_url) {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Invalid REDIS_URL: {e}");
+            return None;
+        }
+    };
     let client = RedisClient::new(config, None, None, None);
 
     let _handle = client.connect();

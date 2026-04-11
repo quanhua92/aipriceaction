@@ -176,22 +176,18 @@ pub async fn tickers(
         HeaderValue::from_static(source_tag),
     );
     if let Some(meta) = redis_meta {
-        response.headers_mut().insert(
-            HeaderName::from_static("x-redis-base"),
-            HeaderValue::from_str(&meta.base_interval).unwrap(),
-        );
-        response.headers_mut().insert(
-            HeaderName::from_static("x-redis-raw-count"),
-            HeaderValue::from_str(&meta.raw_close_count.to_string()).unwrap(),
-        );
-        response.headers_mut().insert(
-            HeaderName::from_static("x-redis-aligned"),
-            HeaderValue::from_str(&meta.aligned_count.to_string()).unwrap(),
-        );
-        response.headers_mut().insert(
-            HeaderName::from_static("x-redis-limit"),
-            HeaderValue::from_str(&meta.requested_limit.to_string()).unwrap(),
-        );
+        if let Ok(v) = HeaderValue::from_str(&meta.base_interval) {
+            response.headers_mut().insert(HeaderName::from_static("x-redis-base"), v);
+        }
+        if let Ok(v) = HeaderValue::from_str(&meta.raw_close_count.to_string()) {
+            response.headers_mut().insert(HeaderName::from_static("x-redis-raw-count"), v);
+        }
+        if let Ok(v) = HeaderValue::from_str(&meta.aligned_count.to_string()) {
+            response.headers_mut().insert(HeaderName::from_static("x-redis-aligned"), v);
+        }
+        if let Ok(v) = HeaderValue::from_str(&meta.requested_limit.to_string()) {
+            response.headers_mut().insert(HeaderName::from_static("x-redis-limit"), v);
+        }
     }
     response
 }
