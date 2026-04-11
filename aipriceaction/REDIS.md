@@ -36,9 +36,9 @@ Redis 8 Alpine service added to `docker-compose.yml` and `docker-compose.local.y
 
 - **Image**: `redis:8-alpine`
 - **Memory**: 2 GB max, `allkeys-lru` eviction policy
-- **Auth**: `helloaipriceaction`
+- **Auth**: `<your-password>`
 - **Port**: 6379
-- **Healthcheck**: `redis-cli -a helloaipriceaction ping`
+- **Healthcheck**: `redis-cli -a <your-password> ping`
 - **Volume**: `redis_data` persisted to `/data`
 
 The `aipriceaction` service depends on Redis with `service_healthy` condition.
@@ -50,7 +50,7 @@ The `aipriceaction` service depends on Redis with `service_healthy` condition.
 | `REDIS_URL` | No | — | Redis connection URL. When set, workers write OHLCV to Redis ZSET |
 | `REDIS_WORKERS` | No | `false` | Enable the backfill worker (`"true"` or `"1"`) |
 
-**URL format**: `redis://default:helloaipriceaction@localhost:6379/0`
+**URL format**: `redis://default:<your-password>@localhost:6379/0`
 
 Without `REDIS_URL`, the application starts normally with no Redis-related behavior and no error messages (only a single info log: "REDIS_URL not set, Redis ZSET cache disabled").
 
@@ -228,16 +228,16 @@ Typical p50 latencies (vs PostgreSQL):
 docker compose up -d
 
 # 2. Run test suite
-REDIS_URL=redis://default:helloaipriceaction@localhost:6379/0 cargo run -- test-redis
+REDIS_URL=redis://default:<your-password>@localhost:6379/0 cargo run -- test-redis
 
 # 3. Run server with Redis (workers write to Redis on each crawl)
-REDIS_URL=redis://default:helloaipriceaction@localhost:6379/0 cargo run -- serve
+REDIS_URL=redis://default:<your-password>@localhost:6379/0 cargo run -- serve
 
 # 4. Run server with backfill worker
-REDIS_URL=redis://default:helloaipriceaction@localhost:6379/0 REDIS_WORKERS=true cargo run -- serve
+REDIS_URL=redis://default:<your-password>@localhost:6379/0 REDIS_WORKERS=true cargo run -- serve
 
 # 5. Verify keys exist in Redis
-redis-cli -a helloaipriceaction ZCARD ohlcv:vn:VNINDEX:1D
-redis-cli -a helloaipriceaction ZREVRANGE ohlcv:vn:VNINDEX:1D 0 2
-redis-cli -a helloaipriceaction SCAN 0 MATCH "ohlcv:*" COUNT 100
+redis-cli -a <your-password> ZCARD ohlcv:vn:VNINDEX:1D
+redis-cli -a <your-password> ZREVRANGE ohlcv:vn:VNINDEX:1D 0 2
+redis-cli -a <your-password> SCAN 0 MATCH "ohlcv:*" COUNT 100
 ```

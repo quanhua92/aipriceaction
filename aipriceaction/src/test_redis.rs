@@ -302,6 +302,80 @@ pub fn run(ticker: String) {
             Err(e) => log_result("overwrite verification", false, &format!("{e}")),
         }
 
+        // 9b. crawl_ts dedup — same score, different crawl_ts; highest wins
+        tracing::info!("{}", "-".repeat(60));
+        {
+            let dedup_key = format!("{key}:dedup");
+            let _: Result<Value, Error> = client.del(&dedup_key).await; // cleanup
+
+            let ts = now_ts;
+            let crawl_old = 1000000000000_i64;
+            let crawl_new = 2000000000000_i64;
+
+            // Write two members with same score (ts) but different crawl_ts
+            let member_old = format!("{ts}|100|110|90|105|50000|{crawl_old}");
+            let member_new = format!("{ts}|200|210|190|205|60000|{crawl_new}");
+
+            match client
+                .zadd::<Value, _, _>(
+                    &dedup_key,
+                    None,
+                    None,
+                    false,
+                    false,
+                    vec![(ts as f64, member_old.clone()), (ts as f64, member_new.clone())],
+                )
+                .await
+            {
+                Ok(_) => log_result("crawl_ts dedup (zadd)", true, "added 2 members with same score"),
+                Err(e) => log_result("crawl_ts dedup (zadd)", false, &format!("{e}")),
+            }
+
+            // Read back and verify only the member with highest crawl_ts is kept
+            // (Redis ZADD with same score replaces the member, so we get the last one written)
+            match client
+                .zrevrange::<Vec<Value>, _>(&dedup_key, 0, -1, false)
+                .await
+            {
+                Ok(members) => {
+                    let count = members.len();
+                    if count == 1 {
+                        let s = members.first().and_then(|v| match v {
+                            Value::Bytes(b) => std::str::from_utf8(b).ok(),
+                            Value::String(s) => std::str::from_utf8(s.as_bytes()).ok(),
+                            _ => None,
+                        });
+                        match s {
+                            Some(member_str) => {
+                                // Parse and check crawl_ts
+                                let fields: Vec<&str> = member_str.split('|').collect();
+                                if fields.len() >= 7 {
+                                    let parsed_crawl: i64 = fields[6].parse().unwrap_or(0);
+                                    log_result(
+                                        "crawl_ts dedup (highest wins)",
+                                        parsed_crawl == crawl_new,
+                                        &format!("crawl_ts={parsed_crawl}, expected={crawl_new}"),
+                                    );
+                                } else {
+                                    log_result("crawl_ts dedup (highest wins)", false, &format!("unexpected field count: {}", fields.len()));
+                                }
+                            }
+                            None => log_result("crawl_ts dedup (highest wins)", false, "failed to extract member string"),
+                        }
+                    } else {
+                        log_result(
+                            "crawl_ts dedup (highest wins)",
+                            false,
+                            &format!("expected 1 member, got {count}"),
+                        );
+                    }
+                }
+                Err(e) => log_result("crawl_ts dedup (highest wins)", false, &format!("{e}")),
+            }
+
+            let _: Result<Value, Error> = client.del(&dedup_key).await; // cleanup
+        }
+
         // 10. SCAN — discover keys matching "ohlcv:*"
         tracing::info!("{}", "-".repeat(60));
         let mut all_keys = Vec::new();
