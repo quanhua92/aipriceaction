@@ -228,9 +228,24 @@ pub(crate) async fn fetch_native_tickers(
                 effective_limit + crate::constants::api::SMA_MAX_PERIOD
             };
 
-            if let Some(redis_map) = redis_reader::batch_read_ohlcv_from_redis(
+            // Try reading from primary source and any extra sources
+            let mut redis_map: HashMap<String, redis_reader::RedisReadResult> = HashMap::new();
+            if let Some(map) = redis_reader::batch_read_ohlcv_from_redis(
                 redis_client, source, &symbols, interval, total_limit,
             ).await {
+                redis_map = map;
+            }
+            // Also read extra source ZSETs (e.g. sjc for mode=yahoo)
+            for &extra_src in extra_sources {
+                if let Some(extra_map) = redis_reader::batch_read_ohlcv_from_redis(
+                    redis_client, extra_src, &symbols, interval, total_limit,
+                ).await {
+                    for (k, v) in extra_map {
+                        redis_map.entry(k).or_insert(v);
+                    }
+                }
+            }
+            if !redis_map.is_empty() {
                 let mut result = BTreeMap::new();
                 let mut first_meta: Option<redis_reader::RedisReadResult> = None;
                 for (ticker, redis_result) in redis_map {
