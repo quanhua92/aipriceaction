@@ -101,45 +101,65 @@ pub async fn write_ohlcv_to_redis(
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.min(s)))),
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.max(s)))),
     ) {
-        match client
-            .zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts)
-            .await
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            client.zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts),
+        )
+        .await
         {
-            Ok(removed) if removed > 0 => {
+            Ok(Ok(removed)) if removed > 0 => {
                 tracing::debug!(key, removed, min = min_ts, max = max_ts, "write dedup: removed stale members");
             }
-            Ok(removed) => {
-                tracing::debug!(key, removed, min = min_ts, max = max_ts, "write dedup: no stale members");
-            }
-            Err(e) => {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
                 tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
+            }
+            Err(_) => {
+                tracing::warn!(key, "write dedup zremrangebyscore timed out");
             }
         }
     }
 
     // Batch ZADD (supports multi-member add natively)
-    if let Err(e) = client
-        .zadd::<Value, _, _>(
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.zadd::<Value, _, _>(
             &key,
             None,  // options
             None,  // ordering
             false, // changed
             false, // incr
             values,
-        )
-        .await
+        ),
+    )
+    .await
     {
-        tracing::warn!(key, "zadd failed: {e}");
-        return;
+        Ok(Ok(_)) => {}
+        Ok(Err(e)) => {
+            tracing::warn!(key, "zadd failed: {e}");
+            return;
+        }
+        Err(_) => {
+            tracing::warn!(key, "zadd timed out");
+            return;
+        }
     }
 
     // Trim to retention limit: keep top MAX entries by score (highest timestamps)
     let limit = max_size(interval);
-    if let Err(e) = client
-        .zremrangebyrank::<Value, _>(&key, 0, -(limit as i64 + 1))
-        .await
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.zremrangebyrank::<Value, _>(&key, 0, -(limit as i64 + 1)),
+    )
+    .await
     {
-        tracing::warn!(key, "zremrangebyrank failed: {e}");
+        Ok(Ok(_)) => {}
+        Ok(Err(e)) => {
+            tracing::warn!(key, "zremrangebyrank failed: {e}");
+        }
+        Err(_) => {
+            tracing::warn!(key, "zremrangebyrank timed out");
+        }
     }
 }
 

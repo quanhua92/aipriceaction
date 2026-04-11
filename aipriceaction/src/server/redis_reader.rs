@@ -49,7 +49,14 @@ pub async fn batch_read_ohlcv_from_redis(
         }
     }
 
-    let results: Vec<FredResult<Value>> = pipe.try_all::<Value>().await;
+    let results: Vec<FredResult<Value>> =
+        match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+            Ok(results) => results,
+            Err(_) => {
+                tracing::warn!("Redis pipeline timed out after 2s");
+                return None;
+            }
+        };
     let read_ms = t_read.elapsed().as_millis();
 
     let t_parse = std::time::Instant::now();
