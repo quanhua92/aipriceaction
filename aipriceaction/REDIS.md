@@ -2,7 +2,7 @@
 
 Redis Sorted Sets (ZSET) act as an optional edge cache for OHLCV data. Workers write crawled data to Redis ZSETs after saving to PostgreSQL. A backfill worker reads all tickers from PostgreSQL and fills ZSETs.
 
-The server reads from Redis first, falling back to PostgreSQL only when Redis has no data. When PG is down, the server operates fully from Redis for all non-date-range queries.
+The server reads from Redis first, falling back to PostgreSQL only when Redis has no data. When PG is down, all `/tickers` and `/analysis/*` endpoints serve from Redis (date-range queries use full ZSET + in-memory filtering).
 
 ## Architecture
 
@@ -32,7 +32,7 @@ The server reads from Redis first, falling back to PostgreSQL only when Redis ha
 - **Read path**: Redis-first for all OHLCV and ticker-list queries (no date range). PG fallback when Redis has no data. PG calls wrapped with 3-5s timeout.
 - **Workers**: fire-and-forget writes to Redis after each PG upsert
 - **Backfill worker**: full backfill of all ticker/interval groups every 60 minutes, followed by SCAN + trim to enforce retention limits. Caches the ticker list in `meta:ticker_list` at the end of each cycle.
-- **Graceful degradation**: if `REDIS_URL` is not set, everything runs without Redis. If PG is down, reads from Redis only (date-range queries return empty).
+- **Graceful degradation**: if `REDIS_URL` is not set, everything runs without Redis. If PG is down, reads from Redis only (full ZSET read + date-range filtering). If Redis goes down mid-session, reads automatically fall through to PG with 3-5s timeout — no restart needed.
 
 ## Dependencies
 
@@ -64,6 +64,7 @@ The `aipriceaction` service depends on Redis with `service_healthy` condition.
 |---|---|---|---|
 | `REDIS_URL` | No | — | Redis connection URL. When set, workers write OHLCV to Redis ZSET |
 | `REDIS_WORKERS` | No | `false` | Enable the backfill worker (`"true"` or `"1"`) |
+| `REDIS_PASSWORD` | No | — | Redis password (auto-configured in Docker via `.env`) |
 
 **URL format**: `redis://default:<your-password>@localhost:6379/0`
 
@@ -189,12 +190,16 @@ When PostgreSQL is unreachable:
 |---|---|
 | `GET /tickers?symbol=BTCUSDT` | Redis-first OHLCV read, instant response |
 | `GET /tickers` (no symbol) | Redis ticker list + Redis OHLCV per ticker |
-| `GET /tickers?mode=all` | Redis ticker list + Redis OHLCV per source group |
-| `GET /tickers?start_date=..&end_date=..` | Skips Redis (no date filtering), PG timeout (3s), returns empty |
+| `GET /tickers?mode=all` | Redis ticker list + Redis OHLCV per source group (incl. sjc merge) |
+| `GET /tickers?start_date=..&end_date=..` | Full ZSET read + in-memory date filtering |
 | `GET /tickers/group` | File-based (JSON/CSV), no PG needed |
 | `GET /tickers/name` | File-based (JSON/CSV), no PG needed |
 | `GET /tickers/info` | File-based (CSV), no PG needed |
 | `GET /health` | PG health check fails, but endpoint still returns 200 |
+| `GET /analysis/rrg` | Redis-first via `try_redis_batch` + `enhance_rows`, per-source fallback |
+| `GET /analysis/top-performers` | Redis-first via `try_redis_batch` + `enhance_rows`, per-source fallback |
+| `GET /analysis/ma-scores-by-sector` | Redis-first via `try_redis_batch` + `enhance_rows`, per-source fallback |
+| `GET /analysis/volume-profile` | Redis-first 1m read with date-range filtering (7-day retention limit) |
 
 PG pool is configured with `acquire_timeout(3s)`. All read-path PG calls are wrapped with `tokio::time::timeout` (3s for ticker queries, 5s for OHLCV batch queries). On timeout or error, the server returns empty data gracefully rather than hanging.
 
@@ -242,15 +247,24 @@ Provides `RedisClient` (type alias for `fred::prelude::Client`) and `connect()`:
 - `read_ticker_list_from_redis()` — reads `meta:ticker_list` and returns `Option<Vec<TickerInfo>>`
 - Returns `HashMap<ticker, RedisReadResult>` with PERF tracing
 
-### `src/server/api.rs` — Redis-First Read Logic
+### `src/server/api/` — Redis-First Read Logic
 
 The server's `/tickers` handler uses Redis-first for all read paths:
 
-- **`fetch_native_tickers()`**: tries Redis ZSET read first (when no date range), falls back to PG with 5s timeout
-- **`fetch_aggregated_tickers()`**: same Redis-first logic for aggregated intervals
-- **`handle_mode_all()`**: per-source spawned tasks each try Redis first, then PG fallback
+- **`fetch.rs::fetch_native_tickers()`**: tries Redis ZSET read first (including merged extra sources like sjc), falls back to PG with 5s timeout
+- **`fetch.rs::fetch_aggregated_tickers()`**: same Redis-first logic for aggregated intervals
+- **`mod.rs::handle_mode_all()`**: per-source spawned tasks each try Redis first, then PG fallback
 - **Ticker list resolution**: tries Redis `meta:ticker_list` first, falls back to PG with 3s timeout
 - **`?redis=false`**: skips Redis, goes straight to PG (useful for debugging)
+
+### `src/server/analysis/` — Redis-First Analysis Endpoints
+
+All analysis endpoints use `try_redis_batch()` + `enhance_rows()`:
+
+- **`rrg.rs`**: Redis-first for mascore (no trails), mascore with trails, and JdK algorithm — per-source fallback for `mode=all`
+- **`performers.rs`**: Redis-first for top-performers via `try_redis_batch` + `enhance_rows`
+- **`ma_scores.rs`**: Redis-first for ma-scores-by-sector via `try_redis_batch` + `enhance_rows`
+- **`volume_profile.rs`**: Redis-first 1m read with in-memory date-range filtering
 
 ### `src/test_redis.rs` — TestRedis CLI Command
 

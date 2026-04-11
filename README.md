@@ -2,7 +2,7 @@
 
 **Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web)
 
-Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend. Fetches, stores, and serves OHLCV market data with technical indicators via REST API.
+Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend and Redis edge cache. Fetches, stores, and serves OHLCV market data with technical indicators via REST API. All endpoints serve from Redis first for low latency, with automatic fallback to PostgreSQL when Redis is unavailable.
 
 ## Quick Start
 
@@ -14,17 +14,19 @@ cd aipriceaction
 # Create .env from template
 cp .env.example .env
 
-# Build and start (includes PostgreSQL 18 + pgvector)
+# Build and start (includes PostgreSQL 18 + pgvector, Redis 7)
 docker compose up -d
 
 # View logs
 docker logs aipriceaction -f
 docker logs aipriceaction-postgres -f
+docker logs aipriceaction-redis -f
 ```
 
-This starts two containers:
+This starts three containers:
 - **aipriceaction** -- API server on port 3000, runs migrations on startup
 - **aipriceaction-postgres** -- PostgreSQL 18 with pgvector on port 5432
+- **aipriceaction-redis** -- Redis 8 with AOF persistence on port 6379 (edge cache for OHLCV data)
 
 Edit `.env` to configure `DATABASE_URL` (required by the API server) and enable or disable background workers:
 
@@ -88,6 +90,9 @@ docker compose up -d postgres
 
 # Benchmark database query performance
 ./target/release/aipriceaction test-perf
+
+# Manually backfill Redis ZSETs from PostgreSQL
+./target/release/aipriceaction backfill-redis
 ```
 
 ## API Endpoints
@@ -155,6 +160,22 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `YAHOO_WORKERS` | No | `true` | Enable Yahoo Finance data workers |
 | `HTTP_PROXIES` | No | -- | Comma-separated SOCKS5 proxy list |
 | `CORS_ORIGINS` | No | `https://aipriceaction.com` | Comma-separated allowed CORS origins |
+| `REDIS_URL` | No | -- | Redis connection URL (auto-configured in Docker) |
+| `REDIS_PASSWORD` | No | -- | Redis password (auto-configured in Docker) |
+| `REDIS_WORKERS` | No | `false` | Enable Redis ZSET backfill worker |
+
+## Redis Cache
+
+OHLCV data is cached in Redis ZSETs for fast reads. All API endpoints try Redis first and fall back to PostgreSQL automatically.
+
+- **1 ZSET per ticker/interval**: `ohlcv:{source}:{ticker}:{interval}`
+- **Retention**: 1D (5,000 bars / ~20yr), 1h (20,000 / ~2yr), 1m (10,000 / ~7 days)
+- **Backfill**: periodic full backfill from PostgreSQL every 15 minutes
+- **Write path**: fire-and-forget ZADD from all data workers after PG upsert
+- **Read path**: pipelined ZREVRANGE — 1 network round-trip per ticker batch
+- **PG-outage resilience**: all `/tickers` and `/analysis/*` endpoints serve from Redis when PostgreSQL is down
+
+See [REDIS.md](REDIS.md) for detailed documentation.
 
 ## Database
 
