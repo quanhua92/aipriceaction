@@ -275,34 +275,38 @@ async fn handle_mode_all(
             NormalizedInterval::Native(db_interval) => {
                 let db_interval = db_interval.to_string();
                 handles.push(tokio::spawn(async move {
-                    let (data, _tag, _meta) = fetch::fetch_native_tickers(
+                    let (data, tag, _meta) = fetch::fetch_native_tickers(
                         &pool, &redis_client, &source, syms,
                         &db_interval, start_time, end_time,
                         Some(limit), &[], true,
                     ).await;
-                    (source, data)
+                    (source, data, tag)
                 }));
             }
             NormalizedInterval::Aggregated(agg) => {
                 let agg = *agg;
                 handles.push(tokio::spawn(async move {
-                    let (data, _tag, _meta) = fetch::fetch_aggregated_tickers(
+                    let (data, tag, _meta) = fetch::fetch_aggregated_tickers(
                         &pool, &redis_client, &source, syms,
                         agg, start_time, end_time,
                         limit, &[], true,
                     ).await;
-                    (source, data)
+                    (source, data, tag)
                 }));
             }
         }
     }
 
-    // Merge results from all sources
+    // Merge results from all sources, collecting source tags
     let mut merged: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+    let mut source_tags: std::collections::HashSet<&'static str> = std::collections::HashSet::new();
     for handle in handles {
         match handle.await {
-            Ok((_source, mut source_data)) => {
-                merged.append(&mut source_data);
+            Ok((_source, mut source_data, tag)) => {
+                if !source_data.is_empty() {
+                    source_tags.insert(tag);
+                    merged.append(&mut source_data);
+                }
             }
             Err(e) => {
                 tracing::warn!("Task failed in mode=all: {e}");
@@ -316,7 +320,16 @@ async fn handle_mode_all(
         guard.put(cache_key, &merged);
     }
 
-    response::build_response(merged, params.legacy, params.mode, is_csv)
+    let all_redis = !source_tags.is_empty() && source_tags.iter().all(|&t| t == "redis");
+    let any_redis = source_tags.contains("redis");
+    let source_tag = if merged.is_empty() { "empty" } else if all_redis { "redis" } else if any_redis { "mixed" } else { "postgres" };
+
+    let mut response = response::build_response(merged, params.legacy, params.mode, is_csv);
+    response.headers_mut().insert(
+        HeaderName::from_static("x-data-source"),
+        HeaderValue::from_static(source_tag),
+    );
+    response
 }
 
 // ── /tickers/group ──
