@@ -1,3 +1,5 @@
+mod response;
+
 use axum::extract::State;
 use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Json, Response};
@@ -8,7 +10,7 @@ use std::sync::Arc;
 
 use crate::server::types::{
     GroupQuery, Mode, NormalizedInterval, StockDataResponse,
-    TickersQuery, is_vn_ticker,
+    TickersQuery,
 };
 use crate::services::ohlcv;
 
@@ -127,7 +129,7 @@ pub async fn tickers(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
-            let mut resp = build_response(cached, params.legacy, params.mode, is_csv);
+            let mut resp = response::build_response(cached, params.legacy, params.mode, is_csv);
             resp.headers_mut().insert(
                 HeaderName::from_static("x-data-source"),
                 HeaderValue::from_static("in-memory"),
@@ -181,7 +183,7 @@ pub async fn tickers(
         guard.put(cache_key, &result);
     }
 
-    let mut response = build_response(result, params.legacy, params.mode, is_csv);
+    let mut response = response::build_response(result, params.legacy, params.mode, is_csv);
     response.headers_mut().insert(
         HeaderName::from_static("x-data-source"),
         HeaderValue::from_static(source_tag),
@@ -310,7 +312,7 @@ async fn handle_mode_all(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
-            return build_response(cached, params.legacy, params.mode, is_csv);
+            return response::build_response(cached, params.legacy, params.mode, is_csv);
         }
         drop(guard);
     }
@@ -608,7 +610,7 @@ async fn handle_mode_all(
         guard.put(cache_key, &merged);
     }
 
-    build_response(merged, params.legacy, params.mode, is_csv)
+    response::build_response(merged, params.legacy, params.mode, is_csv)
 }
 
 /// Build a cache key from the query parameters (excludes view-layer params).
@@ -684,7 +686,7 @@ async fn fetch_native_tickers(
                     if !enhanced.is_empty() {
                         let mut mapped: Vec<StockDataResponse> = enhanced
                             .into_iter()
-                            .map(|r| map_ohlcv_to_response(r, is_daily, params.mode))
+                            .map(|r| response::map_ohlcv_to_response(r, is_daily, params.mode))
                             .collect();
                         // Redis returns newest-first, API contract is oldest-first
                         mapped.reverse();
@@ -731,7 +733,7 @@ async fn fetch_native_tickers(
     for (ticker, rows) in batch_map {
         let mut mapped: Vec<StockDataResponse> = rows
             .into_iter()
-            .map(|r| map_ohlcv_to_response(r, is_daily, params.mode))
+            .map(|r| response::map_ohlcv_to_response(r, is_daily, params.mode))
             .collect();
 
         // DB returns newest first (DESC index scan), but API contract is oldest first
@@ -816,7 +818,7 @@ async fn fetch_aggregated_tickers(
                     let start = if len > limit as usize { len - limit as usize } else { 0 };
                     let trimmed: Vec<StockDataResponse> = data[start..]
                         .iter()
-                        .map(|d| map_aggregated_to_response(d, is_daily, params.mode))
+                        .map(|d| response::map_aggregated_to_response(d, is_daily, params.mode))
                         .collect();
                     result.insert(ticker.clone(), trimmed);
                 }
@@ -882,7 +884,7 @@ async fn fetch_aggregated_tickers(
         let start = if len > limit as usize { len - limit as usize } else { 0 };
         let trimmed: Vec<StockDataResponse> = data[start..]
             .iter()
-            .map(|d| map_aggregated_to_response(d, is_daily, params.mode))
+            .map(|d| response::map_aggregated_to_response(d, is_daily, params.mode))
             .collect();
 
         result.insert(ticker, trimmed);
@@ -893,40 +895,6 @@ async fn fetch_aggregated_tickers(
     (result, "postgres", None)
 }
 
-/// Apply legacy price scaling and format the response.
-fn build_response(
-    mut data: BTreeMap<String, Vec<StockDataResponse>>,
-    legacy: bool,
-    mode: Mode,
-    is_csv: bool,
-) -> Response {
-    if legacy {
-        let divisor = crate::constants::api::LEGACY_DIVISOR;
-        for rows in data.values_mut() {
-            for row in rows {
-                let apply = if mode == Mode::Vn {
-                    !crate::server::types::is_index_ticker(&row.symbol)
-                } else if mode == Mode::All && is_vn_ticker(&row.symbol) {
-                    !crate::server::types::is_index_ticker(&row.symbol)
-                } else {
-                    false
-                };
-                if apply {
-                    row.open /= divisor;
-                    row.high /= divisor;
-                    row.low /= divisor;
-                    row.close /= divisor;
-                }
-            }
-        }
-    }
-
-    if is_csv {
-        csv_response(&data)
-    } else {
-        (StatusCode::OK, Json(data)).into_response()
-    }
-}
 
 // ── /tickers/group ──
 
@@ -1116,140 +1084,6 @@ pub async fn explorer_handler() -> Response {
         )
             .into_response(),
     }
-}
-
-// ── Mapping helpers ──
-
-fn map_ohlcv_to_response(
-    row: crate::models::ohlcv::OhlcvJoined,
-    is_daily: bool,
-    _mode: Mode,
-) -> StockDataResponse {
-    let time_str = if is_daily {
-        row.time.format("%Y-%m-%d").to_string()
-    } else {
-        row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
-    };
-
-    StockDataResponse {
-        time: time_str,
-        open: row.open,
-        high: row.high,
-        low: row.low,
-        close: row.close,
-        volume: row.volume as u64,
-        symbol: row.ticker,
-        ma10: row.ma10,
-        ma20: row.ma20,
-        ma50: row.ma50,
-        ma100: row.ma100,
-        ma200: row.ma200,
-        ma10_score: row.ma10_score,
-        ma20_score: row.ma20_score,
-        ma50_score: row.ma50_score,
-        ma100_score: row.ma100_score,
-        ma200_score: row.ma200_score,
-        close_changed: row.close_changed,
-        volume_changed: row.volume_changed,
-        total_money_changed: row.total_money_changed,
-    }
-}
-
-fn map_aggregated_to_response(
-    row: &crate::services::aggregator::AggregatedOhlcv,
-    is_daily: bool,
-    _mode: Mode,
-) -> StockDataResponse {
-    let time_str = if is_daily {
-        row.time.format("%Y-%m-%d").to_string()
-    } else {
-        row.time.format("%Y-%m-%dT%H:%M:%S").to_string()
-    };
-
-    StockDataResponse {
-        time: time_str,
-        open: row.open,
-        high: row.high,
-        low: row.low,
-        close: row.close,
-        volume: row.volume as u64,
-        symbol: row.ticker.clone(),
-        ma10: row.ma10,
-        ma20: row.ma20,
-        ma50: row.ma50,
-        ma100: row.ma100,
-        ma200: row.ma200,
-        ma10_score: row.ma10_score,
-        ma20_score: row.ma20_score,
-        ma50_score: row.ma50_score,
-        ma100_score: row.ma100_score,
-        ma200_score: row.ma200_score,
-        close_changed: row.close_changed,
-        volume_changed: row.volume_changed,
-        total_money_changed: row.total_money_changed,
-    }
-}
-
-// ── CSV response builder ──
-
-fn fmt_opt(v: Option<f64>) -> String {
-    match v {
-        Some(n) => n.to_string(),
-        None => String::new(),
-    }
-}
-
-fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
-    let mut buf = String::from(
-        "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed\n",
-    );
-
-    for (symbol, rows) in data {
-        for r in rows {
-            buf.push_str(symbol);
-            buf.push(',');
-            buf.push_str(&r.time);
-            buf.push(',');
-            buf.push_str(&r.open.to_string());
-            buf.push(',');
-            buf.push_str(&r.high.to_string());
-            buf.push(',');
-            buf.push_str(&r.low.to_string());
-            buf.push(',');
-            buf.push_str(&r.close.to_string());
-            buf.push(',');
-            buf.push_str(&r.volume.to_string());
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma10));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma20));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma50));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma100));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma200));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma10_score));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma20_score));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma50_score));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma100_score));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.ma200_score));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.close_changed));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.volume_changed));
-            buf.push(',');
-            buf.push_str(&fmt_opt(r.total_money_changed));
-            buf.push('\n');
-        }
-    }
-
-    (StatusCode::OK, [("content-type", "text/csv")], buf).into_response()
 }
 
 // ── Date parsing ──
