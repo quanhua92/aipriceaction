@@ -2,9 +2,23 @@
 
 Redis Sorted Sets (ZSET) act as an optional edge cache for OHLCV data. Workers write crawled data to Redis ZSETs after saving to PostgreSQL. A backfill worker reads all tickers from PostgreSQL and fills ZSETs.
 
+The server reads from Redis first, falling back to PostgreSQL only when Redis has no data. When PG is down, the server operates fully from Redis for all non-date-range queries.
+
 ## Architecture
 
 ```
+                         READ PATH (Redis-first)
+┌──────────┐         ┌───────────┐         ┌──────────────┐
+│  Client   │────────>│  Server   │────────>│  Redis ZSET  │──hit──> respond
+│  /tickers │         │           │    miss  │  (cache)     │
+└──────────┘         │           │────────>│              │
+                     │           │         └──────────────┘
+                     │           │    miss  ┌──────────────┐
+                     └───────────│───────>│  PostgreSQL  │──> respond + write to Redis
+                                │         │  (primary)   │
+                                │         └──────────────┘
+                                │
+                         WRITE PATH (PG-first)
 ┌─────────────┐     ┌──────────────┐     ┌───────────┐
 │  VCI/Binance │────>│  PostgreSQL  │────>│ Redis ZSET│
 │  Yahoo/SJC   │     │  (primary)   │     │ (cache)   │
@@ -15,9 +29,10 @@ Redis Sorted Sets (ZSET) act as an optional edge cache for OHLCV data. Workers w
                            └────────────────────┘
 ```
 
+- **Read path**: Redis-first for all OHLCV and ticker-list queries (no date range). PG fallback when Redis has no data. PG calls wrapped with 3-5s timeout.
 - **Workers**: fire-and-forget writes to Redis after each PG upsert
-- **Backfill worker**: full backfill of all ticker/interval groups every 60 minutes, followed by SCAN + trim to enforce retention limits
-- **Graceful degradation**: if `REDIS_URL` is not set, everything runs without Redis
+- **Backfill worker**: full backfill of all ticker/interval groups every 60 minutes, followed by SCAN + trim to enforce retention limits. Caches the ticker list in `meta:ticker_list` at the end of each cycle.
+- **Graceful degradation**: if `REDIS_URL` is not set, everything runs without Redis. If PG is down, reads from Redis only (date-range queries return empty).
 
 ## Dependencies
 
@@ -56,6 +71,8 @@ Without `REDIS_URL`, the application starts normally with no Redis-related behav
 
 ## Key Format
 
+### OHLCV ZSET keys
+
 One ZSET key per ticker/interval (all 5 OHLCV fields packed into a single member string):
 
 ```
@@ -70,7 +87,19 @@ ohlcv:yahoo:AAPL:1m
 ohlcv:sjc:SJC-GOLD:1D
 ```
 
-### Member Format
+### Ticker list key
+
+A plain string key containing a JSON array of all known tickers (used to resolve ticker lists without PG):
+
+```
+meta:ticker_list
+```
+
+**Value**: JSON array of `{"source":"vn","ticker":"VCB"}, ...`
+**TTL**: 15 minutes (auto-expires, refreshed every backfill cycle)
+**Size**: ~1900 tickers × ~30 bytes each ≈ ~57KB
+
+## OHLCV Member Format
 
 Each ZSET member is a pipe-delimited string:
 
@@ -84,7 +113,7 @@ Each ZSET member is a pipe-delimited string:
 - **Member**: pipe-delimited OHLCV string + crawl timestamp
 - **crawl_ts_ms**: `Utc::now().timestamp_millis()` at write time, used for dedup — the latest crawl_ts wins per bar timestamp
 
-### Read Path
+### Read Path (OHLCV)
 
 Pipelined `ZREVRANGE` — 1 command per ticker, 1 network round-trip for all tickers:
 
@@ -94,7 +123,17 @@ ZREVRANGE ohlcv:vn:VCB:1D 0 249     # get last 250 bars
 
 Response is an array of member strings, parsed by splitting on `|`. Deduplication by bar timestamp keeps only the entry with the highest `crawl_ts_ms` (most recent write). Backward compatible with old 6-field format (no crawl_ts).
 
-### Write Path
+### Read Path (Ticker List)
+
+Simple `GET` on `meta:ticker_list`, parsed as JSON array of `{source, ticker}`:
+
+```
+GET meta:ticker_list
+```
+
+Returns `None` if key doesn't exist (e.g. first boot before backfill completes).
+
+### Write Path (OHLCV)
 
 Batch `ZADD` — all OHLCV fields in one call per ticker/interval:
 
@@ -108,6 +147,14 @@ Followed by retention trim:
 ZREMRANGEBYRANK ohlcv:vn:VCB:1D 0 -(MAX+1)    # keep top MAX entries
 ```
 
+### Write Path (Ticker List)
+
+`SET` with 15-minute TTL at the end of each backfill cycle:
+
+```
+SET meta:ticker_list '{"source":"vn","ticker":"VCB"},...' EX 900
+```
+
 ## Retention Policy
 
 | Interval | Max Size | Coverage |
@@ -115,6 +162,10 @@ ZREMRANGEBYRANK ohlcv:vn:VCB:1D 0 -(MAX+1)    # keep top MAX entries
 | `1D` | 5,000 entries | ~20 years of daily bars |
 | `1h` | 20,000 entries | ~2 years of hourly bars |
 | `1m` | 10,000 entries | ~7 days of minute bars |
+
+| Key | TTL | Refresh |
+|---|---|---|
+| `meta:ticker_list` | 15 min | Every backfill cycle (60 min) |
 
 Retention is enforced in two places:
 1. **On write**: `write_ohlcv_to_redis()` trims after every `ZADD`
@@ -130,6 +181,23 @@ SCAN 0 MATCH ohlcv:* COUNT 1000
 
 The backfill worker parses key components (`source`, `ticker`, `interval`) from the key format.
 
+## PG-Outage Resilience
+
+When PostgreSQL is unreachable:
+
+| Endpoint | Behavior |
+|---|---|
+| `GET /tickers?symbol=BTCUSDT` | Redis-first OHLCV read, instant response |
+| `GET /tickers` (no symbol) | Redis ticker list + Redis OHLCV per ticker |
+| `GET /tickers?mode=all` | Redis ticker list + Redis OHLCV per source group |
+| `GET /tickers?start_date=..&end_date=..` | Skips Redis (no date filtering), PG timeout (3s), returns empty |
+| `GET /tickers/group` | File-based (JSON/CSV), no PG needed |
+| `GET /tickers/name` | File-based (JSON/CSV), no PG needed |
+| `GET /tickers/info` | File-based (CSV), no PG needed |
+| `GET /health` | PG health check fails, but endpoint still returns 200 |
+
+PG pool is configured with `acquire_timeout(3s)`. All read-path PG calls are wrapped with `tokio::time::timeout` (3s for ticker queries, 5s for OHLCV batch queries). On timeout or error, the server returns empty data gracefully rather than hanging.
+
 ## Source Files
 
 ### `src/redis.rs` — Client Connection
@@ -139,10 +207,15 @@ Provides `RedisClient` (type alias for `fred::prelude::Client`) and `connect()`:
 - Reads `REDIS_URL` from environment
 - Creates a `fred::Client` with `Config::from_url()`
 - Calls `client.connect()` (no reconnect policy — fred manages reconnection internally)
-- Waits for connection via `client.wait_for_connect()`
+- Waits for connection via `client.wait_for_connect()` with 3s timeout
+- Background health loop pings every 15s, triggers reconnect on failure
 - Returns `Option<RedisClient>` — `None` if `REDIS_URL` is unset or connection fails
 
 ### `src/workers/redis_worker.rs` — ZSET Helpers & Backfill Worker
+
+**Public types**:
+
+- `TickerInfo` — minimal `{source, ticker}` struct for the ticker list cache
 
 **Public helpers** (called from workers):
 
@@ -151,6 +224,8 @@ Provides `RedisClient` (type alias for `fred::prelude::Client`) and `connect()`:
 - `format_row_as_member(row) -> String` — format an OhlcvRow as a pipe-delimited member
 - `parse_member(member, interval) -> Option<OhlcvRow>` — parse a pipe-delimited member back
 - `write_ohlcv_to_redis(client, source, ticker, interval, rows)` — batch-write OHLCV rows via `ZADD`, then trim with `ZREMRANGEBYRANK`. One call per ticker/interval (all 5 fields in one ZADD). No-op if client is `None` or rows is empty.
+- `write_ticker_list(client, tickers)` — serialize `Vec<TickerInfo>` as JSON and store in `meta:ticker_list` with 15min TTL
+- `read_ticker_list(client) -> Option<Vec<TickerInfo>>` — read and deserialize `meta:ticker_list` from Redis
 
 **Backfill worker** (`run(pool, client)`):
 
@@ -158,12 +233,24 @@ Provides `RedisClient` (type alias for `fred::prelude::Client`) and `connect()`:
 2. Builds groups: every ticker × 3 intervals (1D, 1h, 1m) with full backfill limits
 3. Backfills ALL groups in parallel (concurrency = `BACKFILL_CONCURRENCY`)
 4. Discovers all `ohlcv:*` keys via `SCAN`, trims each to retention limit
-5. Sleeps 60 minutes, repeats from step 1
+5. Caches the ticker list in `meta:ticker_list` for PG-outage resilience
+6. Sleeps 60 minutes, repeats from step 1
 
 ### `src/server/redis_reader.rs` — Pipelined ZREVRANGE Read Path
 
 - `batch_read_ohlcv_from_redis()` — pipelines N `ZREVRANGE` calls (1 per ticker), parses pipe-delimited members into `OhlcvRow` structs
+- `read_ticker_list_from_redis()` — reads `meta:ticker_list` and returns `Option<Vec<TickerInfo>>`
 - Returns `HashMap<ticker, RedisReadResult>` with PERF tracing
+
+### `src/server/api.rs` — Redis-First Read Logic
+
+The server's `/tickers` handler uses Redis-first for all read paths:
+
+- **`fetch_native_tickers()`**: tries Redis ZSET read first (when no date range), falls back to PG with 5s timeout
+- **`fetch_aggregated_tickers()`**: same Redis-first logic for aggregated intervals
+- **`handle_mode_all()`**: per-source spawned tasks each try Redis first, then PG fallback
+- **Ticker list resolution**: tries Redis `meta:ticker_list` first, falls back to PG with 3s timeout
+- **`?redis=false`**: skips Redis, goes straight to PG (useful for debugging)
 
 ### `src/test_redis.rs` — TestRedis CLI Command
 
@@ -200,6 +287,8 @@ pub mod redis_ts {
     pub const BACKFILL_LOOP_SECS: u64 = 3600;       // 60 minutes between cycles
     pub const BACKFILL_CONCURRENCY: usize = 2;       // parallel tasks per cycle
     pub const MEMBER_SEP: &str = "|";                // field separator in member string
+    pub const TICKER_LIST_KEY: &str = "meta:ticker_list";  // cached ticker list
+    pub const TICKER_LIST_TTL_SECS: u64 = 900;       // 15 min TTL for ticker list
 }
 ```
 
@@ -240,4 +329,14 @@ REDIS_URL=redis://default:<your-password>@localhost:6379/0 REDIS_WORKERS=true ca
 redis-cli -a <your-password> ZCARD ohlcv:vn:VNINDEX:1D
 redis-cli -a <your-password> ZREVRANGE ohlcv:vn:VNINDEX:1D 0 2
 redis-cli -a <your-password> SCAN 0 MATCH "ohlcv:*" COUNT 100
+
+# 6. Verify ticker list cache
+redis-cli -a <your-password> GET meta:ticker_list
+redis-cli -a <your-password> TTL meta:ticker_list
+
+# 7. Test PG-outage resilience
+docker compose stop postgres
+curl -s "http://localhost:3000/tickers?symbol=BTCUSDT&interval=1D&limit=2&mode=crypto"
+curl -s "http://localhost:3000/tickers?mode=all&interval=1D&limit=1" | python3 -c "import sys,json; print(f'{len(json.load(sys.stdin))} tickers')"
+docker compose start postgres
 ```
