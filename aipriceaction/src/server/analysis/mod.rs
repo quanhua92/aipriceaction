@@ -6,10 +6,29 @@ pub mod rrg;
 use serde::Serialize;
 use std::collections::{BTreeMap, HashMap};
 
+use crate::models::ohlcv::OhlcvRow;
+use crate::redis::RedisClient;
+
 pub use performers::top_performers_handler;
 pub use ma_scores::ma_scores_by_sector_handler;
 pub use volume_profile::volume_profile_handler;
 pub use rrg::rrg_handler;
+
+/// Try reading OHLCV from Redis, stripping metadata to plain HashMap.
+/// Returns `None` on any failure → caller falls through to PG.
+pub async fn try_redis_batch(
+    redis_client: &Option<RedisClient>,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    total_limit: i64,
+) -> Option<HashMap<String, Vec<OhlcvRow>>> {
+    let result = crate::server::redis_reader::batch_read_ohlcv_from_redis(
+        redis_client, source, symbols, interval, total_limit,
+    )
+    .await?;
+    Some(result.into_iter().map(|(k, v)| (k, v.rows)).collect())
+}
 
 /// All data sources used by mode=all
 pub fn get_all_sources() -> Vec<&'static str> {
