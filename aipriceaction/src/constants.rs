@@ -304,7 +304,7 @@ pub mod redis_ts {
     /// Concurrency for backfill worker (parallel tasks per cycle).
     pub const BACKFILL_CONCURRENCY: usize = 2;
 
-    /// ZSET member format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}"
+    /// ZSET member format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}|{crawl_ts_ms}"
     /// Separator used between fields in the member string.
     pub const MEMBER_SEP: &str = "|";
 }
