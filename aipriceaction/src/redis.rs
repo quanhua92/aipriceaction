@@ -25,14 +25,19 @@ pub async fn connect() -> Option<RedisClient> {
 
     let _handle = client.connect();
 
-    // Wait for connection
-    match client.wait_for_connect().await {
-        Ok(()) => {
+    // Wait for connection with 3s timeout to avoid blocking startup
+    match tokio::time::timeout(std::time::Duration::from_secs(3), client.wait_for_connect()).await
+    {
+        Ok(Ok(())) => {
             tracing::info!("Connected to Redis");
             Some(client)
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             tracing::error!("Failed to connect to Redis: {e}");
+            None
+        }
+        Err(_) => {
+            tracing::error!("Redis connection timed out after 3s (will reconnect in background)");
             None
         }
     }
