@@ -526,7 +526,11 @@ async fn handle_mascore(
             if let Some(map) = redis_result {
                 let joined: HashMap<String, Vec<OhlcvJoined>> = map.into_iter()
                     .map(|(ticker, orows)| {
-                        let enhanced = ohlcv::enhance_rows(&ticker, orows, effective_limit, et);
+                        let filtered = match et {
+                            Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
+                            None => orows,
+                        };
+                        let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None);
                         (ticker, enhanced)
                     })
                     .filter(|(_, v)| !v.is_empty())
@@ -548,7 +552,11 @@ async fn handle_mascore(
         if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", redis_limit).await {
             let joined: HashMap<String, Vec<OhlcvJoined>> = map.into_iter()
                 .map(|(ticker, orows)| {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, effective_limit, end_time);
+                    let filtered = match end_time {
+                        Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
+                        None => orows,
+                    };
+                    let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None);
                     (ticker, enhanced)
                 })
                 .filter(|(_, v)| !v.is_empty())
@@ -759,7 +767,11 @@ async fn handle_jdk(
             &state.redis_client, source, &fetch_symbols, "1D", jdk_limit,
         ).await {
             for (sym, rows) in map {
-                results.insert(format!("{source}:{sym}"), rows);
+                let filtered = match end_time {
+                    Some(end) => rows.into_iter().filter(|r| r.time <= end).collect(),
+                    None => rows,
+                };
+                results.insert(format!("{source}:{sym}"), filtered);
             }
         } else {
             // Fall back to PG
