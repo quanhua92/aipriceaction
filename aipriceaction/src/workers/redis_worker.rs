@@ -21,24 +21,27 @@ pub fn max_size(interval: &str) -> usize {
 }
 
 /// Format an OHLCV row as a pipe-delimited member string for ZSET storage.
-/// Format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}"
+/// Format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}|{crawl_ts_ms}"
 pub fn format_row_as_member(row: &OhlcvRow) -> String {
+    let crawl_ts = chrono::Utc::now().timestamp_millis();
     format!(
-        "{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}",
         row.time.timestamp_millis(),
         row.open,
         row.high,
         row.low,
         row.close,
         row.volume,
+        crawl_ts,
     )
 }
 
 /// Parse a pipe-delimited ZSET member string back into an OhlcvRow.
 /// Returns None if parsing fails.
-pub fn parse_member(member: &str, interval: &str) -> Option<OhlcvRow> {
-    let parts: Vec<&str> = member.splitn(6, c::MEMBER_SEP).collect();
-    if parts.len() != 6 {
+/// Also returns the crawl timestamp if present (7-field format).
+pub fn parse_member(member: &str, interval: &str) -> Option<(OhlcvRow, Option<i64>)> {
+    let parts: Vec<&str> = member.splitn(7, c::MEMBER_SEP).collect();
+    if parts.len() < 6 {
         return None;
     }
     let ts_ms: i64 = parts[0].parse().ok()?;
@@ -47,18 +50,22 @@ pub fn parse_member(member: &str, interval: &str) -> Option<OhlcvRow> {
     let low: f64 = parts[3].parse().ok()?;
     let close: f64 = parts[4].parse().ok()?;
     let volume: i64 = parts[5].parse().ok()?;
+    let crawl_ts = if parts.len() == 7 { parts[6].parse().ok() } else { None };
     let time = chrono::DateTime::from_timestamp_millis(ts_ms)?;
 
-    Some(OhlcvRow {
-        ticker_id: 0,
-        interval: interval.to_string(),
-        time,
-        open,
-        high,
-        low,
-        close,
-        volume,
-    })
+    Some((
+        OhlcvRow {
+            ticker_id: 0,
+            interval: interval.to_string(),
+            time,
+            open,
+            high,
+            low,
+            close,
+            volume,
+        },
+        crawl_ts,
+    ))
 }
 
 /// Write OHLCV rows to Redis ZSET (fire-and-forget).
@@ -272,6 +279,21 @@ async fn backfill_ticker(
         return Ok(false);
     }
 
+    let key = zset_key(source, ticker, interval);
+
+    // Remove stale members for the timestamp range being written.
+    // Fire-and-forget writes with same timestamp but different close/volume
+    // create duplicate members that ZSET doesn't deduplicate (only by string).
+    // ZREMRANGEBYSCORE clears the entire range; ZADD then writes back PG data.
+    let min_ts = rows.iter().map(|r| r.time.timestamp_millis() as f64).fold(f64::INFINITY, f64::min);
+    let max_ts = rows.iter().map(|r| r.time.timestamp_millis() as f64).fold(f64::NEG_INFINITY, f64::max);
+    if let Err(e) = client
+        .zremrangebyscore::<Value, _, _, _>(&key, min_ts, max_ts)
+        .await
+    {
+        tracing::warn!(key, "backfill zremrangebyscore failed: {e}");
+    }
+
     write_ohlcv_to_redis(&Some(client.clone()), source, ticker, interval, &rows).await;
 
     tracing::info!(
@@ -354,15 +376,28 @@ mod tests {
     fn test_format_and_parse_member() {
         let row = make_row(1700000000000, 1500.5, 1510.0, 1490.0, 1505.25, 100000);
         let member = format_row_as_member(&row);
-        assert_eq!(member, "1700000000000|1500.5|1510|1490|1505.25|100000");
+        // New format: 7 fields with crawl_ts at the end
+        let parts: Vec<&str> = member.splitn(7, '|').collect();
+        assert_eq!(parts.len(), 7);
+        assert_eq!(parts[0], "1700000000000");
+        assert_eq!(parts[1], "1500.5");
+        assert_eq!(parts[6].parse::<i64>().is_ok(), true); // crawl_ts
 
-        let parsed = parse_member(&member, "1D").unwrap();
+        let (parsed, crawl_ts) = parse_member(&member, "1D").unwrap();
         assert_eq!(parsed.time.timestamp_millis(), 1700000000000);
         assert_eq!(parsed.open, 1500.5);
         assert_eq!(parsed.high, 1510.0);
         assert_eq!(parsed.low, 1490.0);
         assert_eq!(parsed.close, 1505.25);
         assert_eq!(parsed.volume, 100000);
+        assert!(crawl_ts.is_some());
+
+        // Old 6-field format should still parse (backward compat)
+        let old_member = "1700000000000|1500.5|1510|1490|1505.25|100000";
+        let (parsed_old, crawl_ts_old) = parse_member(old_member, "1D").unwrap();
+        assert_eq!(parsed_old.time.timestamp_millis(), 1700000000000);
+        assert_eq!(parsed_old.close, 1505.25);
+        assert!(crawl_ts_old.is_none());
     }
 
     #[test]

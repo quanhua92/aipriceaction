@@ -71,7 +71,10 @@ pub async fn batch_read_ohlcv_from_redis(
         };
 
         let raw_count = members.len();
-        let mut rows = Vec::with_capacity(raw_count);
+        // Track latest entry per bar timestamp using crawl_ts (when available).
+        // Key: bar timestamp (ms), Value: (row, crawl_ts)
+        let mut deduped: std::collections::HashMap<i64, (OhlcvRow, i64)> =
+            std::collections::HashMap::with_capacity(raw_count);
 
         for member_val in &members {
             let member_str = match member_val {
@@ -81,11 +84,25 @@ pub async fn batch_read_ohlcv_from_redis(
             };
 
             if let Some(member) = member_str {
-                if let Some(row) = redis_worker::parse_member(member, interval) {
-                    rows.push(row);
+                if let Some((row, crawl_ts)) = redis_worker::parse_member(member, interval) {
+                    let ts_ms = row.time.timestamp_millis();
+                    let crawl = crawl_ts.unwrap_or(0);
+                    match deduped.get(&ts_ms) {
+                        Some((_, prev_crawl)) if crawl > *prev_crawl => {
+                            deduped.insert(ts_ms, (row, crawl));
+                        }
+                        None => {
+                            deduped.insert(ts_ms, (row, crawl));
+                        }
+                        _ => {} // older entry, skip
+                    }
                 }
             }
         }
+
+        // Sort by timestamp descending to match ZREVRANGE order
+        let mut rows: Vec<OhlcvRow> = deduped.into_values().map(|(r, _)| r).collect();
+        rows.sort_by(|a, b| b.time.cmp(&a.time));
 
         if rows.is_empty() {
             continue;

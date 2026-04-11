@@ -75,13 +75,14 @@ ohlcv:sjc:SJC-GOLD:1D
 Each ZSET member is a pipe-delimited string:
 
 ```
-{ts_ms}|{open}|{high}|{low}|{close}|{volume}
+{ts_ms}|{open}|{high}|{low}|{close}|{volume}|{crawl_ts_ms}
 ```
 
-**Example**: `1700000000000|1500.5|1510|1490|1505.25|100000`
+**Example**: `1700000000000|1500.5|1510|1490|1505.25|100000|1775870000000`
 
-- **Score**: Unix timestamp in milliseconds (integer as f64)
-- **Member**: pipe-delimited OHLCV string
+- **Score**: bar timestamp in milliseconds (integer as f64)
+- **Member**: pipe-delimited OHLCV string + crawl timestamp
+- **crawl_ts_ms**: `Utc::now().timestamp_millis()` at write time, used for dedup — the latest crawl_ts wins per bar timestamp
 
 ### Read Path
 
@@ -91,14 +92,14 @@ Pipelined `ZREVRANGE` — 1 command per ticker, 1 network round-trip for all tic
 ZREVRANGE ohlcv:vn:VCB:1D 0 249     # get last 250 bars
 ```
 
-Response is an array of member strings, parsed by splitting on `|`.
+Response is an array of member strings, parsed by splitting on `|`. Deduplication by bar timestamp keeps only the entry with the highest `crawl_ts_ms` (most recent write). Backward compatible with old 6-field format (no crawl_ts).
 
 ### Write Path
 
 Batch `ZADD` — all OHLCV fields in one call per ticker/interval:
 
 ```
-ZADD ohlcv:vn:VCB:1D 1700000000000 "1700000000000|1500.5|1510|1490|1505.25|100000" ...
+ZADD ohlcv:vn:VCB:1D 1700000000000 "1700000000000|1500.5|1510|1490|1505.25|100000|1775870000000" ...
 ```
 
 Followed by retention trim:

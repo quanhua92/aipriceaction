@@ -135,7 +135,7 @@ pub fn run(ticker: String) {
                     };
                     if let Some(member_str) = member_str {
                         tracing::info!("    First (oldest): {member_str}");
-                        if let Some(row) =
+                        if let Some((row, _)) =
                             crate::workers::redis_worker::parse_member(member_str, "1D")
                         {
                             log_result(
