@@ -163,6 +163,7 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `REDIS_URL` | No | -- | Redis connection URL (auto-configured in Docker) |
 | `REDIS_PASSWORD` | No | -- | Redis password (auto-configured in Docker) |
 | `REDIS_WORKERS` | No | `false` | Enable Redis ZSET backfill worker |
+| `API_MAX_LIMIT` | No | `40` | Max ?limit= rows per ticker for /tickers endpoint |
 
 ## Redis Cache
 

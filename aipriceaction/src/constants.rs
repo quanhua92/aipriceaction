@@ -281,6 +281,14 @@ pub mod api {
     pub const LEGACY_DIVISOR: f64 = 1000.0;
     /// Max SMA period — DB lookback buffer.
     pub const SMA_MAX_PERIOD: i64 = 200;
+    /// Max allowed ?limit= value when requesting multiple/all tickers (no symbol or >1 symbol).
+    /// Single-ticker requests are uncapped. Override via API_MAX_LIMIT env var. Default: 40.
+    pub fn max_limit() -> i64 {
+        std::env::var("API_MAX_LIMIT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(40)
+    }
 }
 
 /// Redis ZSET OHLCV cache configuration constants.

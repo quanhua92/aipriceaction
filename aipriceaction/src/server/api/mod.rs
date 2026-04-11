@@ -110,13 +110,15 @@ pub async fn tickers(
     }
 
     // Compute effective limit before any DB call
+    let is_single_ticker = params.symbol.as_ref().map(|s| s.len()) == Some(1);
     let effective_limit = params.limit.unwrap_or_else(|| {
-        if params.symbol.as_ref().map(|s| s.len()) == Some(1) {
+        if is_single_ticker {
             crate::constants::api::DEFAULT_LIMIT
         } else {
             1
         }
     });
+    let effective_limit = if is_single_ticker { effective_limit } else { effective_limit.min(crate::constants::api::max_limit()) };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
@@ -230,13 +232,15 @@ async fn handle_mode_all(
 
     // Compute effective_limit and is_csv before any DB call
     let has_explicit_symbols = params.symbol.is_some();
+    let is_single_ticker = has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1);
     let effective_limit = params.limit.unwrap_or_else(|| {
-        if has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1) {
+        if is_single_ticker {
             crate::constants::api::DEFAULT_LIMIT
         } else {
             1
         }
     });
+    let effective_limit = if is_single_ticker { effective_limit } else { effective_limit.min(crate::constants::api::max_limit()) };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
