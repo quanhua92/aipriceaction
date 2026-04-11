@@ -264,7 +264,7 @@ pub fn run() {
                             crate::workers::redis_worker::run(pool, client).await;
                         });
                     } else {
-                        tracing::warn!("REDIS_WORKERS=true but Redis is not connected (connection failed or timed out)");
+                        tracing::warn!("REDIS_WORKERS=true but REDIS_URL not set");
                     }
                 } else {
                     tracing::info!("REDIS_WORKERS=false — Redis ZSET backfill worker not started");
