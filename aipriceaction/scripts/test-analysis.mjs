@@ -293,10 +293,10 @@ async function testMaScoresModeAll() {
   assert(body.analysis_type === "ma_scores_by_sector", "analysis_type correct");
   assert(body.data.sectors.length > 0, "sectors not empty");
 
-  // Should have VN sectors plus synthetic ones like CRYPTO
+  // Should have VN sectors plus synthetic ones like CRYPTO_TOP_100
   const sectorNames = body.data.sectors.map((s) => s.sector_name);
-  const hasCrypto = sectorNames.includes("CRYPTO");
-  assert(hasCrypto, "has CRYPTO sector");
+  const hasCrypto = sectorNames.includes("CRYPTO_TOP_100");
+  assert(hasCrypto, "has CRYPTO_TOP_100 sector");
 
   // Top stocks should have source field in mode=all
   const allHaveSource = body.data.sectors.every((s) =>
