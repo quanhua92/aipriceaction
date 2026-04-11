@@ -95,6 +95,20 @@ pub async fn write_ohlcv_to_redis(
         })
         .collect();
 
+    // Remove existing members in the timestamp range to prevent duplicates
+    // (same score + different crawl_ts creates distinct members in ZSET).
+    if let (Some(min_ts), Some(max_ts)) = (
+        values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.min(s)))),
+        values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.max(s)))),
+    ) {
+        if let Err(e) = client
+            .zremrangebyscore::<Value, _, _, _>(&key, min_ts, max_ts)
+            .await
+        {
+            tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
+        }
+    }
+
     // Batch ZADD (supports multi-member add natively)
     if let Err(e) = client
         .zadd::<Value, _, _>(
