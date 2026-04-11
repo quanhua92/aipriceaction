@@ -372,6 +372,7 @@ async fn handle_mode_all(
     let mut handles = Vec::new();
     for (source, syms) in &source_map {
         let pool = state.pool.clone();
+        let redis_client = state.redis_client.clone();
         let syms = syms.clone();
         let source = source.clone();
         let limit = effective_limit;
@@ -382,6 +383,55 @@ async fn handle_mode_all(
             let db_interval = db_interval.clone();
             let is_daily = is_daily_native;
             handles.push(tokio::spawn(async move {
+                // Redis first when no date range
+                if start_time.is_none() && end_time.is_none() && redis_client.is_some() {
+                    let effective_limit = limit;
+                    let total_limit = effective_limit + crate::constants::api::SMA_MAX_PERIOD;
+                    if let Some(redis_map) = super::redis_reader::batch_read_ohlcv_from_redis(
+                        &redis_client, &source, &syms, &db_interval, total_limit,
+                    ).await {
+                        let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+                        for (ticker, redis_result) in redis_map {
+                            let enhanced = crate::queries::ohlcv::enhance_rows(
+                                &ticker, redis_result.rows, Some(effective_limit), None,
+                            );
+                            if !enhanced.is_empty() {
+                                let mut mapped: Vec<StockDataResponse> = enhanced
+                                    .into_iter()
+                                    .map(|r| {
+                                        let time_str = if is_daily {
+                                            r.time.format("%Y-%m-%d").to_string()
+                                        } else {
+                                            r.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                                        };
+                                        StockDataResponse {
+                                            time: time_str,
+                                            open: r.open, high: r.high, low: r.low, close: r.close,
+                                            volume: r.volume as u64,
+                                            symbol: r.ticker,
+                                            ma10: r.ma10, ma20: r.ma20, ma50: r.ma50,
+                                            ma100: r.ma100, ma200: r.ma200,
+                                            ma10_score: r.ma10_score, ma20_score: r.ma20_score,
+                                            ma50_score: r.ma50_score, ma100_score: r.ma100_score,
+                                            ma200_score: r.ma200_score,
+                                            close_changed: r.close_changed,
+                                            volume_changed: r.volume_changed,
+                                            total_money_changed: r.total_money_changed,
+                                        }
+                                    })
+                                    .collect();
+                                mapped.reverse();
+                                result.insert(ticker, mapped);
+                            }
+                        }
+                        if !result.is_empty() {
+                            result.retain(|_, v| !v.is_empty());
+                            return (source, result);
+                        }
+                    }
+                }
+
+                // Fallback to PG
                 let batch_map = ohlcv::get_ohlcv_joined_batch(
                     &pool, &source, &syms, &db_interval,
                     Some(limit), start_time, end_time,
@@ -423,54 +473,111 @@ async fn handle_mode_all(
             handles.push(tokio::spawn(async move {
                 use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
                 let hourly_offset: i64 = if source == "vn" { 2 } else { 0 };
-                let raw_map = ohlcv::get_ohlcv_batch_raw(
-                    &pool, &source, &syms, &base_interval,
-                    Some(lb), start_time, end_time,
-                ).await.unwrap_or_default();
-
-                let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
-                for (ticker, rows) in raw_map {
-                    let aggregated = match base_interval.as_str() {
-                        "1D" => Aggregator::aggregate_daily_data(&ticker, rows, agg),
-                        "1h" => Aggregator::aggregate_hourly_data(&ticker, rows, agg, hourly_offset),
-                        _ => Aggregator::aggregate_minute_data(&ticker, rows, agg),
-                    };
-                    per_ticker.insert(ticker, aggregated);
-                }
-                let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
-
                 let is_daily = base_interval == "1D";
+
+                // Redis first when no date range
                 let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
-                for (ticker, data) in enhanced {
-                    let len = data.len();
-                    let start = if len > limit as usize { len - limit as usize } else { 0 };
-                    let trimmed: Vec<StockDataResponse> = data[start..]
-                        .iter()
-                        .map(|d| {
-                            let time_str = if is_daily {
-                                d.time.format("%Y-%m-%d").to_string()
-                            } else {
-                                d.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                if start_time.is_none() && end_time.is_none() && redis_client.is_some() {
+                    if let Some(redis_map) = super::redis_reader::batch_read_ohlcv_from_redis(
+                        &redis_client, &source, &syms, &base_interval, lb,
+                    ).await {
+                        let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
+                        for (ticker, redis_result) in redis_map {
+                            let aggregated = match agg.base_interval() {
+                                crate::models::interval::Interval::Daily => {
+                                    Aggregator::aggregate_daily_data(&ticker, redis_result.rows, agg)
+                                }
+                                crate::models::interval::Interval::Hourly => {
+                                    Aggregator::aggregate_hourly_data(&ticker, redis_result.rows, agg, hourly_offset)
+                                }
+                                _ => Aggregator::aggregate_minute_data(&ticker, redis_result.rows, agg),
                             };
-                            StockDataResponse {
-                                time: time_str,
-                                open: d.open, high: d.high, low: d.low, close: d.close,
-                                volume: d.volume as u64,
-                                symbol: d.ticker.clone(),
-                                ma10: d.ma10, ma20: d.ma20, ma50: d.ma50,
-                                ma100: d.ma100, ma200: d.ma200,
-                                ma10_score: d.ma10_score, ma20_score: d.ma20_score,
-                                ma50_score: d.ma50_score, ma100_score: d.ma100_score,
-                                ma200_score: d.ma200_score,
-                                close_changed: d.close_changed,
-                                volume_changed: d.volume_changed,
-                                total_money_changed: d.total_money_changed,
-                            }
-                        })
-                        .collect();
-                    result.insert(ticker, trimmed);
+                            per_ticker.insert(ticker, aggregated);
+                        }
+                        let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+                        for (ticker, data) in &enhanced {
+                            let len = data.len();
+                            let start = if len > limit as usize { len - limit as usize } else { 0 };
+                            let trimmed: Vec<StockDataResponse> = data[start..]
+                                .iter()
+                                .map(|d| {
+                                    let time_str = if is_daily {
+                                        d.time.format("%Y-%m-%d").to_string()
+                                    } else {
+                                        d.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                                    };
+                                    StockDataResponse {
+                                        time: time_str,
+                                        open: d.open, high: d.high, low: d.low, close: d.close,
+                                        volume: d.volume as u64,
+                                        symbol: d.ticker.clone(),
+                                        ma10: d.ma10, ma20: d.ma20, ma50: d.ma50,
+                                        ma100: d.ma100, ma200: d.ma200,
+                                        ma10_score: d.ma10_score, ma20_score: d.ma20_score,
+                                        ma50_score: d.ma50_score, ma100_score: d.ma100_score,
+                                        ma200_score: d.ma200_score,
+                                        close_changed: d.close_changed,
+                                        volume_changed: d.volume_changed,
+                                        total_money_changed: d.total_money_changed,
+                                    }
+                                })
+                                .collect();
+                            result.insert(ticker.clone(), trimmed);
+                        }
+                        result.retain(|_, v| !v.is_empty());
+                    }
                 }
-                result.retain(|_, v| !v.is_empty());
+
+                // Fallback to PG if Redis had no data
+                if result.is_empty() {
+                    let raw_map = ohlcv::get_ohlcv_batch_raw(
+                        &pool, &source, &syms, &base_interval,
+                        Some(lb), start_time, end_time,
+                    ).await.unwrap_or_default();
+
+                    let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
+                    for (ticker, rows) in raw_map {
+                        let aggregated = match base_interval.as_str() {
+                            "1D" => Aggregator::aggregate_daily_data(&ticker, rows, agg),
+                            "1h" => Aggregator::aggregate_hourly_data(&ticker, rows, agg, hourly_offset),
+                            _ => Aggregator::aggregate_minute_data(&ticker, rows, agg),
+                        };
+                        per_ticker.insert(ticker, aggregated);
+                    }
+                    let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+
+                    for (ticker, data) in enhanced {
+                        let len = data.len();
+                        let start = if len > limit as usize { len - limit as usize } else { 0 };
+                        let trimmed: Vec<StockDataResponse> = data[start..]
+                            .iter()
+                            .map(|d| {
+                                let time_str = if is_daily {
+                                    d.time.format("%Y-%m-%d").to_string()
+                                } else {
+                                    d.time.format("%Y-%m-%dT%H:%M:%S").to_string()
+                                };
+                                StockDataResponse {
+                                    time: time_str,
+                                    open: d.open, high: d.high, low: d.low, close: d.close,
+                                    volume: d.volume as u64,
+                                    symbol: d.ticker.clone(),
+                                    ma10: d.ma10, ma20: d.ma20, ma50: d.ma50,
+                                    ma100: d.ma100, ma200: d.ma200,
+                                    ma10_score: d.ma10_score, ma20_score: d.ma20_score,
+                                    ma50_score: d.ma50_score, ma100_score: d.ma100_score,
+                                    ma200_score: d.ma200_score,
+                                    close_changed: d.close_changed,
+                                    volume_changed: d.volume_changed,
+                                    total_money_changed: d.total_money_changed,
+                                }
+                            })
+                            .collect();
+                        result.insert(ticker, trimmed);
+                    }
+                    result.retain(|_, v| !v.is_empty());
+                }
+
                 (source, result)
             }));
         }
