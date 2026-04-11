@@ -121,6 +121,8 @@ pub enum Commands {
         #[arg(long, default_value = "VNINDEX")]
         ticker: String,
     },
+    /// Trigger a one-shot Redis ZSET backfill from PostgreSQL
+    BackfillRedis,
     /// Fetch company info and financial ratios for VN tickers from VCI
     GenerateCompanyInfo {
         /// Optional: query a single ticker (e.g. VCB)
@@ -1485,6 +1487,39 @@ pub fn run() {
         }
         Commands::TestRedis { ticker } => {
             crate::test_redis::run(ticker);
+        }
+        Commands::BackfillRedis => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                let database_url =
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| String::new());
+                if database_url.is_empty() {
+                    tracing::error!("DATABASE_URL not set");
+                    return;
+                }
+                let pool = match db::connect(&database_url).await {
+                    Ok(pool) => {
+                        tracing::info!("Connected to PostgreSQL");
+                        pool
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database: {e}");
+                        return;
+                    }
+                };
+                let redis_client = match crate::redis::connect().await {
+                    Some(c) => {
+                        tracing::info!("Connected to Redis");
+                        c
+                    }
+                    None => {
+                        tracing::error!("REDIS_URL not set or failed to connect");
+                        return;
+                    }
+                };
+                crate::workers::redis_worker::backfill_full(&pool, &redis_client).await;
+                tracing::info!("Backfill complete");
+            });
         }
         Commands::GenerateCompanyInfo { ticker, rate_limit, save } => {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

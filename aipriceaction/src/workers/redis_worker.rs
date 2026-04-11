@@ -236,7 +236,7 @@ pub async fn run(pool: PgPool, client: RedisClient) {
 }
 
 /// Full backfill: enumerate all tickers from PG, backfill all 3 intervals with full history.
-async fn backfill_full(pool: &PgPool, client: &RedisClient) {
+pub async fn backfill_full(pool: &PgPool, client: &RedisClient) {
     tracing::info!("Redis ZSET backfill FULL cycle: starting");
 
     let tickers = match crate::queries::ohlcv::list_all_tickers(pool).await {
