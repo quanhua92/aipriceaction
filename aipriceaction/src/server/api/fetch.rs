@@ -201,11 +201,10 @@ pub(crate) async fn fetch_native_tickers(
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     let is_daily = interval == "1D";
 
-    // Redis shortcut: native interval, no extra sources
+    // Redis shortcut: native interval, Redis client available
     // When a date range is given, check if Redis has data covering start_time
     let redis_allowed = use_redis
         && !symbols.is_empty()
-        && extra_sources.is_empty()
         && redis_client.is_some();
 
     if redis_allowed {
