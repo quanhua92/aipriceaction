@@ -133,33 +133,42 @@ pub async fn volume_profile_handler(
     let end_datetime = end_naive.and_hms_opt(23, 59, 59).unwrap().and_utc();
 
     // Try Redis first, fall back to PG
-    let rows: Vec<OhlcvJoined> = if crate::server::redis_reader::redis_covers_range(
-        &state.redis_client, source, &params.symbol, "1m", start_datetime,
+    let limit = redis_worker::max_size("1m") as i64;
+    let rows: Vec<OhlcvJoined> = if let Some(map) = try_redis_batch(
+        &state.redis_client, source, &[params.symbol.clone()], "1m", limit,
     ).await {
-        // Redis covers the range — read full minute ZSET and filter
-        let limit = redis_worker::max_size("1m") as i64;
-        if let Some(map) = try_redis_batch(
-            &state.redis_client, source, &[params.symbol.clone()], "1m", limit,
-        ).await {
-            map.get(&params.symbol)
-                .map(|r| r.iter().map(|row| OhlcvJoined {
-                    ticker: params.symbol.clone(),
-                    time: row.time,
-                    open: row.open,
-                    high: row.high,
-                    low: row.low,
-                    close: row.close,
-                    volume: row.volume,
-                    ma10: None, ma20: None, ma50: None, ma100: None, ma200: None,
-                    ma10_score: None, ma20_score: None, ma50_score: None, ma100_score: None, ma200_score: None,
-                    close_changed: None, volume_changed: None, total_money_changed: None,
-                }).collect::<Vec<_>>())
-                .unwrap_or_default()
+        let redis_rows: Vec<OhlcvJoined> = map.get(&params.symbol)
+            .map(|r| r.iter().map(|row| OhlcvJoined {
+                ticker: params.symbol.clone(),
+                time: row.time,
+                open: row.open,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+                volume: row.volume,
+                ma10: None, ma20: None, ma50: None, ma100: None, ma200: None,
+                ma10_score: None, ma20_score: None, ma50_score: None, ma100_score: None, ma200_score: None,
+                close_changed: None, volume_changed: None, total_money_changed: None,
+            }).collect::<Vec<_>>())
+            .unwrap_or_default();
+        // If Redis has data but none falls in the requested range, try PG
+        if !redis_rows.is_empty() {
+            let in_range: Vec<_> = redis_rows.iter()
+                .filter(|d| {
+                    let date = d.time.date_naive();
+                    date >= start_naive && date <= end_naive
+                })
+                .collect();
+            if in_range.is_empty() {
+                Vec::new() // Redis data doesn't cover this date range, fall to PG
+            } else {
+                redis_rows
+            }
         } else {
-            Vec::new() // Redis failed, fall through to PG below
+            Vec::new()
         }
     } else {
-        Vec::new() // Redis doesn't cover range, use PG
+        Vec::new() // Redis unavailable, fall through to PG
     };
 
     let rows = if rows.is_empty() {
