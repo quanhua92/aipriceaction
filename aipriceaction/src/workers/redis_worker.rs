@@ -5,6 +5,13 @@ use crate::constants::redis_ts as c;
 use crate::models::ohlcv::OhlcvRow;
 use crate::redis::RedisClient;
 
+/// Minimal ticker info for Redis cache (no need for id, status, next_* fields).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TickerInfo {
+    pub source: String,
+    pub ticker: String,
+}
+
 /// Build a Redis ZSET key for a given source, ticker, and interval.
 /// One key per ticker/interval (all 5 OHLCV fields packed into the member string).
 pub fn zset_key(source: &str, ticker: &str, interval: &str) -> String {
@@ -66,6 +73,58 @@ pub fn parse_member(member: &str, interval: &str) -> Option<(OhlcvRow, Option<i6
         },
         crawl_ts,
     ))
+}
+
+/// Write the full ticker list to Redis as a JSON string with TTL.
+/// Called at the end of each backfill_full() cycle.
+pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
+    let value = match serde_json::to_string(tickers) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::warn!("Failed to serialize ticker list: {e}");
+            return;
+        }
+    };
+
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.set::<Value, _, _>(
+            c::TICKER_LIST_KEY,
+            &value,
+            Some(fred::types::Expiration::EX(c::TICKER_LIST_TTL_SECS as i64)),
+            None,
+            false,
+        ),
+    )
+    .await
+    {
+        Ok(Ok(_)) => {
+            tracing::info!("Cached {} tickers in Redis ({})", tickers.len(), c::TICKER_LIST_KEY);
+        }
+        Ok(Err(e)) => {
+            tracing::warn!("Failed to write ticker list to Redis: {e}");
+        }
+        Err(_) => {
+            tracing::warn!("Timeout writing ticker list to Redis");
+        }
+    }
+}
+
+/// Read the cached ticker list from Redis.
+/// Returns None if the key doesn't exist, parsing fails, or on timeout.
+pub async fn read_ticker_list(client: &RedisClient) -> Option<Vec<TickerInfo>> {
+    let value: String = match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.get(c::TICKER_LIST_KEY),
+    )
+    .await
+    {
+        Ok(Ok(v)) => v,
+        Ok(Err(_)) => return None,
+        Err(_) => return None,
+    };
+
+    serde_json::from_str(&value).ok()
 }
 
 /// Write OHLCV rows to Redis ZSET (fire-and-forget).
@@ -209,6 +268,13 @@ async fn backfill_full(pool: &PgPool, client: &RedisClient) {
     if let Some(all_keys) = discover_keys(client).await {
         trim_all_keys(client, &all_keys).await;
     }
+
+    // Cache ticker list in Redis for PG-outage resilience
+    let ticker_infos: Vec<TickerInfo> = tickers
+        .iter()
+        .map(|t| TickerInfo { source: t.source.clone(), ticker: t.ticker.clone() })
+        .collect();
+    write_ticker_list(client, &ticker_infos).await;
 }
 
 /// Process a list of groups with concurrency control.

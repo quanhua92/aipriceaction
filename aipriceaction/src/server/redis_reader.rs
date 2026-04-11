@@ -143,3 +143,13 @@ pub async fn batch_read_ohlcv_from_redis(
 
     Some(parsed)
 }
+
+/// Read cached ticker list from Redis (`meta:ticker_list`).
+/// Returns `Some(Vec<TickerInfo>)` if the key exists and parses correctly.
+/// Returns `None` on missing key, parse error, or timeout (2s).
+pub async fn read_ticker_list_from_redis(
+    client: &Option<RedisClient>,
+) -> Option<Vec<redis_worker::TickerInfo>> {
+    let client = client.as_ref()?;
+    redis_worker::read_ticker_list(client).await
+}

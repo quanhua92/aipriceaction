@@ -142,27 +142,27 @@ pub async fn tickers(
         Some(ref syms) => syms.clone(),
         None => {
             let source = params.mode.source_label();
-            match tokio::time::timeout(
-                std::time::Duration::from_secs(3),
-                ohlcv::list_tickers_with_extra(&state.pool, source, extra_sources),
-            ).await {
-                Ok(Ok(tickers)) => tickers.into_iter().map(|t| t.ticker).collect(),
-                Ok(Err(e)) => {
-                    tracing::warn!("Failed to list tickers for {source}: {e}");
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({ "error": "Failed to list tickers" })),
-                    )
-                        .into_response();
+            // Try Redis first (fast, no PG dependency)
+            if let Some(redis_tickers) = super::redis_reader::read_ticker_list_from_redis(&state.redis_client).await {
+                let mut syms: Vec<String> = redis_tickers
+                    .into_iter()
+                    .filter(|t| {
+                        t.source == source || extra_sources.contains(&t.source.as_str())
+                    })
+                    .map(|t| t.ticker)
+                    .collect();
+                syms.sort();
+                syms.dedup();
+                if !syms.is_empty() {
+                    tracing::debug!("Using Redis cached ticker list: {} tickers for {source}", syms.len());
+                    syms
+                } else {
+                    // Redis has no data for this source — fall through to PG
+                    pg_list_tickers(&state.pool, source, extra_sources).await
                 }
-                Err(_) => {
-                    tracing::warn!("Timeout listing tickers for {source}");
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({ "error": "Timeout listing tickers" })),
-                    )
-                        .into_response();
-                }
+            } else {
+                // Redis unavailable — fall through to PG
+                pg_list_tickers(&state.pool, source, extra_sources).await
             }
         }
     };
@@ -203,6 +203,80 @@ pub async fn tickers(
     response
 }
 
+/// PG fallback for list_tickers_with_extra when Redis doesn't have data.
+/// Returns a Vec of ticker strings, or an empty Vec on error/timeout.
+async fn pg_list_tickers(
+    pool: &sqlx::PgPool,
+    source: &str,
+    extra_sources: &[&str],
+) -> Vec<String> {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        ohlcv::list_tickers_with_extra(pool, source, extra_sources),
+    ).await {
+        Ok(Ok(tickers)) => tickers.into_iter().map(|t| t.ticker).collect(),
+        Ok(Err(e)) => {
+            tracing::warn!("Failed to list tickers for {source}: {e}");
+            Vec::new()
+        }
+        Err(_) => {
+            tracing::warn!("Timeout listing tickers for {source}");
+            Vec::new()
+        }
+    }
+}
+
+/// PG fallback for resolve_ticker_sources when Redis doesn't have enough data.
+async fn drop_redis_resolve_pg(
+    pool: &sqlx::PgPool,
+    syms: &[String],
+) -> HashMap<String, Vec<String>> {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        ohlcv::resolve_ticker_sources(pool, syms),
+    ).await {
+        Ok(Ok(map)) => {
+            let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+            for (sym, source) in &map {
+                grouped.entry(source.clone()).or_default().push(sym.clone());
+            }
+            grouped
+        }
+        Ok(Err(e)) => {
+            tracing::warn!("Failed to resolve ticker sources: {e}");
+            HashMap::new()
+        }
+        Err(_) => {
+            tracing::warn!("Timeout resolving ticker sources");
+            HashMap::new()
+        }
+    }
+}
+
+/// PG fallback for list_all_tickers when Redis doesn't have data.
+async fn drop_redis_list_all(pool: &sqlx::PgPool) -> HashMap<String, Vec<String>> {
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        ohlcv::list_all_tickers(pool),
+    ).await {
+        Ok(Ok(tickers)) => {
+            let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+            for t in tickers {
+                grouped.entry(t.source).or_default().push(t.ticker);
+            }
+            grouped
+        }
+        Ok(Err(e)) => {
+            tracing::warn!("Failed to list all tickers: {e}");
+            HashMap::new()
+        }
+        Err(_) => {
+            tracing::warn!("Timeout listing all tickers");
+            HashMap::new()
+        }
+    }
+}
+
 /// Handle mode=all: query tickers across all sources in parallel, then merge.
 async fn handle_mode_all(
     state: &Arc<AppState>,
@@ -241,61 +315,48 @@ async fn handle_mode_all(
         drop(guard);
     }
 
-    // Cache miss — now resolve symbols → sources from DB
+    // Cache miss — resolve symbols → sources
+    // Try Redis first (fast, no PG dependency), fall back to PG on miss
     let source_map: HashMap<String, Vec<String>> = if let Some(ref syms) = params.symbol {
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            ohlcv::resolve_ticker_sources(&state.pool, syms),
-        ).await {
-            Ok(Ok(map)) => {
-                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
-                for (sym, source) in &map {
-                    grouped.entry(source.clone()).or_default().push(sym.clone());
-                }
-                grouped
-            }
-            Ok(Err(e)) => {
-                tracing::warn!("Failed to resolve ticker sources: {e}");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Failed to resolve ticker sources" })),
-                ).into_response();
-            }
-            Err(_) => {
-                tracing::warn!("Timeout resolving ticker sources");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Timeout resolving ticker sources" })),
-                ).into_response();
-            }
-        }
-    } else {
-        // No symbols → fetch all tickers across all sources
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            ohlcv::list_all_tickers(&state.pool),
-        ).await {
-            Ok(Ok(tickers)) => {
-                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
-                for t in tickers {
+        // With explicit symbols: look them up in Redis cached ticker list first
+        if let Some(redis_tickers) = super::redis_reader::read_ticker_list_from_redis(&state.redis_client).await {
+            let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+            let sym_set: std::collections::HashSet<&str> = syms.iter().map(|s| s.as_str()).collect();
+            for t in redis_tickers {
+                if sym_set.contains(t.ticker.as_str()) {
                     grouped.entry(t.source).or_default().push(t.ticker);
                 }
+            }
+            if grouped.keys().count() == syms.len() {
+                // All symbols resolved from Redis
+                tracing::debug!("Resolved {} symbols from Redis ticker list", syms.len());
                 grouped
+            } else {
+                // Some symbols not found — fall back to PG
+                drop_redis_resolve_pg(&state.pool, syms).await
             }
-            Ok(Err(e)) => {
-                tracing::warn!("Failed to list all tickers: {e}");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Failed to list tickers" })),
-                ).into_response();
+        } else {
+            // Redis unavailable — fall back to PG
+            drop_redis_resolve_pg(&state.pool, syms).await
+        }
+    } else {
+        // No symbols → try Redis cached ticker list first
+        if let Some(redis_tickers) = super::redis_reader::read_ticker_list_from_redis(&state.redis_client).await {
+            if !redis_tickers.is_empty() {
+                let ticker_count = redis_tickers.len();
+                let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
+                for t in redis_tickers {
+                    grouped.entry(t.source).or_default().push(t.ticker);
+                }
+                tracing::debug!("Using Redis ticker list: {ticker_count} tickers across {} sources", grouped.len());
+                grouped
+            } else {
+                // Redis empty — fall back to PG
+                drop_redis_list_all(&state.pool).await
             }
-            Err(_) => {
-                tracing::warn!("Timeout listing all tickers");
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Timeout listing tickers" })),
-                ).into_response();
-            }
+        } else {
+            // Redis unavailable — fall back to PG
+            drop_redis_list_all(&state.pool).await
         }
     };
 

@@ -307,4 +307,9 @@ pub mod redis_ts {
     /// ZSET member format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}|{crawl_ts_ms}"
     /// Separator used between fields in the member string.
     pub const MEMBER_SEP: &str = "|";
+
+    /// Redis key for cached ticker list (JSON array of {source, ticker}).
+    pub const TICKER_LIST_KEY: &str = "meta:ticker_list";
+    /// TTL for cached ticker list in seconds (15 minutes).
+    pub const TICKER_LIST_TTL_SECS: u64 = 900;
 }
