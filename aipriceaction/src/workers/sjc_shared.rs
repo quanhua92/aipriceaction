@@ -71,7 +71,11 @@ struct SjcCsvRow {
 ///
 /// Algorithm: uses yesterday's close as today's open to create visible candle bodies.
 /// Returns the number of rows imported.
-pub async fn import_csv_to_ohlcv(pool: &PgPool, ticker_id: i32) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+pub async fn import_csv_to_ohlcv(
+    pool: &PgPool,
+    ticker_id: i32,
+    redis_client: &Option<crate::redis::RedisClient>,
+) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
     let path = resolve_data_file(sjc_worker::CSV_PATH)?;
 
     let content = std::fs::read_to_string(&path)?;
@@ -143,6 +147,22 @@ pub async fn import_csv_to_ohlcv(pool: &PgPool, ticker_id: i32) -> Result<usize,
         total_imported += chunk.len();
     }
 
+    // Fire-and-forget Redis ZSET write
+    if let Some(client) = redis_client {
+        let redis = client.clone();
+        let rows = candles.clone();
+        tokio::spawn(async move {
+            crate::workers::redis_worker::write_ohlcv_to_redis(
+                &Some(redis),
+                sjc_worker::SOURCE,
+                sjc_worker::TICKER,
+                "1D",
+                &rows,
+            )
+            .await;
+        });
+    }
+
     tracing::info!(total_imported, "import_csv_to_ohlcv: import complete");
     Ok(total_imported)
 }
@@ -151,7 +171,7 @@ pub async fn import_csv_to_ohlcv(pool: &PgPool, ticker_id: i32) -> Result<usize,
 ///
 /// Uses ON CONFLICT preserving open: first tick sets open, subsequent ticks
 /// only widen high/low via GREATEST/LEAST and update close.
-pub async fn upsert_live_price(pool: &PgPool, ticker_id: i32, buy: f64, sell: f64) -> Result<(), sqlx::Error> {
+pub async fn upsert_live_price(pool: &PgPool, ticker_id: i32, buy: f64, sell: f64, redis_client: &Option<crate::redis::RedisClient>) -> Result<(), sqlx::Error> {
     let current_mid = (buy + sell) / 2.0;
     let today = chrono::Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc();
 
@@ -166,7 +186,24 @@ pub async fn upsert_live_price(pool: &PgPool, ticker_id: i32, buy: f64, sell: f6
         volume: 1,
     };
 
-    import::bulk_upsert_ohlcv_preserve_open(pool, &[row]).await
+    import::bulk_upsert_ohlcv_preserve_open(pool, &[row.clone()]).await?;
+
+    // Fire-and-forget Redis ZSET write
+    if let Some(client) = redis_client {
+        let redis = client.clone();
+        tokio::spawn(async move {
+            crate::workers::redis_worker::write_ohlcv_to_redis(
+                &Some(redis),
+                sjc_worker::SOURCE,
+                sjc_worker::TICKER,
+                "1D",
+                &[row],
+            )
+            .await;
+        });
+    }
+
+    Ok(())
 }
 
 /// Get the appropriate loop interval based on VN trading hours.

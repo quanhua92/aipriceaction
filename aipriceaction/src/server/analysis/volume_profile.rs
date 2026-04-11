@@ -7,11 +7,13 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use chrono::NaiveDate;
 
+use crate::models::ohlcv::OhlcvJoined;
 use crate::queries::ohlcv;
 use crate::server::types::Mode;
 use crate::server::AppState;
+use crate::workers::redis_worker;
 
-use super::AnalysisResponse;
+use super::{try_redis_batch, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct VolumeProfileQuery {
@@ -130,23 +132,66 @@ pub async fn volume_profile_handler(
     let start_datetime = start_naive.and_hms_opt(0, 0, 0).unwrap().and_utc();
     let end_datetime = end_naive.and_hms_opt(23, 59, 59).unwrap().and_utc();
 
-    // Fetch minute data from DB
-    let rows = match ohlcv::get_ohlcv_joined_range(
-        &state.pool,
-        source,
-        &params.symbol,
-        "1m",
-        None, // no limit — get all minute data for the date range
-        Some(start_datetime),
-        Some(end_datetime),
+    // Try Redis first, fall back to PG
+    let limit = redis_worker::max_size("1m") as i64;
+    let rows: Vec<OhlcvJoined> = if let Some(map) = try_redis_batch(
+        &state.redis_client, source, &[params.symbol.clone()], "1m", limit,
     ).await {
-        Ok(r) => r,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({ "error": format!("Failed to fetch data: {}", e) })),
-            ).into_response();
+        let redis_rows: Vec<OhlcvJoined> = map.get(&params.symbol)
+            .map(|r| r.iter().map(|row| OhlcvJoined {
+                ticker: params.symbol.clone(),
+                time: row.time,
+                open: row.open,
+                high: row.high,
+                low: row.low,
+                close: row.close,
+                volume: row.volume,
+                ma10: None, ma20: None, ma50: None, ma100: None, ma200: None,
+                ma10_score: None, ma20_score: None, ma50_score: None, ma100_score: None, ma200_score: None,
+                close_changed: None, volume_changed: None, total_money_changed: None,
+            }).collect::<Vec<_>>())
+            .unwrap_or_default();
+        // If Redis has data but none falls in the requested range, try PG
+        if !redis_rows.is_empty() {
+            let in_range: Vec<_> = redis_rows.iter()
+                .filter(|d| {
+                    let date = d.time.date_naive();
+                    date >= start_naive && date <= end_naive
+                })
+                .collect();
+            if in_range.is_empty() {
+                Vec::new() // Redis data doesn't cover this date range, fall to PG
+            } else {
+                redis_rows
+            }
+        } else {
+            Vec::new()
         }
+    } else {
+        Vec::new() // Redis unavailable, fall through to PG
+    };
+
+    let rows = if rows.is_empty() {
+        // Fetch minute data from DB
+        match ohlcv::get_ohlcv_joined_range(
+            &state.pool,
+            source,
+            &params.symbol,
+            "1m",
+            None, // no limit — get all minute data for the date range
+            Some(start_datetime),
+            Some(end_datetime),
+        ).await {
+            Ok(r) => r,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": format!("Failed to fetch data: {}", e) })),
+                ).into_response();
+            }
+        }
+    } else {
+        rows
     };
 
     if rows.is_empty() {

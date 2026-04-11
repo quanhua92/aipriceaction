@@ -51,6 +51,9 @@ pub struct TickersQuery {
     pub cache: bool,
     #[serde(default)]
     pub mode: Mode,
+    /// true = try Redis first (default), false = skip Redis and go straight to PG.
+    #[serde(default = "default_true")]
+    pub redis: bool,
 }
 
 fn default_format() -> String {
@@ -63,6 +66,10 @@ fn default_cache() -> bool {
 
 fn default_limit() -> Option<i64> {
     None
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// Query parameters for GET /tickers/group

@@ -7,7 +7,7 @@ use crate::providers::yahoo::YahooProvider;
 use crate::queries::ohlcv;
 use crate::workers::yahoo_shared;
 
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     tracing::info!(
         "Yahoo minute worker: waiting {} seconds before first sync...",
         yahoo_worker::MINUTE_INITIAL_DELAY_SECS
@@ -52,6 +52,7 @@ pub async fn run(pool: PgPool) {
                 for ticker_entry in chunk {
                     let pool = pool.clone();
                     let provider = provider.clone();
+                    let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = yahoo_shared::ensure_yahoo_ticker(&pool, "yahoo", &ticker).await;
@@ -62,7 +63,7 @@ pub async fn run(pool: PgPool) {
 
                         match provider.get_history(&ticker, "1m", range).await {
                             Ok(data) => {
-                                yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+                                yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "yahoo", &ticker, &redis_client).await;
 
                                 match yahoo_shared::schedule_fixed_interval(
                                     &pool,

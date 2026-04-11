@@ -11,7 +11,7 @@ use crate::workers::sjc_shared;
 /// 1. Find tickers with status='waiting-import' and source='sjc'
 /// 2. Import historical data from sjc-batch.csv
 /// 3. Mark as 'ready' and schedule normal daily sync
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     tracing::info!("SJC bootstrap worker started");
 
     // Ensure the SJC ticker exists with waiting-import status before entering the loop.
@@ -45,7 +45,7 @@ pub async fn run(pool: PgPool) {
             let ticker_id = ticker_entry.id;
             tracing::info!(ticker, ticker_id, "SJC bootstrap: starting CSV import");
 
-            match sjc_shared::import_csv_to_ohlcv(&pool, ticker_id).await {
+            match sjc_shared::import_csv_to_ohlcv(&pool, ticker_id, &redis_client).await {
                 Ok(count) => {
                     tracing::info!(ticker, ticker_id, count, "SJC bootstrap: import successful");
 

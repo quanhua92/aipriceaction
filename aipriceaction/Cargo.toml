@@ -26,3 +26,4 @@ isahc = { version = "1.7", features = ["json"] }
 rand = "0.8"
 zip = "8"
 yahoo_finance_api = "4.1"
+fred = { version = "10", features = ["i-sorted-sets", "i-keys", "enable-rustls"], default-features = false }

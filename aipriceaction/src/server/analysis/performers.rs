@@ -9,8 +9,9 @@ use std::sync::Arc;
 use crate::queries::ohlcv;
 use crate::server::types::{is_vn_ticker, Mode};
 use crate::server::AppState;
+use crate::constants::api::SMA_MAX_PERIOD;
 
-use super::{get_all_sources, get_ticker_sector, is_index_ticker, parse_analysis_date, validate_limit, AnalysisResponse};
+use super::{get_all_sources, get_ticker_sector, is_index_ticker, load_crypto_groups, load_yahoo_groups, parse_analysis_date, try_redis_batch, validate_limit, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct TopPerformersQuery {
@@ -128,33 +129,90 @@ pub async fn top_performers_handler(
     let is_all = params.mode == Mode::All;
     let analysis_date = parse_analysis_date(params.date.as_deref());
 
-    // Fetch latest daily data; for mode=all, also collect source per row
-    let rows: Vec<_> = if is_all {
+    // Build symbol lists per source for Redis batch reads
+    let source_symbols: Vec<(&str, Vec<String>)> = if is_all {
         let sources = get_all_sources();
+        sources.iter().map(|&src| {
+            let symbols = match src {
+                "vn" => ticker_groups.values().flat_map(|v| v.iter().cloned()).collect(),
+                "crypto" => load_crypto_groups().map(|g| g.into_values().flatten().collect()).unwrap_or_default(),
+                "yahoo" => load_yahoo_groups().map(|g| g.into_values().flatten().collect()).unwrap_or_default(),
+                _ => Vec::new(),
+            };
+            (src, symbols)
+        }).collect()
+    } else {
+        let source = params.mode.source_label();
+        let symbols: Vec<String> = match source {
+            "vn" => ticker_groups.values().flat_map(|v| v.iter().cloned()).collect(),
+            "crypto" => load_crypto_groups().map(|g| g.into_values().flatten().collect()).unwrap_or_default(),
+            "yahoo" => load_yahoo_groups().map(|g| g.into_values().flatten().collect()).unwrap_or_default(),
+            _ => Vec::new(),
+        };
+        vec![(source, symbols)]
+    };
+
+    // Fetch latest daily data with Redis-first, PG fallback per source
+    let rows: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = if is_all {
+        let sources = get_all_sources();
+        let redis_limit = 1 + SMA_MAX_PERIOD;
+        let syms: Vec<Vec<String>> = sources.iter()
+            .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
+            .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[0]),
-            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[1]),
-            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[2]),
-            ohlcv::get_latest_daily_per_ticker(&state.pool, sources[3]),
+            try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", redis_limit),
+            try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", redis_limit),
+            try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", redis_limit),
+            try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", redis_limit),
         );
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
-        for (r, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
-            match r {
-                Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
-                Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+        for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            if let Some(map) = redis_result {
+                for (ticker, orows) in map {
+                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None);
+                    merged.extend(enhanced.into_iter().map(|row| (row, src)));
+                }
+            } else {
+                match ohlcv::get_latest_daily_per_ticker(&state.pool, src).await {
+                    Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
+                    Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
+                }
             }
         }
         merged
     } else {
         let source = params.mode.source_label();
-        match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-            Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
-            Err(e) => {
-                tracing::error!("Failed to fetch daily data: {}", e);
-                return (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-                ).into_response();
+        let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
+        if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD).await {
+            let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
+            for (ticker, orows) in map {
+                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None);
+                merged.extend(enhanced.into_iter().map(|row| (row, "")));
+            }
+            if !merged.is_empty() {
+                merged
+            } else {
+                match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+                    Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+                    Err(e) => {
+                        tracing::error!("Failed to fetch daily data: {}", e);
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                        ).into_response();
+                    }
+                }
+            }
+        } else {
+            match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+                Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
+                Err(e) => {
+                    tracing::error!("Failed to fetch daily data: {}", e);
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+                    ).into_response();
+                }
             }
         }
     };
