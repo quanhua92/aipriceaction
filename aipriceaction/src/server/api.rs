@@ -142,13 +142,24 @@ pub async fn tickers(
         Some(ref syms) => syms.clone(),
         None => {
             let source = params.mode.source_label();
-            match ohlcv::list_tickers_with_extra(&state.pool, source, extra_sources).await {
-                Ok(tickers) => tickers.into_iter().map(|t| t.ticker).collect(),
-                Err(e) => {
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(3),
+                ohlcv::list_tickers_with_extra(&state.pool, source, extra_sources),
+            ).await {
+                Ok(Ok(tickers)) => tickers.into_iter().map(|t| t.ticker).collect(),
+                Ok(Err(e)) => {
                     tracing::warn!("Failed to list tickers for {source}: {e}");
                     return (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(serde_json::json!({ "error": "Failed to list tickers" })),
+                    )
+                        .into_response();
+                }
+                Err(_) => {
+                    tracing::warn!("Timeout listing tickers for {source}");
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({ "error": "Timeout listing tickers" })),
                     )
                         .into_response();
                 }
@@ -232,37 +243,57 @@ async fn handle_mode_all(
 
     // Cache miss — now resolve symbols → sources from DB
     let source_map: HashMap<String, Vec<String>> = if let Some(ref syms) = params.symbol {
-        match ohlcv::resolve_ticker_sources(&state.pool, syms).await {
-            Ok(map) => {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            ohlcv::resolve_ticker_sources(&state.pool, syms),
+        ).await {
+            Ok(Ok(map)) => {
                 let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
                 for (sym, source) in &map {
                     grouped.entry(source.clone()).or_default().push(sym.clone());
                 }
                 grouped
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 tracing::warn!("Failed to resolve ticker sources: {e}");
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({ "error": "Failed to resolve ticker sources" })),
                 ).into_response();
             }
+            Err(_) => {
+                tracing::warn!("Timeout resolving ticker sources");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Timeout resolving ticker sources" })),
+                ).into_response();
+            }
         }
     } else {
         // No symbols → fetch all tickers across all sources
-        match ohlcv::list_all_tickers(&state.pool).await {
-            Ok(tickers) => {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(3),
+            ohlcv::list_all_tickers(&state.pool),
+        ).await {
+            Ok(Ok(tickers)) => {
                 let mut grouped: HashMap<String, Vec<String>> = HashMap::new();
                 for t in tickers {
                     grouped.entry(t.source).or_default().push(t.ticker);
                 }
                 grouped
             }
-            Err(e) => {
+            Ok(Err(e)) => {
                 tracing::warn!("Failed to list all tickers: {e}");
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({ "error": "Failed to list tickers" })),
+                ).into_response();
+            }
+            Err(_) => {
+                tracing::warn!("Timeout listing all tickers");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": "Timeout listing tickers" })),
                 ).into_response();
             }
         }
@@ -501,21 +532,28 @@ async fn fetch_native_tickers(
 
     // Fall through to PostgreSQL
     // Use batch query — single SQL query for all tickers instead of N sequential queries.
-    let batch_map = match ohlcv::get_ohlcv_joined_batch_with_extra(
-        &state.pool,
-        source,
-        &symbols,
-        interval,
-        limit,
-        start_time,
-        end_time,
-        extra_sources,
+    let batch_map = match tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        ohlcv::get_ohlcv_joined_batch_with_extra(
+            &state.pool,
+            source,
+            &symbols,
+            interval,
+            limit,
+            start_time,
+            end_time,
+            extra_sources,
+        ),
     )
     .await
     {
-        Ok(m) => m,
-        Err(e) => {
+        Ok(Ok(m)) => m,
+        Ok(Err(e)) => {
             tracing::warn!("Failed to batch-fetch tickers ({interval}): {e}");
+            return (BTreeMap::new(), "postgres", None);
+        }
+        Err(_) => {
+            tracing::warn!("Timeout batch-fetching tickers ({interval})");
             return (BTreeMap::new(), "postgres", None);
         }
     };
@@ -624,21 +662,28 @@ async fn fetch_aggregated_tickers(
 
     // Fall through to PostgreSQL
     // Batch-fetch raw OHLCV rows for all target tickers in a single query
-    let raw_map = match ohlcv::get_ohlcv_batch_raw_with_extra(
-        &state.pool,
-        source,
-        &symbols,
-        base_interval,
-        Some(lookback),
-        start_time,
-        end_time,
-        extra_sources,
+    let raw_map = match tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        ohlcv::get_ohlcv_batch_raw_with_extra(
+            &state.pool,
+            source,
+            &symbols,
+            base_interval,
+            Some(lookback),
+            start_time,
+            end_time,
+            extra_sources,
+        ),
     )
     .await
     {
-        Ok(m) => m,
-        Err(e) => {
+        Ok(Ok(m)) => m,
+        Ok(Err(e)) => {
             tracing::warn!("Failed to batch-fetch for aggregation ({base_interval}): {e}");
+            return (BTreeMap::new(), "postgres", None);
+        }
+        Err(_) => {
+            tracing::warn!("Timeout batch-fetching for aggregation ({base_interval})");
             return (BTreeMap::new(), "postgres", None);
         }
     };
