@@ -7,7 +7,7 @@ use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv;
 use crate::workers::vci_shared;
 
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     tracing::info!("VCI dividend worker started");
 
     let provider = match VciProvider::new(60) {
@@ -127,7 +127,7 @@ pub async fn run(pool: PgPool) {
                             total_saved += fetched;
 
                             // Save immediately — avoids OOM from accumulating all chunks
-                            vci_shared::enhance_and_save(&pool, ticker_id, &data, interval).await;
+                            vci_shared::enhance_and_save(&pool, ticker_id, &data, interval, "vn", &ticker, &redis_client).await;
                             let newest_ts = data.last().unwrap().time.timestamp();
                             tracing::info!(ticker, interval, chunk = fetched, total = total_saved, %oldest, %newest, "saved dividend chunk");
 

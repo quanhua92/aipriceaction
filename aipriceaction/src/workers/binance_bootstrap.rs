@@ -14,7 +14,7 @@ use crate::workers::binance_shared;
 /// 3. For 1m: download Vision daily ZIPs from 2017, save each immediately
 /// 4. Fill the gap with live API klines
 /// 5. Mark as 'ready' when all intervals are done
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     let provider = match BinanceProvider::new(120) {
         Ok(p) => p,
         Err(e) => {
@@ -103,7 +103,7 @@ pub async fn run(pool: PgPool) {
                             Ok(data) if data.is_empty() => {}
                             Ok(data) => {
                                 let count = data.len();
-                                binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval).await;
+                                binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval, "crypto", ticker, &redis_client).await;
                                 total_saved += count;
                                 tracing::info!(ticker, interval = db_interval, year = %y, month = %m, count, total = total_saved, "saved vision month");
                             }
@@ -136,7 +136,7 @@ pub async fn run(pool: PgPool) {
                         Ok(data) if data.is_empty() => {}
                         Ok(data) => {
                             let count = data.len();
-                            binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval).await;
+                            binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval, "crypto", ticker, &redis_client).await;
                             total_saved += count;
                         }
                         Err(_) => {} // 404 expected for future/weekend days
@@ -156,7 +156,7 @@ pub async fn run(pool: PgPool) {
                     Ok(data) if data.is_empty() => {}
                     Ok(data) => {
                         let count = data.len();
-                        binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval).await;
+                        binance_shared::enhance_and_save(&pool, ticker_id, &data, db_interval, "crypto", ticker, &redis_client).await;
                         tracing::info!(ticker, interval = db_interval, count, "saved live klines gap");
                     }
                     Err(e) => {

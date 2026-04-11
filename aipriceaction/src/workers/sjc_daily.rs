@@ -13,7 +13,7 @@ use crate::workers::sjc_shared;
 /// 3. Fetch SJC API immediately on startup, then every 5 min during
 ///    VN trading hours, 30 min off-hours
 /// 4. Upsert today's daily candle preserving the opening price
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     let provider = match SjcProvider::new() {
         Ok(p) => p,
         Err(e) => {
@@ -76,7 +76,7 @@ pub async fn run(pool: PgPool) {
                     "SJC daily worker: fetched price"
                 );
 
-                if let Err(e) = sjc_shared::upsert_live_price(&pool, ticker_id, price.buy, price.sell).await {
+                if let Err(e) = sjc_shared::upsert_live_price(&pool, ticker_id, price.buy, price.sell, &redis_client).await {
                     tracing::warn!("SJC daily worker: failed to upsert price: {e}");
                 } else {
                     first_fetch_done = true;

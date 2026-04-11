@@ -97,6 +97,9 @@ pub async fn enhance_and_save(
     ticker_id: i32,
     data: &[OhlcvData],
     interval: &str,
+    source: &str,
+    ticker: &str,
+    redis_client: &Option<crate::redis::RedisClient>,
 ) {
     if data.is_empty() {
         return;
@@ -146,6 +149,16 @@ pub async fn enhance_and_save(
 
     if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &deduped).await {
         tracing::error!(ticker_id, interval, "bulk_upsert_ohlcv failed: {e}");
+    } else if redis_client.is_some() {
+        // Fire-and-forget Redis TS write
+        let redis = redis_client.clone();
+        let src = source.to_string();
+        let tk = ticker.to_string();
+        let iv = interval.to_string();
+        let rows = deduped.clone();
+        tokio::spawn(async move {
+            crate::workers::redis_worker::write_ohlcv_to_redis(&redis, &src, &tk, &iv, &rows).await;
+        });
     }
 }
 

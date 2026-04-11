@@ -9,7 +9,7 @@ use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv;
 use crate::workers::{binance_shared, vci_shared};
 
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     // Initial delay before first sync (3 minutes)
     tracing::info!("VCI minute worker: waiting {} seconds before first sync...", vci_worker::MINUTE_INITIAL_DELAY_SECS);
     sleep(Duration::from_secs(vci_worker::MINUTE_INITIAL_DELAY_SECS)).await;
@@ -55,6 +55,7 @@ pub async fn run(pool: PgPool) {
                 for ticker_entry in chunk {
                     let pool = pool.clone();
                     let provider = provider.clone();
+                    let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
@@ -69,7 +70,7 @@ pub async fn run(pool: PgPool) {
 
                         match provider.get_history(&ticker, "1m", count_back, None).await {
                             Ok(data) => {
-                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "vn", &ticker, &redis_client).await;
 
                                 // Major VN tickers get fixed 60s schedule; others use money-flow tier
                                 if MAJOR_VN.contains(&ticker.as_str()) {

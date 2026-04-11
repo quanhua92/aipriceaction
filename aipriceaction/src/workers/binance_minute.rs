@@ -7,7 +7,7 @@ use crate::providers::binance::BinanceProvider;
 use crate::queries::ohlcv;
 use crate::workers::binance_shared;
 
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     // Initial delay before first sync
     tracing::info!(
         "Binance minute worker: waiting {} seconds before first sync...",
@@ -53,6 +53,7 @@ pub async fn run(pool: PgPool) {
                 for ticker_entry in chunk {
                     let pool = pool.clone();
                     let provider = provider.clone();
+                    let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = binance_shared::ensure_crypto_ticker(&pool, "crypto", &ticker).await;
@@ -62,7 +63,7 @@ pub async fn run(pool: PgPool) {
 
                         match provider.get_history_since(&ticker, "1m", binance_worker::MINUTE_LIMIT, start_time).await {
                             Ok(data) => {
-                                binance_shared::enhance_and_save(&pool, ticker_id, &data, "1m").await;
+                                binance_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "crypto", &ticker, &redis_client).await;
 
                                 match binance_shared::schedule_fixed_interval(
                                     &pool,

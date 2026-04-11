@@ -8,7 +8,7 @@ use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv;
 use crate::workers::{binance_shared, vci_shared};
 
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     let provider = match VciProvider::new(60) {
         Ok(p) => Arc::new(p),
         Err(e) => {
@@ -56,6 +56,7 @@ pub async fn run(pool: PgPool) {
                 for ticker_entry in chunk {
                     let pool = pool.clone();
                     let provider = provider.clone();
+                    let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
                         let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
@@ -81,7 +82,7 @@ pub async fn run(pool: PgPool) {
                                     tracing::warn!("[DIVIDEND] ticker={}, daily sync SKIPPED — awaiting dividend worker to re-download full history", ticker);
                                     return false;
                                 }
-                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D").await;
+                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "vn", &ticker, &redis_client).await;
 
                                 // Major VN tickers get fixed 60s schedule; others use money-flow tier
                                 if MAJOR_VN.contains(&ticker.as_str()) {

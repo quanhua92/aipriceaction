@@ -262,7 +262,7 @@ pub async fn get_ohlcv_joined_range(
 /// The rows must be in time DESC order (as returned from the DB).
 /// All rows are used for SMA calculation, then filtered to `start_time`
 /// if provided, and trimmed to `limit` from the newest end.
-fn enhance_rows(
+pub fn enhance_rows(
     ticker: &str,
     rows: Vec<OhlcvRow>,
     limit: Option<i64>,

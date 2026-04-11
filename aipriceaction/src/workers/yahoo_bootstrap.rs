@@ -12,7 +12,7 @@ use crate::workers::yahoo_shared;
 /// 1. Find tickers with status='dividend-detected' or 'full-download-requested'
 /// 2. Download full history chunked by time windows for 1D, 1h, 1m (upsert, no delete)
 /// 3. Mark as 'ready' when all intervals are done
-pub async fn run(pool: PgPool) {
+pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
     let provider = match YahooProvider::with_options(60, true, true) {
         Ok(p) => p,
         Err(e) => {
@@ -156,7 +156,7 @@ pub async fn run(pool: PgPool) {
                             let fetched = data.len();
                             total_saved += fetched;
 
-                            yahoo_shared::enhance_and_save(&pool, ticker_id, &data, db_interval).await;
+                            yahoo_shared::enhance_and_save(&pool, ticker_id, &data, db_interval, "yahoo", ticker, &redis_client).await;
                             let newest_ts = data.last().unwrap().time.timestamp();
                             tracing::info!(
                                 ticker,
