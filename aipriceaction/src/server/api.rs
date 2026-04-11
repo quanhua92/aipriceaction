@@ -1,5 +1,5 @@
 use axum::extract::State;
-use axum::http::StatusCode;
+use axum::http::{HeaderName, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Json, Response};
 use axum_extra::extract::Query;
 use chrono::{Datelike, NaiveDate, Timelike};
@@ -127,7 +127,12 @@ pub async fn tickers(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
-            return build_response(cached, params.legacy, params.mode, is_csv);
+            let mut resp = build_response(cached, params.legacy, params.mode, is_csv);
+            resp.headers_mut().insert(
+                HeaderName::from_static("x-data-source"),
+                HeaderValue::from_static("in-memory"),
+            );
+            return resp;
         }
         drop(guard);
     }
@@ -150,7 +155,7 @@ pub async fn tickers(
             }
         }
     };
-    let result = match interval {
+    let (result, source_tag, redis_meta) = match interval {
         NormalizedInterval::Native(db_interval) => {
             fetch_native_tickers(&state, symbols, db_interval, &params, Some(effective_limit), extra_sources).await
         }
@@ -165,7 +170,30 @@ pub async fn tickers(
         guard.put(cache_key, &result);
     }
 
-    build_response(result, params.legacy, params.mode, is_csv)
+    let mut response = build_response(result, params.legacy, params.mode, is_csv);
+    response.headers_mut().insert(
+        HeaderName::from_static("x-data-source"),
+        HeaderValue::from_static(source_tag),
+    );
+    if let Some(meta) = redis_meta {
+        response.headers_mut().insert(
+            HeaderName::from_static("x-redis-base"),
+            HeaderValue::from_str(&meta.base_interval).unwrap(),
+        );
+        response.headers_mut().insert(
+            HeaderName::from_static("x-redis-raw-count"),
+            HeaderValue::from_str(&meta.raw_close_count.to_string()).unwrap(),
+        );
+        response.headers_mut().insert(
+            HeaderName::from_static("x-redis-aligned"),
+            HeaderValue::from_str(&meta.aligned_count.to_string()).unwrap(),
+        );
+        response.headers_mut().insert(
+            HeaderName::from_static("x-redis-limit"),
+            HeaderValue::from_str(&meta.requested_limit.to_string()).unwrap(),
+        );
+    }
+    response
 }
 
 /// Handle mode=all: query tickers across all sources in parallel, then merge.
@@ -419,6 +447,7 @@ fn build_cache_key(
 }
 
 /// Native interval: query DB directly. Returns full VND prices (no legacy scaling).
+/// Returns (data, source_tag, redis_meta).
 async fn fetch_native_tickers(
     state: &Arc<AppState>,
     symbols: Vec<String>,
@@ -426,12 +455,55 @@ async fn fetch_native_tickers(
     params: &TickersQuery,
     limit: Option<i64>,
     extra_sources: &[&str],
-) -> BTreeMap<String, Vec<StockDataResponse>> {
+) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<super::redis_reader::RedisReadResult>) {
     let start_time = params.start_date.as_deref().and_then(parse_date);
     let end_time = params.end_date.as_deref().and_then(parse_date_end);
     let source = params.mode.source_label();
     let is_daily = interval == "1D";
 
+    // Redis shortcut: native interval, no date range, no extra sources
+    if params.redis && !symbols.is_empty() && start_time.is_none() && end_time.is_none() && extra_sources.is_empty() {
+        if state.redis_client.is_some() {
+            let effective_limit = limit.unwrap_or(crate::constants::api::DEFAULT_LIMIT);
+            let total_limit = effective_limit + crate::constants::api::SMA_MAX_PERIOD;
+
+            if let Some(redis_map) = super::redis_reader::batch_read_ohlcv_from_redis(
+                &state.redis_client, source, &symbols, interval, total_limit,
+            ).await {
+                let mut result = BTreeMap::new();
+                let mut first_meta: Option<super::redis_reader::RedisReadResult> = None;
+                for (ticker, redis_result) in redis_map {
+                    let meta = super::redis_reader::RedisReadResult {
+                        raw_close_count: redis_result.raw_close_count,
+                        aligned_count: redis_result.aligned_count,
+                        requested_limit: redis_result.requested_limit,
+                        base_interval: redis_result.base_interval.clone(),
+                        rows: Vec::new(),
+                    };
+                    if first_meta.is_none() {
+                        first_meta = Some(meta);
+                    }
+                    let enhanced = crate::queries::ohlcv::enhance_rows(
+                        &ticker, redis_result.rows, limit, None,
+                    );
+                    if !enhanced.is_empty() {
+                        let mut mapped: Vec<StockDataResponse> = enhanced
+                            .into_iter()
+                            .map(|r| map_ohlcv_to_response(r, is_daily, params.mode))
+                            .collect();
+                        // Redis returns newest-first, API contract is oldest-first
+                        mapped.reverse();
+                        result.insert(ticker, mapped);
+                    }
+                }
+                if !result.is_empty() {
+                    return (result, "redis", first_meta);
+                }
+            }
+        }
+    }
+
+    // Fall through to PostgreSQL
     // Use batch query — single SQL query for all tickers instead of N sequential queries.
     let batch_map = match ohlcv::get_ohlcv_joined_batch_with_extra(
         &state.pool,
@@ -448,7 +520,7 @@ async fn fetch_native_tickers(
         Ok(m) => m,
         Err(e) => {
             tracing::warn!("Failed to batch-fetch tickers ({interval}): {e}");
-            return BTreeMap::new();
+            return (BTreeMap::new(), "postgres", None);
         }
     };
 
@@ -468,11 +540,12 @@ async fn fetch_native_tickers(
 
     // Remove tickers with no data (matches production behavior)
     result.retain(|_, v| !v.is_empty());
-    result
+    (result, "postgres", None)
 }
 
 /// Aggregated interval: fetch source data, aggregate, enhance, trim.
 /// Returns full VND prices (no legacy scaling).
+/// Returns (data, source_tag, redis_meta).
 async fn fetch_aggregated_tickers(
     state: &Arc<AppState>,
     symbols: Vec<String>,
@@ -480,7 +553,7 @@ async fn fetch_aggregated_tickers(
     params: &TickersQuery,
     limit: i64,
     extra_sources: &[&str],
-) -> BTreeMap<String, Vec<StockDataResponse>> {
+) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<super::redis_reader::RedisReadResult>) {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
     let base_interval = agg.base_interval().as_str();
@@ -497,6 +570,63 @@ async fn fetch_aggregated_tickers(
     // crypto aligns to midnight UTC.
     let hourly_offset: i64 = if params.mode == Mode::Vn { 2 } else { 0 };
 
+    // Redis shortcut: aggregated interval, no date range, no extra sources
+    if params.redis && !symbols.is_empty() && start_time.is_none() && end_time.is_none() && extra_sources.is_empty() {
+        if state.redis_client.is_some() {
+            // Use same lookback as PG path (limit + AGGREGATED_LOOKBACK) to ensure
+            // identical row counts. SMA extra is handled post-aggregation, not during base read.
+            if let Some(redis_map) = super::redis_reader::batch_read_ohlcv_from_redis(
+                &state.redis_client, source, &symbols, base_interval,
+                lookback,
+            ).await {
+                let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
+                let mut first_meta: Option<super::redis_reader::RedisReadResult> = None;
+
+                for (ticker, redis_result) in redis_map {
+                    let meta = super::redis_reader::RedisReadResult {
+                        raw_close_count: redis_result.raw_close_count,
+                        aligned_count: redis_result.aligned_count,
+                        requested_limit: redis_result.requested_limit,
+                        base_interval: redis_result.base_interval.clone(),
+                        rows: Vec::new(),
+                    };
+                    if first_meta.is_none() {
+                        first_meta = Some(meta);
+                    }
+
+                    let aggregated = match agg.base_interval() {
+                        crate::models::interval::Interval::Daily => {
+                            Aggregator::aggregate_daily_data(&ticker, redis_result.rows, agg)
+                        }
+                        crate::models::interval::Interval::Hourly => {
+                            Aggregator::aggregate_hourly_data(&ticker, redis_result.rows, agg, hourly_offset)
+                        }
+                        _ => Aggregator::aggregate_minute_data(&ticker, redis_result.rows, agg),
+                    };
+                    per_ticker.insert(ticker, aggregated);
+                }
+
+                let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+                let mut result = BTreeMap::new();
+
+                for (ticker, data) in &enhanced {
+                    let len = data.len();
+                    let start = if len > limit as usize { len - limit as usize } else { 0 };
+                    let trimmed: Vec<StockDataResponse> = data[start..]
+                        .iter()
+                        .map(|d| map_aggregated_to_response(d, is_daily, params.mode))
+                        .collect();
+                    result.insert(ticker.clone(), trimmed);
+                }
+
+                if !result.is_empty() {
+                    return (result, "redis", first_meta);
+                }
+            }
+        }
+    }
+
+    // Fall through to PostgreSQL
     // Batch-fetch raw OHLCV rows for all target tickers in a single query
     let raw_map = match ohlcv::get_ohlcv_batch_raw_with_extra(
         &state.pool,
@@ -513,7 +643,7 @@ async fn fetch_aggregated_tickers(
         Ok(m) => m,
         Err(e) => {
             tracing::warn!("Failed to batch-fetch for aggregation ({base_interval}): {e}");
-            return BTreeMap::new();
+            return (BTreeMap::new(), "postgres", None);
         }
     };
 
@@ -551,7 +681,7 @@ async fn fetch_aggregated_tickers(
 
     // Remove tickers with no data (matches production behavior)
     result.retain(|_, v| !v.is_empty());
-    result
+    (result, "postgres", None)
 }
 
 /// Apply legacy price scaling and format the response.
