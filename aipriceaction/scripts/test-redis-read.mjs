@@ -41,8 +41,71 @@ await test('VCB 2W aggregated', '/tickers?symbol=VCB&interval=2W&limit=26', 'red
 await test('VCB 1M aggregated', '/tickers?symbol=VCB&interval=1M&limit=12', 'redis');
 await test('BTCUSDT 1D crypto', '/tickers?symbol=BTCUSDT&interval=1D&limit=100&mode=crypto', 'redis');
 
-// Tests that should fall back to PG (date range)
-await test('VCB 1D with date range', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01', 'postgres');
+// Date range queries now also use Redis when the range is covered
+await test('VCB 1D with date range', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01', 'redis');
+
+// ── Date range tests ──
+
+// 1D: Redis has data from 2015 — all these ranges should be Redis
+await test('VCB 1D start_date only', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01&limit=5', 'redis');
+await test('VCB 1D start+end date', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01&end_date=2025-03-01&limit=5', 'redis');
+await test('VCB 1D recent range', '/tickers?symbol=VCB&interval=1D&start_date=2026-01-01&end_date=2026-04-01&limit=5', 'redis');
+await test('VCB 1D old range (2020)', '/tickers?symbol=VCB&interval=1D&start_date=2020-01-01&end_date=2020-06-01&limit=5', 'redis');
+
+// 1D crypto: Redis has data from 2017 — range should be Redis
+await test('BTCUSDT 1D start_date', '/tickers?symbol=BTCUSDT&interval=1D&start_date=2024-01-01&limit=5&mode=crypto', 'redis');
+await test('BTCUSDT 1D start+end', '/tickers?symbol=BTCUSDT&interval=1D&start_date=2024-01-01&end_date=2024-06-01&limit=5&mode=crypto', 'redis');
+
+// 1h: Redis has data from 2023-09 — range should be Redis
+await test('VCB 1h start_date', '/tickers?symbol=VCB&interval=1H&start_date=2025-06-01&limit=5', 'redis');
+await test('VCB 1h start+end', '/tickers?symbol=VCB&interval=1H&start_date=2025-06-01&end_date=2025-07-01&limit=5', 'redis');
+
+// 1m: Redis has data from ~2026-02 — covered range should be Redis
+await test('VCB 1m covered range', '/tickers?symbol=VCB&interval=1m&start_date=2026-03-01&end_date=2026-03-02&limit=5', 'redis');
+
+// 1m: Redis does NOT have data before 2026-02 — should fall back to PG
+await test('VCB 1m out-of-range (PG fallback)', '/tickers?symbol=VCB&interval=1m&start_date=2025-10-01&end_date=2025-10-02&limit=5', 'postgres');
+
+// Multi-ticker with date range
+await test('VCB+FPT 1D date range', '/tickers?symbol=VCB&symbol=FPT&interval=1D&start_date=2025-01-01&end_date=2025-03-01&limit=5', 'redis');
+
+// Date range data validation: check returned rows are within the requested range
+async function testDateRangeData(name, url, startDate, endDate) {
+  total++;
+  try {
+    const sep = url.includes('?') ? '&' : '?';
+    const t0 = performance.now();
+    const res = await fetch(`${BASE}${url}${sep}cache=false`);
+    const data = await res.json();
+    const ms = (performance.now() - t0).toFixed(0);
+    const source = res.headers.get('x-data-source');
+
+    const rows = data.VCB || data.BTCUSDT || [];
+    if (rows.length === 0) {
+      console.log(`[FAIL] ${name} — no rows returned, ${source}, ${ms}ms`);
+      fail++;
+      return;
+    }
+
+    const allInRange = rows.every(r => r.time.slice(0, 10) >= startDate && r.time.slice(0, 10) <= endDate);
+    if (allInRange) {
+      console.log(`[PASS] ${name} — ${rows.length} rows in [${startDate}, ${endDate}], source=${source}, ${ms}ms`);
+      pass++;
+    } else {
+      const outOfRange = rows.filter(r => r.time < startDate || r.time > endDate);
+      console.log(`[FAIL] ${name} — ${outOfRange.length} rows outside range, source=${source}, ${ms}ms`);
+      fail++;
+    }
+  } catch (e) {
+    console.log(`[FAIL] ${name} — fetch error: ${e.message}`);
+    fail++;
+  }
+}
+
+await testDateRangeData('VCB 1D date range data', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01&end_date=2025-03-01&limit=10', '2025-01-01', '2025-03-01');
+await testDateRangeData('VCB 1h date range data', '/tickers?symbol=VCB&interval=1H&start_date=2025-06-01&end_date=2025-07-01&limit=10', '2025-06-01', '2025-07-01');
+await testDateRangeData('BTCUSDT 1D date range data', '/tickers?symbol=BTCUSDT&interval=1D&start_date=2024-01-01&end_date=2024-06-01&limit=10&mode=crypto', '2024-01-01', '2024-06-01');
+await testDateRangeData('VCB 1m date range data', '/tickers?symbol=VCB&interval=1m&start_date=2026-03-01&end_date=2026-03-02&limit=10', '2026-03-01', '2026-03-02');
 
 // Tests that should hit Redis (multi-ticker via Lua batch)
 await test('VCB+FPT multi-ticker', '/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=10', 'redis');

@@ -144,6 +144,73 @@ pub async fn batch_read_ohlcv_from_redis(
     Some(parsed)
 }
 
+/// Check if the Redis ZSET for the given source/ticker/interval has data
+/// covering the requested `start_time`. Uses `ZRANGE key 0 0 WITHSCORES`
+/// to read the oldest entry's timestamp and compares it against `start_time`.
+///
+/// Returns `true` if Redis has data old enough (min_timestamp <= start_time).
+/// Returns `false` if Redis is unavailable, the key doesn't exist, or the
+/// oldest data is newer than `start_time`.
+pub async fn redis_covers_range(
+    client: &Option<RedisClient>,
+    source: &str,
+    ticker: &str,
+    interval: &str,
+    start_time: chrono::DateTime<chrono::Utc>,
+) -> bool {
+    let client = match client.as_ref() {
+        Some(c) => c,
+        None => return false,
+    };
+
+    let key = redis_worker::zset_key(source, ticker, interval);
+
+    let result = match tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        // ZREVRANGE -1 -1 WITHSCORES → returns the lowest-scored member (oldest)
+        client.zrevrange::<Vec<Value>, _>(&key, -1, -1, true),
+    )
+    .await
+    {
+        Ok(Ok(r)) => r,
+        Ok(Err(e)) => {
+            tracing::debug!(%key, "ZREVRANGE -1 -1 WITHSCORES error: {e}");
+            return false;
+        }
+        Err(_) => {
+            tracing::debug!(%key, "ZREVRANGE -1 -1 WITHSCORES timed out");
+            return false;
+        }
+    };
+
+    // fred returns WITHSCORES as a flat array: [member, score, member, score, ...]
+    // We requested index -1, so we get exactly 1 member: [member, score].
+    // The score (index 1) is the timestamp in ms.
+    if result.len() >= 2 {
+        let min_ts_ms = match &result[1] {
+            Value::Double(d) => Some(*d as i64),
+            Value::Bytes(b) => std::str::from_utf8(b)
+                .ok()
+                .and_then(|s| s.parse::<i64>().ok()),
+            Value::String(s) => s.parse::<i64>().ok(),
+            _ => None,
+        };
+        if let Some(min_ts_ms) = min_ts_ms {
+            let covers = min_ts_ms <= start_time.timestamp_millis();
+            tracing::debug!(
+                %key,
+                min_ts_ms,
+                start_ts_ms = start_time.timestamp_millis(),
+                covers,
+                "redis_covers_range check"
+            );
+            return covers;
+        }
+    }
+
+    false
+}
+
 /// Read cached ticker list from Redis (`meta:ticker_list`).
 /// Returns `Some(Vec<TickerInfo>)` if the key exists and parses correctly.
 /// Returns `None` on missing key, parse error, or timeout (2s).

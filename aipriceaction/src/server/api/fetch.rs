@@ -201,11 +201,33 @@ pub(crate) async fn fetch_native_tickers(
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     let is_daily = interval == "1D";
 
-    // Redis shortcut: native interval, no date range, no extra sources
-    if use_redis && !symbols.is_empty() && start_time.is_none() && end_time.is_none() && extra_sources.is_empty() {
-        if redis_client.is_some() {
+    // Redis shortcut: native interval, no extra sources
+    // When a date range is given, check if Redis has data covering start_time
+    let redis_allowed = use_redis
+        && !symbols.is_empty()
+        && extra_sources.is_empty()
+        && redis_client.is_some();
+
+    if redis_allowed {
+        let start_ok = if start_time.is_some() {
+            redis_reader::redis_covers_range(
+                redis_client, source, &symbols[0], interval, start_time.unwrap(),
+            )
+            .await
+        } else {
+            true
+        };
+
+        if start_ok {
             let effective_limit = limit.unwrap_or(crate::constants::api::DEFAULT_LIMIT);
-            let total_limit = effective_limit + crate::constants::api::SMA_MAX_PERIOD;
+            // When a date range is given, fetch all ZSET rows so the range
+            // can be in the middle of history (not just at the tail).
+            let total_limit = if start_time.is_some() || end_time.is_some() {
+                (crate::workers::redis_worker::max_size(interval) as i64)
+                    + crate::constants::api::SMA_MAX_PERIOD
+            } else {
+                effective_limit + crate::constants::api::SMA_MAX_PERIOD
+            };
 
             if let Some(redis_map) = redis_reader::batch_read_ohlcv_from_redis(
                 redis_client, source, &symbols, interval, total_limit,
@@ -223,9 +245,30 @@ pub(crate) async fn fetch_native_tickers(
                     if first_meta.is_none() {
                         first_meta = Some(meta);
                     }
+                    // When a date range is given, don't let enhance_rows truncate
+                    // to limit (it would keep the N newest rows, potentially
+                    // outside the requested range). Pass None so we get all rows,
+                    // then filter by range and apply limit ourselves.
+                    let enhance_limit = if start_time.is_some() || end_time.is_some() {
+                        None
+                    } else {
+                        limit
+                    };
                     let enhanced = crate::queries::ohlcv::enhance_rows(
-                        &ticker, redis_result.rows, limit, None,
+                        &ticker, redis_result.rows, enhance_limit, start_time,
                     );
+                    let mut enhanced = enhanced;
+                    // Apply end_time filter when date range was provided
+                    if let Some(et) = end_time {
+                        enhanced.retain(|r| r.time <= et);
+                    }
+                    // Apply limit after date filtering (enhanced is newest-first)
+                    if let Some(l) = limit {
+                        let l = l as usize;
+                        if enhanced.len() > l {
+                            enhanced.truncate(l);
+                        }
+                    }
                     if !enhanced.is_empty() {
                         let mut mapped: Vec<StockDataResponse> = enhanced
                             .into_iter()
@@ -319,12 +362,36 @@ pub(crate) async fn fetch_aggregated_tickers(
     // crypto aligns to midnight UTC.
     let hourly_offset: i64 = if source == "vn" { 2 } else { 0 };
 
-    // Redis shortcut: aggregated interval, no date range, no extra sources
-    if use_redis && !symbols.is_empty() && start_time.is_none() && end_time.is_none() && extra_sources.is_empty() {
-        if redis_client.is_some() {
+    // Redis shortcut: aggregated interval, no extra sources
+    // When a date range is given, check if Redis has data covering start_time
+    let redis_allowed = use_redis
+        && !symbols.is_empty()
+        && extra_sources.is_empty()
+        && redis_client.is_some();
+
+    if redis_allowed {
+        let start_ok = if start_time.is_some() {
+            redis_reader::redis_covers_range(
+                redis_client, source, &symbols[0], base_interval, start_time.unwrap(),
+            )
+            .await
+        } else {
+            true
+        };
+
+        if start_ok {
+            // When a date range is given, fetch all ZSET rows so the range
+            // can be in the middle of history.
+            let effective_lookback = if start_time.is_some() || end_time.is_some() {
+                (crate::workers::redis_worker::max_size(base_interval) as i64)
+                    + crate::constants::api::AGGREGATED_LOOKBACK
+            } else {
+                lookback
+            };
+
             if let Some(redis_map) = redis_reader::batch_read_ohlcv_from_redis(
                 redis_client, source, &symbols, base_interval,
-                lookback,
+                effective_lookback,
             ).await {
                 let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
                 let mut first_meta: Option<redis_reader::RedisReadResult> = None;
@@ -357,13 +424,23 @@ pub(crate) async fn fetch_aggregated_tickers(
                 let mut result = BTreeMap::new();
 
                 for (ticker, data) in &enhanced {
-                    let len = data.len();
+                    let mut filtered: Vec<_> = data.iter().collect();
+                    // Apply start_time filter when date range was provided
+                    if let Some(st) = start_time {
+                        filtered.retain(|d| d.time >= st);
+                    }
+                    if let Some(et) = end_time {
+                        filtered.retain(|d| d.time <= et);
+                    }
+                    let len = filtered.len();
                     let start = if len > limit as usize { len - limit as usize } else { 0 };
-                    let trimmed: Vec<StockDataResponse> = data[start..]
+                    let trimmed: Vec<StockDataResponse> = filtered[start..]
                         .iter()
                         .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
                         .collect();
-                    result.insert(ticker.clone(), trimmed);
+                    if !trimmed.is_empty() {
+                        result.insert(ticker.clone(), trimmed);
+                    }
                 }
 
                 if !result.is_empty() {
