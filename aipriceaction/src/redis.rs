@@ -43,16 +43,26 @@ pub async fn connect() -> Option<RedisClient> {
         }
     }
 
-    // Spawn a lightweight health loop that logs reconnection events.
-    // This doesn't modify the client — fred handles reconnection internally.
+    // Spawn a lightweight health loop that pings Redis every 15s.
+    // When a ping fails, triggers fred reconnection so workers recover
+    // without a restart.
     let health_client = client.clone();
     tokio::spawn(async move {
         loop {
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
-            if health_client.is_connected() {
-                tracing::debug!("Redis health: connected");
-            } else {
-                tracing::warn!("Redis health: disconnected (fred reconnecting...)");
+            tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(2),
+                health_client.ping::<Option<String>>(None),
+            )
+            .await
+            {
+                Ok(Ok(_)) => {
+                    tracing::debug!("Redis health: connected");
+                }
+                _ => {
+                    tracing::warn!("Redis health: disconnected, triggering reconnect");
+                    let _ = health_client.init().await;
+                }
             }
         }
     });
