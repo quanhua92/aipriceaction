@@ -106,10 +106,10 @@ pub async fn write_ohlcv_to_redis(
             .await
         {
             Ok(removed) if removed > 0 => {
-                tracing::info!(key, removed, min = min_ts, max = max_ts, "write dedup: removed stale members");
+                tracing::debug!(key, removed, min = min_ts, max = max_ts, "write dedup: removed stale members");
             }
             Ok(removed) => {
-                tracing::info!(key, removed, min = min_ts, max = max_ts, "write dedup: no stale members");
+                tracing::debug!(key, removed, min = min_ts, max = max_ts, "write dedup: no stale members");
             }
             Err(e) => {
                 tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
@@ -314,7 +314,7 @@ async fn backfill_ticker(
         .await
     {
         Ok(removed) if removed > 0 => {
-            tracing::info!(key, removed, min = min_ts, max = max_ts, "backfill dedup: removed stale members");
+            tracing::debug!(key, removed, min = min_ts, max = max_ts, "backfill dedup: removed stale members");
         }
         Ok(_) => {}
         Err(e) => {
