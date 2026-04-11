@@ -101,11 +101,19 @@ pub async fn write_ohlcv_to_redis(
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.min(s)))),
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.max(s)))),
     ) {
-        if let Err(e) = client
-            .zremrangebyscore::<Value, _, _, _>(&key, min_ts, max_ts)
+        match client
+            .zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts)
             .await
         {
-            tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
+            Ok(removed) if removed > 0 => {
+                tracing::info!(key, removed, min = min_ts, max = max_ts, "write dedup: removed stale members");
+            }
+            Ok(removed) => {
+                tracing::info!(key, removed, min = min_ts, max = max_ts, "write dedup: no stale members");
+            }
+            Err(e) => {
+                tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
+            }
         }
     }
 
@@ -301,11 +309,17 @@ async fn backfill_ticker(
     // ZREMRANGEBYSCORE clears the entire range; ZADD then writes back PG data.
     let min_ts = rows.iter().map(|r| r.time.timestamp_millis() as f64).fold(f64::INFINITY, f64::min);
     let max_ts = rows.iter().map(|r| r.time.timestamp_millis() as f64).fold(f64::NEG_INFINITY, f64::max);
-    if let Err(e) = client
-        .zremrangebyscore::<Value, _, _, _>(&key, min_ts, max_ts)
+    match client
+        .zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts)
         .await
     {
-        tracing::warn!(key, "backfill zremrangebyscore failed: {e}");
+        Ok(removed) if removed > 0 => {
+            tracing::info!(key, removed, min = min_ts, max = max_ts, "backfill dedup: removed stale members");
+        }
+        Ok(_) => {}
+        Err(e) => {
+            tracing::warn!(key, "backfill zremrangebyscore failed: {e}");
+        }
     }
 
     write_ohlcv_to_redis(&Some(client.clone()), source, ticker, interval, &rows).await;
