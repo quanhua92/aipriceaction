@@ -4,6 +4,7 @@ pub mod types;
 pub mod analysis;
 pub mod legacy;
 pub mod upload;
+pub mod redis_reader;
 
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -49,6 +50,7 @@ pub struct AppState {
     pub started_at: std::time::Instant,
     pub tickers_cache: Arc<tokio::sync::RwLock<cache::TickersCache>>,
     pub health_snapshot: Arc<tokio::sync::RwLock<HealthSnapshot>>,
+    pub redis_client: Option<crate::redis::RedisClient>,
 }
 
 /// Middleware to add security headers to all responses
@@ -103,7 +105,7 @@ async fn add_cache_headers(request: Request, next: Next) -> Response {
 }
 
 #[allow(deprecated)]
-pub fn create_app(pool: PgPool) -> (axum::Router, Arc<tokio::sync::RwLock<HealthSnapshot>>) {
+pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) -> (axum::Router, Arc<tokio::sync::RwLock<HealthSnapshot>>) {
     let tickers_cache = cache::TickersCache::new(
         crate::constants::api::CACHE_MAX_ENTRIES,
         Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
@@ -122,6 +124,7 @@ pub fn create_app(pool: PgPool) -> (axum::Router, Arc<tokio::sync::RwLock<Health
         started_at: std::time::Instant::now(),
         tickers_cache,
         health_snapshot: health_snapshot.clone(),
+        redis_client,
     });
 
     // Upload routes with 10MB body limit

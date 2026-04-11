@@ -104,6 +104,12 @@ pub enum Commands {
     },
     /// Test SOCKS5 proxy connectivity against Yahoo Finance API
     TestProxy,
+    /// Test Redis TimeSeries connectivity and commands
+    TestRedis {
+        /// Ticker symbol to test with (default: VNINDEX)
+        #[arg(long, default_value = "VNINDEX")]
+        ticker: String,
+    },
     /// Fetch company info and financial ratios for VN tickers from VCI
     GenerateCompanyInfo {
         /// Optional: query a single ticker (e.g. VCB)
@@ -159,6 +165,9 @@ pub fn run() {
 
                 tracing::info!("Starting server on {host}:{port}");
 
+                // Connect to Redis (optional — degrades gracefully if REDIS_URL is not set)
+                let redis_client = crate::redis::connect().await;
+
                 // Spawn VCI data workers if enabled
                 let vci_workers_enabled = std::env::var("VCI_WORKERS")
                     .map(|v| v == "true" || v == "1")
@@ -168,18 +177,21 @@ pub fn run() {
                     tracing::info!("VCI workers enabled");
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::vci_daily::run(pool_clone).await;
+                        crate::workers::vci_daily::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::vci_hourly::run(pool_clone).await;
+                        crate::workers::vci_hourly::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::vci_minute::run(pool_clone).await;
+                        crate::workers::vci_minute::run(pool_clone, redis_clone).await;
                     });
 
                     // Dividend worker has its own toggle
@@ -189,8 +201,9 @@ pub fn run() {
 
                     if dividend_worker_enabled {
                         let pool_clone = pool.clone();
+                        let redis_clone = redis_client.clone();
                         tokio::spawn(async move {
-                            crate::workers::vci_dividend::run(pool_clone).await;
+                            crate::workers::vci_dividend::run(pool_clone, redis_clone).await;
                         });
                     } else {
                         tracing::info!("VCI dividend worker disabled (set VCI_DIVIDEND_WORKER=true to enable)");
@@ -208,23 +221,27 @@ pub fn run() {
                     tracing::info!("BINANCE_WORKERS=true — spawning daily/hourly/minute crypto workers");
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::binance_bootstrap::run(pool_clone).await;
+                        crate::workers::binance_bootstrap::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::binance_daily::run(pool_clone).await;
+                        crate::workers::binance_daily::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::binance_hourly::run(pool_clone).await;
+                        crate::workers::binance_hourly::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::binance_minute::run(pool_clone).await;
+                        crate::workers::binance_minute::run(pool_clone, redis_clone).await;
                     });
                 } else {
                     tracing::info!("BINANCE_WORKERS=false — Binance crypto workers not started");
@@ -238,19 +255,29 @@ pub fn run() {
                 if yahoo_workers_enabled {
                     tracing::info!("YAHOO_WORKERS=true — spawning bootstrap/daily/hourly/minute yahoo workers");
 
-                    let yahoo_workers: &[fn(sqlx::PgPool) -> std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>] = &[
-                        |p| Box::pin(crate::workers::yahoo_bootstrap::run(p)),
-                        |p| Box::pin(crate::workers::yahoo_daily::run(p)),
-                        |p| Box::pin(crate::workers::yahoo_hourly::run(p)),
-                        |p| Box::pin(crate::workers::yahoo_minute::run(p)),
-                    ];
+                    let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_bootstrap::run(pool_clone, redis_clone).await;
+                    });
 
-                    for worker in yahoo_workers {
-                        let pool_clone = pool.clone();
-                        tokio::spawn(async move {
-                            worker(pool_clone).await;
-                        });
-                    }
+                    let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_daily::run(pool_clone, redis_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_hourly::run(pool_clone, redis_clone).await;
+                    });
+
+                    let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
+                    tokio::spawn(async move {
+                        crate::workers::yahoo_minute::run(pool_clone, redis_clone).await;
+                    });
                 } else {
                     tracing::info!("YAHOO_WORKERS=false — Yahoo Finance workers not started");
                 }
@@ -264,19 +291,40 @@ pub fn run() {
                     tracing::info!("SJC_WORKERS=true — spawning bootstrap/daily SJC gold workers");
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::sjc_bootstrap::run(pool_clone).await;
+                        crate::workers::sjc_bootstrap::run(pool_clone, redis_clone).await;
                     });
 
                     let pool_clone = pool.clone();
+                    let redis_clone = redis_client.clone();
                     tokio::spawn(async move {
-                        crate::workers::sjc_daily::run(pool_clone).await;
+                        crate::workers::sjc_daily::run(pool_clone, redis_clone).await;
                     });
                 } else {
                     tracing::info!("SJC_WORKERS=false — SJC gold workers not started");
                 }
 
-                let (app, health_snapshot) = crate::server::create_app(pool.clone());
+                // Spawn Redis TS backfill worker if enabled
+                let redis_workers_enabled = std::env::var("REDIS_WORKERS")
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(false);
+
+                if redis_workers_enabled {
+                    if let Some(client) = redis_client.clone() {
+                        tracing::info!("REDIS_WORKERS=true — spawning Redis ZSET backfill worker (semaphore-gated concurrency)");
+                        let pool_clone = pool.clone();
+                        tokio::spawn(async move {
+                            crate::workers::redis_worker::run(pool_clone, client).await;
+                        });
+                    } else {
+                        tracing::warn!("REDIS_WORKERS=true but Redis is not connected (REDIS_URL not set)");
+                    }
+                } else {
+                    tracing::info!("REDIS_WORKERS=false — Redis ZSET backfill worker not started");
+                }
+
+                let (app, health_snapshot) = crate::server::create_app(pool.clone(), redis_client.clone());
 
                 // Spawn health-stats worker (always enabled — lightweight)
                 {
@@ -1488,6 +1536,9 @@ pub fn run() {
         }
         Commands::TestProxy => {
             crate::test_proxy::run();
+        }
+        Commands::TestRedis { ticker } => {
+            crate::test_redis::run(ticker);
         }
         Commands::GenerateCompanyInfo { ticker, rate_limit, save } => {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");

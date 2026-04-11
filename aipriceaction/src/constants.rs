@@ -282,3 +282,29 @@ pub mod api {
     /// Max SMA period — DB lookback buffer.
     pub const SMA_MAX_PERIOD: i64 = 200;
 }
+
+/// Redis ZSET OHLCV cache configuration constants.
+pub mod redis_ts {
+    /// Maximum ZSET members for daily data (matches ~10 years of daily bars).
+    pub const DAILY_MAX_SIZE: usize = 5000;
+    /// Maximum ZSET members for hourly data (matches ~2 years of hourly bars).
+    pub const HOURLY_MAX_SIZE: usize = 20000;
+    /// Maximum ZSET members for minute data (matches ~7 days of minute bars).
+    pub const MINUTE_MAX_SIZE: usize = 10000;
+
+    /// Backfill limit for daily data.
+    pub const DAILY_BACKFILL_LIMIT: i64 = 5000;
+    /// Backfill limit for hourly data.
+    pub const HOURLY_BACKFILL_LIMIT: i64 = 20000;
+    /// Backfill limit for minute data.
+    pub const MINUTE_BACKFILL_LIMIT: i64 = 10000;
+
+    /// Backfill loop interval in seconds (60 minutes).
+    pub const BACKFILL_LOOP_SECS: u64 = 3600;
+    /// Concurrency for backfill worker (parallel tasks per cycle).
+    pub const BACKFILL_CONCURRENCY: usize = 2;
+
+    /// ZSET member format: "{ts_ms}|{open}|{high}|{low}|{close}|{volume}"
+    /// Separator used between fields in the member string.
+    pub const MEMBER_SEP: &str = "|";
+}
