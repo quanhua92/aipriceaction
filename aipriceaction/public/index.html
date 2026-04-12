@@ -323,27 +323,48 @@
         <h3 class="text-sm font-semibold text-gray-700 mb-2">Cryptocurrency Markets</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 mb-4">
           <button
-            onclick="quickFetchWithParams('BTC', '1D', null, null, 30, 'crypto')"
+            onclick="quickFetchWithParams('BTCUSDT', '1D', null, null, 30, 'crypto')"
             class="text-left px-4 py-3 bg-gradient-to-r from-yellow-50 to-yellow-100 hover:from-yellow-100 hover:to-yellow-200 rounded border border-yellow-200 transition duration-200">
-            <span class="font-medium text-gray-800">₿ BTC - Daily</span>
+            <span class="font-medium text-gray-800">₿ BTCUSDT - Daily</span>
             <p class="text-xs text-gray-600 mt-1">Last 30 days (Crypto)</p>
           </button>
           <button
-            onclick="quickFetchWithParams('ETH', '1H', null, null, 48, 'crypto')"
+            onclick="quickFetchWithParams('ETHUSDT', '1H', null, null, 48, 'crypto')"
             class="text-left px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded border border-purple-200 transition duration-200">
-            <span class="font-medium text-gray-800">💎 ETH - Hourly</span>
+            <span class="font-medium text-gray-800">💎 ETHUSDT - Hourly</span>
             <p class="text-xs text-gray-600 mt-1">Last 48 hours (Crypto)</p>
           </button>
           <button
-            onclick="quickFetchWithParams('XRP', '5m', null, null, 100, 'crypto')"
+            onclick="quickFetchWithParams('XRPUSDT', '5m', null, null, 100, 'crypto')"
             class="text-left px-4 py-3 bg-gradient-to-r from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 rounded border border-teal-200 transition duration-200">
-            <span class="font-medium text-gray-800">⚡ XRP - 5 Minutes</span>
+            <span class="font-medium text-gray-800">⚡ XRPUSDT - 5 Minutes</span>
             <p class="text-xs text-gray-600 mt-1">Last 100 5-minute candles (Crypto)</p>
           </button>
         </div>
-      </section>
 
-      <!-- Analysis API Section -->
+        <!-- Global Markets (Yahoo) Examples -->
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">Global Markets (Yahoo)</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3 mb-4">
+          <button
+            onclick="quickFetchWithParams('^GSPC', '1D', null, null, 30, 'yahoo')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-sky-50 to-sky-100 hover:from-sky-100 hover:to-sky-200 rounded border border-sky-200 transition duration-200">
+            <span class="font-medium text-gray-800">📊 S&P 500 - Daily</span>
+            <p class="text-xs text-gray-600 mt-1">Last 30 days (Yahoo)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('NVDA', '1D', null, null, 30, 'yahoo')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-lime-50 to-lime-100 hover:from-lime-100 hover:to-lime-200 rounded border border-lime-200 transition duration-200">
+            <span class="font-medium text-gray-800">🟢 NVDA - Daily</span>
+            <p class="text-xs text-gray-600 mt-1">Last 30 days (Yahoo)</p>
+          </button>
+          <button
+            onclick="quickFetchWithParams('GC=F', '1D', null, null, 30, 'yahoo')"
+            class="text-left px-4 py-3 bg-gradient-to-r from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 rounded border border-amber-200 transition duration-200">
+            <span class="font-medium text-gray-800">🥇 Gold Futures - Daily</span>
+            <p class="text-xs text-gray-600 mt-1">Last 30 days (Yahoo)</p>
+          </button>
+        </div>
+      </section>
       <section class="bg-white rounded-lg shadow-md p-4 md:p-6">
         <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">📊 Analysis API</h2>
         <div class="text-xs md:text-sm text-gray-600 mb-4">
