@@ -458,6 +458,61 @@ async function testModeAllNoDuplicates() {
 }
 
 // ──────────────────────────────────────────────
+// ma=false param (skip MA indicators)
+// ──────────────────────────────────────────────
+
+async function testMaFalseNoIndicators() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D&limit=2&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1D&limit=2&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body, "has VCB key");
+  assert(body.VCB.length === 2, `got 2 rows (got ${body.VCB.length})`);
+  const r = body.VCB[0];
+  assert(r.ma10 === undefined, "ma10 absent when ma=false");
+  assert(r.ma20 === undefined, "ma20 absent when ma=false");
+  assert(r.ma50 === undefined, "ma50 absent when ma=false");
+  assert(r.ma100 === undefined, "ma100 absent when ma=false");
+  assert(r.ma200 === undefined, "ma200 absent when ma=false");
+  assert(r.ma10_score === undefined, "ma10_score absent when ma=false");
+  // Second row (newest) has change indicators; first row (oldest) does not
+  const r2 = body.VCB[1];
+  assert(r2.close_changed !== undefined, "close_changed still present on second row");
+  assert(r2.volume_changed !== undefined, "volume_changed still present on second row");
+}
+
+async function testMaTrueHasIndicators() {
+  const { body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D&limit=1&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1D&limit=1&ma=true ── ${ms}ms`);
+  const r = body.VCB[0];
+  assert(typeof r.ma10 === "number", "ma10 present when ma=true");
+  assert(typeof r.ma20 === "number", "ma20 present when ma=true");
+  assert(typeof r.ma50 === "number", "ma50 present when ma=true");
+  assert(typeof r.ma100 === "number", "ma100 present when ma=true");
+  assert(typeof r.ma200 === "number", "ma200 present when ma=true");
+}
+
+async function testMaFalseAggregated() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=15m&limit=2&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=15m&limit=2&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("VCB" in body) {
+    const r = body.VCB[0];
+    assert(r.ma10 === undefined, "ma10 absent for aggregated when ma=false");
+    // Second row (newest) has change indicators
+    const r2 = body.VCB[1];
+    assert(r2.close_changed !== undefined, "close_changed still present for aggregated");
+  } else {
+    ok("VCB not in response (skipped)");
+  }
+}
+
+// ──────────────────────────────────────────────
 // SJC-GOLD merged into yahoo mode
 // ──────────────────────────────────────────────
 
@@ -539,6 +594,9 @@ const tests = [
   testModeAllGroups,
   testModeAllNames,
   testModeAllAggregated,
+  testMaFalseNoIndicators,
+  testMaTrueHasIndicators,
+  testMaFalseAggregated,
   testVnNoDuplicates,
   testYahooNoDuplicates,
   testCryptoNoDuplicates,

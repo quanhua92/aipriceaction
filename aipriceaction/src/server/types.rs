@@ -54,6 +54,9 @@ pub struct TickersQuery {
     /// true = try Redis first (default), false = skip Redis and go straight to PG.
     #[serde(default = "default_true")]
     pub redis: bool,
+    /// true = calculate MA indicators (default), false = skip MA and SMA buffer.
+    #[serde(default = "default_true")]
+    pub ma: bool,
 }
 
 fn default_format() -> String {

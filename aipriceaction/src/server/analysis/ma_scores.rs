@@ -126,7 +126,7 @@ pub async fn ma_scores_by_sector_handler(
         for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
             if let Some(map) = redis_result {
                 for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None);
+                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
                     merged.extend(enhanced.into_iter().map(|row| (row, src)));
                 }
             } else {
@@ -143,7 +143,7 @@ pub async fn ma_scores_by_sector_handler(
         if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "ma_scores/single").await {
             let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
             for (ticker, orows) in map {
-                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None);
+                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
                 merged.extend(enhanced.into_iter().map(|row| (row, "")));
             }
             if !merged.is_empty() {

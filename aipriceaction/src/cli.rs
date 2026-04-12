@@ -977,7 +977,7 @@ pub fn run() {
                     {
                         let label = "vn batch 1D";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1D", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1D", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -989,7 +989,7 @@ pub fn run() {
                     {
                         let label = "vn batch 1H";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1H", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1H", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1001,7 +1001,7 @@ pub fn run() {
                     {
                         let label = "vn batch 1m";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1013,7 +1013,7 @@ pub fn run() {
                     {
                         let label = "vn batch 1m multi";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into(), "FPT".into()], "1m", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into(), "FPT".into()], "1m", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1026,7 +1026,7 @@ pub fn run() {
                         let label = "vn batch 1m start_date";
                         let start_time = Some(Utc::now() - chrono::Duration::days(30));
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), start_time, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["VCB".into()], "1m", Some(100), start_time, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1168,7 +1168,7 @@ pub fn run() {
                     {
                         let label = "crypto batch 1D";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1D", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1D", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1180,7 +1180,7 @@ pub fn run() {
                     {
                         let label = "crypto batch 1H";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1H", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1H", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1192,7 +1192,7 @@ pub fn run() {
                     {
                         let label = "crypto batch 1m";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1204,7 +1204,7 @@ pub fn run() {
                     {
                         let label = "crypto batch 1m multi";
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into(), "ETHUSDT".into()], "1m", Some(100), None, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into(), "ETHUSDT".into()], "1m", Some(100), None, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });
@@ -1217,7 +1217,7 @@ pub fn run() {
                         let label = "crypto batch 1m start_date";
                         let start_time = Some(Utc::now() - chrono::Duration::days(30));
                         let start = Instant::now();
-                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), start_time, None).await {
+                        match q::get_ohlcv_joined_batch(&pool, src, &["BTCUSDT".into()], "1m", Some(100), start_time, None, true).await {
                             Ok(map) => {
                                 let total: usize = map.values().map(|v| v.len()).sum();
                                 section_results.push(BenchResult { label: label.into(), rows: total, ms: start.elapsed().as_millis() });

@@ -136,8 +136,12 @@ impl Aggregator {
     }
 
     /// Enhance aggregated data with technical indicators.
+    ///
+    /// When `with_ma` is false, SMA/score indicators are skipped (all remain None),
+    /// saving CPU time. Change indicators are still computed.
     pub fn enhance_aggregated_data(
         mut data: HashMap<String, Vec<AggregatedOhlcv>>,
+        with_ma: bool,
     ) -> HashMap<String, Vec<AggregatedOhlcv>> {
         for stock_data in data.values_mut() {
             if stock_data.is_empty() {
@@ -145,32 +149,35 @@ impl Aggregator {
             }
 
             let closes: Vec<f64> = stock_data.iter().map(|d| d.close).collect();
-            let ma10_values = calculate_sma(&closes, 10);
-            let ma20_values = calculate_sma(&closes, 20);
-            let ma50_values = calculate_sma(&closes, 50);
-            let ma100_values = calculate_sma(&closes, 100);
-            let ma200_values = calculate_sma(&closes, 200);
 
-            for (i, stock) in stock_data.iter_mut().enumerate() {
-                if ma10_values[i] > 0.0 {
-                    stock.ma10 = Some(ma10_values[i]);
-                    stock.ma10_score = Some(calculate_ma_score(stock.close, ma10_values[i]));
-                }
-                if ma20_values[i] > 0.0 {
-                    stock.ma20 = Some(ma20_values[i]);
-                    stock.ma20_score = Some(calculate_ma_score(stock.close, ma20_values[i]));
-                }
-                if ma50_values[i] > 0.0 {
-                    stock.ma50 = Some(ma50_values[i]);
-                    stock.ma50_score = Some(calculate_ma_score(stock.close, ma50_values[i]));
-                }
-                if ma100_values[i] > 0.0 {
-                    stock.ma100 = Some(ma100_values[i]);
-                    stock.ma100_score = Some(calculate_ma_score(stock.close, ma100_values[i]));
-                }
-                if ma200_values[i] > 0.0 {
-                    stock.ma200 = Some(ma200_values[i]);
-                    stock.ma200_score = Some(calculate_ma_score(stock.close, ma200_values[i]));
+            if with_ma {
+                let ma10_values = calculate_sma(&closes, 10);
+                let ma20_values = calculate_sma(&closes, 20);
+                let ma50_values = calculate_sma(&closes, 50);
+                let ma100_values = calculate_sma(&closes, 100);
+                let ma200_values = calculate_sma(&closes, 200);
+
+                for (i, stock) in stock_data.iter_mut().enumerate() {
+                    if ma10_values[i] > 0.0 {
+                        stock.ma10 = Some(ma10_values[i]);
+                        stock.ma10_score = Some(calculate_ma_score(stock.close, ma10_values[i]));
+                    }
+                    if ma20_values[i] > 0.0 {
+                        stock.ma20 = Some(ma20_values[i]);
+                        stock.ma20_score = Some(calculate_ma_score(stock.close, ma20_values[i]));
+                    }
+                    if ma50_values[i] > 0.0 {
+                        stock.ma50 = Some(ma50_values[i]);
+                        stock.ma50_score = Some(calculate_ma_score(stock.close, ma50_values[i]));
+                    }
+                    if ma100_values[i] > 0.0 {
+                        stock.ma100 = Some(ma100_values[i]);
+                        stock.ma100_score = Some(calculate_ma_score(stock.close, ma100_values[i]));
+                    }
+                    if ma200_values[i] > 0.0 {
+                        stock.ma200 = Some(ma200_values[i]);
+                        stock.ma200_score = Some(calculate_ma_score(stock.close, ma200_values[i]));
+                    }
                 }
             }
 

@@ -162,7 +162,7 @@ pub(crate) fn build_cache_key(
     let start = params.start_date.as_deref().unwrap_or("");
     let end = params.end_date.as_deref().unwrap_or("");
 
-    format!("{source}|{interval_str}|{sorted_symbols}|{limit}|{start}|{end}")
+    format!("{source}|{interval_str}|{sorted_symbols}|{limit}|{start}|{end}|ma={}", params.ma)
 }
 
 /// Parse a date string as start-of-day UTC.
@@ -198,6 +198,7 @@ pub(crate) async fn fetch_native_tickers(
     limit: Option<i64>,
     extra_sources: &[&str],
     use_redis: bool,
+    with_ma: bool,
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     let is_daily = interval == "1D";
 
@@ -225,11 +226,11 @@ pub(crate) async fn fetch_native_tickers(
             // so a small limit + SMA_MAX_PERIOD suffices.
             let need_full_scan = start_time.is_some();
             let max_score = if need_full_scan { None } else { end_time.map(|t| t.timestamp_millis()) };
+            let buffer = if with_ma { crate::constants::api::SMA_MAX_PERIOD } else { 1 };
             let total_limit = if need_full_scan {
-                (crate::workers::redis_worker::max_size(interval) as i64)
-                    + crate::constants::api::SMA_MAX_PERIOD
+                (crate::workers::redis_worker::max_size(interval) as i64) + buffer
             } else {
-                effective_limit + crate::constants::api::SMA_MAX_PERIOD
+                effective_limit + buffer
             };
             let req_detail = match (limit, &start_time, &end_time) {
                 (_, Some(s), Some(e)) => format!("tickers limit={effective_limit} start={}..end={}", s.format("%Y-%m-%d"), e.format("%Y-%m-%d")),
@@ -280,7 +281,7 @@ pub(crate) async fn fetch_native_tickers(
                         limit
                     };
                     let enhanced = crate::queries::ohlcv::enhance_rows(
-                        &ticker, redis_result.rows, enhance_limit, start_time,
+                        &ticker, redis_result.rows, enhance_limit, start_time, with_ma,
                     );
                     let mut enhanced = enhanced;
                     // Apply end_time filter when date range was provided
@@ -316,7 +317,7 @@ pub(crate) async fn fetch_native_tickers(
         tokio::time::timeout(
             std::time::Duration::from_secs(5),
             ohlcv::get_ohlcv_joined_batch(
-                pool, source, &symbols, interval, limit, start_time, end_time,
+                pool, source, &symbols, interval, limit, start_time, end_time, with_ma,
             ),
         )
         .await
@@ -324,7 +325,7 @@ pub(crate) async fn fetch_native_tickers(
         tokio::time::timeout(
             std::time::Duration::from_secs(5),
             ohlcv::get_ohlcv_joined_batch_with_extra(
-                pool, source, &symbols, interval, limit, start_time, end_time, extra_sources,
+                pool, source, &symbols, interval, limit, start_time, end_time, extra_sources, with_ma,
             ),
         )
         .await
@@ -373,13 +374,15 @@ pub(crate) async fn fetch_aggregated_tickers(
     limit: i64,
     extra_sources: &[&str],
     use_redis: bool,
+    with_ma: bool,
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
     let base_interval = agg.base_interval().as_str();
 
-    // Fetch source data with lookback buffer for MA200
-    let lookback = limit + crate::constants::api::AGGREGATED_LOOKBACK;
+    // Fetch source data with lookback buffer for MA200 (skip when with_ma=false)
+    let agg_buffer = if with_ma { crate::constants::api::AGGREGATED_LOOKBACK } else { 1 };
+    let lookback = limit + agg_buffer;
 
     let is_daily = base_interval == "1D";
 
@@ -411,8 +414,7 @@ pub(crate) async fn fetch_aggregated_tickers(
             let need_full_scan = start_time.is_some();
             let max_score = if need_full_scan { None } else { end_time.map(|t| t.timestamp_millis()) };
             let effective_lookback = if need_full_scan {
-                (crate::workers::redis_worker::max_size(base_interval) as i64)
-                    + crate::constants::api::AGGREGATED_LOOKBACK
+                (crate::workers::redis_worker::max_size(base_interval) as i64) + agg_buffer
             } else {
                 lookback
             };
@@ -454,7 +456,7 @@ pub(crate) async fn fetch_aggregated_tickers(
                     per_ticker.insert(ticker, aggregated);
                 }
 
-                let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+                let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma);
                 let mut result = BTreeMap::new();
 
                 for (ticker, data) in &enhanced {
@@ -533,7 +535,7 @@ pub(crate) async fn fetch_aggregated_tickers(
     }
 
     // Enhance with indicators
-    let enhanced = Aggregator::enhance_aggregated_data(per_ticker);
+    let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma);
 
     // Trim to requested limit and map to response
     let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();

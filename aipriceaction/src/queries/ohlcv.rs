@@ -180,7 +180,7 @@ pub async fn get_ohlcv_joined(
     }
 
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit, None);
+    let result = enhance_rows(&ticker_str, rows, limit, None, true);
     Ok(result)
 }
 
@@ -253,7 +253,7 @@ pub async fn get_ohlcv_joined_range(
     }
 
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit, start_time);
+    let result = enhance_rows(&ticker_str, rows, limit, start_time, true);
     Ok(result)
 }
 
@@ -262,11 +262,16 @@ pub async fn get_ohlcv_joined_range(
 /// The rows must be in time DESC order (as returned from the DB).
 /// All rows are used for SMA calculation, then filtered to `start_time`
 /// if provided, and trimmed to `limit` from the newest end.
+///
+/// When `with_ma` is false, SMA/score indicators are skipped (all set to None),
+/// saving CPU time. Change indicators (close_changed, volume_changed,
+/// total_money_changed) are still computed.
 pub fn enhance_rows(
     ticker: &str,
     rows: Vec<OhlcvRow>,
     limit: Option<i64>,
     start_time: Option<DateTime<Utc>>,
+    with_ma: bool,
 ) -> Vec<OhlcvJoined> {
     if rows.is_empty() {
         return Vec::new();
@@ -280,12 +285,18 @@ pub fn enhance_rows(
     let closes: Vec<f64> = chrono_rows.iter().map(|r| r.close).collect();
     let volumes: Vec<f64> = chrono_rows.iter().map(|r| r.volume as f64).collect();
 
-    // Calculate SMAs on the full dataset
-    let ma10 = calculate_sma(&closes, 10);
-    let ma20 = calculate_sma(&closes, 20);
-    let ma50 = calculate_sma(&closes, 50);
-    let ma100 = calculate_sma(&closes, 100);
-    let ma200 = calculate_sma(&closes, 200);
+    // Calculate SMAs on the full dataset (skip when with_ma=false)
+    let (ma10, ma20, ma50, ma100, ma200) = if with_ma {
+        (
+            calculate_sma(&closes, 10),
+            calculate_sma(&closes, 20),
+            calculate_sma(&closes, 50),
+            calculate_sma(&closes, 100),
+            calculate_sma(&closes, 200),
+        )
+    } else {
+        (vec![], vec![], vec![], vec![], vec![])
+    };
 
     // Build joined rows with indicators
     let mut joined: Vec<OhlcvJoined> = chrono_rows
@@ -531,6 +542,7 @@ async fn fetch_ohlcv_batch_raw(
 ///
 /// For `limit`, each ticker gets at most `limit` result rows. The underlying query
 /// fetches up to `limit + SMA_MAX_PERIOD` rows per ticker for accurate SMA.
+/// When `with_ma` is false, no SMA buffer is added and MA indicators are skipped.
 pub async fn get_ohlcv_joined_batch(
     pool: &PgPool,
     source: &str,
@@ -539,8 +551,9 @@ pub async fn get_ohlcv_joined_batch(
     limit: Option<i64>,
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
+    with_ma: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
-    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[]).await
+    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[], with_ma).await
 }
 
 pub async fn get_ohlcv_joined_batch_with_extra(
@@ -552,11 +565,12 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
     extra_sources: &[&str],
+    with_ma: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
     use std::collections::HashMap;
 
-    let per_ticker = limit.map(|l| (l + SMA_MAX_PERIOD) as i64);
-    let lookback = limit.map(|_| interval_duration(interval) * SMA_MAX_PERIOD);
+    let per_ticker = limit.map(|l| if with_ma { (l + SMA_MAX_PERIOD) as i64 } else { l + 1 });
+    let lookback = if with_ma { limit.map(|_| interval_duration(interval) * SMA_MAX_PERIOD) } else { None };
 
     let raw = fetch_ohlcv_batch_raw(
         pool, source, symbols, extra_sources, interval,
@@ -566,7 +580,7 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     // Enhance each group
     let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
     for (ticker, ticker_rows) in raw {
-        let joined = enhance_rows(&ticker, ticker_rows, limit, start_time);
+        let joined = enhance_rows(&ticker, ticker_rows, limit, start_time, with_ma);
         result.insert(ticker, joined);
     }
 
@@ -732,7 +746,7 @@ pub async fn get_latest_daily_per_ticker(
             .unwrap_or_default();
 
         // Enhance with all rows for accurate indicators
-        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None);
+        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None, true);
         result.extend(joined);
     }
 

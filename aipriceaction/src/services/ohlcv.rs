@@ -191,8 +191,9 @@ pub async fn get_ohlcv_joined_batch(
     limit: Option<i64>,
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
+    with_ma: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
-    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[]).await
+    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[], with_ma).await
 }
 
 /// Like `get_ohlcv_joined_batch` but also includes tickers from extra_sources.
@@ -205,8 +206,9 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
     extra_sources: &[&str],
+    with_ma: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
-    ohlcv::get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, extra_sources).await
+    ohlcv::get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, extra_sources, with_ma).await
 }
 
 /// Batch-fetch raw OHLCV rows (no indicators) for tickers of a source + interval.
