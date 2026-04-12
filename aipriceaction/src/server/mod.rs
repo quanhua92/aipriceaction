@@ -179,7 +179,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>)
 }
 
 fn build_cors_layer() -> CorsLayer {
-    let origins_str = std::env::var("CORS_ORIGINS").unwrap_or_else(|_| "https://aipriceaction.com".to_string());
+    let origins_str = std::env::var("CORS_ORIGINS").unwrap_or_else(|_| "https://aipriceaction.com,https://api.aipriceaction.com".to_string());
 
     if origins_str.trim() == "*" {
         tracing::info!("CORS: permissive mode (all origins allowed)");
