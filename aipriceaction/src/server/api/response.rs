@@ -113,9 +113,40 @@ pub(crate) fn build_response(
 
 // ── CSV response builder ──
 
-fn fmt_opt(v: Option<f64>) -> String {
+/// Number of decimal places for price fields based on close price magnitude.
+/// Tiny crypto (e.g. PEPE ~1e-5) needs more decimals; large stocks (e.g. 70000) need fewer.
+fn price_decimals(close: f64) -> usize {
+    if close == 0.0 {
+        return 2;
+    }
+    let abs = close.abs();
+    if abs < 1e-5 { 6 }
+    else if abs < 1e-3 { 5 }
+    else if abs < 1.0 { 4 }
+    else if abs < 100.0 { 3 }
+    else { 2 }
+}
+
+fn fmt_price(v: f64, decimals: usize) -> String {
+    format!("{v:.decimals$}")
+}
+
+fn fmt_opt_price(v: Option<f64>, decimals: usize) -> String {
     match v {
-        Some(n) => n.to_string(),
+        Some(n) => fmt_price(n, decimals),
+        None => String::new(),
+    }
+}
+
+/// Round to at most 4 decimal places, stripping trailing zeros.
+fn fmt_pct(v: f64) -> String {
+    let s = format!("{v:.4}");
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+fn fmt_opt_pct(v: Option<f64>) -> String {
+    match v {
+        Some(n) => fmt_pct(n),
         None => String::new(),
     }
 }
@@ -127,45 +158,46 @@ fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
 
     for (symbol, rows) in data {
         for r in rows {
+            let d = price_decimals(r.close);
             buf.push_str(symbol);
             buf.push(',');
             buf.push_str(&r.time);
             buf.push(',');
-            buf.push_str(&r.open.to_string());
+            buf.push_str(&fmt_price(r.open, d));
             buf.push(',');
-            buf.push_str(&r.high.to_string());
+            buf.push_str(&fmt_price(r.high, d));
             buf.push(',');
-            buf.push_str(&r.low.to_string());
+            buf.push_str(&fmt_price(r.low, d));
             buf.push(',');
-            buf.push_str(&r.close.to_string());
+            buf.push_str(&fmt_price(r.close, d));
             buf.push(',');
             buf.push_str(&r.volume.to_string());
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma10));
+            buf.push_str(&fmt_opt_price(r.ma10, d));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma20));
+            buf.push_str(&fmt_opt_price(r.ma20, d));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma50));
+            buf.push_str(&fmt_opt_price(r.ma50, d));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma100));
+            buf.push_str(&fmt_opt_price(r.ma100, d));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma200));
+            buf.push_str(&fmt_opt_price(r.ma200, d));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma10_score));
+            buf.push_str(&fmt_opt_pct(r.ma10_score));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma20_score));
+            buf.push_str(&fmt_opt_pct(r.ma20_score));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma50_score));
+            buf.push_str(&fmt_opt_pct(r.ma50_score));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma100_score));
+            buf.push_str(&fmt_opt_pct(r.ma100_score));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.ma200_score));
+            buf.push_str(&fmt_opt_pct(r.ma200_score));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.close_changed));
+            buf.push_str(&fmt_opt_pct(r.close_changed));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.volume_changed));
+            buf.push_str(&fmt_opt_pct(r.volume_changed));
             buf.push(',');
-            buf.push_str(&fmt_opt(r.total_money_changed));
+            buf.push_str(&fmt_opt_pct(r.total_money_changed));
             buf.push('\n');
         }
     }
