@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use fred::prelude::*;
+use fred::types::sorted_sets::{ZRange, ZRangeBound, ZRangeKind};
 
 use crate::models::ohlcv::OhlcvRow;
 use crate::redis::RedisClient;
@@ -23,6 +24,10 @@ pub struct RedisReadResult {
 /// Works for single ticker (N=1) and multi-ticker (N>1).
 /// Returns `Some(HashMap<ticker, RedisReadResult>)` on success, or `None` if
 /// Redis is unavailable or no data found for any ticker.
+///
+/// When `max_score` is `Some(ts)`, uses ZREVRANGEBYSCORE to start from that
+/// timestamp instead of scanning the entire ZSET tail. This is optimal for
+/// end-only requests where `start_time` is not set.
 pub async fn batch_read_ohlcv_from_redis(
     client: &Option<RedisClient>,
     source: &str,
@@ -30,6 +35,7 @@ pub async fn batch_read_ohlcv_from_redis(
     interval: &str,
     total_limit: i64,
     ctx: &str,
+    max_score: Option<i64>,
 ) -> Option<HashMap<String, RedisReadResult>> {
     let client = client.as_ref()?;
 
@@ -39,12 +45,25 @@ pub async fn batch_read_ohlcv_from_redis(
 
     let t_read = std::time::Instant::now();
 
-    // Pipeline N ZREVRANGE calls (1 per ticker, 1 network round-trip)
+    // Pipeline N ZREVRANGE or ZREVRANGEBYSCORE calls (1 per ticker, 1 network round-trip)
     let pipe = client.pipeline();
+    let cmd_mode = if max_score.is_some() { "zrevrangebyscore" } else { "zrevrange" };
     for ticker in tickers {
         let key = redis_worker::zset_key(source, ticker, interval);
         // Pipeline commands are buffered (not sent until try_all).
-        if let Err(e) = pipe.zrevrange::<(), _>(&key, 0, total_limit as i64 - 1, false).await {
+        if let Some(end_ts) = max_score {
+            let result = pipe.zrevrangebyscore::<(), _, _, _>(
+                &key,
+                ZRange { kind: ZRangeKind::Inclusive, range: ZRangeBound::Score(end_ts as f64) },
+                ZRange { kind: ZRangeKind::Inclusive, range: ZRangeBound::NegInfiniteScore },
+                false,
+                Some((0, total_limit)),
+            ).await;
+            if let Err(e) = result {
+                tracing::warn!(%key, "pipeline zrevrangebyscore enqueue error: {e}");
+                continue;
+            }
+        } else if let Err(e) = pipe.zrevrange::<(), _>(&key, 0, total_limit as i64 - 1, false).await {
             tracing::warn!(%key, "pipeline zrevrange enqueue error: {e}");
             continue;
         }
@@ -138,7 +157,7 @@ pub async fn batch_read_ohlcv_from_redis(
     let total_rows: usize = parsed.values().map(|r| r.rows.len()).sum();
     tracing::info!(
         "[PERF] batch_read ctx=\"{ctx}\" source={source} interval={interval} tickers={} total_limit={total_limit} \
-         read={read_ms}ms parse={parse_ms}ms results={total_rows}",
+         mode={cmd_mode} read={read_ms}ms parse={parse_ms}ms results={total_rows}",
         tickers.len(),
     );
 

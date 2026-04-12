@@ -219,9 +219,13 @@ pub(crate) async fn fetch_native_tickers(
 
         if start_ok {
             let effective_limit = limit.unwrap_or(crate::constants::api::DEFAULT_LIMIT);
-            // When a date range is given, fetch all ZSET rows so the range
+            // When a start date is given, fetch all ZSET rows so the range
             // can be in the middle of history (not just at the tail).
-            let total_limit = if start_time.is_some() || end_time.is_some() {
+            // For end-only, use ZREVRANGEBYSCORE to start from end_time,
+            // so a small limit + SMA_MAX_PERIOD suffices.
+            let need_full_scan = start_time.is_some();
+            let max_score = if need_full_scan { None } else { end_time.map(|t| t.timestamp_millis()) };
+            let total_limit = if need_full_scan {
                 (crate::workers::redis_worker::max_size(interval) as i64)
                     + crate::constants::api::SMA_MAX_PERIOD
             } else {
@@ -230,7 +234,7 @@ pub(crate) async fn fetch_native_tickers(
             let req_detail = match (limit, &start_time, &end_time) {
                 (_, Some(s), Some(e)) => format!("tickers limit={effective_limit} start={}..end={}", s.format("%Y-%m-%d"), e.format("%Y-%m-%d")),
                 (_, Some(s), None) => format!("tickers limit={effective_limit} start={}..", s.format("%Y-%m-%d")),
-                (_, None, Some(e)) => format!("tickers limit={effective_limit} ..end={}", e.format("%Y-%m-%d")),
+                (_, None, Some(e)) => format!("tickers limit={effective_limit} ..end={} score={}", e.format("%Y-%m-%d"), e.timestamp_millis()),
                 (Some(l), None, None) => format!("tickers limit={l}"),
                 (None, None, None) => format!("tickers limit={effective_limit}"),
             };
@@ -238,14 +242,14 @@ pub(crate) async fn fetch_native_tickers(
             // Try reading from primary source and any extra sources
             let mut redis_map: HashMap<String, redis_reader::RedisReadResult> = HashMap::new();
             if let Some(map) = redis_reader::batch_read_ohlcv_from_redis(
-                redis_client, source, &symbols, interval, total_limit, &req_detail,
+                redis_client, source, &symbols, interval, total_limit, &req_detail, max_score,
             ).await {
                 redis_map = map;
             }
             // Also read extra source ZSETs (e.g. sjc for mode=yahoo)
             for &extra_src in extra_sources {
                 if let Some(extra_map) = redis_reader::batch_read_ohlcv_from_redis(
-                    redis_client, extra_src, &symbols, interval, total_limit, &format!("{req_detail}/extra"),
+                    redis_client, extra_src, &symbols, interval, total_limit, &format!("{req_detail}/extra"), max_score,
                 ).await {
                     for (k, v) in extra_map {
                         redis_map.entry(k).or_insert(v);
@@ -401,9 +405,12 @@ pub(crate) async fn fetch_aggregated_tickers(
         };
 
         if start_ok {
-            // When a date range is given, fetch all ZSET rows so the range
+            // When a start date is given, fetch all ZSET rows so the range
             // can be in the middle of history.
-            let effective_lookback = if start_time.is_some() || end_time.is_some() {
+            // For end-only, use ZREVRANGEBYSCORE to start from end_time.
+            let need_full_scan = start_time.is_some();
+            let max_score = if need_full_scan { None } else { end_time.map(|t| t.timestamp_millis()) };
+            let effective_lookback = if need_full_scan {
                 (crate::workers::redis_worker::max_size(base_interval) as i64)
                     + crate::constants::api::AGGREGATED_LOOKBACK
             } else {
@@ -412,13 +419,13 @@ pub(crate) async fn fetch_aggregated_tickers(
             let agg_detail = match (limit, &start_time, &end_time) {
                 (_, Some(s), Some(e)) => format!("tickers/agg {} limit={limit} start={}..end={}", agg.to_str(), s.format("%Y-%m-%d"), e.format("%Y-%m-%d")),
                 (_, Some(s), None) => format!("tickers/agg {} limit={limit} start={}..", agg.to_str(), s.format("%Y-%m-%d")),
-                (_, None, Some(e)) => format!("tickers/agg {} limit={limit} ..end={}", agg.to_str(), e.format("%Y-%m-%d")),
+                (_, None, Some(e)) => format!("tickers/agg {} limit={limit} ..end={} score={}", agg.to_str(), e.format("%Y-%m-%d"), e.timestamp_millis()),
                 _ => format!("tickers/agg {} limit={limit}", agg.to_str()),
             };
 
             if let Some(redis_map) = redis_reader::batch_read_ohlcv_from_redis(
                 redis_client, source, &symbols, base_interval,
-                effective_lookback, &agg_detail,
+                effective_lookback, &agg_detail, max_score,
             ).await {
                 let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
                 let mut first_meta: Option<redis_reader::RedisReadResult> = None;
