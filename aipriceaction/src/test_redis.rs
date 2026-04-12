@@ -68,7 +68,7 @@ pub fn run(ticker: String) {
         let source = "test";
         let interval = "1D";
         let key = crate::workers::redis_worker::zset_key(source, &ticker, interval);
-        let _max_size = crate::constants::redis_ts::DAILY_MAX_SIZE;
+        let _max_size = crate::constants::redis_ts::daily_max_size();
 
         // Cleanup first (in case of previous failed test)
         let _: Result<Value, Error> = client.del(&key).await;

@@ -164,13 +164,19 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `REDIS_PASSWORD` | No | -- | Redis password (auto-configured in Docker) |
 | `REDIS_WORKERS` | No | `false` | Enable Redis ZSET backfill worker |
 | `API_MAX_LIMIT` | No | `40` | Max ?limit= rows per ticker for /tickers endpoint |
+| `REDIS_DAILY_MAX_SIZE` | No | `5000` | Max Redis ZSET members for daily interval |
+| `REDIS_HOURLY_MAX_SIZE` | No | `30000` | Max Redis ZSET members for hourly interval |
+| `REDIS_MINUTE_MAX_SIZE` | No | `20000` | Max Redis ZSET members for minute interval |
+| `REDIS_DAILY_BACKFILL_LIMIT` | No | `5000` | Rows fetched during backfill (daily) |
+| `REDIS_HOURLY_BACKFILL_LIMIT` | No | `30000` | Rows fetched during backfill (hourly) |
+| `REDIS_MINUTE_BACKFILL_LIMIT` | No | `20000` | Rows fetched during backfill (minute) |
 
 ## Redis Cache
 
 OHLCV data is cached in Redis ZSETs for fast reads. All API endpoints try Redis first and fall back to PostgreSQL automatically.
 
 - **1 ZSET per ticker/interval**: `ohlcv:{source}:{ticker}:{interval}`
-- **Retention**: 1D (5,000 bars / ~20yr), 1h (20,000 / ~2yr), 1m (10,000 / ~7 days)
+- **Retention**: 1D (5,000 bars / ~20yr), 1h (30,000 / ~3yr), 1m (20,000 / ~14 days)
 - **Backfill**: periodic full backfill from PostgreSQL every 15 minutes
 - **Write path**: fire-and-forget ZADD from all data workers after PG upsert
 - **Read path**: pipelined ZREVRANGE — 1 network round-trip per ticker batch

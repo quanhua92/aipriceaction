@@ -293,19 +293,30 @@ pub mod api {
 
 /// Redis ZSET OHLCV cache configuration constants.
 pub mod redis_ts {
-    /// Maximum ZSET members for daily data (matches ~10 years of daily bars).
-    pub const DAILY_MAX_SIZE: usize = 5000;
-    /// Maximum ZSET members for hourly data (matches ~2 years of hourly bars).
-    pub const HOURLY_MAX_SIZE: usize = 20000;
-    /// Maximum ZSET members for minute data (matches ~7 days of minute bars).
-    pub const MINUTE_MAX_SIZE: usize = 10000;
+    /// Maximum ZSET members for daily data (~10 years of daily bars).
+    /// Override via `REDIS_DAILY_MAX_SIZE` env var. Default: 5000.
+    pub fn daily_max_size() -> usize { env("REDIS_DAILY_MAX_SIZE", 5000) }
+    /// Maximum ZSET members for hourly data (~3 years of hourly bars).
+    /// Override via `REDIS_HOURLY_MAX_SIZE` env var. Default: 30000.
+    pub fn hourly_max_size() -> usize { env("REDIS_HOURLY_MAX_SIZE", 30000) }
+    /// Maximum ZSET members for minute data (~14 days of minute bars).
+    /// Override via `REDIS_MINUTE_MAX_SIZE` env var. Default: 20000.
+    pub fn minute_max_size() -> usize { env("REDIS_MINUTE_MAX_SIZE", 20000) }
 
-    /// Backfill limit for daily data.
-    pub const DAILY_BACKFILL_LIMIT: i64 = 5000;
-    /// Backfill limit for hourly data.
-    pub const HOURLY_BACKFILL_LIMIT: i64 = 20000;
-    /// Backfill limit for minute data.
-    pub const MINUTE_BACKFILL_LIMIT: i64 = 10000;
+    /// Backfill limit for daily data (rows fetched from PG).
+    /// Override via `REDIS_DAILY_BACKFILL_LIMIT` env var. Default: 5000.
+    pub fn daily_backfill_limit() -> i64 { env("REDIS_DAILY_BACKFILL_LIMIT", 5000) }
+    /// Backfill limit for hourly data (rows fetched from PG).
+    /// Override via `REDIS_HOURLY_BACKFILL_LIMIT` env var. Default: 30000.
+    pub fn hourly_backfill_limit() -> i64 { env("REDIS_HOURLY_BACKFILL_LIMIT", 30000) }
+    /// Backfill limit for minute data (rows fetched from PG).
+    /// Override via `REDIS_MINUTE_BACKFILL_LIMIT` env var. Default: 20000.
+    pub fn minute_backfill_limit() -> i64 { env("REDIS_MINUTE_BACKFILL_LIMIT", 20000) }
+
+    /// Parse an env var as type T, falling back to default.
+    fn env<T: std::str::FromStr>(key: &str, default: T) -> T {
+        std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
+    }
 
     /// Backfill loop interval in seconds (60 minutes).
     pub const BACKFILL_LOOP_SECS: u64 = 3600;

@@ -65,6 +65,12 @@ The `aipriceaction` service depends on Redis with `service_healthy` condition.
 | `REDIS_URL` | No | — | Redis connection URL. When set, workers write OHLCV to Redis ZSET |
 | `REDIS_WORKERS` | No | `false` | Enable the backfill worker (`"true"` or `"1"`) |
 | `REDIS_PASSWORD` | No | — | Redis password (auto-configured in Docker via `.env`) |
+| `REDIS_DAILY_MAX_SIZE` | No | `5000` | Max Redis ZSET members for daily interval |
+| `REDIS_HOURLY_MAX_SIZE` | No | `30000` | Max Redis ZSET members for hourly interval |
+| `REDIS_MINUTE_MAX_SIZE` | No | `20000` | Max Redis ZSET members for minute interval |
+| `REDIS_DAILY_BACKFILL_LIMIT` | No | `5000` | Rows fetched during backfill (daily) |
+| `REDIS_HOURLY_BACKFILL_LIMIT` | No | `30000` | Rows fetched during backfill (hourly) |
+| `REDIS_MINUTE_BACKFILL_LIMIT` | No | `20000` | Rows fetched during backfill (minute) |
 
 **URL format**: `redis://default:<your-password>@localhost:6379/0`
 
@@ -161,8 +167,8 @@ SET meta:ticker_list '{"source":"vn","ticker":"VCB"},...' EX 900
 | Interval | Max Size | Coverage |
 |---|---|---|
 | `1D` | 5,000 entries | ~20 years of daily bars |
-| `1h` | 20,000 entries | ~2 years of hourly bars |
-| `1m` | 10,000 entries | ~7 days of minute bars |
+| `1h` | 30,000 entries | ~3 years of hourly bars |
+| `1m` | 20,000 entries | ~14 days of minute bars |
 
 | Key | TTL | Refresh |
 |---|---|---|
@@ -292,12 +298,16 @@ cargo run -- test-redis --ticker VCB
 
 ```rust
 pub mod redis_ts {
-    pub const DAILY_MAX_SIZE: usize = 5000;      // retention for daily
-    pub const HOURLY_MAX_SIZE: usize = 20000;    // retention for hourly
-    pub const MINUTE_MAX_SIZE: usize = 10000;    // retention for minute (~7 days)
-    pub const DAILY_BACKFILL_LIMIT: i64 = 5000;
-    pub const HOURLY_BACKFILL_LIMIT: i64 = 20000;
-    pub const MINUTE_BACKFILL_LIMIT: i64 = 10000;
+    // Max ZSET sizes (overridable via env vars, defaults shown)
+    pub fn daily_max_size() -> usize        // REDIS_DAILY_MAX_SIZE, default 5000
+    pub fn hourly_max_size() -> usize       // REDIS_HOURLY_MAX_SIZE, default 30000
+    pub fn minute_max_size() -> usize       // REDIS_MINUTE_MAX_SIZE, default 20000
+
+    // Backfill limits (overridable via env vars, defaults shown)
+    pub fn daily_backfill_limit() -> i64    // REDIS_DAILY_BACKFILL_LIMIT, default 5000
+    pub fn hourly_backfill_limit() -> i64   // REDIS_HOURLY_BACKFILL_LIMIT, default 30000
+    pub fn minute_backfill_limit() -> i64   // REDIS_MINUTE_BACKFILL_LIMIT, default 20000
+
     pub const BACKFILL_LOOP_SECS: u64 = 3600;       // 60 minutes between cycles
     pub const BACKFILL_CONCURRENCY: usize = 2;       // parallel tasks per cycle
     pub const MEMBER_SEP: &str = "|";                // field separator in member string

@@ -21,9 +21,9 @@ pub fn zset_key(source: &str, ticker: &str, interval: &str) -> String {
 /// Get max ZSET size (retention) for a given interval.
 pub fn max_size(interval: &str) -> usize {
     match interval {
-        "1h" => c::HOURLY_MAX_SIZE,
-        "1m" => c::MINUTE_MAX_SIZE,
-        _ => c::DAILY_MAX_SIZE,
+        "1h" => c::hourly_max_size(),
+        "1m" => c::minute_max_size(),
+        _ => c::daily_max_size(),
     }
 }
 
@@ -253,10 +253,10 @@ pub async fn backfill_full(pool: &PgPool, client: &RedisClient) {
     for ticker in &tickers {
         for &interval in &["1D", "1h", "1m"] {
             let limit: i64 = match interval {
-                "1D" => c::DAILY_BACKFILL_LIMIT,
-                "1h" => c::HOURLY_BACKFILL_LIMIT,
-                "1m" => c::MINUTE_BACKFILL_LIMIT,
-                _ => c::DAILY_BACKFILL_LIMIT,
+                "1D" => c::daily_backfill_limit(),
+                "1h" => c::hourly_backfill_limit(),
+                "1m" => c::minute_backfill_limit(),
+                _ => c::daily_backfill_limit(),
             };
             groups.push((ticker.source.clone(), ticker.ticker.clone(), interval.to_string(), limit));
         }
@@ -481,9 +481,9 @@ mod tests {
 
     #[test]
     fn test_max_size() {
-        assert_eq!(max_size("1D"), c::DAILY_MAX_SIZE);
-        assert_eq!(max_size("1h"), c::HOURLY_MAX_SIZE);
-        assert_eq!(max_size("1m"), c::MINUTE_MAX_SIZE);
+        assert_eq!(max_size("1D"), c::daily_max_size());
+        assert_eq!(max_size("1h"), c::hourly_max_size());
+        assert_eq!(max_size("1m"), c::minute_max_size());
     }
 
     #[test]
