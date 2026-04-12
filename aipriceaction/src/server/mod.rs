@@ -203,6 +203,7 @@ fn build_cors_layer() -> CorsLayer {
         .allow_headers([
             HeaderName::from_static("content-type"),
             HeaderName::from_static("authorization"),
+            HeaderName::from_static("user-agent"),
         ])
 }
 
