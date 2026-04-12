@@ -177,14 +177,14 @@ pub async fn tickers(
             fetch::fetch_native_tickers(
                 &state.pool, &state.redis_client, source, symbols,
                 db_interval, start_time, end_time,
-                Some(effective_limit), extra_sources, params.redis, params.ma,
+                Some(effective_limit), extra_sources, params.redis, params.ma, params.ema,
             ).await
         }
         NormalizedInterval::Aggregated(agg) => {
             fetch::fetch_aggregated_tickers(
                 &state.pool, &state.redis_client, source, symbols,
                 agg, start_time, end_time,
-                effective_limit, extra_sources, params.redis, params.ma,
+                effective_limit, extra_sources, params.redis, params.ma, params.ema,
             ).await
         }
     };
@@ -267,6 +267,7 @@ async fn handle_mode_all(
     // Fetch per source in parallel using shared fetch functions
     let mut handles = Vec::new();
     let with_ma = params.ma;
+    let use_ema = params.ema;
     for (source, syms) in &source_map {
         let pool = state.pool.clone();
         let redis_client = state.redis_client.clone();
@@ -283,7 +284,7 @@ async fn handle_mode_all(
                     let (data, tag, _meta) = fetch::fetch_native_tickers(
                         &pool, &redis_client, &source, syms,
                         &db_interval, start_time, end_time,
-                        Some(limit), &[], true, with_ma,
+                        Some(limit), &[], true, with_ma, use_ema,
                     ).await;
                     (source, data, tag)
                 }));
@@ -294,7 +295,7 @@ async fn handle_mode_all(
                     let (data, tag, _meta) = fetch::fetch_aggregated_tickers(
                         &pool, &redis_client, &source, syms,
                         agg, start_time, end_time,
-                        limit, &[], true, with_ma,
+                        limit, &[], true, with_ma, use_ema,
                     ).await;
                     (source, data, tag)
                 }));

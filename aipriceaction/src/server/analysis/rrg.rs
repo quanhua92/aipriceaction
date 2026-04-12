@@ -47,6 +47,9 @@ pub struct RrgQuery {
     pub date: Option<String>,
     #[serde(default)]
     pub mode: Mode,
+    /// true = use EMA instead of SMA for MA indicators.
+    #[serde(default)]
+    pub ema: bool,
 }
 
 fn default_period() -> usize {
@@ -392,7 +395,7 @@ async fn handle_mascore(
             for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
                 if let Some(map) = redis_result {
                     for (ticker, orows) in map {
-                        let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
+                        let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
                         merged.extend(enhanced.into_iter().map(|row| (row, src)));
                     }
                 } else {
@@ -410,7 +413,7 @@ async fn handle_mascore(
             if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "rrg/single").await {
                 let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
                 for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
+                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
                     merged.extend(enhanced.into_iter().map(|row| (row, source)));
                 }
                 if merged.is_empty() {
@@ -530,7 +533,7 @@ async fn handle_mascore(
                             Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
                             None => orows,
                         };
-                        let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true);
+                        let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true, params.ema);
                         (ticker, enhanced)
                     })
                     .filter(|(_, v)| !v.is_empty())
@@ -541,7 +544,7 @@ async fn handle_mascore(
                 }
             }
             // Redis failed or returned empty for this source — fall back to PG
-            match ohlcv::get_ohlcv_joined_batch(&state.pool, src, &[], "1D", el, None, et, true).await {
+            match ohlcv::get_ohlcv_joined_batch(&state.pool, src, &[], "1D", el, None, et, true, params.ema).await {
                 Ok(map) => all_joined.push((map, src)),
                 Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
             }
@@ -556,7 +559,7 @@ async fn handle_mascore(
                         Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
                         None => orows,
                     };
-                    let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true);
+                    let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true, params.ema);
                     (ticker, enhanced)
                 })
                 .filter(|(_, v)| !v.is_empty())
@@ -565,7 +568,7 @@ async fn handle_mascore(
                 all_joined.push((joined, source));
             } else {
                 // Redis returned empty — fall back to PG
-                match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true).await {
+                match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true, params.ema).await {
                     Ok(map) => all_joined.push((map, source)),
                     Err(e) => {
                         tracing::error!("Failed to fetch daily data: {}", e);
@@ -579,7 +582,7 @@ async fn handle_mascore(
             }
         } else {
             // Redis unavailable — fall back to PG
-            match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true).await {
+            match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true, params.ema).await {
                 Ok(map) => all_joined.push((map, source)),
                 Err(e) => {
                     tracing::error!("Failed to fetch daily data: {}", e);

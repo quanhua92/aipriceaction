@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, Utc};
 use sqlx::PgPool;
 
-use crate::models::indicators::{calculate_ma_score, calculate_sma};
+use crate::models::indicators::{calculate_ema, calculate_ma_score, calculate_sma};
 pub use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
 
 /// Maximum SMA period — fetch this many extra rows before the requested range
@@ -180,7 +180,7 @@ pub async fn get_ohlcv_joined(
     }
 
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit, None, true);
+    let result = enhance_rows(&ticker_str, rows, limit, None, true, crate::constants::api::DEFAULT_USE_EMA);
     Ok(result)
 }
 
@@ -253,7 +253,7 @@ pub async fn get_ohlcv_joined_range(
     }
 
     let ticker_str = ticker.to_string();
-    let result = enhance_rows(&ticker_str, rows, limit, start_time, true);
+    let result = enhance_rows(&ticker_str, rows, limit, start_time, true, crate::constants::api::DEFAULT_USE_EMA);
     Ok(result)
 }
 
@@ -272,6 +272,7 @@ pub fn enhance_rows(
     limit: Option<i64>,
     start_time: Option<DateTime<Utc>>,
     with_ma: bool,
+    use_ema: bool,
 ) -> Vec<OhlcvJoined> {
     if rows.is_empty() {
         return Vec::new();
@@ -285,14 +286,15 @@ pub fn enhance_rows(
     let closes: Vec<f64> = chrono_rows.iter().map(|r| r.close).collect();
     let volumes: Vec<f64> = chrono_rows.iter().map(|r| r.volume as f64).collect();
 
-    // Calculate SMAs on the full dataset (skip when with_ma=false)
+    // Calculate MAs on the full dataset (skip when with_ma=false)
     let (ma10, ma20, ma50, ma100, ma200) = if with_ma {
+        let calc_ma = if use_ema { calculate_ema } else { calculate_sma };
         (
-            calculate_sma(&closes, 10),
-            calculate_sma(&closes, 20),
-            calculate_sma(&closes, 50),
-            calculate_sma(&closes, 100),
-            calculate_sma(&closes, 200),
+            calc_ma(&closes, 10),
+            calc_ma(&closes, 20),
+            calc_ma(&closes, 50),
+            calc_ma(&closes, 100),
+            calc_ma(&closes, 200),
         )
     } else {
         (vec![], vec![], vec![], vec![], vec![])
@@ -552,8 +554,9 @@ pub async fn get_ohlcv_joined_batch(
     start_time: Option<DateTime<Utc>>,
     end_time: Option<DateTime<Utc>>,
     with_ma: bool,
+    use_ema: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
-    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[], with_ma).await
+    get_ohlcv_joined_batch_with_extra(pool, source, symbols, interval, limit, start_time, end_time, &[], with_ma, use_ema).await
 }
 
 pub async fn get_ohlcv_joined_batch_with_extra(
@@ -566,6 +569,7 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     end_time: Option<DateTime<Utc>>,
     extra_sources: &[&str],
     with_ma: bool,
+    use_ema: bool,
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
     use std::collections::HashMap;
 
@@ -580,7 +584,7 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     // Enhance each group
     let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
     for (ticker, ticker_rows) in raw {
-        let joined = enhance_rows(&ticker, ticker_rows, limit, start_time, with_ma);
+        let joined = enhance_rows(&ticker, ticker_rows, limit, start_time, with_ma, use_ema);
         result.insert(ticker, joined);
     }
 
@@ -746,7 +750,7 @@ pub async fn get_latest_daily_per_ticker(
             .unwrap_or_default();
 
         // Enhance with all rows for accurate indicators
-        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None, true);
+        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None, true, crate::constants::api::DEFAULT_USE_EMA);
         result.extend(joined);
     }
 

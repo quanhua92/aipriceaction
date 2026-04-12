@@ -57,6 +57,9 @@ pub struct TickersQuery {
     /// true = calculate MA indicators (default), false = skip MA and SMA buffer.
     #[serde(default = "default_true")]
     pub ma: bool,
+    /// true = use EMA instead of SMA for MA indicators.
+    #[serde(default)]
+    pub ema: bool,
 }
 
 fn default_format() -> String {

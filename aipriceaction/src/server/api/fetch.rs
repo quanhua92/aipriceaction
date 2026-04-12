@@ -162,7 +162,7 @@ pub(crate) fn build_cache_key(
     let start = params.start_date.as_deref().unwrap_or("");
     let end = params.end_date.as_deref().unwrap_or("");
 
-    format!("{source}|{interval_str}|{sorted_symbols}|{limit}|{start}|{end}|ma={}", params.ma)
+    format!("{source}|{interval_str}|{sorted_symbols}|{limit}|{start}|{end}|ma={}|ema={}", params.ma, params.ema)
 }
 
 /// Parse a date string as start-of-day UTC.
@@ -199,6 +199,7 @@ pub(crate) async fn fetch_native_tickers(
     extra_sources: &[&str],
     use_redis: bool,
     with_ma: bool,
+    use_ema: bool,
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     let is_daily = interval == "1D";
 
@@ -281,7 +282,7 @@ pub(crate) async fn fetch_native_tickers(
                         limit
                     };
                     let enhanced = crate::queries::ohlcv::enhance_rows(
-                        &ticker, redis_result.rows, enhance_limit, start_time, with_ma,
+                        &ticker, redis_result.rows, enhance_limit, start_time, with_ma, use_ema,
                     );
                     let mut enhanced = enhanced;
                     // Apply end_time filter when date range was provided
@@ -317,7 +318,7 @@ pub(crate) async fn fetch_native_tickers(
         tokio::time::timeout(
             std::time::Duration::from_secs(5),
             ohlcv::get_ohlcv_joined_batch(
-                pool, source, &symbols, interval, limit, start_time, end_time, with_ma,
+                pool, source, &symbols, interval, limit, start_time, end_time, with_ma, use_ema,
             ),
         )
         .await
@@ -325,7 +326,7 @@ pub(crate) async fn fetch_native_tickers(
         tokio::time::timeout(
             std::time::Duration::from_secs(5),
             ohlcv::get_ohlcv_joined_batch_with_extra(
-                pool, source, &symbols, interval, limit, start_time, end_time, extra_sources, with_ma,
+                pool, source, &symbols, interval, limit, start_time, end_time, extra_sources, with_ma, use_ema,
             ),
         )
         .await
@@ -375,6 +376,7 @@ pub(crate) async fn fetch_aggregated_tickers(
     extra_sources: &[&str],
     use_redis: bool,
     with_ma: bool,
+    use_ema: bool,
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     use crate::services::aggregator::{AggregatedOhlcv, Aggregator};
 
@@ -456,7 +458,7 @@ pub(crate) async fn fetch_aggregated_tickers(
                     per_ticker.insert(ticker, aggregated);
                 }
 
-                let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma);
+                let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma, use_ema);
                 let mut result = BTreeMap::new();
 
                 for (ticker, data) in &enhanced {
@@ -535,7 +537,7 @@ pub(crate) async fn fetch_aggregated_tickers(
     }
 
     // Enhance with indicators
-    let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma);
+    let enhanced = Aggregator::enhance_aggregated_data(per_ticker, with_ma, use_ema);
 
     // Trim to requested limit and map to response
     let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();

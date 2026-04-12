@@ -26,6 +26,9 @@ pub struct TopPerformersQuery {
     pub with_hour: Option<bool>,
     #[serde(default)]
     pub mode: Mode,
+    /// true = use EMA instead of SMA for MA indicators.
+    #[serde(default)]
+    pub ema: bool,
 }
 
 fn default_sort_by() -> String { "close_changed".to_string() }
@@ -169,7 +172,7 @@ pub async fn top_performers_handler(
         for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
             if let Some(map) = redis_result {
                 for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
+                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
                     merged.extend(enhanced.into_iter().map(|row| (row, src)));
                 }
             } else {
@@ -186,7 +189,7 @@ pub async fn top_performers_handler(
         if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "performers/single").await {
             let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
             for (ticker, orows) in map {
-                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true);
+                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
                 merged.extend(enhanced.into_iter().map(|row| (row, "")));
             }
             if !merged.is_empty() {

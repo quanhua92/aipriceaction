@@ -513,6 +513,99 @@ async function testMaFalseAggregated() {
 }
 
 // ──────────────────────────────────────────────
+// ema=true query parameter (EMA vs SMA)
+// ──────────────────────────────────────────────
+
+async function testEmaDiffersFromSma() {
+  const [smaRes, emaRes] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=50"),
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=50&ema=true"),
+  ]);
+  console.log(`\n── EMA vs SMA: VCB 1D limit=50 ── ${smaRes.ms}ms / ${emaRes.ms}ms`);
+  assert(smaRes.status === 200, "SMA request returns 200");
+  assert(emaRes.status === 200, "EMA request returns 200");
+  if (!("VCB" in smaRes.body) || !("VCB" in emaRes.body)) {
+    ok("VCB not in response (skipped)");
+    return;
+  }
+  // Scan all rows for any MA difference (EMA diverges from SMA over time)
+  let foundDiff = false;
+  for (let i = 0; i < smaRes.body.VCB.length; i++) {
+    const s = smaRes.body.VCB[i];
+    const e = emaRes.body.VCB[i];
+    if (typeof s.ma10 === "number" && typeof e.ma10 === "number" && s.ma10 !== e.ma10) {
+      foundDiff = true;
+      break;
+    }
+  }
+  assert(foundDiff, "at least one row has different EMA vs SMA ma10");
+}
+
+async function testEmaDefaultIsSma() {
+  const [defaultRes, explicitSmaRes] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=3"),
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=3&ema=false"),
+  ]);
+  console.log(`\n── Default (no ema) matches ema=false ──`);
+  assert(defaultRes.status === 200, "default request returns 200");
+  assert(explicitSmaRes.status === 200, "ema=false request returns 200");
+  if (!("VCB" in defaultRes.body) || !("VCB" in explicitSmaRes.body)) {
+    ok("VCB not in response (skipped)");
+    return;
+  }
+  const d = defaultRes.body.VCB;
+  const s = explicitSmaRes.body.VCB;
+  for (let i = 0; i < d.length; i++) {
+    assert(d[i].ma10 === s[i].ma10, `default ma10 matches ema=false at row ${i}`);
+    assert(d[i].ma20 === s[i].ma20, `default ma20 matches ema=false at row ${i}`);
+  }
+  ok("default behavior (no ema param) is identical to ema=false");
+}
+
+async function testEmaWithAggregated() {
+  const [smaRes, emaRes] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=1W&limit=10"),
+    fetchJSON("/tickers?symbol=VCB&interval=1W&limit=10&ema=true"),
+  ]);
+  console.log(`\n── EMA with aggregated interval (1W) ── ${smaRes.ms}ms / ${emaRes.ms}ms`);
+  assert(smaRes.status === 200, "SMA weekly returns 200");
+  assert(emaRes.status === 200, "EMA weekly returns 200");
+  if (!("VCB" in smaRes.body) || !("VCB" in emaRes.body)) {
+    ok("VCB not in response (skipped)");
+    return;
+  }
+  const s = smaRes.body.VCB;
+  const e = emaRes.body.VCB;
+  let foundDiff = false;
+  for (let i = 0; i < s.length; i++) {
+    for (const ma of ["ma10", "ma20", "ma50"]) {
+      if (typeof s[i][ma] === "number" && typeof e[i][ma] === "number" && s[i][ma] !== e[i][ma]) {
+        foundDiff = true;
+        break;
+      }
+    }
+    if (foundDiff) break;
+  }
+  assert(foundDiff, "weekly EMA differs from weekly SMA");
+}
+
+async function testEmaWithModeAll() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&symbol=BTCUSDT&interval=1D&limit=1&mode=all&ema=true",
+  );
+  console.log(`\n── EMA with mode=all ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("VCB" in body) {
+    assert(typeof body.VCB[0].ma10 === "number", "VCB has ma10 with ema=true mode=all");
+    ok("mode=all + ema=true works for VN ticker");
+  }
+  if ("BTCUSDT" in body) {
+    assert(typeof body.BTCUSDT[0].ma10 === "number", "BTCUSDT has ma10 with ema=true mode=all");
+    ok("mode=all + ema=true works for crypto ticker");
+  }
+}
+
+// ──────────────────────────────────────────────
 // SJC-GOLD merged into yahoo mode
 // ──────────────────────────────────────────────
 
@@ -601,6 +694,10 @@ const tests = [
   testYahooNoDuplicates,
   testCryptoNoDuplicates,
   testModeAllNoDuplicates,
+  testEmaDiffersFromSma,
+  testEmaDefaultIsSma,
+  testEmaWithAggregated,
+  testEmaWithModeAll,
   testSjcGoldInYahooGroups,
   testSjcGoldInYahooNames,
   testSjcGoldInYahooTickers,

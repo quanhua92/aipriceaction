@@ -281,6 +281,9 @@ pub mod api {
     pub const LEGACY_DIVISOR: f64 = 1000.0;
     /// Max SMA period — DB lookback buffer.
     pub const SMA_MAX_PERIOD: i64 = 200;
+    /// Default value for the `ema` query parameter across all endpoints.
+    /// Set to true to use EMA by default, false to use SMA.
+    pub const DEFAULT_USE_EMA: bool = false;
     /// Max allowed ?limit= value when requesting multiple/all tickers (no symbol or >1 symbol).
     /// Single-ticker requests are uncapped. Override via API_MAX_LIMIT env var. Default: 40.
     pub fn max_limit() -> i64 {

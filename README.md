@@ -129,6 +129,15 @@ curl "http://localhost:3000/tickers?symbol=ETHUSDT&mode=crypto&interval=5m&limit
 # CSV export
 curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&format=csv"
 
+# Use EMA instead of SMA for moving averages
+curl "http://localhost:3000/tickers?symbol=VCB&interval=1D&limit=10&ema=true"
+curl "http://localhost:3000/tickers?symbol=BTCUSDT&mode=crypto&interval=1D&ema=true"
+
+# Analysis endpoints also support ema=true
+curl "http://localhost:3000/analysis/top-performers?ema=true"
+curl "http://localhost:3000/analysis/ma-scores-by-sector?ema=true"
+curl "http://localhost:3000/analysis/rrg?ema=true"
+
 # Ticker groups
 curl "http://localhost:3000/tickers/group"              # VN sectors
 curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups

@@ -306,6 +306,58 @@ async function testMaScoresModeAll() {
 }
 
 // ──────────────────────────────────────────────
+// ema=true query parameter (EMA vs SMA)
+// ──────────────────────────────────────────────
+
+async function testTopPerformersEma() {
+  const [smaRes, emaRes] = await Promise.all([
+    fetchJSON("/analysis/top-performers?limit=5"),
+    fetchJSON("/analysis/top-performers?limit=5&ema=true"),
+  ]);
+  console.log(`\n── EMA vs SMA: /analysis/top-performers ── ${smaRes.ms}ms / ${emaRes.ms}ms`);
+  assert(smaRes.status === 200, "SMA request returns 200");
+  assert(emaRes.status === 200, "EMA request returns 200");
+  assert(smaRes.body.data.performers.length > 0, "SMA performers not empty");
+  assert(emaRes.body.data.performers.length > 0, "EMA performers not empty");
+
+  // Find a common symbol and compare MA values
+  const smaSymbols = new Map(smaRes.body.data.performers.map((p) => [p.symbol, p]));
+  let foundDiff = false;
+  for (const ep of emaRes.body.data.performers) {
+    const sp = smaSymbols.get(ep.symbol);
+    if (sp && typeof sp.ma50 === "number" && typeof ep.ma50 === "number" && sp.ma50 !== ep.ma50) {
+      foundDiff = true;
+      ok(`${ep.symbol}: EMA ma50 (${ep.ma50}) differs from SMA ma50 (${sp.ma50})`);
+      break;
+    }
+  }
+  if (!foundDiff) ok("no MA difference found (may have no overlapping symbols with MA values)");
+}
+
+async function testMaScoresEma() {
+  const [smaRes, emaRes] = await Promise.all([
+    fetchJSON("/analysis/ma-scores-by-sector?ma_period=20&top_per_sector=3"),
+    fetchJSON("/analysis/ma-scores-by-sector?ma_period=20&top_per_sector=3&ema=true"),
+  ]);
+  console.log(`\n── EMA vs SMA: /analysis/ma-scores-by-sector ── ${smaRes.ms}ms / ${emaRes.ms}ms`);
+  assert(smaRes.status === 200, "SMA request returns 200");
+  assert(emaRes.status === 200, "EMA request returns 200");
+  assert(smaRes.body.data.sectors.length > 0, "SMA sectors not empty");
+  assert(emaRes.body.data.sectors.length > 0, "EMA sectors not empty");
+
+  // Compare average scores — they should differ when EMA is used
+  const smaAvg = smaRes.body.data.sectors.reduce((s, sec) => s + sec.average_score, 0) / smaRes.body.data.sectors.length;
+  const emaAvg = emaRes.body.data.sectors.reduce((s, sec) => s + sec.average_score, 0) / emaRes.body.data.sectors.length;
+  ok(`SMA avg score: ${smaAvg.toFixed(2)}, EMA avg score: ${emaAvg.toFixed(2)}`);
+  // It's possible (unlikely) they're equal, so just note the values
+  if (smaAvg !== emaAvg) {
+    ok("average scores differ between SMA and EMA");
+  } else {
+    ok("average scores are identical (edge case)");
+  }
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -325,6 +377,8 @@ const tests = [
   testVolumeProfileCrypto,
   testTopPerformersModeAll,
   testMaScoresModeAll,
+  testTopPerformersEma,
+  testMaScoresEma,
 ];
 
 async function main() {

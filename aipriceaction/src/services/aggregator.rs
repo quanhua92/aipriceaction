@@ -1,5 +1,5 @@
 use crate::models::aggregated_interval::AggregatedInterval;
-use crate::models::indicators::{calculate_ma_score, calculate_sma};
+use crate::models::indicators::{calculate_ema, calculate_ma_score, calculate_sma};
 use crate::models::ohlcv::OhlcvRow;
 use chrono::{DateTime, Datelike, Duration, TimeZone, Timelike, Utc};
 use std::collections::HashMap;
@@ -142,6 +142,7 @@ impl Aggregator {
     pub fn enhance_aggregated_data(
         mut data: HashMap<String, Vec<AggregatedOhlcv>>,
         with_ma: bool,
+        use_ema: bool,
     ) -> HashMap<String, Vec<AggregatedOhlcv>> {
         for stock_data in data.values_mut() {
             if stock_data.is_empty() {
@@ -151,11 +152,12 @@ impl Aggregator {
             let closes: Vec<f64> = stock_data.iter().map(|d| d.close).collect();
 
             if with_ma {
-                let ma10_values = calculate_sma(&closes, 10);
-                let ma20_values = calculate_sma(&closes, 20);
-                let ma50_values = calculate_sma(&closes, 50);
-                let ma100_values = calculate_sma(&closes, 100);
-                let ma200_values = calculate_sma(&closes, 200);
+                let calc_ma = if use_ema { calculate_ema } else { calculate_sma };
+                let ma10_values = calc_ma(&closes, 10);
+                let ma20_values = calc_ma(&closes, 20);
+                let ma50_values = calc_ma(&closes, 50);
+                let ma100_values = calc_ma(&closes, 100);
+                let ma200_values = calc_ma(&closes, 200);
 
                 for (i, stock) in stock_data.iter_mut().enumerate() {
                     if ma10_values[i] > 0.0 {
