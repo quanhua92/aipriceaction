@@ -383,10 +383,10 @@ async fn handle_mascore(
                 .collect();
             // Try Redis for each source concurrently
             let (r1, r2, r3, r4) = tokio::join!(
-                try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", 1 + SMA_MAX_PERIOD),
-                try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", 1 + SMA_MAX_PERIOD),
-                try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", 1 + SMA_MAX_PERIOD),
-                try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", 1 + SMA_MAX_PERIOD),
+                try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
+                try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
+                try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
+                try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
             );
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
             for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
@@ -407,7 +407,7 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-            if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD).await {
+            if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "rrg/single").await {
                 let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
                 for (ticker, orows) in map {
                     let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None);
@@ -517,10 +517,10 @@ async fn handle_mascore(
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", redis_limit),
-            try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", redis_limit),
-            try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", redis_limit),
-            try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", redis_limit),
+            try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "rrg"),
+            try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "rrg"),
+            try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "rrg"),
+            try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "rrg"),
         );
         for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
             if let Some(map) = redis_result {
@@ -549,7 +549,7 @@ async fn handle_mascore(
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", redis_limit).await {
+        if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", redis_limit, "rrg/single").await {
             let joined: HashMap<String, Vec<OhlcvJoined>> = map.into_iter()
                 .map(|(ticker, orows)| {
                     let filtered = match end_time {
@@ -764,7 +764,7 @@ async fn handle_jdk(
         // Try Redis first
         let jdk_limit = 250 + SMA_MAX_PERIOD;
         if let Some(map) = try_redis_batch(
-            &state.redis_client, source, &fetch_symbols, "1D", jdk_limit,
+            &state.redis_client, source, &fetch_symbols, "1D", jdk_limit, "rrg/jdk",
         ).await {
             for (sym, rows) in map {
                 let filtered = match end_time {

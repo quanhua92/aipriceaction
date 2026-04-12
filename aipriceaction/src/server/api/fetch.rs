@@ -227,18 +227,25 @@ pub(crate) async fn fetch_native_tickers(
             } else {
                 effective_limit + crate::constants::api::SMA_MAX_PERIOD
             };
+            let req_detail = match (limit, &start_time, &end_time) {
+                (_, Some(s), Some(e)) => format!("tickers limit={effective_limit} start={}..end={}", s.format("%Y-%m-%d"), e.format("%Y-%m-%d")),
+                (_, Some(s), None) => format!("tickers limit={effective_limit} start={}..", s.format("%Y-%m-%d")),
+                (_, None, Some(e)) => format!("tickers limit={effective_limit} ..end={}", e.format("%Y-%m-%d")),
+                (Some(l), None, None) => format!("tickers limit={l}"),
+                (None, None, None) => format!("tickers limit={effective_limit}"),
+            };
 
             // Try reading from primary source and any extra sources
             let mut redis_map: HashMap<String, redis_reader::RedisReadResult> = HashMap::new();
             if let Some(map) = redis_reader::batch_read_ohlcv_from_redis(
-                redis_client, source, &symbols, interval, total_limit,
+                redis_client, source, &symbols, interval, total_limit, &req_detail,
             ).await {
                 redis_map = map;
             }
             // Also read extra source ZSETs (e.g. sjc for mode=yahoo)
             for &extra_src in extra_sources {
                 if let Some(extra_map) = redis_reader::batch_read_ohlcv_from_redis(
-                    redis_client, extra_src, &symbols, interval, total_limit,
+                    redis_client, extra_src, &symbols, interval, total_limit, &format!("{req_detail}/extra"),
                 ).await {
                     for (k, v) in extra_map {
                         redis_map.entry(k).or_insert(v);
@@ -402,10 +409,16 @@ pub(crate) async fn fetch_aggregated_tickers(
             } else {
                 lookback
             };
+            let agg_detail = match (limit, &start_time, &end_time) {
+                (_, Some(s), Some(e)) => format!("tickers/agg {} limit={limit} start={}..end={}", agg.to_str(), s.format("%Y-%m-%d"), e.format("%Y-%m-%d")),
+                (_, Some(s), None) => format!("tickers/agg {} limit={limit} start={}..", agg.to_str(), s.format("%Y-%m-%d")),
+                (_, None, Some(e)) => format!("tickers/agg {} limit={limit} ..end={}", agg.to_str(), e.format("%Y-%m-%d")),
+                _ => format!("tickers/agg {} limit={limit}", agg.to_str()),
+            };
 
             if let Some(redis_map) = redis_reader::batch_read_ohlcv_from_redis(
                 redis_client, source, &symbols, base_interval,
-                effective_lookback,
+                effective_lookback, &agg_detail,
             ).await {
                 let mut per_ticker: HashMap<String, Vec<AggregatedOhlcv>> = HashMap::new();
                 let mut first_meta: Option<redis_reader::RedisReadResult> = None;

@@ -135,7 +135,7 @@ pub async fn volume_profile_handler(
     // Try Redis first, fall back to PG
     let limit = redis_worker::max_size("1m") as i64;
     let rows: Vec<OhlcvJoined> = if let Some(map) = try_redis_batch(
-        &state.redis_client, source, &[params.symbol.clone()], "1m", limit,
+        &state.redis_client, source, &[params.symbol.clone()], "1m", limit, "volume_profile",
     ).await {
         let redis_rows: Vec<OhlcvJoined> = map.get(&params.symbol)
             .map(|r| r.iter().map(|row| OhlcvJoined {

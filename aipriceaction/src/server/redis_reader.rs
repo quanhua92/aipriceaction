@@ -29,6 +29,7 @@ pub async fn batch_read_ohlcv_from_redis(
     tickers: &[String],
     interval: &str,
     total_limit: i64,
+    ctx: &str,
 ) -> Option<HashMap<String, RedisReadResult>> {
     let client = client.as_ref()?;
 
@@ -136,7 +137,7 @@ pub async fn batch_read_ohlcv_from_redis(
 
     let total_rows: usize = parsed.values().map(|r| r.rows.len()).sum();
     tracing::info!(
-        "[PERF] batch_read source={source} interval={interval} tickers={} total_limit={total_limit} \
+        "[PERF] batch_read ctx=\"{ctx}\" source={source} interval={interval} tickers={} total_limit={total_limit} \
          read={read_ms}ms parse={parse_ms}ms results={total_rows}",
         tickers.len(),
     );

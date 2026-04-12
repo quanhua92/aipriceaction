@@ -22,9 +22,10 @@ pub async fn try_redis_batch(
     symbols: &[String],
     interval: &str,
     total_limit: i64,
+    ctx: &str,
 ) -> Option<HashMap<String, Vec<OhlcvRow>>> {
     let result = crate::server::redis_reader::batch_read_ohlcv_from_redis(
-        redis_client, source, symbols, interval, total_limit,
+        redis_client, source, symbols, interval, total_limit, ctx,
     )
     .await?;
     Some(result.into_iter().map(|(k, v)| (k, v.rows)).collect())
