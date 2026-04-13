@@ -2,7 +2,7 @@ mod api;
 mod cache;
 pub mod types;
 pub mod analysis;
-pub mod legacy;
+
 pub mod upload;
 pub mod redis_reader;
 
@@ -156,7 +156,6 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>)
         .route("/tickers/name", axum::routing::get(api::tickers_name))
         .route("/tickers/info", axum::routing::get(api::tickers_info))
         .nest("/analysis", analysis_routes())
-        .route("/raw/{*path}", axum::routing::get(legacy::raw_proxy_handler))
         .layer(RequestBodyLimitLayer::new(1024 * 1024));
 
     // Public static files with cache headers
