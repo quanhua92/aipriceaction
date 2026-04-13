@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m\n           FROM tickers WHERE source = $1 AND ticker = $2",
+  "query": "SELECT id, source, ticker, name, status, next_1d\n           FROM tickers WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -32,22 +32,11 @@
         "ordinal": 5,
         "name": "next_1d",
         "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 6,
-        "name": "next_1h",
-        "type_info": "Timestamptz"
-      },
-      {
-        "ordinal": 7,
-        "name": "next_1m",
-        "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text"
+        "Int4"
       ]
     },
     "nullable": [
@@ -56,10 +45,8 @@
       false,
       true,
       true,
-      false,
-      false,
       false
     ]
   },
-  "hash": "4ed485e87332f6c367c16d8915d63e094fe505f47a65ba60432af2c93c26a9b5"
+  "hash": "e5b9535713e0924f55fb2e6c41687bcf54940d234b2f801e2be7aeafa42a6e48"
 }
