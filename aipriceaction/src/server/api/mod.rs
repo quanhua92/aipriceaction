@@ -350,11 +350,14 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
 
     match result {
         Ok(groups) => (StatusCode::OK, Json(groups)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => {
+            tracing::error!("tickers_group error: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to load ticker groups" })),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -370,11 +373,14 @@ pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
 
     match result {
         Ok(names) => (StatusCode::OK, Json(names)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => {
+            tracing::error!("tickers_name error: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to load ticker names" })),
+            )
+                .into_response()
+        }
     }
 }
 
@@ -409,11 +415,14 @@ pub async fn tickers_info(Query(params): Query<InfoQuery>) -> Response {
                 (StatusCode::OK, Json(data)).into_response()
             }
         }
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-            .into_response(),
+        Err(e) => {
+            tracing::error!("tickers_info error: {e}");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to load ticker info" })),
+            )
+                .into_response()
+        }
     }
 }
 
