@@ -314,6 +314,9 @@ pub async fn rrg_handler(
 // Mascore handler
 // ---------------------------------------------------------------------------
 
+/// Mascore algorithm only needs MA20 and MA100, so max_period=100.
+const MASCORE_MAX_MA_PERIOD: usize = 100;
+
 async fn handle_mascore(
     state: Arc<AppState>,
     params: &RrgQuery,
@@ -386,16 +389,16 @@ async fn handle_mascore(
                 .collect();
             // Try Redis for each source concurrently
             let (r1, r2, r3, r4) = tokio::join!(
-                try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
-                try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
-                try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
-                try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", 1 + SMA_MAX_PERIOD, "rrg"),
+                try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
+                try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
+                try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
+                try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
             );
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
             for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
                 if let Some(map) = redis_result {
                     for (ticker, orows) in map {
-                        let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
+                        let enhanced = ohlcv::enhance_rows_selective(&ticker, orows, Some(1), None, params.ema, MASCORE_MAX_MA_PERIOD);
                         merged.extend(enhanced.into_iter().map(|row| (row, src)));
                     }
                 } else {
@@ -410,10 +413,10 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-            if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "rrg/single").await {
+            if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single").await {
                 let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
                 for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
+                    let enhanced = ohlcv::enhance_rows_selective(&ticker, orows, Some(1), None, params.ema, MASCORE_MAX_MA_PERIOD);
                     merged.extend(enhanced.into_iter().map(|row| (row, source)));
                 }
                 if merged.is_empty() {
@@ -509,7 +512,7 @@ async fn handle_mascore(
 
     // Trails path: fetch historical rows per source
     let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
-    let redis_limit = effective_limit.unwrap_or(1) + SMA_MAX_PERIOD;
+    let redis_limit = effective_limit.unwrap_or(1) + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD);
 
     if is_all {
         let sources = get_all_sources();
@@ -533,7 +536,7 @@ async fn handle_mascore(
                             Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
                             None => orows,
                         };
-                        let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true, params.ema);
+                        let enhanced = ohlcv::enhance_rows_selective(&ticker, filtered, effective_limit, None, params.ema, MASCORE_MAX_MA_PERIOD);
                         (ticker, enhanced)
                     })
                     .filter(|(_, v)| !v.is_empty())
@@ -559,7 +562,7 @@ async fn handle_mascore(
                         Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
                         None => orows,
                     };
-                    let enhanced = ohlcv::enhance_rows(&ticker, filtered, effective_limit, None, true, params.ema);
+                    let enhanced = ohlcv::enhance_rows_selective(&ticker, filtered, effective_limit, None, params.ema, MASCORE_MAX_MA_PERIOD);
                     (ticker, enhanced)
                 })
                 .filter(|(_, v)| !v.is_empty())

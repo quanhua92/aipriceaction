@@ -369,6 +369,110 @@ pub fn enhance_rows(
     joined
 }
 
+/// Like [`enhance_rows`] but only computes MAs for periods <= `max_period`.
+///
+/// This is useful for callers that only need a subset of the standard 5 MAs
+/// (10, 20, 50, 100, 200), avoiding unnecessary work and a larger lookback buffer.
+///
+/// Scores for periods > `max_period` are set to `None`.
+pub fn enhance_rows_selective(
+    ticker: &str,
+    rows: Vec<OhlcvRow>,
+    limit: Option<i64>,
+    start_time: Option<DateTime<Utc>>,
+    use_ema: bool,
+    max_period: usize,
+) -> Vec<OhlcvJoined> {
+    if rows.is_empty() {
+        return Vec::new();
+    }
+
+    // Reverse to chronological order (oldest first) for MA calculation
+    let mut chrono_rows = rows;
+    chrono_rows.reverse();
+
+    // Extract closes and volumes in chronological order
+    let closes: Vec<f64> = chrono_rows.iter().map(|r| r.close).collect();
+    let volumes: Vec<f64> = chrono_rows.iter().map(|r| r.volume as f64).collect();
+
+    let calc_ma = if use_ema { calculate_ema } else { calculate_sma };
+
+    // Only compute MAs for periods <= max_period
+    let ma10 = if max_period >= 10 { calc_ma(&closes, 10) } else { vec![] };
+    let ma20 = if max_period >= 20 { calc_ma(&closes, 20) } else { vec![] };
+    let ma50 = if max_period >= 50 { calc_ma(&closes, 50) } else { vec![] };
+    let ma100 = if max_period >= 100 { calc_ma(&closes, 100) } else { vec![] };
+    let ma200 = if max_period >= 200 { calc_ma(&closes, 200) } else { vec![] };
+
+    // Build joined rows with indicators
+    let mut joined: Vec<OhlcvJoined> = chrono_rows
+        .iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let make_opt = |vals: &[f64], idx: usize| -> Option<f64> {
+                if idx < vals.len() && vals[idx] > 0.0 {
+                    Some(vals[idx])
+                } else {
+                    None
+                }
+            };
+
+            OhlcvJoined {
+                ticker: ticker.to_string(),
+                time: r.time,
+                open: r.open,
+                high: r.high,
+                low: r.low,
+                close: r.close,
+                volume: r.volume,
+                ma10: make_opt(&ma10, i),
+                ma20: make_opt(&ma20, i),
+                ma50: make_opt(&ma50, i),
+                ma100: make_opt(&ma100, i),
+                ma200: make_opt(&ma200, i),
+                ma10_score: make_opt(&ma10, i).map(|v| calculate_ma_score(r.close, v)),
+                ma20_score: make_opt(&ma20, i).map(|v| calculate_ma_score(r.close, v)),
+                ma50_score: make_opt(&ma50, i).map(|v| calculate_ma_score(r.close, v)),
+                ma100_score: make_opt(&ma100, i).map(|v| calculate_ma_score(r.close, v)),
+                ma200_score: make_opt(&ma200, i).map(|v| calculate_ma_score(r.close, v)),
+                close_changed: if i > 0 && closes[i - 1] > 0.0 {
+                    Some(((r.close - closes[i - 1]) / closes[i - 1]) * 100.0)
+                } else {
+                    None
+                },
+                volume_changed: if i > 0 && volumes[i - 1] > 0.0 {
+                    Some(((volumes[i] - volumes[i - 1]) / volumes[i - 1]) * 100.0)
+                } else {
+                    None
+                },
+                total_money_changed: if i > 0 && closes[i - 1] > 0.0 {
+                    Some((r.close - closes[i - 1]) * r.volume as f64)
+                } else {
+                    None
+                },
+            }
+        })
+        .collect();
+
+    // Reverse back to newest-first order
+    joined.reverse();
+
+    // Post-filter: remove rows before the user's original start_time
+    if let Some(st) = start_time {
+        joined.retain(|r| r.time >= st);
+    }
+
+    // Apply limit (trim from the newest end)
+    if let Some(l) = limit {
+        let l = l as usize;
+        if joined.len() > l {
+            joined.truncate(l);
+        }
+    }
+
+    joined
+}
+
 /// Core batch fetch: query OHLCV rows for multiple tickers in a single SQL
 /// query and group by ticker name. Returns raw `OhlcvRow` without indicators.
 ///

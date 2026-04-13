@@ -281,6 +281,10 @@ pub mod api {
     pub const LEGACY_DIVISOR: f64 = 1000.0;
     /// Max SMA period — DB lookback buffer.
     pub const SMA_MAX_PERIOD: i64 = 200;
+    /// Compute the lookback buffer size for a given max MA period.
+    pub const fn sma_buffer_for(max_period: usize) -> i64 {
+        max_period as i64
+    }
     /// Default value for the `ema` query parameter across all endpoints.
     /// Set to true to use EMA by default, false to use SMA.
     pub const DEFAULT_USE_EMA: bool = false;
