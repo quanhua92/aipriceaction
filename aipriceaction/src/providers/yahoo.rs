@@ -80,8 +80,13 @@ impl RateLimiter {
     }
 
     pub async fn acquire(&self) {
-        let permit = self.semaphore.acquire().await.expect("rate limiter closed");
-        permit.forget();
+        match self.semaphore.acquire().await {
+            Ok(permit) => permit.forget(),
+            Err(_) => {
+                tracing::error!("rate limiter semaphore closed unexpectedly");
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+        }
     }
 }
 

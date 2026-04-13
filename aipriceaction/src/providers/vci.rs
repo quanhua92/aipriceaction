@@ -129,8 +129,14 @@ impl RateLimiter {
 
     /// Acquire a permit (blocks until one is available, then consumes it).
     pub async fn acquire(&self) {
-        let permit = self.semaphore.acquire().await.expect("rate limiter closed");
-        permit.forget();
+        match self.semaphore.acquire().await {
+            Ok(permit) => permit.forget(),
+            Err(_) => {
+                tracing::error!("rate limiter semaphore closed unexpectedly");
+                // Sleep to avoid busy-looping if semaphore is permanently closed
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+        }
     }
 
     pub fn requests_per_minute(&self) -> u32 {
@@ -321,7 +327,7 @@ impl VciProvider {
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
         ];
-        let user_agent = user_agents.choose(&mut rand::thread_rng()).unwrap();
+        let user_agent = user_agents.choose(&mut rand::thread_rng()).unwrap_or(&"Mozilla/5.0");
         let body = serde_json::to_string(payload)?;
 
         for attempt_idx in 0..MAX_TOTAL_ATTEMPTS {

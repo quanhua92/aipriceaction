@@ -305,7 +305,13 @@ async fn process_groups(
             let interval2 = interval.clone();
             let permit = sem.clone();
             tokio::spawn(async move {
-                let _guard = permit.acquire().await.unwrap();
+                let _guard = match permit.acquire().await {
+                    Ok(guard) => guard,
+                    Err(_) => {
+                        tracing::error!("backfill semaphore closed unexpectedly");
+                        return Err("semaphore closed".into());
+                    }
+                };
                 match backfill_ticker(&pool, &client, &source, &ticker, &interval, pg_limit).await {
                     Ok(result) => Ok(result),
                     Err(e) => {
