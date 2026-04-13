@@ -118,7 +118,7 @@ pub async fn tickers(
             1
         }
     });
-    let effective_limit = if is_single_ticker { effective_limit } else { effective_limit.min(crate::constants::api::max_limit()) };
+    let effective_limit = if is_single_ticker { effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT) } else { effective_limit.min(crate::constants::api::max_limit()) };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
@@ -240,7 +240,7 @@ async fn handle_mode_all(
             1
         }
     });
-    let effective_limit = if is_single_ticker { effective_limit } else { effective_limit.min(crate::constants::api::max_limit()) };
+    let effective_limit = if is_single_ticker { effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT) } else { effective_limit.min(crate::constants::api::max_limit()) };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
