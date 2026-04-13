@@ -270,7 +270,7 @@ pub const MERGE_WITH_YAHOO: &[&str] = &["sjc"];
 /// API server constants.
 pub mod api {
     /// Cache TTL for /tickers responses (seconds).
-    pub const CACHE_TTL_SECS: u64 = 10;
+    pub const CACHE_TTL_SECS: u64 = 5;
     /// Max cached entries before eviction.
     pub const CACHE_MAX_ENTRIES: usize = 500;
     /// Default ?limit= when not specified.
