@@ -608,33 +608,51 @@ async fn handle_mascore(
             }
 
             // DB returns DESC order; reverse to chronological
-            let mut chrono_rows: Vec<&OhlcvJoined> = rows.iter().rev().collect();
+            let chrono_rows: Vec<&OhlcvJoined> = rows.iter().rev().collect();
 
-            // Filter rows that have both ma20_score and ma100_score
-            chrono_rows.retain(|r| r.ma20_score.is_some() && r.ma100_score.is_some());
+            // Find the last known scores (newest bar) to backfill earlier
+            // rows that don't have enough history for MA computation.
+            let fallback_x = chrono_rows.iter().rev().find_map(|r| r.ma20_score);
+            let fallback_y = chrono_rows.iter().rev().find_map(|r| r.ma100_score);
 
-            if chrono_rows.is_empty() {
+            let (fx, fy) = match (fallback_x, fallback_y) {
+                (Some(x), Some(y)) => (x, y),
+                _ => continue, // no valid scores at all, skip ticker
+            };
+
+            let filled: Vec<(DateTime<Utc>, f64, f64, i64, f64)> = chrono_rows
+                .iter()
+                .map(|r| (
+                    r.time,
+                    r.ma20_score.unwrap_or(fx),
+                    r.ma100_score.unwrap_or(fy),
+                    r.volume,
+                    r.close,
+                ))
+                .collect();
+
+            if filled.is_empty() {
                 continue;
             }
 
             // Latest row for volume check
-            let latest = chrono_rows.last().unwrap();
-            if latest.volume < params.min_volume {
+            let (_, _, _, latest_vol, _) = filled.last().unwrap();
+            if *latest_vol < params.min_volume {
                 continue;
             }
 
             // Take the last effective_trails rows
-            let start = chrono_rows.len().saturating_sub(effective_trails as usize);
-            chrono_rows = chrono_rows[start..].to_vec();
+            let start = filled.len().saturating_sub(effective_trails as usize);
+            let trail_slice = &filled[start..];
 
             // Build trail points (only when effective_trails > 0)
             let trails = if effective_trails > 0 {
-                let trail_points: Vec<RrgTrailPoint> = chrono_rows
+                let trail_points: Vec<RrgTrailPoint> = trail_slice
                     .iter()
-                    .map(|r| RrgTrailPoint {
-                        date: r.time.format("%Y-%m-%d").to_string(),
-                        rs_ratio: r.ma20_score.unwrap(),
-                        rs_momentum: r.ma100_score.unwrap(),
+                    .map(|(time, x, y, _, _)| RrgTrailPoint {
+                        date: time.format("%Y-%m-%d").to_string(),
+                        rs_ratio: *x,
+                        rs_momentum: *y,
                     })
                     .collect();
                 if trail_points.is_empty() { None } else { Some(trail_points) }
@@ -643,18 +661,18 @@ async fn handle_mascore(
             };
 
             // Re-get latest after trimming to trail_length
-            let latest = chrono_rows.last().unwrap();
+            let (_latest_time, latest_x, latest_y, latest_volume, latest_close) = trail_slice.last().unwrap();
             let sector = source_groups
                 .get(src)
                 .and_then(|g| get_ticker_sector(ticker, g));
 
             snapshots.push(RrgTickerSnapshot {
                 symbol: ticker.clone(),
-                rs_ratio: latest.ma20_score.unwrap(),
-                rs_momentum: latest.ma100_score.unwrap(),
+                rs_ratio: *latest_x,
+                rs_momentum: *latest_y,
                 raw_rs: 0.0,
-                close: latest.close,
-                volume: latest.volume,
+                close: *latest_close,
+                volume: *latest_volume,
                 sector,
                 source: if is_all { Some((*src).to_string()) } else { None },
                 trails,
