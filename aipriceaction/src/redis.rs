@@ -66,7 +66,9 @@ pub async fn connect() -> Option<(RedisClient, ConnectHandle)> {
                 }
                 _ => {
                     tracing::warn!("Redis health: disconnected, triggering reconnect");
-                    let _ = health_client.init().await;
+                    if let Err(e) = health_client.init().await {
+                        tracing::warn!("Redis reconnect failed: {e}");
+                    }
                 }
             }
         }

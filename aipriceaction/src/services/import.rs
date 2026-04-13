@@ -40,7 +40,12 @@ pub async fn import_csv(
     // Determine which ticker directories to process
     let ticker_dirs: Vec<std::path::PathBuf> = match std::fs::read_dir(market_data_dir) {
         Ok(entries) => entries
-            .filter_map(|e| e.ok())
+            .filter_map(|e| {
+                if let Err(ref err) = e {
+                    tracing::warn!(path = ?market_data_dir, "failed to read directory entry: {err}");
+                }
+                e.ok()
+            })
             .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
             .map(|e| e.path())
             .filter(|p| {

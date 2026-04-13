@@ -150,7 +150,8 @@ pub async fn enhance_and_save(
     if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &deduped).await {
         tracing::error!(ticker_id, interval, "bulk_upsert_ohlcv failed: {e}");
     } else if redis_client.is_some() {
-        // Fire-and-forget Redis TS write
+        // Fire-and-forget Redis TS write.
+        // Errors are logged internally by write_ohlcv_to_redis.
         let redis = redis_client.clone();
         let src = source.to_string();
         let tk = ticker.to_string();
