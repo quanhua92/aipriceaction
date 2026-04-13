@@ -21,9 +21,7 @@ pub struct TopPerformersQuery {
     pub limit: Option<usize>,
     #[serde(default = "default_direction")]
     pub direction: String,
-    pub sector: Option<String>,
     pub min_volume: Option<u64>,
-    pub with_hour: Option<bool>,
     #[serde(default)]
     pub mode: Mode,
     /// true = use EMA instead of SMA for MA indicators.

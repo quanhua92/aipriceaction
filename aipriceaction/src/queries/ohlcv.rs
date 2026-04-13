@@ -30,19 +30,6 @@ pub async fn upsert_ticker(
 
 // ── Read queries ──
 
-/// Find a ticker by source + symbol, returns None if not found.
-pub async fn get_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<Option<Ticker>> {
-    sqlx::query_as!(
-        Ticker,
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
-           FROM tickers WHERE source = $1 AND ticker = $2"#,
-        source,
-        ticker
-    )
-    .fetch_optional(pool)
-    .await
-}
-
 /// List all tickers for a given source.
 pub async fn list_tickers(pool: &PgPool, source: &str) -> sqlx::Result<Vec<Ticker>> {
     list_tickers_with_extra(pool, source, &[]).await
@@ -57,7 +44,7 @@ pub async fn list_tickers_with_extra(
     if extra_sources.is_empty() {
         return sqlx::query_as!(
             Ticker,
-            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+            r#"SELECT id, source, ticker, name, status, next_1d
                FROM tickers WHERE source = $1
                ORDER BY ticker"#,
             source
@@ -67,7 +54,7 @@ pub async fn list_tickers_with_extra(
     }
 
     sqlx::query_as::<_, Ticker>(
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+        r#"SELECT id, source, ticker, name, status, next_1d
            FROM tickers WHERE source = $1 OR source = ANY($2)
            ORDER BY ticker"#,
     )
@@ -81,7 +68,7 @@ pub async fn list_tickers_with_extra(
 pub async fn list_all_tickers(pool: &PgPool) -> sqlx::Result<Vec<Ticker>> {
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+        r#"SELECT id, source, ticker, name, status, next_1d
            FROM tickers
            ORDER BY ticker"#,
     )
@@ -500,7 +487,7 @@ async fn fetch_ohlcv_batch_raw(
     } else if extra_sources.is_empty() {
         sqlx::query_as!(
             Ticker,
-            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+            r#"SELECT id, source, ticker, name, status, next_1d
                FROM tickers WHERE source = $1 AND ticker = ANY($2)
                ORDER BY ticker"#,
             source,
@@ -510,7 +497,7 @@ async fn fetch_ohlcv_batch_raw(
         .await?
     } else {
         sqlx::query_as::<_, Ticker>(
-            r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+            r#"SELECT id, source, ticker, name, status, next_1d
                FROM tickers WHERE (source = $1 OR source = ANY($2)) AND ticker = ANY($3)
                ORDER BY ticker"#,
         )
@@ -605,7 +592,6 @@ async fn fetch_ohlcv_batch_raw(
     }
     if end_time.is_some() {
         conditions.push(format!("time <= ${param_idx}"));
-        param_idx += 1;
     }
 
     let where_clause = conditions.join(" AND ");
@@ -887,7 +873,7 @@ pub async fn get_tickers_by_statuses(
     let statuses: Vec<String> = statuses.iter().map(|s| s.to_string()).collect();
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+        r#"SELECT id, source, ticker, name, status, next_1d
            FROM tickers WHERE source = $1 AND status = ANY($2)
            ORDER BY ticker"#,
         source,
@@ -901,7 +887,7 @@ pub async fn get_tickers_by_statuses(
 pub async fn get_ticker_by_id(pool: &PgPool, ticker_id: i32) -> sqlx::Result<Option<Ticker>> {
     sqlx::query_as!(
         Ticker,
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+        r#"SELECT id, source, ticker, name, status, next_1d
            FROM tickers WHERE id = $1"#,
         ticker_id
     )
@@ -1018,7 +1004,7 @@ pub async fn get_due_tickers(
     );
 
     let sql = format!(
-        r#"SELECT id, source, ticker, name, status, next_1d, next_1h, next_1m
+        r#"SELECT id, source, ticker, name, status, next_1d
            FROM tickers
            WHERE source = $1 AND status = 'ready' AND {next_col} < NOW()
            ORDER BY {next_col} ASC"#

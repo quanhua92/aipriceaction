@@ -52,7 +52,6 @@ impl std::error::Error for YahooError {
 #[derive(Clone)]
 struct RateLimiter {
     semaphore: Arc<Semaphore>,
-    refill_interval_ms: u64,
     refill_handle: Arc<std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
@@ -74,7 +73,6 @@ impl RateLimiter {
 
         Self {
             semaphore,
-            refill_interval_ms,
             refill_handle: Arc::new(std::sync::Mutex::new(Some(handle))),
         }
     }

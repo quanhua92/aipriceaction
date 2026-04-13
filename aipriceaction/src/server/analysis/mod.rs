@@ -36,11 +36,6 @@ pub fn get_all_sources() -> Vec<&'static str> {
     vec!["vn", "yahoo", "sjc", "crypto"]
 }
 
-/// Load groups from a {source}_tickers.json file, keyed by category.
-pub fn load_groups_from_json(source: &str) -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error + Send + Sync>> {
-    crate::server::api::data_loader::load_groups_from_source(source)
-}
-
 /// Load yahoo/global groups including MERGE_WITH_YAHOO sources (e.g. SJC).
 pub fn load_yahoo_groups() -> Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error + Send + Sync>> {
     crate::server::api::data_loader::load_yahoo_groups()

@@ -11,7 +11,6 @@ use crate::models::ohlcv::OhlcvRow;
 /// are ignored — they are calculated on-the-fly at query time.
 pub struct ParsedCsv {
     pub ticker: String,
-    pub interval: Interval,
     pub rows: Vec<OhlcvRow>,
 }
 
@@ -127,7 +126,6 @@ pub fn parse_csv(path: &Path) -> Result<ParsedCsv, String> {
 
     Ok(ParsedCsv {
         ticker,
-        interval,
         rows,
     })
 }

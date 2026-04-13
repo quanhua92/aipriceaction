@@ -97,7 +97,6 @@ pub struct OfficerInfo {
 #[derive(Clone)]
 pub struct RateLimiter {
     semaphore: Arc<Semaphore>,
-    refill_interval_ms: u64,
     refill_handle: Arc<std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
@@ -122,7 +121,6 @@ impl RateLimiter {
 
         Self {
             semaphore,
-            refill_interval_ms,
             refill_handle: Arc::new(std::sync::Mutex::new(Some(handle))),
         }
     }
@@ -139,9 +137,6 @@ impl RateLimiter {
         }
     }
 
-    pub fn requests_per_minute(&self) -> u32 {
-        (60_000 / self.refill_interval_ms) as u32
-    }
 }
 
 impl Drop for RateLimiter {

@@ -11,8 +11,6 @@ pub struct Ticker {
     pub name: Option<String>,
     pub status: Option<String>,
     pub next_1d: DateTime<Utc>,
-    pub next_1h: DateTime<Utc>,
-    pub next_1m: DateTime<Utc>,
 }
 
 impl fmt::Display for Ticker {

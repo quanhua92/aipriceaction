@@ -22,8 +22,6 @@ pub enum BinanceError {
     Zip(zip::result::ZipError),
     InvalidInterval(String),
     InvalidResponse(String),
-    RateLimit,
-    NoData,
 }
 
 impl std::fmt::Display for BinanceError {
@@ -35,8 +33,6 @@ impl std::fmt::Display for BinanceError {
             BinanceError::Zip(e) => write!(f, "ZIP error: {e}"),
             BinanceError::InvalidInterval(s) => write!(f, "Invalid interval: {s}"),
             BinanceError::InvalidResponse(s) => write!(f, "Invalid response: {s}"),
-            BinanceError::RateLimit => write!(f, "Rate limit exceeded"),
-            BinanceError::NoData => write!(f, "No data available"),
         }
     }
 }
