@@ -13,6 +13,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::limit::RequestBodyLimitLayer;
+use fred::types::ConnectHandle;
 use axum::http::{HeaderValue, HeaderName, Method};
 use axum::response::Response;
 use axum::middleware::{self, Next};
@@ -51,6 +52,8 @@ pub struct AppState {
     pub tickers_cache: Arc<tokio::sync::RwLock<cache::TickersCache>>,
     pub health_snapshot: Arc<tokio::sync::RwLock<HealthSnapshot>>,
     pub redis_client: Option<crate::redis::RedisClient>,
+    /// Holds the Redis connection handle to keep it alive for automatic reconnection.
+    pub _redis_handle: Option<ConnectHandle>,
 }
 
 /// Middleware to add security headers to all responses
@@ -105,7 +108,7 @@ async fn add_cache_headers(request: Request, next: Next) -> Response {
 }
 
 #[allow(deprecated)]
-pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) -> (axum::Router, Arc<tokio::sync::RwLock<HealthSnapshot>>) {
+pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>, redis_handle: Option<ConnectHandle>) -> (axum::Router, Arc<tokio::sync::RwLock<HealthSnapshot>>) {
     let tickers_cache = cache::TickersCache::new(
         crate::constants::api::CACHE_MAX_ENTRIES,
         Duration::from_secs(crate::constants::api::CACHE_TTL_SECS),
@@ -125,6 +128,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>)
         tickers_cache,
         health_snapshot: health_snapshot.clone(),
         redis_client,
+        _redis_handle: redis_handle,
     });
 
     // Upload routes with 10MB body limit

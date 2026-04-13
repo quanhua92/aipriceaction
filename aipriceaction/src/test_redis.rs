@@ -34,8 +34,8 @@ pub fn run(ticker: String) {
 
         // 2. Connect
         tracing::info!("{}", "-".repeat(60));
-        let client = match crate::redis::connect().await {
-            Some(c) => c,
+        let client: crate::redis::RedisClient = match crate::redis::connect().await {
+            Some((c, _handle)) => c,
             None => {
                 log_result("connect", false, "failed to connect");
                 return;

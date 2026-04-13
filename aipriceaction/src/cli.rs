@@ -179,7 +179,10 @@ pub fn run() {
                 tracing::info!("Starting server on {host}:{port}");
 
                 // Connect to Redis (optional — degrades gracefully if REDIS_URL is not set)
-                let redis_client = crate::redis::connect().await;
+                let (redis_client, redis_handle) = match crate::redis::connect().await {
+                    Some((client, handle)) => (Some(client), Some(handle)),
+                    None => (None, None),
+                };
 
                 // Spawn VCI data workers if enabled
                 let vci_workers_enabled = std::env::var("VCI_WORKERS")
@@ -272,7 +275,7 @@ pub fn run() {
                     tracing::info!("REDIS_WORKERS=false — Redis ZSET backfill worker not started");
                 }
 
-                let (app, health_snapshot) = crate::server::create_app(pool.clone(), redis_client.clone());
+                let (app, health_snapshot) = crate::server::create_app(pool.clone(), redis_client.clone(), redis_handle);
 
                 // Spawn health-stats worker (always enabled — lightweight)
                 {
@@ -1508,7 +1511,7 @@ pub fn run() {
                     }
                 };
                 let redis_client = match crate::redis::connect().await {
-                    Some(c) => {
+                    Some((c, _handle)) => {
                         tracing::info!("Connected to Redis");
                         c
                     }

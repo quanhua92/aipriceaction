@@ -1,11 +1,16 @@
 use fred::prelude::*;
+use fred::types::ConnectHandle;
 
 pub type RedisClient = Client;
 
 /// Connect to Redis if REDIS_URL is set. Returns None if not configured.
 /// If initial connection times out (3s), returns Some(client) anyway — fred
 /// reconnects in the background via the connection handle.
-pub async fn connect() -> Option<RedisClient> {
+///
+/// The connection handle is returned alongside the client so the caller can
+/// store it for the lifetime of the application (keeping it alive enables
+/// automatic reconnection).
+pub async fn connect() -> Option<(RedisClient, ConnectHandle)> {
     let redis_url = match std::env::var("REDIS_URL") {
         Ok(url) if !url.is_empty() => url,
         _ => {
@@ -67,9 +72,5 @@ pub async fn connect() -> Option<RedisClient> {
         }
     });
 
-    // Intentionally leak the handle so the reconnection task stays alive.
-    // It's a small, lightweight struct (~few bytes) that manages a background task.
-    std::mem::forget(handle);
-
-    Some(client)
+    Some((client, handle))
 }
