@@ -760,31 +760,37 @@ pub async fn count_ohlcv(
 ) -> sqlx::Result<i64> {
     match (ticker, interval) {
         (Some(ticker), Some(interval)) => {
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = (SELECT id FROM tickers WHERE source = '{source}' AND ticker = '{ticker}') AND interval = '{interval}'"
-            );
-            sqlx::query_scalar(&sql).fetch_one(pool).await
+            sqlx::query_scalar(
+                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = (SELECT id FROM tickers WHERE source = $1 AND ticker = $2) AND interval = $3"
+            )
+                .bind(source)
+                .bind(ticker)
+                .bind(interval)
+                .fetch_one(pool)
+                .await
         }
         (Some(ticker), None) => {
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = (SELECT id FROM tickers WHERE source = '{source}' AND ticker = '{ticker}')"
-            );
-            sqlx::query_scalar(&sql).fetch_one(pool).await
+            sqlx::query_scalar(
+                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = (SELECT id FROM tickers WHERE source = $1 AND ticker = $2)"
+            )
+                .bind(source)
+                .bind(ticker)
+                .fetch_one(pool)
+                .await
         }
         (None, Some(interval)) => {
             let ids = source_ticker_ids(pool, source).await?;
-            let sql = format!(
-                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = ANY($1) AND interval = '{interval}'"
-            );
-            sqlx::query_scalar(&sql)
+            sqlx::query_scalar(
+                "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = ANY($1) AND interval = $2"
+            )
                 .bind(&ids)
+                .bind(interval)
                 .fetch_one(pool)
                 .await
         }
         (None, None) => {
             let ids = source_ticker_ids(pool, source).await?;
-            let sql = "SELECT COUNT(*) FROM ohlcv WHERE ticker_id = ANY($1)".to_string();
-            sqlx::query_scalar(&sql)
+            sqlx::query_scalar("SELECT COUNT(*) FROM ohlcv WHERE ticker_id = ANY($1)")
                 .bind(&ids)
                 .fetch_one(pool)
                 .await
