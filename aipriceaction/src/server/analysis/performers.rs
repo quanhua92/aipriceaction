@@ -27,10 +27,14 @@ pub struct TopPerformersQuery {
     /// true = use EMA instead of SMA for MA indicators.
     #[serde(default)]
     pub ema: bool,
+    /// true = use Redis snapshot cache (default).
+    #[serde(default = "default_true")]
+    pub snap: bool,
 }
 
 fn default_sort_by() -> String { "close_changed".to_string() }
 fn default_direction() -> String { "desc".to_string() }
+fn default_true() -> bool { true }
 
 #[derive(Debug, Serialize)]
 pub struct TopPerformersResponse {
@@ -161,10 +165,10 @@ pub async fn top_performers_handler(
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "performers", params.ema),
-            super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "performers", params.ema),
-            super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "performers", params.ema),
-            super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "performers", params.ema),
+            super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "performers", params.ema, !params.snap),
         );
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
@@ -176,7 +180,7 @@ pub async fn top_performers_handler(
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "performers/single", params.ema).await;
+        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "performers/single", params.ema, !params.snap).await;
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (_ticker, bars) in map {
             merged.extend(bars.into_iter().map(|row| (row, "")));

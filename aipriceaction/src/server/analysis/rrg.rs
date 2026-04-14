@@ -50,6 +50,9 @@ pub struct RrgQuery {
     /// true = use EMA instead of SMA for MA indicators.
     #[serde(default)]
     pub ema: bool,
+    /// true = use Redis snapshot cache (default).
+    #[serde(default = "default_true")]
+    pub snap: bool,
 }
 
 fn default_period() -> usize {
@@ -61,6 +64,7 @@ fn default_trails() -> usize {
 fn default_min_volume() -> i64 {
     100_000
 }
+fn default_true() -> bool { true }
 
 fn parse_rrg_date(date_str: &str) -> Option<DateTime<Utc>> {
     chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
@@ -388,10 +392,10 @@ async fn handle_mascore(
                 .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
                 .collect();
             let (r1, r2, r3, r4) = tokio::join!(
-                super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
-                super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
-                super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
-                super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
+                super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
             );
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
             for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
@@ -411,7 +415,7 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-            let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single", params.ema).await;
+            let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single", params.ema, !params.snap).await;
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
             for (_ticker, bars) in map {
                 merged.extend(bars.into_iter().map(|row| (row, source)));

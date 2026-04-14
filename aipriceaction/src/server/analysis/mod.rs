@@ -46,12 +46,15 @@ pub async fn fetch_source_enhanced(
     redis_limit: i64,
     ctx: &str,
     use_ema: bool,
+    skip_snap: bool,
 ) -> std::collections::HashMap<String, Vec<crate::models::ohlcv::OhlcvJoined>> {
     let ma_type = if use_ema { "ema" } else { "sma" };
 
     // Try snapshot cache
-    if let Some(snap_map) = try_snap_joined(redis_client, source, symbols, interval, 1, ma_type).await {
-        return snap_map;
+    if !skip_snap {
+        if let Some(snap_map) = try_snap_joined(redis_client, source, symbols, interval, 1, ma_type).await {
+            return snap_map;
+        }
     }
 
     // Fall through to Redis batch + enhance
