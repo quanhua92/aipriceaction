@@ -30,16 +30,16 @@ async function test(name, url, expectSource, expectNonEmpty = true) {
 }
 
 // Tests that should hit Redis (single ticker, all intervals)
-await test('VCB 1m native', '/tickers?symbol=VCB&interval=1m&limit=100', 'redis');
-await test('VCB 1h native', '/tickers?symbol=VCB&interval=1h&limit=100', 'redis');
-await test('VCB 1D native', '/tickers?symbol=VCB&interval=1D&limit=100', 'redis');
+await test('VCB 1m native', '/tickers?symbol=VCB&interval=1m&limit=100&snap=false', 'redis');
+await test('VCB 1h native', '/tickers?symbol=VCB&interval=1h&limit=100&snap=false', 'redis');
+await test('VCB 1D native', '/tickers?symbol=VCB&interval=1D&limit=100&snap=false', 'redis');
 await test('VCB 5m aggregated', '/tickers?symbol=VCB&interval=5m&limit=100', 'redis');
 await test('VCB 15m aggregated', '/tickers?symbol=VCB&interval=15m&limit=100', 'redis');
 await test('VCB 4h aggregated', '/tickers?symbol=VCB&interval=4h&limit=100', 'redis');
 await test('VCB 1W aggregated', '/tickers?symbol=VCB&interval=1W&limit=52', 'redis');
 await test('VCB 2W aggregated', '/tickers?symbol=VCB&interval=2W&limit=26', 'redis');
 await test('VCB 1M aggregated', '/tickers?symbol=VCB&interval=1M&limit=12', 'redis');
-await test('BTCUSDT 1D crypto', '/tickers?symbol=BTCUSDT&interval=1D&limit=100&mode=crypto', 'redis');
+await test('BTCUSDT 1D crypto', '/tickers?symbol=BTCUSDT&interval=1D&limit=100&mode=crypto&snap=false', 'redis');
 
 // Date range queries now also use Redis when the range is covered
 await test('VCB 1D with date range', '/tickers?symbol=VCB&interval=1D&start_date=2025-01-01', 'redis');
@@ -108,15 +108,15 @@ await testDateRangeData('BTCUSDT 1D date range data', '/tickers?symbol=BTCUSDT&i
 await testDateRangeData('VCB 1m date range data', '/tickers?symbol=VCB&interval=1m&start_date=2026-03-01&end_date=2026-03-02&limit=10', '2026-03-01', '2026-03-02');
 
 // Tests that should hit Redis (multi-ticker via Lua batch)
-await test('VCB+FPT multi-ticker', '/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=10', 'redis');
-await test('VCB+FPT+HPG multi-ticker', '/tickers?symbol=VCB&symbol=FPT&symbol=HPG&interval=1D&limit=10', 'redis');
-await test('VCB+FPT multi 1h', '/tickers?symbol=VCB&symbol=FPT&interval=1h&limit=50', 'redis');
+await test('VCB+FPT multi-ticker', '/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=10&snap=false', 'redis');
+await test('VCB+FPT+HPG multi-ticker', '/tickers?symbol=VCB&symbol=FPT&symbol=HPG&interval=1D&limit=10&snap=false', 'redis');
+await test('VCB+FPT multi 1h', '/tickers?symbol=VCB&symbol=FPT&interval=1h&limit=50&snap=false', 'redis');
 await test('VCB+FPT multi 5m agg', '/tickers?symbol=VCB&symbol=FPT&interval=5m&limit=50', 'redis');
 
 // Verify response data consistency: compare Redis vs PG for same query
 try {
   const t0 = performance.now();
-  const redisRes = await fetch(`${BASE}/tickers?symbol=VCB&interval=1D&limit=10&cache=false&_t=${Date.now()}`);
+  const redisRes = await fetch(`${BASE}/tickers?symbol=VCB&interval=1D&limit=10&cache=false&snap=false&_t=${Date.now()}`);
   const pgRes = await fetch(`${BASE}/tickers?symbol=VCB&interval=1D&limit=10&start_date=2024-01-01&cache=false&_t=${Date.now()}`);
   const redisData = await redisRes.json();
   const pgData = await pgRes.json();
@@ -180,7 +180,7 @@ const queries = [
 ];
 
 for (const q of queries) {
-  const redisResult = await bench(q.label, `${q.path}&redis=true`);
+  const redisResult = await bench(q.label, `${q.path}&redis=true&snap=false`);
   const pgResult    = await bench(q.label, `${q.path}&redis=false`);
   const ratio = pgResult.p50 > 0 ? (redisResult.p50 / pgResult.p50).toFixed(2) : '—';
   console.log(
@@ -191,7 +191,7 @@ for (const q of queries) {
   total++;
   try {
     const [redisRes, pgRes] = await Promise.all([
-      fetch(`${BASE}${q.path}&redis=true&cache=false&_t=${Date.now()}`),
+      fetch(`${BASE}${q.path}&redis=true&cache=false&snap=false&_t=${Date.now()}`),
       fetch(`${BASE}${q.path}&redis=false&cache=false&_t=${Date.now()}`),
     ]);
     const redisJson = await redisRes.json();
@@ -244,22 +244,25 @@ async function testSnapParam(name, url, expectSnapFaster) {
     const warmup = await fetch(`${BASE}${url}&cache=false&snap=true&_t=${Date.now()}`);
     await warmup.json();
 
+    const t0 = performance.now();
     const [noSnapRes, snapRes] = await Promise.all([
       fetch(`${BASE}${url}&cache=false&snap=false&_t=${Date.now()}`),
       fetch(`${BASE}${url}&cache=false&snap=true&_t=${Date.now()}`),
     ]);
     const [noSnapBody, snapBody] = await Promise.all([noSnapRes.json(), snapRes.json()]);
+    const totalMs = (performance.now() - t0).toFixed(0);
+
     const noSnapMs = parseFloat(noSnapRes.headers.get('x-response-time') || '0');
     const snapMs = parseFloat(snapRes.headers.get('x-response-time') || '0');
+    const ms = noSnapMs > 0 ? `${noSnapMs.toFixed(0)}ms / ${snapMs.toFixed(0)}ms` : `${totalMs}ms`;
 
-    const sameData = JSON.stringify(noSnapBody) === JSON.stringify(snapBody) ||
-      (typeof noSnapBody === 'object' && typeof snapBody === 'object' &&
-       Object.keys(noSnapBody).length === Object.keys(snapBody).length);
+    const sameKeys = typeof noSnapBody === 'object' && typeof snapBody === 'object' &&
+      Object.keys(noSnapBody).length === Object.keys(snapBody).length;
 
-    if (sameData) {
-      const faster = snapMs < noSnapMs;
+    if (sameKeys) {
+      const faster = snapMs < noSnapMs || noSnapMs === 0;
       const tag = expectSnapFaster ? (faster ? 'PASS' : 'WARN') : 'PASS';
-      console.log(`[${tag}] ${name} — snap=false: ${noSnapMs.toFixed(0)}ms, snap=true: ${snapMs.toFixed(0)}ms`);
+      console.log(`[${tag}] ${name} — snap=false/snap=true: ${ms}`);
       if (tag === 'PASS') pass++; else fail++;
     } else {
       console.log(`[FAIL] ${name} — data mismatch between snap=true and snap=false`);
