@@ -62,13 +62,15 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cp target/release/aipriceaction /app/aipriceaction-bin
 
 # Stage 4: Minimal production image
-FROM alpine:3.22 AS final-image
+FROM alpine:3.23.3 AS final-image
 WORKDIR /app
 
 ARG BUILD_DATE
 ARG GIT_COMMIT
 
-RUN apk add --no-cache ca-certificates curl libcurl nghttp2 libssh2
+RUN apk update && apk upgrade --no-cache \
+ && apk add --no-cache ca-certificates curl libcurl nghttp2 libssh2 \
+ && rm -rf /var/cache/apk/*
 
 RUN addgroup -S appgroup && adduser -S -G appgroup appuser
 
