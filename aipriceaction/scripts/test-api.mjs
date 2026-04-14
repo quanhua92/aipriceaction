@@ -702,6 +702,30 @@ async function testSnapDefaultIsTrue() {
   ok("default (no snap param) behaves like snap=true");
 }
 
+async function testSnapWithEndDateToday() {
+  // end_date=today should still use snapshot (no constraint)
+  const today = new Date().toISOString().slice(0, 10);
+  const { status, headers, body, ms } = await fetchJSON(
+    `/tickers?symbol=VCB&interval=1D&limit=1&end_date=${today}&cache=false&snap=true`,
+  );
+  console.log(`\n── snap with end_date=today (VCB 1D limit=1) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body, "has VCB key");
+  const source = headers.get("x-data-source");
+  assert(source === "redis-snap", `x-data-source is redis-snap (got ${source})`);
+}
+
+async function testSnapWithPastEndDateBypassesSnap() {
+  // end_date in the past should NOT use snapshot (actual constraint)
+  const { status, headers, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1D&limit=1&end_date=2025-01-01&cache=false&snap=true",
+  );
+  console.log(`\n── snap with past end_date (VCB 1D limit=1) ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  const source = headers.get("x-data-source");
+  assert(source !== "redis-snap", `x-data-source is NOT redis-snap (got ${source})`);
+}
+
 // ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
@@ -751,6 +775,8 @@ const tests = [
   testSnapTrueReturnsSameData,
   testSnapPerformanceMultiTicker,
   testSnapDefaultIsTrue,
+  testSnapWithEndDateToday,
+  testSnapWithPastEndDateBypassesSnap,
 ];
 
 async function main() {
