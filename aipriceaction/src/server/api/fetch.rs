@@ -212,12 +212,14 @@ pub(crate) async fn fetch_native_tickers(
 
     // --- Snapshot fast path ---
     // Try reading pre-computed responses from Redis HASH snapshots.
-    // Only eligible when: no date range, MA enabled, limit is set, and not a recursive call.
+    // Only eligible when: no date range (or end_date >= today), MA enabled, limit is set, and not a recursive call.
+    let today = chrono::Utc::now().date_naive();
+    let end_is_today = end_time.map_or(true, |t| t.date_naive() >= today);
     let snap_eligible = !skip_snap
         && redis_allowed
         && limit.is_some()
         && start_time.is_none()
-        && end_time.is_none()
+        && end_is_today
         && with_ma;
     let ma_type: &str = if use_ema { "ema" } else { "sma" };
     let limit_val = limit.unwrap_or(1);
