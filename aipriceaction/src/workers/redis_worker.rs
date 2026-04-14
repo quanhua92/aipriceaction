@@ -151,6 +151,7 @@ pub async fn batch_read_snapshots(
 }
 
 /// Batch-write snapshot fields for multiple tickers via pipelined HSET + EXPIRE.
+/// Writes both the `StockDataResponse` field and the `OhlcvJoined` field (if provided).
 /// Fire-and-forget — errors are logged but not propagated.
 pub async fn batch_write_snapshots(
     client: &RedisClient,
@@ -160,12 +161,14 @@ pub async fn batch_write_snapshots(
     limit: i64,
     ma_type: &str,
     responses: &std::collections::BTreeMap<String, Vec<crate::server::types::StockDataResponse>>,
+    joined: Option<&std::collections::BTreeMap<String, Vec<crate::models::ohlcv::OhlcvJoined>>>,
 ) {
     if responses.is_empty() {
         return;
     }
 
     let field = snap_field(limit, ma_type);
+    let joined_field = format!("{field}:joined");
     let ttl = c::snapshot::TTL_SECS as i64;
     let pipe = client.pipeline();
 
@@ -176,6 +179,14 @@ pub async fn batch_write_snapshots(
                     let key = snap_key(source, ticker, interval);
                     let mut values = std::collections::HashMap::new();
                     values.insert(field.clone(), json);
+                    // Also write the OhlcvJoined field for analysis endpoints
+                    if let Some(joined_map) = joined {
+                        if let Some(joined_bars) = joined_map.get(ticker) {
+                            if let Ok(joined_json) = serde_json::to_string(joined_bars) {
+                                values.insert(joined_field.clone(), joined_json);
+                            }
+                        }
+                    }
                     if let Err(e) = pipe.hset::<(), _, _>(&key, values).await {
                         tracing::warn!(%key, "pipeline hset enqueue error: {e}");
                     }
@@ -194,6 +205,113 @@ pub async fn batch_write_snapshots(
         Ok(_) => {}
         Err(_) => {
             tracing::warn!("[SNAP] pipeline hset+expire timed out");
+        }
+    }
+}
+
+/// Batch-read joined snapshot fields (OhlcvJoined) for multiple tickers.
+/// Read-only helper for analysis endpoints — no write-back.
+pub async fn batch_read_joined_snapshots(
+    client: &RedisClient,
+    source: &str,
+    tickers: &[String],
+    interval: &str,
+    limit: i64,
+    ma_type: &str,
+) -> Option<std::collections::HashMap<String, Vec<crate::models::ohlcv::OhlcvJoined>>> {
+    if tickers.is_empty() {
+        return Some(std::collections::HashMap::new());
+    }
+
+    let field = format!("{}:joined", snap_field(limit, ma_type));
+    let pipe = client.pipeline();
+
+    for ticker in tickers {
+        let key = snap_key(source, ticker, interval);
+        if let Err(e) = pipe.hmget::<(), _, _>(&key, &field).await {
+            tracing::warn!(%key, "pipeline hmget enqueue error: {e}");
+            continue;
+        }
+    }
+
+    let results: Vec<FredResult<Value>> =
+        match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+            Ok(r) => r,
+            Err(_) => {
+                tracing::warn!("[SNAP] pipeline hmget (joined) timed out");
+                return None;
+            }
+        };
+
+    let mut out = std::collections::HashMap::new();
+    for (i, result) in results.into_iter().enumerate() {
+        match result {
+            Ok(Value::Array(arr)) => {
+                let json = arr.into_iter().next().and_then(|v| match v {
+                    Value::String(s) => Some(s.to_string()),
+                    _ => None,
+                });
+                if let Some(json) = json {
+                    if let Ok(bars) = serde_json::from_str::<Vec<crate::models::ohlcv::OhlcvJoined>>(&json) {
+                        if !bars.is_empty() {
+                            out.insert(tickers[i].clone(), bars);
+                        }
+                    }
+                }
+            }
+            Ok(_) => {}
+            Err(e) => {
+                tracing::warn!(ticker = %tickers[i], "[SNAP] hmget joined error: {e}");
+            }
+        }
+    }
+
+    Some(out)
+}
+
+/// Batch-write joined snapshot fields (OhlcvJoined) for multiple tickers via pipelined HSET + EXPIRE.
+/// Used by analysis endpoints to cache their enhance_rows output.
+/// Fire-and-forget — errors are logged but not propagated.
+pub async fn batch_write_joined_snapshots(
+    client: &RedisClient,
+    source: &str,
+    _tickers: &[String],
+    interval: &str,
+    limit: i64,
+    ma_type: &str,
+    joined: &std::collections::HashMap<String, Vec<crate::models::ohlcv::OhlcvJoined>>,
+) {
+    if joined.is_empty() {
+        return;
+    }
+
+    let field = format!("{}:joined", snap_field(limit, ma_type));
+    let ttl = c::snapshot::TTL_SECS as i64;
+    let pipe = client.pipeline();
+
+    for (ticker, bars) in joined {
+        match serde_json::to_string(bars) {
+            Ok(json) => {
+                let key = snap_key(source, ticker, interval);
+                let mut values = std::collections::HashMap::new();
+                values.insert(field.clone(), json);
+                if let Err(e) = pipe.hset::<(), _, _>(&key, values).await {
+                    tracing::warn!(%key, "pipeline hset (joined) enqueue error: {e}");
+                }
+                if let Err(e) = pipe.expire::<(), _>(&key, ttl, None).await {
+                    tracing::warn!(%key, "pipeline expire (joined) enqueue error: {e}");
+                }
+            }
+            Err(e) => {
+                tracing::warn!(ticker, "snapshot joined serialize error: {e}");
+            }
+        }
+    }
+
+    match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+        Ok(_) => {}
+        Err(_) => {
+            tracing::warn!("[SNAP] pipeline hset+expire (joined) timed out");
         }
     }
 }

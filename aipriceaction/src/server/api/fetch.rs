@@ -261,7 +261,7 @@ pub(crate) async fn fetch_native_tickers(
                     tokio::spawn(async move {
                         crate::workers::redis_worker::batch_write_snapshots(
                             &redis, &source_owned, &missed_syms,
-                            &interval_owned, limit_val, &ma_type_owned, &missed_clone,
+                            &interval_owned, limit_val, &ma_type_owned, &missed_clone, None,
                         ).await;
                     });
                 }
@@ -388,7 +388,7 @@ pub(crate) async fn fetch_native_tickers(
                         tokio::spawn(async move {
                             crate::workers::redis_worker::batch_write_snapshots(
                                 &redis, &source_owned, &syms_owned,
-                                &interval_owned, snap_limit, &ma_type_owned, &result_clone,
+                                &interval_owned, snap_limit, &ma_type_owned, &result_clone, None,
                             ).await;
                         });
                     }

@@ -62,7 +62,7 @@ impl fmt::Debug for OhlcvRow {
 /// ma10,ma20,ma50,ma100,ma200,
 /// ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,
 /// close_changed,volume_changed,total_money_changed
-#[derive(Clone, FromRow)]
+#[derive(Clone, FromRow, serde::Serialize, serde::Deserialize)]
 pub struct OhlcvJoined {
     pub ticker: String,
     pub time: DateTime<Utc>,

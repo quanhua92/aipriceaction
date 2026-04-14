@@ -14,6 +14,76 @@ pub use ma_scores::ma_scores_by_sector_handler;
 pub use volume_profile::volume_profile_handler;
 pub use rrg::rrg_handler;
 
+/// Try reading pre-computed OhlcvJoined from snapshot cache.
+/// Returns `Some` if snapshots exist for enough tickers (>=90% hit rate).
+pub async fn try_snap_joined(
+    redis_client: &Option<RedisClient>,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    limit: i64,
+    ma_type: &str,
+) -> Option<std::collections::HashMap<String, Vec<crate::models::ohlcv::OhlcvJoined>>> {
+    let client = redis_client.as_ref()?;
+    let result = crate::workers::redis_worker::batch_read_joined_snapshots(
+        client, source, symbols, interval, limit, ma_type,
+    ).await?;
+    if result.len() >= symbols.len() * 9 / 10 {
+        Some(result)
+    } else {
+        None
+    }
+}
+
+/// Fetch enhanced data for a single source with snapshot optimization.
+/// Tries snapshot first, falls through to try_redis_batch + enhance_rows.
+/// On miss, writes joined snapshots for future reads (fire-and-forget).
+pub async fn fetch_source_enhanced(
+    redis_client: &Option<RedisClient>,
+    source: &str,
+    symbols: &[String],
+    interval: &str,
+    redis_limit: i64,
+    ctx: &str,
+    use_ema: bool,
+) -> std::collections::HashMap<String, Vec<crate::models::ohlcv::OhlcvJoined>> {
+    let ma_type = if use_ema { "ema" } else { "sma" };
+
+    // Try snapshot cache
+    if let Some(snap_map) = try_snap_joined(redis_client, source, symbols, interval, 1, ma_type).await {
+        return snap_map;
+    }
+
+    // Fall through to Redis batch + enhance
+    let mut result = std::collections::HashMap::new();
+    if let Some(map) = try_redis_batch(redis_client, source, symbols, interval, redis_limit, ctx).await {
+        for (ticker, orows) in map {
+            let enhanced = crate::queries::ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, use_ema);
+            if !enhanced.is_empty() {
+                result.insert(ticker, enhanced);
+            }
+        }
+    }
+
+    // Write joined snapshots for future reads (fire-and-forget)
+    if !result.is_empty() {
+        if let Some(redis) = redis_client {
+            let ma_owned = ma_type.to_string();
+            let src_owned = source.to_string();
+            let iv_owned = interval.to_string();
+            let result_clone = result.clone();
+            let redis_clone = redis.clone();
+            tokio::spawn(async move {
+                crate::workers::redis_worker::batch_write_joined_snapshots(
+                    &redis_clone, &src_owned, &[], &iv_owned, 1, &ma_owned, &result_clone,
+                ).await;
+            });
+        }
+    }
+
+    result
+}
+
 /// Try reading OHLCV from Redis, stripping metadata to plain HashMap.
 /// Returns `None` on any failure → caller falls through to PG.
 pub async fn try_redis_batch(

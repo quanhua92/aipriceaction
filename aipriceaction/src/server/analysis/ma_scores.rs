@@ -12,7 +12,7 @@ use crate::server::types::Mode;
 use crate::server::AppState;
 use crate::constants::api::SMA_MAX_PERIOD;
 
-use super::{get_all_sources, get_tickers_in_sector, is_index_ticker, load_crypto_groups, load_ticker_groups, load_yahoo_groups, try_redis_batch, AnalysisResponse};
+use super::{get_all_sources, get_tickers_in_sector, is_index_ticker, load_crypto_groups, load_ticker_groups, load_yahoo_groups, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct MaScoresBySectorQuery {
@@ -120,49 +120,28 @@ pub async fn ma_scores_by_sector_handler(
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "ma_scores"),
-            try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "ma_scores"),
-            try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "ma_scores"),
-            try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "ma_scores"),
+            super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "ma_scores", params.ema),
+            super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "ma_scores", params.ema),
+            super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "ma_scores", params.ema),
+            super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "ma_scores", params.ema),
         );
         let mut merged = Vec::new();
-        for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
-            if let Some(map) = redis_result {
-                for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
-                    merged.extend(enhanced.into_iter().map(|row| (row, src)));
-                }
-            } else {
-                match ohlcv::get_latest_daily_per_ticker(&state.pool, src).await {
-                    Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
-                    Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
-                }
+        for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            for (_ticker, bars) in map {
+                merged.extend(bars.into_iter().map(|row| (row, src)));
             }
         }
         merged
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "ma_scores/single").await {
-            let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
-            for (ticker, orows) in map {
-                let enhanced = ohlcv::enhance_rows(&ticker, orows, Some(1), None, true, params.ema);
-                merged.extend(enhanced.into_iter().map(|row| (row, "")));
-            }
-            if !merged.is_empty() {
-                merged
-            } else {
-                match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-                    Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
-                    Err(e) => {
-                        tracing::error!("Failed to fetch daily data: {}", e);
-                        return (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-                        ).into_response();
-                    }
-                }
-            }
+        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "ma_scores/single", params.ema).await;
+        let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
+        for (_ticker, bars) in map {
+            merged.extend(bars.into_iter().map(|row| (row, "")));
+        }
+        if !merged.is_empty() {
+            merged
         } else {
             match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
                 Ok(r) => r.into_iter().map(|row| (row, "")).collect(),

@@ -387,22 +387,20 @@ async fn handle_mascore(
             let syms: Vec<Vec<String>> = sources.iter()
                 .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
                 .collect();
-            // Try Redis for each source concurrently
             let (r1, r2, r3, r4) = tokio::join!(
-                try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
-                try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
-                try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
-                try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg"),
+                super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
+                super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
+                super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
+                super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema),
             );
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
-            for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
-                if let Some(map) = redis_result {
-                    for (ticker, orows) in map {
-                        let enhanced = ohlcv::enhance_rows_selective(&ticker, orows, Some(1), None, params.ema, MASCORE_MAX_MA_PERIOD);
-                        merged.extend(enhanced.into_iter().map(|row| (row, src)));
+            for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+                if !map.is_empty() {
+                    for (_ticker, bars) in map {
+                        merged.extend(bars.into_iter().map(|row| (row, src)));
                     }
                 } else {
-                    // Redis failed for this source — fall back to PG
+                    // Redis/snapshots failed for this source — fall back to PG
                     match ohlcv::get_latest_daily_per_ticker(&state.pool, src).await {
                         Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
                         Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
@@ -413,30 +411,14 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-            if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single").await {
-                let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
-                for (ticker, orows) in map {
-                    let enhanced = ohlcv::enhance_rows_selective(&ticker, orows, Some(1), None, params.ema, MASCORE_MAX_MA_PERIOD);
-                    merged.extend(enhanced.into_iter().map(|row| (row, source)));
-                }
-                if merged.is_empty() {
-                    // Redis returned empty — fall back to PG
-                    match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
-                        Ok(r) => r.into_iter().map(|row| (row, source)).collect(),
-                        Err(e) => {
-                            tracing::error!("Failed to fetch daily data: {}", e);
-                            return (
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                                Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-                            )
-                                .into_response();
-                        }
-                    }
-                } else {
-                    merged
-                }
+            let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single", params.ema).await;
+            let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
+            for (_ticker, bars) in map {
+                merged.extend(bars.into_iter().map(|row| (row, source)));
+            }
+            if !merged.is_empty() {
+                merged
             } else {
-                // Redis unavailable — fall back to PG
                 match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
                     Ok(r) => r.into_iter().map(|row| (row, source)).collect(),
                     Err(e) => {
