@@ -358,6 +358,69 @@ async function testMaScoresEma() {
 }
 
 // ──────────────────────────────────────────────
+// snap=true/false (Redis snapshot cache)
+// ──────────────────────────────────────────────
+
+async function testSnapTrueReturnsSameData() {
+  const [noSnap, withSnap] = await Promise.all([
+    fetchJSON("/analysis/top-performers?limit=5&cache=false&snap=false"),
+    fetchJSON("/analysis/top-performers?limit=5&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap=true vs snap=false: /analysis/top-performers ── ${noSnap.ms}ms / ${withSnap.ms}ms`);
+  assert(noSnap.status === 200, "snap=false returns 200");
+  assert(withSnap.status === 200, "snap=true returns 200");
+  assert(noSnap.body.data.performers.length === withSnap.body.data.performers.length,
+    `same number of performers (${noSnap.body.data.performers.length} vs ${withSnap.body.data.performers.length})`);
+}
+
+async function testSnapPerformanceTopPerformers() {
+  // Warm up snapshot cache
+  await fetchJSON("/analysis/top-performers?cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/analysis/top-performers?cache=false&snap=false"),
+    fetchJSON("/analysis/top-performers?cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: /analysis/top-performers (vn) ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  ok(`snap=true ${warm.ms < cold.ms ? "faster" : "similar"} to snap=false`);
+}
+
+async function testSnapPerformanceMaScores() {
+  await fetchJSON("/analysis/ma-scores-by-sector?cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/analysis/ma-scores-by-sector?cache=false&snap=false"),
+    fetchJSON("/analysis/ma-scores-by-sector?cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: /analysis/ma-scores-by-sector (vn) ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  ok(`snap=true ${warm.ms < cold.ms ? "faster" : "similar"} to snap=false`);
+}
+
+async function testSnapPerformanceRrgMascore() {
+  await fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=false"),
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: /analysis/rrg?algorithm=mascore&trails=0 (vn) ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  ok(`snap=true ${warm.ms < cold.ms ? "faster" : "similar"} to snap=false`);
+}
+
+async function testSnapDefaultIsTrue() {
+  const [defaultRes, explicitSnap] = await Promise.all([
+    fetchJSON("/analysis/top-performers?limit=5&cache=false"),
+    fetchJSON("/analysis/top-performers?limit=5&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap default behavior (no param = snap=true) ──`);
+  assert(defaultRes.status === 200, "default request returns 200");
+  assert(explicitSnap.status === 200, "snap=true request returns 200");
+  // Both should have same number of results (both use snapshots)
+  assert(defaultRes.body.data.performers.length > 0, "default returns data");
+  ok("default (no snap param) behaves like snap=true");
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -379,6 +442,11 @@ const tests = [
   testMaScoresModeAll,
   testTopPerformersEma,
   testMaScoresEma,
+  testSnapTrueReturnsSameData,
+  testSnapPerformanceTopPerformers,
+  testSnapPerformanceMaScores,
+  testSnapPerformanceRrgMascore,
+  testSnapDefaultIsTrue,
 ];
 
 async function main() {

@@ -138,6 +138,13 @@ curl "http://localhost:3000/analysis/top-performers?ema=true"
 curl "http://localhost:3000/analysis/ma-scores-by-sector?ema=true"
 curl "http://localhost:3000/analysis/rrg?ema=true"
 
+# Redis snapshot cache (skip ZSET parsing + SMA computation)
+curl "http://localhost:3000/tickers?interval=1D&limit=1&snap=true"     # use snapshot (default)
+curl "http://localhost:3000/tickers?interval=1D&limit=1&snap=false"    # skip snapshot, recompute from ZSET
+curl "http://localhost:3000/analysis/top-performers?snap=false"
+curl "http://localhost:3000/analysis/ma-scores-by-sector?snap=false"
+curl "http://localhost:3000/analysis/rrg?algorithm=mascore&snap=false"
+
 # Ticker groups
 curl "http://localhost:3000/tickers/group"              # VN sectors
 curl "http://localhost:3000/tickers/group?mode=crypto"   # Crypto groups
@@ -185,11 +192,14 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 OHLCV data is cached in Redis ZSETs for fast reads. All API endpoints try Redis first and fall back to PostgreSQL automatically.
 
 - **1 ZSET per ticker/interval**: `ohlcv:{source}:{ticker}:{interval}`
+- **Snapshot HASH per ticker/interval**: `snap:{source}:{ticker}:{interval}` — pre-computed JSON responses for common queries (limit=1, limit=N), avoids ZSET parsing + SMA computation
 - **Retention**: 1D (5,000 bars / ~20yr), 1h (30,000 / ~3yr), 1m (20,000 / ~14 days)
+- **Snapshot TTL**: 30 seconds (invalidated immediately by workers on data updates)
 - **Backfill**: periodic full backfill from PostgreSQL every 15 minutes
 - **Write path**: fire-and-forget ZADD from all data workers after PG upsert
 - **Read path**: pipelined ZREVRANGE — 1 network round-trip per ticker batch
 - **PG-outage resilience**: all `/tickers` and `/analysis/*` endpoints serve from Redis when PostgreSQL is down
+- **`?snap=true/false`**: toggle snapshot cache on `/tickers` and `/analysis/*` endpoints
 
 See [REDIS.md](REDIS.md) for detailed documentation.
 

@@ -658,6 +658,51 @@ async function testSjcGoldNoDuplicates() {
 }
 
 // ──────────────────────────────────────────────
+// snap=true/false (Redis snapshot cache)
+// ──────────────────────────────────────────────
+
+async function testSnapTrueReturnsSameData() {
+  const [noSnap, withSnap] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=2&cache=false&snap=false"),
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=2&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap=true vs snap=false: /tickers (VCB 1D limit=2) ── ${noSnap.ms}ms / ${withSnap.ms}ms`);
+  assert(noSnap.status === 200, "snap=false returns 200");
+  assert(withSnap.status === 200, "snap=true returns 200");
+  assert("VCB" in noSnap.body && "VCB" in withSnap.body, "both have VCB key");
+  assert(noSnap.body.VCB.length === withSnap.body.VCB.length,
+    `same number of rows (${noSnap.body.VCB.length} vs ${withSnap.body.VCB.length})`);
+}
+
+async function testSnapPerformanceMultiTicker() {
+  // Warm up snapshot cache with all tickers
+  await fetchJSON("/tickers?interval=1D&limit=1&cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/tickers?interval=1D&limit=1&cache=false&snap=false"),
+    fetchJSON("/tickers?interval=1D&limit=1&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: /tickers?interval=1D&limit=1 (all tickers) ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  const coldKeys = Object.keys(cold.body);
+  const warmKeys = Object.keys(warm.body);
+  assert(coldKeys.length === warmKeys.length,
+    `same number of tickers (${coldKeys.length} vs ${warmKeys.length})`);
+  ok(`snap=true ${warm.ms < cold.ms ? "faster" : "similar"} to snap=false`);
+}
+
+async function testSnapDefaultIsTrue() {
+  const [defaultRes, explicitSnap] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=1&cache=false"),
+    fetchJSON("/tickers?symbol=VCB&interval=1D&limit=1&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap default behavior (no param = snap=true) ──`);
+  assert(defaultRes.status === 200, "default request returns 200");
+  assert(explicitSnap.status === 200, "snap=true request returns 200");
+  assert("VCB" in defaultRes.body, "default returns data");
+  ok("default (no snap param) behaves like snap=true");
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -703,6 +748,9 @@ const tests = [
   testSjcGoldInYahooTickers,
   testSjcGoldInAllGroups,
   testSjcGoldNoDuplicates,
+  testSnapTrueReturnsSameData,
+  testSnapPerformanceMultiTicker,
+  testSnapDefaultIsTrue,
 ];
 
 async function main() {

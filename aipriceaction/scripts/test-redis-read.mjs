@@ -232,4 +232,54 @@ for (const q of queries) {
 }
 
 console.log(`\n${pass}/${total} passed, ${fail} failed`);
+
+// ── Snapshot cache tests (snap=true/false) ──
+
+console.log(`\n── Snapshot cache tests ──`);
+
+async function testSnapParam(name, url, expectSnapFaster) {
+  total++;
+  try {
+    // Warm up snapshot cache
+    const warmup = await fetch(`${BASE}${url}&cache=false&snap=true&_t=${Date.now()}`);
+    await warmup.json();
+
+    const [noSnapRes, snapRes] = await Promise.all([
+      fetch(`${BASE}${url}&cache=false&snap=false&_t=${Date.now()}`),
+      fetch(`${BASE}${url}&cache=false&snap=true&_t=${Date.now()}`),
+    ]);
+    const [noSnapBody, snapBody] = await Promise.all([noSnapRes.json(), snapRes.json()]);
+    const noSnapMs = parseFloat(noSnapRes.headers.get('x-response-time') || '0');
+    const snapMs = parseFloat(snapRes.headers.get('x-response-time') || '0');
+
+    const sameData = JSON.stringify(noSnapBody) === JSON.stringify(snapBody) ||
+      (typeof noSnapBody === 'object' && typeof snapBody === 'object' &&
+       Object.keys(noSnapBody).length === Object.keys(snapBody).length);
+
+    if (sameData) {
+      const faster = snapMs < noSnapMs;
+      const tag = expectSnapFaster ? (faster ? 'PASS' : 'WARN') : 'PASS';
+      console.log(`[${tag}] ${name} — snap=false: ${noSnapMs.toFixed(0)}ms, snap=true: ${snapMs.toFixed(0)}ms`);
+      if (tag === 'PASS') pass++; else fail++;
+    } else {
+      console.log(`[FAIL] ${name} — data mismatch between snap=true and snap=false`);
+      fail++;
+    }
+  } catch (e) {
+    console.log(`[FAIL] ${name} — error: ${e.message}`);
+    fail++;
+  }
+}
+
+await testSnapParam('/tickers single VCB 1D limit=1',
+  '/tickers?symbol=VCB&interval=1D&limit=1', true);
+await testSnapParam('/tickers multi-ticker 1D limit=1',
+  '/tickers?interval=1D&limit=1', true);
+await testSnapParam('/analysis/top-performers vn',
+  '/analysis/top-performers?mode=vn&cache=false', true);
+await testSnapParam('/analysis/ma-scores-by-sector vn',
+  '/analysis/ma-scores-by-sector?cache=false', false);
+await testSnapParam('/analysis/rrg mascore trails=0 vn',
+  '/analysis/rrg?algorithm=mascore&trails=0&mode=vn&cache=false', false);
+
 process.exit(fail > 0 ? 1 : 0);

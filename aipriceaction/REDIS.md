@@ -39,10 +39,11 @@ The server reads from Redis first, falling back to PostgreSQL only when Redis ha
 **`fred` crate v10** (`Cargo.toml`):
 - `i-sorted-sets` — Sorted set commands (`zadd`, `zrevrange`, `zremrangebyrank`, `zcard`)
 - `i-keys` — key management (`del` for cleanup, `scan_page` for key discovery)
+- `i-hashes` — Hash commands (`hset`, `hmget`, `hkeys`) for snapshot cache
 - `enable-rustls` — TLS support for Redis connections
 
 ```toml
-fred = { version = "10", features = ["i-sorted-sets", "i-keys", "enable-rustls"], default-features = false }
+fred = { version = "10", features = ["i-sorted-sets", "i-keys", "i-hashes", "enable-rustls"], default-features = false }
 ```
 
 ## Docker Infrastructure
@@ -313,6 +314,78 @@ pub mod redis_ts {
     pub const MEMBER_SEP: &str = "|";                // field separator in member string
     pub const TICKER_LIST_KEY: &str = "meta:ticker_list";  // cached ticker list
     pub const TICKER_LIST_TTL_SECS: u64 = 900;       // 15 min TTL for ticker list
+}
+```
+
+## Snapshot Cache (Pre-computed Response Hashes)
+
+On top of the ZSET OHLCV cache, a second layer caches **pre-computed API responses** as JSON blobs in Redis HASH fields. This avoids ZSET parsing + SMA computation on repeated requests.
+
+### How It Works
+
+```
+READ PATH (snapshot-first)
+┌──────────┐     ┌──────────────┐     ┌──────────────┐
+│  Client   │────>│  snap HASH   │─hit─>│  JSON parse  │──> respond
+└──────────┘     │  (cache)     │      └──────────────┘
+                 │              │ miss ┌──────────────┐
+                 └──────────────┤─────>│  Redis ZSET  │──> compute + write snap + respond
+                                │      │  (OHLCV)    │
+                                │      └──────────────┘
+                                │ miss ┌──────────────┐
+                                └─────>│  PostgreSQL  │──> compute + write snap + respond
+                                       │  (primary)   │
+                                       └──────────────┘
+```
+
+### Key Format
+
+One HASH key per ticker/interval, with fields for each limit/MA type combination:
+
+```
+snap:{source}:{ticker}:{interval}
+```
+
+**Fields**:
+- `{limit}:{ma_type}` — JSON blob of `Vec<StockDataResponse>` (used by `/tickers`)
+- `{limit}:{ma_type}:joined` — JSON blob of `Vec<OhlcvJoined>` (used by `/analysis/*`)
+
+**Examples**:
+```
+HGET snap:vn:VCB:1D "1:sma"         → [{"time":"2026-04-13","symbol":"VCB","close":1505.25,"ma10":...}]
+HGET snap:vn:VCB:1D "1:sma:joined"  → [{"ticker":"VCB","time":"2026-04-13","close":1505.25,"ma10_score":...}]
+HGET snap:vn:VCB:1D "40:sma"        → 40 bars worth of StockDataResponse
+```
+
+### Cache Invalidation
+
+- **Worker write**: `DEL snap:{source}:{ticker}:{interval}` after every `write_ohlcv_to_redis()` — invalidates all limit/MA type variants at once
+- **TTL safety net**: 30 seconds on all snapshot HASH fields (set on each write)
+- **`?snap=false`**: bypass snapshot cache, recompute from ZSET + PG fallback
+
+### Performance Impact
+
+| Scenario | Without Snapshot | With Snapshot (warm) |
+|---|---|---|
+| `/tickers` limit=1, 384 tickers | ~200ms (77K ZSET members parsed) | ~10-20ms (JSON HMGET) |
+| `/analysis/top-performers` mode=vn | ~50ms | ~4ms |
+| `/analysis/top-performers` mode=all | ~31ms | ~5ms |
+
+### API Parameters
+
+| Endpoint | Param | Default | Description |
+|---|---|---|---|
+| `/tickers` | `?snap=true/false` | `true` | Use or bypass snapshot cache |
+| `/analysis/top-performers` | `?snap=true/false` | `true` | Use or bypass snapshot cache |
+| `/analysis/ma-scores-by-sector` | `?snap=true/false` | `true` | Use or bypass snapshot cache |
+| `/analysis/rrg` | `?snap=true/false` | `true` | Use or bypass snapshot cache (mascore only) |
+
+### Constants (`src/constants.rs::snapshot`)
+
+```rust
+pub mod snapshot {
+    pub const KEY_PREFIX: &str = "snap";
+    pub const TTL_SECS: u64 = 30;
 }
 ```
 

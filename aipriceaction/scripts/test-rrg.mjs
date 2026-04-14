@@ -308,6 +308,34 @@ async function testVnHasSectors() {
 }
 
 // ──────────────────────────────────────────────
+// snap=true/false (Redis snapshot cache)
+// ──────────────────────────────────────────────
+
+async function testMascoreSnapPerformance() {
+  // Warm up snapshot cache
+  await fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=false"),
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: mascore trails=0 (vn) ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  assert(cold.body.data.tickers.length === warm.body.data.tickers.length,
+    `same number of tickers (${cold.body.data.tickers.length} vs ${warm.body.data.tickers.length})`);
+}
+
+async function testMascoreSnapModeAll() {
+  await fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&mode=all&cache=false&snap=true");
+  const [cold, warm] = await Promise.all([
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&mode=all&cache=false&snap=false"),
+    fetchJSON("/analysis/rrg?algorithm=mascore&trails=0&mode=all&cache=false&snap=true"),
+  ]);
+  console.log(`\n── snap perf: mascore trails=0 mode=all ── snap=false: ${cold.ms}ms, snap=true: ${warm.ms}ms`);
+  assert(cold.status === 200 && warm.status === 200, "both return 200");
+  ok(`snap=true ${warm.ms < cold.ms ? "faster" : "similar"} to snap=false for mode=all`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -333,6 +361,8 @@ const tests = [
   testYahooHasSectors,
   testCryptoHasSectors,
   testVnHasSectors,
+  testMascoreSnapPerformance,
+  testMascoreSnapModeAll,
 ];
 
 async function main() {
