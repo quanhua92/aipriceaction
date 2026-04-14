@@ -1,6 +1,6 @@
 # aipriceaction
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web)
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction)
 
 Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend and Redis edge cache. Fetches, stores, and serves OHLCV market data with technical indicators via REST API. All endpoints serve from Redis first for low latency, with automatic fallback to PostgreSQL when Redis is unavailable.
 
@@ -36,6 +36,65 @@ Edit `.env` to configure `DATABASE_URL` (required by the API server) and enable 
 ```
 
 After changing `.env`, restart: `docker compose up -d`.
+
+### Production (HAProxy + rolling updates)
+
+For zero-downtime deployments with multiple API replicas:
+
+```bash
+cd aipriceaction
+
+# Create .env from template
+cp .env.example .env
+
+# Build and start (HAProxy + 3 API replicas + 1 worker + PostgreSQL + Redis)
+docker compose -f docker-compose.prod.yml up -d
+```
+
+This starts five services:
+- **haproxy** -- Load balancer on port 3000, routes traffic across API replicas
+- **aipriceaction-api** (x3) -- API servers with workers disabled, health-checked by HAProxy
+- **aipriceaction-worker** (x1) -- Background sync workers (VCI, Binance, Yahoo, SJC)
+- **aipriceaction-postgres** -- PostgreSQL 18 with pgvector on port 5432
+- **aipriceaction-redis** -- Redis 8 with AOF persistence on port 6379
+
+Rolling updates: when you pull and redeploy, `start-first` order ensures a new container is healthy before the old one is removed -- zero downtime.
+
+#### Day-2 operations
+
+```bash
+# Rolling update (pull latest image and redeploy with zero downtime)
+docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
+
+# Scale API replicas up or down
+docker compose -f docker-compose.prod.yml up -d --scale aipriceaction-api=5
+
+# View running containers
+docker compose -f docker-compose.prod.yml ps
+
+# View HAProxy stats (from inside the network)
+docker compose -f docker-compose.prod.yml exec haproxy wget -qO- http://localhost:8404/stats
+
+# View logs
+docker compose -f docker-compose.prod.yml logs aipriceaction-api -f
+docker compose -f docker-compose.prod.yml logs aipriceaction-worker -f
+docker compose -f docker-compose.prod.yml logs haproxy -f
+
+# Restart a single service
+docker compose -f docker-compose.prod.yml restart aipriceaction-worker
+
+# Stop everything (preserves data volumes)
+docker compose -f docker-compose.prod.yml down
+
+# Stop everything and delete volumes (destroys all data)
+docker compose -f docker-compose.prod.yml down -v
+
+# Database backup (uses script mounted into postgres container)
+docker compose -f docker-compose.prod.yml exec postgres /app/scripts/backup-db.sh
+
+# Database restore
+docker compose -f docker-compose.prod.yml exec postgres /app/scripts/restore-db.sh /app/backups/<backup-file>
+```
 
 ### Build from source
 
@@ -164,28 +223,28 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `DATABASE_URL` | Yes | -- | PostgreSQL connection string |
-| `PORT` | No | `3000` | Server port |
-| `RUST_LOG` | No | `info` | Log level |
-| `VCI_WORKERS` | No | `true` | Enable VN stock data workers |
-| `VCI_DIVIDEND_WORKER` | No | `true` | Enable dividend detection worker |
-| `BINANCE_WORKERS` | No | `true` | Enable crypto data workers |
-| `SJC_WORKERS` | No | `true` | Enable SJC gold price workers |
-| `YAHOO_WORKERS` | No | `true` | Enable Yahoo Finance data workers |
-| `HTTP_PROXIES` | No | -- | Comma-separated SOCKS5 proxy list |
-| `CORS_ORIGINS` | No | `https://aipriceaction.com` | Comma-separated allowed CORS origins |
-| `REDIS_URL` | No | -- | Redis connection URL (auto-configured in Docker) |
-| `REDIS_PASSWORD` | No | -- | Redis password (auto-configured in Docker) |
-| `REDIS_WORKERS` | No | `false` | Enable Redis ZSET backfill worker |
-| `API_MAX_LIMIT` | No | `40` | Max ?limit= rows per ticker for /tickers endpoint |
-| `REDIS_DAILY_MAX_SIZE` | No | `5000` | Max Redis ZSET members for daily interval |
-| `REDIS_HOURLY_MAX_SIZE` | No | `30000` | Max Redis ZSET members for hourly interval |
-| `REDIS_MINUTE_MAX_SIZE` | No | `20000` | Max Redis ZSET members for minute interval |
-| `REDIS_DAILY_BACKFILL_LIMIT` | No | `5000` | Rows fetched during backfill (daily) |
-| `REDIS_HOURLY_BACKFILL_LIMIT` | No | `30000` | Rows fetched during backfill (hourly) |
-| `REDIS_MINUTE_BACKFILL_LIMIT` | No | `20000` | Rows fetched during backfill (minute) |
+| Variable                      | Required | Default                     | Description                                       |
+| ----------------------------- | -------- | --------------------------- | ------------------------------------------------- |
+| `DATABASE_URL`                | Yes      | --                          | PostgreSQL connection string                      |
+| `PORT`                        | No       | `3000`                      | Server port                                       |
+| `RUST_LOG`                    | No       | `info`                      | Log level                                         |
+| `VCI_WORKERS`                 | No       | `true`                      | Enable VN stock data workers                      |
+| `VCI_DIVIDEND_WORKER`         | No       | `true`                      | Enable dividend detection worker                  |
+| `BINANCE_WORKERS`             | No       | `true`                      | Enable crypto data workers                        |
+| `SJC_WORKERS`                 | No       | `true`                      | Enable SJC gold price workers                     |
+| `YAHOO_WORKERS`               | No       | `true`                      | Enable Yahoo Finance data workers                 |
+| `HTTP_PROXIES`                | No       | --                          | Comma-separated SOCKS5 proxy list                 |
+| `CORS_ORIGINS`                | No       | `https://aipriceaction.com` | Comma-separated allowed CORS origins              |
+| `REDIS_URL`                   | No       | --                          | Redis connection URL (auto-configured in Docker)  |
+| `REDIS_PASSWORD`              | No       | --                          | Redis password (auto-configured in Docker)        |
+| `REDIS_WORKERS`               | No       | `false`                     | Enable Redis ZSET backfill worker                 |
+| `API_MAX_LIMIT`               | No       | `40`                        | Max ?limit= rows per ticker for /tickers endpoint |
+| `REDIS_DAILY_MAX_SIZE`        | No       | `5000`                      | Max Redis ZSET members for daily interval         |
+| `REDIS_HOURLY_MAX_SIZE`       | No       | `30000`                     | Max Redis ZSET members for hourly interval        |
+| `REDIS_MINUTE_MAX_SIZE`       | No       | `20000`                     | Max Redis ZSET members for minute interval        |
+| `REDIS_DAILY_BACKFILL_LIMIT`  | No       | `5000`                      | Rows fetched during backfill (daily)              |
+| `REDIS_HOURLY_BACKFILL_LIMIT` | No       | `30000`                     | Rows fetched during backfill (hourly)             |
+| `REDIS_MINUTE_BACKFILL_LIMIT` | No       | `20000`                     | Rows fetched during backfill (minute)             |
 
 ## Redis Cache
 
