@@ -177,7 +177,7 @@ pub async fn tickers(
             fetch::fetch_native_tickers(
                 &state.pool, &state.redis_client, source, symbols,
                 db_interval, start_time, end_time,
-                Some(effective_limit), extra_sources, params.redis, params.ma, params.ema,
+                Some(effective_limit), extra_sources, params.redis, params.ma, params.ema, !params.snap,
             ).await
         }
         NormalizedInterval::Aggregated(agg) => {
@@ -284,7 +284,7 @@ async fn handle_mode_all(
                     let (data, tag, _meta) = fetch::fetch_native_tickers(
                         &pool, &redis_client, &source, syms,
                         &db_interval, start_time, end_time,
-                        Some(limit), &[], true, with_ma, use_ema,
+                        Some(limit), &[], true, with_ma, use_ema, true,
                     ).await;
                     (source, data, tag)
                 }));

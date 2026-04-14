@@ -153,11 +153,18 @@ pub async fn import_csv_to_ohlcv(
         let rows = candles.clone();
         tokio::spawn(async move {
             crate::workers::redis_worker::write_ohlcv_to_redis(
-                &Some(redis),
+                &Some(redis.clone()),
                 sjc_worker::SOURCE,
                 sjc_worker::TICKER,
                 "1D",
                 &rows,
+            )
+            .await;
+            crate::workers::redis_worker::invalidate_snapshot(
+                &Some(redis),
+                sjc_worker::SOURCE,
+                sjc_worker::TICKER,
+                "1D",
             )
             .await;
         });
@@ -188,16 +195,23 @@ pub async fn upsert_live_price(pool: &PgPool, ticker_id: i32, buy: f64, sell: f6
 
     import::bulk_upsert_ohlcv_preserve_open(pool, &[row.clone()]).await?;
 
-    // Fire-and-forget Redis ZSET write
+    // Fire-and-forget Redis ZSET write + snapshot invalidation
     if let Some(client) = redis_client {
         let redis = client.clone();
         tokio::spawn(async move {
             crate::workers::redis_worker::write_ohlcv_to_redis(
-                &Some(redis),
+                &Some(redis.clone()),
                 sjc_worker::SOURCE,
                 sjc_worker::TICKER,
                 "1D",
                 &[row],
+            )
+            .await;
+            crate::workers::redis_worker::invalidate_snapshot(
+                &Some(redis),
+                sjc_worker::SOURCE,
+                sjc_worker::TICKER,
+                "1D",
             )
             .await;
         });

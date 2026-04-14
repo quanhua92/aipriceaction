@@ -341,4 +341,14 @@ pub mod redis_ts {
     pub const TICKER_LIST_KEY: &str = "meta:ticker_list";
     /// TTL for cached ticker list in seconds (15 minutes).
     pub const TICKER_LIST_TTL_SECS: u64 = 900;
+
+    /// Snapshot cache for pre-computed limit=N responses.
+    /// Key pattern: `snap:{source}:{ticker}:{interval}` (HASH).
+    /// Field pattern: `{limit}:{ma_type}` (e.g. "1:sma", "5:ema").
+    pub mod snapshot {
+        /// Redis HASH key prefix for snapshot cache.
+        pub const KEY_PREFIX: &str = "snap";
+        /// TTL for snapshot hashes in seconds.
+        pub const TTL_SECS: u64 = 30;
+    }
 }

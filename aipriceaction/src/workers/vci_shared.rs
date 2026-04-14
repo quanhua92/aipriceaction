@@ -159,6 +159,7 @@ pub async fn enhance_and_save(
         let rows = deduped.clone();
         tokio::spawn(async move {
             crate::workers::redis_worker::write_ohlcv_to_redis(&redis, &src, &tk, &iv, &rows).await;
+            crate::workers::redis_worker::invalidate_snapshot(&redis, &src, &tk, &iv).await;
         });
     }
 }

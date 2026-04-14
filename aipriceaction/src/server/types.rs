@@ -60,6 +60,9 @@ pub struct TickersQuery {
     /// true = use EMA instead of SMA for MA indicators.
     #[serde(default)]
     pub ema: bool,
+    /// true = use pre-computed snapshot cache (default), false = skip snapshots.
+    #[serde(default = "default_true")]
+    pub snap: bool,
 }
 
 fn default_format() -> String {
@@ -121,7 +124,7 @@ impl NormalizedInterval {
 }
 
 /// Stock data response matching the parent project format.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockDataResponse {
     pub time: String,
     pub open: f64,

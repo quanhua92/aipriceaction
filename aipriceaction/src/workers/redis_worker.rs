@@ -75,6 +75,157 @@ pub fn parse_member(member: &str, interval: &str) -> Option<(OhlcvRow, Option<i6
     ))
 }
 
+// ---------------------------------------------------------------------------
+// Snapshot cache: pre-computed limit=N responses stored in Redis HASHes.
+// Key: `snap:{source}:{ticker}:{interval}`, Field: `{limit}:{ma_type}`
+// ---------------------------------------------------------------------------
+
+/// Build a Redis HASH key for a snapshot cache entry.
+pub fn snap_key(source: &str, ticker: &str, interval: &str) -> String {
+    format!("{}:{source}:{ticker}:{interval}", c::snapshot::KEY_PREFIX)
+}
+
+/// Build a HASH field name for a specific limit and MA type.
+/// Example: `snap_field(1, "sma")` returns `"1:sma"`.
+pub fn snap_field(limit: i64, ma_type: &str) -> String {
+    format!("{limit}:{ma_type}")
+}
+
+/// Batch-read snapshot fields for multiple tickers via pipelined HMGET.
+/// Returns `Vec<Option<String>>` in the same order as `tickers`.
+/// Returns `None` if Redis is unavailable or on timeout.
+pub async fn batch_read_snapshots(
+    client: &RedisClient,
+    source: &str,
+    tickers: &[String],
+    interval: &str,
+    limit: i64,
+    ma_type: &str,
+) -> Option<Vec<Option<String>>> {
+    if tickers.is_empty() {
+        return Some(Vec::new());
+    }
+
+    let field = snap_field(limit, ma_type);
+    let pipe = client.pipeline();
+
+    for ticker in tickers {
+        let key = snap_key(source, ticker, interval);
+        if let Err(e) = pipe.hmget::<(), _, _>(&key, &field).await {
+            tracing::warn!(%key, "pipeline hmget enqueue error: {e}");
+            continue;
+        }
+    }
+
+    let results: Vec<FredResult<Value>> =
+        match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+            Ok(r) => r,
+            Err(_) => {
+                tracing::warn!("[SNAP] pipeline hmget timed out");
+                return None;
+            }
+        };
+
+    let mut out: Vec<Option<String>> = Vec::with_capacity(tickers.len());
+    for result in results {
+        match result {
+            Ok(Value::Array(arr)) => {
+                // HMGET returns array of values for each field requested.
+                // We request 1 field, so take the first.
+                let s = arr.into_iter().next().and_then(|v| match v {
+                    Value::String(s) => Some(s.to_string()),
+                    _ => None,
+                });
+                out.push(s);
+            }
+            Ok(Value::Null) => out.push(None),
+            Ok(_) => out.push(None),
+            Err(e) => {
+                tracing::warn!("[SNAP] hmget error: {e}");
+                out.push(None);
+            }
+        }
+    }
+
+    Some(out)
+}
+
+/// Batch-write snapshot fields for multiple tickers via pipelined HSET + EXPIRE.
+/// Fire-and-forget — errors are logged but not propagated.
+pub async fn batch_write_snapshots(
+    client: &RedisClient,
+    source: &str,
+    tickers: &[String],
+    interval: &str,
+    limit: i64,
+    ma_type: &str,
+    responses: &std::collections::BTreeMap<String, Vec<crate::server::types::StockDataResponse>>,
+) {
+    if responses.is_empty() {
+        return;
+    }
+
+    let field = snap_field(limit, ma_type);
+    let ttl = c::snapshot::TTL_SECS as i64;
+    let pipe = client.pipeline();
+
+    for (ticker, bars) in responses {
+        if tickers.iter().any(|t| t == ticker) {
+            match serde_json::to_string(bars) {
+                Ok(json) => {
+                    let key = snap_key(source, ticker, interval);
+                    let mut values = std::collections::HashMap::new();
+                    values.insert(field.clone(), json);
+                    if let Err(e) = pipe.hset::<(), _, _>(&key, values).await {
+                        tracing::warn!(%key, "pipeline hset enqueue error: {e}");
+                    }
+                    if let Err(e) = pipe.expire::<(), _>(&key, ttl, None).await {
+                        tracing::warn!(%key, "pipeline expire enqueue error: {e}");
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(ticker, "snapshot serialize error: {e}");
+                }
+            }
+        }
+    }
+
+    match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+        Ok(_) => {}
+        Err(_) => {
+            tracing::warn!("[SNAP] pipeline hset+expire timed out");
+        }
+    }
+}
+
+/// Delete the snapshot HASH for a given ticker/interval.
+/// Invalidates all limit/ma_type variants at once.
+/// No-op if client is None.
+pub async fn invalidate_snapshot(client: &Option<RedisClient>, source: &str, ticker: &str, interval: &str) {
+    let client = match client {
+        Some(c) => c,
+        None => return,
+    };
+    let key = snap_key(source, ticker, interval);
+    match tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        client.del::<Value, _>(&key),
+    )
+    .await
+    {
+        Ok(Ok(Value::Integer(n))) if n > 0 => {
+            tracing::debug!(%key, "snapshot invalidated");
+        }
+        Ok(Ok(_)) => {}
+        Ok(Err(e)) => {
+            tracing::warn!(%key, "snapshot del error: {e}");
+        }
+        Err(_) => {
+            tracing::warn!(%key, "snapshot del timed out");
+        }
+    }
+}
+
 /// Write the full ticker list to Redis as a JSON string with TTL.
 /// Called at the end of each backfill_full() cycle.
 pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
@@ -415,6 +566,7 @@ async fn backfill_ticker(
     }
 
     write_ohlcv_to_redis(&Some(client.clone()), source, ticker, interval, &rows).await;
+    invalidate_snapshot(&Some(client.clone()), source, ticker, interval).await;
 
     tracing::info!(
         source, ticker, interval,
@@ -524,5 +676,13 @@ mod tests {
     fn test_parse_member_invalid() {
         assert!(parse_member("garbage", "1D").is_none());
         assert!(parse_member("1|2|3|4", "1D").is_none());
+    }
+
+    #[test]
+    fn test_snap_key_and_field() {
+        assert_eq!(snap_key("vn", "VCB", "1D"), "snap:vn:VCB:1D");
+        assert_eq!(snap_key("crypto", "BTCUSDT", "1h"), "snap:crypto:BTCUSDT:1h");
+        assert_eq!(snap_field(1, "sma"), "1:sma");
+        assert_eq!(snap_field(40, "ema"), "40:ema");
     }
 }

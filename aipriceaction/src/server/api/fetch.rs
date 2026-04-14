@@ -200,6 +200,7 @@ pub(crate) async fn fetch_native_tickers(
     use_redis: bool,
     with_ma: bool,
     use_ema: bool,
+    skip_snap: bool,
 ) -> (BTreeMap<String, Vec<StockDataResponse>>, &'static str, Option<redis_reader::RedisReadResult>) {
     let is_daily = interval == "1D";
 
@@ -208,6 +209,74 @@ pub(crate) async fn fetch_native_tickers(
     let redis_allowed = use_redis
         && !symbols.is_empty()
         && redis_client.is_some();
+
+    // --- Snapshot fast path ---
+    // Try reading pre-computed responses from Redis HASH snapshots.
+    // Only eligible when: no date range, MA enabled, limit is set, and not a recursive call.
+    let snap_eligible = !skip_snap
+        && redis_allowed
+        && limit.is_some()
+        && start_time.is_none()
+        && end_time.is_none()
+        && with_ma;
+    let ma_type: &str = if use_ema { "ema" } else { "sma" };
+    let limit_val = limit.unwrap_or(1);
+
+    if snap_eligible {
+
+        if let Some(raw_values) = crate::workers::redis_worker::batch_read_snapshots(
+            redis_client.as_ref().unwrap(), source, &symbols, interval, limit_val, ma_type,
+        ).await {
+            // Separate hits from misses
+            let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
+            let mut missed_symbols: Vec<String> = Vec::new();
+
+            for (i, raw) in raw_values.iter().enumerate() {
+                if let Some(json) = raw {
+                    if let Ok(bars) = serde_json::from_str::<Vec<StockDataResponse>>(json) {
+                        if !bars.is_empty() {
+                            result.insert(symbols[i].clone(), bars);
+                            continue;
+                        }
+                    }
+                }
+                missed_symbols.push(symbols[i].clone());
+            }
+
+            // Compute missing tickers via existing path (skip_snap=true to avoid recursion)
+            if !missed_symbols.is_empty() {
+                let (missed_result, _tag, _meta) = Box::pin(fetch_native_tickers(
+                    pool, redis_client, source, missed_symbols.clone(), interval,
+                    None, None, limit, extra_sources, use_redis, with_ma, use_ema, true,
+                )).await;
+
+                // Write back snapshots for the newly computed tickers
+                if !missed_result.is_empty() {
+                    let redis = redis_client.as_ref().unwrap().clone();
+                    let ma_type_owned = ma_type.to_string();
+                    let source_owned = source.to_string();
+                    let interval_owned = interval.to_string();
+                    let missed_clone = missed_result.clone();
+                    let missed_syms = missed_symbols;
+                    tokio::spawn(async move {
+                        crate::workers::redis_worker::batch_write_snapshots(
+                            &redis, &source_owned, &missed_syms,
+                            &interval_owned, limit_val, &ma_type_owned, &missed_clone,
+                        ).await;
+                    });
+                }
+
+                // Merge misses into result
+                for (ticker, bars) in missed_result {
+                    result.insert(ticker, bars);
+                }
+            }
+
+            if !result.is_empty() {
+                return (result, "redis-snap", None);
+            }
+        }
+    }
 
     if redis_allowed {
         let start_ok = if start_time.is_some() {
@@ -307,6 +376,22 @@ pub(crate) async fn fetch_native_tickers(
                     }
                 }
                 if !result.is_empty() {
+                    // Write snapshots for future requests (fire-and-forget)
+                    if snap_eligible {
+                        let redis = redis_client.as_ref().unwrap().clone();
+                        let ma_type_owned = ma_type.to_string();
+                        let source_owned = source.to_string();
+                        let interval_owned = interval.to_string();
+                        let result_clone = result.clone();
+                        let syms_owned: Vec<String> = symbols.clone();
+                        let snap_limit = limit_val;
+                        tokio::spawn(async move {
+                            crate::workers::redis_worker::batch_write_snapshots(
+                                &redis, &source_owned, &syms_owned,
+                                &interval_owned, snap_limit, &ma_type_owned, &result_clone,
+                            ).await;
+                        });
+                    }
                     return (result, "redis", first_meta);
                 }
             }
