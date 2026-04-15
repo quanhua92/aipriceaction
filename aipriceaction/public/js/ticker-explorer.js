@@ -39,6 +39,13 @@ function buildTickerUrl() {
     params.limit = limit;
   }
 
+  // Boolean options: only append when false (API defaults to true)
+  if (!document.getElementById('opt-cache').checked) params.cache = 'false';
+  if (!document.getElementById('opt-ma').checked) params.ma = 'false';
+  if (!document.getElementById('opt-redis').checked) params.redis = 'false';
+  if (!document.getElementById('opt-snap').checked) params.snap = 'false';
+  if (document.getElementById('opt-ema').checked) params.ema = 'true';
+
   return buildApiUrl('/tickers', params);
 }
 

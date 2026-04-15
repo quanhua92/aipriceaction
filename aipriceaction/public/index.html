@@ -259,6 +259,34 @@
             </select>
           </div>
 
+          <!-- API Options -->
+          <div>
+            <label class="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">API Options</label>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs md:text-sm">
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="opt-cache" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <span>Cache</span>
+              </label>
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="opt-ma" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <span>MA</span>
+              </label>
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="opt-redis" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <span>Redis</span>
+              </label>
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="opt-snap" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <span>Snap</span>
+              </label>
+              <label class="flex items-center gap-1">
+                <input type="checkbox" id="opt-ema" class="w-4 h-4 text-blue-600 border-gray-300 rounded">
+                <span>EMA</span>
+              </label>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">Defaults: cache/ma/redis/snap ON, ema OFF</p>
+          </div>
+
           <!-- Action Buttons -->
           <div class="flex flex-col sm:flex-row gap-2 md:gap-3">
             <button
