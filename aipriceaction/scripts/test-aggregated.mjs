@@ -398,6 +398,182 @@ async function testCryptoAggregated() {
 }
 
 // ──────────────────────────────────────────────
+// ma=false with aggregated intervals
+// ──────────────────────────────────────────────
+
+async function testMaFalseAggregatedReturnsLimit() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=15m&limit=5&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=15m&limit=5&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body, "has VCB key");
+  assert(body.VCB.length === 5, `ma=false returns requested limit rows (got ${body.VCB.length})`);
+  assertOldestFirst(body.VCB, "15m ma=false");
+}
+
+async function testMaFalseAggregatedNoMaFields() {
+  const { body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=15m&limit=5&ma=false",
+  );
+  console.log(`\n── ma=false aggregated: no MA fields ── ${ms}ms`);
+  if (!("VCB" in body) || body.VCB.length === 0) {
+    ok("skipped - no data");
+    return;
+  }
+  const r = body.VCB[0];
+  assert(r.ma10 === undefined, "ma10 absent");
+  assert(r.ma20 === undefined, "ma20 absent");
+  assert(r.ma50 === undefined, "ma50 absent");
+  assert(r.ma10_score === undefined, "ma10_score absent");
+}
+
+async function testMaFalse5m() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=5m&limit=10&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=5m&limit=10&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 10, `5m ma=false returns 10 rows (got ${body.VCB.length})`);
+}
+
+async function testMaFalse30m() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=30m&limit=5&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=30m&limit=5&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `30m ma=false returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaFalse4h() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=BTCUSDT&interval=4h&limit=5&mode=crypto&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=BTCUSDT&interval=4h&limit=5&mode=crypto&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("BTCUSDT" in body) {
+    assert(body.BTCUSDT.length === 5, `4h ma=false returns 5 rows (got ${body.BTCUSDT.length})`);
+  } else {
+    ok("skipped - no BTCUSDT data");
+  }
+}
+
+async function testMaFalseWeekly() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1W&limit=5&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1W&limit=5&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `1W ma=false returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaFalseMonthly() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1M&limit=5&ma=false",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1M&limit=5&ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `1M ma=false returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaFalseAggregatedMultiTicker() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&symbol=FPT&interval=15m&limit=5&ma=false",
+  );
+  console.log(`\n── GET /tickers multi-ticker 15m ma=false ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body && "FPT" in body, "has both VCB and FPT");
+  assert(body.VCB.length === 5, `VCB has 5 rows (got ${body.VCB.length})`);
+  assert(body.FPT.length === 5, `FPT has 5 rows (got ${body.FPT.length})`);
+}
+
+async function testMaFalseVsMaTrueSameRowCount() {
+  const [noMa, withMa] = await Promise.all([
+    fetchJSON("/tickers?symbol=VCB&interval=15m&limit=10&ma=false&cache=false"),
+    fetchJSON("/tickers?symbol=VCB&interval=15m&limit=10&ma=true&cache=false"),
+  ]);
+  console.log(`\n── ma=false vs ma=true row count (15m limit=10) ── ${noMa.ms}ms / ${withMa.ms}ms`);
+  assert(noMa.status === 200 && withMa.status === 200, "both return 200");
+  assert(noMa.body.VCB.length === withMa.body.VCB.length,
+    `same row count: ma=false=${noMa.body.VCB.length} vs ma=true=${withMa.body.VCB.length}`);
+  ok("ma=false and ma=true return same number of aggregated rows");
+}
+
+// ──────────────────────────────────────────────
+// ma=true baseline (should all pass)
+// ──────────────────────────────────────────────
+
+async function testMaTrue15m() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=15m&limit=5&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=15m&limit=5&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `ma=true 15m returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaTrue5m() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=5m&limit=10&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=5m&limit=10&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 10, `ma=true 5m returns 10 rows (got ${body.VCB.length})`);
+}
+
+async function testMaTrue30m() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=30m&limit=5&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=30m&limit=5&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `ma=true 30m returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaTrue4h() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=BTCUSDT&interval=4h&limit=5&mode=crypto&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=BTCUSDT&interval=4h&limit=5&mode=crypto&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  if ("BTCUSDT" in body) {
+    assert(body.BTCUSDT.length === 5, `ma=true 4h returns 5 rows (got ${body.BTCUSDT.length})`);
+  } else {
+    ok("skipped - no BTCUSDT data");
+  }
+}
+
+async function testMaTrueWeekly() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1W&limit=5&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1W&limit=5&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `ma=true 1W returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaTrueMonthly() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&interval=1M&limit=5&ma=true",
+  );
+  console.log(`\n── GET /tickers?symbol=VCB&interval=1M&limit=5&ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(body.VCB.length === 5, `ma=true 1M returns 5 rows (got ${body.VCB.length})`);
+}
+
+async function testMaTrueAggregatedMultiTicker() {
+  const { status, body, ms } = await fetchJSON(
+    "/tickers?symbol=VCB&symbol=FPT&interval=15m&limit=5&ma=true",
+  );
+  console.log(`\n── GET /tickers multi-ticker 15m ma=true ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert("VCB" in body && "FPT" in body, "has both VCB and FPT");
+  assert(body.VCB.length === 5, `VCB has 5 rows (got ${body.VCB.length})`);
+  assert(body.FPT.length === 5, `FPT has 5 rows (got ${body.FPT.length})`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -419,6 +595,22 @@ const tests = [
   testAggregatedLegacy,
   testAggregatedLegacyIndexNotDivided,
   testCryptoAggregated,
+  testMaFalseAggregatedReturnsLimit,
+  testMaFalseAggregatedNoMaFields,
+  testMaFalse5m,
+  testMaFalse30m,
+  testMaFalse4h,
+  testMaFalseWeekly,
+  testMaFalseMonthly,
+  testMaFalseAggregatedMultiTicker,
+  testMaFalseVsMaTrueSameRowCount,
+  testMaTrue15m,
+  testMaTrue5m,
+  testMaTrue30m,
+  testMaTrue4h,
+  testMaTrueWeekly,
+  testMaTrueMonthly,
+  testMaTrueAggregatedMultiTicker,
 ];
 
 async function main() {

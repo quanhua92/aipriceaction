@@ -469,9 +469,15 @@ pub(crate) async fn fetch_aggregated_tickers(
 
     let base_interval = agg.base_interval().as_str();
 
-    // Fetch source data with lookback buffer for MA200 (skip when with_ma=false)
-    let agg_buffer = if with_ma { crate::constants::api::AGGREGATED_LOOKBACK } else { 1 };
-    let lookback = limit + agg_buffer;
+    // Fetch source data with lookback buffer for MA200 (skip when with_ma=false).
+    // When ma=false, still need enough base bars to form the requested aggregated candles
+    // plus one extra bucket for the partial leading candle.
+    let agg_buffer = if with_ma {
+        crate::constants::api::AGGREGATED_LOOKBACK
+    } else {
+        agg.base_bars_per_candle() // e.g. 15 for 15m-from-1m, 4 for 4h-from-1h, 7 for 1W-from-1D
+    };
+    let lookback = limit * agg.base_bars_per_candle() + agg_buffer;
 
     let is_daily = base_interval == "1D";
 

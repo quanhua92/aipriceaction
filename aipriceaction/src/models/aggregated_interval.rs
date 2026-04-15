@@ -76,6 +76,20 @@ impl AggregatedInterval {
             _ => None,
         }
     }
+
+    /// Number of base interval bars needed to form one aggregated candle.
+    pub fn base_bars_per_candle(&self) -> i64 {
+        match self {
+            AggregatedInterval::Minutes5 => 5,
+            AggregatedInterval::Minutes15 => 15,
+            AggregatedInterval::Minutes30 => 30,
+            AggregatedInterval::Hours4 => 4,
+            // Day-based: trading days per period. Month needs the most (up to 23 trading days).
+            AggregatedInterval::Week => 5,
+            AggregatedInterval::Week2 => 10,
+            AggregatedInterval::Month => 23,
+        }
+    }
 }
 
 impl fmt::Display for AggregatedInterval {
