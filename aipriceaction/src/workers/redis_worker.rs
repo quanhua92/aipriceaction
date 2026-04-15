@@ -2,6 +2,8 @@ use fred::prelude::*;
 use sqlx::PgPool;
 
 use crate::constants::redis_ts as c;
+
+const REDIS_OP_TIMEOUT_SECS: u64 = 5;
 use crate::models::ohlcv::OhlcvRow;
 use crate::redis::RedisClient;
 
@@ -430,7 +432,7 @@ pub async fn write_ohlcv_to_redis(
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.max(s)))),
     ) {
         match tokio::time::timeout(
-            std::time::Duration::from_secs(2),
+            std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
             client.zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts),
         )
         .await
@@ -450,7 +452,7 @@ pub async fn write_ohlcv_to_redis(
 
     // Batch ZADD (supports multi-member add natively)
     match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
         client.zadd::<Value, _, _>(
             &key,
             None,  // options
@@ -476,7 +478,7 @@ pub async fn write_ohlcv_to_redis(
     // Trim to retention limit: keep top MAX entries by score (highest timestamps)
     let limit = max_size(interval);
     match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
         client.zremrangebyrank::<Value, _>(&key, 0, -(limit as i64 + 1)),
     )
     .await
