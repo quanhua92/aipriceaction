@@ -69,7 +69,7 @@ ARG BUILD_DATE
 ARG GIT_COMMIT
 
 RUN apk update && apk upgrade --no-cache \
- && apk add --no-cache ca-certificates curl libcurl nghttp2 libssh2 \
+ && apk add --no-cache ca-certificates \
  && rm -rf /var/cache/apk/*
 
 RUN addgroup -S appgroup && adduser -S -G appgroup appuser
@@ -96,6 +96,6 @@ USER appuser
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
+    CMD wget -q --spider http://localhost:${PORT:-3000}/health || exit 1
 
 CMD ["./aipriceaction", "serve", "--port", "3000"]
