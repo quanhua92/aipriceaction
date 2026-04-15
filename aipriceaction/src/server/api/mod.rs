@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::server::types::{
-    GroupQuery, Mode, NormalizedInterval, StockDataResponse,
+    GroupQuery, Mode, NormalizedInterval, RefreshQuery, StockDataResponse,
     TickersQuery,
 };
 
@@ -336,6 +336,66 @@ async fn handle_mode_all(
         HeaderValue::from_static(source_tag),
     );
     response
+}
+
+// ── POST /tickers/refresh ──
+
+pub async fn tickers_refresh(
+    State(state): State<Arc<AppState>>,
+    axum::Json(body): axum::Json<RefreshQuery>,
+) -> Response {
+    let col = match body.interval.as_str() {
+        "1D" => crate::queries::ohlcv::ScheduleColumn::Daily,
+        "1h" => crate::queries::ohlcv::ScheduleColumn::Hourly,
+        "1m" => crate::queries::ohlcv::ScheduleColumn::Minute,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Invalid interval. Must be one of: 1D, 1h, 1m"
+                })),
+            )
+                .into_response()
+        }
+    };
+
+    let col_label = match col {
+        crate::queries::ohlcv::ScheduleColumn::Daily => "next_1d",
+        crate::queries::ohlcv::ScheduleColumn::Hourly => "next_1h",
+        crate::queries::ohlcv::ScheduleColumn::Minute => "next_1m",
+    };
+
+    let sources: Vec<&'static str> = match body.mode {
+        Mode::Vn => vec!["vn"],
+        Mode::Crypto => vec!["crypto"],
+        Mode::Yahoo => vec!["yahoo"],
+        Mode::All => vec!["vn", "crypto", "yahoo"],
+    };
+
+    let mut total_updated: u64 = 0;
+    for source in &sources {
+        match crate::queries::ohlcv::refresh_ticker_schedule(&state.pool, source, col).await {
+            Ok(n) => total_updated += n,
+            Err(e) => {
+                tracing::error!("refresh_ticker_schedule error for source {source}: {e}");
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({ "error": format!("Database error for source {source}") })),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "updated": total_updated,
+            "interval": col_label,
+            "sources": sources,
+        })),
+    )
+        .into_response()
 }
 
 // ── /tickers/group ──

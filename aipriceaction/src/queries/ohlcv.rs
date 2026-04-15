@@ -1078,3 +1078,39 @@ pub async fn reset_ticker_schedule(pool: &PgPool, ticker_id: i32) -> sqlx::Resul
     .await?;
     Ok(())
 }
+
+#[derive(Clone, Copy)]
+pub enum ScheduleColumn {
+    Daily,
+    Hourly,
+    Minute,
+}
+
+/// Reset the given next_* column to NOW() for all ready tickers of a source.
+pub async fn refresh_ticker_schedule(
+    pool: &PgPool,
+    source: &str,
+    col: ScheduleColumn,
+) -> sqlx::Result<u64> {
+    let result = match col {
+        ScheduleColumn::Daily => sqlx::query!(
+            "UPDATE tickers SET next_1d = NOW() WHERE source = $1 AND status = 'ready'",
+            source
+        )
+        .execute(pool)
+        .await?,
+        ScheduleColumn::Hourly => sqlx::query!(
+            "UPDATE tickers SET next_1h = NOW() WHERE source = $1 AND status = 'ready'",
+            source
+        )
+        .execute(pool)
+        .await?,
+        ScheduleColumn::Minute => sqlx::query!(
+            "UPDATE tickers SET next_1m = NOW() WHERE source = $1 AND status = 'ready'",
+            source
+        )
+        .execute(pool)
+        .await?,
+    };
+    Ok(result.rows_affected())
+}

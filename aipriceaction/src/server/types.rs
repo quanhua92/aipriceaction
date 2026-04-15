@@ -123,6 +123,14 @@ impl NormalizedInterval {
     }
 }
 
+/// Request body for POST /tickers/refresh
+#[derive(Debug, Deserialize)]
+pub struct RefreshQuery {
+    pub interval: String,
+    #[serde(default)]
+    pub mode: Mode,
+}
+
 /// Stock data response matching the parent project format.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StockDataResponse {

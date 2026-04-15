@@ -727,6 +727,47 @@ async function testSnapWithPastEndDateBypassesSnap() {
 }
 
 // ──────────────────────────────────────────────
+// POST /tickers/refresh tests
+// ──────────────────────────────────────────────
+
+async function testRefreshVnDaily() {
+  const { status, body, ms } = await fetchJSON("/tickers/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval: "1D", mode: "vn" }),
+  });
+  console.log(`\n── POST /tickers/refresh {1D, vn} ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(typeof body.updated === "number", "has updated count");
+  assert(body.updated >= 0, "updated is non-negative");
+  assert(Array.isArray(body.sources), "has sources array");
+  assert(body.sources.includes("vn"), "sources includes vn");
+}
+
+async function testRefreshInvalidInterval() {
+  const { status, body, ms } = await fetchJSON("/tickers/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval: "5m", mode: "vn" }),
+  });
+  console.log(`\n── POST /tickers/refresh {5m, vn} (invalid interval) ── ${ms}ms`);
+  assert(status === 400, `returns 400 (got ${status})`);
+  assert(typeof body.error === "string", "has error message");
+}
+
+async function testRefreshAllSources() {
+  const { status, body, ms } = await fetchJSON("/tickers/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval: "1h", mode: "all" }),
+  });
+  console.log(`\n── POST /tickers/refresh {1h, all} ── ${ms}ms`);
+  assert(status === 200, "returns 200");
+  assert(typeof body.updated === "number", "has updated count");
+  assert(body.sources.length === 3, `updates 3 sources (got ${body.sources.length})`);
+}
+
+// ──────────────────────────────────────────────
 // Runner
 // ──────────────────────────────────────────────
 
@@ -777,6 +818,9 @@ const tests = [
   testSnapDefaultIsTrue,
   testSnapWithEndDateToday,
   testSnapWithPastEndDateBypassesSnap,
+  testRefreshVnDaily,
+  testRefreshInvalidInterval,
+  testRefreshAllSources,
 ];
 
 async function main() {

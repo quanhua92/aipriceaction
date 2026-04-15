@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickers SET next_1d = NOW() WHERE source = $1 AND status = 'ready'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f242feeb0dabca4ca1dc35ad3287f269a0cf7f830e5c2b3db3301b67f4ca88b3"
+}

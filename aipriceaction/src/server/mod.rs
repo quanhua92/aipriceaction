@@ -159,6 +159,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .route("/tickers/group", axum::routing::get(api::tickers_group))
         .route("/tickers/name", axum::routing::get(api::tickers_name))
         .route("/tickers/info", axum::routing::get(api::tickers_info))
+        .route("/tickers/refresh", axum::routing::post(api::tickers_refresh))
         .nest("/analysis", analysis_routes())
         .layer(RequestBodyLimitLayer::new(1024 * 1024));
 
