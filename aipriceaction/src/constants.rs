@@ -1,3 +1,13 @@
+/// Fraction of due tickers to process per loop iteration (after shuffle).
+/// Override via `DUE_TICKER_FRACTION` env var (0.0–1.0). Default: 0.5.
+pub fn due_ticker_fraction() -> f64 {
+    std::env::var("DUE_TICKER_FRACTION")
+        .ok()
+        .and_then(|v| v.parse::<f64>().ok())
+        .filter(|f| (0.0..=1.0).contains(f))
+        .unwrap_or(0.5)
+}
+
 /// VCI worker timing and configuration constants.
 pub mod vci_worker {
     /// Hard cap on next_* schedule delay regardless of tier or off-hours multiplier.
@@ -83,10 +93,6 @@ pub mod vci_worker {
     /// No new data arrives off-hours, so less frequent polling is fine.
     pub const OFF_HOURS_MULTIPLIER: i64 = 20;
 
-    /// Max tickers to process per loop iteration.
-    /// All due tickers are fetched, shuffled, and this many are taken.
-    /// Shuffling avoids multiple containers competing for the same tickers.
-    pub const DUE_TICKER_BATCH_SIZE: usize = 50;
 
     /// Priority scheduling based on money flow (close * volume).
     pub mod priority {
@@ -137,9 +143,6 @@ pub mod binance_worker {
     /// Cooldown when rate limited (HTTP 429/403) detected in a batch
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
 
-    /// Max tickers to process per loop iteration
-    pub const DUE_TICKER_BATCH_SIZE: usize = 20;
-
     /// Concurrent API batches based on Binance API client count.
     /// Conservative: 2 per client, max 6 total.
     pub fn concurrent_batches(client_count: usize) -> usize {
@@ -185,9 +188,6 @@ pub mod yahoo_worker {
 
     /// Cooldown when rate limited (HTTP 429) detected in a batch
     pub const RATE_LIMIT_COOLDOWN_SECS: u64 = 60;
-
-    /// Max tickers to process per loop iteration
-    pub const DUE_TICKER_BATCH_SIZE: usize = 20;
 
     /// Concurrent API batches based on Yahoo client count.
     pub fn concurrent_batches(client_count: usize) -> usize {

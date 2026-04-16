@@ -94,6 +94,7 @@ aipriceaction/src/
 | `VCI_DIVIDEND_WORKER` | No | true | Enable dividend detection worker |
 | `BINANCE_WORKERS` | No | true | Enable crypto sync workers |
 | `HTTP_PROXIES` | No | — | Comma-separated proxy URLs for VCI & Binance |
+| `DUE_TICKER_FRACTION` | No | 0.5 | Fraction (0.0–1.0) of due tickers to process per worker loop iteration |
 
 ## SDK
 

@@ -42,7 +42,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
         use rand::seq::SliceRandom;
         tickers.shuffle(&mut rand::thread_rng());
-        tickers.truncate(yahoo_worker::DUE_TICKER_BATCH_SIZE);
+        tickers.truncate((tickers.len() as f64 * crate::constants::due_ticker_fraction()) as usize);
 
         if !tickers.is_empty() {
             tracing::info!("Yahoo daily worker: syncing {} due tickers", tickers.len());
