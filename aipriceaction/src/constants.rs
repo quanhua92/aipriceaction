@@ -328,6 +328,10 @@ pub mod redis_ts {
         std::env::var(key).ok().and_then(|v| v.parse().ok()).unwrap_or(default)
     }
 
+    /// Timeout for all Redis operations (seconds).
+    /// Override via `REDIS_OP_TIMEOUT_SECS` env var. Default: 5.
+    pub fn op_timeout_secs() -> u64 { env("REDIS_OP_TIMEOUT_SECS", 5) }
+
     /// Backfill loop interval in seconds (60 minutes).
     pub const BACKFILL_LOOP_SECS: u64 = 3600;
     /// Concurrency for backfill worker (parallel tasks per cycle).

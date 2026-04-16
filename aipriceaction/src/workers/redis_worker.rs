@@ -3,7 +3,6 @@ use sqlx::PgPool;
 
 use crate::constants::redis_ts as c;
 
-const REDIS_OP_TIMEOUT_SECS: u64 = 5;
 use crate::models::ohlcv::OhlcvRow;
 use crate::redis::RedisClient;
 
@@ -119,11 +118,12 @@ pub async fn batch_read_snapshots(
         }
     }
 
+    let start = std::time::Instant::now();
     let results: Vec<FredResult<Value>> =
-        match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(c::op_timeout_secs()), pipe.try_all::<Value>()).await {
             Ok(r) => r,
             Err(_) => {
-                tracing::warn!("[SNAP] pipeline hmget timed out");
+                tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "[SNAP] pipeline hmget timed out");
                 return None;
             }
         };
@@ -203,10 +203,11 @@ pub async fn batch_write_snapshots(
         }
     }
 
-    match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+    let start = std::time::Instant::now();
+    match tokio::time::timeout(std::time::Duration::from_secs(c::op_timeout_secs()), pipe.try_all::<Value>()).await {
         Ok(_) => {}
         Err(_) => {
-            tracing::warn!("[SNAP] pipeline hset+expire timed out");
+            tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "[SNAP] pipeline hset+expire timed out");
         }
     }
 }
@@ -236,11 +237,12 @@ pub async fn batch_read_joined_snapshots(
         }
     }
 
+    let start = std::time::Instant::now();
     let results: Vec<FredResult<Value>> =
-        match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(c::op_timeout_secs()), pipe.try_all::<Value>()).await {
             Ok(r) => r,
             Err(_) => {
-                tracing::warn!("[SNAP] pipeline hmget (joined) timed out");
+                tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "[SNAP] pipeline hmget (joined) timed out");
                 return None;
             }
         };
@@ -310,10 +312,11 @@ pub async fn batch_write_joined_snapshots(
         }
     }
 
-    match tokio::time::timeout(std::time::Duration::from_secs(2), pipe.try_all::<Value>()).await {
+    let start = std::time::Instant::now();
+    match tokio::time::timeout(std::time::Duration::from_secs(c::op_timeout_secs()), pipe.try_all::<Value>()).await {
         Ok(_) => {}
         Err(_) => {
-            tracing::warn!("[SNAP] pipeline hset+expire (joined) timed out");
+            tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "[SNAP] pipeline hset+expire (joined) timed out");
         }
     }
 }
@@ -327,8 +330,9 @@ pub async fn invalidate_snapshot(client: &Option<RedisClient>, source: &str, tic
         None => return,
     };
     let key = snap_key(source, ticker, interval);
+    let start = std::time::Instant::now();
     match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(c::op_timeout_secs()),
         client.del::<Value, _>(&key),
     )
     .await
@@ -341,7 +345,7 @@ pub async fn invalidate_snapshot(client: &Option<RedisClient>, source: &str, tic
             tracing::warn!(%key, "snapshot del error: {e}");
         }
         Err(_) => {
-            tracing::warn!(%key, "snapshot del timed out");
+            tracing::warn!(%key, elapsed_ms = start.elapsed().as_millis(), "snapshot del timed out");
         }
     }
 }
@@ -357,8 +361,9 @@ pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
         }
     };
 
+    let start = std::time::Instant::now();
     match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(c::op_timeout_secs()),
         client.set::<Value, _, _>(
             c::TICKER_LIST_KEY,
             &value,
@@ -376,7 +381,7 @@ pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
             tracing::warn!("Failed to write ticker list to Redis: {e}");
         }
         Err(_) => {
-            tracing::warn!("Timeout writing ticker list to Redis");
+            tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "Timeout writing ticker list to Redis");
         }
     }
 }
@@ -384,15 +389,19 @@ pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
 /// Read the cached ticker list from Redis.
 /// Returns None if the key doesn't exist, parsing fails, or on timeout.
 pub async fn read_ticker_list(client: &RedisClient) -> Option<Vec<TickerInfo>> {
+    let start = std::time::Instant::now();
     let value: String = match tokio::time::timeout(
-        std::time::Duration::from_secs(2),
+        std::time::Duration::from_secs(c::op_timeout_secs()),
         client.get(c::TICKER_LIST_KEY),
     )
     .await
     {
         Ok(Ok(v)) => v,
         Ok(Err(_)) => return None,
-        Err(_) => return None,
+        Err(_) => {
+            tracing::warn!(elapsed_ms = start.elapsed().as_millis(), "read ticker list timed out");
+            return None;
+        }
     };
 
     serde_json::from_str(&value).ok()
@@ -431,8 +440,9 @@ pub async fn write_ohlcv_to_redis(
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.min(s)))),
         values.iter().map(|(s, _)| *s).fold(None, |acc, s| Some(acc.map_or(s, |a: f64| a.max(s)))),
     ) {
+        let start = std::time::Instant::now();
         match tokio::time::timeout(
-            std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
+            std::time::Duration::from_secs(c::op_timeout_secs()),
             client.zremrangebyscore::<i64, _, _, _>(&key, min_ts, max_ts),
         )
         .await
@@ -445,14 +455,15 @@ pub async fn write_ohlcv_to_redis(
                 tracing::warn!(key, "write dedup zremrangebyscore failed: {e}");
             }
             Err(_) => {
-                tracing::warn!(key, "write dedup zremrangebyscore timed out");
+                tracing::warn!(key, elapsed_ms = start.elapsed().as_millis(), "write dedup zremrangebyscore timed out");
             }
         }
     }
 
     // Batch ZADD (supports multi-member add natively)
+    let start = std::time::Instant::now();
     match tokio::time::timeout(
-        std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
+        std::time::Duration::from_secs(c::op_timeout_secs()),
         client.zadd::<Value, _, _>(
             &key,
             None,  // options
@@ -470,15 +481,16 @@ pub async fn write_ohlcv_to_redis(
             return;
         }
         Err(_) => {
-            tracing::warn!(key, "zadd timed out");
+            tracing::warn!(key, elapsed_ms = start.elapsed().as_millis(), "zadd timed out");
             return;
         }
     }
 
     // Trim to retention limit: keep top MAX entries by score (highest timestamps)
     let limit = max_size(interval);
+    let start = std::time::Instant::now();
     match tokio::time::timeout(
-        std::time::Duration::from_secs(REDIS_OP_TIMEOUT_SECS),
+        std::time::Duration::from_secs(c::op_timeout_secs()),
         client.zremrangebyrank::<Value, _>(&key, 0, -(limit as i64 + 1)),
     )
     .await
@@ -488,7 +500,7 @@ pub async fn write_ohlcv_to_redis(
             tracing::warn!(key, "zremrangebyrank failed: {e}");
         }
         Err(_) => {
-            tracing::warn!(key, "zremrangebyrank timed out");
+            tracing::warn!(key, elapsed_ms = start.elapsed().as_millis(), "zremrangebyrank timed out");
         }
     }
 }
