@@ -115,7 +115,11 @@ async fn progressive_query(
     start_time: Option<chrono::DateTime<chrono::Utc>>,
     end_time: Option<chrono::DateTime<chrono::Utc>>,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
-    let want = limit.unwrap() as usize;
+    let Some(want_limit) = limit else {
+        // progressive_query is only called when limit.is_some(), but be defensive
+        return ohlcv::get_ohlcv_joined_range(pool, source, ticker, interval, limit, start_time, end_time).await;
+    };
+    let want = want_limit as usize;
     let end = end_time.unwrap_or_else(Utc::now);
 
     for effective_start in progressive_windows(interval, end, start_time) {

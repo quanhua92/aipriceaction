@@ -225,9 +225,9 @@ pub(crate) async fn fetch_native_tickers(
     let limit_val = limit.unwrap_or(1);
 
     if snap_eligible {
-
+        if let Some(redis) = &*redis_client {
         if let Some(raw_values) = crate::workers::redis_worker::batch_read_snapshots(
-            redis_client.as_ref().unwrap(), source, &symbols, interval, limit_val, ma_type,
+            redis, source, &symbols, interval, limit_val, ma_type,
         ).await {
             // Separate hits from misses
             let mut result: BTreeMap<String, Vec<StockDataResponse>> = BTreeMap::new();
@@ -254,7 +254,7 @@ pub(crate) async fn fetch_native_tickers(
 
                 // Write back snapshots for the newly computed tickers
                 if !missed_result.is_empty() {
-                    let redis = redis_client.as_ref().unwrap().clone();
+                    let redis = redis.clone();
                     let ma_type_owned = ma_type.to_string();
                     let source_owned = source.to_string();
                     let interval_owned = interval.to_string();
@@ -278,12 +278,13 @@ pub(crate) async fn fetch_native_tickers(
                 return (result, "redis-snap", None);
             }
         }
+        } // end if let Some(ref redis)
     }
 
     if redis_allowed {
-        let start_ok = if start_time.is_some() {
+        let start_ok = if let Some(st) = start_time {
             redis_reader::redis_covers_range(
-                redis_client, source, &symbols[0], interval, start_time.unwrap(),
+                redis_client, source, &symbols[0], interval, st,
             )
             .await
         } else {
@@ -380,7 +381,8 @@ pub(crate) async fn fetch_native_tickers(
                 if !result.is_empty() {
                     // Write snapshots for future requests (fire-and-forget)
                     if snap_eligible {
-                        let redis = redis_client.as_ref().unwrap().clone();
+                        if let Some(redis) = redis_client.as_ref() {
+                        let redis = redis.clone();
                         let ma_type_owned = ma_type.to_string();
                         let source_owned = source.to_string();
                         let interval_owned = interval.to_string();
@@ -393,6 +395,7 @@ pub(crate) async fn fetch_native_tickers(
                                 &interval_owned, snap_limit, &ma_type_owned, &result_clone, None,
                             ).await;
                         });
+                        } // end if let Some(redis)
                     }
                     return (result, "redis", first_meta);
                 }
@@ -493,9 +496,9 @@ pub(crate) async fn fetch_aggregated_tickers(
         && redis_client.is_some();
 
     if redis_allowed {
-        let start_ok = if start_time.is_some() {
+        let start_ok = if let Some(st) = start_time {
             redis_reader::redis_covers_range(
-                redis_client, source, &symbols[0], base_interval, start_time.unwrap(),
+                redis_client, source, &symbols[0], base_interval, st,
             )
             .await
         } else {

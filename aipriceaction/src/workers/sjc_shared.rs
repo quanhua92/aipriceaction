@@ -95,8 +95,8 @@ pub async fn import_csv_to_ohlcv(
 
     tracing::info!(
         total_rows = rows.len(),
-        first_date = %rows.first().unwrap().date,
-        last_date = %rows.last().unwrap().date,
+        first_date = %rows.first().map(|r| &r.date).unwrap_or(&"?".to_string()),
+        last_date = %rows.last().map(|r| &r.date).unwrap_or(&"?".to_string()),
         "import_csv_to_ohlcv: starting import"
     );
 

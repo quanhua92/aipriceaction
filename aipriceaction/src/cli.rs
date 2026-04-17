@@ -324,36 +324,56 @@ pub fn run() {
                 let source = "vn";
 
                 // Total tickers
-                let ticker_count = ohlcv::count_tickers(&pool, source)
-                    .await
-                    .expect("Failed to count tickers");
+                let ticker_count = match ohlcv::count_tickers(&pool, source).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("Failed to count tickers: {e}");
+                        std::process::exit(1);
+                    }
+                };
 
                 // Total OHLCV rows (all tickers)
-                let total_ohlcv = ohlcv::count_ohlcv(&pool, source, None, None)
-                    .await
-                    .expect("Failed to count OHLCV");
+                let total_ohlcv = match ohlcv::count_ohlcv(&pool, source, None, None).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("Failed to count OHLCV: {e}");
+                        std::process::exit(1);
+                    }
+                };
 
                 tracing::info!("Source: {source} | Tickers: {ticker_count} | OHLCV: {total_ohlcv}");
 
                 // Per-interval totals
                 for iv in &["1D", "1h", "1m"] {
-                    let ohlcv_count = ohlcv::count_ohlcv(&pool, source, None, Some(iv))
-                        .await
-                        .expect("Failed to count OHLCV");
+                    let ohlcv_count = match ohlcv::count_ohlcv(&pool, source, None, Some(iv)).await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            eprintln!("Failed to count OHLCV for {iv}: {e}");
+                            std::process::exit(1);
+                        }
+                    };
                     if ohlcv_count > 0 {
                         tracing::info!("  {iv}: {ohlcv_count} OHLCV");
                     }
                 }
 
                 // VNINDEX breakdown
-                let vnindex_ohlcv = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), None)
-                    .await
-                    .expect("Failed to count VNINDEX OHLCV");
+                let vnindex_ohlcv = match ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), None).await {
+                    Ok(c) => c,
+                    Err(e) => {
+                        eprintln!("Failed to count VNINDEX OHLCV: {e}");
+                        std::process::exit(1);
+                    }
+                };
                 tracing::info!("VNINDEX: {vnindex_ohlcv} OHLCV");
                 for iv in &["1D", "1h", "1m"] {
-                    let count = ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), Some(iv))
-                        .await
-                        .expect("Failed to count VNINDEX OHLCV");
+                    let count = match ohlcv::count_ohlcv(&pool, source, Some("VNINDEX"), Some(iv)).await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            eprintln!("Failed to count VNINDEX OHLCV for {iv}: {e}");
+                            std::process::exit(1);
+                        }
+                    };
                     if count > 0 {
                         tracing::info!("  {iv}: {count}");
                     }

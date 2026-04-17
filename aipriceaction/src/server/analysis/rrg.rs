@@ -859,9 +859,14 @@ async fn handle_jdk(
             }
 
             // Latest point
-            let latest_ratio = *x_vals.last().unwrap();
-            let latest_momentum = *y_vals.last().unwrap();
-            let latest_close = *aligned.sec_closes.last().unwrap();
+            let (latest_ratio, latest_momentum) = match (x_vals.last(), y_vals.last()) {
+                (Some(&r), Some(&m)) => (r, m),
+                _ => continue,
+            };
+            let latest_close = match aligned.sec_closes.last() {
+                Some(&c) => c,
+                None => continue,
+            };
 
             // Latest volume from the most recent security row (newest in time)
             let latest_volume = sec_rows
@@ -875,10 +880,13 @@ async fn handle_jdk(
             }
 
             // Raw RS for latest point
-            let raw_rs = if latest_close != 0.0 && !aligned.bench_closes.is_empty() {
-                let bench_close = *aligned.bench_closes.last().unwrap();
-                if bench_close != 0.0 {
-                    latest_close / bench_close
+            let raw_rs = if latest_close != 0.0 {
+                if let Some(&bench_close) = aligned.bench_closes.last() {
+                    if bench_close != 0.0 {
+                        latest_close / bench_close
+                    } else {
+                        0.0
+                    }
                 } else {
                     0.0
                 }

@@ -787,7 +787,7 @@ mod tests {
         assert_eq!(parts[1], "1500.5");
         assert_eq!(parts[6].parse::<i64>().is_ok(), true); // crawl_ts
 
-        let (parsed, crawl_ts) = parse_member(&member, "1D").unwrap();
+        let (parsed, crawl_ts) = parse_member(&member, "1D").expect("failed to parse 7-field member");
         assert_eq!(parsed.time.timestamp_millis(), 1700000000000);
         assert_eq!(parsed.open, 1500.5);
         assert_eq!(parsed.high, 1510.0);
@@ -798,7 +798,7 @@ mod tests {
 
         // Old 6-field format should still parse (backward compat)
         let old_member = "1700000000000|1500.5|1510|1490|1505.25|100000";
-        let (parsed_old, crawl_ts_old) = parse_member(old_member, "1D").unwrap();
+        let (parsed_old, crawl_ts_old) = parse_member(old_member, "1D").expect("failed to parse 6-field member");
         assert_eq!(parsed_old.time.timestamp_millis(), 1700000000000);
         assert_eq!(parsed_old.close, 1505.25);
         assert!(crawl_ts_old.is_none());

@@ -121,14 +121,14 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                                 tracing::info!(ticker, interval, "empty response, stopping");
                                 break;
                             }
-                            let oldest = data.first().unwrap().time.format("%Y-%m-%d %H:%M").to_string();
-                            let newest = data.last().unwrap().time.format("%Y-%m-%d %H:%M").to_string();
+                            let oldest = data.first().map(|r| r.time.format("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
+                            let newest = data.last().map(|r| r.time.format("%Y-%m-%d %H:%M").to_string()).unwrap_or_default();
                             let fetched = data.len();
                             total_saved += fetched;
 
                             // Save immediately — avoids OOM from accumulating all chunks
                             vci_shared::enhance_and_save(&pool, ticker_id, &data, interval, "vn", &ticker, &redis_client).await;
-                            let newest_ts = data.last().unwrap().time.timestamp();
+                            let newest_ts = data.last().map(|r| r.time.timestamp()).unwrap_or(i64::MIN);
                             tracing::info!(ticker, interval, chunk = fetched, total = total_saved, %oldest, %newest, "saved dividend chunk");
 
                             // Stall detection: if newest timestamp didn't advance, we're in a gap

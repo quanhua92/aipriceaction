@@ -332,8 +332,10 @@ fn calculate_poc_and_percentages(profile: Vec<PriceLevelVolume>, _total_volume: 
 fn aggregate_into_bins(profile: Vec<PriceLevelVolume>, num_bins: usize) -> Vec<PriceLevelVolume> {
     if profile.len() <= num_bins { return profile; }
 
-    let price_min = profile.first().unwrap().price;
-    let price_max = profile.last().unwrap().price;
+    let (price_min, price_max) = match (profile.first(), profile.last()) {
+        (Some(first), Some(last)) => (first.price, last.price),
+        _ => return profile,
+    };
     let bin_size = (price_max - price_min) / num_bins as f64;
     if bin_size <= 0.0 { return profile; }
 
