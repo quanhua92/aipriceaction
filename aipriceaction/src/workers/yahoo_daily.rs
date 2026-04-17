@@ -56,7 +56,13 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                     let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = yahoo_shared::ensure_yahoo_ticker(&pool, "yahoo", &ticker).await;
+                        let ticker_id = match yahoo_shared::ensure_yahoo_ticker(&pool, "yahoo", &ticker).await {
+                            Ok(id) => id,
+                            Err(e) => {
+                                tracing::warn!(ticker, "failed to upsert ticker: {e}");
+                                return false;
+                            }
+                        };
 
                         // Check existing daily count before fetching
                         let needs_full_download = match ohlcv::count_ohlcv(&pool, "yahoo", Some(&ticker), Some("1D")).await {

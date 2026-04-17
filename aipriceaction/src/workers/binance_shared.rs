@@ -76,12 +76,11 @@ pub async fn sync_crypto_tickers(pool: &PgPool) -> usize {
 ///
 /// Crypto-specific version — does NOT set status (unlike VN's set_ticker_ready_if_new).
 /// New crypto tickers are handled by sync_crypto_tickers which sets full-download-requested.
-pub async fn ensure_crypto_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
+pub async fn ensure_crypto_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<i32> {
     let ticker_id = ohlcv::upsert_ticker(pool, source, ticker, None)
-        .await
-        .expect("failed to upsert ticker");
+        .await?;
     tracing::debug!(ticker, ticker_id, source, "ensure_crypto_ticker: upsert done (no status change)");
-    ticker_id
+    Ok(ticker_id)
 }
 
 /// Schedule the next run for a ticker at a fixed interval.

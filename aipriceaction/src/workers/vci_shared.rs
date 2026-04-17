@@ -71,10 +71,9 @@ pub async fn sync_tickers_from_json(pool: &PgPool) -> usize {
 }
 
 /// Ensure a VN ticker exists in the database, return its id.
-pub async fn ensure_vn_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
+pub async fn ensure_vn_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<i32> {
     queries::ohlcv::upsert_ticker(pool, source, ticker, None)
         .await
-        .expect("failed to upsert ticker")
 }
 
 /// Get the latest timestamp for a ticker + interval.

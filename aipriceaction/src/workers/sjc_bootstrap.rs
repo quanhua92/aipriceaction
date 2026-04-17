@@ -16,7 +16,9 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
     // Ensure the SJC ticker exists with waiting-import status before entering the loop.
     // This avoids a race where sjc_daily creates the ticker after bootstrap's first query.
-    sjc_shared::ensure_sjc_ticker(&pool).await;
+    if let Err(e) = sjc_shared::ensure_sjc_ticker(&pool).await {
+        tracing::warn!("SJC bootstrap worker: failed to ensure SJC ticker on startup: {e}");
+    }
 
     loop {
         // Find SJC tickers flagged for import

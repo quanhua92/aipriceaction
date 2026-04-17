@@ -30,7 +30,14 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
     loop {
         // 1. Ensure ticker exists
-        let ticker_id = sjc_shared::ensure_sjc_ticker(&pool).await;
+        let ticker_id = match sjc_shared::ensure_sjc_ticker(&pool).await {
+            Ok(id) => id,
+            Err(e) => {
+                tracing::warn!("SJC daily worker: failed to ensure SJC ticker: {e}");
+                sleep(TokioDuration::from_secs(sjc_worker::DAILY_LOOP_OFF_SECS)).await;
+                continue;
+            }
+        };
 
         // 2. Check if bootstrap is done
         let ticker = match ohlcv::get_ticker_by_id(&pool, ticker_id).await {

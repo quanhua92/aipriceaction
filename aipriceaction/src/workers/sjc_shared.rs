@@ -24,10 +24,9 @@ pub fn resolve_data_file(name: &str) -> Result<std::path::PathBuf, Box<dyn std::
 ///
 /// Creates it with source='sjc' and sets status to 'waiting-import' if NULL,
 /// so the bootstrap worker picks it up.
-pub async fn ensure_sjc_ticker(pool: &PgPool) -> i32 {
+pub async fn ensure_sjc_ticker(pool: &PgPool) -> sqlx::Result<i32> {
     let ticker_id = ohlcv::upsert_ticker(pool, sjc_worker::SOURCE, sjc_worker::TICKER, Some(sjc_worker::NAME))
-        .await
-        .expect("failed to upsert SJC ticker");
+        .await?;
 
     // Set status to waiting-import if NULL (new ticker)
     let result = sqlx::query!(
@@ -51,10 +50,8 @@ pub async fn ensure_sjc_ticker(pool: &PgPool) -> i32 {
         }
     }
 
-    ticker_id
+    Ok(ticker_id)
 }
-
-/// CSV row structure for sjc-batch.csv.
 #[derive(Debug, serde::Deserialize)]
 struct SjcCsvRow {
     date: String,

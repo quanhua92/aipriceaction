@@ -71,12 +71,11 @@ pub async fn sync_yahoo_tickers(pool: &PgPool) -> usize {
 }
 
 /// Ensure a yahoo ticker exists in the database, return its id.
-pub async fn ensure_yahoo_ticker(pool: &PgPool, source: &str, ticker: &str) -> i32 {
+pub async fn ensure_yahoo_ticker(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<i32> {
     let ticker_id = ohlcv::upsert_ticker(pool, source, ticker, None)
-        .await
-        .expect("failed to upsert ticker");
+        .await?;
     tracing::debug!(ticker, ticker_id, source, "ensure_yahoo_ticker: upsert done (no status change)");
-    ticker_id
+    Ok(ticker_id)
 }
 
 /// Re-export commonly used functions for convenience.

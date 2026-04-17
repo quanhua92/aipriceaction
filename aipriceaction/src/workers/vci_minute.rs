@@ -58,7 +58,13 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                     let redis_client = redis_client.clone();
                     let ticker = ticker_entry.ticker.clone();
                     handles.spawn(async move {
-                        let ticker_id = vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await;
+                        let ticker_id = match vci_shared::ensure_vn_ticker(&pool, "vn", &ticker).await {
+                            Ok(id) => id,
+                            Err(e) => {
+                                tracing::warn!(ticker, "failed to upsert ticker: {e}");
+                                return false;
+                            }
+                        };
                         let last_time = vci_shared::get_last_time(&pool, ticker_id, "1m").await;
 
                         let count_back = match last_time {
