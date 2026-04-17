@@ -86,16 +86,18 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                                     tracing::warn!("[YAHOO-DIVIDEND] ticker={}, daily sync SKIPPED — awaiting bootstrap worker to re-download full history", ticker);
                                     return false;
                                 }
-                                yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "yahoo", &ticker, &redis_client).await;
-
-                                match yahoo_shared::schedule_fixed_interval(
-                                    &pool, ticker_id, "next_1d",
-                                    yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_DAILY_SECS),
-                                )
-                                .await
-                                {
-                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
-                                    Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
+                                if yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "yahoo", &ticker, &redis_client).await {
+                                    match yahoo_shared::schedule_fixed_interval(
+                                        &pool, ticker_id, "next_1d",
+                                        yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_DAILY_SECS),
+                                    )
+                                    .await
+                                    {
+                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
+                                        Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
+                                    }
+                                } else {
+                                    tracing::warn!(ticker, count = data.len(), "daily sync upsert failed, skipping schedule");
                                 }
                                 false
                             }

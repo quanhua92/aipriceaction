@@ -99,9 +99,9 @@ pub async fn enhance_and_save(
     source: &str,
     ticker: &str,
     redis_client: &Option<crate::redis::RedisClient>,
-) {
+) -> bool {
     if data.is_empty() {
-        return;
+        return true;
     }
 
     // Sort chronologically (should already be sorted, but be safe)
@@ -148,6 +148,7 @@ pub async fn enhance_and_save(
 
     if let Err(e) = queries::import::bulk_upsert_ohlcv(pool, &deduped).await {
         tracing::error!(ticker_id, interval, "bulk_upsert_ohlcv failed: {e}");
+        return false;
     } else if redis_client.is_some() {
         // Fire-and-forget Redis TS write.
         // Errors are logged internally by write_ohlcv_to_redis.
@@ -161,6 +162,7 @@ pub async fn enhance_and_save(
             crate::workers::redis_worker::invalidate_snapshot(&redis, &src, &tk, &iv).await;
         });
     }
+    true
 }
 
 /// Normalize a timestamp to the start of its interval boundary.

@@ -69,18 +69,20 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
                         match provider.get_history_since(&ticker, "1m", binance_worker::MINUTE_LIMIT, start_time).await {
                             Ok(data) => {
-                                binance_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "crypto", &ticker, &redis_client).await;
-
-                                match binance_shared::schedule_fixed_interval(
-                                    &pool,
-                                    ticker_id,
-                                    "next_1m",
-                                    binance_worker::schedule_secs(&ticker, binance_worker::SCHEDULE_MINUTE_SECS),
-                                )
-                                .await
-                                {
-                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
-                                    Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                if binance_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "crypto", &ticker, &redis_client).await {
+                                    match binance_shared::schedule_fixed_interval(
+                                        &pool,
+                                        ticker_id,
+                                        "next_1m",
+                                        binance_worker::schedule_secs(&ticker, binance_worker::SCHEDULE_MINUTE_SECS),
+                                    )
+                                    .await
+                                    {
+                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
+                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                    }
+                                } else {
+                                    tracing::warn!(ticker, count = data.len(), "minute sync upsert failed, skipping schedule");
                                 }
                                 false
                             }

@@ -88,24 +88,26 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                                     tracing::warn!("[DIVIDEND] ticker={}, daily sync SKIPPED — awaiting dividend worker to re-download full history", ticker);
                                     return false;
                                 }
-                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "vn", &ticker, &redis_client).await;
-
-                                // Major VN tickers get fixed 60s schedule; others use money-flow tier
-                                if MAJOR_VN.contains(&ticker.as_str()) {
-                                    match binance_shared::schedule_fixed_interval(
-                                        &pool, ticker_id, "next_1d", MAJOR_SCHEDULE_SECS,
-                                    ).await {
-                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK (major)"),
-                                        Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
+                                if vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "vn", &ticker, &redis_client).await {
+                                    // Major VN tickers get fixed 60s schedule; others use money-flow tier
+                                    if MAJOR_VN.contains(&ticker.as_str()) {
+                                        match binance_shared::schedule_fixed_interval(
+                                            &pool, ticker_id, "next_1d", MAJOR_SCHEDULE_SECS,
+                                        ).await {
+                                            Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK (major)"),
+                                            Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
+                                        }
+                                    } else {
+                                        match ohlcv::schedule_next_run(
+                                            &pool, ticker_id, "next_1d",
+                                            &priority::THRESHOLDS, &tier_secs,
+                                        ).await {
+                                            Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
+                                            Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
+                                        }
                                     }
                                 } else {
-                                    match ohlcv::schedule_next_run(
-                                        &pool, ticker_id, "next_1d",
-                                        &priority::THRESHOLDS, &tier_secs,
-                                    ).await {
-                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "daily sync OK"),
-                                        Err(e) => tracing::warn!(ticker, count = data.len(), "daily sync OK but scheduling failed: {e}"),
-                                    }
+                                    tracing::warn!(ticker, count = data.len(), "daily sync upsert failed, skipping schedule");
                                 }
                                 false
                             }

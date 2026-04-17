@@ -76,24 +76,26 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
                         match provider.get_history(&ticker, "1m", count_back, None).await {
                             Ok(data) => {
-                                vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "vn", &ticker, &redis_client).await;
-
-                                // Major VN tickers get fixed 60s schedule; others use money-flow tier
-                                if MAJOR_VN.contains(&ticker.as_str()) {
-                                    match binance_shared::schedule_fixed_interval(
-                                        &pool, ticker_id, "next_1m", MAJOR_SCHEDULE_SECS,
-                                    ).await {
-                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK (major)"),
-                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                if vci_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "vn", &ticker, &redis_client).await {
+                                    // Major VN tickers get fixed 60s schedule; others use money-flow tier
+                                    if MAJOR_VN.contains(&ticker.as_str()) {
+                                        match binance_shared::schedule_fixed_interval(
+                                            &pool, ticker_id, "next_1m", MAJOR_SCHEDULE_SECS,
+                                        ).await {
+                                            Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK (major)"),
+                                            Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                        }
+                                    } else {
+                                        match ohlcv::schedule_next_run(
+                                            &pool, ticker_id, "next_1m",
+                                            &priority::THRESHOLDS, &tier_secs,
+                                        ).await {
+                                            Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
+                                            Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                        }
                                     }
                                 } else {
-                                    match ohlcv::schedule_next_run(
-                                        &pool, ticker_id, "next_1m",
-                                        &priority::THRESHOLDS, &tier_secs,
-                                    ).await {
-                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
-                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
-                                    }
+                                    tracing::warn!(ticker, count = data.len(), "minute sync upsert failed, skipping schedule");
                                 }
                                 false
                             }

@@ -69,18 +69,20 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
                         match provider.get_history(&ticker, "1m", range).await {
                             Ok(data) => {
-                                yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "yahoo", &ticker, &redis_client).await;
-
-                                match yahoo_shared::schedule_fixed_interval(
-                                    &pool,
-                                    ticker_id,
-                                    "next_1m",
-                                    yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_MINUTE_SECS),
-                                )
-                                .await
-                                {
-                                    Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
-                                    Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                if yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "yahoo", &ticker, &redis_client).await {
+                                    match yahoo_shared::schedule_fixed_interval(
+                                        &pool,
+                                        ticker_id,
+                                        "next_1m",
+                                        yahoo_worker::schedule_secs(&ticker, yahoo_worker::SCHEDULE_MINUTE_SECS),
+                                    )
+                                    .await
+                                    {
+                                        Ok(next_run) => tracing::info!(ticker, count = data.len(), next = %next_run, "minute sync OK"),
+                                        Err(e) => tracing::warn!(ticker, count = data.len(), "minute sync OK but scheduling failed: {e}"),
+                                    }
+                                } else {
+                                    tracing::warn!(ticker, count = data.len(), "minute sync upsert failed, skipping schedule");
                                 }
                                 false
                             }
