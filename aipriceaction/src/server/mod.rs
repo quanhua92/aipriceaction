@@ -1,5 +1,6 @@
 mod api;
 mod cache;
+mod sync;
 pub mod types;
 pub mod analysis;
 
@@ -139,6 +140,8 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .route("/tickers/name", axum::routing::get(api::tickers_name))
         .route("/tickers/info", axum::routing::get(api::tickers_info))
         .route("/tickers/refresh", axum::routing::post(api::tickers_refresh))
+        .route("/sync/{key}", axum::routing::get(sync::sync_get))
+        .route("/sync/{key}", axum::routing::post(sync::sync_post))
         .nest("/analysis", analysis_routes())
         .layer(RequestBodyLimitLayer::new(1024 * 1024));
 

@@ -219,6 +219,15 @@ curl "http://localhost:3000/tickers/name?mode=all"      # All sources
 # Company info (from company_info.json)
 curl "http://localhost:3000/tickers/info"              # All tickers
 curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
+
+# Sync KV-store (cross-device JSON object syncing)
+curl -X POST http://localhost:3000/sync/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <SYNC_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"secret": "my-secret", "value": {"bookmarks": ["BTCUSDT", "VCB"]}}'
+
+curl http://localhost:3000/sync/550e8400-e29b-41d4-a716-446655440000?secret=my-secret \
+  -H "Authorization: Bearer <SYNC_TOKEN>"
 ```
 
 ## Environment Variables
@@ -247,6 +256,7 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `REDIS_HOURLY_BACKFILL_LIMIT` | No       | `30000`                     | Rows fetched during backfill (hourly)             |
 | `REDIS_MINUTE_BACKFILL_LIMIT` | No       | `20000`                     | Rows fetched during backfill (minute)             |
 | `REFRESH_SECRET`              | No       | --                          | Secret key required for POST /tickers/refresh. Endpoint returns 403 if unset. |
+| `SYNC_TOKEN`                  | No       | --                          | Bearer token for /sync KV-store endpoint. Comma-separated for key rotation. Endpoint returns 403 if unset. |
 
 ## Redis Cache
 

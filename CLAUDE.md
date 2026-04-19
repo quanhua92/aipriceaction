@@ -52,6 +52,7 @@ aipriceaction/src/
 │   ├── cache.rs         # In-memory response cache (TTL 10s, 500 entries)
 │   ├── analysis/        # Top performers, MA scores, sector rotation endpoints
 │   ├── upload.rs        # CSV/ZIP file upload handling
+│   ├── sync.rs          # KV-sync endpoints (/sync/{key})
 │   └── legacy.rs        # Legacy GitHub proxy endpoints (deprecated)
 ├── services/            # Business logic (OHLCV service layer, CSV import)
 ├── workers/             # Background data sync (tokio::spawn)
@@ -95,6 +96,7 @@ aipriceaction/src/
 | `BINANCE_WORKERS` | No | true | Enable crypto sync workers |
 | `HTTP_PROXIES` | No | — | Comma-separated proxy URLs for VCI & Binance |
 | `DUE_TICKER_FRACTION` | No | 0.5 | Fraction (0.0–1.0) of due tickers to process per worker loop iteration |
+| `SYNC_TOKEN` | No | -- | Bearer token for /sync KV-store endpoint. Comma-separated for key rotation. Endpoint returns 403 if unset. |
 
 ## SDK
 
