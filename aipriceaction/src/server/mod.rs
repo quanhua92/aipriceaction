@@ -3,7 +3,6 @@ mod cache;
 pub mod types;
 pub mod analysis;
 
-pub mod upload;
 pub mod redis_reader;
 
 use sqlx::PgPool;
@@ -131,26 +130,6 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         _redis_handle: redis_handle,
     });
 
-    // Upload routes with 10MB body limit
-    let upload_routes = axum::Router::new()
-        .route("/upload/markdown", axum::routing::post(upload::upload_markdown_handler))
-        .route("/upload/image", axum::routing::post(upload::upload_image_handler))
-        .route(
-            "/uploads/{session_id}/markdown/{filename}",
-            axum::routing::get(upload::serve_markdown_handler)
-                .delete(upload::delete_markdown_handler),
-        )
-        .route(
-            "/uploads/{session_id}/images/{filename}",
-            axum::routing::get(upload::serve_image_handler)
-                .delete(upload::delete_image_handler),
-        )
-        .route(
-            "/uploads/{session_id}",
-            axum::routing::delete(upload::delete_session_handler),
-        )
-        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024));
-
     // Main routes with 1MB body limit
     let main_routes = axum::Router::new()
         .route("/explorer", axum::routing::get(api::explorer_handler))
@@ -170,7 +149,6 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .layer(middleware::from_fn(add_cache_headers));
 
     let router = axum::Router::new()
-        .merge(upload_routes)
         .merge(main_routes)
         .merge(public_routes)
         .with_state(state)

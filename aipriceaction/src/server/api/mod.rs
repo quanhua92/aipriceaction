@@ -344,6 +344,35 @@ pub async fn tickers_refresh(
     State(state): State<Arc<AppState>>,
     axum::Json(body): axum::Json<RefreshQuery>,
 ) -> Response {
+    let expected_key = std::env::var("REFRESH_SECRET");
+    let expected_key = match &expected_key {
+        Ok(key) => key.as_str(),
+        Err(_) => {
+            tracing::warn!("POST /tickers/refresh denied: REFRESH_SECRET not set");
+            return (
+                StatusCode::FORBIDDEN,
+                Json(serde_json::json!({
+                    "error": "Refresh endpoint is disabled. Set REFRESH_SECRET environment variable."
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    match &body.key {
+        Some(key) if key == expected_key => {}
+        _ => {
+            tracing::warn!("POST /tickers/refresh denied: invalid or missing key");
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({
+                    "error": "Invalid or missing key"
+                })),
+            )
+                .into_response();
+        }
+    }
+
     let col = match body.interval.as_str() {
         "1D" => crate::queries::ohlcv::ScheduleColumn::Daily,
         "1h" => crate::queries::ohlcv::ScheduleColumn::Hourly,

@@ -347,10 +347,31 @@ async function testDeleteNonexistentSession() {
 }
 
 // ──────────────────────────────────────────────
-// Runner
+// Verify upload feature is disabled
 // ──────────────────────────────────────────────
 
-const tests = [
+async function testUploadEndpointsDisabled() {
+  const endpoints = [
+    { method: "POST", path: "/upload/markdown?session_id=00000000-0000-0000-0000-000000000000&secret=1234567890123456" },
+    { method: "POST", path: "/upload/image?session_id=00000000-0000-0000-0000-000000000000&secret=1234567890123456" },
+    { method: "GET",  path: "/uploads/00000000-0000-0000-0000-000000000000/markdown/test.md" },
+    { method: "GET",  path: "/uploads/00000000-0000-0000-0000-000000000000/images/test.png" },
+    { method: "DELETE", path: "/uploads/00000000-0000-0000-0000-000000000000/markdown/test.md?secret=1234567890123456" },
+    { method: "DELETE", path: "/uploads/00000000-0000-0000-0000-000000000000?secret=1234567890123456" },
+  ];
+
+  for (const { method, path } of endpoints) {
+    const { status } = await fetchJSON(path, { method });
+    console.log(`\n── ${method} ${path} ──`);
+    assert(status === 404, `upload endpoint disabled, returns 404 (got ${status})`);
+  }
+}
+
+// ──────────────────────────────────────────────
+// Disabled: upload feature tests (kept for reference)
+// ──────────────────────────────────────────────
+
+const disabledTests = [
   testUploadMarkdown,
   testRetrieveMarkdown,
   testDuplicateMarkdown,
@@ -384,14 +405,11 @@ async function main() {
     process.exit(1);
   }
 
-  for (const fn of tests) {
-    try {
-      await fn();
-    } catch (err) {
-      failed++;
-      console.log(`  💥 ${fn.name}: ${err.message}`);
-    }
-  }
+  // Run disabled-feature check first
+  await testUploadEndpointsDisabled();
+
+  // Skip disabled tests (upload feature removed)
+  console.log(`\n⏭️  Skipping ${disabledTests.length} upload feature tests (feature disabled)`);
 
   const suiteMs = Math.round((performance.now() - suiteStart) * 100) / 100;
   console.log(`\n${"═".repeat(50)}`);

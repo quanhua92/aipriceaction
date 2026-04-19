@@ -730,11 +730,51 @@ async function testSnapWithPastEndDateBypassesSnap() {
 // POST /tickers/refresh tests
 // ──────────────────────────────────────────────
 
-async function testRefreshVnDaily() {
-  const { status, body, ms } = await fetchJSON("/tickers/refresh", {
+const REFRESH_KEY = process.env.REFRESH_SECRET || null;
+
+function refreshBody(interval, mode, key = REFRESH_KEY) {
+  return JSON.stringify({ interval, mode, key });
+}
+
+async function testRefreshMissingKey() {
+  const { status, body } = await fetchJSON("/tickers/refresh", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ interval: "1D", mode: "vn" }),
+  });
+  console.log(`\n── POST /tickers/refresh (no key) ──`);
+  if (!REFRESH_KEY) {
+    assert(status === 403, `returns 403 when REFRESH_SECRET not set (got ${status})`);
+    assert(body.error?.includes("disabled"), "error says disabled");
+  } else {
+    assert(status === 401, `returns 401 when key missing (got ${status})`);
+    assert(typeof body.error === "string", "has error message");
+  }
+}
+
+async function testRefreshWrongKey() {
+  const { status, body } = await fetchJSON("/tickers/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ interval: "1D", mode: "vn", key: "wrong-key" }),
+  });
+  console.log(`\n── POST /tickers/refresh (wrong key) ──`);
+  if (!REFRESH_KEY) {
+    assert(status === 403, `returns 403 when REFRESH_SECRET not set (got ${status})`);
+  } else {
+    assert(status === 401, `returns 401 when key wrong (got ${status})`);
+  }
+}
+
+async function testRefreshVnDaily() {
+  if (!REFRESH_KEY) {
+    console.log(`\n── POST /tickers/refresh {1D, vn} ── ⏭️  skipped (REFRESH_SECRET not set)`);
+    return;
+  }
+  const { status, body, ms } = await fetchJSON("/tickers/refresh", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: refreshBody("1D", "vn"),
   });
   console.log(`\n── POST /tickers/refresh {1D, vn} ── ${ms}ms`);
   assert(status === 200, "returns 200");
@@ -745,10 +785,14 @@ async function testRefreshVnDaily() {
 }
 
 async function testRefreshInvalidInterval() {
+  if (!REFRESH_KEY) {
+    console.log(`\n── POST /tickers/refresh {5m, vn} (invalid interval) ── ⏭️  skipped (REFRESH_SECRET not set)`);
+    return;
+  }
   const { status, body, ms } = await fetchJSON("/tickers/refresh", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ interval: "5m", mode: "vn" }),
+    body: refreshBody("5m", "vn"),
   });
   console.log(`\n── POST /tickers/refresh {5m, vn} (invalid interval) ── ${ms}ms`);
   assert(status === 400, `returns 400 (got ${status})`);
@@ -756,10 +800,14 @@ async function testRefreshInvalidInterval() {
 }
 
 async function testRefreshAllSources() {
+  if (!REFRESH_KEY) {
+    console.log(`\n── POST /tickers/refresh {1h, all} ── ⏭️  skipped (REFRESH_SECRET not set)`);
+    return;
+  }
   const { status, body, ms } = await fetchJSON("/tickers/refresh", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ interval: "1h", mode: "all" }),
+    body: refreshBody("1h", "all"),
   });
   console.log(`\n── POST /tickers/refresh {1h, all} ── ${ms}ms`);
   assert(status === 200, "returns 200");
@@ -818,6 +866,8 @@ const tests = [
   testSnapDefaultIsTrue,
   testSnapWithEndDateToday,
   testSnapWithPastEndDateBypassesSnap,
+  testRefreshMissingKey,
+  testRefreshWrongKey,
   testRefreshVnDaily,
   testRefreshInvalidInterval,
   testRefreshAllSources,

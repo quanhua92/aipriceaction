@@ -129,6 +129,8 @@ pub struct RefreshQuery {
     pub interval: String,
     #[serde(default)]
     pub mode: Mode,
+    #[serde(default)]
+    pub key: Option<String>,
 }
 
 /// Stock data response matching the parent project format.

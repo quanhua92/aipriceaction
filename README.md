@@ -246,6 +246,7 @@ curl "http://localhost:3000/tickers/info?ticker=VCB"   # Single ticker
 | `REDIS_DAILY_BACKFILL_LIMIT`  | No       | `5000`                      | Rows fetched during backfill (daily)              |
 | `REDIS_HOURLY_BACKFILL_LIMIT` | No       | `30000`                     | Rows fetched during backfill (hourly)             |
 | `REDIS_MINUTE_BACKFILL_LIMIT` | No       | `20000`                     | Rows fetched during backfill (minute)             |
+| `REFRESH_SECRET`              | No       | --                          | Secret key required for POST /tickers/refresh. Endpoint returns 403 if unset. |
 
 ## Redis Cache
 
