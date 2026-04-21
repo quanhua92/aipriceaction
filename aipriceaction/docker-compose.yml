@@ -12,6 +12,10 @@ services:
       - PORT=3000
       - DATABASE_URL=postgres://aipriceaction:${POSTGRES_PASSWORD}@postgres:5432/aipriceaction
       - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379/0
+      # Pre-loads last 500 candles per ticker on fresh deploy. Comment out to skip.
+      - CHECKPOINT_FILE=/app/data/checkpoint.json.gz
+    volumes:
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy

@@ -5,6 +5,7 @@ use crate::models::interval::Interval;
 use crate::providers::binance::BinanceProvider;
 use crate::providers::vci::VciProvider;
 use crate::providers::yahoo::YahooProvider;
+use crate::services::checkpoint;
 use crate::services::ohlcv;
 
 /// Spawn a background worker that takes `(PgPool, Option<RedisClient>)`.
@@ -123,6 +124,15 @@ pub enum Commands {
     },
     /// Trigger a one-shot Redis ZSET backfill from PostgreSQL
     BackfillRedis,
+    /// Create a checkpoint file from the current database
+    Checkpoint {
+        /// Number of candles per ticker per interval (default: 500)
+        #[arg(long, default_value = "500")]
+        candles: u32,
+        /// Output file path (default: data/checkpoint.json.gz)
+        #[arg(long, default_value = "data/checkpoint.json.gz")]
+        output: String,
+    },
     /// Fetch company info and financial ratios for VN tickers from VCI
     GenerateCompanyInfo {
         /// Optional: query a single ticker (e.g. VCB)
@@ -175,6 +185,25 @@ pub fn run() {
                         return;
                     }
                 };
+
+                // Import checkpoint if CHECKPOINT_FILE is set and DB is empty
+                if let Ok(path) = std::env::var("CHECKPOINT_FILE") {
+                    match checkpoint::has_existing_data(&pool).await {
+                        Ok(true) => {
+                            tracing::warn!("Database already has data, skipping checkpoint import");
+                        }
+                        Ok(false) => {
+                            tracing::info!("Importing checkpoint from {path}");
+                            match checkpoint::import_checkpoint(&pool, std::path::Path::new(&path)).await {
+                                Ok(()) => tracing::info!("Checkpoint import finished"),
+                                Err(e) => tracing::error!("Checkpoint import failed: {e} (server will continue, workers will fill gaps)"),
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to check existing data for checkpoint: {e}");
+                        }
+                    }
+                }
 
                 tracing::info!("Starting server on {host}:{port}");
 
@@ -1548,6 +1577,41 @@ pub fn run() {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 crate::generate_company_info::run(ticker, rate_limit, save).await;
+            });
+        }
+        Commands::Checkpoint { candles, output } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                let database_url =
+                    std::env::var("DATABASE_URL").unwrap_or_else(|_| String::new());
+
+                if database_url.is_empty() {
+                    tracing::error!("DATABASE_URL not set");
+                    return;
+                }
+
+                let pool = match db::connect(&database_url).await {
+                    Ok(pool) => {
+                        tracing::info!("Connected to PostgreSQL, migrations applied");
+                        pool
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to connect to database: {e}");
+                        return;
+                    }
+                };
+
+                let output_path = std::path::Path::new(&output);
+                if let Some(parent) = output_path.parent() {
+                    std::fs::create_dir_all(parent).unwrap_or_else(|e| {
+                        tracing::warn!("Failed to create output directory: {e}");
+                    });
+                }
+
+                match checkpoint::create_checkpoint(&pool, candles, output_path).await {
+                    Ok(()) => tracing::info!("Checkpoint created successfully"),
+                    Err(e) => tracing::error!("Failed to create checkpoint: {e}"),
+                }
             });
         }
     }

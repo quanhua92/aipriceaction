@@ -38,6 +38,7 @@ dependencies = [
  "clap",
  "csv",
  "dotenvy",
+ "flate2",
  "fred",
  "hex",
  "infer",
