@@ -1,7 +1,7 @@
 {
   "source": "yahoo",
   "fetched_at": "2026-04-05T08:00:00Z",
-  "count": 60,
+  "count": 61,
   "data": [
     { "symbol": "GC=F", "name": "Gold Futures", "category": "Commodity" },
     { "symbol": "SI=F", "name": "Silver Futures", "category": "Commodity" },
@@ -23,6 +23,7 @@
     { "symbol": "^DJI", "name": "Dow Jones Industrial Average", "category": "US Index" },
     { "symbol": "^NDX", "name": "Nasdaq 100", "category": "US Index" },
     { "symbol": "^VIX", "name": "CBOE Volatility Index", "category": "US Index" },
+    { "symbol": "^TNX", "name": "US 10-Year Treasury Yield - US10Y", "category": "US Index" },
     { "symbol": "^N225", "name": "Nikkei 225", "category": "Global Index" },
     { "symbol": "^HSI", "name": "Hang Seng Index", "category": "Global Index" },
     { "symbol": "^FTSE", "name": "FTSE 100 Index", "category": "Global Index" },
