@@ -113,7 +113,11 @@ pub async fn tickers(
     let is_single_ticker = params.symbol.as_ref().map(|s| s.len()) == Some(1);
     let effective_limit = params.limit.unwrap_or_else(|| {
         if is_single_ticker {
-            crate::constants::api::DEFAULT_LIMIT
+            if params.start_date.is_some() {
+                crate::constants::api::SINGLE_TICKER_MAX_LIMIT  // don't truncate date ranges
+            } else {
+                crate::constants::api::DEFAULT_LIMIT
+            }
         } else {
             1
         }
@@ -235,7 +239,11 @@ async fn handle_mode_all(
     let is_single_ticker = has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1);
     let effective_limit = params.limit.unwrap_or_else(|| {
         if is_single_ticker {
-            crate::constants::api::DEFAULT_LIMIT
+            if params.start_date.is_some() {
+                crate::constants::api::SINGLE_TICKER_MAX_LIMIT  // don't truncate date ranges
+            } else {
+                crate::constants::api::DEFAULT_LIMIT
+            }
         } else {
             1
         }

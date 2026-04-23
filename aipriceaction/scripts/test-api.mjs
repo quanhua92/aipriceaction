@@ -166,6 +166,21 @@ async function testDateRange() {
   assertOldestFirst(rows, "daily date-range");
 }
 
+async function testDateRangeHourlyNoTruncation() {
+  const { body, ms } = await fetchJSON(
+    "/tickers?symbol=VIC&interval=1h&start_date=2025-05-14&end_date=2025-10-02",
+  );
+  console.log(`\n── GET /tickers?symbol=VIC&interval=1h&start_date=...&end_date=... (no limit) ── ${ms}ms`);
+  assert("VIC" in body, "has VIC key");
+  const rows = body.VIC;
+  assert(rows.length > 0, `got rows (got ${rows.length})`);
+  assert(rows[0].time >= "2025-05-14", `first row >= 2025-05-14 (got ${rows[0].time})`);
+  assert(!rows[rows.length - 1].time.startsWith("2025-10-03"), `last row not beyond end_date 2025-10-02 (got ${rows[rows.length - 1].time})`);
+  assert(rows[rows.length - 1].time.startsWith("2025-10"), `last row within Oct 2025 (got ${rows[rows.length - 1].time})`);
+  assert(rows.length > 252, `rows > 252 — not truncated by default limit (got ${rows.length})`);
+  assertOldestFirst(rows, "hourly date-range no truncation");
+}
+
 async function testHourlyTimeFormat() {
   const { body, ms } = await fetchJSON(
     "/tickers?symbol=VCB&interval=1H&limit=2",
@@ -827,6 +842,7 @@ const tests = [
   testLegacyPrices,
   testLegacyIndexNotDivided,
   testDateRange,
+  testDateRangeHourlyNoTruncation,
   testHourlyTimeFormat,
   testMinuteTimeFormat,
   testNoSymbols,
