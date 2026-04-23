@@ -187,6 +187,35 @@ async function testDateRangeHourlyNoTruncation() {
   assertOldestFirst(rows, "hourly date-range no truncation");
 }
 
+async function testStartDateWithLimit() {
+  // 1h interval: start_date + limit should return first N candles from start_date
+  const { body, ms } = await fetchJSON(
+    "/tickers?symbol=VIC&interval=1h&start_date=2025-05-14&limit=10&mode=vn",
+  );
+  console.log(`\n── GET /tickers?symbol=VIC&interval=1h&start_date=...&limit=10 ── ${ms}ms`);
+  assert("VIC" in body, "has VIC key");
+  const rows = body.VIC;
+  assert(rows.length === 10, `got exactly 10 rows (got ${rows.length})`);
+  assert(rows[0].time >= "2025-05-14", `first row >= start_date 2025-05-14 (got ${rows[0].time})`);
+  assert(rows[0].time < "2025-05-20", `first row near start_date (got ${rows[0].time})`);
+  assert(rows[rows.length - 1].time < "2025-06", `last row close to first 10 bars (got ${rows[rows.length - 1].time})`);
+  assertOldestFirst(rows, "start_date+limit hourly");
+}
+
+async function testStartDateMinuteNoLimit() {
+  // 1m interval with start_date but no limit: should start from start_date, not from newest
+  const { body, ms } = await fetchJSON(
+    "/tickers?symbol=VIC&interval=1m&start_date=2025-01-02&mode=vn",
+  );
+  console.log(`\n── GET /tickers?symbol=VIC&interval=1m&start_date=2025-01-02 (no limit) ── ${ms}ms`);
+  assert("VIC" in body, "has VIC key");
+  const rows = body.VIC;
+  assert(rows.length > 0, `got rows (got ${rows.length})`);
+  assert(rows[0].time >= "2025-01-02", `first row >= start_date 2025-01-02 (got ${rows[0].time})`);
+  assert(rows[0].time < "2025-01-05", `first row near start_date (got ${rows[0].time})`);
+  assertOldestFirst(rows, "start_date+no-limit minute");
+}
+
 async function testHourlyTimeFormat() {
   const { body, ms } = await fetchJSON(
     "/tickers?symbol=VCB&interval=1H&limit=2",
@@ -841,6 +870,8 @@ const tests = [
   testLegacyIndexNotDivided,
   testDateRange,
   testDateRangeHourlyNoTruncation,
+  testStartDateWithLimit,
+  testStartDateMinuteNoLimit,
   testHourlyTimeFormat,
   testMinuteTimeFormat,
   testNoSymbols,
