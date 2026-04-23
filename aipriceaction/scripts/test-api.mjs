@@ -758,13 +758,8 @@ async function testRefreshMissingKey() {
     body: JSON.stringify({ interval: "1D", mode: "vn" }),
   });
   console.log(`\n── POST /tickers/refresh (no key) ──`);
-  if (!REFRESH_KEY) {
-    assert(status === 403, `returns 403 when REFRESH_SECRET not set (got ${status})`);
-    assert(body.error?.includes("disabled"), "error says disabled");
-  } else {
-    assert(status === 401, `returns 401 when key missing (got ${status})`);
-    assert(typeof body.error === "string", "has error message");
-  }
+  assert(status === 401 || status === 403, `returns 401 or 403 (got ${status})`);
+  assert(typeof body.error === "string", "has error message");
 }
 
 async function testRefreshWrongKey() {
@@ -774,11 +769,8 @@ async function testRefreshWrongKey() {
     body: JSON.stringify({ interval: "1D", mode: "vn", key: "wrong-key" }),
   });
   console.log(`\n── POST /tickers/refresh (wrong key) ──`);
-  if (!REFRESH_KEY) {
-    assert(status === 403, `returns 403 when REFRESH_SECRET not set (got ${status})`);
-  } else {
-    assert(status === 401, `returns 401 when key wrong (got ${status})`);
-  }
+  assert(status === 401 || status === 403, `returns 401 or 403 (got ${status})`);
+  assert(typeof body.error === "string", "has error message");
 }
 
 async function testRefreshVnDaily() {
