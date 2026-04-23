@@ -2,8 +2,14 @@
  * Integration tests for the Axum API server (/health, /tickers, /tickers/group).
  *
  * Usage:
- *   node scripts/test-api.mjs                 # default: http://localhost:3001
+ *   node scripts/test-api.mjs                 # default: http://localhost:3000
  *   node scripts/test-api.mjs http://localhost:3000
+ *
+ * Optional env vars:
+ *   REFRESH_SECRET  Set to test POST /tickers/refresh with a valid key.
+ *                   Without it, refresh auth tests accept 401 or 403.
+ *                   To load from .env:
+ *                     REFRESH_SECRET=$(grep REFRESH_SECRET .env | cut -d= -f2) node scripts/test-api.mjs
  */
 
 const BASE_URL = process.argv[2] || "http://localhost:3000";

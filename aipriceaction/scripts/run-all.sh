@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Usage: ./scripts/run-all.sh [BASE_URL]
+#
+# Optional env vars (load from .env for full coverage):
+#   SYNC_TOKEN      Required by test-sync.mjs for auth tests
+#   REFRESH_SECRET  Enables full refresh-key tests in test-api.mjs
+#
+# Example with .env:
+#   export SYNC_TOKEN REFRESH_SECRET && ./scripts/run-all.sh http://localhost:3000
+#   set -a; source .env; set +a; ./scripts/run-all.sh http://localhost:3000
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_URL="${1:-http://localhost:3000}"
 FAILED=0
