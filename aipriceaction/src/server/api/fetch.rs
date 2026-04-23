@@ -364,7 +364,12 @@ pub(crate) async fn fetch_native_tickers(
                     // Apply limit after date filtering (enhanced is newest-first)
                     if let Some(l) = limit {
                         let l = l as usize;
-                        if enhanced.len() > l {
+                        if start_time.is_some() {
+                            // When start_date is set, keep the N OLDEST rows
+                            enhanced.reverse();
+                            enhanced.truncate(l);
+                            enhanced.reverse();
+                        } else if enhanced.len() > l {
                             enhanced.truncate(l);
                         }
                     }
@@ -567,11 +572,21 @@ pub(crate) async fn fetch_aggregated_tickers(
                         filtered.retain(|d| d.time <= et);
                     }
                     let len = filtered.len();
-                    let start = if len > limit as usize { len - limit as usize } else { 0 };
-                    let trimmed: Vec<StockDataResponse> = filtered[start..]
-                        .iter()
-                        .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
-                        .collect();
+                    let trimmed: Vec<StockDataResponse> = if start_time.is_some() {
+                        // When start_date is set, keep first N = N oldest from start_date
+                        let end = (limit as usize).min(len);
+                        filtered[..end]
+                            .iter()
+                            .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
+                            .collect()
+                    } else {
+                        // Default: keep last N = N newest
+                        let start = if len > limit as usize { len - limit as usize } else { 0 };
+                        filtered[start..]
+                            .iter()
+                            .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
+                            .collect()
+                    };
                     if !trimmed.is_empty() {
                         result.insert(ticker.clone(), trimmed);
                     }
@@ -640,11 +655,21 @@ pub(crate) async fn fetch_aggregated_tickers(
 
     for (ticker, data) in enhanced {
         let len = data.len();
-        let start = if len > limit as usize { len - limit as usize } else { 0 };
-        let trimmed: Vec<StockDataResponse> = data[start..]
-            .iter()
-            .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
-            .collect();
+        let trimmed: Vec<StockDataResponse> = if start_time.is_some() {
+            // When start_date is set, keep first N = N oldest from start_date
+            let end = (limit as usize).min(len);
+            data[..end]
+                .iter()
+                .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
+                .collect()
+        } else {
+            // Default: keep last N = N newest
+            let start = if len > limit as usize { len - limit as usize } else { 0 };
+            data[start..]
+                .iter()
+                .map(|d| super::response::map_aggregated_to_response(d, is_daily, Mode::All))
+                .collect()
+        };
 
         result.insert(ticker, trimmed);
     }

@@ -343,13 +343,23 @@ pub fn enhance_rows(
     // Post-filter: remove rows before the user's original start_time
     if let Some(st) = start_time {
         joined.retain(|r| r.time >= st);
-    }
-
-    // Apply limit (trim from the newest end)
-    if let Some(l) = limit {
-        let l = l as usize;
-        if joined.len() > l {
-            joined.truncate(l);
+        // When start_time is set, keep the N OLDEST rows (first N from start_date)
+        // instead of the N newest. Reverse to oldest-first, truncate, reverse back.
+        if let Some(l) = limit {
+            let l = l as usize;
+            if joined.len() > l {
+                joined.reverse();
+                joined.truncate(l);
+                joined.reverse();
+            }
+        }
+    } else {
+        // No start_time: keep the N newest rows (default behavior)
+        if let Some(l) = limit {
+            let l = l as usize;
+            if joined.len() > l {
+                joined.truncate(l);
+            }
         }
     }
 
@@ -447,13 +457,22 @@ pub fn enhance_rows_selective(
     // Post-filter: remove rows before the user's original start_time
     if let Some(st) = start_time {
         joined.retain(|r| r.time >= st);
-    }
-
-    // Apply limit (trim from the newest end)
-    if let Some(l) = limit {
-        let l = l as usize;
-        if joined.len() > l {
-            joined.truncate(l);
+        // When start_time is set, keep the N OLDEST rows (first N from start_date)
+        if let Some(l) = limit {
+            let l = l as usize;
+            if joined.len() > l {
+                joined.reverse();
+                joined.truncate(l);
+                joined.reverse();
+            }
+        }
+    } else {
+        // No start_time: keep the N newest rows (default behavior)
+        if let Some(l) = limit {
+            let l = l as usize;
+            if joined.len() > l {
+                joined.truncate(l);
+            }
         }
     }
 
@@ -543,6 +562,14 @@ async fn fetch_ohlcv_batch_raw(
         }
         let lateral_where = lateral_conditions.join(" AND ");
 
+        // When start_time is set, fetch oldest rows first (ASC) so the per-ticker
+        // LIMIT picks rows from start_date. Otherwise keep DESC (newest first).
+        let (inner_order, outer_order) = if start_time.is_some() {
+            ("ASC", "ASC")
+        } else {
+            ("DESC", "DESC")
+        };
+
         let sql = format!(
             r#"SELECT o.ticker_id, o.interval, o.time, o.open, o.high, o.low, o.close, o.volume
                FROM unnest($1::int[]) AS t(id)
@@ -550,10 +577,10 @@ async fn fetch_ohlcv_batch_raw(
                    SELECT ticker_id, interval, time, open, high, low, close, volume
                    FROM ohlcv
                    WHERE {lateral_where}
-                   ORDER BY time DESC
+                   ORDER BY time {inner_order}
                    LIMIT {per_ticker}
                ) AS o
-               ORDER BY o.ticker_id, o.time DESC"#
+               ORDER BY o.ticker_id, o.time {outer_order}"#
         );
 
         let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
@@ -596,10 +623,13 @@ async fn fetch_ohlcv_batch_raw(
 
     let where_clause = conditions.join(" AND ");
 
+    // When start_time is set, use ASC so rows are ordered from start_date
+    let time_order = if start_time.is_some() { "ASC" } else { "DESC" };
+
     let sql = format!(
         r#"SELECT ticker_id, interval, time, open, high, low, close, volume
            FROM ohlcv WHERE {where_clause}
-           ORDER BY ticker_id, time DESC"#
+           ORDER BY ticker_id, time {time_order}"#
     );
 
     let mut q = sqlx::query_as::<_, OhlcvRow>(&sql)
@@ -672,8 +702,14 @@ pub async fn get_ohlcv_joined_batch_with_extra(
     ).await?;
 
     // Enhance each group
+    // When start_time is set, fetch_ohlcv_batch_raw returns rows in ASC (oldest-first)
+    // order, but enhance_rows expects DESC (newest-first). Reverse before enhancing.
+    let need_reverse = start_time.is_some();
     let mut result: HashMap<String, Vec<OhlcvJoined>> = HashMap::new();
-    for (ticker, ticker_rows) in raw {
+    for (ticker, mut ticker_rows) in raw {
+        if need_reverse {
+            ticker_rows.reverse();
+        }
         let joined = enhance_rows(&ticker, ticker_rows, limit, start_time, with_ma, use_ema);
         result.insert(ticker, joined);
     }
