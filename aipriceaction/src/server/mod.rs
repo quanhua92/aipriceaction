@@ -143,7 +143,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .route("/sync/{key}", axum::routing::get(sync::sync_get))
         .route("/sync/{key}", axum::routing::post(sync::sync_post))
         .nest("/analysis", analysis_routes())
-        .layer(RequestBodyLimitLayer::new(1024 * 1024));
+        .layer(RequestBodyLimitLayer::new(5 * 1024 * 1024));
 
     // Public static files with cache headers
     let public_dir = std::path::Path::new("public");
