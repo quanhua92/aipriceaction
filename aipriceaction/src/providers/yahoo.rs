@@ -50,7 +50,7 @@ impl std::error::Error for YahooError {
 // ---------------------------------------------------------------------------
 
 #[derive(Clone)]
-struct RateLimiter {
+pub(crate) struct RateLimiter {
     semaphore: Arc<Semaphore>,
     refill_handle: Arc<std::sync::Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
@@ -134,6 +134,7 @@ fn sanitize_proxy_url(proxy_url: &str) -> String {
 
 pub struct YahooProvider {
     connectors: Vec<yahoo_finance_api::YahooConnector>,
+    raw_clients: Vec<reqwest::Client>,
     rate_limiters: Vec<RateLimiter>,
     direct_connection: bool,
 }
@@ -151,6 +152,7 @@ impl YahooProvider {
 
     pub fn with_options(requests_per_minute: u32, direct_connection: bool, skip_proxies: bool) -> Result<Self, YahooError> {
         let mut connectors = Vec::new();
+        let mut raw_clients = Vec::new();
         let mut rate_limiters = Vec::new();
 
         // 1. Direct connector
@@ -161,6 +163,10 @@ impl YahooProvider {
             {
                 Ok(connector) => {
                     rate_limiters.push(RateLimiter::new(requests_per_minute));
+                    raw_clients.push(reqwest::Client::builder()
+                        .timeout(StdDuration::from_secs(30))
+                        .build()
+                        .unwrap_or_default());
                     connectors.push(connector);
                     tracing::info!("Direct connection enabled");
                 }
@@ -188,9 +194,12 @@ impl YahooProvider {
                                 .build()
                             {
                                 Ok(client) => {
+                                    // Clone client before moving into connector
+                                    let raw_client = client.clone();
                                     match yahoo_finance_api::YahooConnectorBuilder::build_with_client(client) {
                                         Ok(connector) => {
                                             rate_limiters.push(RateLimiter::new(requests_per_minute));
+                                            raw_clients.push(raw_client);
                                             connectors.push(connector);
                                             tracing::info!("Added proxy (socks5): {}", sanitize_proxy_url(proxy_url));
                                         }
@@ -232,6 +241,7 @@ impl YahooProvider {
 
         Ok(Self {
             connectors,
+            raw_clients,
             rate_limiters,
             direct_connection,
         })
@@ -245,7 +255,7 @@ impl YahooProvider {
     // Interval mapping
     // -----------------------------------------------------------------------
 
-    fn map_interval(interval: &str) -> Result<&'static str, YahooError> {
+    pub fn map_interval(interval: &str) -> Result<&'static str, YahooError> {
         match interval {
             "1m" => Ok("1m"),
             "1h" => Ok("1h"),
@@ -385,6 +395,22 @@ impl YahooProvider {
         interval: &str,
         range: &str,
     ) -> Result<Vec<OhlcvData>, YahooError> {
+        if super::yahoo_raw::needs_raw_path(ticker) {
+            if super::yahoo_raw::is_pvt_ticker(ticker) && !matches!(interval, "1D" | "1d" | "1wk" | "1W" | "1mo" | "1M") {
+                tracing::debug!("Skipping {} for PVT ticker {} (daily-only)", interval, ticker);
+                return Ok(Vec::new());
+            }
+            return super::yahoo_raw::get_history_raw(
+                ticker,
+                interval,
+                range,
+                &self.raw_clients,
+                &self.rate_limiters,
+                self.direct_connection,
+            )
+            .await;
+        }
+
         let yahoo_interval = Self::map_interval(interval)?;
         let result = self
             .make_request(ticker, yahoo_interval, range)
@@ -449,6 +475,23 @@ impl YahooProvider {
         start: chrono::DateTime<chrono::Utc>,
         end: chrono::DateTime<chrono::Utc>,
     ) -> Result<Vec<OhlcvData>, YahooError> {
+        if super::yahoo_raw::needs_raw_path(ticker) {
+            if super::yahoo_raw::is_pvt_ticker(ticker) && !matches!(interval, "1D" | "1d" | "1wk" | "1W" | "1mo" | "1M") {
+                tracing::debug!("Skipping {} for PVT ticker {} (daily-only)", interval, ticker);
+                return Ok(Vec::new());
+            }
+            return super::yahoo_raw::get_history_interval_raw(
+                ticker,
+                interval,
+                start,
+                end,
+                &self.raw_clients,
+                &self.rate_limiters,
+                self.direct_connection,
+            )
+            .await;
+        }
+
         let yahoo_interval = Self::map_interval(interval)?;
         let result = self
             .make_request_interval(ticker, yahoo_interval, start, end)
