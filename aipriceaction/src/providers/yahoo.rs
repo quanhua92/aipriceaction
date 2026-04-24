@@ -476,9 +476,21 @@ impl YahooProvider {
         end: chrono::DateTime<chrono::Utc>,
     ) -> Result<Vec<OhlcvData>, YahooError> {
         if super::yahoo_raw::needs_raw_path(ticker) {
-            if super::yahoo_raw::is_pvt_ticker(ticker) && !matches!(interval, "1D" | "1d" | "1wk" | "1W" | "1mo" | "1M") {
-                tracing::debug!("Skipping {} for PVT ticker {} (daily-only)", interval, ticker);
-                return Ok(Vec::new());
+            if super::yahoo_raw::is_pvt_ticker(ticker) {
+                if !matches!(interval, "1D" | "1d" | "1wk" | "1W" | "1mo" | "1M") {
+                    tracing::debug!("Skipping {} for PVT ticker {} (daily-only)", interval, ticker);
+                    return Ok(Vec::new());
+                }
+                // PVT tickers' period-based URL returns 400; use range-based fetch instead
+                return super::yahoo_raw::get_history_raw(
+                    ticker,
+                    interval,
+                    "max",
+                    &self.raw_clients,
+                    &self.rate_limiters,
+                    self.direct_connection,
+                )
+                .await;
             }
             return super::yahoo_raw::get_history_interval_raw(
                 ticker,

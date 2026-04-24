@@ -1505,7 +1505,44 @@ pub fn run() {
                     }
                 }
 
-                // 3. Search ticker test
+                // 3. get_history_interval test
+                tracing::info!("{}", "─".repeat(60));
+                tracing::info!("get_history_interval Test — ticker={}", ticker);
+                {
+                    let now = chrono::Utc::now();
+                    let intervals_to_test: &[(&str, &str, i64)] = &[
+                        ("1d", "30d", 30),
+                        ("1h", "5d", 5),
+                        ("1m", "1d", 1),
+                    ];
+                    for (interval, label, days_back) in intervals_to_test {
+                        let start = now - chrono::Duration::days(*days_back);
+                        tracing::info!("  Fetching {} (last {}) ...", interval, label);
+                        match provider.get_history_interval(&ticker, interval, start, now).await {
+                            Ok(data) => {
+                                let count = data.len();
+                                if count > 0 {
+                                    let first = &data[0];
+                                    let last = &data[count - 1];
+                                    tracing::info!(
+                                        "    ✅ {} | {} records | {} → {}",
+                                        interval,
+                                        count,
+                                        first.time.format("%Y-%m-%d %H:%M"),
+                                        last.time.format("%Y-%m-%d %H:%M"),
+                                    );
+                                } else {
+                                    tracing::info!("    ⚠️  {} | 0 records returned", interval);
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("    ❌ {} | error: {}", interval, e);
+                            }
+                        }
+                    }
+                }
+
+                // 4. Search ticker test
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Search Test — query=\"{}\"", ticker);
                 match provider.search_ticker(&ticker).await {
@@ -1529,7 +1566,7 @@ pub fn run() {
                     }
                 }
 
-                // 4. Summary
+                // 5. Summary
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
             });
