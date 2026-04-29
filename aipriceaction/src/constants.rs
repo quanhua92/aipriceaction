@@ -78,8 +78,12 @@ pub mod vci_worker {
     /// Minute worker: initial delay before first sync
     pub const MINUTE_INITIAL_DELAY_SECS: u64 = 60;
 
-    /// Index tickers (no dividend detection)
-    pub const INDEX_TICKERS: &[&str] = &["VNINDEX", "VN30", "VN30F1M"];
+    /// Index tickers (no dividend detection, no legacy price scaling)
+    pub const INDEX_TICKERS: &[&str] = &[
+        "VNINDEX", "VN30", "VN30F1M",
+        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE",
+        "VNFIN", "HNX30", "VNREAL", "VNENE",
+    ];
 
     /// Concurrent API batches based on VCI client count.
     /// 3 concurrent requests per client, each with its own rate limiter.
