@@ -1,8 +1,12 @@
 {
     "INDEX": [
-        "VNINDEX", "VN30", "VN30F1M",
-        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE",
-        "VNFIN", "HNX30", "VNREAL", "VNENE"
+        "VNINDEX",
+        "VN30", "VN30F1M", "HNX30",
+        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE", "VNXALLSHARE",
+        "VNMITECH", "VNUTI", "VNCONS", "VNCOND", "VNHEAL", "VNIND",
+        "VNFIN", "VNFINLEAD", "VNFINSELECT",
+        "VNDIAMOND", "VNDIVIDEND",
+        "VNREAL", "VNENE"
     ],
     "BAN_LE": [
         "AFX",

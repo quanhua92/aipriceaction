@@ -80,9 +80,19 @@ pub mod vci_worker {
 
     /// Index tickers (no dividend detection, no legacy price scaling)
     pub const INDEX_TICKERS: &[&str] = &[
-        "VNINDEX", "VN30", "VN30F1M",
-        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE",
-        "VNFIN", "HNX30", "VNREAL", "VNENE",
+        // Exchange boards
+        "VNINDEX",
+        // Blue-chip / size-based
+        "VN30", "VN30F1M", "HNX30",
+        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE", "VNXALLSHARE",
+        // Sector indices
+        "VNMITECH", "VNUTI", "VNCONS", "VNCOND", "VNHEAL", "VNIND",
+        // Financial indices
+        "VNFIN", "VNFINLEAD", "VNFINSELECT",
+        // Specialty / thematic
+        "VNDIAMOND", "VNDIVIDEND",
+        // Other
+        "VNREAL", "VNENE",
     ];
 
     /// Concurrent API batches based on VCI client count.
