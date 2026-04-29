@@ -80,7 +80,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
                         let _start_time = ohlcv::get_last_time(&pool, ticker_id, "1D").await.ok().flatten();
 
-                        match provider.get_history(&ticker, "1d", yahoo_worker::DAILY_RANGE).await {
+                        match provider.get_history(yahoo_shared::yahoo_symbol(&ticker), "1d", yahoo_worker::DAILY_RANGE).await {
                             Ok(data) => {
                                 if yahoo_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
                                     tracing::warn!("[YAHOO-DIVIDEND] ticker={}, daily sync SKIPPED — awaiting bootstrap worker to re-download full history", ticker);

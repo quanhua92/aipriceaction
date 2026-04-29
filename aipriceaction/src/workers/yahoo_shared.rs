@@ -7,6 +7,14 @@ use crate::providers::ohlcv::OhlcvData;
 use crate::queries::ohlcv;
 use crate::workers::vci_shared;
 
+/// Strip `:US` suffix for Yahoo API calls.
+/// Yahoo doesn't use `:XX` format; our `:US` suffix is a namespace convention
+/// to disambiguate from VN tickers (e.g., VFS in VN = Viet First Securities,
+/// VFS:US in Yahoo = VinFast Auto Ltd.).
+pub fn yahoo_symbol(db_ticker: &str) -> &str {
+    db_ticker.strip_suffix(":US").unwrap_or(db_ticker)
+}
+
 // ---------------------------------------------------------------------------
 // yahoo_tickers.json schema
 // ---------------------------------------------------------------------------

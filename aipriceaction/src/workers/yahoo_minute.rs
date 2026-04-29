@@ -67,7 +67,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
 
                         let range = yahoo_worker::MINUTE_RANGE;
 
-                        match provider.get_history(&ticker, "1m", range).await {
+                        match provider.get_history(yahoo_shared::yahoo_symbol(&ticker), "1m", range).await {
                             Ok(data) => {
                                 if yahoo_shared::enhance_and_save(&pool, ticker_id, &data, "1m", "yahoo", &ticker, &redis_client).await {
                                     match yahoo_shared::schedule_fixed_interval(

@@ -1,7 +1,7 @@
 {
   "source": "yahoo",
   "fetched_at": "2026-04-05T08:00:00Z",
-  "count": 132,
+  "count": 133,
   "data": [
     { "symbol": "GC=F", "name": "Gold Futures", "category": "Commodity" },
     { "symbol": "SI=F", "name": "Silver Futures", "category": "Commodity" },
@@ -134,6 +134,7 @@
     { "symbol": "PEAI.PVT", "name": "Perplexity", "category": "Private" },
     { "symbol": "EPGA.PVT", "name": "Epic Games", "category": "Private" },
     { "symbol": "RIPL.PVT", "name": "Ripple", "category": "Private" },
-    { "symbol": "ADBE", "name": "Adobe Inc.", "category": "Stock" }
+    { "symbol": "ADBE", "name": "Adobe Inc.", "category": "Stock" },
+    { "symbol": "VFS:US", "name": "VinFast Auto Ltd.", "category": "Stock" }
   ]
 }

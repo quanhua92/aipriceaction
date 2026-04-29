@@ -143,7 +143,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                         "yahoo bootstrap fetch"
                     );
 
-                    match provider.get_history_interval(ticker, yahoo_interval, chunk_start, fetch_end).await {
+                    match provider.get_history_interval(yahoo_shared::yahoo_symbol(ticker), yahoo_interval, chunk_start, fetch_end).await {
                         Ok(data) => {
                             if data.is_empty() {
                                 tracing::info!(ticker, interval = db_interval, "empty chunk response, skipping forward");
