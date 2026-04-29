@@ -1,4 +1,9 @@
 {
+    "INDEX": [
+        "VNINDEX", "VN30", "VN30F1M",
+        "VN100", "VNMIDCAP", "VNSMALLCAP", "VNALLSHARE",
+        "VNFIN", "HNX30", "VNREAL", "VNENE"
+    ],
     "BAN_LE": [
         "AFX",
         "DGW",
