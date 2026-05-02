@@ -185,7 +185,7 @@ class TestDiskCache:
         responses.reset()
         # Re-add yearly 404 mock (SDK tries yearly file first, then falls back to per-day cache)
         responses.get(
-            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/yearly/VCB-1D-2025.csv",
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
             status=404,
         )
         df2 = client.get_ohlcv(

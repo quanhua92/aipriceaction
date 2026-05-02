@@ -258,7 +258,7 @@ fn s3_key(source: &str, ticker: &str, interval: &str, date: NaiveDate) -> String
 /// Build S3 key for a yearly daily aggregate CSV.
 fn s3_key_yearly(source: &str, ticker: &str, year: i32) -> String {
     format!(
-        "ohlcv/{}/{}/1D/yearly/{}-1D-{}.csv",
+        "ohlcv/{}/{}/yearly/{}-1D-{}.csv",
         source, ticker, ticker, year,
     )
 }

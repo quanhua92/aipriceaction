@@ -206,7 +206,7 @@ class AIPriceAction:
 
     def _csv_key_yearly(self, source: str, ticker: str, year: int) -> str:
         """S3 key for a yearly daily aggregate CSV file."""
-        return f"ohlcv/{source}/{ticker}/1D/yearly/{ticker}-1D-{year}.csv"
+        return f"ohlcv/{source}/{ticker}/yearly/{ticker}-1D-{year}.csv"
 
     def _cache_key_yearly(self, source: str, ticker: str, year: int) -> str:
         """Local filesystem cache path for a yearly CSV file."""
@@ -214,7 +214,6 @@ class AIPriceAction:
             self._cache_dir
             / source
             / ticker
-            / "1D"
             / "yearly"
             / f"{ticker}-1D-{year}.csv"
         )
