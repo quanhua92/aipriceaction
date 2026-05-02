@@ -32,5 +32,5 @@ fred = { version = "10", features = ["i-sorted-sets", "i-keys", "i-hashes", "ena
 flate2 = "1"
 http = "1"
 aws-creds = "0.39"
-rust-s3 = { version = "0.37.1", default-features = false, features = ["tokio-rustls-tls", "with-tokio", "fail-on-err"] }
+rust-s3 = { version = "0.37.1", default-features = false, features = ["tokio-rustls-tls", "with-tokio"] }
 futures = "0.3.32"
