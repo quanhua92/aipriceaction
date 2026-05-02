@@ -291,6 +291,75 @@ When enabled via environment variables, the server runs background sync workers:
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
 - **Yahoo Finance workers** -- Syncs US/international stock data for daily, hourly, and minute intervals
 - **SJC gold workers** -- Syncs SJC gold bar prices (HCM branch) via sjc.com.vn API; bootstrap imports historical CSV, then live syncs every 5min during trading hours. SJC-GOLD appears under `mode=yahoo` as a commodity alongside GC=F, CL=F, etc.
+- **S3 archive worker** -- Exports OHLCV data from PostgreSQL to S3 as per-day CSV files with enriched ticker metadata (`meta/tickers.json`). Runs a full historical scan on startup and every 24h, plus an incremental check every 1h for the last 7 days. Uses fingerprint-based skip-if-unchanged and concurrent uploads. See [S3_ARCHIVE_WORKER.md](S3_ARCHIVE_WORKER.md) for detailed documentation.
+
+**S3 bucket policy** (required for public-read access): the bucket must allow anonymous `s3:GetObject`. In the rustfs console, go to Buckets → `aipriceaction-archive` → Access Rules → Add:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::aipriceaction-archive/*"
+        }
+    ]
+}
+```
+
+## Python SDK
+
+Read OHLCV data directly from the S3 archive via plain HTTP — no API credentials or S3 SDK needed. The bucket must be public-read (see S3 bucket policy above).
+
+```bash
+cd sdk/aipriceaction-python
+pip install .
+```
+
+```python
+from aipriceaction import AIPriceAction
+
+# Point to any public S3 archive (rustfs, AWS S3, Cloudflare R2, etc.)
+# cache_dir defaults to a temp dir; pass a path for persistent caching
+client = AIPriceAction("http://localhost:9000/aipriceaction-archive", cache_dir="./cache")
+
+# Ticker metadata (from meta/tickers.json)
+tickers = client.get_tickers()               # all tickers
+tickers = client.get_tickers(source="vn")    # filter by source
+
+# OHLCV data as DataFrame (mirrors /tickers API params)
+df = client.get_ohlcv("VCB", interval="1D")                        # single ticker, last 365 days
+df = client.get_ohlcv(tickers=["VCB", "FPT"], interval="1D")        # multiple tickers
+df = client.get_ohlcv(ticker="VCB", interval="1D", limit=100)       # limit rows per ticker
+df = client.get_ohlcv(ticker="VCB", start_date="2025-01-01", end_date="2025-04-30")
+df = client.get_ohlcv(ticker=None, interval="1D", source="crypto")  # all crypto tickers
+
+# Check if data changed without downloading (reads x-amz-meta-content-hash)
+hash = client.get_content_hash("VCB", "1D", "2025-04-29")
+# -> "6acdda8b..." or None if file doesn't exist
+
+# Download CSV files to local folder
+paths = client.download_csv("BTCUSDT", interval="1D", start_date="2025-04-01", end_date="2025-04-30", output_dir="./data")
+```
+
+**Parameters:**
+
+| Method | Param | Description |
+|---|---|---|
+| `get_ohlcv(ticker, tickers, interval, limit, start_date, end_date, source)` | `ticker` | Single symbol (e.g. `"VCB"`), or `None` for all tickers |
+| | `tickers` | List of symbols (e.g. `["VCB", "FPT"]`) |
+| | `interval` | `"1D"`, `"1h"`, `"1m"` (native intervals stored in S3) |
+| | `limit` | Max rows per ticker |
+| | `start_date` / `end_date` | `str` (`"YYYY-MM-DD"`), `date`, or `datetime` |
+| | `source` | Override auto-detection (`"vn"`, `"yahoo"`, `"crypto"`, `"sjc"`) |
+| `get_tickers(source, use_cache)` | | Returns `list[TickerInfo]` with source, ticker, name, exchange, type, category, group |
+| `get_content_hash(ticker, interval, day, source)` | `day` | `datetime.date` object or `"YYYY-MM-DD"` string |
+| `download_csv(ticker, interval, limit, start_date, end_date, source, output_dir)` | | Returns list of downloaded file paths |
+
+Source is auto-detected from `tickers.json` (priority: vn > yahoo > sjc > crypto) when not specified. Downloaded data is cached to disk (default: temp dir) — set `cache_dir` to customize.
 
 ## Development
 

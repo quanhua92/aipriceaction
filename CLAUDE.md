@@ -100,4 +100,5 @@ aipriceaction/src/
 
 ## SDK
 
-TypeScript SDK in `sdk/aipriceaction-js/`, built with pnpm. See `sdk/aipriceaction-js/README.md` for usage.
+- **TypeScript SDK** in `sdk/aipriceaction-js/`, built with pnpm. See `sdk/aipriceaction-js/README.md` for usage.
+- **Python SDK** in `sdk/aipriceaction-python/`, reads from S3 archive via plain HTTP. See `sdk/aipriceaction-python/` and README.md for usage.
