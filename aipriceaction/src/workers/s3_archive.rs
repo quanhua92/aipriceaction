@@ -469,7 +469,8 @@ async fn startup_scan(
                 Ok(false) => 0,
                 Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
             };
-            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
+            let inner_skipped = if inner_uploaded == 0 { 1u64 } else { 0u64 };
+            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: inner_skipped }
         }));
 
         while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
@@ -770,7 +771,8 @@ async fn incremental_cycle(
                     Ok(false) => 0,
                     Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
                 };
-                ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
+                let inner_skipped = if inner_uploaded == 0 { 1u64 } else { 0u64 };
+                ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: inner_skipped }
             }));
 
             while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
