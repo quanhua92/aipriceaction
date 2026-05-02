@@ -170,3 +170,78 @@ pub fn day_range(date: NaiveDate) -> (DateTime<Utc>, DateTime<Utc>) {
     let end = start + chrono::Duration::days(1);
     (start, end)
 }
+
+/// Convert a year to the start/end of that year in UTC.
+/// Returns `(Jan 1 00:00:00 UTC, Jan 1 00:00:00 UTC of next year)`.
+pub fn year_range(year: i32) -> (DateTime<Utc>, DateTime<Utc>) {
+    let start = NaiveDate::from_ymd_opt(year, 1, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+    let end = NaiveDate::from_ymd_opt(year + 1, 1, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+    (start, end)
+}
+
+/// Fetch all daily OHLCV rows for a specific ticker and year.
+/// Returns rows sorted by `time ASC` for CSV output.
+pub async fn get_ohlcv_for_year(
+    pool: &PgPool,
+    ticker_id: i32,
+    year_start: DateTime<Utc>,
+    year_end: DateTime<Utc>,
+) -> sqlx::Result<Vec<crate::models::ohlcv::OhlcvRow>> {
+    sqlx::query_as!(
+        crate::models::ohlcv::OhlcvRow,
+        r#"SELECT ticker_id, interval, time, open, high, low, close, volume
+           FROM ohlcv
+           WHERE ticker_id = $1 AND interval = '1D'
+           AND time >= $2 AND time < $3
+           ORDER BY time ASC"#,
+        ticker_id,
+        year_start,
+        year_end,
+    )
+    .fetch_all(pool)
+    .await
+}
+
+/// Get the 4-column fingerprint for a full year of daily OHLCV data.
+/// Returns `None` if no data exists for that year.
+pub async fn get_ohlcv_year_fingerprint(
+    pool: &PgPool,
+    ticker_id: i32,
+    year_start: DateTime<Utc>,
+    year_end: DateTime<Utc>,
+) -> sqlx::Result<Option<DayFingerprint>> {
+    let row = sqlx::query!(
+        r#"SELECT
+               COUNT(*) as "count!",
+               MAX(time) as max_time,
+               COALESCE(SUM((close * 10000)::bigint), 0)::bigint as "sum_close_scaled!: i64",
+               COALESCE(SUM(volume), 0)::bigint as "sum_volume!: i64"
+           FROM ohlcv
+           WHERE ticker_id = $1 AND interval = '1D'
+           AND time >= $2 AND time < $3"#,
+        ticker_id,
+        year_start,
+        year_end,
+    )
+    .fetch_one(pool)
+    .await?;
+
+    if row.count == 0 {
+        return Ok(None);
+    }
+
+    Ok(Some(DayFingerprint {
+        count: row.count,
+        max_time: row.max_time.unwrap(),
+        sum_close_scaled: row.sum_close_scaled,
+        sum_volume: row.sum_volume,
+    }))
+}

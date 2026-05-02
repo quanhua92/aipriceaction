@@ -1,4 +1,4 @@
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{Datelike, Duration, NaiveDate, Utc};
 use futures::StreamExt;
 use http::HeaderMap;
 use sqlx::PgPool;
@@ -14,7 +14,8 @@ use crate::constants::s3_archive::{
 };
 use crate::queries::ohlcv::Ticker;
 use crate::queries::s3_archive::{
-    day_range, get_data_ranges, get_ohlcv_day_fingerprint, get_ohlcv_for_day, ArchiveTicker,
+    day_range, get_data_ranges, get_ohlcv_day_fingerprint, get_ohlcv_for_day,
+    get_ohlcv_for_year, get_ohlcv_year_fingerprint, year_range, ArchiveTicker,
 };
 
 // ── Enrichment data loaded once at startup ──
@@ -247,6 +248,14 @@ fn s3_key(source: &str, ticker: &str, interval: &str, date: NaiveDate) -> String
     )
 }
 
+/// Build S3 key for a yearly daily aggregate CSV.
+fn s3_key_yearly(source: &str, ticker: &str, year: i32) -> String {
+    format!(
+        "ohlcv/{}/{}/1D/yearly/{}-1D-{}.csv",
+        source, ticker, ticker, year,
+    )
+}
+
 /// Build CSV bytes from OHLCV rows.
 fn rows_to_csv(rows: &[crate::models::ohlcv::OhlcvRow]) -> Vec<u8> {
     let mut wtr = csv::WriterBuilder::new()
@@ -406,8 +415,11 @@ async fn startup_scan(
         futures::stream::FuturesUnordered::new();
 
     // Group ranges by ticker_id so we can log per-ticker progress
+    // Also collect 1D year ranges for yearly file processing
     let mut last_ticker_id: i32 = -1;
     let mut ticker_count = 0;
+    let mut yearly_tasks: Vec<(i32, String, String, i32)> = Vec::new(); // (ticker_id, source, ticker, year)
+    let mut yearly_ticker_seen: std::collections::HashSet<i32> = std::collections::HashSet::new();
 
     for range in &ranges {
         let (source, ticker_sym) = match ticker_map.get(&range.ticker_id) {
@@ -428,6 +440,16 @@ async fn startup_scan(
         for interval in &intervals {
             if range.interval != *interval {
                 continue;
+            }
+
+            // Collect yearly tasks for 1D interval
+            if range.interval == "1D" && !yearly_ticker_seen.contains(&range.ticker_id) {
+                yearly_ticker_seen.insert(range.ticker_id);
+                let earliest_year = range.earliest.year();
+                let latest_year = range.latest.year();
+                for year in earliest_year..=latest_year {
+                    yearly_tasks.push((range.ticker_id, source.clone(), ticker_sym.clone(), year));
+                }
             }
 
             let earliest_date = range.earliest.date_naive();
@@ -501,6 +523,64 @@ async fn startup_scan(
     tracing::info!(
         "s3_archive: startup scan complete — {ticker_count} tickers, uploaded: {uploaded}, skipped: {skipped}"
     );
+
+    // Process yearly daily aggregate files
+    let yearly_count = yearly_tasks.len();
+    if yearly_count > 0 {
+        tracing::info!(
+            "s3_archive: processing {yearly_count} yearly daily files for {} tickers...",
+            yearly_ticker_seen.len()
+        );
+    }
+    for (ticker_id, source, ticker_sym, year) in yearly_tasks {
+        let key = s3_key_yearly(&source, &ticker_sym, year);
+        let (year_start, year_end) = year_range(year);
+        let pool = pool.clone();
+        let bucket = bucket.clone();
+        let permit = sem.clone();
+
+        in_flight.push(tokio::spawn(async move {
+            let _permit = permit.acquire().await.unwrap();
+            let result = process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await;
+            (key, result)
+        }));
+
+        while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
+            if let Some(result) = in_flight.next().await {
+                match result {
+                    Ok((_key, Ok(true))) => uploaded += 1,
+                    Ok((_key, Ok(false))) => skipped += 1,
+                    Ok((key, Err(e))) => {
+                        tracing::warn!("s3_archive: error processing {key}: {e}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("s3_archive: task panicked: {e}");
+                    }
+                }
+            }
+        }
+    }
+
+    // Drain remaining yearly tasks
+    while let Some(result) = in_flight.next().await {
+        match result {
+            Ok((_key, Ok(true))) => uploaded += 1,
+            Ok((_key, Ok(false))) => skipped += 1,
+            Ok((key, Err(e))) => {
+                tracing::warn!("s3_archive: error processing {key}: {e}");
+            }
+            Err(e) => {
+                tracing::warn!("s3_archive: task panicked: {e}");
+            }
+        }
+    }
+
+    if yearly_count > 0 {
+        tracing::info!(
+            "s3_archive: yearly files complete — {yearly_count} yearly files processed"
+        );
+    }
+
     Ok(())
 }
 
@@ -603,6 +683,54 @@ async fn incremental_cycle(
     tracing::info!(
         "s3_archive: incremental cycle — {total_tickers} tickers, uploaded: {uploaded}, skipped: {skipped}"
     );
+
+    // Process yearly daily aggregate files for current year
+    let current_year = today.year();
+    for ticker in &all_tickers {
+        let year = current_year;
+        let key = s3_key_yearly(&ticker.source, &ticker.ticker, year);
+        let (year_start, year_end) = year_range(year);
+        let pool = pool.clone();
+        let bucket = bucket.clone();
+        let permit = sem.clone();
+        let ticker_id = ticker.id;
+
+        in_flight.push(tokio::spawn(async move {
+            let _permit = permit.acquire().await.unwrap();
+            let result = process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await;
+            (key, result)
+        }));
+
+        while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
+            if let Some(result) = in_flight.next().await {
+                match result {
+                    Ok((_key, Ok(true))) => uploaded += 1,
+                    Ok((_key, Ok(false))) => skipped += 1,
+                    Ok((key, Err(e))) => {
+                        tracing::warn!("s3_archive: error processing {key}: {e}");
+                    }
+                    Err(e) => {
+                        tracing::warn!("s3_archive: task panicked: {e}");
+                    }
+                }
+            }
+        }
+    }
+
+    // Drain remaining yearly tasks
+    while let Some(result) = in_flight.next().await {
+        match result {
+            Ok((_key, Ok(true))) => uploaded += 1,
+            Ok((_key, Ok(false))) => skipped += 1,
+            Ok((key, Err(e))) => {
+                tracing::warn!("s3_archive: error processing {key}: {e}");
+            }
+            Err(e) => {
+                tracing::warn!("s3_archive: task panicked: {e}");
+            }
+        }
+    }
+
     Ok(())
 }
 
@@ -641,6 +769,58 @@ async fn process_day(
 
     // Fetch rows and build CSV
     let rows = get_ohlcv_for_day(pool, ticker_id, interval, day_start, day_end).await?;
+    if rows.is_empty() {
+        return Ok(false);
+    }
+
+    let csv_bytes = rows_to_csv(&rows);
+
+    // Upload with metadata
+    let mut headers = HeaderMap::new();
+    headers.insert("x-amz-meta-content-hash", hash.parse().unwrap());
+
+    bucket
+        .put_object_with_content_type_and_headers(key, &csv_bytes, CSV_CONTENT_TYPE, Some(headers))
+        .await?;
+
+    tracing::debug!("s3_archive: uploaded {key} ({} rows)", rows.len());
+    Ok(true)
+}
+
+/// Process a single yearly daily file: check fingerprint, upload if changed.
+/// Returns Ok(true) if uploaded, Ok(false) if skipped.
+async fn process_yearly(
+    pool: &PgPool,
+    bucket: &Bucket,
+    ticker_id: i32,
+    key: &str,
+    year_start: chrono::DateTime<Utc>,
+    year_end: chrono::DateTime<Utc>,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    // Get fingerprint
+    let fp = match get_ohlcv_year_fingerprint(pool, ticker_id, year_start, year_end).await? {
+        Some(fp) => fp,
+        None => return Ok(false), // No data for this year
+    };
+
+    let hash = fp.to_hash();
+
+    // HEAD check — skip if hash matches
+    match bucket.head_object(key).await {
+        Ok((head, _status)) => {
+            if let Some(existing) = head.metadata.as_ref().and_then(|m| m.get("content-hash")) {
+                if existing == &hash {
+                    return Ok(false);
+                }
+            }
+        }
+        Err(_) => {
+            // Object doesn't exist yet or HEAD failed, proceed to upload
+        }
+    }
+
+    // Fetch rows and build CSV
+    let rows = get_ohlcv_for_year(pool, ticker_id, year_start, year_end).await?;
     if rows.is_empty() {
         return Ok(false);
     }
