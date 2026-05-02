@@ -21,9 +21,10 @@ DIM = "\033[2m"
 BOLD = "\033[1m"
 
 
-def check(label: str, condition: bool, detail: str = "") -> bool:
+def check(label: str, condition: bool, detail: str = "", elapsed: float = 0) -> bool:
     status = OK if condition else FAIL
-    msg = f"  [{status}] {label}"
+    timing = f" ({elapsed:.2f}s)" if elapsed else ""
+    msg = f"  [{status}] {label}{timing}"
     if detail:
         msg += f"\n         {detail}"
     print(msg)
@@ -52,6 +53,7 @@ def print_df_rows(df, max_rows: int = 3):
 
 
 def main(url: str) -> int:
+    t_start = time.time()
     print(f"\n{BOLD}aipriceaction SDK smoke test{BOLD}")
     print(f"  URL: {url}\n")
 
@@ -70,7 +72,8 @@ def main(url: str) -> int:
             sources[t.source] = sources.get(t.source, 0) + 1
         src_detail = ", ".join(f"{k}={v}" for k, v in sorted(sources.items()))
         ok = check("get_tickers()", len(tickers) > 0,
-                     f"{len(tickers)} tickers ({elapsed:.2f}s)\n         Sources: {src_detail}")
+                     f"{len(tickers)} tickers\n         Sources: {src_detail}",
+                     elapsed=elapsed)
         # Show first 5 tickers
         for t in tickers[:5]:
             name = t.name or ""
@@ -86,8 +89,11 @@ def main(url: str) -> int:
     for src_name in ["vn", "crypto", "yahoo"]:
         total += 1
         try:
+            t0 = time.time()
             filtered = client.get_tickers(source=src_name)
-            check(f"get_tickers(source='{src_name}')", True, f"{len(filtered)} tickers")
+            elapsed = time.time() - t0
+            check(f"get_tickers(source='{src_name}')", True,
+                  f"{len(filtered)} tickers", elapsed=elapsed)
             passed += 1
         except Exception as e:
             check(f"get_tickers(source='{src_name}')", False, str(e))
@@ -95,9 +101,12 @@ def main(url: str) -> int:
     # 3. Content hash
     total += 1
     try:
+        t0 = time.time()
         h = client.get_content_hash("VCB", "1D", "2025-04-29")
+        elapsed = time.time() - t0
         ok = check("get_content_hash()", h is not None,
-                     f"VCB 1D 2025-04-29\n         hash={h}")
+                     f"VCB 1D 2025-04-29\n         hash={h}",
+                     elapsed=elapsed)
         passed += int(ok)
     except Exception as e:
         check("get_content_hash()", False, str(e))
@@ -105,9 +114,12 @@ def main(url: str) -> int:
     # 4. Content hash — missing file
     total += 1
     try:
+        t0 = time.time()
         h = client.get_content_hash("VCB", "1D", "2099-01-01")
+        elapsed = time.time() - t0
         ok = check("get_content_hash() [missing]", h is None,
-                     f"VCB 1D 2099-01-01 → None (expected)")
+                     f"VCB 1D 2099-01-01 -> None (expected)",
+                     elapsed=elapsed)
         passed += int(ok)
     except Exception as e:
         check("get_content_hash() [missing]", False, str(e))
@@ -121,7 +133,8 @@ def main(url: str) -> int:
         elapsed = time.time() - t0
         cols = sorted(df.columns.tolist())
         ok = check("get_ohlcv(ma=False)", len(df) > 0,
-                     f"{len(df)} rows, {len(df.columns)} cols ({elapsed:.2f}s)\n         Columns: {cols}")
+                     f"{len(df)} rows, {len(df.columns)} cols\n         Columns: {cols}",
+                     elapsed=elapsed)
         print_df_rows(df)
         passed += int(ok)
     except Exception as e:
@@ -136,7 +149,8 @@ def main(url: str) -> int:
         elapsed = time.time() - t0
         ma_cols = [c for c in df.columns if c.startswith("ma") or "changed" in c]
         ok = check("get_ohlcv(ma=True, ema=False)", len(df) > 0 and len(ma_cols) > 0,
-                     f"{len(df)} rows, {len(ma_cols)} MA columns ({elapsed:.2f}s)")
+                     f"{len(df)} rows, {len(ma_cols)} MA columns",
+                     elapsed=elapsed)
         print_df_rows(df)
         if not df.empty:
             row = df.iloc[-1]
@@ -166,7 +180,8 @@ def main(url: str) -> int:
         df_ema = client.get_ohlcv("VCB", interval="1D",
                                   start_date="2025-04-29", end_date="2025-04-29", ema=True)
         elapsed = time.time() - t0
-        ok = check("get_ohlcv(ema=True)", len(df_ema) > 0, f"{len(df_ema)} rows ({elapsed:.2f}s)")
+        ok = check("get_ohlcv(ema=True)", len(df_ema) > 0,
+                     f"{len(df_ema)} rows", elapsed=elapsed)
         passed += int(ok)
     except Exception as e:
         check("get_ohlcv(ema=True)", False, str(e))
@@ -174,19 +189,22 @@ def main(url: str) -> int:
     # 8. SMA vs EMA differ
     total += 1
     try:
+        t0 = time.time()
         # Need a wider range so EMA and SMA diverge
         df_sma = client.get_ohlcv("VCB", interval="1D",
                                   start_date="2025-04-10", end_date="2025-04-29", ma=True, ema=False)
         df_ema = client.get_ohlcv("VCB", interval="1D",
                                   start_date="2025-04-10", end_date="2025-04-29", ma=True, ema=True)
+        elapsed = time.time() - t0
         if not df_sma.empty and not df_ema.empty:
             last_sma = df_sma.iloc[-1]["ma20"]
             last_ema = df_ema.iloc[-1]["ma20"]
             diff = abs(last_sma - last_ema)
             ok = check("SMA != EMA", diff > 0.01,
-                         f"SMA ma20={last_sma:,.2f}, EMA ma20={last_ema:,.2f} (diff={diff:.2f})")
+                         f"SMA ma20={last_sma:,.2f}, EMA ma20={last_ema:,.2f} (diff={diff:.2f})",
+                         elapsed=elapsed)
         else:
-            ok = check("SMA != EMA", False, "no data")
+            ok = check("SMA != EMA", False, "no data", elapsed=elapsed)
         passed += int(ok)
     except Exception as e:
         check("SMA != EMA", False, str(e))
@@ -200,7 +218,8 @@ def main(url: str) -> int:
         elapsed = time.time() - t0
         symbols = sorted(df["symbol"].unique()) if not df.empty else []
         ok = check("get_ohlcv(tickers=[...])", len(df) > 0,
-                     f"symbols={symbols}, {len(df)} rows ({elapsed:.2f}s)")
+                     f"symbols={symbols}, {len(df)} rows",
+                     elapsed=elapsed)
         print_df_rows(df)
         passed += int(ok)
     except Exception as e:
@@ -209,10 +228,13 @@ def main(url: str) -> int:
     # 10. Limit
     total += 1
     try:
+        t0 = time.time()
         df = client.get_ohlcv("VCB", interval="1D",
                              start_date="2025-04-28", end_date="2025-04-29",
                              limit=1, ma=False)
-        ok = check("get_ohlcv(limit=1)", len(df) == 1, f"got {len(df)} row(s)")
+        elapsed = time.time() - t0
+        ok = check("get_ohlcv(limit=1)", len(df) == 1,
+                     f"got {len(df)} row(s)", elapsed=elapsed)
         if not df.empty:
             print(f"         {df.iloc[0]['time']}  close={df.iloc[0]['close']:,.2f}")
         passed += int(ok)
@@ -224,10 +246,13 @@ def main(url: str) -> int:
     try:
         import tempfile
         tmpdir = tempfile.mkdtemp(prefix="aipriceaction-smoke-")
+        t0 = time.time()
         paths = client.download_csv("VCB", interval="1D",
                                     start_date="2025-04-29", end_date="2025-04-29",
                                     output_dir=tmpdir)
-        ok = check("download_csv()", len(paths) > 0, f"{len(paths)} file(s)")
+        elapsed = time.time() - t0
+        ok = check("download_csv()", len(paths) > 0,
+                     f"{len(paths)} file(s)", elapsed=elapsed)
         for p in paths:
             print(f"         {p}")
         passed += int(ok)
@@ -238,6 +263,7 @@ def main(url: str) -> int:
     print(f"\n  {BOLD}── Recent data (last 7 days, random ticker sampling) ──{BOLD}\n")
     from datetime import datetime, timedelta, timezone
     days = [(datetime.now(timezone.utc) - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(6, -1, -1)]
+    t0 = time.time()
     try:
         all_tickers = client.get_tickers()
         by_source: dict[str, list[str]] = {}
@@ -262,11 +288,14 @@ def main(url: str) -> int:
                 bar = "".join("█" if d in ok_days else "░" for d in days)
                 tag = "OK" if len(ok_days) > 0 else "WARN"
                 print(f"  [{tag}] {src:6s}/{sym:16s}  {bar}  {len(ok_days)}/{len(days)} days")
+        elapsed = time.time() - t0
+        print(f"\n  {DIM}Sampling completed in {elapsed:.2f}s{DIM}")
     except Exception as e:
         print(f"  [FAIL] recent sampling: {e}")
 
     # Summary
-    print(f"\n{BOLD}Results: {passed}/{total} passed{BOLD}")
+    total_elapsed = time.time() - t_start
+    print(f"\n{BOLD}Results: {passed}/{total} passed ({total_elapsed:.2f}s){BOLD}")
     return 0 if passed == total else 1
 
 
