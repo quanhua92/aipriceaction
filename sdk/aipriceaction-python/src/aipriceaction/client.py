@@ -390,6 +390,42 @@ class AIPriceAction:
 
         return result
 
+    def to_ticker_records(self, df: pd.DataFrame) -> dict[str, list[Ticker]]:
+        """Convert get_ohlcv() DataFrame to dict of Ticker lists for AIContextBuilder.
+
+        Args:
+            df: DataFrame from get_ohlcv().
+
+        Returns:
+            Dict mapping symbol -> list of Ticker objects.
+        """
+        from .ticker import Ticker
+
+        _OPTIONAL_COLS = [
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed",
+        ]
+        result: dict[str, list[Ticker]] = {}
+        for sym, group in df.groupby("symbol", sort=False):
+            records = []
+            for _, row in group.iterrows():
+                kwargs: dict = {
+                    "symbol": sym,
+                    "time": str(row["time"]),
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": int(row["volume"]),
+                }
+                for col in _OPTIONAL_COLS:
+                    if col in row.index and pd.notna(row[col]):
+                        kwargs[col] = float(row[col])
+                records.append(Ticker(**kwargs))
+            result[sym] = records
+        return result
+
     # ── Download CSVs ──
 
     def download_csv(

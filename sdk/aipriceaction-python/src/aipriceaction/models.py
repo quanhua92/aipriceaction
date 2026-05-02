@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
@@ -11,3 +11,4 @@ class TickerInfo:
     type: Optional[str] = None
     category: Optional[str] = None
     group: Optional[str] = None
+    groups: Optional[list[str]] = None
