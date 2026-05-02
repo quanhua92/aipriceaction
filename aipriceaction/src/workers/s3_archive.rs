@@ -702,6 +702,31 @@ pub async fn test_s3(ticker: String, interval: String, days: u32, create_bucket:
         }
     }
 
+    // 3.5. Test public access (plain HTTP GET without credentials)
+    tracing::info!("{}", "─".repeat(60));
+    let public_url = match &bucket.region {
+        s3::Region::Custom { endpoint, .. } => {
+            format!("{endpoint}/{}/meta/tickers.json", bucket.name())
+        }
+        other => {
+            let region_str = format!("{:?}", other);
+            format!("https://{}.s3.{region_str}.amazonaws.com/meta/tickers.json", bucket.name())
+        }
+    };
+
+    let public_check = reqwest::get(&public_url).await;
+    match public_check {
+        Ok(resp) if resp.status().as_u16() == 200 => {
+            tracing::info!("Public access: OK — {public_url}");
+        }
+        Ok(resp) => {
+            tracing::warn!("Public access: FAILED (status={}) — bucket requires public-read for Python SDK", resp.status());
+        }
+        Err(e) => {
+            tracing::warn!("Public access: FAILED ({e}) — could not reach S3 endpoint");
+        }
+    }
+
     // 4. Connect to DB
     let database_url = match std::env::var("DATABASE_URL") {
         Ok(url) => url,
