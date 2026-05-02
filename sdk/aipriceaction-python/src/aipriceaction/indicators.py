@@ -80,9 +80,7 @@ def compute_indicators(
 
     for period in _MA_PERIODS:
         ma_values = calc(closes, period)
-        result[f"ma{period}"] = [
-            v if v > 0.0 else None for v in ma_values
-        ]
+        result[f"ma{period}"] = [v if v > 0.0 else None for v in ma_values]
         result[f"ma{period}_score"] = [
             calculate_ma_score(closes[i], v) if v > 0.0 else None
             for i, v in enumerate(ma_values)
@@ -101,9 +99,7 @@ def compute_indicators(
             close_changed[i] = ((closes[i] - prev_close) / prev_close) * 100.0
 
         if prev_vol > 0:
-            volume_changed[i] = (
-                (volumes[i] - prev_vol) / prev_vol
-            ) * 100.0
+            volume_changed[i] = ((volumes[i] - prev_vol) / prev_vol) * 100.0
 
         total_money_changed[i] = (closes[i] - prev_close) * volumes[i]
 

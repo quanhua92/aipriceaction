@@ -6,13 +6,16 @@ import os
 import tempfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import requests
 import pandas as pd
 
 from .exceptions import AIPriceActionError
 from .models import TickerInfo
+
+if TYPE_CHECKING:
+    from .ticker import Ticker
 
 # Source auto-detection priority (matches Rust's resolve_ticker_sources)
 _SOURCE_PRIORITY = ["vn", "yahoo", "sjc", "crypto"]
@@ -21,17 +24,37 @@ _OHLCV_COLUMNS = ["time", "open", "high", "low", "close", "volume"]
 
 _MA_PERIODS = [10, 20, 50, 100, 200]
 _MA_COLUMNS = [
-    "ma10", "ma20", "ma50", "ma100", "ma200",
-    "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
-    "close_changed", "volume_changed", "total_money_changed",
+    "ma10",
+    "ma20",
+    "ma50",
+    "ma100",
+    "ma200",
+    "ma10_score",
+    "ma20_score",
+    "ma50_score",
+    "ma100_score",
+    "ma200_score",
+    "close_changed",
+    "volume_changed",
+    "total_money_changed",
 ]
 
 _ALL_INTERVALS = {
-    "1D", "1d", "daily",
-    "1H", "1h", "hourly",
-    "1m", "minute",
-    "5m", "15m", "30m", "4h",
-    "1W", "2W", "1M",
+    "1D",
+    "1d",
+    "daily",
+    "1H",
+    "1h",
+    "hourly",
+    "1m",
+    "minute",
+    "5m",
+    "15m",
+    "30m",
+    "4h",
+    "1W",
+    "2W",
+    "1M",
 }
 
 
@@ -40,9 +63,9 @@ def _ma_buffer_days(interval: str) -> int:
     if interval == "1D":
         return 400  # ~200 trading days + padding
     if interval == "1h":
-        return 50   # 200 bars ÷ ~6.5 trading hours/day ≈ 31 trading days
+        return 50  # 200 bars ÷ ~6.5 trading hours/day ≈ 31 trading days
     if interval == "1m":
-        return 5    # 200 bars ÷ ~390 min/day < 1 day
+        return 5  # 200 bars ÷ ~390 min/day < 1 day
     return 400
 
 
@@ -113,7 +136,16 @@ class AIPriceAction:
         if cache_path.exists():
             try:
                 raw = json.loads(cache_path.read_text())
-                return [TickerInfo(**{k: v for k, v in t.items() if k in TickerInfo.__dataclass_fields__}) for t in raw]
+                return [
+                    TickerInfo(
+                        **{
+                            k: v
+                            for k, v in t.items()
+                            if k in TickerInfo.__dataclass_fields__
+                        }
+                    )
+                    for t in raw
+                ]
             except (json.JSONDecodeError, TypeError):
                 pass  # stale cache, refetch
 
@@ -126,7 +158,12 @@ class AIPriceAction:
         raw = resp.json()
         cache_path.write_text(json.dumps(raw))
 
-        return [TickerInfo(**{k: v for k, v in t.items() if k in TickerInfo.__dataclass_fields__}) for t in raw]
+        return [
+            TickerInfo(
+                **{k: v for k, v in t.items() if k in TickerInfo.__dataclass_fields__}
+            )
+            for t in raw
+        ]
 
     def _find_source(self, ticker: str, source: Optional[str]) -> tuple[str, str]:
         """Resolve (source, ticker) for a given ticker symbol.
@@ -204,11 +241,15 @@ class AIPriceAction:
             / f"{ticker}-{interval}-{day.isoformat()}.csv"
         )
 
-    def _csv_key_yearly(self, source: str, ticker: str, interval: str, year: int) -> str:
+    def _csv_key_yearly(
+        self, source: str, ticker: str, interval: str, year: int
+    ) -> str:
         """S3 key for a yearly aggregate CSV file."""
         return f"ohlcv/{source}/{ticker}/yearly/{ticker}-{interval}-{year}.csv"
 
-    def _cache_key_yearly(self, source: str, ticker: str, interval: str, year: int) -> str:
+    def _cache_key_yearly(
+        self, source: str, ticker: str, interval: str, year: int
+    ) -> str:
         """Local filesystem cache path for a yearly CSV file."""
         return str(
             self._cache_dir
@@ -349,7 +390,9 @@ class AIPriceAction:
         if interval not in ("1D", "1h") or not days:
             # Non-1D or empty: greedy backwards fetch (stop when enough rows)
             if need_rows is not None:
-                return self._fetch_backwards(source, ticker, interval, days, need_rows, use_cache=use_cache)
+                return self._fetch_backwards(
+                    source, ticker, interval, days, need_rows, use_cache=use_cache
+                )
             frames: list[pd.DataFrame] = []
             for day in days:
                 df = self._fetch_csv(source, ticker, interval, day, use_cache=use_cache)
@@ -373,7 +416,9 @@ class AIPriceAction:
         # Try fetching yearly files for each year (newest first for early stop)
         yearly_row_count = 0
         for year in reversed(years):
-            df = self._fetch_csv_yearly(source, ticker, interval, year, use_cache=use_cache)
+            df = self._fetch_csv_yearly(
+                source, ticker, interval, year, use_cache=use_cache
+            )
             if df is not None and not df.empty:
                 yearly_frames.append(df)
                 yearly_years_covered.add(year)
@@ -388,9 +433,15 @@ class AIPriceAction:
 
         # If yearly files already have enough rows, skip per-day fallback
         if need_rows is not None and yearly_row_count >= need_rows:
-            result = pd.concat(yearly_frames, ignore_index=True) if yearly_frames else pd.DataFrame(columns=_OHLCV_COLUMNS)
+            result = (
+                pd.concat(yearly_frames, ignore_index=True)
+                if yearly_frames
+                else pd.DataFrame(columns=_OHLCV_COLUMNS)
+            )
             if not result.empty and "time" in result.columns:
-                result = result.drop_duplicates(subset=["time"], keep="first").reset_index(drop=True)
+                result = result.drop_duplicates(
+                    subset=["time"], keep="first"
+                ).reset_index(drop=True)
             return result
 
         # Compute remaining days: only dates NOT within a fully-covered year,
@@ -398,9 +449,9 @@ class AIPriceAction:
         # today's data hasn't been aggregated into the yearly file yet.
         if yearly_max_date:
             remaining_days = [
-                d for d in days
-                if d.year not in yearly_years_covered
-                or d > yearly_max_date
+                d
+                for d in days
+                if d.year not in yearly_years_covered or d > yearly_max_date
             ]
         else:
             # No yearly files fetched, fall back to all days
@@ -422,7 +473,9 @@ class AIPriceAction:
 
         # Deduplicate by time (in case a day appears in both yearly and per-day)
         if not result.empty and "time" in result.columns:
-            result = result.drop_duplicates(subset=["time"], keep="first").reset_index(drop=True)
+            result = result.drop_duplicates(subset=["time"], keep="first").reset_index(
+                drop=True
+            )
 
         return result
 
@@ -542,10 +595,7 @@ class AIPriceAction:
             raise ValueError("Use either 'ticker' or 'tickers', not both")
 
         if interval.upper() not in {i.upper() for i in _ALL_INTERVALS}:
-            raise ValueError(
-                f"Invalid interval '{interval}'. "
-                f"Valid: {_ALL_INTERVALS}"
-            )
+            raise ValueError(f"Invalid interval '{interval}'. Valid: {_ALL_INTERVALS}")
 
         # Normalize interval to S3 key format
         norm_interval = self._normalize_interval(interval)
@@ -600,7 +650,10 @@ class AIPriceAction:
         frames: list[pd.DataFrame] = []
         for src, sym in resolved:
             df = self._fetch_ohlcv_for_ticker(
-                src, sym, norm_interval, days,
+                src,
+                sym,
+                norm_interval,
+                days,
                 need_rows=need_rows,
             )
             if df.empty:
@@ -638,11 +691,15 @@ class AIPriceAction:
             if ma_buffer_start < user_start:
                 result["_time_parsed"] = pd.to_datetime(result["time"])
                 cutoff = pd.Timestamp(user_start.isoformat())
-                result = result[result["_time_parsed"] >= cutoff].drop(columns=["_time_parsed"])
+                result = result[result["_time_parsed"] >= cutoff].drop(
+                    columns=["_time_parsed"]
+                )
 
         # Apply limit per symbol
         if limit is not None:
-            result = result.groupby("symbol", sort=False).tail(limit).reset_index(drop=True)
+            result = (
+                result.groupby("symbol", sort=False).tail(limit).reset_index(drop=True)
+            )
 
         return result
 
@@ -690,7 +747,9 @@ class AIPriceAction:
         norm_interval = self._normalize_interval(interval)
 
         end = self._parse_date(end_date) if end_date else date.today()
-        start = self._parse_date(start_date) if start_date else end - timedelta(days=365)
+        start = (
+            self._parse_date(start_date) if start_date else end - timedelta(days=365)
+        )
         days = self._date_range(start, end)
 
         if limit is not None:
@@ -705,7 +764,9 @@ class AIPriceAction:
             if not all_df.empty:
                 for day in days:
                     day_str = day.isoformat()
-                    matching = all_df[all_df["time"].astype(str).str.startswith(day_str)]
+                    matching = all_df[
+                        all_df["time"].astype(str).str.startswith(day_str)
+                    ]
                     if matching.empty:
                         continue
                     filename = f"{ticker}-{norm_interval}-{day_str}.csv"

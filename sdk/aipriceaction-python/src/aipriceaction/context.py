@@ -90,7 +90,13 @@ def _format_record(record: Ticker, interval: str) -> str:
         val = getattr(record, name)
         if val is not None:
             fields.append(f"{name}={val:.2f}")
-    for name in ("ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score"):
+    for name in (
+        "ma10_score",
+        "ma20_score",
+        "ma50_score",
+        "ma100_score",
+        "ma200_score",
+    ):
         val = getattr(record, name)
         if val is not None:
             fields.append(f"{name}={val:.2f}")
@@ -214,16 +220,24 @@ class AIContextBuilder:
         if ticker:
             single_ticker = ticker
             df = self._client.get_ohlcv(
-                ticker, interval=interval, limit=effective_limit,
-                start_date=start_date, end_date=end_date, ma=ma,
+                ticker,
+                interval=interval,
+                limit=effective_limit,
+                start_date=start_date,
+                end_date=end_date,
+                ma=ma,
                 ema=(self._ma_type == "ema"),
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info([ticker])
         elif tickers:
             df = self._client.get_ohlcv(
-                tickers=tickers, interval=interval, limit=effective_limit,
-                start_date=start_date, end_date=end_date, ma=ma,
+                tickers=tickers,
+                interval=interval,
+                limit=effective_limit,
+                start_date=start_date,
+                end_date=end_date,
+                ma=ma,
                 ema=(self._ma_type == "ema"),
             )
             self._market_data = self._df_to_records(df)
@@ -232,8 +246,12 @@ class AIContextBuilder:
         # Fetch reference ticker if specified
         if reference_ticker:
             ref_df = self._client.get_ohlcv(
-                reference_ticker, interval=interval, limit=limit,
-                start_date=start_date, end_date=end_date, ma=ma,
+                reference_ticker,
+                interval=interval,
+                limit=limit,
+                start_date=start_date,
+                end_date=end_date,
+                ma=ma,
                 ema=(self._ma_type == "ema"),
             )
             ref_records = self._df_to_records(ref_df)
@@ -256,9 +274,18 @@ class AIContextBuilder:
             Dict mapping symbol -> list of Ticker objects.
         """
         _OPTIONAL_COLS = [
-            "ma10", "ma20", "ma50", "ma100", "ma200",
-            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
-            "close_changed", "volume_changed",
+            "ma10",
+            "ma20",
+            "ma50",
+            "ma100",
+            "ma200",
+            "ma10_score",
+            "ma20_score",
+            "ma50_score",
+            "ma100_score",
+            "ma200_score",
+            "close_changed",
+            "volume_changed",
         ]
         result: dict[str, list[Ticker]] = {}
         for sym, group in df.groupby("symbol", sort=False):
@@ -439,7 +466,9 @@ class AIContextBuilder:
             lines.append("")
 
         if has_ref and self._ref_ticker and self._ref_data:
-            lines.append(_format_ticker_block(self._ref_ticker, self._ref_data, self._interval))
+            lines.append(
+                _format_ticker_block(self._ref_ticker, self._ref_data, self._interval)
+            )
             lines.append("")
 
         lines.append(_format_ticker_block(ticker, records, self._interval))

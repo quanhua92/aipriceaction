@@ -35,6 +35,7 @@ class Settings(BaseSettings):
 
     # General
     mock_only: bool = False
+    ai_context_lang: str = "en"
 
     @model_validator(mode="after")
     def at_least_one_api_key(self) -> "Settings":
