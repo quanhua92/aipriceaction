@@ -42,16 +42,18 @@ class AIPriceAction:
     No S3 credentials needed — the bucket must be public-read.
 
     Args:
-        base_url: S3 archive base URL (e.g. "http://localhost:9000/aipriceaction-archive")
+        base_url: S3 archive base URL. Defaults to "https://s3.aipriceaction.com".
         cache_dir: Local disk cache directory. Defaults to a temp dir. Pass None to disable.
     """
 
+    DEFAULT_BASE_URL = "https://s3.aipriceaction.com"
+
     def __init__(
         self,
-        base_url: str,
+        base_url: Optional[str] = None,
         cache_dir: Optional[str] = None,
     ):
-        self.base_url = base_url.rstrip("/")
+        self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self._session = requests.Session()
         self._tickers_cache: list[TickerInfo] | None = None
 
@@ -60,7 +62,8 @@ class AIPriceAction:
             self._cache_dir = Path(cache_dir)
             self._cache_dir.mkdir(parents=True, exist_ok=True)
         else:
-            self._cache_dir = Path(tempfile.mkdtemp(prefix="aipriceaction-"))
+            self._cache_dir = Path(tempfile.gettempdir()) / "aipriceaction-s3-cache"
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Ticker metadata ──
 
@@ -216,7 +219,7 @@ class AIPriceAction:
         # Fetch from S3
         url = f"{self.base_url}/{self._csv_key(source, ticker, interval, day)}"
         resp = self._session.get(url)
-        if resp.status_code == 404:
+        if resp.status_code in (404, 403):
             return None
         resp.raise_for_status()
 
@@ -261,7 +264,7 @@ class AIPriceAction:
         url = f"{self.base_url}/{key}"
 
         resp = self._session.head(url)
-        if resp.status_code == 404:
+        if resp.status_code in (404, 403):
             return None
         resp.raise_for_status()
 

@@ -2,7 +2,7 @@
 
 Usage:
     cd sdk/aipriceaction-python
-    uv run python scripts/test_url.py                          # defaults to localhost:9000
+    uv run python scripts/test_url.py                          # defaults to https://s3.aipriceaction.com
     uv run python scripts/test_url.py http://localhost:9000/aipriceaction-archive
     uv run python scripts/test_url.py https://aipriceaction-archive.s3.us-east-1.amazonaws.com
 """
@@ -270,7 +270,7 @@ def main(url: str) -> int:
     return 0 if passed == total else 1
 
 
-DEFAULT_URL = "http://localhost:9000/aipriceaction-archive"
+DEFAULT_URL = "https://s3.aipriceaction.com"
 
 
 if __name__ == "__main__":

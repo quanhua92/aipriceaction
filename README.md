@@ -324,7 +324,7 @@ from aipriceaction import AIPriceAction
 
 # Point to any public S3 archive (rustfs, AWS S3, Cloudflare R2, etc.)
 # cache_dir defaults to a temp dir; pass a path for persistent caching
-client = AIPriceAction("http://localhost:9000/aipriceaction-archive", cache_dir="./cache")
+client = AIPriceAction(cache_dir="./cache")
 
 # Ticker metadata (from meta/tickers.json)
 tickers = client.get_tickers()               # all tickers
