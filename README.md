@@ -355,6 +355,8 @@ paths = client.download_csv("BTCUSDT", interval="1D", start_date="2025-04-01", e
 | | `limit` | Max rows per ticker |
 | | `start_date` / `end_date` | `str` (`"YYYY-MM-DD"`), `date`, or `datetime` |
 | | `source` | Override auto-detection (`"vn"`, `"yahoo"`, `"crypto"`, `"sjc"`) |
+| | `ma` | Calculate MA indicators and scores (default: `True`). Fetches extra history for MA-200 buffer |
+| | `ema` | Use EMA instead of SMA for MA indicators (default: `False`) |
 | `get_tickers(source, use_cache)` | | Returns `list[TickerInfo]` with source, ticker, name, exchange, type, category, group |
 | `get_content_hash(ticker, interval, day, source)` | `day` | `datetime.date` object or `"YYYY-MM-DD"` string |
 | `download_csv(ticker, interval, limit, start_date, end_date, source, output_dir)` | | Returns list of downloaded file paths |

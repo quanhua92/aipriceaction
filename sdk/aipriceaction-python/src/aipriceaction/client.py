@@ -19,6 +19,14 @@ _SOURCE_PRIORITY = ["vn", "yahoo", "sjc", "crypto"]
 
 _OHLCV_COLUMNS = ["time", "open", "high", "low", "close", "volume"]
 
+_MA_PERIODS = [10, 20, 50, 100, 200]
+_MA_BUFFER_DAYS = 400  # fetch extra history for MA-200 calculation (~1yr of trading days)
+_MA_COLUMNS = [
+    "ma10", "ma20", "ma50", "ma100", "ma200",
+    "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+    "close_changed", "volume_changed", "total_money_changed",
+]
+
 _ALL_INTERVALS = {
     "1D", "1d", "daily",
     "1H", "1h", "hourly",
@@ -271,6 +279,8 @@ class AIPriceAction:
         start_date: Optional[Union[str, date, datetime]] = None,
         end_date: Optional[Union[str, date, datetime]] = None,
         source: Optional[str] = None,
+        ma: bool = True,
+        ema: bool = False,
     ) -> pd.DataFrame:
         """Get OHLCV data as a pandas DataFrame.
 
@@ -285,9 +295,15 @@ class AIPriceAction:
             start_date: Start date (inclusive). String "YYYY-MM-DD" or date object.
             end_date: End date (inclusive). String "YYYY-MM-DD" or date object.
             source: Override source ("vn", "yahoo", "crypto", "sjc"). None = auto-detect.
+            ma: Calculate MA indicators and scores (default: True).
+                When True, fetches extra history (400 days before start_date) to
+                warm the MA-200 buffer.
+            ema: Use EMA instead of SMA for MA indicators (default: False).
 
         Returns:
             DataFrame with columns: time, open, high, low, close, volume, symbol.
+            When ma=True, also includes: ma10..ma200, ma10_score..ma200_score,
+            close_changed, volume_changed, total_money_changed.
             Empty DataFrame if no data found.
         """
         if ticker and tickers:
@@ -314,7 +330,14 @@ class AIPriceAction:
         # Compute date range
         end = self._parse_date(end_date) if end_date else date.today()
         start = self._parse_date(start_date) if start_date else end - timedelta(days=365)
-        days = self._date_range(start, end)
+
+        # Expand start date for MA buffer (need ~200 trading days of history)
+        ma_buffer_start = start
+        user_start = start
+        if ma:
+            ma_buffer_start = start - timedelta(days=_MA_BUFFER_DAYS)
+
+        days = self._date_range(ma_buffer_start, end)
 
         # Fetch and concatenate
         frames: list[pd.DataFrame] = []
@@ -332,6 +355,31 @@ class AIPriceAction:
             )
 
         result = pd.concat(frames, ignore_index=True)
+
+        # Compute MA indicators per symbol
+        if ma:
+            from .indicators import compute_indicators
+
+            all_rows: list[pd.DataFrame] = []
+            for sym, group in result.groupby("symbol", sort=False):
+                group = group.sort_values("time").reset_index(drop=True)
+
+                closes = group["close"].tolist()
+                volumes = group["volume"].astype(int).tolist()
+                indicators = compute_indicators(closes, volumes, use_ema=ema)
+
+                for col in _MA_COLUMNS:
+                    group[col] = indicators[col]
+
+                all_rows.append(group)
+
+            result = pd.concat(all_rows, ignore_index=True)
+
+            # Trim to user-requested date range
+            if ma_buffer_start < user_start:
+                result["_time_parsed"] = pd.to_datetime(result["time"])
+                cutoff = pd.Timestamp(user_start.isoformat())
+                result = result[result["_time_parsed"] >= cutoff].drop(columns=["_time_parsed"])
 
         # Apply limit per symbol
         if limit is not None:

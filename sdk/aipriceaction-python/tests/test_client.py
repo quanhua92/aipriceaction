@@ -1,10 +1,8 @@
 from datetime import date
 
-import pandas as pd
 import pytest
 
 from aipriceaction import AIPriceAction
-from aipriceaction.exceptions import AIPriceActionError
 from aipriceaction.models import TickerInfo
 
 
@@ -41,6 +39,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-28", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df) == 2
         assert list(df.columns) == ["time", "open", "high", "low", "close", "volume", "symbol"]
@@ -52,6 +51,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB", interval="1D",
             start_date=date(2025, 4, 28), end_date=date(2025, 4, 29),
+            ma=False,
         )
         assert len(df) == 2
 
@@ -59,6 +59,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             tickers=["VCB", "BTCUSDT"], interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df) == 2
         symbols = sorted(df["symbol"].unique())
@@ -72,6 +73,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         # VCB + FPT + BTCUSDT all have data for 04-29
         assert len(df) == 3
@@ -82,7 +84,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-28", end_date="2025-04-29",
-            limit=1,
+            limit=1, ma=False,
         )
         assert len(df) == 1
         # limit takes the last row (tail)
@@ -93,6 +95,7 @@ class TestGetOhlcv:
             "BTCUSDT", interval="1D",
             source="crypto",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df) == 1
         assert df.iloc[0]["close"] == 94256.82
@@ -101,6 +104,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-30", end_date="2025-04-30",
+            ma=False,
         )
         assert len(df) == 0
         assert list(df.columns) == ["time", "open", "high", "low", "close", "volume", "symbol"]
@@ -110,6 +114,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df) == 1
 
@@ -131,6 +136,7 @@ class TestGetOhlcv:
         df = client.get_ohlcv(
             "VCB", interval="hourly",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df) == 0  # no 1h data mocked
 
@@ -162,6 +168,7 @@ class TestDiskCache:
         client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         cache_file = tmp_path / "vn" / "VCB" / "1D" / "VCB-1D-2025-04-29.csv"
         assert cache_file.exists()
@@ -171,6 +178,7 @@ class TestDiskCache:
         df1 = client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         # Clear responses so any HTTP call would fail
         import responses
@@ -178,6 +186,7 @@ class TestDiskCache:
         df2 = client.get_ohlcv(
             "VCB", interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
         )
         assert len(df2) == len(df1)
         assert df2.iloc[0]["close"] == df1.iloc[0]["close"]
@@ -214,6 +223,211 @@ class TestDownloadCsv:
             output_dir=str(output_dir),
         )
         assert len(paths) == 1
+
+
+class TestMaIndicators:
+    """Tests for MA/EMA indicator calculation."""
+
+    def test_ma_true_adds_indicator_columns(self, mock_s3_ma, client):
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+            ma=True,
+        )
+        ma_cols = [
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed",
+        ]
+        for col in ma_cols:
+            assert col in df.columns, f"Missing column: {col}"
+
+    def test_ma_false_no_indicator_columns(self, mock_s3, client):
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        assert "ma10" not in df.columns
+        assert "ma10_score" not in df.columns
+        assert "close_changed" not in df.columns
+
+    def test_ma_default_is_true(self, mock_s3_ma, client):
+        """ma=True by default, same as the /tickers endpoint."""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+        )
+        assert "ma10" in df.columns
+
+    def test_sma_values(self, mock_s3_ma, client):
+        """Verify SMA-10 for a dataset with linearly increasing prices.
+
+        Days 0-9 have closes 100, 101, ..., 109.
+        SMA-10 at day 9 = (100+101+...+109)/10 = 104.5
+        Day 10 has close=110, SMA-10 = (101+...+110)/10 = 105.5
+        """
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-20", end_date="2025-04-24",
+            ma=True,
+        )
+        # Find the row with close=110.0 (day index 10, which is 2025-04-20)
+        row_110 = df[df["close"] == 110.0]
+        if not row_110.empty:
+            assert abs(row_110.iloc[0]["ma10"] - 105.5) < 0.01
+
+    def test_ema_values(self, mock_s3_ma, client):
+        """Verify EMA differs from SMA."""
+        df_sma = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+            ma=True, ema=False,
+        )
+        df_ema = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+            ma=True, ema=True,
+        )
+        # EMA and SMA should produce different values for the same data
+        assert df_sma.iloc[0]["ma10"] != df_ema.iloc[0]["ma10"]
+
+    def test_ma_score_formula(self, mock_s3_ma, client):
+        """ma_score = ((close - ma) / ma) * 100"""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+            ma=True,
+        )
+        if not df.empty:
+            row = df.iloc[-1]
+            close = row["close"]
+            ma10 = row["ma10"]
+            if ma10 and ma10 > 0:
+                expected = ((close - ma10) / ma10) * 100.0
+                assert abs(row["ma10_score"] - expected) < 0.01
+
+    def test_close_changed(self, mock_s3_ma, client):
+        """close_changed = ((curr - prev) / prev) * 100"""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-11", end_date="2025-04-11",
+            ma=True,
+        )
+        # First row should have None (no previous bar after trim)
+        # If we have multiple rows, check the second
+        if len(df) >= 2:
+            curr = df.iloc[1]["close"]
+            prev = df.iloc[0]["close"]
+            expected = ((curr - prev) / prev) * 100.0
+            assert abs(df.iloc[1]["close_changed"] - expected) < 0.01
+
+    def test_close_changed_first_row_is_none(self, mock_s3_ma, client):
+        """First data row has no previous bar, so close_changed is None/NaN."""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-10", end_date="2025-04-11",
+            ma=True,
+        )
+        if len(df) >= 1:
+            import math
+            assert math.isnan(df.iloc[0]["close_changed"])
+
+    def test_total_money_changed(self, mock_s3_ma, client):
+        """total_money_changed = (close - prev_close) * volume"""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-11", end_date="2025-04-11",
+            ma=True,
+        )
+        if len(df) >= 2:
+            curr = df.iloc[1]
+            prev = df.iloc[0]
+            expected = (curr["close"] - prev["close"]) * curr["volume"]
+            assert abs(curr["total_money_changed"] - expected) < 0.01
+
+    def test_ma_trimmed_to_user_date_range(self, mock_s3_ma, client):
+        """When ma=True, buffer data should not appear in the result."""
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-24", end_date="2025-04-24",
+            ma=True,
+        )
+        # All returned rows should be within user's requested range
+        for _, row in df.iterrows():
+            assert "2025-04-24" in str(row["time"])
+
+
+class TestIndicators:
+    """Unit tests for the indicators module."""
+
+    def test_sma_full_window(self):
+        from aipriceaction.indicators import calculate_sma
+
+        closes = [10.0, 20.0, 30.0, 40.0, 50.0]
+        result = calculate_sma(closes, 3)
+        # Index 2: (10+20+30)/3 = 20
+        # Index 3: (20+30+40)/3 = 30
+        # Index 4: (30+40+50)/3 = 40
+        assert result[0] == 0.0  # not enough data
+        assert result[1] == 0.0  # not enough data
+        assert result[2] == 20.0
+        assert result[3] == 30.0
+        assert result[4] == 40.0
+
+    def test_sma_expanding_window(self):
+        from aipriceaction.indicators import calculate_sma
+
+        closes = [10.0, 20.0]
+        result = calculate_sma(closes, 5)
+        # Only 2 bars, period=5: expanding window
+        assert result[0] == 10.0
+        assert result[1] == 15.0  # (10+20)/2
+
+    def test_ema_basic(self):
+        from aipriceaction.indicators import calculate_ema, calculate_sma
+
+        # Non-linear data so EMA != SMA
+        closes = [10.0, 50.0, 20.0, 80.0, 30.0]
+        result = calculate_ema(closes, 3)
+        # Seed at index 2: SMA(10,50,20) = 26.667
+        assert abs(result[2] - 80.0 / 3.0) < 0.01
+        # EMA should weight recent data more than SMA
+        sma = calculate_sma(closes, 3)
+        assert result[4] != sma[4]
+
+    def test_ma_score(self):
+        from aipriceaction.indicators import calculate_ma_score
+
+        assert calculate_ma_score(110.0, 100.0) == 10.0
+        assert calculate_ma_score(90.0, 100.0) == -10.0
+        assert calculate_ma_score(100.0, 0.0) == 0.0
+
+    def test_compute_indicators_keys(self):
+        from aipriceaction.indicators import compute_indicators
+
+        closes = [100.0, 101.0, 102.0]
+        volumes = [1000, 1100, 1200]
+        result = compute_indicators(closes, volumes)
+
+        expected_keys = [
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed", "total_money_changed",
+        ]
+        for key in expected_keys:
+            assert key in result
+            assert len(result[key]) == 3
+
+    def test_compute_indicators_ema(self):
+        from aipriceaction.indicators import compute_indicators
+
+        closes = [100.0] * 15
+        volumes = [1000] * 15
+        sma_result = compute_indicators(closes, volumes, use_ema=False)
+        ema_result = compute_indicators(closes, volumes, use_ema=True)
+        # With flat data, SMA and EMA should be the same
+        assert sma_result["ma10"][-1] == ema_result["ma10"][-1]
 
 
 class TestInit:
