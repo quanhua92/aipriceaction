@@ -113,7 +113,7 @@ class AIPriceAction:
         if cache_path.exists():
             try:
                 raw = json.loads(cache_path.read_text())
-                return [TickerInfo(**t) for t in raw]
+                return [TickerInfo(**{k: v for k, v in t.items() if k in TickerInfo.__dataclass_fields__}) for t in raw]
             except (json.JSONDecodeError, TypeError):
                 pass  # stale cache, refetch
 
@@ -126,7 +126,7 @@ class AIPriceAction:
         raw = resp.json()
         cache_path.write_text(json.dumps(raw))
 
-        return [TickerInfo(**t) for t in raw]
+        return [TickerInfo(**{k: v for k, v in t.items() if k in TickerInfo.__dataclass_fields__}) for t in raw]
 
     def _find_source(self, ticker: str, source: Optional[str]) -> tuple[str, str]:
         """Resolve (source, ticker) for a given ticker symbol.
