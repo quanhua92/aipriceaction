@@ -421,12 +421,96 @@ async fn startup_scan(
     let mut in_flight: futures::stream::FuturesUnordered<_> =
         futures::stream::FuturesUnordered::new();
 
-    // Group ranges by ticker_id so we can log per-ticker progress
-    // Also collect 1D year ranges for yearly file processing
-    let mut last_ticker_id: i32 = -1;
-    let mut ticker_count = 0;
+    // ── Phase 1: Collect and process yearly daily aggregate files first ──
+    // Yearly files are fast (~5s for 6K files) and the Python SDK prefers them
+    // for 1D interval, so process them before the slow per-day scan.
     let mut yearly_tasks: Vec<(i32, String, String, i32)> = Vec::new(); // (ticker_id, source, ticker, year)
     let mut yearly_ticker_seen: std::collections::HashSet<i32> = std::collections::HashSet::new();
+
+    for range in &ranges {
+        if range.interval != "1D" {
+            continue;
+        }
+        if yearly_ticker_seen.contains(&range.ticker_id) {
+            continue;
+        }
+        let (source, ticker_sym) = match ticker_map.get(&range.ticker_id) {
+            Some(t) => t,
+            None => continue,
+        };
+        yearly_ticker_seen.insert(range.ticker_id);
+        let earliest_year = range.earliest.year();
+        let latest_year = range.latest.year();
+        for year in earliest_year..=latest_year {
+            yearly_tasks.push((range.ticker_id, source.clone(), ticker_sym.clone(), year));
+        }
+    }
+
+    let yearly_count = yearly_tasks.len();
+    let mut yearly_uploaded: u64 = 0;
+    let mut yearly_skipped: u64 = 0;
+    if yearly_count > 0 {
+        tracing::info!(
+            "s3_archive: processing {yearly_count} yearly daily files for {} tickers...",
+            yearly_ticker_seen.len()
+        );
+    }
+    for (ticker_id, source, ticker_sym, year) in yearly_tasks {
+        let key = s3_key_yearly(&source, &ticker_sym, year);
+        let (year_start, year_end) = year_range(year);
+        let pool = pool.clone();
+        let bucket = bucket.clone();
+        let permit = sem.clone();
+
+        in_flight.push(tokio::spawn(async move {
+            let _permit = permit.acquire().await.unwrap();
+            let inner_uploaded = match process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await {
+                Ok(true) => 1u64,
+                Ok(false) => 0,
+                Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
+            };
+            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
+        }));
+
+        while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
+            if let Some(result) = in_flight.next().await {
+                match result {
+                    Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                        yearly_uploaded += u;
+                        yearly_skipped += s;
+                    }
+                    Err(e) => {
+                        tracing::warn!("s3_archive: task panicked: {e}");
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // Drain remaining yearly tasks
+    while let Some(result) = in_flight.next().await {
+        match result {
+            Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                yearly_uploaded += u;
+                yearly_skipped += s;
+            }
+            Err(e) => {
+                tracing::warn!("s3_archive: task panicked: {e}");
+            }
+            _ => {}
+        }
+    }
+
+    if yearly_count > 0 {
+        tracing::info!(
+            "s3_archive: yearly files complete — {yearly_count} yearly files, {yearly_uploaded} uploaded, {yearly_skipped} skipped"
+        );
+    }
+
+    // ── Phase 2: Per-day scan (newest→oldest with consecutive skip early-stop) ──
+    let mut last_ticker_id: i32 = -1;
+    let mut ticker_count = 0;
 
     for range in &ranges {
         let (source, ticker_sym) = match ticker_map.get(&range.ticker_id) {
@@ -447,16 +531,6 @@ async fn startup_scan(
         for interval in &intervals {
             if range.interval != *interval {
                 continue;
-            }
-
-            // Collect yearly tasks for 1D interval
-            if range.interval == "1D" && !yearly_ticker_seen.contains(&range.ticker_id) {
-                yearly_ticker_seen.insert(range.ticker_id);
-                let earliest_year = range.earliest.year();
-                let latest_year = range.latest.year();
-                for year in earliest_year..=latest_year {
-                    yearly_tasks.push((range.ticker_id, source.clone(), ticker_sym.clone(), year));
-                }
             }
 
             let earliest_date = range.earliest.date_naive();
@@ -566,67 +640,6 @@ async fn startup_scan(
     tracing::info!(
         "s3_archive: startup scan complete — {ticker_count} tickers, uploaded: {uploaded}, skipped: {skipped}"
     );
-
-    // Process yearly daily aggregate files
-    let yearly_count = yearly_tasks.len();
-    if yearly_count > 0 {
-        tracing::info!(
-            "s3_archive: processing {yearly_count} yearly daily files for {} tickers...",
-            yearly_ticker_seen.len()
-        );
-    }
-    for (ticker_id, source, ticker_sym, year) in yearly_tasks {
-        let key = s3_key_yearly(&source, &ticker_sym, year);
-        let (year_start, year_end) = year_range(year);
-        let pool = pool.clone();
-        let bucket = bucket.clone();
-        let permit = sem.clone();
-
-        in_flight.push(tokio::spawn(async move {
-            let _permit = permit.acquire().await.unwrap();
-            let inner_uploaded = match process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await {
-                Ok(true) => 1u64,
-                Ok(false) => 0,
-                Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
-            };
-            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
-        }));
-
-        while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
-            if let Some(result) = in_flight.next().await {
-                match result {
-                    Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
-                        uploaded += u;
-                        skipped += s;
-                    }
-                    Err(e) => {
-                        tracing::warn!("s3_archive: task panicked: {e}");
-                    }
-                    _ => {}
-                }
-            }
-        }
-    }
-
-    // Drain remaining yearly tasks
-    while let Some(result) = in_flight.next().await {
-        match result {
-            Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
-                uploaded += u;
-                skipped += s;
-            }
-            Err(e) => {
-                tracing::warn!("s3_archive: task panicked: {e}");
-            }
-            _ => {}
-        }
-    }
-
-    if yearly_count > 0 {
-        tracing::info!(
-            "s3_archive: yearly files complete — {yearly_count} yearly files processed"
-        );
-    }
 
     Ok(())
 }
