@@ -187,11 +187,12 @@ pub fn year_range(year: i32) -> (DateTime<Utc>, DateTime<Utc>) {
     (start, end)
 }
 
-/// Fetch all daily OHLCV rows for a specific ticker and year.
+/// Fetch all OHLCV rows for a specific ticker, interval, and year.
 /// Returns rows sorted by `time ASC` for CSV output.
 pub async fn get_ohlcv_for_year(
     pool: &PgPool,
     ticker_id: i32,
+    interval: &str,
     year_start: DateTime<Utc>,
     year_end: DateTime<Utc>,
 ) -> sqlx::Result<Vec<crate::models::ohlcv::OhlcvRow>> {
@@ -199,10 +200,11 @@ pub async fn get_ohlcv_for_year(
         crate::models::ohlcv::OhlcvRow,
         r#"SELECT ticker_id, interval, time, open, high, low, close, volume
            FROM ohlcv
-           WHERE ticker_id = $1 AND interval = '1D'
-           AND time >= $2 AND time < $3
+           WHERE ticker_id = $1 AND interval = $2
+           AND time >= $3 AND time < $4
            ORDER BY time ASC"#,
         ticker_id,
+        interval,
         year_start,
         year_end,
     )
@@ -210,11 +212,12 @@ pub async fn get_ohlcv_for_year(
     .await
 }
 
-/// Get the 4-column fingerprint for a full year of daily OHLCV data.
+/// Get the 4-column fingerprint for a full year of OHLCV data.
 /// Returns `None` if no data exists for that year.
 pub async fn get_ohlcv_year_fingerprint(
     pool: &PgPool,
     ticker_id: i32,
+    interval: &str,
     year_start: DateTime<Utc>,
     year_end: DateTime<Utc>,
 ) -> sqlx::Result<Option<DayFingerprint>> {
@@ -225,9 +228,10 @@ pub async fn get_ohlcv_year_fingerprint(
                COALESCE(SUM((close * 10000)::bigint), 0)::bigint as "sum_close_scaled!: i64",
                COALESCE(SUM(volume), 0)::bigint as "sum_volume!: i64"
            FROM ohlcv
-           WHERE ticker_id = $1 AND interval = '1D'
-           AND time >= $2 AND time < $3"#,
+           WHERE ticker_id = $1 AND interval = $2
+           AND time >= $3 AND time < $4"#,
         ticker_id,
+        interval,
         year_start,
         year_end,
     )

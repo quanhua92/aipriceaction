@@ -204,18 +204,18 @@ class AIPriceAction:
             / f"{ticker}-{interval}-{day.isoformat()}.csv"
         )
 
-    def _csv_key_yearly(self, source: str, ticker: str, year: int) -> str:
-        """S3 key for a yearly daily aggregate CSV file."""
-        return f"ohlcv/{source}/{ticker}/yearly/{ticker}-1D-{year}.csv"
+    def _csv_key_yearly(self, source: str, ticker: str, interval: str, year: int) -> str:
+        """S3 key for a yearly aggregate CSV file."""
+        return f"ohlcv/{source}/{ticker}/yearly/{ticker}-{interval}-{year}.csv"
 
-    def _cache_key_yearly(self, source: str, ticker: str, year: int) -> str:
+    def _cache_key_yearly(self, source: str, ticker: str, interval: str, year: int) -> str:
         """Local filesystem cache path for a yearly CSV file."""
         return str(
             self._cache_dir
             / source
             / ticker
             / "yearly"
-            / f"{ticker}-1D-{year}.csv"
+            / f"{ticker}-{interval}-{year}.csv"
         )
 
     def _fetch_csv(
@@ -271,17 +271,18 @@ class AIPriceAction:
         self,
         source: str,
         ticker: str,
+        interval: str,
         year: int,
         *,
         use_cache: bool = True,
     ) -> Optional[pd.DataFrame]:
-        """Fetch a yearly daily aggregate CSV as a DataFrame.
+        """Fetch a yearly aggregate CSV as a DataFrame.
 
-        Returns a DataFrame with all daily bars for the given year,
+        Returns a DataFrame with all bars for the given year,
         or None if the file doesn't exist (404).
         """
         # Try disk cache
-        cache_path = self._cache_key_yearly(source, ticker, year)
+        cache_path = self._cache_key_yearly(source, ticker, interval, year)
         if use_cache and os.path.exists(cache_path):
             try:
                 text = Path(cache_path).read_text()
@@ -290,7 +291,7 @@ class AIPriceAction:
                 pass
 
         # Fetch from S3
-        url = f"{self.base_url}/{self._csv_key_yearly(source, ticker, year)}"
+        url = f"{self.base_url}/{self._csv_key_yearly(source, ticker, interval, year)}"
         resp = self._session.get(url)
         if resp.status_code in (404, 403):
             return None
@@ -345,7 +346,7 @@ class AIPriceAction:
         For other intervals: fetches from latest to past, stops when enough rows collected.
         When need_rows is set and no explicit start_date given, uses greedy backwards fetch.
         """
-        if interval != "1D" or not days:
+        if interval not in ("1D", "1h") or not days:
             # Non-1D or empty: greedy backwards fetch (stop when enough rows)
             if need_rows is not None:
                 return self._fetch_backwards(source, ticker, interval, days, need_rows, use_cache=use_cache)
@@ -358,7 +359,7 @@ class AIPriceAction:
                 return pd.DataFrame(columns=_OHLCV_COLUMNS)
             return pd.concat(frames, ignore_index=True)
 
-        # 1D interval: prefer yearly files
+        # 1D and 1h intervals: prefer yearly files
         start = min(days)
         end = max(days)
         yearly_frames: list[pd.DataFrame] = []
@@ -372,7 +373,7 @@ class AIPriceAction:
         # Try fetching yearly files for each year (newest first for early stop)
         yearly_row_count = 0
         for year in reversed(years):
-            df = self._fetch_csv_yearly(source, ticker, year, use_cache=use_cache)
+            df = self._fetch_csv_yearly(source, ticker, interval, year, use_cache=use_cache)
             if df is not None and not df.empty:
                 yearly_frames.append(df)
                 yearly_years_covered.add(year)
@@ -721,7 +722,7 @@ class AIPriceAction:
         os.makedirs(output_dir, exist_ok=True)
         paths: list[str] = []
 
-        if norm_interval == "1D":
+        if norm_interval in ("1D", "1h"):
             # Fetch all data at once (yearly + fallback), then split by day
             all_df = self._fetch_ohlcv_for_ticker(source, ticker, norm_interval, days)
             if not all_df.empty:

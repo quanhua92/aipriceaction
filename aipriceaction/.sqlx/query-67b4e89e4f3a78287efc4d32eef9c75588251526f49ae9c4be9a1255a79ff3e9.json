@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT ticker_id, interval, time, open, high, low, close, volume\n           FROM ohlcv\n           WHERE ticker_id = $1 AND interval = '1D'\n           AND time >= $2 AND time < $3\n           ORDER BY time ASC",
+  "query": "SELECT ticker_id, interval, time, open, high, low, close, volume\n           FROM ohlcv\n           WHERE ticker_id = $1 AND interval = $2\n           AND time >= $3 AND time < $4\n           ORDER BY time ASC",
   "describe": {
     "columns": [
       {
@@ -47,6 +47,7 @@
     "parameters": {
       "Left": [
         "Int4",
+        "Text",
         "Timestamptz",
         "Timestamptz"
       ]
@@ -62,5 +63,5 @@
       false
     ]
   },
-  "hash": "3aa0a828dbef87c9f83841687073c259dff8b0e0f33bbec07e6a3de5f88c5241"
+  "hash": "67b4e89e4f3a78287efc4d32eef9c75588251526f49ae9c4be9a1255a79ff3e9"
 }

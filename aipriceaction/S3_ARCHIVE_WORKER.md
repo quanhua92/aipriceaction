@@ -22,11 +22,12 @@ Python notebooks / scripts
 
 ## S3 Key Scheme
 
-One file per ticker, per interval, per day. For `1D` interval, an additional yearly aggregate file is generated containing all daily bars for that year.
+One file per ticker, per interval, per day. For `1D` and `1h` intervals, additional yearly aggregate files are generated containing all bars for that year.
 
 ```
 ohlcv/{source}/{ticker}/{interval}/{ticker}-{interval}-{YYYY}-{MM}-{DD}.csv
-ohlcv/{source}/{ticker}/1D/yearly/{ticker}-1D-{YYYY}.csv
+ohlcv/{source}/{ticker}/yearly/{ticker}-1D-{YYYY}.csv
+ohlcv/{source}/{ticker}/yearly/{ticker}-1h-{YYYY}.csv
 meta/tickers.json
 ```
 
@@ -35,12 +36,14 @@ Examples:
 ```
 ohlcv/vn/VCB/1D/VCB-1D-2025-04-01.csv
 ohlcv/vn/VCB/1D/VCB-1D-2025-04-02.csv
-ohlcv/vn/VCB/1D/yearly/VCB-1D-2025.csv
-ohlcv/vn/VCB/1D/yearly/VCB-1D-2024.csv
+ohlcv/vn/VCB/yearly/VCB-1D-2025.csv
+ohlcv/vn/VCB/yearly/VCB-1D-2024.csv
 ohlcv/vn/VCB/1h/VCB-1h-2025-04-01.csv
+ohlcv/vn/VCB/yearly/VCB-1h-2025.csv
 ohlcv/vn/VCB/1m/VCB-1m-2025-04-01.csv
 ohlcv/crypto/BTCUSDT/1D/BTCUSDT-1D-2025-04-01.csv
-ohlcv/crypto/BTCUSDT/1D/yearly/BTCUSDT-1D-2025.csv
+ohlcv/crypto/BTCUSDT/yearly/BTCUSDT-1D-2025.csv
+ohlcv/crypto/BTCUSDT/yearly/BTCUSDT-1h-2025.csv
 ohlcv/yahoo/^GSPC/1D/^GSPC-1D-2025-04-01.csv
 ohlcv/sjc/SJC-GOLD/1D/SJC-GOLD-1D-2025-04-01.csv
 meta/tickers.json
@@ -49,7 +52,7 @@ meta/tickers.json
 ## CSV Format
 
 Each per-day file contains OHLCV data for one ticker, one interval, one day.
-Yearly files (`1D/yearly/`) contain all daily bars for a ticker for a full year.
+Yearly files (`yearly/`) contain all bars for a ticker for a full year (1D or 1h).
 
 Header: `time,open,high,low,close,volume`
 
@@ -138,7 +141,7 @@ On startup and every `STARTUP_SCAN_INTERVAL_SECS` (default 24h), the worker perf
 3. For each ticker + interval:
    - Iterate from earliest date to current date (day by day)
    - For each day: check fingerprint → skip if S3 hash matches, else upload
-4. For each ticker with `1D` data:
+4. For each ticker with `1D` or `1h` data:
    - Process yearly aggregate files for all years that have data (from `earliest.year()` to `latest.year()`)
    - Each yearly file uses the same fingerprint-based skip-if-unchanged pattern
 5. When scan completes, enter incremental loop
@@ -167,11 +170,11 @@ This is efficient because:
        f. Else → fetch all rows for the day, build CSV, PUT to S3 with metadata
    All day-tasks run concurrently (bounded by `UPLOAD_CONCURRENCY`)
 3. For each ticker in DB:
-   For current year:
+   For current year, for each interval in [1D, 1h]:
      a. `get_ohlcv_year_fingerprint()` → same 4-column fingerprint for the full year
      b. HEAD S3 yearly object, compare `x-amz-meta-content-hash`
      c. If hash matches → **SKIP**
-     d. Else → fetch all daily rows for the year, build CSV, PUT to S3
+     d. Else → fetch all rows for the year, build CSV, PUT to S3
 4. Sleep `LOOP_SECS` (default 3600 seconds = 1 hour, override via `S3_ARCHIVE_INTERVAL_SECS`)
 
 ### Skip-if-unchanged (fingerprint)
@@ -293,22 +296,22 @@ FROM ohlcv
 GROUP BY ticker_id, interval
 ```
 
-### `get_ohlcv_for_year(pool, ticker_id, year_start, year_end) -> Vec<OhlcvRow>`
+### `get_ohlcv_for_year(pool, ticker_id, interval, year_start, year_end) -> Vec<OhlcvRow>`
 
-Fetches all daily OHLCV rows for a specific ticker and year.
+Fetches all OHLCV rows for a specific ticker, interval, and year.
 Returns rows sorted by `time ASC` for CSV output.
 
 ```sql
 SELECT ticker_id, interval, time, open, high, low, close, volume
 FROM ohlcv
-WHERE ticker_id = $1 AND interval = '1D'
-AND time >= $2 AND time < $3
+WHERE ticker_id = $1 AND interval = $2
+AND time >= $3 AND time < $4
 ORDER BY time ASC
 ```
 
-### `get_ohlcv_year_fingerprint(pool, ticker_id, year_start, year_end) -> Option<DayFingerprint>`
+### `get_ohlcv_year_fingerprint(pool, ticker_id, interval, year_start, year_end) -> Option<DayFingerprint>`
 
-Returns the 4-column fingerprint components for a full year of daily data,
+Returns the 4-column fingerprint components for a full year of data,
 or `None` if no data exists for that year. Reuses the same `DayFingerprint` struct.
 
 ```sql
@@ -318,8 +321,8 @@ SELECT
     SUM((close * 10000)::bigint),
     SUM(volume)
 FROM ohlcv
-WHERE ticker_id = $1 AND interval = '1D'
-AND time >= $2 AND time < $3
+WHERE ticker_id = $1 AND interval = $2
+AND time >= $3 AND time < $4
 ```
 
 ### `year_range(year) -> (DateTime<Utc>, DateTime<Utc>)`
@@ -653,8 +656,8 @@ class TickerInfo:
 - **Source auto-detection**: If `source` not specified, auto-detects from `tickers.json`.
   Priority: vn > yahoo > sjc > crypto.
 - **Default date range**: `start_date` defaults to 365 days ago, `end_date` to today.
-- **Yearly file preference**: For `1D` interval, the SDK fetches yearly aggregate CSV files
-  (`ohlcv/{source}/{ticker}/1D/yearly/{ticker}-1D-{YYYY}.csv`) instead of individual
+- **Yearly file preference**: For `1D` and `1h` intervals, the SDK fetches yearly aggregate CSV files
+  (`ohlcv/{source}/{ticker}/yearly/{ticker}-{interval}-{YYYY}.csv`) instead of individual
   per-day files. This reduces HTTP requests from hundreds to 2-3 per ticker. Falls back
   to per-day files for any dates not covered by yearly files (e.g., partial year at boundaries
   or years where the yearly file doesn't exist yet).

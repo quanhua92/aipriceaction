@@ -289,11 +289,11 @@ def main() -> None:
         ('VCB 1D, ma=False', test_vcb_daily, 5.0),
         ('VCB 1D, ma=True', test_vcb_daily_ma, 5.0),
         ('batch 4, 1D, ma=True', test_batch_ma, 15.0),
-        ('VCB 1h, ma=False', test_vcb_hourly, 5.0),
+        ('VCB 1h, ma=False', test_vcb_hourly, 3.0),
         ('VCB 1m, ma=False', test_vcb_minute, 5.0),
         ('BTCUSDT 1D, ma=True', test_btcusdt_daily_ma, 5.0),
         # ── Intraday + MA ──
-        ('VCB 1h, ma=True', test_hourly_ma, 5.0),
+        ('VCB 1h, ma=True', test_hourly_ma, 3.0),
         ('VCB 1m, ma=True', test_minute_ma, 5.0),
         # ── AI context (typical) ──
         ('VCB limit=1, ma=True', test_ai_single, 5.0),
@@ -305,7 +305,7 @@ def main() -> None:
         # ── start_date + limit ──
         ('start_date + limit', test_start_limit, 5.0),
         ('start_date + limit + ma', test_start_limit_ma, 5.0),
-        ('start_date + limit + 1h', test_start_limit_hourly, 5.0),
+        ('start_date + limit + 1h', test_start_limit_hourly, 3.0),
         # ── end_date + limit ──
         ('end_date + limit', test_end_limit, 5.0),
         ('end_date + limit + ma', test_end_limit_ma, 5.0),
@@ -317,15 +317,15 @@ def main() -> None:
         ('no dates, batch 5, ma=False', test_batch_no_ma, 5.0),
         # ── start + end ──
         ('start + end, 1D', test_start_end, 5.0),
-        ('start + end, 1h', test_1h_start_end, 5.0),
+        ('start + end, 1h', test_1h_start_end, 3.0),
         ('start + end, 1m', test_1m_start_end, 5.0),
         ('start + end + limit + batch', test_start_end_limit_batch, 5.0),
         # ── end_date only ──
         ('end_date only', test_end_only, 5.0),
         # ── start only intraday ──
-        ('start_date + 1h', test_start_only_1h, 5.0),
+        ('start_date + 1h', test_start_only_1h, 3.0),
         # ── Crypto intraday ──
-        ('BTCUSDT 1h', test_btc_1h, 5.0),
+        ('BTCUSDT 1h', test_btc_1h, 3.0),
         ('BTCUSDT 1m', test_btc_1m, 5.0),
     ]
 

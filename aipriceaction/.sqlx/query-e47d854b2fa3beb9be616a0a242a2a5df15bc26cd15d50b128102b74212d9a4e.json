@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n               COUNT(*) as \"count!\",\n               MAX(time) as max_time,\n               COALESCE(SUM((close * 10000)::bigint), 0)::bigint as \"sum_close_scaled!: i64\",\n               COALESCE(SUM(volume), 0)::bigint as \"sum_volume!: i64\"\n           FROM ohlcv\n           WHERE ticker_id = $1 AND interval = '1D'\n           AND time >= $2 AND time < $3",
+  "query": "SELECT\n               COUNT(*) as \"count!\",\n               MAX(time) as max_time,\n               COALESCE(SUM((close * 10000)::bigint), 0)::bigint as \"sum_close_scaled!: i64\",\n               COALESCE(SUM(volume), 0)::bigint as \"sum_volume!: i64\"\n           FROM ohlcv\n           WHERE ticker_id = $1 AND interval = $2\n           AND time >= $3 AND time < $4",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,7 @@
     "parameters": {
       "Left": [
         "Int4",
+        "Text",
         "Timestamptz",
         "Timestamptz"
       ]
@@ -38,5 +39,5 @@
       null
     ]
   },
-  "hash": "3e01610a37869a15271687d6e7917c2b9992178f7b7ee12f92f86e113678a33f"
+  "hash": "e47d854b2fa3beb9be616a0a242a2a5df15bc26cd15d50b128102b74212d9a4e"
 }

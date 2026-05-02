@@ -383,9 +383,9 @@ pub mod s3_archive {
     pub const STARTUP_SCAN_INTERVAL_SECS: u64 = 86400; // 24 hours
 
     /// Stop scanning older per-day files after this many consecutive skips (no changes).
-    /// Historical data never changes once uploaded, so 50 skips in a row means
+    /// Historical data never changes once uploaded, so 20 skips in a row means
     /// everything older is also unchanged.
-    pub const STARTUP_CONSECUTIVE_SKIP_LIMIT: u32 = 50;
+    pub const STARTUP_CONSECUTIVE_SKIP_LIMIT: u32 = 20;
 
     /// Max parallel S3 uploads.
     pub const UPLOAD_CONCURRENCY: usize = 4;
