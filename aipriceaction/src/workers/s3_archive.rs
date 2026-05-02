@@ -9,7 +9,8 @@ use awscreds::Credentials;
 use s3::{Bucket, BucketConfiguration, Region};
 
 use crate::constants::s3_archive::{
-    CSV_CONTENT_TYPE, JSON_CONTENT_TYPE, LOOKBACK_DAYS, LOOP_SECS, STARTUP_SCAN_INTERVAL_SECS,
+    CSV_CONTENT_TYPE, JSON_CONTENT_TYPE, LOOKBACK_DAYS, LOOP_SECS, STARTUP_CONSECUTIVE_SKIP_LIMIT,
+    STARTUP_SCAN_INTERVAL_SECS,
     UPLOAD_CONCURRENCY,
 };
 use crate::queries::ohlcv::Ticker;
@@ -17,6 +18,12 @@ use crate::queries::s3_archive::{
     day_range, get_data_ranges, get_ohlcv_day_fingerprint, get_ohlcv_for_day,
     get_ohlcv_for_year, get_ohlcv_year_fingerprint, year_range, ArchiveTicker,
 };
+
+/// Result from a per-day or yearly scan task.
+enum ScanResult {
+    DayScan { uploaded: u64, skipped: u64 },
+    YearlyScan { uploaded: u64, skipped: u64 },
+}
 
 // ── Enrichment data loaded once at startup ──
 
@@ -455,62 +462,98 @@ async fn startup_scan(
             let earliest_date = range.earliest.date_naive();
             let latest_date = range.latest.date_naive().min(today);
 
-            let mut current = earliest_date;
-            while current <= latest_date {
-                let (day_start, day_end) = day_range(current);
-                let key = s3_key(source, ticker_sym, interval, current);
-                let interval = interval.to_string();
-                let pool = pool.clone();
-                let bucket = bucket.clone();
-                let permit = sem.clone();
-                let ticker_id = range.ticker_id;
+            // Spawn one task per ticker+interval that iterates newest→oldest.
+            // Stops after STARTUP_CONSECUTIVE_SKIP_LIMIT consecutive skips —
+            // historical data never changes once uploaded (except 1D dividends,
+            // which hit early days first and reset the counter if adjusted).
+            let source = source.to_string();
+            let ticker_sym = ticker_sym.to_string();
+            let interval = interval.to_string();
+            let pool = pool.clone();
+            let bucket = bucket.clone();
+            let permit = sem.clone();
+            let ticker_id = range.ticker_id;
+            let skip_limit = STARTUP_CONSECUTIVE_SKIP_LIMIT;
 
-                in_flight.push(tokio::spawn(async move {
-                    let _permit = permit.acquire().await.unwrap();
-                    let result = process_day(&pool, &bucket, ticker_id, &interval, &key, day_start, day_end).await;
-                    (key, result)
-                }));
+            in_flight.push(tokio::spawn(async move {
+                let _permit = permit.acquire().await.unwrap();
+                let mut current = latest_date;
+                let mut inner_uploaded: u64 = 0;
+                let mut inner_skipped: u64 = 0;
+                let mut consecutive_skips: u32 = 0;
+                let mut _stopped_early = false;
 
-                current += Duration::days(1);
+                while current >= earliest_date {
+                    let (day_start, day_end) = day_range(current);
+                    let key = s3_key(&source, &ticker_sym, &interval, current);
 
-                // Drain completed tasks to avoid unbounded memory growth
-                while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
-                    if let Some(result) = in_flight.next().await {
-                        processed += 1;
-                        match result {
-                            Ok((_key, Ok(true))) => uploaded += 1,
-                            Ok((_key, Ok(false))) => skipped += 1,
-                            Ok((key, Err(e))) => {
-                                tracing::warn!("s3_archive: error processing {key}: {e}");
-                            }
-                            Err(e) => {
-                                tracing::warn!("s3_archive: task panicked: {e}");
-                            }
+                    match process_day(&pool, &bucket, ticker_id, &interval, &key, day_start, day_end).await {
+                        Ok(true) => {
+                            inner_uploaded += 1;
+                            consecutive_skips = 0;
                         }
-                        if processed - last_log >= 2000 {
-                            tracing::info!(
-                                "s3_archive: startup progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
-                            );
-                            last_log = processed;
+                        Ok(false) => {
+                            inner_skipped += 1;
+                            consecutive_skips += 1;
                         }
+                        Err(e) => {
+                            consecutive_skips = 0;
+                            tracing::warn!("s3_archive: error processing {key}: {e}");
+                        }
+                    }
+
+                    if consecutive_skips >= skip_limit {
+                        _stopped_early = true;
+                        tracing::info!(
+                            "s3_archive: {source}/{ticker_sym}/{interval} — stopped after {} days ({} uploaded, {} skipped, {} consecutive skips)",
+                            inner_uploaded + inner_skipped, inner_uploaded, inner_skipped, consecutive_skips
+                        );
+                        break;
+                    }
+
+                    current -= Duration::days(1);
+                }
+
+                ScanResult::DayScan { uploaded: inner_uploaded, skipped: inner_skipped }
+            }));
+
+            // Drain completed tasks to avoid unbounded memory growth
+            while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
+                if let Some(result) = in_flight.next().await {
+                    match result {
+                        Ok(ScanResult::DayScan { uploaded: u, skipped: s }) => {
+                            uploaded += u;
+                            skipped += s;
+                            processed += u + s;
+                        }
+                        Err(e) => {
+                            tracing::warn!("s3_archive: task panicked: {e}");
+                        }
+                        _ => {}
+                    }
+                    if processed - last_log >= 2000 {
+                        tracing::info!(
+                            "s3_archive: startup progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
+                        );
+                        last_log = processed;
                     }
                 }
             }
         }
     }
 
-    // Drain remaining tasks
+    // Drain remaining per-day tasks
     while let Some(result) = in_flight.next().await {
-        processed += 1;
         match result {
-            Ok((_key, Ok(true))) => uploaded += 1,
-            Ok((_key, Ok(false))) => skipped += 1,
-            Ok((key, Err(e))) => {
-                tracing::warn!("s3_archive: error processing {key}: {e}");
+            Ok(ScanResult::DayScan { uploaded: u, skipped: s }) => {
+                uploaded += u;
+                skipped += s;
+                processed += u + s;
             }
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+            _ => {}
         }
         if processed - last_log >= 2000 {
             tracing::info!(
@@ -541,21 +584,25 @@ async fn startup_scan(
 
         in_flight.push(tokio::spawn(async move {
             let _permit = permit.acquire().await.unwrap();
-            let result = process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await;
-            (key, result)
+            let inner_uploaded = match process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await {
+                Ok(true) => 1u64,
+                Ok(false) => 0,
+                Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
+            };
+            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
         }));
 
         while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
             if let Some(result) = in_flight.next().await {
                 match result {
-                    Ok((_key, Ok(true))) => uploaded += 1,
-                    Ok((_key, Ok(false))) => skipped += 1,
-                    Ok((key, Err(e))) => {
-                        tracing::warn!("s3_archive: error processing {key}: {e}");
+                    Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                        uploaded += u;
+                        skipped += s;
                     }
                     Err(e) => {
                         tracing::warn!("s3_archive: task panicked: {e}");
                     }
+                    _ => {}
                 }
             }
         }
@@ -564,14 +611,14 @@ async fn startup_scan(
     // Drain remaining yearly tasks
     while let Some(result) = in_flight.next().await {
         match result {
-            Ok((_key, Ok(true))) => uploaded += 1,
-            Ok((_key, Ok(false))) => skipped += 1,
-            Ok((key, Err(e))) => {
-                tracing::warn!("s3_archive: error processing {key}: {e}");
+            Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                uploaded += u;
+                skipped += s;
             }
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+            _ => {}
         }
     }
 
@@ -629,8 +676,14 @@ async fn incremental_cycle(
 
                 in_flight.push(tokio::spawn(async move {
                     let _permit = permit.acquire().await.unwrap();
-                    let result = process_day(&pool, &bucket, ticker_id, &interval, &key, day_start, day_end).await;
-                    (key, result)
+                    match process_day(&pool, &bucket, ticker_id, &interval, &key, day_start, day_end).await {
+                        Ok(true) => ScanResult::DayScan { uploaded: 1, skipped: 0 },
+                        Ok(false) => ScanResult::DayScan { uploaded: 0, skipped: 1 },
+                        Err(e) => {
+                            tracing::warn!("s3_archive: error processing {key}: {e}");
+                            ScanResult::DayScan { uploaded: 0, skipped: 0 }
+                        }
+                    }
                 }));
 
                 // Drain completed tasks
@@ -638,14 +691,14 @@ async fn incremental_cycle(
                     if let Some(result) = in_flight.next().await {
                         processed += 1;
                         match result {
-                            Ok((_key, Ok(true))) => uploaded += 1,
-                            Ok((_key, Ok(false))) => skipped += 1,
-                            Ok((key, Err(e))) => {
-                                tracing::warn!("s3_archive: error processing {key}: {e}");
+                            Ok(ScanResult::DayScan { uploaded: u, skipped: s }) => {
+                                uploaded += u;
+                                skipped += s;
                             }
                             Err(e) => {
                                 tracing::warn!("s3_archive: task panicked: {e}");
                             }
+                            _ => {}
                         }
                         if processed - last_log >= 2000 {
                             tracing::info!(
@@ -663,14 +716,14 @@ async fn incremental_cycle(
     while let Some(result) = in_flight.next().await {
         processed += 1;
         match result {
-            Ok((_key, Ok(true))) => uploaded += 1,
-            Ok((_key, Ok(false))) => skipped += 1,
-            Ok((key, Err(e))) => {
-                tracing::warn!("s3_archive: error processing {key}: {e}");
+            Ok(ScanResult::DayScan { uploaded: u, skipped: s }) => {
+                uploaded += u;
+                skipped += s;
             }
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+            _ => {}
         }
         if processed - last_log >= 2000 {
             tracing::info!(
@@ -697,21 +750,25 @@ async fn incremental_cycle(
 
         in_flight.push(tokio::spawn(async move {
             let _permit = permit.acquire().await.unwrap();
-            let result = process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await;
-            (key, result)
+            let inner_uploaded = match process_yearly(&pool, &bucket, ticker_id, &key, year_start, year_end).await {
+                Ok(true) => 1u64,
+                Ok(false) => 0,
+                Err(e) => { tracing::warn!("s3_archive: error processing yearly {key}: {e}"); 0 }
+            };
+            ScanResult::YearlyScan { uploaded: inner_uploaded, skipped: 0 }
         }));
 
         while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
             if let Some(result) = in_flight.next().await {
                 match result {
-                    Ok((_key, Ok(true))) => uploaded += 1,
-                    Ok((_key, Ok(false))) => skipped += 1,
-                    Ok((key, Err(e))) => {
-                        tracing::warn!("s3_archive: error processing {key}: {e}");
+                    Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                        uploaded += u;
+                        skipped += s;
                     }
                     Err(e) => {
                         tracing::warn!("s3_archive: task panicked: {e}");
                     }
+                    _ => {}
                 }
             }
         }
@@ -720,14 +777,14 @@ async fn incremental_cycle(
     // Drain remaining yearly tasks
     while let Some(result) = in_flight.next().await {
         match result {
-            Ok((_key, Ok(true))) => uploaded += 1,
-            Ok((_key, Ok(false))) => skipped += 1,
-            Ok((key, Err(e))) => {
-                tracing::warn!("s3_archive: error processing {key}: {e}");
+            Ok(ScanResult::YearlyScan { uploaded: u, skipped: s }) => {
+                uploaded += u;
+                skipped += s;
             }
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+            _ => {}
         }
     }
 
