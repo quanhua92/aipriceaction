@@ -399,6 +399,8 @@ async fn startup_scan(
     let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(UPLOAD_CONCURRENCY));
     let mut uploaded: u64 = 0;
     let mut skipped: u64 = 0;
+    let mut processed: u64 = 0;
+    let mut last_log: u64 = 0;
 
     let mut in_flight: futures::stream::FuturesUnordered<_> =
         futures::stream::FuturesUnordered::new();
@@ -452,8 +454,9 @@ async fn startup_scan(
                 // Drain completed tasks to avoid unbounded memory growth
                 while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
                     if let Some(result) = in_flight.next().await {
+                        processed += 1;
                         match result {
-                            Ok((key, Ok(true))) => uploaded += 1,
+                            Ok((_key, Ok(true))) => uploaded += 1,
                             Ok((_key, Ok(false))) => skipped += 1,
                             Ok((key, Err(e))) => {
                                 tracing::warn!("s3_archive: error processing {key}: {e}");
@@ -461,6 +464,12 @@ async fn startup_scan(
                             Err(e) => {
                                 tracing::warn!("s3_archive: task panicked: {e}");
                             }
+                        }
+                        if processed - last_log >= 2000 {
+                            tracing::info!(
+                                "s3_archive: startup progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
+                            );
+                            last_log = processed;
                         }
                     }
                 }
@@ -470,6 +479,7 @@ async fn startup_scan(
 
     // Drain remaining tasks
     while let Some(result) = in_flight.next().await {
+        processed += 1;
         match result {
             Ok((_key, Ok(true))) => uploaded += 1,
             Ok((_key, Ok(false))) => skipped += 1,
@@ -479,6 +489,12 @@ async fn startup_scan(
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+        }
+        if processed - last_log >= 2000 {
+            tracing::info!(
+                "s3_archive: progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
+            );
+            last_log = processed;
         }
     }
 
@@ -509,6 +525,8 @@ async fn incremental_cycle(
     let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(UPLOAD_CONCURRENCY));
     let mut uploaded: u64 = 0;
     let mut skipped: u64 = 0;
+    let mut processed: u64 = 0;
+    let mut last_log: u64 = 0;
 
     tracing::info!(
         "s3_archive: incremental cycle — checking {total_tickers} tickers × {intervals:?} × {LOOKBACK_DAYS} days (concurrency={UPLOAD_CONCURRENCY})"
@@ -538,6 +556,7 @@ async fn incremental_cycle(
                 // Drain completed tasks
                 while in_flight.len() >= UPLOAD_CONCURRENCY * 2 {
                     if let Some(result) = in_flight.next().await {
+                        processed += 1;
                         match result {
                             Ok((_key, Ok(true))) => uploaded += 1,
                             Ok((_key, Ok(false))) => skipped += 1,
@@ -548,6 +567,12 @@ async fn incremental_cycle(
                                 tracing::warn!("s3_archive: task panicked: {e}");
                             }
                         }
+                        if processed - last_log >= 2000 {
+                            tracing::info!(
+                                "s3_archive: incremental progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
+                            );
+                            last_log = processed;
+                        }
                     }
                 }
             }
@@ -556,6 +581,7 @@ async fn incremental_cycle(
 
     // Drain remaining tasks
     while let Some(result) = in_flight.next().await {
+        processed += 1;
         match result {
             Ok((_key, Ok(true))) => uploaded += 1,
             Ok((_key, Ok(false))) => skipped += 1,
@@ -565,6 +591,12 @@ async fn incremental_cycle(
             Err(e) => {
                 tracing::warn!("s3_archive: task panicked: {e}");
             }
+        }
+        if processed - last_log >= 2000 {
+            tracing::info!(
+                "s3_archive: progress — {processed} processed, {uploaded} uploaded, {skipped} skipped"
+            );
+            last_log = processed;
         }
     }
 
