@@ -441,7 +441,7 @@ The `aipriceaction` service adds S3 env vars and `depends_on: rustfs: condition:
 
 ```toml
 # Cargo.toml
-rust-s3 = { version = "0.37.1", default-features = false, features = ["tokio-rustls-tls", "with-tokio", "fail-on-err"] }
+rust-s3 = { version = "0.37.1", default-features = false, features = ["tokio-rustls-tls", "with-tokio"] }
 ```
 
 Uses `rust-s3` with `tokio-rustls-tls` — lightweight S3 client with rustls TLS,
@@ -504,33 +504,76 @@ sdk/aipriceaction-python/
       __init__.py
       client.py        # Main AIPriceAction class
       models.py        # TickerInfo dataclass
-      exceptions.py    # AIPriceActionError, DataNotFoundError
+      exceptions.py    # AIPriceActionError
+      indicators.py    # SMA/EMA calculation (ported from Rust backend)
+  tests/
+    conftest.py       # Fixtures (mock_s3, mock_s3_ma)
+    test_client.py    # 44 tests
 ```
 
 ## Public API
 
+`get_ohlcv()` mirrors the `/tickers` REST API endpoint parameters:
+
 ```python
 from aipriceaction import AIPriceAction
 
-# Just pass the base URL — no credentials needed
-client = AIPriceAction(base_url="http://localhost:9000/aipriceaction-archive")
+# base_url + optional cache_dir for local disk caching
+client = AIPriceAction(
+    "http://localhost:9000/aipriceaction-archive",
+    cache_dir="./cache",
+)
 
-# Ticker metadata (HTTP GET meta/tickers.json, cached in memory)
+# Ticker metadata (HTTP GET meta/tickers.json, cached in memory + disk)
 tickers = client.get_tickers()
-# -> [TickerInfo(source="vn", ticker="VCB", name="..."), ...]
+tickers = client.get_tickers(source="vn")
 
-# OHLCV data as DataFrame (downloads last N days of CSVs, default: 30)
-df = client.get_ohlcv("VCB", "1D", days=30)
-# -> pandas DataFrame with columns: time, open, high, low, close, volume
+# OHLCV data — mirrors /tickers endpoint
+df = client.get_ohlcv("VCB", interval="1D")                        # single ticker, last 365 days
+df = client.get_ohlcv(tickers=["VCB", "FPT"], interval="1D")        # multiple tickers
+df = client.get_ohlcv(ticker="VCB", interval="1D", limit=100)       # limit rows per ticker
+df = client.get_ohlcv(ticker="VCB", start_date="2025-01-01", end_date="2025-04-30")
+df = client.get_ohlcv(ticker=None, interval="1D", source="crypto")  # all crypto tickers
+
+# MA indicators (ma=True is default, matching /tickers endpoint)
+df = client.get_ohlcv("VCB", interval="1D", ma=True)                # SMA (default)
+df = client.get_ohlcv("VCB", interval="1D", ema=True)               # EMA instead of SMA
+df = client.get_ohlcv("VCB", interval="1D", ma=False)               # no indicators
 
 # Download CSVs to local folder
-paths = client.download_csv("VCB", "1D", days=30, output_dir="./data")
-# -> ["./data/VCB-1D-2025-04-01.csv", "./data/VCB-1D-2025-04-02.csv", ...]
+paths = client.download_csv("VCB", interval="1D",
+    start_date="2025-04-01", end_date="2025-04-30", output_dir="./data")
 
 # Check if data changed without downloading (HTTP HEAD)
 hash = client.get_content_hash("VCB", "1D", "2025-04-01")
 # -> "a1b2c3..." or None if file doesn't exist
 ```
+
+### `get_ohlcv` parameters
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `ticker` | `str` or `None` | `None` | Single symbol, or `None` for all tickers |
+| `tickers` | `list[str]` or `None` | `None` | Multiple symbols (mutually exclusive with `ticker`) |
+| `interval` | `str` | `"1D"` | `"1D"`, `"1h"`, `"1m"` (native intervals stored in S3) |
+| `limit` | `int` or `None` | `None` | Max rows per ticker (applied after fetching) |
+| `start_date` | `str`/`date`/`datetime` | 365 days ago | Start date (inclusive) |
+| `end_date` | `str`/`date`/`datetime` | today | End date (inclusive) |
+| `source` | `str` or `None` | `None` | Override auto-detection (`"vn"`, `"yahoo"`, `"crypto"`, `"sjc"`) |
+| `ma` | `bool` | `True` | Calculate MA indicators and scores (fetches 400 extra days for buffer) |
+| `ema` | `bool` | `False` | Use EMA instead of SMA when `ma=True` |
+
+### MA indicator columns (when `ma=True`)
+
+When `ma=True`, the returned DataFrame includes these additional columns (matching
+the Rust `/tickers` response): `ma10`, `ma20`, `ma50`, `ma100`, `ma200`,
+`ma10_score`, `ma20_score`, `ma50_score`, `ma100_score`, `ma200_score`,
+`close_changed`, `volume_changed`, `total_money_changed`.
+
+MA score formula: `((close - ma) / ma) * 100`
+
+SMA/EMA calculations are ported from the Rust backend (`src/models/indicators.rs`)
+and produce identical results.
 
 ## URL Building
 
@@ -539,8 +582,10 @@ The SDK builds public URLs for date ranges:
 {base_url}/ohlcv/{source}/{ticker}/{interval}/{ticker}-{interval}-{YYYY}-{MM}-{DD}.csv
 ```
 
-For `days=30`, it iterates from `(today - 29 days)` to `today`, building one URL per
-day. Missing days (HTTP 404) are silently skipped.
+Source auto-detection uses `tickers.json` to resolve ticker symbols. Priority:
+vn > yahoo > sjc > crypto (matches Rust's `resolve_ticker_sources`).
+
+Missing days (HTTP 404) are silently skipped.
 
 ## TickerInfo Model
 
@@ -559,24 +604,31 @@ class TickerInfo:
 ## Behaviors
 
 - **Source auto-detection**: If `source` not specified, auto-detects from `tickers.json`.
-  Priority: vn > yahoo > sjc > crypto (matches Rust's `resolve_ticker_sources`).
-- **Default 30 days**: `get_ohlcv()` defaults to `days=30` for recent data.
-- **Ticker metadata caching**: First `get_tickers()` fetches via HTTP, subsequent
-  calls use in-memory cache (pass `use_cache=False` to force re-fetch).
+  Priority: vn > yahoo > sjc > crypto.
+- **Default date range**: `start_date` defaults to 365 days ago, `end_date` to today.
+- **MA buffer**: When `ma=True`, fetches 400 extra days before `start_date` to warm the
+  MA-200 buffer, then trims results to the user's requested range.
+- **Ticker metadata caching**: First `get_tickers()` fetches via HTTP, cached in memory
+  and on disk. Pass `use_cache=False` to force re-fetch.
 - **404 handling**: Silently skips days that don't have data yet.
 - **Content-hash check**: `get_content_hash()` uses HTTP HEAD to read `x-amz-meta-content-hash`
   header — zero bytes downloaded.
+- **Aggregated intervals**: `5m`, `15m`, `30m`, `4h`, `1W`, `2W`, `1M` are not stored in S3
+  and will raise `ValueError`. Only native intervals `1D`, `1h`, `1m` are available.
 
 ## Config
 
-Only one config value needed: `base_url` (the public URL prefix for the bucket).
-
 ```python
 # Local rustfs
-client = AIPriceAction(base_url="http://localhost:9000/aipriceaction-archive")
+client = AIPriceAction(
+    "http://localhost:9000/aipriceaction-archive",
+    cache_dir="./cache",  # optional, defaults to temp dir
+)
 
 # Production AWS S3
-client = AIPriceAction(base_url="https://aipriceaction-archive.s3.us-east-1.amazonaws.com")
+client = AIPriceAction(
+    "https://aipriceaction-archive.s3.us-east-1.amazonaws.com",
+)
 ```
 
 No environment variables required. No credentials. Just a URL.
@@ -588,6 +640,12 @@ No environment variables required. No credentials. Just a URL.
 dependencies = [
     "requests>=2.28",
     "pandas>=2.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "responses>=0.25",
 ]
 ```
 
