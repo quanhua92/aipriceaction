@@ -1,3 +1,5 @@
+import re
+
 import pytest
 import responses
 
@@ -62,6 +64,12 @@ def mock_s3():
         status=404,
     )
 
+    # Yearly files: return 404 so SDK falls back to per-day files
+    responses.get(
+        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*/yearly/.*\.csv"),
+        status=404,
+    )
+
     yield
 
     responses.stop()
@@ -96,7 +104,6 @@ def mock_s3_ma():
         responses.get(url, body=body)
 
     # Catch-all: return 404 for any unmocked CSV URLs (MA buffer expansion hits dates before 2025-04-10)
-    import re
     responses.get(
         re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
         status=404,

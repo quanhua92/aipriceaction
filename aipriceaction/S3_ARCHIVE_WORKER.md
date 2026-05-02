@@ -653,11 +653,18 @@ class TickerInfo:
 - **Source auto-detection**: If `source` not specified, auto-detects from `tickers.json`.
   Priority: vn > yahoo > sjc > crypto.
 - **Default date range**: `start_date` defaults to 365 days ago, `end_date` to today.
-- **MA buffer**: When `ma=True`, fetches 400 extra days before `start_date` to warm the
-  MA-200 buffer, then trims results to the user's requested range.
+- **Yearly file preference**: For `1D` interval, the SDK fetches yearly aggregate CSV files
+  (`ohlcv/{source}/{ticker}/1D/yearly/{ticker}-1D-{YYYY}.csv`) instead of individual
+  per-day files. This reduces HTTP requests from hundreds to 2-3 per ticker. Falls back
+  to per-day files for any dates not covered by yearly files (e.g., partial year at boundaries
+  or years where the yearly file doesn't exist yet).
+- **Interval-aware MA buffer**: When `ma=True`, extra history is fetched before `start_date`
+  to warm the MA-200 buffer. The buffer size depends on interval:
+  `1D`: 400 days, `1h`: 50 days, `1m`: 5 days. This avoids excessive fetching for intraday
+  data where MA-200 needs far fewer calendar days of data.
 - **Ticker metadata caching**: First `get_tickers()` fetches via HTTP, cached in memory
   and on disk. Pass `use_cache=False` to force re-fetch.
-- **404 handling**: Silently skips days that don't have data yet.
+- **404 handling**: Silently skips days/files that don't exist yet.
 - **Content-hash check**: `get_content_hash()` uses HTTP HEAD to read `x-amz-meta-content-hash`
   header — zero bytes downloaded.
 - **Aggregated intervals**: `5m`, `15m`, `30m`, `4h`, `1W`, `2W`, `1M` are not stored in S3
