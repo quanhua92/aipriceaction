@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
 
+import pandas as pd
+
+from .client import AIPriceAction
 from .ticker import Ticker
 from .system import (
     _ma_label,
@@ -11,8 +14,8 @@ from .system import (
     get_system_prompt_with_ticker_info,
     get_trading_hours_notice,
 )
-from .single import get_single_template, get_single_templates
-from .multi import get_multi_template, get_multi_templates
+from .single import get_single_templates
+from .multi import get_multi_templates
 
 # Vietnam timezone (UTC+7, no DST)
 _VN_TZ = timezone(timedelta(hours=7))
@@ -117,72 +120,192 @@ def _format_ticker_block(ticker: str, records: list[Ticker], interval: str) -> s
 class AIContextBuilder:
     """Builds AI context strings for investment analysis.
 
+    Owns an AIPriceAction client internally and exposes a single build() method.
+
     Usage:
-        builder = AIContextBuilder(lang="en", ma_type="ema")
-        builder.set_market_data({"VCB": [...]})
-        builder.set_interval("1D")
-        context = builder.build_context()
+        builder = AIContextBuilder()  # lang="en", ma_type="sma" by default
 
-    Single-ticker with template:
-        builder.build_context_with_single_template("VCB", 0)
+        # Browse question bank
+        for q in builder.questions("single"):
+            print(f"  {q['title']}: {q['snippet']}")
 
-    Multi-ticker with template:
-        builder.build_context_with_multi_template(0)
+        # Single ticker
+        context = builder.build(ticker="VCB", interval="1D", limit=5)
+        context = builder.build(ticker="VCB", interval="1D", limit=5, question="Custom question")
+
+        # Multi ticker
+        context = builder.build(tickers=["VCB", "FPT"], interval="1D", limit=5)
+
+        # No data - just system prompt + disclaimer
+        context = builder.build()
+
+        # With reference ticker
+        context = builder.build(ticker="VCB", limit=5, reference_ticker="VNINDEX")
     """
 
-    def __init__(self, lang: str = "en", ma_type: str = "sma"):
+    def __init__(
+        self,
+        *,
+        lang: str = "en",
+        ma_type: str = "sma",
+        base_url: str | None = None,
+        cache_dir: str | None = None,
+    ):
+        self._client = AIPriceAction(base_url=base_url, cache_dir=cache_dir)
         self._lang = lang
         self._ma_type = ma_type
-        self._market_data: dict[str, list[Ticker]] | None = None
         self._interval: str = "1D"
         self._is_trading_hours: bool = False
+        self._market_data: dict[str, list[Ticker]] | None = None
         self._tickers_info: list[dict] | None = None
         self._ref_ticker: str | None = None
         self._ref_data: list[Ticker] | None = None
         self._ref_info: dict | None = None
 
-    # -- fluent setters --
+    # -- questions --
 
-    def set_lang(self, lang: str) -> AIContextBuilder:
-        self._lang = lang
-        return self
+    def questions(self, mode: str = "multi") -> list[dict]:
+        """Browse question bank. mode='single' or 'multi'. Uses builder's lang."""
+        if mode == "single":
+            return get_single_templates(self._lang)
+        return get_multi_templates(self._lang)
 
-    def set_ma_type(self, ma_type: str) -> AIContextBuilder:
-        self._ma_type = ma_type
-        return self
+    # -- main build method --
 
-    def set_market_data(self, data: dict[str, list[Ticker]]) -> AIContextBuilder:
-        self._market_data = data
-        return self
-
-    def set_interval(self, interval: str) -> AIContextBuilder:
-        self._interval = interval
-        return self
-
-    def set_trading_hours(self, is_trading: bool) -> AIContextBuilder:
-        self._is_trading_hours = is_trading
-        return self
-
-    def set_tickers_info(self, info: list[dict]) -> AIContextBuilder:
-        self._tickers_info = info
-        return self
-
-    def set_reference_ticker(
+    def build(
         self,
-        ticker: str,
-        data: list[Ticker],
-        info: dict | None = None,
-    ) -> AIContextBuilder:
-        self._ref_ticker = ticker
-        self._ref_data = data
-        self._ref_info = info
-        return self
+        ticker: str | None = None,
+        tickers: list[str] | None = None,
+        interval: str = "1D",
+        limit: int | None = None,
+        *,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        question: str | None = None,
+        reference_ticker: str | None = None,
+    ) -> str:
+        """Build the complete AI context string.
 
-    def clear_reference_ticker(self) -> AIContextBuilder:
-        self._ref_ticker = None
-        self._ref_data = None
-        self._ref_info = None
-        return self
+        Args:
+            ticker: Single ticker symbol for single-ticker mode.
+            tickers: List of ticker symbols for multi-ticker mode.
+            interval: Time interval. Default "1D".
+            limit: Max rows per ticker.
+            start_date: Start date (inclusive).
+            end_date: End date (inclusive).
+            question: Custom question to append as === Question === section.
+            reference_ticker: Reference ticker (e.g. "VNINDEX") for market context.
+
+        Returns:
+            The complete formatted context string.
+        """
+        self._interval = interval
+        single_ticker: str | None = None
+        ma = self._ma_type == "ema"
+
+        if ticker and tickers:
+            raise ValueError("Use either 'ticker' or 'tickers', not both")
+
+        # Default limit: 60 bars (~3 months daily data) for both single and
+        # multi-ticker. Unlike get_ohlcv() which defaults to 1 for multi-ticker.
+        effective_limit = limit if limit is not None else 60
+
+        # Fetch data
+        if ticker:
+            single_ticker = ticker
+            df = self._client.get_ohlcv(
+                ticker, interval=interval, limit=effective_limit,
+                start_date=start_date, end_date=end_date, ma=ma,
+                ema=(self._ma_type == "ema"),
+            )
+            self._market_data = self._df_to_records(df)
+            self._tickers_info = self._build_tickers_info([ticker])
+        elif tickers:
+            df = self._client.get_ohlcv(
+                tickers=tickers, interval=interval, limit=effective_limit,
+                start_date=start_date, end_date=end_date, ma=ma,
+                ema=(self._ma_type == "ema"),
+            )
+            self._market_data = self._df_to_records(df)
+            self._tickers_info = self._build_tickers_info(tickers)
+
+        # Fetch reference ticker if specified
+        if reference_ticker:
+            ref_df = self._client.get_ohlcv(
+                reference_ticker, interval=interval, limit=limit,
+                start_date=start_date, end_date=end_date, ma=ma,
+                ema=(self._ma_type == "ema"),
+            )
+            ref_records = self._df_to_records(ref_df)
+            self._ref_ticker = reference_ticker
+            self._ref_data = ref_records.get(reference_ticker, [])
+            self._ref_info = self._build_single_ticker_info(reference_ticker)
+
+        return self._build_context(question=question, single_ticker=single_ticker)
+
+    # -- internal helpers --
+
+    @staticmethod
+    def _df_to_records(df: pd.DataFrame) -> dict[str, list[Ticker]]:
+        """Convert get_ohlcv() DataFrame to dict of Ticker lists.
+
+        Args:
+            df: DataFrame from get_ohlcv().
+
+        Returns:
+            Dict mapping symbol -> list of Ticker objects.
+        """
+        _OPTIONAL_COLS = [
+            "ma10", "ma20", "ma50", "ma100", "ma200",
+            "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+            "close_changed", "volume_changed",
+        ]
+        result: dict[str, list[Ticker]] = {}
+        for sym, group in df.groupby("symbol", sort=False):
+            records = []
+            for _, row in group.iterrows():
+                kwargs: dict = {
+                    "symbol": sym,
+                    "time": str(row["time"]),
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": int(row["volume"]),
+                }
+                for col in _OPTIONAL_COLS:
+                    if col in row.index and pd.notna(row[col]):
+                        kwargs[col] = float(row[col])
+                records.append(Ticker(**kwargs))
+            result[sym] = records
+        return result
+
+    def _build_tickers_info(self, symbols: list[str]) -> list[dict]:
+        """Build ticker info dicts from get_tickers() for the given symbols."""
+        all_tickers = self._client.get_tickers()
+        result: list[dict] = []
+        for t in all_tickers:
+            if t.ticker in symbols:
+                info: dict = {"symbol": t.ticker}
+                if t.name:
+                    info["name"] = t.name
+                if t.group:
+                    info["groups"] = [t.group]
+                result.append(info)
+        return result
+
+    def _build_single_ticker_info(self, symbol: str) -> dict:
+        """Build a single ticker info dict."""
+        all_tickers = self._client.get_tickers()
+        for t in all_tickers:
+            if t.ticker == symbol:
+                info: dict = {"symbol": t.ticker}
+                if t.name:
+                    info["name"] = t.name
+                if t.group:
+                    info["groups"] = [t.group]
+                return info
+        return {"symbol": symbol}
 
     # -- section builders --
 
@@ -322,26 +445,14 @@ class AIContextBuilder:
         lines.append(_format_ticker_block(ticker, records, self._interval))
         return "\n".join(lines)
 
-    # -- main build method --
+    # -- internal build_context --
 
-    def build_context(
+    def _build_context(
         self,
         question: str | None = None,
-        template: dict | None = None,
         single_ticker: str | None = None,
     ) -> str:
-        """Build the complete AI context string.
-
-        Args:
-            question: Custom question to append (=== Question === section).
-            template: A template dict from single.py or multi.py.
-            single_ticker: If set, uses single-ticker system prompt variant
-                           and supports reference ticker. The {ticker} placeholder
-                           in single-ticker templates will be replaced.
-
-        Returns:
-            The complete formatted context string.
-        """
+        """Build the complete AI context string."""
         sections: list[str] = []
         lang = self._lang
 
@@ -380,32 +491,7 @@ class AIContextBuilder:
             sections.append(get_trading_hours_notice(lang))
 
         # 7. Question
-        if template is not None:
-            q_text = template["question"]
-            if single_ticker and "{ticker}" in q_text:
-                q_text = q_text.replace("{ticker}", single_ticker)
-            sections.append(f"=== Question ===\n{q_text}")
-        elif question is not None:
+        if question is not None:
             sections.append(f"=== Question ===\n{question}")
 
         return "\n\n".join(sections)
-
-    # -- convenience methods --
-
-    def build_context_with_single_template(self, ticker: str, template_index: int) -> str:
-        template = get_single_template(self._lang, template_index)
-        if template is None:
-            raise IndexError(f"Single-ticker template index {template_index} out of range")
-        return self.build_context(template=template, single_ticker=ticker)
-
-    def build_context_with_multi_template(self, template_index: int) -> str:
-        template = get_multi_template(self._lang, template_index)
-        if template is None:
-            raise IndexError(f"Multi-ticker template index {template_index} out of range")
-        return self.build_context(template=template)
-
-    def get_single_templates(self) -> list[dict]:
-        return get_single_templates(self._lang)
-
-    def get_multi_templates(self) -> list[dict]:
-        return get_multi_templates(self._lang)
