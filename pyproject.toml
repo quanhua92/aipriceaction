@@ -1,0 +1,13 @@
+[project]
+name = "aipriceaction-workspace"
+version = "0.0.0"
+requires-python = ">=3.13"
+
+[tool.uv.workspace]
+members = [
+    "sdk/aipriceaction-python",
+    "aipriceaction-agents",
+]
+
+[tool.uv.sources]
+aipriceaction = { workspace = true }
