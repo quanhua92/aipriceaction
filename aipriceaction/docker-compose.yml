@@ -12,6 +12,9 @@ services:
       - PORT=3000
       - DATABASE_URL=postgres://aipriceaction:${POSTGRES_PASSWORD}@postgres:5432/aipriceaction
       - REDIS_URL=redis://default:${REDIS_PASSWORD}@redis:6379/0
+      # S3 archive — overrides endpoint to rustfs container
+      # Set S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY in .env
+      - S3_ENDPOINT=http://rustfs:9000
       # Pre-loads last 500 candles per ticker on fresh deploy. Comment out to skip.
       - CHECKPOINT_FILE=/app/data/checkpoint.json.gz
     volumes:
@@ -66,6 +69,38 @@ services:
       timeout: 5s
       retries: 5
 
+  # rustfs — S3-compatible object storage (Rust, Apache 2.0)
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: aipriceaction-rustfs
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console
+    environment:
+      - RUSTFS_ADDRESS=0.0.0.0:9000
+      - RUSTFS_CONSOLE_ADDRESS=0.0.0.0:9001
+      - RUSTFS_CONSOLE_ENABLE=true
+      - RUSTFS_ACCESS_KEY=rustfsadmin
+      - RUSTFS_SECRET_KEY=rustfsadmin
+      - RUSTFS_UNSAFE_BYPASS_DISK_CHECK=true
+    volumes:
+      - rustfs_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -f http://127.0.0.1:9000/health && curl -f http://127.0.0.1:9001/rustfs/console/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  rustfs-permfix:
+    image: alpine
+    volumes:
+      - rustfs_data:/data
+    command: sh -c "chown -R 10001:10001 /data && echo 'Permissions fixed' && exit 0"
+    restart: "no"
+
 volumes:
   postgres_data:
   redis_data:
+  rustfs_data:

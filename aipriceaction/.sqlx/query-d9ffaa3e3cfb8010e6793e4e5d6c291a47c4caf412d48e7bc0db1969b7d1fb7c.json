@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT source, ticker, name FROM tickers ORDER BY source, ticker",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "ticker",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d9ffaa3e3cfb8010e6793e4e5d6c291a47c4caf412d48e7bc0db1969b7d1fb7c"
+}

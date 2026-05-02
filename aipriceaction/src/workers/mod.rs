@@ -18,3 +18,4 @@ pub mod sjc_daily;
 pub mod sjc_shared;
 pub mod health;
 pub mod redis_worker;
+pub mod s3_archive;

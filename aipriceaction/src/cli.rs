@@ -145,6 +145,21 @@ pub enum Commands {
         #[arg(long)]
         save: bool,
     },
+    /// Test S3 archive connectivity and data upload
+    TestS3 {
+        /// Ticker symbol to test (default: VCB)
+        #[arg(long, default_value = "VCB")]
+        ticker: String,
+        /// Interval to test (default: 1D)
+        #[arg(long, default_value = "1D")]
+        interval: String,
+        /// Number of days to upload (default: 3)
+        #[arg(long, default_value = "3")]
+        days: u32,
+        /// Create bucket if it doesn't exist
+        #[arg(long)]
+        create_bucket: bool,
+    },
 }
 
 pub fn run() {
@@ -302,6 +317,22 @@ pub fn run() {
                     }
                 } else {
                     tracing::info!("REDIS_WORKERS=false — Redis ZSET backfill worker not started");
+                }
+
+                // Spawn S3 archive worker if enabled
+                let s3_archive_enabled = std::env::var("S3_ARCHIVE_WORKER")
+                    .map(|v| v == "true" || v == "1")
+                    .unwrap_or(false);
+
+                if s3_archive_enabled {
+                    if std::env::var("S3_BUCKET").is_ok() {
+                        tracing::info!("S3_ARCHIVE_WORKER=true — spawning S3 archive worker");
+                        spawn_worker(&pool, &redis_client, crate::workers::s3_archive::run);
+                    } else {
+                        tracing::warn!("S3_ARCHIVE_WORKER=true but S3_BUCKET not set");
+                    }
+                } else {
+                    tracing::info!("S3_ARCHIVE_WORKER=false — S3 archive worker not started");
                 }
 
                 let (app, health_snapshot) = crate::server::create_app(pool.clone(), redis_client.clone(), redis_handle);
@@ -1649,6 +1680,12 @@ pub fn run() {
                     Ok(()) => tracing::info!("Checkpoint created successfully"),
                     Err(e) => tracing::error!("Failed to create checkpoint: {e}"),
                 }
+            });
+        }
+        Commands::TestS3 { ticker, interval, days, create_bucket } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                crate::workers::s3_archive::test_s3(ticker, interval, days, create_bucket).await;
             });
         }
     }

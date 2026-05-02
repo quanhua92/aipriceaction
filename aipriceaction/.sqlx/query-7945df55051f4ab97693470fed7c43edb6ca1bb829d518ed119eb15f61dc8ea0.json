@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ticker_id, interval, MIN(time) as earliest, MAX(time) as latest\n           FROM ohlcv\n           GROUP BY ticker_id, interval",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ticker_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "interval",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "earliest",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "latest",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "7945df55051f4ab97693470fed7c43edb6ca1bb829d518ed119eb15f61dc8ea0"
+}

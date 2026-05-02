@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ticker_id, interval, time, open, high, low, close, volume\n           FROM ohlcv\n           WHERE ticker_id = $1 AND interval = $2 AND time >= $3 AND time < $4\n           ORDER BY time ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ticker_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "interval",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "time",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "open",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "high",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "low",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "close",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "volume",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5fcbbeb01124717eaf106180ce3cf2e19cecc0c31f69fd0ab6e24f665471debd"
+}

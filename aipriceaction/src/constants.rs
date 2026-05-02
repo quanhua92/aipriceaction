@@ -370,3 +370,24 @@ pub mod redis_ts {
         pub const TTL_SECS: u64 = 30;
     }
 }
+
+/// S3 archive worker configuration.
+pub mod s3_archive {
+    /// Worker loop interval in seconds. Override via `S3_ARCHIVE_INTERVAL_SECS` env var.
+    pub const LOOP_SECS: u64 = 3600; // 1 hour
+
+    /// Number of days to check in incremental mode (today + N-1 previous).
+    pub const LOOKBACK_DAYS: u32 = 7;
+
+    /// How often to re-run the full historical scan (catches new tickers).
+    pub const STARTUP_SCAN_INTERVAL_SECS: u64 = 86400; // 24 hours
+
+    /// Max parallel S3 uploads.
+    pub const UPLOAD_CONCURRENCY: usize = 4;
+
+    /// Content-Type for CSV uploads.
+    pub const CSV_CONTENT_TYPE: &str = "text/csv";
+
+    /// Content-Type for JSON uploads.
+    pub const JSON_CONTENT_TYPE: &str = "application/json";
+}
