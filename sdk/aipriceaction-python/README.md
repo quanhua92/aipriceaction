@@ -1,5 +1,7 @@
 # aipriceaction
 
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/)
+
 Python SDK for [AIPriceAction](https://aipriceaction.com/) — OHLCV data access and AI context builder for multi-market investment analysis. Reads from a public S3 archive (no API credentials needed).
 
 ## Install

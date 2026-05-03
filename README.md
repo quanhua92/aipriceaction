@@ -1,6 +1,6 @@
 # aipriceaction
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction)
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/)
 
 Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend and Redis edge cache. Fetches, stores, and serves OHLCV market data with technical indicators via REST API. All endpoints serve from Redis first for low latency, with automatic fallback to PostgreSQL when Redis is unavailable.
 
