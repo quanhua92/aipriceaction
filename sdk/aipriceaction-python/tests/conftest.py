@@ -19,6 +19,10 @@ def mock_s3():
         "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
         json=tickers,
     )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        headers={"x-amz-meta-content-hash": "tickers-hash-001"},
+    )
 
     # VCB daily data
     responses.get(
@@ -54,13 +58,39 @@ def mock_s3():
         status=404,
     )
 
-    # content-hash HEAD
+    # HEAD mocks for per-day CSVs (matching all GET URLs)
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-28.csv",
+        headers={"x-amz-meta-content-hash": "vcb-0428-hash"},
+    )
     responses.head(
         "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-29.csv",
         headers={"x-amz-meta-content-hash": "abc123"},
     )
     responses.head(
         "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-30.csv",
+        status=404,
+    )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/ohlcv/vn/FPT/1D/FPT-1D-2025-04-28.csv",
+        status=404,
+    )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/ohlcv/vn/FPT/1D/FPT-1D-2025-04-29.csv",
+        headers={"x-amz-meta-content-hash": "fpt-0429-hash"},
+    )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/ohlcv/crypto/BTCUSDT/1D/BTCUSDT-1D-2025-04-28.csv",
+        status=404,
+    )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/ohlcv/crypto/BTCUSDT/1D/BTCUSDT-1D-2025-04-29.csv",
+        headers={"x-amz-meta-content-hash": "btc-0429-hash"},
+    )
+
+    # HEAD for yearly files: 404 so SDK falls back to per-day files
+    responses.head(
+        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*/yearly/.*\.csv"),
         status=404,
     )
 
@@ -85,6 +115,10 @@ def mock_s3_ma():
         "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
         json=[{"source": "vn", "ticker": "VCB", "name": "VCB", "group": "BANK"}],
     )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        headers={"x-amz-meta-content-hash": "tickers-hash-ma"},
+    )
 
     # 15 trading days of linearly increasing prices
     # Closes: 100.0, 101.0, 102.0, ..., 114.0
@@ -102,9 +136,14 @@ def mock_s3_ma():
         url = f"http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-{d.isoformat()}.csv"
         body = f"{d.isoformat()} 00:00:00,{o},{h},{l},{close},{vol}"
         responses.get(url, body=body)
+        responses.head(url, headers={"x-amz-meta-content-hash": f"vcb-ma-{d.isoformat()}-hash"})
 
     # Catch-all: return 404 for any unmocked CSV URLs (MA buffer expansion hits dates before 2025-04-10)
     responses.get(
+        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+        status=404,
+    )
+    responses.head(
         re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
         status=404,
     )

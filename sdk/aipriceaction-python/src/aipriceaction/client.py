@@ -4,6 +4,7 @@ import io
 import json
 import os
 import tempfile
+import time as _time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
@@ -77,6 +78,7 @@ class AIPriceAction:
     Args:
         base_url: S3 archive base URL. Defaults to "https://s3.aipriceaction.com".
         cache_dir: Local disk cache directory. Defaults to a temp dir. Pass None to disable.
+        freshness_ttl: Seconds to trust disk cache before re-checking server hash (default 300).
     """
 
     DEFAULT_BASE_URL = "https://s3.aipriceaction.com"
@@ -85,10 +87,14 @@ class AIPriceAction:
         self,
         base_url: Optional[str] = None,
         cache_dir: Optional[str] = None,
+        *,
+        freshness_ttl: float = 300.0,
     ):
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self._session = requests.Session()
         self._tickers_cache: list[TickerInfo] | None = None
+        self._freshness: dict[str, dict] = {}
+        self._freshness_ttl = freshness_ttl
 
         # Disk cache for downloaded CSVs
         if cache_dir is not None:
@@ -97,6 +103,80 @@ class AIPriceAction:
         else:
             self._cache_dir = Path(tempfile.gettempdir()) / "aipriceaction-s3-cache"
             self._cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # ── Freshness helpers ──
+
+    def _head_content_hash(self, url: str) -> Optional[str]:
+        """HEAD request returning x-amz-meta-content-hash. Returns None on error."""
+        try:
+            resp = self._session.head(url, timeout=10)
+            if resp.status_code in (404, 403):
+                return None
+            resp.raise_for_status()
+            return resp.headers.get("x-amz-meta-content-hash")
+        except Exception:
+            return None
+
+    def _save_hash(self, cache_path: str, content_hash: str) -> None:
+        """Write .hash sidecar file with the server content hash."""
+        Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(f"{cache_path}.hash").write_text(content_hash)
+
+    def _read_hash(self, cache_path: str) -> Optional[str]:
+        """Read .hash sidecar file. Returns None if missing."""
+        p = Path(f"{cache_path}.hash")
+        if not p.exists():
+            return None
+        try:
+            return p.read_text().strip()
+        except OSError:
+            return None
+
+    def _is_fresh(self, cache_path: str, url: str) -> bool:
+        """Check if a disk-cached file is still fresh.
+
+        Within TTL → True (no HEAD needed).
+        Beyond TTL → HEAD the server, compare with .hash file.
+        Hash matches → update timestamp, return True.
+        Hash differs → return False.
+        HEAD fails + disk cache exists → return True (conservative).
+        No .hash file yet (upgrade path) → do HEAD, write .hash, trust cache.
+        """
+        if not os.path.exists(cache_path):
+            return False
+
+        now = _time.monotonic()
+        entry = self._freshness.get(cache_path)
+
+        if entry and (now - entry["checked_at"]) < self._freshness_ttl:
+            return True
+
+        # Beyond TTL or no entry — check server
+        server_hash = self._head_content_hash(url)
+        disk_hash = self._read_hash(cache_path)
+
+        if server_hash is None:
+            # HEAD failed (network error or 404/403)
+            if disk_hash is not None:
+                # We have a cached hash and disk file — trust cache conservatively
+                self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
+                return True
+            # No hash file yet (upgrade path) and server HEAD failed — do HEAD
+            # can't determine freshness, skip cache
+            return False
+
+        if disk_hash is None:
+            # No .hash file yet — write it and trust existing disk cache
+            self._save_hash(cache_path, server_hash)
+            self._freshness[cache_path] = {"hash": server_hash, "checked_at": now}
+            return True
+
+        if server_hash == disk_hash:
+            self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
+            return True
+
+        # Hash changed — need to re-download
+        return False
 
     # ── Ticker metadata ──
 
@@ -129,13 +209,13 @@ class AIPriceAction:
     def _fetch_tickers(self) -> list[TickerInfo]:
         """Fetch and parse tickers.json from S3, with disk caching."""
         url = f"{self.base_url}/meta/tickers.json"
-        cache_path = self._cache_dir / "_meta" / "tickers.json"
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path = str(self._cache_dir / "_meta" / "tickers.json")
+        Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
 
-        # Try disk cache first
-        if cache_path.exists():
+        # Try disk cache first (with freshness check)
+        if os.path.exists(cache_path) and self._is_fresh(cache_path, url):
             try:
-                raw = json.loads(cache_path.read_text())
+                raw = json.loads(Path(cache_path).read_text())
                 return [
                     TickerInfo(
                         **{
@@ -156,7 +236,16 @@ class AIPriceAction:
 
         # Write to disk cache
         raw = resp.json()
-        cache_path.write_text(json.dumps(raw))
+        Path(cache_path).write_text(json.dumps(raw))
+
+        # Write hash sidecar and update freshness
+        content_hash = self._head_content_hash(url)
+        if content_hash:
+            self._save_hash(cache_path, content_hash)
+        self._freshness[cache_path] = {
+            "hash": content_hash or "",
+            "checked_at": _time.monotonic(),
+        }
 
         return [
             TickerInfo(
@@ -272,9 +361,11 @@ class AIPriceAction:
 
         Returns a DataFrame, or None if the file doesn't exist.
         """
-        # Try disk cache
         cache_path = self._cache_key(source, ticker, interval, day)
-        if use_cache and os.path.exists(cache_path):
+        url = f"{self.base_url}/{self._csv_key(source, ticker, interval, day)}"
+
+        # Try disk cache (with freshness check)
+        if use_cache and self._is_fresh(cache_path, url):
             try:
                 text = Path(cache_path).read_text()
                 return self._parse_csv(text)
@@ -282,7 +373,6 @@ class AIPriceAction:
                 pass
 
         # Fetch from S3
-        url = f"{self.base_url}/{self._csv_key(source, ticker, interval, day)}"
         resp = self._session.get(url)
         if resp.status_code in (404, 403):
             return None
@@ -294,6 +384,15 @@ class AIPriceAction:
         if use_cache:
             Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
             Path(cache_path).write_text(text)
+
+            # Write hash sidecar and update freshness
+            content_hash = self._head_content_hash(url)
+            if content_hash:
+                self._save_hash(cache_path, content_hash)
+            self._freshness[cache_path] = {
+                "hash": content_hash or "",
+                "checked_at": _time.monotonic(),
+            }
 
         return self._parse_csv(text)
 
@@ -322,9 +421,11 @@ class AIPriceAction:
         Returns a DataFrame with all bars for the given year,
         or None if the file doesn't exist (404).
         """
-        # Try disk cache
         cache_path = self._cache_key_yearly(source, ticker, interval, year)
-        if use_cache and os.path.exists(cache_path):
+        url = f"{self.base_url}/{self._csv_key_yearly(source, ticker, interval, year)}"
+
+        # Try disk cache (with freshness check)
+        if use_cache and self._is_fresh(cache_path, url):
             try:
                 text = Path(cache_path).read_text()
                 return self._parse_csv(text)
@@ -332,7 +433,6 @@ class AIPriceAction:
                 pass
 
         # Fetch from S3
-        url = f"{self.base_url}/{self._csv_key_yearly(source, ticker, interval, year)}"
         resp = self._session.get(url)
         if resp.status_code in (404, 403):
             return None
@@ -344,6 +444,15 @@ class AIPriceAction:
         if use_cache:
             Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
             Path(cache_path).write_text(text)
+
+            # Write hash sidecar and update freshness
+            content_hash = self._head_content_hash(url)
+            if content_hash:
+                self._save_hash(cache_path, content_hash)
+            self._freshness[cache_path] = {
+                "hash": content_hash or "",
+                "checked_at": _time.monotonic(),
+            }
 
         return self._parse_csv(text)
 
@@ -544,12 +653,7 @@ class AIPriceAction:
         key = self._csv_key(source, ticker, interval, day)
         url = f"{self.base_url}/{key}"
 
-        resp = self._session.head(url)
-        if resp.status_code in (404, 403):
-            return None
-        resp.raise_for_status()
-
-        return resp.headers.get("x-amz-meta-content-hash")
+        return self._head_content_hash(url)
 
     # ── OHLCV data (mirrors /tickers endpoint) ──
 

@@ -183,8 +183,12 @@ class TestDiskCache:
         # Clear responses so any HTTP call would fail
         import responses
         responses.reset()
-        # Re-add yearly 404 mock (SDK tries yearly file first, then falls back to per-day cache)
+        # Re-add yearly 404 mocks (SDK tries yearly file first)
         responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        responses.head(
             "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
             status=404,
         )
@@ -450,3 +454,177 @@ class TestInit:
     def test_base_url_stripped(self):
         c = AIPriceAction("http://example.com/")
         assert c.base_url == "http://example.com"
+
+
+class TestCacheInvalidation:
+    """Tests for cache invalidation via content-hash freshness checking."""
+
+    def test_hash_file_written_on_first_fetch(self, mock_s3, client, tmp_path):
+        """Fetching a CSV should create a .hash sidecar file."""
+        client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        hash_file = tmp_path / "vn" / "VCB" / "1D" / "VCB-1D-2025-04-29.csv.hash"
+        assert hash_file.exists()
+        content = hash_file.read_text().strip()
+        assert content == "abc123"
+
+    def test_tickers_hash_file_written(self, mock_s3, client, tmp_path):
+        """Fetching tickers should create a .hash sidecar file."""
+        client.get_tickers(use_cache=False)
+        hash_file = tmp_path / "_meta" / "tickers.json.hash"
+        assert hash_file.exists()
+        content = hash_file.read_text().strip()
+        assert content == "tickers-hash-001"
+
+    def test_uses_disk_cache_within_ttl(self, mock_s3, client):
+        """Within TTL window, no HEAD requests should be made."""
+        import responses
+
+        client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        # Clear all mocks — within TTL no HTTP calls should happen.
+        # Yearly file is never cached (404), so _is_fresh returns False for it,
+        # but the _fetch_csv_yearly path gets 404 → returns None, so no mock needed.
+        # However, responses library raises on unmocked calls by default.
+        # We need to mock the yearly GET/HEAD 404 since they're unavoidable.
+        responses.reset()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        assert len(df) == 1
+        assert df.iloc[0]["close"] == 56887.44
+
+    def test_re_fetches_on_hash_change(self, mock_s3, client, tmp_path):
+        """Different server hash should trigger re-download."""
+        import responses
+
+        # First fetch
+        client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+
+        # Expire freshness by setting TTL to 0
+        client._freshness_ttl = 0
+
+        # Replace mocks with new hash + different content
+        responses.reset()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            json=[
+                {"source": "vn", "ticker": "VCB", "name": "Vietcombank", "group": "BANK"},
+            ],
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            headers={"x-amz-meta-content-hash": "tickers-hash-002"},
+        )
+        new_csv_body = "2025-04-29 00:00:00,60000.0,61000.0,59000.0,60500.0,3000000"
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-29.csv",
+            body=new_csv_body,
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-29.csv",
+            headers={"x-amz-meta-content-hash": "new-hash-changed"},
+        )
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        assert df.iloc[0]["close"] == 60500.0
+
+    def test_head_failure_uses_disk_cache(self, mock_s3, client):
+        """Network error on HEAD should still use disk cache."""
+        import responses
+
+        # First fetch (populates disk cache)
+        client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+
+        # Expire freshness
+        client._freshness_ttl = 0
+
+        # Clear all mocks — HEAD will fail for CSV, but disk cache + .hash exist
+        # so _is_fresh conservatively returns True.
+        # Yearly file: no disk cache, HEAD fails → _is_fresh returns False,
+        # but _fetch_csv_yearly GET also needs a mock.
+        responses.reset()
+        # For yearly file: no disk cache, HEAD fails → _is_fresh returns False → GET called
+        # Since there's no disk cache for yearly (it was 404), GET would also fail.
+        # Use passthrough to allow real requests (will fail with ConnectionError),
+        # or mock them. Mock with 404 since the yearly file never existed.
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/yearly/VCB-1D-2025.csv",
+            status=404,
+        )
+        # tickers in-memory cache is used, so no mock needed for that
+
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+        assert len(df) == 1
+        assert df.iloc[0]["close"] == 56887.44
+
+    def test_no_hash_file_on_upgrade(self, mock_s3, client, tmp_path):
+        """Existing cache without .hash file should work and create .hash."""
+        import responses
+
+        # Manually create a CSV in cache without .hash sidecar
+        cache_dir = tmp_path / "vn" / "FPT" / "1D"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        csv_file = cache_dir / "FPT-1D-2025-04-29.csv"
+        csv_file.write_text("2025-04-29 00:00:00,145000.0,146500.0,144000.0,146000.0,987654")
+
+        # Set TTL to 0 so _is_fresh does a HEAD check
+        client._freshness_ttl = 0
+
+        # The HEAD mock already returns a hash for FPT-04-29 in conftest
+        df = client.get_ohlcv(
+            "FPT", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            ma=False,
+        )
+
+        # .hash file should have been created during freshness check
+        hash_file = cache_dir / "FPT-1D-2025-04-29.csv.hash"
+        assert hash_file.exists()
+        assert hash_file.read_text().strip() == "fpt-0429-hash"
+        assert len(df) == 1
+        assert df.iloc[0]["close"] == 146000.0
