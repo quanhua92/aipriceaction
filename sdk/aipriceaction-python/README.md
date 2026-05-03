@@ -53,6 +53,33 @@ Data is cached to disk by default (temp dir). Set `cache_dir` for persistent cac
 client = AIPriceAction(cache_dir="./cache")
 ```
 
+## Live Data
+
+By default the SDK reads from an S3 archive which may be stale by minutes to hours. Enable `use_live=True` to overlay live data from the REST API on top of S3 data:
+
+```python
+client = AIPriceAction(use_live=True)
+df = client.get_ohlcv("VCB", interval="1D", limit=5, ma=False)
+```
+
+When enabled, for native intervals (`1D`, `1h`, `1m`) the SDK:
+- Fetches live data from the REST API (`https://api.aipriceaction.com` by default)
+- Overwrites the last candle(s) from S3 with live data
+- Appends any newer candles not yet in the archive
+- Falls back to S3-only data if the live API is unreachable
+
+Live responses are cached in memory for 120 seconds to avoid redundant API calls. On API failure, stale cached data is returned if available.
+
+Point to a self-hosted instance with `live_url`:
+
+```python
+client = AIPriceAction(
+    base_url="https://your-s3-endpoint/archive",
+    use_live=True,
+    live_url="https://your-api-instance.com",
+)
+```
+
 ## AI Context Builder
 
 Build structured context strings for LLM-powered investment analysis.

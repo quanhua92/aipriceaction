@@ -58,6 +58,12 @@ _ALL_INTERVALS = {
     "1M",
 }
 
+# Live data overlay settings
+_LIVE_CACHE_TTL = 120.0
+_LIVE_REQUEST_TIMEOUT = 5.0
+_LIVE_LIMITS: dict[str, int] = {"1D": 1, "1h": 5, "1m": 60}
+_LIVE_NATIVE_INTERVALS = {"1D", "1h", "1m"}
+
 
 def _ma_buffer_days(interval: str) -> int:
     """Calendar days of extra history to fetch before start_date for MA warm-up."""
@@ -79,6 +85,10 @@ class AIPriceAction:
         base_url: S3 archive base URL. Defaults to "https://s3.aipriceaction.com".
         cache_dir: Local disk cache directory. Defaults to a temp dir. Pass None to disable.
         freshness_ttl: Seconds to trust disk cache before re-checking server hash (default 300).
+        use_live: Overlay live API data on top of S3 data (default False). When enabled,
+            the last candle(s) from S3 are overwritten with live data and any newer candles
+            are appended. Falls back to stale S3 data if the live API is unreachable.
+        live_url: Base URL for the live data API. Defaults to "https://api.aipriceaction.com".
     """
 
     DEFAULT_BASE_URL = "https://s3.aipriceaction.com"
@@ -89,12 +99,17 @@ class AIPriceAction:
         cache_dir: Optional[str] = None,
         *,
         freshness_ttl: float = 300.0,
+        use_live: bool = False,
+        live_url: str = "https://api.aipriceaction.com",
     ):
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self._session = requests.Session()
         self._tickers_cache: list[TickerInfo] | None = None
         self._freshness: dict[str, dict] = {}
         self._freshness_ttl = freshness_ttl
+        self.use_live = use_live
+        self._live_url = live_url.rstrip("/")
+        self._live_cache: dict[str, dict] = {}
 
         # Disk cache for downloaded CSVs
         if cache_dir is not None:
@@ -655,6 +670,114 @@ class AIPriceAction:
 
         return self._head_content_hash(url)
 
+    # ── Live data overlay ──
+
+    def _fetch_live_data(self, interval: str) -> Optional[dict]:
+        """Fetch live OHLCV data from the REST API with caching.
+
+        Returns the parsed JSON dict (ticker -> list of candles), or None on failure.
+        Uses an in-memory cache with TTL to avoid hammering the API.
+        On failure, returns stale cached data if available.
+        """
+        now = _time.monotonic()
+        cached = self._live_cache.get(interval)
+        if cached and (now - cached["fetched_at"]) < _LIVE_CACHE_TTL:
+            return cached["data"]
+
+        limit = _LIVE_LIMITS.get(interval, 1)
+        url = (
+            f"{self._live_url}/tickers"
+            f"?interval={interval}&mode=all&format=json&limit={limit}&ma=false"
+        )
+
+        try:
+            resp = self._session.get(url, timeout=_LIVE_REQUEST_TIMEOUT)
+            resp.raise_for_status()
+            data = resp.json()
+            self._live_cache[interval] = {"data": data, "fetched_at": now}
+            return data
+        except Exception:
+            # Return stale cache if available
+            if cached is not None:
+                return cached["data"]
+            return None
+
+    @staticmethod
+    def _normalize_time_str(t: str) -> str:
+        """Normalize time string for comparison between S3 and live data.
+
+        S3 format: "2025-04-29 00:00:00" or "2025-04-29T14:00:00"
+        Live format: "2025-04-29" or "2025-04-29T14:00:00"
+        Normalize to the shorter form by stripping " 00:00:00" suffix.
+        """
+        t = str(t).strip()
+        if t.endswith(" 00:00:00"):
+            return t[:10]
+        return t
+
+    def _merge_live_data(
+        self,
+        s3_df: pd.DataFrame,
+        live_data: dict,
+        resolved: list[tuple[str, str]],
+    ) -> pd.DataFrame:
+        """Merge live API data on top of S3 data.
+
+        For each requested ticker:
+        1. Extract only OHLCV columns from live data (drop extra API fields).
+        2. Remove S3 rows whose time overlaps with live data.
+        3. Append live rows (overwrites + newer candles).
+        4. Sort by time.
+
+        Tickers not present in live data are left unchanged.
+        Live candles older than the oldest S3 candle are dropped.
+        """
+        if s3_df.empty:
+            return s3_df
+
+        all_rows: list[pd.DataFrame] = []
+
+        for sym, group in s3_df.groupby("symbol", sort=False):
+            ticker = sym
+            live_candles = live_data.get(ticker)
+            if not live_candles:
+                all_rows.append(group)
+                continue
+
+            # Build live DataFrame with only OHLCV columns
+            live_rows = []
+            for c in live_candles:
+                live_rows.append({col: c.get(col) for col in _OHLCV_COLUMNS})
+            live_df = pd.DataFrame(live_rows)
+
+            if live_df.empty:
+                all_rows.append(group)
+                continue
+
+            # Normalize time strings for comparison
+            s3_normalized = group["time"].apply(self._normalize_time_str)
+            live_normalized = live_df["time"].apply(self._normalize_time_str)
+
+            # Drop S3 rows whose time overlaps with live data
+            live_times = set(live_normalized)
+            s3_mask = ~s3_normalized.isin(live_times)
+            filtered = group[s3_mask]
+
+            # Drop live candles older than the oldest S3 candle
+            if not filtered.empty:
+                oldest_s3_time = self._normalize_time_str(filtered["time"].iloc[0])
+                live_df = live_df[live_normalized >= oldest_s3_time]
+
+            live_df["symbol"] = ticker
+            merged = pd.concat([filtered, live_df], ignore_index=True)
+            merged = merged.sort_values("time").reset_index(drop=True)
+            all_rows.append(merged)
+
+        if not all_rows:
+            return s3_df
+
+        return pd.concat(all_rows, ignore_index=True)
+
     # ── OHLCV data (mirrors /tickers endpoint) ──
 
     def get_ohlcv(
@@ -673,6 +796,11 @@ class AIPriceAction:
         """Get OHLCV data as a pandas DataFrame.
 
         Mirrors the /tickers REST API endpoint parameters.
+
+        When ``use_live=True`` is set on the client and the interval is a native
+        one (``1D``, ``1h``, ``1m``), live data from the REST API is overlaid on
+        top of S3 data — the last candle(s) are overwritten and any newer candles
+        are appended. If the live API is unreachable, stale S3 data is used.
 
         Args:
             ticker: Single ticker symbol (e.g. "VCB", "BTCUSDT"). None = all tickers.
@@ -771,6 +899,12 @@ class AIPriceAction:
             )
 
         result = pd.concat(frames, ignore_index=True)
+
+        # Overlay live data on top of S3 data (before MA computation)
+        if self.use_live and norm_interval in _LIVE_NATIVE_INTERVALS:
+            live_data = self._fetch_live_data(norm_interval)
+            if live_data is not None:
+                result = self._merge_live_data(result, live_data, resolved)
 
         # Compute MA indicators per symbol
         if ma:
