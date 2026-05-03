@@ -102,7 +102,6 @@ Set via environment variables or `.env` file:
 | `OPENAI_API_KEY` | `""` | API key for LLM calls |
 | `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API endpoint |
 | `OPENAI_MODEL` | `openai/gpt-oss-20b` | Default LLM model |
-| `ANTHROPIC_API_KEY` | `""` | Anthropic API key |
 | `AI_CONTEXT_LANG` | `en` | Context language (`en` or `vi`) |
 
 ### OpenRouter Models

@@ -6,4 +6,4 @@ from .settings import Settings, settings
 from .llm_models import Model, OpenRouter
 
 __all__ = ["AIPriceAction", "Ticker", "TickerInfo", "AIContextBuilder", "Settings", "settings", "Model", "OpenRouter"]
-__version__ = "0.1.0"
+__version__ = "0.1.1"

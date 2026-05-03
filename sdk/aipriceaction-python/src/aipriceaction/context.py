@@ -573,6 +573,10 @@ class AIContextBuilder:
             return self._llm
         from .settings import settings
         from langchain_openai import ChatOpenAI
+        if not settings.openai_api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is not set. Set it via environment variable or .env file."
+            )
         self._llm = ChatOpenAI(
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url,

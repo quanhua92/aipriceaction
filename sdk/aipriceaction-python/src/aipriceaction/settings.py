@@ -22,11 +22,6 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://openrouter.ai/api/v1"
     openai_model: str = "openai/gpt-oss-20b"
 
-    # Anthropic
-    anthropic_api_key: str = ""
-    anthropic_base_url: str = "https://api.anthropic.com/v1"
-    anthropic_model: str = "claude-sonnet-4-6"
-
     # General
     ai_context_lang: str = "en"
 
