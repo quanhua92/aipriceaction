@@ -1,8 +1,13 @@
 [project]
 name = "aipriceaction"
 dynamic = ["version"]
-description = "Python SDK for AIPriceAction financial data from S3"
+description = "Multi-market OHLCV data SDK with AI context builder and LLM integration for Vietnamese stocks, US stocks, crypto, and commodities"
+authors = [
+    {name = "Quan Hua", email = "quanhua92@gmail.com"},
+]
 requires-python = ">=3.10"
+license = "MIT"
+readme = "README.md"
 dependencies = [
     "langchain>=1.2.17",
     "langchain-anthropic>=1.4.2",
@@ -32,7 +37,7 @@ path = "src/aipriceaction/__init__.py"
 packages = ["src/aipriceaction"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/aipriceaction", "tests", "examples", "pyproject.toml", "README.md"]
+include = ["src/aipriceaction", "tests", "examples", "pyproject.toml", "README.md", "LICENSE"]
 
 
 [tool.pytest.ini_options]
