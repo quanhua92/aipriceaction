@@ -111,24 +111,25 @@ class TestBuildSingleTicker:
         assert "Vietcombank" in context
         assert "Primary Ticker" in context
 
-    def test_single_ticker_with_question(self, mock_s3, builder):
+    def test_single_ticker_stores_context(self, mock_s3, builder):
+        """build() stores context in _last_context for answer() reuse."""
         context = builder.build(
             ticker="VCB", interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
-            question="What is the trend?",
         )
-        assert "=== Question ===" in context
-        assert "What is the trend?" in context
+        assert builder._last_context == context
+        assert "=== Question ===" not in context
 
     def test_single_ticker_with_template_question(self, mock_s3, builder):
         qs = builder.questions("single")
         context = builder.build(
             ticker="VCB", interval="1D",
             start_date="2025-04-29", end_date="2025-04-29",
-            question=qs[0]["question"],
         )
-        assert "=== Question ===" in context
+        assert "=== Question ===" not in context
         assert "VCB" in context
+        # Template question is available via questions() but not embedded in build()
+        assert qs[0]["question"]
 
 
 class TestBuildMultiTicker:
@@ -149,6 +150,25 @@ class TestBuildMultiTicker:
             start_date="2025-04-29", end_date="2025-04-29",
         )
         assert "Primary Ticker" not in context
+
+    def test_multi_includes_vnindex_by_default(self, mock_s3, builder):
+        """Multi-ticker mode auto-includes VNINDEX as reference ticker."""
+        context = builder.build(
+            tickers=["VCB", "FPT"], interval="1D",
+            start_date="2025-04-28", end_date="2025-04-29",
+        )
+        assert "Reference Ticker" in context
+        assert "VNINDEX" in context
+
+    def test_multi_reference_ticker_none(self, mock_s3, builder):
+        """Multi-ticker with reference_ticker=None omits VNINDEX."""
+        context = builder.build(
+            tickers=["VCB", "FPT"], interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+            reference_ticker=None,
+        )
+        assert "Reference Ticker" not in context
+        assert "VNINDEX" not in context
 
 
 class TestBuildReferenceTicker:
@@ -215,3 +235,67 @@ class TestDfToRecords:
         df = pd.DataFrame(columns=["time", "open", "high", "low", "close", "volume", "symbol"])
         records = AIContextBuilder._df_to_records(df)
         assert records == {}
+
+
+class TestAnswer:
+    def test_answer_requires_build_first(self, builder):
+        """answer() raises ValueError if build() was not called."""
+        with pytest.raises(ValueError, match="Call build"):
+            builder.answer("test question")
+
+    def test_answer_returns_response(self, mock_s3, builder):
+        """answer() returns the mocked LLM response content."""
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock()
+        mock_response.content = "The trend is bullish."
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = mock_response
+
+        builder.build(
+            ticker="VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+        )
+        result = builder.answer("What is the trend?", llm=mock_llm)
+        assert result == "The trend is bullish."
+        mock_llm.invoke.assert_called_once()
+
+    def test_answer_passes_question_in_context(self, mock_s3, builder):
+        """answer() appends === Question === section to context."""
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock()
+        mock_response.content = "response"
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = mock_response
+
+        builder.build(
+            ticker="VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+        )
+        builder.answer("What is the trend?", llm=mock_llm)
+
+        # Verify the context passed to llm.invoke() contains the question
+        call_arg = mock_llm.invoke.call_args[0][0]
+        assert "=== Question ===" in call_arg
+        assert "What is the trend?" in call_arg
+
+    def test_answer_custom_llm(self, mock_s3, builder, monkeypatch):
+        """Custom LLM is used instead of default ChatOpenAI."""
+        from unittest.mock import MagicMock, patch
+
+        mock_response = MagicMock()
+        mock_response.content = "custom response"
+        custom_llm = MagicMock()
+        custom_llm.invoke.return_value = mock_response
+
+        # Patch ChatOpenAI at its import location inside _get_default_llm
+        with patch("langchain_openai.ChatOpenAI") as mock_chat:
+            builder.build(
+                ticker="VCB", interval="1D",
+                start_date="2025-04-29", end_date="2025-04-29",
+            )
+            result = builder.answer("test", llm=custom_llm)
+
+        assert result == "custom response"
+        mock_chat.assert_not_called()

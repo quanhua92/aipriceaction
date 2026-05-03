@@ -126,7 +126,7 @@ def _format_ticker_block(ticker: str, records: list[Ticker], interval: str) -> s
 class AIContextBuilder:
     """Builds AI context strings for investment analysis.
 
-    Owns an AIPriceAction client internally and exposes a single build() method.
+    Owns an AIPriceAction client internally and exposes build() + answer() methods.
 
     Usage:
         builder = AIContextBuilder()  # lang="en", ma_type="sma" by default
@@ -137,7 +137,6 @@ class AIContextBuilder:
 
         # Single ticker
         context = builder.build(ticker="VCB", interval="1D", limit=5)
-        context = builder.build(ticker="VCB", interval="1D", limit=5, question="Custom question")
 
         # Multi ticker
         context = builder.build(tickers=["VCB", "FPT"], interval="1D", limit=5)
@@ -145,8 +144,15 @@ class AIContextBuilder:
         # No data - just system prompt + disclaimer
         context = builder.build()
 
-        # With reference ticker
-        context = builder.build(ticker="VCB", limit=5, reference_ticker="VNINDEX")
+        # With reference ticker (VNINDEX is included by default)
+        context = builder.build(ticker="VCB", limit=5)
+        # To omit VNINDEX:
+        context = builder.build(ticker="VCB", limit=5, reference_ticker=None)
+
+        # LLM integration
+        builder.build(ticker="VCB", interval="1D")
+        response = builder.answer("What is the trend?")
+        response2 = builder.answer("Follow up")  # same context, KV cache hit
     """
 
     def __init__(
@@ -167,6 +173,8 @@ class AIContextBuilder:
         self._ref_ticker: str | None = None
         self._ref_data: list[Ticker] | None = None
         self._ref_info: dict | None = None
+        self._last_context: str | None = None
+        self._llm = None
 
     # -- questions --
 
@@ -187,8 +195,7 @@ class AIContextBuilder:
         *,
         start_date: str | None = None,
         end_date: str | None = None,
-        question: str | None = None,
-        reference_ticker: str | None = None,
+        reference_ticker: str = "VNINDEX",
     ) -> str:
         """Build the complete AI context string.
 
@@ -199,8 +206,8 @@ class AIContextBuilder:
             limit: Max rows per ticker.
             start_date: Start date (inclusive).
             end_date: End date (inclusive).
-            question: Custom question to append as === Question === section.
-            reference_ticker: Reference ticker (e.g. "VNINDEX") for market context.
+            reference_ticker: Reference ticker for market context. Default "VNINDEX".
+                Pass None to omit.
 
         Returns:
             The complete formatted context string.
@@ -248,7 +255,7 @@ class AIContextBuilder:
             ref_df = self._client.get_ohlcv(
                 reference_ticker,
                 interval=interval,
-                limit=limit,
+                limit=effective_limit,
                 start_date=start_date,
                 end_date=end_date,
                 ma=ma,
@@ -259,7 +266,14 @@ class AIContextBuilder:
             self._ref_data = ref_records.get(reference_ticker, [])
             self._ref_info = self._build_single_ticker_info(reference_ticker)
 
-        return self._build_context(question=question, single_ticker=single_ticker)
+            # In multi-ticker mode, include reference data in market_data
+            # so _build_market_data_multi() renders it.
+            if not single_ticker and self._market_data is not None:
+                if reference_ticker not in self._market_data and self._ref_data:
+                    self._market_data[reference_ticker] = self._ref_data
+
+        self._last_context = self._build_context(single_ticker=single_ticker)
+        return self._last_context
 
     # -- internal helpers --
 
@@ -478,7 +492,6 @@ class AIContextBuilder:
 
     def _build_context(
         self,
-        question: str | None = None,
         single_ticker: str | None = None,
     ) -> str:
         """Build the complete AI context string."""
@@ -519,8 +532,36 @@ class AIContextBuilder:
         if self._is_trading_hours and has_data:
             sections.append(get_trading_hours_notice(lang))
 
-        # 7. Question
-        if question is not None:
-            sections.append(f"=== Question ===\n{question}")
-
         return "\n\n".join(sections)
+
+    # -- LLM integration --
+
+    def answer(self, question: str, *, llm=None) -> str:
+        """Call LLM with the current context + question.
+
+        Requires a prior build() call. The same context is reused across
+        multiple answer() calls so the LLM can benefit from KV cache.
+        """
+        if not self._last_context:
+            raise ValueError("Call build() before answer()")
+
+        context = f"{self._last_context}\n\n=== Question ===\n{question}"
+
+        if llm is None:
+            llm = self._get_default_llm()
+
+        response = llm.invoke(context)
+        return response.content
+
+    def _get_default_llm(self):
+        """Create and cache a default LLM instance from settings."""
+        if self._llm is not None:
+            return self._llm
+        from .settings import settings
+        from langchain_openai import ChatOpenAI
+        self._llm = ChatOpenAI(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
+            model=settings.openai_model,
+        )
+        return self._llm
