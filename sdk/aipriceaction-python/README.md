@@ -233,6 +233,53 @@ More examples in [examples/](examples/):
 | [llm_question.py](examples/llm_question.py) | Build context + call LLM |
 | [system_prompt_only.py](examples/system_prompt_only.py) | System prompt without ticker data |
 | [langchain_agent.py](examples/langchain_agent.py) | LangChain ReAct agent with AIContextBuilder and tool-calling |
+| [multi_agent.py](examples/multi_agent.py) | Multi-agent parallel sector research with LangGraph Send() |
+
+## System Prompt
+
+`get_system_prompt()` builds the AIPriceAction system prompt from composable sections. Use the bool flags to customize which sections are included — useful when different agents in a multi-agent pipeline need different prompts.
+
+```python
+from aipriceaction.system import get_system_prompt
+
+# Full prompt — data-analyzing agents (workers)
+prompt = get_system_prompt("en")
+
+# Skip strict data policy — aggregator works with text, not raw data
+prompt = get_system_prompt("en", include_data_policy=False)
+
+# Format only — writer doesn't analyze or validate data
+prompt = get_system_prompt("en",
+    include_data_policy=False,
+    include_analysis_framework=False,
+)
+```
+
+### Parameters
+
+| Parameter | Default | Description |
+|---|---|---|
+| `lang` | — | Language: `"en"` or `"vn"` |
+| `ma_type` | `"ema"` | Moving average type: `"ema"` or `"sma"` |
+| `include_ma_score` | `True` | Include MA Score explanation section |
+| `include_disclaimer` | `True` | Include investment disclaimer section |
+| `include_data_policy` | `True` | Include strict data-usage rules (never hallucinate, ask user to paste data). Set `False` for agents working with text from other agents |
+| `include_analysis_framework` | `True` | Include VPA/Wyckoff analysis priorities. Set `False` for formatting/writer agents |
+
+### Prompt Sections
+
+The assembled prompt includes these sections (when enabled):
+
+| Section | Controlled by | Description |
+|---|---|---|
+| Identity | Always | Branding, language instruction, expertise areas |
+| Data Policy | `include_data_policy` | Rules for using only provided data, no hallucination |
+| Analysis Framework | `include_analysis_framework` | Chart context description, VPA/Wyckoff priorities |
+| Communication Style | Always | Output format, objectivity, disclaimers |
+| MA Score Explanation | `include_ma_score` | How MA Score is calculated and interpreted |
+| Investment Disclaimer | `include_disclaimer` | Legal disclaimer about investment risks |
+
+Use `get_system_prompt_with_ticker_info()` for single-ticker contexts that display ticker metadata in the analysis framework.
 
 ## LangChain Agent
 
@@ -300,6 +347,70 @@ for event in agent.stream(
 ```
 
 See [examples/langchain_agent.py](examples/langchain_agent.py) for the full example.
+
+## Multi-Agent
+
+Build a multi-agent system with LangGraph `Send()` for parallel sector research.
+
+```
+START → [supervisor] → Send() fan-out → [worker agents x N] → [aggregator] → [writer] → END
+```
+
+Each node runs a specialized role with a tailored system prompt via `get_system_prompt()` bool flags:
+
+```python
+from langchain.agents import create_agent
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph import START, END, StateGraph, add_messages
+from langgraph.types import Send
+
+from aipriceaction import AIPriceAction, AIContextBuilder
+from aipriceaction.settings import settings
+from aipriceaction.system import get_system_prompt
+
+LANG = settings.ai_context_lang
+
+# Workers — full system prompt (data policy + analysis framework)
+# They fetch real data via tools and produce per-sector analysis.
+worker = create_agent(
+    llm,
+    [get_ticker_list, get_ohlcv_data],
+    system_prompt=get_system_prompt(LANG) + "\n\n" + worker_instructions,
+)
+
+# Aggregator — synthesize worker reports, skip strict data policy
+# since it works with text from workers, not raw market data.
+agg_sys = get_system_prompt(LANG, include_data_policy=False)
+llm.invoke([
+    SystemMessage(content=agg_sys + "\n\n" + aggregator_instructions),
+    HumanMessage(content=sector_reports),
+])
+
+# Writer — format only, skip data policy and analysis framework
+writer_sys = get_system_prompt(
+    LANG, include_data_policy=False, include_analysis_framework=False,
+)
+llm.invoke([
+    SystemMessage(content=writer_sys + "\n\n" + writer_instructions),
+    HumanMessage(content=analysis),
+])
+
+# Fan out to parallel workers via Send()
+graph.add_conditional_edges("supervisor", lambda state: [
+    Send("worker", {"messages": [...], "sector": st["sector"], ...})
+    for st in state["subtasks"]
+], ["worker"])
+```
+
+Key design principles:
+
+- **Workers** have tools (`get_ohlcv_data`, `get_ticker_list`) and the full system prompt. They fetch real data and produce per-sector analysis text.
+- **Aggregator** has no tools — it receives worker reports in a `HumanMessage` and synthesizes them into a unified analysis. `include_data_policy=False` because it works with text, not raw numbers.
+- **Writer** has no tools — it receives the aggregator's analysis in a `HumanMessage` and formats it. `include_data_policy=False, include_analysis_framework=False` because it only formats.
+- All prompts are language-aware (respect `LANG` setting from `AI_CONTEXT_LANG`).
+
+See [examples/multi_agent.py](examples/multi_agent.py) for the full example.
 
 ## License
 
