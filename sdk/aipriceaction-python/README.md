@@ -84,7 +84,7 @@ for q in builder.questions("single"):
 
 ### Ask LLM
 
-Requires `OPENAI_API_KEY` (or `MOCK_ONLY=true` env var). The context is built once and reused across `answer()` calls for KV cache efficiency.
+Requires `OPENAI_API_KEY`. The context is built once and reused across `answer()` calls for KV cache efficiency.
 
 ```python
 builder.build(ticker="VCB", interval="1D")
@@ -103,7 +103,6 @@ Set via environment variables or `.env` file:
 | `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API endpoint |
 | `OPENAI_MODEL` | `openai/gpt-oss-20b` | Default LLM model |
 | `ANTHROPIC_API_KEY` | `""` | Anthropic API key |
-| `MOCK_ONLY` | `false` | Skip API validation |
 | `AI_CONTEXT_LANG` | `en` | Context language (`en` or `vi`) |
 
 ### OpenRouter Models

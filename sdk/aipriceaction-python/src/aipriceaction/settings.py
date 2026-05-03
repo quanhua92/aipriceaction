@@ -28,7 +28,6 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-6"
 
     # General
-    mock_only: bool = False
     ai_context_lang: str = "en"
 
 
