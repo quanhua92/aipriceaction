@@ -55,6 +55,7 @@ def client_live(tmp_path):
         cache_dir=str(tmp_path),
         use_live=True,
         live_url="http://localhost:9000",
+        utc_offset=0,
     )
 
 
@@ -412,3 +413,99 @@ class TestGetOhlcvLive:
         assert "1D" in _LIVE_NATIVE_INTERVALS
         assert "1h" in _LIVE_NATIVE_INTERVALS
         assert "1m" in _LIVE_NATIVE_INTERVALS
+
+
+# ── UTC offset tests ──
+
+class TestUtcOffset:
+    def test_utc_offset_default_converts_hourly(self, mock_s3_base, tmp_path):
+        """Default utc_offset=7 converts hourly UTC+0 time to UTC+7."""
+        responses.start()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            body="2025-04-29T04:00:00,58000,58500,57500,58200,2000000",
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            headers={"x-amz-meta-content-hash": "vcb-1h-hash"},
+        )
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            use_live=False,
+            utc_offset=7,
+        )
+        df = client.get_ohlcv("VCB", interval="1h", start_date="2025-04-29", end_date="2025-04-29", ma=False)
+        assert len(df) == 1
+        assert df.iloc[0]["time"] == "2025-04-29 11:00:00"
+        responses.stop()
+        responses.reset()
+
+    def test_utc_offset_0_keeps_utc(self, mock_s3_base, tmp_path):
+        """utc_offset=0 keeps raw UTC time strings unchanged."""
+        responses.start()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            body="2025-04-29T04:00:00,58000,58500,57500,58200,2000000",
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            headers={"x-amz-meta-content-hash": "vcb-1h-hash-utc0"},
+        )
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            use_live=False,
+            utc_offset=0,
+        )
+        df = client.get_ohlcv("VCB", interval="1h", start_date="2025-04-29", end_date="2025-04-29", ma=False)
+        assert len(df) == 1
+        assert df.iloc[0]["time"] == "2025-04-29T04:00:00"
+        responses.stop()
+        responses.reset()
+
+    def test_utc_offset_date_only(self, mock_s3_base, tmp_path):
+        """1D interval shows date only in configured offset."""
+        responses.start()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-29.csv",
+            body="2025-04-29 00:00:00,58000,58500,57500,58200,2000000",
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-29.csv",
+            headers={"x-amz-meta-content-hash": "vcb-1d-hash-utc9"},
+        )
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            use_live=False,
+            utc_offset=9,
+        )
+        df = client.get_ohlcv("VCB", interval="1D", start_date="2025-04-29", end_date="2025-04-29", ma=False)
+        assert len(df) == 1
+        assert df.iloc[0]["time"] == "2025-04-29"
+        responses.stop()
+        responses.reset()
+
+    def test_utc_offset_intraday(self, mock_s3_base, tmp_path):
+        """1h interval shows full datetime in configured offset."""
+        responses.start()
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            body="2025-04-29T14:30:00,58000,58500,57500,58200,2000000",
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1h/VCB-1h-2025-04-29.csv",
+            headers={"x-amz-meta-content-hash": "vcb-1h-hash-v2"},
+        )
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            use_live=False,
+            utc_offset=5,
+        )
+        df = client.get_ohlcv("VCB", interval="1h", start_date="2025-04-29", end_date="2025-04-29", ma=False)
+        assert len(df) == 1
+        assert df.iloc[0]["time"] == "2025-04-29 19:30:00"
+        responses.stop()
+        responses.reset()

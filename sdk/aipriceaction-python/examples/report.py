@@ -4,6 +4,7 @@ Usage:
     python report.py VCB
     python report.py BTCUSDT --no-live
     python report.py VNINDEX --limit 5
+    python report.py VCB --utc-offset 0
 """
 
 import argparse
@@ -36,9 +37,11 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=3, help="Bars per interval (default: 3)")
     parser.add_argument("--intervals", nargs="+", default=["1D", "1h", "1m"],
                         help="Intervals to report (default: 1D 1h 1m)")
+    parser.add_argument("--utc-offset", type=int, default=7,
+                        help="UTC offset in hours (default: 7). Pass 0 for raw UTC.")
     args = parser.parse_args()
 
-    client = AIPriceAction(use_live=not args.no_live)
+    client = AIPriceAction(use_live=not args.no_live, utc_offset=args.utc_offset)
 
     for interval in args.intervals:
         report(client, args.ticker, interval, args.limit)

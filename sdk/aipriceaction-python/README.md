@@ -53,6 +53,16 @@ Data is cached to disk by default (temp dir). Set `cache_dir` for persistent cac
 client = AIPriceAction(cache_dir="./cache")
 ```
 
+### Timezone
+
+All OHLCV data is stored in UTC+0. By default, the SDK converts timestamps to UTC+7 (ICT, Vietnam timezone) for display. Pass `utc_offset=0` to keep raw UTC, or any integer hour offset:
+
+```python
+client = AIPriceAction(utc_offset=0)       # keep raw UTC
+client = AIPriceAction(utc_offset=9)       # UTC+9 (JST/KST)
+client = AIPriceAction(utc_offset=-5)      # UTC-5 (EST)
+```
+
 ## Live Data
 
 By default the SDK reads from an S3 archive which may be stale by minutes to hours. Enable `use_live=True` to overlay live data from the REST API on top of S3 data:
@@ -82,12 +92,12 @@ client = AIPriceAction(
 
 ## AI Context Builder
 
-Build structured context strings for LLM-powered investment analysis.
+Build structured context strings for LLM-powered investment analysis. Accepts the same `utc_offset` parameter as `AIPriceAction` (default 7 = UTC+7).
 
 ```python
 from aipriceaction import AIContextBuilder
 
-builder = AIContextBuilder(lang="en")
+builder = AIContextBuilder(lang="en", utc_offset=7)  # default UTC+7
 
 # Single ticker (VNINDEX included as reference by default)
 context = builder.build(ticker="VCB", interval="1D")

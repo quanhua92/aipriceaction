@@ -161,4 +161,5 @@ def client(tmp_path):
     return AIPriceAction(
         "http://localhost:9000/aipriceaction-archive",
         cache_dir=str(tmp_path),
+        utc_offset=0,
     )

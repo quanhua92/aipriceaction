@@ -17,9 +17,6 @@ from .system import (
 from .single import get_single_templates
 from .multi import get_multi_templates
 
-# Vietnam timezone (UTC+7, no DST)
-_VN_TZ = timezone(timedelta(hours=7))
-
 # Intervals that display date only (no time)
 DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
 
@@ -49,21 +46,21 @@ def _parse_utc(utc_string: str) -> datetime | None:
         return None
 
 
-def _to_vn_time(dt: datetime) -> str:
-    return dt.astimezone(_VN_TZ).strftime("%Y-%m-%d %H:%M:%S")
+def _to_local_time(dt: datetime, tz: timezone) -> str:
+    return dt.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _to_vn_date(dt: datetime) -> str:
-    return dt.astimezone(_VN_TZ).strftime("%Y-%m-%d")
+def _to_local_date(dt: datetime, tz: timezone) -> str:
+    return dt.astimezone(tz).strftime("%Y-%m-%d")
 
 
-def _format_time(time_str: str, interval: str) -> str:
+def _format_time(time_str: str, interval: str, tz: timezone) -> str:
     dt = _parse_utc(time_str)
     if dt is None:
         return time_str
     if interval in DATE_ONLY_INTERVALS:
-        return _to_vn_date(dt)
-    return _to_vn_time(dt)
+        return _to_local_date(dt, tz)
+    return _to_local_time(dt, tz)
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +68,7 @@ def _format_time(time_str: str, interval: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _format_record(record: Ticker, interval: str) -> str:
+def _format_record(record: Ticker, interval: str, tz: timezone) -> str:
     """Format a single Ticker into key=value line format.
 
     Only includes non-None optional fields. Omits total_money_changed
@@ -79,7 +76,7 @@ def _format_record(record: Ticker, interval: str) -> str:
     """
     fields: list[str] = [
         f"ticker={record.symbol}",
-        f"time={_format_time(record.time, interval)}",
+        f"time={_format_time(record.time, interval, tz)}",
         f"open={record.open:.2f}",
         f"high={record.high:.2f}",
         f"low={record.low:.2f}",
@@ -107,14 +104,14 @@ def _format_record(record: Ticker, interval: str) -> str:
     return " ".join(fields)
 
 
-def _format_ticker_block(ticker: str, records: list[Ticker], interval: str) -> str:
+def _format_ticker_block(ticker: str, records: list[Ticker], interval: str, tz: timezone) -> str:
     """Format a block of records for one ticker."""
     if not records:
         return ""
     sorted_recs = sorted(records, key=lambda r: r.time)
     lines = [f"## {ticker} ({len(sorted_recs)} records)"]
     for rec in sorted_recs:
-        lines.append(_format_record(rec, interval))
+        lines.append(_format_record(rec, interval, tz))
     return "\n".join(lines)
 
 
@@ -162,10 +159,12 @@ class AIContextBuilder:
         ma_type: str = "sma",
         base_url: str | None = None,
         cache_dir: str | None = None,
+        utc_offset: int = 7,
     ):
-        self._client = AIPriceAction(base_url=base_url, cache_dir=cache_dir)
+        self._client = AIPriceAction(base_url=base_url, cache_dir=cache_dir, utc_offset=utc_offset)
         self._lang = lang
         self._ma_type = ma_type
+        self._tz = timezone(timedelta(hours=utc_offset)) if utc_offset != 0 else timezone.utc
         self._interval: str = "1D"
         self._is_trading_hours: bool = False
         self._market_data: dict[str, list[Ticker]] | None = None
@@ -433,7 +432,7 @@ class AIContextBuilder:
         for ticker in sorted(self._market_data.keys()):
             records = self._market_data[ticker]
             if records:
-                lines.append(_format_ticker_block(ticker, records, self._interval))
+                lines.append(_format_ticker_block(ticker, records, self._interval, self._tz))
                 lines.append("")
 
         return "\n".join(lines)
@@ -481,11 +480,11 @@ class AIContextBuilder:
 
         if has_ref and self._ref_ticker and self._ref_data:
             lines.append(
-                _format_ticker_block(self._ref_ticker, self._ref_data, self._interval)
+                _format_ticker_block(self._ref_ticker, self._ref_data, self._interval, self._tz)
             )
             lines.append("")
 
-        lines.append(_format_ticker_block(ticker, records, self._interval))
+        lines.append(_format_ticker_block(ticker, records, self._interval, self._tz))
         return "\n".join(lines)
 
     # -- internal build_context --

@@ -5,7 +5,7 @@ import json
 import os
 import tempfile
 import time as _time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -63,6 +63,7 @@ _LIVE_CACHE_TTL = 120.0
 _LIVE_REQUEST_TIMEOUT = 5.0
 _LIVE_LIMITS: dict[str, int] = {"1D": 1, "1h": 5, "1m": 60}
 _LIVE_NATIVE_INTERVALS = {"1D", "1h", "1m"}
+_DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
 
 
 def _ma_buffer_days(interval: str) -> int:
@@ -89,6 +90,7 @@ class AIPriceAction:
             the last candle(s) from S3 are overwritten with live data and any newer candles
             are appended. Falls back to stale S3 data if the live API is unreachable.
         live_url: Base URL for the live data API. Defaults to "https://api.aipriceaction.com".
+        utc_offset: UTC offset in hours for display (default 7). Pass 0 to keep raw UTC.
     """
 
     DEFAULT_BASE_URL = "https://s3.aipriceaction.com"
@@ -101,6 +103,7 @@ class AIPriceAction:
         freshness_ttl: float = 300.0,
         use_live: bool = False,
         live_url: str = "https://api.aipriceaction.com",
+        utc_offset: int = 7,
     ):
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self._session = requests.Session()
@@ -110,6 +113,7 @@ class AIPriceAction:
         self.use_live = use_live
         self._live_url = live_url.rstrip("/")
         self._live_cache: dict[str, dict] = {}
+        self._utc_offset = timezone(timedelta(hours=utc_offset)) if utc_offset != 0 else None
 
         # Disk cache for downloaded CSVs
         if cache_dir is not None:
@@ -780,6 +784,41 @@ class AIPriceAction:
 
     # ── OHLCV data (mirrors /tickers endpoint) ──
 
+    @staticmethod
+    def _parse_utc(utc_string: str) -> datetime | None:
+        """Parse a UTC ISO string to a datetime.
+
+        Handles: '2025-11-09T14:00:00Z', '2025-11-09 14:00:00', '2025-11-09'.
+        """
+        if not utc_string:
+            return None
+        s = utc_string.strip().replace(" ", "T")
+        if not s.endswith("Z"):
+            if "+" in s[10:] or "-" in s[10:]:
+                pass
+            else:
+                s += "Z"
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+    def _convert_time_str(self, time_str: str, interval: str) -> str:
+        """Convert a UTC time string to the configured timezone."""
+        dt = self._parse_utc(time_str)
+        if dt is None:
+            return time_str
+        local = dt.astimezone(self._utc_offset)
+        if interval in _DATE_ONLY_INTERVALS:
+            return local.strftime("%Y-%m-%d")
+        return local.strftime("%Y-%m-%d %H:%M:%S")
+
+    def _convert_time_column(self, df: pd.DataFrame, interval: str) -> pd.DataFrame:
+        """Apply timezone conversion to the time column."""
+        df = df.copy()
+        df["time"] = df["time"].apply(lambda t: self._convert_time_str(str(t), interval))
+        return df
+
     def get_ohlcv(
         self,
         ticker: Optional[str] = None,
@@ -938,6 +977,10 @@ class AIPriceAction:
             result = (
                 result.groupby("symbol", sort=False).tail(limit).reset_index(drop=True)
             )
+
+        # Convert time column to configured timezone
+        if self._utc_offset is not None:
+            result = self._convert_time_column(result, interval)
 
         return result
 
