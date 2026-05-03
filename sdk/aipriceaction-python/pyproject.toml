@@ -1,6 +1,6 @@
 [project]
 name = "aipriceaction"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Python SDK for AIPriceAction financial data from S3"
 requires-python = ">=3.10"
 dependencies = [
@@ -25,8 +25,15 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "src/aipriceaction/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/aipriceaction"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/aipriceaction", "tests", "examples", "pyproject.toml", "README.md"]
+
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

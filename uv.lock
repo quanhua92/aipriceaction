@@ -19,7 +19,6 @@ members = [
 
 [[package]]
 name = "aipriceaction"
-version = "0.1.0"
 source = { editable = "sdk/aipriceaction-python" }
 dependencies = [
     { name = "langchain" },

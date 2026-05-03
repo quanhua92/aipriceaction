@@ -4,10 +4,6 @@ from aipriceaction import AIContextBuilder
 
 builder = AIContextBuilder(lang="en")
 
-context = builder.build(
-    ticker="VCB",
-    interval="1D",
-    reference_ticker="VNINDEX",
-    question="Analyze VCB relative to the overall market trend.",
-)
+# VNINDEX is included by default; pass reference_ticker=None to omit
+context = builder.build(ticker="VCB", interval="1D")
 print(context)

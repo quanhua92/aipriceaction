@@ -8,10 +8,6 @@ builder = AIContextBuilder(lang="en")
 for i, q in enumerate(builder.questions("single")):
     print(f"  [{i}] {q['title']}: {q['snippet']}")
 
-# Build context with the first template question
-context = builder.build(
-    ticker="VCB",
-    interval="1D",
-    question=builder.questions("single")[0]["question"],
-)
-print(context)
+# Build context
+builder.build(ticker="VCB", interval="1D")
+print(builder._last_context)

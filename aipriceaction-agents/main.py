@@ -18,44 +18,52 @@ def main():
         print(f"  {m.id:65s} {m.label}")
     print()
 
-    # 1. Build context
-    print("[1/4] Building AI context...")
-    t1 = time.perf_counter()
     builder = AIContextBuilder(lang=settings.ai_context_lang)
-    questions = builder.questions("single")
-    for i, q in enumerate(questions):
-        print(f"  [{i}] {q['title']}: {q['snippet']}")
-    builder.build(ticker="VCB", interval="1D")
+
+    # 1. Daily timeframe — big picture
+    print("[1/5] Building daily context (1D)...")
+    t1 = time.perf_counter()
+    builder.build(ticker="VIC", interval="1D")
     t2 = time.perf_counter()
-    context = builder._last_context
-    print(f"  Context built in {t2 - t1:.2f}s ({len(context):,} chars)")
-    print(f"  VNINDEX in context: {'VNINDEX' in context}")
+    context_daily = builder._last_context
+    print(f"  Context built in {t2 - t1:.2f}s ({len(context_daily):,} chars)")
+    print(f"  VNINDEX in context: {'VNINDEX' in context_daily}")
     print()
 
-    # 2. First LLM call (cold — no KV cache)
-    print(f"[2/4] First LLM call ({settings.openai_model})...")
+    # 2. LLM call on daily
+    print(f"[2/5] Daily LLM call ({settings.openai_model})...")
     t3 = time.perf_counter()
-    response1 = builder.answer(questions[0]["question"])
+    questions = builder.questions("single")
+    daily_response = builder.answer(questions[0]["question"])
     t4 = time.perf_counter()
-    print(f"  LLM responded in {t4 - t3:.2f}s (cold)")
+    print(f"  LLM responded in {t4 - t3:.2f}s")
     print()
 
-    # 3. Follow-up LLM call (warm — same context prefix, KV cache hit)
-    follow_up = "Nhận định VNINDEX tuần tiếp theo"
-    print(f"[3/4] Follow-up LLM call: \"{follow_up}\"...")
+    # 3. Hourly timeframe — intraday, with daily analysis as history
+    print("[3/5] Building hourly context (1h)...")
     t5 = time.perf_counter()
-    response2 = builder.answer(follow_up)
+    builder.build(ticker="VIC", interval="1h")
     t6 = time.perf_counter()
-    print(f"  LLM responded in {t6 - t5:.2f}s (warm, KV cache)")
+    context_hourly = builder._last_context
+    print(f"  Context built in {t6 - t5:.2f}s ({len(context_hourly):,} chars)")
     print()
 
-    # 4. Print responses
-    print("[4/4] Responses:")
-    print("--- First call ---")
-    print(response1)
+    # 4. LLM call on hourly with daily response as history
+    follow_up = "Phân tích khung 1h, xác nhận hoặc bác bỏ xu hướng ngày"
+    print(f"[4/5] Hourly LLM call with daily history: \"{follow_up}\"...")
+    t7 = time.perf_counter()
+    hourly_response = builder.answer(follow_up, history=[daily_response])
+    t8 = time.perf_counter()
+    print(f"  LLM responded in {t8 - t7:.2f}s")
     print()
-    print("--- Follow-up call ---")
-    print(response2)
+
+    # 5. Print responses
+    print("[5/5] Responses:")
+    print("--- Daily (1D) ---")
+    print(daily_response)
+    print()
+    print("--- Hourly (1h) + daily history ---")
+    print(hourly_response)
     print("---")
     print()
 
@@ -63,13 +71,14 @@ def main():
     print("=" * 50)
     print("TIMING SUMMARY")
     print("=" * 50)
-    print(f"  Model:            {settings.openai_model}")
-    print(f"  Context length:   {len(context):>8,} chars")
-    print(f"  Context build:    {t2 - t1:>8.2f}s")
-    print(f"  LLM 1 (cold):     {t4 - t3:>8.2f}s")
-    print(f"  LLM 2 (warm):     {t6 - t5:>8.2f}s")
-    print(f"  KV cache speedup: {(t4 - t3) / (t6 - t5) if t6 > t5 else 0:>7.1f}x")
-    print(f"  Total:            {t6 - t0:>8.2f}s")
+    print(f"  Model:              {settings.openai_model}")
+    print(f"  Daily context:      {len(context_daily):>8,} chars")
+    print(f"  Hourly context:     {len(context_hourly):>8,} chars")
+    print(f"  Context build 1D:   {t2 - t1:>8.2f}s")
+    print(f"  Context build 1h:   {t6 - t5:>8.2f}s")
+    print(f"  LLM daily:          {t4 - t3:>8.2f}s")
+    print(f"  LLM hourly+history: {t8 - t7:>8.2f}s")
+    print(f"  Total:              {t8 - t0:>8.2f}s")
     print("=" * 50)
 
 

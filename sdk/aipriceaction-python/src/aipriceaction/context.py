@@ -536,16 +536,30 @@ class AIContextBuilder:
 
     # -- LLM integration --
 
-    def answer(self, question: str, *, llm=None) -> str:
+    def answer(self, question: str, *, history: list[str] | None = None, llm=None) -> str:
         """Call LLM with the current context + question.
 
         Requires a prior build() call. The same context is reused across
         multiple answer() calls so the LLM can benefit from KV cache.
+
+        Args:
+            question: The question to ask the LLM.
+            history: List of previous response strings to include as
+                conversation context (question/answer pairs).
+            llm: Optional LLM instance. Defaults to ChatOpenAI from settings.
         """
         if not self._last_context:
             raise ValueError("Call build() before answer()")
 
-        context = f"{self._last_context}\n\n=== Question ===\n{question}"
+        parts = [self._last_context]
+
+        if history:
+            for i, entry in enumerate(history):
+                parts.append(f"=== Previous Response {i + 1} ===\n{entry}")
+
+        parts.append(f"=== Question ===\n{question}")
+
+        context = "\n\n".join(parts)
 
         if llm is None:
             llm = self._get_default_llm()

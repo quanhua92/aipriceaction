@@ -299,3 +299,30 @@ class TestAnswer:
 
         assert result == "custom response"
         mock_chat.assert_not_called()
+
+    def test_answer_passes_history(self, mock_s3, builder):
+        """answer() includes previous responses as history sections."""
+        from unittest.mock import MagicMock
+
+        mock_response = MagicMock()
+        mock_response.content = "response"
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value = mock_response
+
+        builder.build(
+            ticker="VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+        )
+        builder.answer(
+            "New question?",
+            history=["First answer was bullish.", "Second answer was bearish."],
+            llm=mock_llm,
+        )
+
+        call_arg = mock_llm.invoke.call_args[0][0]
+        assert "=== Previous Response 1 ===" in call_arg
+        assert "First answer was bullish." in call_arg
+        assert "=== Previous Response 2 ===" in call_arg
+        assert "Second answer was bearish." in call_arg
+        assert "=== Question ===" in call_arg
+        assert "New question?" in call_arg
