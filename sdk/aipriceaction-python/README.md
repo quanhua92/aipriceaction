@@ -232,6 +232,74 @@ More examples in [examples/](examples/):
 | [reference_ticker.py](examples/reference_ticker.py) | Context with VNINDEX reference |
 | [llm_question.py](examples/llm_question.py) | Build context + call LLM |
 | [system_prompt_only.py](examples/system_prompt_only.py) | System prompt without ticker data |
+| [langchain_agent.py](examples/langchain_agent.py) | LangChain ReAct agent with AIContextBuilder and tool-calling |
+
+## LangChain Agent
+
+Build a ReAct agent with VNINDEX context from `AIContextBuilder` and tool-calling to research tickers. Use `include_system_prompt=False` to get market data only (the system prompt goes in `system_prompt=` to avoid duplication), and tools use the same builder for consistent formatting.
+
+```python
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
+
+from aipriceaction import AIPriceAction, AIContextBuilder
+from aipriceaction.settings import settings
+from aipriceaction.system import get_system_prompt
+
+LANG = settings.ai_context_lang
+_client = AIPriceAction()
+_builder = AIContextBuilder(lang=LANG)
+
+@tool
+def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 30) -> str:
+    """Fetch OHLCV data for a ticker with MA indicators."""
+    try:
+        return _builder.build(ticker=ticker, interval=interval, limit=limit,
+                             reference_ticker=None, include_system_prompt=False)
+    except Exception as e:
+        return f"Error fetching {ticker}: {e}"
+
+@tool
+def get_ticker_list(source: str | None = None) -> str:
+    """List available ticker symbols and metadata."""
+    tickers = _client.get_tickers(source=source)
+    return "\n".join(f"{t.ticker} ({t.source})" for t in tickers)
+
+initial_context = _builder.build(ticker="VNINDEX", interval="1D",
+                                limit=10, include_system_prompt=False)
+
+llm = ChatOpenAI(api_key=settings.openai_api_key,
+                 base_url=settings.openai_base_url,
+                 model=settings.openai_model)
+
+AGENT_INSTRUCTIONS = """
+You have tools to fetch OHLCV data and list available tickers.
+Research workflow (MANDATORY):
+1. Call get_ohlcv_data for each ticker explicitly mentioned in the question.
+2. Call get_ticker_list to discover tickers in the same sectors.
+3. Call get_ohlcv_data for at least 2-3 additional tickers per sector.
+4. Provide per-ticker analysis, sector rotation observations, and ranking table.
+"""
+
+agent = create_agent(
+    llm,
+    [get_ticker_list, get_ohlcv_data],
+    checkpointer=MemorySaver(),
+    system_prompt=get_system_prompt(LANG) + "\n\n" + AGENT_INSTRUCTIONS,
+)
+
+for event in agent.stream(
+    {"messages": [{"role": "user",
+                   "content": f"{initial_context}\n\nResearch VIC, STB, SSI and related tickers."}]},
+    config={"configurable": {"thread_id": "demo"}},
+    stream_mode="updates",
+):
+    ...
+```
+
+See [examples/langchain_agent.py](examples/langchain_agent.py) for the full example.
 
 ## License
 

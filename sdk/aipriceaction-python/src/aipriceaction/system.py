@@ -391,12 +391,34 @@ _TRADING_HOURS_NOTICES = {
 # ---------------------------------------------------------------------------
 
 
-def get_system_prompt(lang: str) -> str:
-    return _SYSTEM_PROMPTS[lang]
+def get_system_prompt(
+    lang: str,
+    *,
+    include_ma_score: bool = True,
+    ma_type: str = "ema",
+    include_disclaimer: bool = True,
+) -> str:
+    parts = [_SYSTEM_PROMPTS[lang]]
+    if include_ma_score:
+        parts.append(get_ma_score_explanation(ma_type, lang))
+    if include_disclaimer:
+        parts.append(_DISCLAIMERS[lang])
+    return "\n\n".join(parts)
 
 
-def get_system_prompt_with_ticker_info(lang: str) -> str:
-    return _SYSTEM_PROMPTS_WITH_TICKER_INFO[lang]
+def get_system_prompt_with_ticker_info(
+    lang: str,
+    *,
+    include_ma_score: bool = True,
+    ma_type: str = "ema",
+    include_disclaimer: bool = True,
+) -> str:
+    parts = [_SYSTEM_PROMPTS_WITH_TICKER_INFO[lang]]
+    if include_ma_score:
+        parts.append(get_ma_score_explanation(ma_type, lang))
+    if include_disclaimer:
+        parts.append(_DISCLAIMERS[lang])
+    return "\n\n".join(parts)
 
 
 def get_ma_score_explanation(ma_type: str, lang: str) -> str:

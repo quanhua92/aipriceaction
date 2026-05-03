@@ -8,8 +8,6 @@ from .client import AIPriceAction, _parse_utc
 from .ticker import Ticker
 from .system import (
     _ma_label,
-    get_investment_disclaimer,
-    get_ma_score_explanation,
     get_system_prompt,
     get_system_prompt_with_ticker_info,
     get_trading_hours_notice,
@@ -106,7 +104,7 @@ class AIContextBuilder:
     Owns an AIPriceAction client internally and exposes build() + answer() methods.
 
     Usage:
-        builder = AIContextBuilder()  # lang="en", ma_type="sma" by default
+        builder = AIContextBuilder()  # lang="en", ma_type="ema" by default
 
         # Browse question bank
         for q in builder.questions("single"):
@@ -136,7 +134,7 @@ class AIContextBuilder:
         self,
         *,
         lang: str = "en",
-        ma_type: str = "sma",
+        ma_type: str = "ema",
         base_url: str | None = None,
         cache_dir: str | None = None,
         utc_offset: int = 7,
@@ -175,6 +173,7 @@ class AIContextBuilder:
         start_date: str | None = None,
         end_date: str | None = None,
         reference_ticker: str = "VNINDEX",
+        include_system_prompt: bool = True,
     ) -> str:
         """Build the complete AI context string.
 
@@ -187,6 +186,9 @@ class AIContextBuilder:
             end_date: End date (inclusive).
             reference_ticker: Reference ticker for market context. Default "VNINDEX".
                 Pass None to omit.
+            include_system_prompt: Include system prompt, MA score explanation, and
+                disclaimer. Set False when using as tool input for an agent that
+                already has the system prompt set separately.
 
         Returns:
             The complete formatted context string.
@@ -229,8 +231,10 @@ class AIContextBuilder:
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info(tickers)
 
-        # Fetch reference ticker if specified
-        if reference_ticker:
+        # Fetch reference ticker if specified and not already included
+        if reference_ticker and reference_ticker != single_ticker and (
+            not tickers or reference_ticker not in tickers
+        ):
             ref_df = self._client.get_ohlcv(
                 reference_ticker,
                 interval=interval,
@@ -251,7 +255,10 @@ class AIContextBuilder:
                 if reference_ticker not in self._market_data and self._ref_data:
                     self._market_data[reference_ticker] = self._ref_data
 
-        self._last_context = self._build_context(single_ticker=single_ticker)
+        self._last_context = self._build_context(
+            single_ticker=single_ticker,
+            include_system_prompt=include_system_prompt,
+        )
         return self._last_context
 
     # -- internal helpers --
@@ -472,22 +479,29 @@ class AIContextBuilder:
     def _build_context(
         self,
         single_ticker: str | None = None,
+        *,
+        include_system_prompt: bool = True,
     ) -> str:
         """Build the complete AI context string."""
         sections: list[str] = []
         lang = self._lang
 
-        # 1. System Prompt
-        if single_ticker:
-            sections.append(get_system_prompt_with_ticker_info(lang))
-        else:
-            sections.append(get_system_prompt(lang))
-
-        # 2. MA Score Explanation
-        sections.append(get_ma_score_explanation(self._ma_type, lang))
-
-        # 3. Investment Disclaimer
-        sections.append(get_investment_disclaimer(lang))
+        # 1. System Prompt (includes MA score explanation and disclaimer)
+        if include_system_prompt:
+            if single_ticker:
+                sections.append(get_system_prompt_with_ticker_info(
+                    lang,
+                    include_ma_score=True,
+                    ma_type=self._ma_type,
+                    include_disclaimer=True,
+                ))
+            else:
+                sections.append(get_system_prompt(
+                    lang,
+                    include_ma_score=True,
+                    ma_type=self._ma_type,
+                    include_disclaimer=True,
+                ))
 
         # 4. Ticker Info
         has_info = self._tickers_info or (self._ref_ticker and self._ref_data)
