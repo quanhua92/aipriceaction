@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 
 import pandas as pd
 
-from .client import AIPriceAction
+from .client import AIPriceAction, _parse_utc
 from .ticker import Ticker
 from .system import (
     _ma_label,
@@ -24,26 +24,6 @@ DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
 # ---------------------------------------------------------------------------
 # Time formatting helpers
 # ---------------------------------------------------------------------------
-
-
-def _parse_utc(utc_string: str) -> datetime | None:
-    """Parse a UTC ISO string to a datetime.
-
-    Handles: '2025-11-09T14:00:00Z', '2025-11-09 14:00:00', '2025-11-09'.
-    """
-    if not utc_string:
-        return None
-    s = utc_string.strip().replace(" ", "T")
-    if not s.endswith("Z"):
-        if "+" in s[10:] or "-" in s[10:]:
-            # Already has timezone info
-            pass
-        else:
-            s += "Z"
-    try:
-        return datetime.fromisoformat(s.replace("Z", "+00:00"))
-    except ValueError:
-        return None
 
 
 def _to_local_time(dt: datetime, tz: timezone) -> str:

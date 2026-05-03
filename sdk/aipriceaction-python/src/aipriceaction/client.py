@@ -66,6 +66,25 @@ _LIVE_NATIVE_INTERVALS = {"1D", "1h", "1m"}
 _DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
 
 
+def _parse_utc(utc_string: str) -> datetime | None:
+    """Parse a UTC ISO string to a datetime.
+
+    Handles: '2025-11-09T14:00:00Z', '2025-11-09 14:00:00', '2025-11-09'.
+    """
+    if not utc_string:
+        return None
+    s = utc_string.strip().replace(" ", "T")
+    if not s.endswith("Z"):
+        if "+" in s[10:] or "-" in s[10:]:
+            pass
+        else:
+            s += "Z"
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
 def _ma_buffer_days(interval: str) -> int:
     """Calendar days of extra history to fetch before start_date for MA warm-up."""
     if interval == "1D":
@@ -367,22 +386,18 @@ class AIPriceAction:
             / f"{ticker}-{interval}-{year}.csv"
         )
 
-    def _fetch_csv(
+    def _fetch_csv_from_url(
         self,
-        source: str,
-        ticker: str,
-        interval: str,
-        day: date,
+        url: str,
+        cache_path: str,
         *,
         use_cache: bool = True,
     ) -> Optional[pd.DataFrame]:
-        """Fetch a single day's CSV as a DataFrame.
+        """Fetch a CSV from a URL with disk caching and hash sidecar.
 
-        Returns a DataFrame, or None if the file doesn't exist.
+        Shared logic for _fetch_csv and _fetch_csv_yearly.
+        Returns a DataFrame, or None if the file doesn't exist (404/403).
         """
-        cache_path = self._cache_key(source, ticker, interval, day)
-        url = f"{self.base_url}/{self._csv_key(source, ticker, interval, day)}"
-
         # Try disk cache (with freshness check)
         if use_cache and self._is_fresh(cache_path, url):
             try:
@@ -414,6 +429,23 @@ class AIPriceAction:
             }
 
         return self._parse_csv(text)
+
+    def _fetch_csv(
+        self,
+        source: str,
+        ticker: str,
+        interval: str,
+        day: date,
+        *,
+        use_cache: bool = True,
+    ) -> Optional[pd.DataFrame]:
+        """Fetch a single day's CSV as a DataFrame.
+
+        Returns a DataFrame, or None if the file doesn't exist.
+        """
+        cache_path = self._cache_key(source, ticker, interval, day)
+        url = f"{self.base_url}/{self._csv_key(source, ticker, interval, day)}"
+        return self._fetch_csv_from_url(url, cache_path, use_cache=use_cache)
 
     @staticmethod
     def _parse_csv(text: str) -> Optional[pd.DataFrame]:
@@ -442,38 +474,7 @@ class AIPriceAction:
         """
         cache_path = self._cache_key_yearly(source, ticker, interval, year)
         url = f"{self.base_url}/{self._csv_key_yearly(source, ticker, interval, year)}"
-
-        # Try disk cache (with freshness check)
-        if use_cache and self._is_fresh(cache_path, url):
-            try:
-                text = Path(cache_path).read_text()
-                return self._parse_csv(text)
-            except (OSError, pd.errors.EmptyDataError):
-                pass
-
-        # Fetch from S3
-        resp = self._session.get(url)
-        if resp.status_code in (404, 403):
-            return None
-        resp.raise_for_status()
-
-        text = resp.text
-
-        # Write to disk cache
-        if use_cache:
-            Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
-            Path(cache_path).write_text(text)
-
-            # Write hash sidecar and update freshness
-            content_hash = self._head_content_hash(url)
-            if content_hash:
-                self._save_hash(cache_path, content_hash)
-            self._freshness[cache_path] = {
-                "hash": content_hash or "",
-                "checked_at": _time.monotonic(),
-            }
-
-        return self._parse_csv(text)
+        return self._fetch_csv_from_url(url, cache_path, use_cache=use_cache)
 
     @staticmethod
     def _covered_dates_from_yearly(df: pd.DataFrame) -> set[date]:
@@ -784,28 +785,9 @@ class AIPriceAction:
 
     # ── OHLCV data (mirrors /tickers endpoint) ──
 
-    @staticmethod
-    def _parse_utc(utc_string: str) -> datetime | None:
-        """Parse a UTC ISO string to a datetime.
-
-        Handles: '2025-11-09T14:00:00Z', '2025-11-09 14:00:00', '2025-11-09'.
-        """
-        if not utc_string:
-            return None
-        s = utc_string.strip().replace(" ", "T")
-        if not s.endswith("Z"):
-            if "+" in s[10:] or "-" in s[10:]:
-                pass
-            else:
-                s += "Z"
-        try:
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-
     def _convert_time_str(self, time_str: str, interval: str) -> str:
         """Convert a UTC time string to the configured timezone."""
-        dt = self._parse_utc(time_str)
+        dt = _parse_utc(time_str)
         if dt is None:
             return time_str
         local = dt.astimezone(self._utc_offset)
