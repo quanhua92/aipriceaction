@@ -425,6 +425,61 @@ Key design principles:
 
 See [examples/multi_agent.py](examples/multi_agent.py) for the full example.
 
+### Persistent Checkpoint
+
+`PersistentCheckpointSaver` is a drop-in replacement for LangGraph's `MemorySaver` that persists checkpoint state to disk after each node. It supports callbacks to extract worker results into files, and session resume from interrupted runs.
+
+```python
+from pathlib import Path
+from aipriceaction.checkpoint import PersistentCheckpointSaver, PostPutCallback, load_session
+
+def extract_worker_results(channel_values: dict, session_dir: Path) -> None:
+    """Callback: extract per-sector analysis into .md files."""
+    for wr in channel_values.get("worker_results", []):
+        sector = wr.get("sector", "unknown")
+        analysis = wr.get("analysis", "")
+        safe_name = sector.replace(" ", "_")[:60]
+        (session_dir / f"worker_{safe_name}.md").write_text(
+            f"# Sector: {sector}\n\n{analysis}\n"
+        )
+    if channel_values.get("final_report"):
+        (session_dir / "final_report.md").write_text(channel_values["final_report"])
+
+checkpointer = PersistentCheckpointSaver(
+    base_dir=Path("/tmp") / "aipriceaction-checkpoints",
+    callbacks=[extract_worker_results],
+)
+
+graph = build_graph(checkpointer=checkpointer)
+result = graph.invoke(
+    {"messages": [...], "market_snapshot": snapshot},
+    config={"configurable": {"thread_id": checkpointer.session_id}},
+)
+```
+
+This creates a session folder per run:
+
+```
+/tmp/aipriceaction-checkpoints/<uuid7>/
+    state.pkl              # Full checkpoint state (exact restore)
+    latest.json            # Human-readable latest checkpoint
+    worker_Banking.md      # Per-sector analysis (via callback)
+    worker_Securities.md
+    final_report.md
+```
+
+Resume an interrupted run by passing the session ID:
+
+```bash
+uv run python examples/multi_agent.py <session_id>
+```
+
+Or restore programmatically:
+
+```python
+saver = load_session("/tmp/aipriceaction-checkpoints/<session_id>")
+```
+
 ## License
 
 MIT
