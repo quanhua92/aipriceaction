@@ -353,14 +353,91 @@ class TestMergeLiveData:
         result = client_live._merge_live_data(s3_df, live_data, [])
         assert len(result) == 0
 
+    def test_merge_live_no_duplicate_with_t_separator(self, client_live):
+        """S3 uses space format, live API uses T-format for same timestamp → dedup."""
+        s3_df = pd.DataFrame({
+            "time": ["2026-05-04 09:00:00"],
+            "open": [49000],
+            "high": [49500],
+            "low": [48800],
+            "close": [49200],
+            "volume": [500000],
+            "symbol": ["VIC"],
+        })
+        live_data = {
+            "VIC": [
+                {
+                    "time": "2026-05-04T09:00:00",
+                    "open": 49100,
+                    "high": 49600,
+                    "low": 48900,
+                    "close": 49300,
+                    "volume": 550000,
+                }
+            ]
+        }
+        result = client_live._merge_live_data(s3_df, live_data, [])
+        # Only one row: live overwrites S3, no duplicate
+        assert len(result) == 1
+        assert result.iloc[0]["close"] == 49300
+
+    def test_merge_live_1h_t_separator_dedup(self, client_live):
+        """Multiple 1h bars, last bar overlaps between S3 (space) and live (T)."""
+        s3_df = pd.DataFrame({
+            "time": ["2026-05-04 07:00:00", "2026-05-04 08:00:00", "2026-05-04 09:00:00"],
+            "open": [48000, 48500, 49000],
+            "high": [48400, 48900, 49500],
+            "low": [47900, 48400, 48800],
+            "close": [48300, 48800, 49200],
+            "volume": [300000, 400000, 500000],
+            "symbol": ["VIC", "VIC", "VIC"],
+        })
+        live_data = {
+            "VIC": [
+                {
+                    "time": "2026-05-04T09:00:00",
+                    "open": 49100,
+                    "high": 49600,
+                    "low": 48900,
+                    "close": 49300,
+                    "volume": 550000,
+                }
+            ]
+        }
+        result = client_live._merge_live_data(s3_df, live_data, [])
+        # 3 unique bars: first two from S3, last replaced by live
+        assert len(result) == 3
+        times = result["time"].tolist()
+        assert len(times) == len(set(times)), "No duplicate times"
+        assert result.iloc[2]["close"] == 49300  # Live value
+
+
+# ── _parse_csv tests ──
+
+class TestParseCsv:
+    def test_parse_csv_normalizes_t_separator(self):
+        """CSV with T-separator in time column gets normalized to space."""
+        csv_text = "2026-05-04T09:00:00,49100,49600,48900,49300,550000"
+        df = AIPriceAction._parse_csv(csv_text)
+        assert df is not None
+        assert df.iloc[0]["time"] == "2026-05-04 09:00:00"
+
+    def test_parse_csv_space_separator_unchanged(self):
+        """CSV with space separator in time column is kept as-is."""
+        csv_text = "2026-05-04 09:00:00,49100,49600,48900,49300,550000"
+        df = AIPriceAction._parse_csv(csv_text)
+        assert df is not None
+        assert df.iloc[0]["time"] == "2026-05-04 09:00:00"
+
 
 # ── Integration tests ──
 
 class TestGetOhlcvLive:
-    def test_get_ohlcv_live_disabled_no_call(self, mock_s3_base):
+    def test_get_ohlcv_live_disabled_no_call(self, mock_s3_base, tmp_path):
         """use_live=False — live API is never called."""
         client = AIPriceAction(
             "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
             use_live=False,
         )
         # Add S3 data
@@ -460,7 +537,7 @@ class TestUtcOffset:
         )
         df = client.get_ohlcv("VCB", interval="1h", start_date="2025-04-29", end_date="2025-04-29", ma=False)
         assert len(df) == 1
-        assert df.iloc[0]["time"] == "2025-04-29T04:00:00"
+        assert df.iloc[0]["time"] == "2025-04-29 04:00:00"
         responses.stop()
         responses.reset()
 

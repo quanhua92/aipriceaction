@@ -452,11 +452,14 @@ class AIPriceAction:
         """Parse CSV text (no header row) into a DataFrame."""
         if not text.strip():
             return None
-        return pd.read_csv(
+        df = pd.read_csv(
             io.StringIO(text),
             header=None,
             names=_OHLCV_COLUMNS,
         )
+        # Normalize time format: replace T separator with space
+        df["time"] = df["time"].astype(str).str.replace("T", " ", n=1)
+        return df
 
     def _fetch_csv_yearly(
         self,
@@ -715,7 +718,7 @@ class AIPriceAction:
         Live format: "2025-04-29" or "2025-04-29T14:00:00"
         Normalize to the shorter form by stripping " 00:00:00" suffix.
         """
-        t = str(t).strip()
+        t = str(t).strip().replace("T", " ")
         if t.endswith(" 00:00:00"):
             return t[:10]
         return t
