@@ -53,12 +53,12 @@ LANG = settings.ai_context_lang
 
 @tool
 def create_subtasks(subtasks: list[dict]) -> str:
-    """Create research subtasks for sector analysis. Each subtask is a dict with keys: sector (str), tickers (list[str]), instruction (str). Provide 2-3 subtasks."""
+    """Create research subtasks for sector analysis. Each subtask must be a dict with exactly these 3 keys: "sector" (str), "tickers" (list[str]), "instruction" (str). Provide 3-5 subtasks."""
     return json.dumps({"subtasks": subtasks})
 
 
 @tool
-def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 30) -> str:
+def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 20) -> str:
     """Fetch OHLCV data for a ticker. Returns formatted context with MA indicators."""
     try:
         ctx = _builder.build(
@@ -122,11 +122,15 @@ class OverallState(TypedDict):
 _PROMPTS = {
     "en": {
         "supervisor": """You are a research supervisor for Vietnamese stock market analysis.
-Break research questions into 2-3 sector subtasks with 3 representative tickers each.
-A full market snapshot (latest bar for ALL VN tickers with MA scores and change %) is provided — use it
-to pick the most representative tickers per sector (e.g., highest volume, largest change, best/worst MA score).
+Break research questions into 3-5 sector subtasks.
+You MUST include these 3 sectors: Banking (Ngân hàng), Securities (Chứng khoán), Real Estate (Bất động sản).
+Pick 0-2 additional sectors based on market activity.
 
-Call the `create_subtasks` tool with your subtasks. Each subtask needs: sector name, ticker list, and specific instruction.
+For each sector: select ONLY the top 10 most representative tickers based on the snapshot
+(highest volume, largest change, best/worst MA score). Do NOT list all tickers in a sector group.
+Use the market snapshot to pick the most representative ones.
+
+Call the `create_subtasks` tool with your subtasks. Each subtask needs: sector name, ticker list (max 10), and specific instruction.
 
 Common VN market sectors: Banking, Real Estate, Securities, Technology, Retail, Energy, Materials, Construction.""",
 
@@ -201,11 +205,15 @@ Write in a clear, structured format with headers, tables, and bullet points.""",
     },
     "vn": {
         "supervisor": """Bạn là giám đốc nghiên cứu phân tích thị trường chứng khoán Việt Nam.
-Phân tích câu hỏi thành 2-3 nhiệm vụ phân tích ngành, mỗi nhiệm vụ 3 cổ phiếu đại diện.
-Bức tranh toàn thị trường (thanh gần nhất cho TẤT CẢ mã VN với MA score và % thay đổi) đã được cung cấp —
-sử dụng để chọn mã đại diện nhất mỗi ngành (VD: khối lượng cao nhất, thay đổi lớn nhất, MA score tốt nhất/kém nhất).
+Phân tích câu hỏi thành 3-5 nhiệm vụ phân tích ngành.
+Bạn BẮT BUỘC bao gồm 3 ngành: Ngân hàng (Banking), Chứng khoán (Securities), Bất động sản (Real Estate).
+Chọn thêm 0-2 ngành dựa trên hoạt động thị trường.
 
-Gọi tool `create_subtasks` với các nhiệm vụ. Mỗi nhiệm vụ cần: tên ngành, danh sách mã, và hướng dẫn cụ thể.
+Mỗi ngành: chỉ chọn TỐI ĐA 10 mã cổ phiếu đại diện nhất dựa trên bức tranh thị trường
+(khối lượng cao nhất, thay đổi lớn nhất, MA score tốt nhất/kém nhất). KHÔNG liệt kê tất cả mã trong nhóm.
+Sử dụng bức tranh thị trường để chọn mã phù hợp nhất.
+
+Gọi tool `create_subtasks` với các nhiệm vụ. Mỗi nhiệm vụ cần: tên ngành, danh sách mã (tối đa 10), và hướng dẫn cụ thể.
 
 Các ngành phổ biến: Ngân hàng, Bất động sản, Chứng khoán, Công nghệ, Bán lẻ, Năng lượng, Vật liệu, Xây dựng.""",
 
@@ -300,15 +308,18 @@ llm = ChatOpenAI(
 
 
 def _invoke_with_retry(llm_call, retries: int = 5, base_delay: float = 10.0):
-    """Invoke an LLM call with retry on rate-limit errors."""
+    """Invoke an LLM call with retry on transient API errors."""
+    transient = ("429", "500", "502", "503", "504", "timeout", "connection", "overloaded")
     for attempt in range(retries):
         try:
             return llm_call()
         except Exception as e:
-            if "429" in str(e) and attempt < retries - 1:
+            err_str = str(e).lower()
+            is_transient = any(code in err_str for code in transient)
+            if is_transient and attempt < retries - 1:
                 delay = base_delay * (2 ** attempt)
                 delay = min(delay, 60)
-                print(f"    [retry] Rate limited, waiting {delay:.0f}s (attempt {attempt + 1}/{retries})")
+                print(f"    [retry] {type(e).__name__}: {str(e)[:80]} (attempt {attempt + 1}/{retries}, wait {delay:.0f}s)")
                 time.sleep(delay)
             else:
                 raise
@@ -395,11 +406,13 @@ def supervisor_node(state: OverallState) -> dict:
     if not subtasks_data:
         raise ValueError(f"Supervisor did not call create_subtasks tool. Response: {(response.content or '')[:300]}")
 
-    subtasks = [Subtask(
-        sector=st["sector"],
-        tickers=st["tickers"],
-        instruction=st["instruction"],
-    ) for st in subtasks_data]
+    subtasks = []
+    for st in subtasks_data:
+        sector = st.get("sector", "Unknown")
+        tickers = st.get("tickers", st.get("ticker_list", []))
+        tickers = tickers[:10]  # cap at 10 per sector
+        instruction = st.get("instruction", f"Analyze {sector} sector")
+        subtasks.append(Subtask(sector=sector, tickers=tickers, instruction=instruction))
 
     print(f"[Supervisor] Decomposed into {len(subtasks)} subtasks:")
     for st in subtasks:
@@ -532,7 +545,7 @@ def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) ->
     for wr in channel_values.get("worker_results", []):
         sector = wr.get("sector", "unknown")
         analysis = wr.get("analysis", "")
-        safe_name = sector.replace(" ", "_")[:60]
+        safe_name = sector.replace(" ", "_").replace("/", "-")[:60]
         (session_dir / f"worker_{safe_name}.md").write_text(
             f"# Sector: {sector}\n\n{analysis}\n"
         )
@@ -595,8 +608,9 @@ def main(resume_id: str | None = None):
         "en": (
             "Provide a comprehensive market overview of the Vietnamese stock market. "
             "Use the market snapshot to identify the most active sectors and tickers, "
-            "then research 2-3 sectors in depth with full OHLCV data. "
-            "For each sector: fetch data for all representative tickers plus related tickers, "
+            "then research 3-5 sectors in depth (must include Banking, Securities, Real Estate) "
+            "with full OHLCV data. "
+            "For each sector: select only the top 10 most representative tickers, "
             "assess trend direction, VPA signals, MA score momentum across timeframes, "
             "volume confirmation, and identify sector leaders vs laggards. "
             "Then synthesize cross-sector rotation patterns and provide a unified ranking."
@@ -604,8 +618,9 @@ def main(resume_id: str | None = None):
         "vn": (
             "Cung cấp tổng quan thị trường chứng khoán Việt Nam toàn diện. "
             "Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, "
-            "sau đó nghiên cứu sâu 2-3 ngành với dữ liệu OHLCV đầy đủ. "
-            "Mỗi ngành: tải dữ liệu tất cả mã đại diện và các mã liên quan, "
+            "sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Ngân hàng, Chứng khoán, Bất động sản) "
+            "với dữ liệu OHLCV đầy đủ. "
+            "Mỗi ngành: chỉ chọn tối đa 10 mã đại diện nhất, "
             "đánh giá xu hướng, tín hiệu VPA, động lực MA score qua các khung thời gian, "
             "xác nhận khối lượng, và xác định mã dẫn đầu/lagging trong ngành. "
             "Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất."
@@ -668,7 +683,3 @@ if __name__ == "__main__":
     import sys
     resume_id = sys.argv[1] if len(sys.argv) > 1 else None
     main(resume_id=resume_id)
-
-
-if __name__ == "__main__":
-    main()

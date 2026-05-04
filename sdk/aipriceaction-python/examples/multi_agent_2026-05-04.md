@@ -2,7 +2,7 @@
 
   Model:    openrouter/owl-alpha
   Base URL: https://openrouter.ai/api/v1
-  Started:  2026-05-04 05:14:32 UTC
+  Started:  2026-05-04 08:06:59 UTC
   Lang:     vn
 
 ---
@@ -12,74 +12,112 @@
 
 [2] Starting multi-agent research...
 
-    Question: Cung cấp tổng quan thị trường chứng khoán Việt Nam toàn diện. Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, sau đó nghiên cứu sâu 2-3 ngành với dữ liệu OHLCV đầy đủ. Mỗi ngành: tải dữ liệu tất cả mã đại diện và các mã liên quan, đánh giá xu hướng, tín hiệu VPA, động lực MA score qua các khung thời gian, xác nhận khối lượng, và xác định mã dẫn đầu/lagging trong ngành. Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất.
+    Question: Cung cấp tổng quan thị trường chứng khoán Việt Nam toàn diện. Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Ngân hàng, Chứng khoán, Bất động sản) với dữ liệu OHLCV đầy đủ. Mỗi ngành: chỉ chọn tối đa 10 mã đại diện nhất, đánh giá xu hướng, tín hiệu VPA, động lực MA score qua các khung thời gian, xác nhận khối lượng, và xác định mã dẫn đầu/lagging trong ngành. Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất.
 
 ---
 
-    Session: 019df168-d9ec-7559-5d6e-4b3c2a23d485
-    Folder:  /var/folders/hd/20zqmjkj7cd0wm4rv2230bm00000gn/T/aipriceaction-checkpoints/019df168-d9ec-7559-5d6e-4b3c2a23d485
+    Session: 019df206-bcdd-ffe2-d0b4-625ec6dea19b
+    Folder:  /var/folders/hd/20zqmjkj7cd0wm4rv2230bm00000gn/T/aipriceaction-checkpoints/019df206-bcdd-ffe2-d0b4-625ec6dea19b
 
-[Supervisor] Decomposed into 3 subtasks:
-  - Bất động sản: VHM, VIC, NVL, DXG, VRE, PDR, KBC, SCR, DIG, HDC, HDG, CRE, NTL, KDH, LDG, CEO, AGG, API, DRH, HQC, ITC, LGL, NRC, PV2, SGR, SZC, TAL, TCH, TIG, VC3, VPI, HPX, HTN, HAR
-  - Ngân hàng: VCB, BID, TCB, VPB, MBB, ACB, HDB, STB, TPB, EIB, LPB, MSB, OCB, SSB, VIB, NAB, KLB, SHB, CTG, ABB, BVB, SGB, VAB, NVB
-  - Chứng khoán: SSI, HCM, VCI, VND, MBS, SHS, FTS, BSI, CTS, DSC, EVS, BVS, ABW, AGR, APG, BMS, ORS, PSI, SBS, TCX, TVB, TVC, VCK, VDS, VFS, VIG, VPX, AAS, APS
+[Supervisor] Decomposed into 5 subtasks:
+  - Bất động sản: VIC, VHM, NVL, DXG, VRE, KBC, PDR, CEO, DIG, KDH
+  - Ngân hàng: VCB, ACB, TCB, BID, MBB, HDB, STB, VPB, CTG, MSB
+  - Chứng khoán: SSI, VCI, HCM, MBS, VND, BSI, FTS, HSS, VDS, SHS
+  - Công nghệ: FPT, CMG, SAM, SGT, MFS, FOX, ELC, ICT, ST8, VNZ
+  - Thực phẩm: VNM, MSN, SAB, MCH, KDC, VHC, BAF, SBT, ANV
 
-  [Worker:Bất động sản] Starting analysis for VHM, VIC, NVL, DXG, VRE, PDR, KBC, SCR, DIG, HDC, HDG, CRE, NTL, KDH, LDG, CEO, AGG, API, DRH, HQC, ITC, LGL, NRC, PV2, SGR, SZC, TAL, TCH, TIG, VC3, VPI, HPX, HTN, HAR...
-  [Worker:Chứng khoán] Starting analysis for SSI, HCM, VCI, VND, MBS, SHS, FTS, BSI, CTS, DSC, EVS, BVS, ABW, AGR, APG, BMS, ORS, PSI, SBS, TCX, TVB, TVC, VCK, VDS, VFS, VIG, VPX, AAS, APS...
-  [Worker:Ngân hàng] Starting analysis for VCB, BID, TCB, VPB, MBB, ACB, HDB, STB, TPB, EIB, LPB, MSB, OCB, SSB, VIB, NAB, KLB, SHB, CTG, ABB, BVB, SGB, VAB, NVB...
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'VCB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'BID', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'TCB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'VPB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'MBB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'LPB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'MSB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'ACB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'VIB', 'limit': 30})
-  [Worker:Ngân hàng] [tool call] get_ohlcv_data({'ticker': 'VNFINLEAD', 'limit': 30})
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  BID - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  VIB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Quốc tế Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệu ...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  MBB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Quân đội - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lị...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  VCB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Ngoại thương Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ ...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  MSB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Hàng hải Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệu...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  LPB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Lộc Phát Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệu...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  ACB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Á Châu - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  VPB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Việt Nam Thịnh Vượng - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ l...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  TCB - — Mã Chính (đối tượng phân tích) - Ngân hàng TMCP Kỹ thương Việt Nam - [NGAN_HANG]  === Dữ Liệu Thị Trường ===  Dữ liệ...
-  [Worker:Ngân hàng] [tool result]  === Thông Tin Mã CK ===  VNFINLEAD - — Mã Chính (đối tượng phân tích) - [INDEX]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử với đường trung bì...
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VNREAL', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VHM', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VIC', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'NVL', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'DXG', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VRE', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'CRE', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'AGG', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'CEO', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'LDG', 'limit': 30, 'interval': '1D'})
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VHM - — Mã Chính (đối tượng phân tích) - CTCP Vinhomes - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử v...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VIC - — Mã Chính (đối tượng phân tích) - Tập đoàn VINGROUP - CTCP - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLC...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  LDG - — Mã Chính (đối tượng phân tích) - CTCP Đầu tư LDG - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  NVL - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Đầu tư Địa ốc No Va - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ ...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VNREAL - — Mã Chính (đối tượng phân tích) - [INDEX]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử với đường trung bình ...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VRE - — Mã Chính (đối tượng phân tích) - CTCP Vincom Retail - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  DXG - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Đất Xanh - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV ...
+  [Worker:Bất động sản] Starting analysis for VIC, VHM, NVL, DXG, VRE, KBC, PDR, CEO, DIG, KDH...
+  [Worker:Chứng khoán] Starting analysis for SSI, VCI, HCM, MBS, VND, BSI, FTS, HSS, VDS, SHS...
+  [Worker:Công nghệ] Starting analysis for FPT, CMG, SAM, SGT, MFS, FOX, ELC, ICT, ST8, VNZ...
+  [Worker:Thực phẩm] Starting analysis for VNM, MSN, SAB, MCH, KDC, VHC, BAF, SBT, ANV...
+  [Worker:Ngân hàng] Starting analysis for VCB, ACB, TCB, BID, MBB, HDB, STB, VPB, CTG, MSB...
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'SSI', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'HCM', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'VND', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'VCI', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'MBS', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'FTS', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'BSI', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'AGR', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'CTS', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool call] get_ohlcv_data({'ticker': 'DSC', 'interval': '1D', 'limit': 20})
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  HCM - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán Thành phố Hồ Chí Minh - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường === ...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  FTS - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán FPT - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  BSI - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán BIDV - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lị...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  MBS - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán MB - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  CTS - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán VietinBank - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OH...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  DSC - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán DSC - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  VCI - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán Vietcap - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  VND - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán VNDIRECT - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLC...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  SSI - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán SSI - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Chứng khoán] [tool result]  === Thông Tin Mã CK ===  AGR - — Mã Chính (đối tượng phân tích) - CTCP Chứng khoán Agribank - [CHUNG_KHOAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLC...
+  [Worker:Thực phẩm] [tool call] get_ohlcv_data({'ticker': 'VNM', 'interval': '1D', 'limit': 20})
+  [Worker:Thực phẩm] [tool call] get_ohlcv_data({'ticker': 'MSN', 'interval': '1D', 'limit': 20})
+  [Worker:Thực phẩm] [tool call] get_ohlcv_data({'ticker': 'SAB', 'interval': '1D', 'limit': 20})
+  [Worker:Thực phẩm] [tool call] get_ohlcv_data({'ticker': 'KDC', 'interval': '1D', 'limit': 20})
+  [Worker:Thực phẩm] [tool call] get_ohlcv_data({'ticker': 'MCH', 'interval': '1D', 'limit': 20})
+  [Worker:Thực phẩm] [tool result]  === Thông Tin Mã CK ===  MCH - — Mã Chính (đối tượng phân tích) - CTCP Hàng tiêu dùng Masan - [THUC_PHAM]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV ...
+  [Worker:Thực phẩm] [tool result]  === Thông Tin Mã CK ===  SAB - — Mã Chính (đối tượng phân tích) - Tổng Công ty cổ phần Bia - Rượu - Nước giải khát Sài Gòn - [THUC_PHAM]  === Dữ Liệu...
+  [Worker:Thực phẩm] [tool result]  === Thông Tin Mã CK ===  KDC - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn KIDO - [THUC_PHAM]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử...
+  [Worker:Thực phẩm] [tool result]  === Thông Tin Mã CK ===  VNM - — Mã Chính (đối tượng phân tích) - CTCP Sữa Việt Nam - [THUC_PHAM]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử ...
+  [Worker:Thực phẩm] [tool result]  === Thông Tin Mã CK ===  MSN - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Masan - [THUC_PHAM]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch s...
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VIC', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VHM', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'NVL', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'DXG', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'KDH', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VRE', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'PDR', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'HDC', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'AGG', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'NTL', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'SCR', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'KBC', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'DIG', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'CRE', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'VPI', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'NRC', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'HDG', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'TCH', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'CEO', 'interval': '1D', 'limit': 20})
+  [Worker:Bất động sản] [tool call] get_ohlcv_data({'ticker': 'ITC', 'interval': '1D', 'limit': 20})
   [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  AGG - — Mã Chính (đối tượng phân tích) - CTCP Đầu tư và Phát triển Bất động sản An Gia - [BAT_DONG_SAN]  === Dữ Liệu Thị Trư...
-  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  CEO - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn C.E.O - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  SCR - — Mã Chính (đối tượng phân tích) - CTCP Địa ốc Sài Gòn Thương Tín - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VRE - — Mã Chính (đối tượng phân tích) - CTCP Vincom Retail - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  NTL - — Mã Chính (đối tượng phân tích) - CTCP Phát triển Đô thị Từ Liêm - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  NRC - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn NRC - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  DIG - — Mã Chính (đối tượng phân tích) - Tổng Công ty cổ phần Đầu tư Phát triển Xây dựng - [BAT_DONG_SAN]  === Dữ Liệu Thị T...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  HDC - — Mã Chính (đối tượng phân tích) - CTCP Phát triển Nhà Bà Rịa - Vũng Tàu - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường === ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  PDR - — Mã Chính (đối tượng phân tích) - CTCP Phát triển Bất động sản Phát Đạt - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường === ...
   [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  CRE - — Mã Chính (đối tượng phân tích) - CTCP Bất động sản Thế Kỷ - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLC...
-  [Worker:Chứng khoán] Analysis complete (5,934 chars)
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  NVL - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Đầu tư Địa ốc No Va - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VIC - — Mã Chính (đối tượng phân tích) - Tập đoàn VINGROUP - CTCP - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLC...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  KDH - — Mã Chính (đối tượng phân tích) - CTCP Đầu tư và Kinh doanh Nhà Khang Điền - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường =...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VHM - — Mã Chính (đối tượng phân tích) - CTCP Vinhomes - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịch sử v...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  DXG - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Đất Xanh - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  HDG - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn Hà Đô - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  CEO - — Mã Chính (đối tượng phân tích) - CTCP Tập đoàn C.E.O - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu OHLCV lịc...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  VPI - — Mã Chính (đối tượng phân tích) - CTCP Phát triển Bất động sản Văn Phú - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  ...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  TCH - — Mã Chính (đối tượng phân tích) - CTCP Đầu tư Dịch vụ Tài chính Hoàng Huy - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ==...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  ITC - — Mã Chính (đối tượng phân tích) - CTCP Đầu tư và Kinh doanh Nhà - [BAT_DONG_SAN]  === Dữ Liệu Thị Trường ===  Dữ liệu...
+  [Worker:Bất động sản] [tool result]  === Thông Tin Mã CK ===  KBC - — Mã Chính (đối tượng phân tích) - Tổng Công ty Phát triển Đô thị Kinh Bắc - CTCP - [BAT_DONG_SAN]  === Dữ Liệu Thị Tr...
+  [Worker:Công nghệ] Analysis complete (7,529 chars)
 
-  [Worker:Bất động sản] Analysis complete (9,815 chars)
+  [Worker:Ngân hàng] Analysis complete (9,174 chars)
 
-  [Worker:Ngân hàng] Analysis complete (14,755 chars)
+  [Worker:Thực phẩm] Analysis complete (7,131 chars)
 
-[Aggregator] Synthesizing 3 sector reports...
+  [Worker:Bất động sản] Analysis complete (9,990 chars)
 
-[Aggregator] Analysis synthesized (14,704 chars)
+  [Worker:Chứng khoán] Analysis complete (13,513 chars)
+
+[Aggregator] Synthesizing 5 sector reports...
+
+[Aggregator] Analysis synthesized (16,059 chars)
 
 [Writer] Formatting final report...
 
-[Writer] Report generated (23,104 chars)
+[Writer] Report generated (21,653 chars)
 
 ---
 
@@ -87,466 +125,433 @@
 
 ---
 
-# 🏛️ BÁO CÁO TỔNG QUAN THỊ TRƯỜNG CHỨNG KHOÁN VIỆT NAM
-
-## AIPriceAction Investment Advisor
-
-**Website:** https://aipriceaction.com/
-
-**Ngày phát hành:** 04/05/2026
-
-**Dữ liệu:** Thanh giao dịch gần nhất (phiên 04/05/2026 cho thị trường VN, 01/05/2026 cho thị trường quốc tế)
+# 📊 TỔNG QUAN THỊ TRƯỜNG CHỨNG KHOÁN VIỆT NAM
+## Phân Tích Đa Ngành Từ AIPriceAction Investment Advisor
+### https://aipriceaction.com/
 
 ---
 
-## 📊 PHẦN I: TÓM TẮT ĐIỀU HÀNH
+## I. TÓM TẮT ĐIỀU HÀNH
 
-### Nhận định tổng thể
+Thị trường chứng khoán Việt Nam tiếp tục duy trì **xu hướng tăng rõ rệt** trên mọi khung thời gian. VNINDEX đóng cửa tại **1,854.06 điểm**, ghi nhận MA20 Score **+3.63%**, MA50 Score **+5.38%** và MA200 Score **+8.87%** — xác nhận xu hướng tăng dài hạn vững chắc.
 
-Thị trường chứng khoán Việt Nam đang trong **giai đoạn tăng giá rõ ràng** trên các chỉ số chính, với sự phân hóa đáng kể giữa các ngành và nhóm vốn hóa. Dòng tiền thông minh đang tập trung mạnh vào nhóm **Bất động sản** và **Ngân hàng**, trong khi các ngành như **Y tế**, **Năng lượng** và **Cổ tức** đang bị rút tiền.
-
-### Các điểm nổi bật
-
-| Chỉ số | Giá đóng cửa | MA20 Score | MA50 Score | MA200 Score | Xu hướng |
-|--------|-------------|------------|------------|-------------|----------|
-| **VNINDEX** | 1,855.66 | +3.71% | +5.47% | +8.96% | ✅ Tăng mạnh |
-| **VN30** | 2,018.47 | +3.24% | +5.03% | +6.48% | ✅ Tăng |
-| **VN100** | 1,934.51 | +2.96% | +5.25% | +6.42% | ✅ Tăng |
-| **HNX30** | 530.97 | -1.22% | -2.14% | -6.18% | ⚠️ Yếu hơn |
-| **VNALLSHARE** | 1,911.99 | +2.99% | +5.21% | +6.14% | ✅ Tăng |
-| **VNXALLSHARE** | 3,008.99 | +2.87% | +5.03% | +5.67% | ✅ Tăng |
-
-### Tín hiệu VPA chính
-
-- **SOS (Sign of Strength):** VHM breakout ngày 02/05 với volume 16.3 triệu cổ phiếu (+703%)
-- **ST (Strength):** VIC, VRE, NVL — xu hướng tăng được xác nhận bởi volume
-- **SPRING:** TCB, LPB — breakout từ vùng tích lũy
-- **UT (Upthrust):** NVL phiên 04/05 giảm -6.83% — cần theo dõi exhaustion
-- **SOW (Sign of Weakness):** AGG, VND, MBS — xu hướng giảm rõ rệt
+**Điểm nổi bật:**
+- **Bất động sản** tiếp tục dẫn đầu thị trường với VNREAL MA200 **+46.24%**
+- **Ngân hàng** đang trong giai đoạn tích lũy, sẵn sàng cho đợt breakout tiếp theo
+- **Chứng khoán** điều chỉnh sâu nhưng có dấu hiệu phục hồi
+- **Công nghệ và Y tế** đang yếu, cần thời gian phục hồi
+- Dòng tiền thông minh đang **luân chuyển từ BĐS sang Ngân hàng**
 
 ---
 
-## 📈 PHẦN II: PHÂN TÍCH TỪNG NGÀNH VỚI BẢNG XẾP HẠNG
+## II. PHÂN TÍCH TỪNG NGÀNH VỚI BẢNG XẾP HẠNG
 
-### 🏠 NGÀNH 1: BẤT ĐỘNG SẢN — DẪN ĐẦU TUYỆT ĐỐI
+### 🏠 A. NGÀNH BẤT ĐỘNG SẢN — DẪN ĐẦU THỊ TRƯỜNG
 
-#### Tổng quan ngành
+**Chỉ số VNREAL:** MA20 **+13.32%** | MA50 **+25.61%** | MA200 **+46.24%**
 
-Chỉ số **VNREAL** đạt MA200 **+46.05%** — ngành mạnh nhất toàn thị trường. Dòng tiền tập trung mạnh nhất, xu hướng tăng được xác nhận trên mọi khung thời gian.
+Ngành bất động sản tiếp tục là **ngành dẫn đầu tuyệt đối** của thị trường Việt Nam. Chỉ số VNREAL ghi nhận MA200 Score **+46.24%**, cho thấy xu hướng tăng dài hạn cực kỳ mạnh mẽ. Trong ngắn hạn, MA20 Score **+13.32%** xác nhậnh momentum tăng vẫn đang được duy trì.
 
-#### Bảng xếp hạng chi tiết mã BĐS
+#### Bảng xếp hạng 10 mã Bất động sản đại diện
 
-| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Vai trò VPA |
+| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Tín hiệu VPA |
 |------|-----|-----|------|------|------|-------|-------|-------------|
-| 🥇 | **VIC** | 210,100 | +2.72% | +17.77% | +31.36% | +34.56% | +76.75% | ⭐⭐⭐⭐⭐ Leader |
-| 🥈 | **VHM** | 145,200 | -0.03% | +8.50% | +27.10% | +28.03% | +35.79% | ⭐⭐⭐⭐⭐ Leader |
-| 🥉 | **VRE** | 33,650 | +11.61% | +17.21% | +21.98% | +13.40% | +8.84% | ⭐⭐⭐⭐ Leader |
-| 4 | **NVL** | 19,100 | +2.47% | +10.74% | +31.82% | +37.87% | +28.85% | ⭐⭐⭐⭐ Leader |
-| 5 | **DXG** | 15,600 | +4.21% | +4.82% | +6.85% | +0.20% | -14.11% | ⭐⭐ Middle |
-| 6 | **CEO** | 18,000 | +3.99% | +5.11% | +7.67% | -4.73% | -17.96% | ⭐⭐ Middle |
-| 7 | **KBC** | 33,900 | -1.37% | +0.62% | +3.70% | +0.27% | -1.13% | ⭐⭐ Middle |
-| 8 | **NLG** | 28,000 | -0.48% | -1.70% | +0.11% | -5.04% | -16.54% | ⭐ Lagging |
-| 9 | **PDR** | 16,450 | +1.32% | +1.32% | +2.73% | -5.80% | -17.80% | ⭐ Lagging |
-| 10 | **KDH** | 25,200 | -1.93% | -2.31% | -3.61% | -10.65% | -17.75% | ❌ Weak |
-| 11 | **AGG** | 12,600 | -0.16% | -0.73% | -4.09% | -9.37% | -21.90% | ❌ Weakest |
-| 12 | **HDC** | 19,250 | +2.78% | +2.91% | +2.44% | -7.61% | -25.18% | ❌ Weak |
-| 13 | **HDG** | 26,050 | -3.70% | -6.10% | -6.44% | -5.33% | -10.42% | ❌ Weak |
-| 14 | **SCR** | 6,060 | -1.11% | -1.76% | -1.41% | -10.72% | -23.07% | ❌ Weakest |
-| 15 | **CRV** | 28,000 | -3.01% | +0.29% | +0.55% | -3.03% | -6.49% | ⭐ Lagging |
+| 🥇 | **VRE** | 33,700 | +11.76% | **+17.37%** | **+22.15%** | +13.57% | +9.00% | 🟢🟢 Breakout mạnh nhất |
+| 🥈 | **VIC** | 212,000 | +3.56% | **+18.77%** | **+32.52%** | +35.76% | **+78.33%** | 🟢🟢 Xu hướng dài hạn tốt nhất |
+| 🥉 | **VHM** | 142,000 | -2.01% | **+6.24%** | **+24.37%** | +25.24% | **+32.82%** | 🟢 Phục hồi mạnh |
+| 4 | **NVL** | 19,100 | +2.47% | **+10.74%** | **+31.82%** | +37.87% | +28.85% | 🟢 Tăng mạnh |
+| 5 | **NRC** | 6,900 | +4.07% | **+10.75%** | **+15.00%** | +15.67% | +12.99% | 🟢 Hồi phục |
+| 6 | **KBC** | 34,450 | +0.07% | **+2.17%** | **+5.34%** | +1.88% | +0.47% | 🟡 Tích lũy |
+| 7 | **PDR** | 16,500 | +1.60% | **+1.62%** | **+3.03%** | -5.51% | -17.55% | 🟡 Trung tính |
+| 8 | **DXG** | 15,500 | +3.61% | **+4.18%** | **+6.18%** | -0.43% | -14.66% | 🟡 Cần theo dõi |
+| 9 | **CEO** | 17,700 | +2.43% | **+3.45%** | **+5.91%** | -6.30% | -19.32% | 🟡 Trung tính |
+| 10 | **KDH** | 25,000 | -2.63% | **-3.04%** | **-4.36%** | -11.35% | -18.40% | 🔴 Yếu nhất |
 
-#### Phân tích VPA sâu — Nhóm Leaders
+**Phân tích chi tiết:**
 
-**VIC (Tập đoàn VINGROUP)**
-- **Cấu trúc:** MA Score dương mạnh trên tất cả các khung — MA10 +2.72%, MA20 +17.77%, MA50 +31.36%, MA100 +34.56%, MA200 +76.75%
-- **VPA:** Giai đoạn tích lũy từ 140,000 lên 225,500 trong tháng 4. Phiên 04/05 điều chỉnh -1.82% với volume giảm mạnh (-67%) — **healthy pullback** trong xu hướng tăng
-- **Wyckoff:** Đang trong giai đoạn **Markup** sau breakout từ vùng tích lũy
-- **Kết luận:** Mã dẫn đầu tuyệt đối, xu hướng tăng dài hạn rõ rệt
+**VRE (Vincom Retail)** — Mã mạnh nhất ngành:
+- MA20 Score **+17.37%**, MA50 Score **+22.15%** — động lực tăng vượt trội
+- Giá đóng cửa **33,700** vượt mạnh khỏi vùng kháng cự
+- Khối lượng giao dịch **10.35 triệu cổ phiếu** — xác nhận breakout có khối lượng
+- Tín hiệu VPA: **Sign of Strength (SOS)** — đà tăng được hỗ trợ bởi dòng tiền lớn
 
-**VHM (Vinhomes)**
-- **Cấu trúc:** MA20 +8.50%, MA50 +27.10%, MA100 +28.03%, MA200 +35.79%
-- **VPA:** **SOS cực kỳ mạnh** ngày 02/05 — volume 16.3 triệu (+703%), giá tăng từ 125,000 lên 151,000. Hiện consolidation quanh 145,000-151,000
-- **Wyckoff:** **SOS xác nhận** sau giai đoạn tích lũy dài. Đây là tín hiệu mua mạnh
-- **Kết luận:** Breakout bùng nổ, tiền thông minh tích lũy mạnh
+**VIC (Vingroup)** — Xu hướng dài hạn tốt nhất:
+- MA200 Score **+78.33%** — mã có xu hướng tăng dài hạn mạnh nhất toàn ngành
+- MA50 Score **+32.52%** — momentum trung hạn rất tích cực
+- Giá **212,000** đang trong giai đoạn markup sau tích lũy
+- Tín hiệu VPA: **Markup phase** — đang trong xu hướng tăng chính
 
-**VRE (Vincom Retail)**
-- **Cấu trúc:** MA10 +11.61%, MA20 +17.21%, MA50 +21.98% — động lực ngắn-trung hạn mạnh nhất
-- **VPA:** Tăng liên tục từ 27,000 lên 33,650. Volume xác nhận tốt, không có dấu hiệu exhaustion
-- **Wyckoff:** **Markup ổn định**, xu hướng tăng nhất quán
-- **Kết luận:** Cấu trúc kỹ thuật tốt nhất, ít biến động nhất
+**VHM (Vinhomes)** — Phục hồi mạnh:
+- MA50 Score **+24.37%**, MA100 Score **+25.24%** — phục hồi mạnh ở trung và dài hạn
+- MA20 Score **+6.24%** — đà tăng ngắn hạn đang được củng cố
+- Tín hiệu VPA: **Test after rally** — đang kiểm tra lại vùng hỗ trợ trước khi tiếp tục tăng
 
-**NVL (No Va Land)**
-- **Cấu trúc:** MA10 +2.47%, MA20 +10.74%, MA50 +31.82%, MA100 +37.87%, MA200 +28.85%
-- **VPA:** Phiên 04/05 giảm -6.83% với volume tăng 35% — **cảnh báo UT (Upthrust)**. Cần theo dõi có phải exhaustion không
-- **Wyckoff:** Có thể đang trong giai đoạn **Distribution** ngắn hạn
-- **Kết luận:** Momentum mạnh nhưng cần thận trọng với tín hiệu exhaustion
-
-#### Phân tích VPA — Nhóm Lagging
-
-**AGG (An Gia Realty)**
-- MA200 -21.90% — xu hướng giảm dài hạn rõ rệt
-- Không có tín hiệu cải thiện, volume yếu
-- **Kết luận:** Tránh hoàn toàn
-
-**KDH (Khang Điền)**
-- MA100 -10.65%, MA200 -17.75% — đang trong xu hướng giảm
-- Không có catalyst cải thiện
-- **Kết luận:** Không nên bắt dao rơi
+**KDH (Khang Điền)** — Mã yếu nhất, cần tránh:
+- Tất cả MA Scores đều âm: MA20 **-3.04%**, MA50 **-4.36%**, MA200 **-18.40%**
+- Giá **25,000** đang ở mức thấp nhất trong nhóm
+- Tín hiệu VPA: **Sign of Weakness (SOW)** — áp lực bán vẫn đang chi phối
 
 ---
 
-### 🏦 NGÀNH 2: NGÂN HÀNG — PHỤC HỒI MẠNH
+### 🏦 B. NGÀNH NGÂN HÀNG — TÍCH LŨY PHÂN HÓA
 
-#### Tổng quan ngành
+**Chỉ số VNFIN:** MA20 **+0.02%** | MA50 **+0.58%** | MA200 **-2.40%**
 
-Chỉ số **VNFIN** MA50 +1.17%, MA20 +0.59% — ngành đang trong giai đoạn phục hồi. Tuy nhiên MA200 vẫn âm (-1.82%) cho thấy ngành chưa hoàn toàn phục hồi dài hạn.
+Ngân hàng đang trong **giai đoạn tích lũy** với chỉ số VNFIN giao dịch ngang MA20. Đây là tín hiệu tích cực cho thấy dòng tiền đang được tích lũy trước đợt breakout tiếp theo. Tuy nhiên, MA200 Score **-2.40%** cho thấy xu hướng dài hạn vẫn chưa hoàn toàn đảo chiều.
 
-#### Bảng xếp hạng chi tiết mã Ngân hàng
+#### Bảng xếp hạng 10 mã Ngân hàng đại diện
 
-| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Vai trò VPA |
+| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Tín hiệu VPA |
 |------|-----|-----|------|------|------|-------|-------|-------------|
-| 🥇 | **TCB** | 33,700 | +1.46% | +5.37% | +5.38% | +0.79% | -3.60% | ⭐⭐⭐⭐ Leader |
-| 🥈 | **LPB** | 47,500 | +1.81% | +1.71% | +8.05% | +9.35% | +7.41% | ⭐⭐⭐⭐ Leader |
-| 🥉 | **STB** | 67,500 | +2.33% | +3.74% | +4.89% | +12.20% | +18.65% | ⭐⭐⭐⭐ Leader |
-| 4 | **HDB** | 26,500 | -0.24% | +1.06% | +1.36% | -0.70% | +5.90% | ⭐⭐⭐ Tăng |
-| 5 | **VCB** | 60,500 | +0.58% | +1.58% | +0.21% | -2.52% | -2.42% | ⭐⭐⭐ Phục hồi |
-| 6 | **MBB** | 26,300 | +0.17% | +0.08% | -1.07% | -0.19% | +3.03% | ⭐⭐ Middle |
-| 7 | **MSB** | 12,600 | +0.20% | +2.11% | +6.24% | +3.51% | +0.94% | ⭐⭐ Tăng |
-| 8 | **VPB** | 27,000 | -1.51% | -0.27% | +0.58% | -2.48% | -5.38% | ⭐⭐ Middle |
-| 9 | **EIB** | 21,950 | -1.66% | -2.40% | -2.80% | -1.04% | -8.09% | ⭐ Lagging |
-| 10 | **ACB** | 23,300 | -1.23% | -1.44% | -1.24% | -2.47% | -5.24% | ⭐ Lagging |
-| 11 | **BID** | 40,800 | +0.72% | +1.18% | -2.33% | -5.64% | -0.98% | ⭐ Lagging |
-| 12 | **CTG** | 35,350 | +1.03% | +1.63% | +0.37% | -2.37% | +0.76% | ⭐⭐ Middle |
-| 13 | **NAB** | 14,150 | +2.28% | +4.33% | +5.66% | +1.85% | -1.98% | ⭐⭐ Tăng |
-| 14 | **KLB** | 14,500 | +1.47% | +2.17% | +4.14% | -3.13% | -2.81% | ⭐⭐ Tăng |
-| 15 | **OCB** | 11,250 | -1.75% | -1.21% | +0.05% | -3.10% | -7.46% | ⭐ Lagging |
-| 16 | **SSB** | 16,750 | +0.06% | -0.58% | -0.46% | -2.16% | -7.85% | ⭐ Lagging |
-| 17 | **SHB** | 14,500 | -3.04% | -3.33% | -3.40% | -6.54% | -9.42% | ❌ Weak |
-| 18 | **VAB** | 10,250 | -0.58% | -0.22% | -0.05% | -2.46% | -7.40% | ⭐ Lagging |
-| 19 | **BVB** | 12,400 | -0.96% | -0.64% | -0.61% | -4.48% | -9.25% | ❌ Weak |
-| 20 | **NVB** | 10,800 | -0.55% | -1.14% | -3.33% | -11.79% | -21.19% | ❌ Weakest |
-| 21 | **SGB** | 12,200 | -0.97% | -1.37% | -0.91% | -1.51% | -2.26% | ⭐ Lagging |
-| 22 | **VIB** | 16,250 | -0.72% | -0.40% | +0.63% | -1.54% | -7.38% | ⭐ Lagging |
+| 🥇 | **NAB** | 14,300 | +3.25% | **+5.38%** | **+6.76%** | +2.91% | -0.94% | 🟢 Tăng mạnh nhất |
+| 🥈 | **KLB** | 14,800 | +3.35% | **+4.17%** | **+6.25%** | -1.15% | -0.81% | 🟢 Tăng mạnh |
+| 🥉 | **TCB** | 33,550 | +1.05% | **+4.93%** | **+4.92%** | +0.34% | -4.02% | 🟢 Đồng bộ mạnh |
+| 4 | **STB** | 66,200 | +0.56% | **+1.85%** | **+2.91%** | +10.06% | **+16.38%** | 🟢 Xu hướng dài hạn tốt |
+| 5 | **ABB** | 15,000 | +0.94% | **+1.80%** | **+5.56%** | +5.40% | **+16.67%** | 🟢 Phục hồi |
+| 6 | **MSB** | 12,550 | -0.16% | **+1.72%** | **+5.83%** | +3.11% | +0.55% | 🟢 Tăng vừa |
+| 7 | **CTG** | 35,350 | +1.03% | **+1.63%** | **+0.37%** | -2.37% | +0.76% | 🟡 Tích lũy |
+| 8 | **HDB** | 26,500 | -0.24% | **+1.06%** | **+1.36%** | -0.70% | +5.90% | 🟡 Tích lũy dương |
+| 9 | **VCB** | 60,700 | +0.88% | **+1.90%** | **+0.53%** | -2.20% | -2.10% | 🟡 Breakout KL |
+| 10 | **SHB** | 14,350 | -3.95% | **-4.28%** | **-4.38%** | -7.50% | -7.57% | 🔴 Yếu nhất |
 
-#### Phân tích VPA sâu — Nhóm Leaders
+**Phân tích chi tiết:**
 
-**TCB (Techcombank)**
-- **Cấu trúc:** MA10 +1.46%, MA20 +5.37%, MA50 +5.38% — động lực ngắn-trung hạn mạnh
-- **VPA:** Breakout mạnh ngày 08/04 với volume bùng nổ. Hiện consolidation quanh 33,500-34,000 — **bull flag pattern**
-- **Wyckoff:** **SPRING** từ vùng tích lũy, đang trong giai đoạn **Markup**
-- **Kết luận:** Dẫn đầu ngành, cấu trúc kỹ thuật tốt nhất
+**NAB (Ngân hàng Nam Á)** — Dẫn đầu ngân hàng:
+- MA20 Score **+5.38%**, MA50 Score **+6.76%** — động lực tăng vượt trội
+- Giá **14,300** đang giao dịch trên mọi đường trung bình
+- Khối lượng **2.07 triệu** — thanh khoản tốt
+- Tín hiệu VPA: **Accumulation** — dòng tiền đang tích lũy tích cực
 
-**LPB (Lộc Phát Bank)**
-- **Cấu trúc:** MA Score dương từ MA10 đến MA200 — hiếm có trong ngành. MA200 +7.41%
-- **VPA:** Xu hướng tăng ổn định nhất, không có biến động mạnh
-- **Wyckoff:** **Markup nhất quán**, tiền thông minh tích lũy liên tục
-- **Kết luận:** Cổ phiếu phòng thủ tốt nhất trong ngành
+**KLB (Kiên Long)** — Tăng mạnh:
+- MA20 Score **+4.17%**, MA50 Score **+6.25%** — momentum tăng rõ rệt
+- Khối lượng **542,200** tăng **208.42%** so với phiên trước — xác nhận dòng tiền vào
+- Tín hiệu VPA: **Demand coming in** — lực mua đang gia tăng
 
-**STB (Sài Gòn Tài Lộc)**
-- **Cấu trúc:** MA100 +12.20%, MA200 +18.65% — xu hướng tăng dài hạn mạnh nhất ngành
-- **VPA:** Tăng đều đặn từ 50,000 lên 68,100. Volume xác nhận tốt
-- **Wyckoff:** **Markup dài hạn**, tiền thông minh tích lũy
-- **Kết luận:** Bất ngờ lớn, xu hướng tăng dài hạn rõ rệt
+**TCB (Kỹ Thương)** — Đồng bộ mạnh:
+- MA20 Score **+4.93%**, MA50 Score **+4.92%** — đồng bộ giữa ngắn và trung hạn
+- Giá **33,550** đang trong giai đoạn markup
+- Tín hiệu VPA: **Markup** — xu hướng tăng đang được duy trì
 
-#### Phân tích VPA — Nhóm Lagging
+**STB (Sài Gòn Tài Lộc)** — Xu hướng dài hạn tốt nhất:
+- MA200 Score **+16.38%** — xu hướng dài hạn tốt nhất trong nhóm ngân hàng
+- MA100 Score **+10.06%** — momentum dài hạn rất tích cực
+- Tín hiệu VPA: **Long-term uptrend** — xu hướng tăng dài hạn vững chắc
 
-**NVB (Quốc Dân)**
-- MA200 -21.19% — yếu nhất ngành
-- Không có tín hiệu cải thiện
-- **Kết luận:** Tránh hoàn toàn
-
-**SHB (Sài Gòn Hà Nội)**
-- MA20 -3.33%, MA50 -3.40%, MA100 -6.54%, MA200 -9.42%
-- Xu hướng giảm rõ rệt trên mọi khung
-- **Kết luận:** Tránh
+**SHB (Sài Gòn Hà Nội)** — Yếu nhất, cần tránh:
+- Tất cả MA Scores đều âm: MA10 **-3.95%**, MA20 **-4.28%**, MA50 **-4.38%**
+- Khối lượng **62.36 triệu** — cao nhất nhưng giá giảm, cho thấy áp lực bán lớn
+- Tín hiệu VPA: **Distribution** — dòng tiền đang phân phối
 
 ---
 
-### 📊 NGÀNH 3: CHỨNG KHOÁN — ĐIỀU CHỈNH
+### 📈 C. NGÀNH CHỨNG KHOÁN — ĐIỀU CHỈNH SÂU, CHỜ PHỤC HỒI
 
-#### Tổng quan ngành
+**Chỉ số VNFINSELECT:** MA20 **+0.02%** | MA50 **+0.58%** | MA200 **-2.40%**
 
-Ngành chứng khoán đang trong **giai đoạn điều chỉnh** với sự phân hóa rõ rệt. Khối lượng giao dịch sụt giảm mạnh trên toàn thị trường.
+Ngành chứng khoán đang trong **giai đoạn điều chỉnh sâu** so với các đường trung bình dài hạn. Phần lớn các mã có MA200 Score âm, cho thấy ngành đã điều chỉnh đáng kể sau đợt tăng trước đó.
 
-#### Bảng xếp hạng chi tiết mã Chứng khoán
+#### Bảng xếp hạng 10 mã Chứng khoán đại diện
 
-| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Vai trò VPA |
+| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Tín hiệu VPA |
 |------|-----|-----|------|------|------|-------|-------|-------------|
-| 🥇 | **HCM** | 26,900 | -0.28% | +3.39% | +12.45% | +14.62% | +10.23% | ⭐⭐⭐⭐ Leader |
-| 🥈 | **TCI** | 10,550 | +0.48% | +3.08% | +12.65% | +12.83% | +6.36% | ⭐⭐⭐⭐ Leader |
-| 🥉 | **BMS** | 15,300 | +1.32% | +3.00% | +8.04% | +12.81% | +13.15% | ⭐⭐⭐ Tăng |
-| 4 | **AGR** | 14,600 | -0.41% | -0.98% | -3.18% | -6.65% | -10.85% | ⭐ Lagging |
-| 5 | **SSI** | 27,850 | -1.10% | -1.09% | -3.85% | -6.56% | -11.35% | ⭐ Lagging |
-| 6 | **VCI** | 26,350 | -1.90% | -3.16% | -2.68% | +0.16% | -6.53% | ⭐ Lagging |
-| 7 | **FTS** | 26,400 | -1.44% | -3.63% | -6.43% | -13.58% | -22.14% | ❌ Weak |
-| 8 | **MBS** | 19,500 | -1.71% | -3.30% | -3.78% | -6.72% | -15.78% | ❌ Weak |
-| 9 | **VND** | 16,300 | -0.55% | -0.67% | -2.78% | -9.17% | -18.07% | ❌ Weakest |
-| 10 | **SHS** | 17,000 | -2.19% | -2.91% | -2.25% | -9.25% | -19.60% | ❌ Weakest |
-| 11 | **CTS** | 26,500 | -0.80% | -2.80% | -5.61% | -13.25% | -23.67% | ❌ Weakest |
-| 12 | **BVS** | 25,600 | -1.99% | -3.90% | -7.00% | -11.65% | -21.33% | ❌ Weakest |
-| 13 | **DSC** | 13,000 | +0.15% | -0.48% | -2.90% | -8.46% | -13.76% | ❌ Weak |
-| 14 | **EVS** | 4,600 | -3.97% | -6.98% | -9.95% | -16.30% | -26.52% | ❌ Weakest |
-| 15 | **HCM** | 26,900 | -0.28% | +3.39% | +12.45% | +14.62% | +10.23% | ⭐⭐⭐⭐ Leader |
+| 🥇 | **HCM** | 26,350 | -2.12% | **+1.39%** | **+10.20%** | +12.31% | +7.99% | 🟢 Mạnh nhất ngành |
+| 🥈 | **TCI** | 10,600 | +0.90% | **+3.54%** | **+13.17%** | +13.36% | +6.87% | 🟢 Tăng mạnh |
+| 🥉 | **SSI** | 27,700 | -1.58% | **-1.60%** | **-4.36%** | -7.06% | -11.83% | 🟡 Thanh khoản tốt |
+| 4 | **AGR** | 14,550 | -0.72% | **-1.31%** | **-3.50%** | -6.96% | -11.16% | 🟡 MA10 gần 0% |
+| 5 | **VND** | 16,200 | -1.10% | **-1.25%** | **-3.36%** | -9.72% | -18.57% | 🟡 Điều chỉnh |
+| 6 | **FTS** | 26,100 | -2.45% | **-4.67%** | **-7.47%** | -14.56% | -23.02% | 🔴 Yếu |
+| 7 | **VCI** | 26,150 | -2.57% | **-3.86%** | **-3.40%** | -0.59% | -7.23% | 🔴 Điều chỉnh sâu |
+| 8 | **MBS** | 19,400 | -2.17% | **-3.77%** | **-4.26%** | -7.20% | -16.21% | 🔴 Yếu |
+| 9 | **CTS** | 26,350 | -1.31% | **-3.32%** | **-6.13%** | -13.74% | -24.10% | 🔴 Yếu |
+| 10 | **HSS** | 16,900 | -2.71% | **-3.46%** | **-2.82%** | -9.78% | -20.07% | 🔴 Yếu nhất |
 
-#### Phân tích VPA sâu
+**Phân tích chi tiết:**
 
-**HCM (Chứng khoán TP.HCM)**
-- **Cấu trúc:** MA Score dương ở mọi khung. MA50 +12.45%, MA100 +14.62%, MA200 +10.23%
-- **VPA:** Xu hướng tăng rõ rệt, volume xác nhận tốt
-- **Kết luận:** Dẫn đầu ngành, cấu trúc kỹ thuật tốt nhất
+**HCM (Chứng khoán TP.HCM)** — Mạnh nhất ngành:
+- MA20 Score **+1.39%**, MA50 Score **+10.20%** — duy trì xu hướng tăng trung hạn
+- MA100 Score **+12.31%**, MA200 Score **+7.99%** — xu hướng dài hạn tích cực
+- Tín hiệu VPA: **Relative Strength** — mạnh hơn hẳn so với các mã cùng ngành
 
-**TCI (Chứng khoán Thành Công)**
-- **Cấu trúc:** MA50 +12.65%, MA100 +12.83%, MA200 +6.36%
-- **VPA:** Tương tự HCM, xu hướng tăng mạnh
-- **Kết luận:** Dẫn đầu ngành cùng HCM
+**TCI (Chứng khoán Thành Công)** — Tăng mạnh:
+- MA20 Score **+3.54%**, MA50 Score **+13.17%** — momentum tăng rõ rệt
+- MA100 Score **+13.36%** — xu hướng trung hạn rất tốt
+- Tín hiệu VPA: **Recovery** — đang phục hồi mạnh sau giai đoạn điều chỉnh
 
-**VND (VNDIRECT) — Yếu nhất**
-- MA200 -18.07% — xu hướng giảm dài hạn rõ rệt
-- Không có tín hiệu cải thiện
-- **Kết luận:** Tránh hoàn toàn
+**HSS (Chứng khoán Sài Gòn Hà Nội)** — Yếu nhất:
+- MA200 Score **-20.07%** — điều chỉnh sâu nhất trong ngành
+- Tất cả MA Scores đều âm
+- Tín hiệu VPA: **Markdown** — đang trong xu hướng giảm
 
 ---
 
-### 🏭 NGÀNH 4: CÔNG NGHIỆP & XÂY DỰNG — TRUNG TÍNH
+### 💻 D. NGÀNH CÔNG NGHỆ — ĐIỀU CHỈNH
 
-#### Bảng xếp hạng mã tiêu biểu
+**Chỉ số VNMITECH:** MA20 **-0.61%** | MA50 **-0.48%** | MA200 **-3.85%**
 
-| Hạng | Mã | Giá | MA20 | MA50 | MA100 | MA200 | Vai trò |
-|------|-----|-----|------|------|-------|-------|---------|
-| 🥇 | **CTD** | 88,000 | +9.02% | +10.37% | +14.62% | +15.83% | ⭐⭐⭐⭐ Leader |
-| 🥈 | **HSG** | 12,550 | +4.33% | +7.08% | +4.18% | -3.98% | ⭐⭐⭐ Tăng |
-| 🥉 | **HPG** | 27,700 | -0.42% | +1.15% | +2.30% | +1.63% | ⭐⭐ Middle |
-| 4 | **GMD** | 75,500 | +2.35% | -0.50% | +8.17% | +12.50% | ⭐⭐⭐ Tăng |
-| 5 | **DXP** | 14,900 | +6.73% | +13.03% | +21.97% | +28.73% | ⭐⭐⭐⭐ Leader |
-| 6 | **DXS** | 7,870 | +6.18% | +13.19% | +1.52% | -18.50% | ⭐⭐ Tăng |
-| 7 | **CII** | 19,350 | +2.56% | +8.83% | -0.26% | -7.65% | ⭐⭐ Tăng |
-| 8 | **DRI** | 14,100 | +7.88% | +7.19% | +8.77% | +12.12% | ⭐⭐⭐ Tăng |
-| 9 | **ASM** | 6,020 | +4.80% | +3.76% | -2.03% | -11.15% | ⭐⭐ Tăng |
-| 10 | **FCN** | 13,350 | -0.58% | +2.72% | -3.85% | -11.10% | ⭐ Lagging |
+Ngành công nghệ đang trong **giai đoạn điều chỉnh** với tất cả MA Scores đều âm. Đây là ngành yếu thứ hai trong thị trường, chỉ hơn ngành Y tế.
 
----
+#### Bảng xếp hạng 10 mã Công nghệ đại diện
 
-### 💻 NGÀNH 5: CÔNG NGHỆ — ĐIỀU CHỈNH
+| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Tín hiệu VPA |
+|------|-----|-----|------|------|------|-------|-------|-------------|
+| 🥇 | **VNZ** | 331,000 | +3.41% | **+4.25%** | **+1.34%** | -4.22% | -10.04% | 🟢 Mạnh nhất |
+| 🥈 | **FOX** | 81,000 | -1.05% | **-0.85%** | **+1.54%** | +5.36% | **+13.10%** | 🟢 Xu hướng dài hạn tốt |
+| 🥉 | **SAM** | 6,760 | -0.71% | **-1.59%** | **+0.30%** | -3.78% | -9.56% | 🟡 Trung lập |
+| 4 | **SGT** | 15,400 | +0.29% | **-0.10%** | **-1.16%** | -2.69% | -7.15% | 🟡 Đình trệ |
+| 5 | **ICT** | 17,800 | -0.06% | **-0.10%** | **-0.11%** | -2.60% | +1.48% | 🟡 Đình trệ |
+| 6 | **FPT** | 73,700 | -1.47% | **-2.19%** | **-7.11%** | -16.98% | -21.95% | 🔴 Điều chỉnh sâu |
+| 7 | **CMG** | 27,850 | -1.42% | **-2.37%** | **-7.27%** | -13.07% | -18.65% | 🔴 Yếu |
+| 8 | **ELC** | 17,500 | -1.30% | **-2.17%** | **-5.51%** | -17.24% | -17.94% | 🔴 Yếu |
+| 9 | **VTK** | 49,300 | -2.30% | **-3.19%** | **-3.78%** | -6.73% | -7.02% | 🔴 Yếu |
+| 10 | **MFS** | 34,900 | -0.46% | **-1.26%** | **-3.03%** | -6.58% | -10.16% | 🔴 Yếu |
 
-#### Bảng xếp hạng mã Công nghệ
+**Phân tích chi tiết:**
 
-| Hạng | Mã | Giá | MA20 | MA50 | MA100 | MA200 | Vai trò |
-|------|-----|-----|------|------|-------|-------|---------|
-| 🥇 | **FOX** | 80,500 | -1.43% | +0.93% | +4.72% | +12.41% | ⭐⭐⭐ Leader |
-| 🥈 | **FPT** | 74,500 | -1.18% | -6.12% | -16.09% | -21.11% | ⭐ Lagging |
-| 🥉 | **CMG** | 28,050 | -1.71% | -6.62% | -12.45% | -18.07% | ⭐ Lagging |
-| 4 | **ELC** | 17,500 | -2.17% | -5.51% | -17.24% | -17.94% | ❌ Weak |
-| 5 | **SAM** | 6,760 | -0.71% | +0.30% | -3.78% | -9.56% | ⭐ Lagging |
-| 6 | **SGT** | 15,400 | -0.10% | -1.16% | -2.69% | -7.15% | ⭐ Lagging |
-| 7 | **VNZ** | 332,000 | +4.54% | +1.64% | -3.93% | -9.77% | ⭐⭐ Tăng |
-| 8 | **VTE** | 7,400 | +3.06% | +6.87% | +2.99% | +24.96% | ⭐⭐⭐ Tăng |
+**VNZ (VNG)** — Ngôi sáng duy nhất:
+- MA20 Score **+4.25%** — mã duy nhất có MA20 dương trong ngành
+- Giá **331,000** tăng **6.43%** trong phiên — breakout mạnh
+- Tín hiệu VPA: **Bounce** — đang phục hồi từ vùng hỗ trợ
 
----
+**FOX (FPT Telecom)** — Xu hướng dài hạn tốt:
+- MA200 Score **+13.10%** — xu hướng dài hạn vẫn tích cực
+- MA50 Score **+1.54%** — momentum trung hạn đang phục hồi
+- Tín hiệu VPA: **Test** — đang kiểm tra lại vùng hỗ trợ
 
-### 🛒 NGÀNH 6: BÁN LẺ & TIÊU DÙNG — PHÂN HÓA
-
-#### Bảng xếp hạng mã tiêu biểu
-
-| Hạng | Mã | Giá | MA20 | MA50 | MA100 | MA200 | Vai trò |
-|------|-----|-----|------|------|-------|-------|---------|
-| 🥇 | **MWG** | 83,700 | +1.26% | -0.16% | -1.63% | +3.62% | ⭐⭐⭐ Leader |
-| 🥈 | **FRT** | 148,000 | -1.32% | -4.52% | -3.90% | +0.34% | ⭐⭐ Middle |
-| 🥉 | **DGW** | 43,300 | -3.46% | -4.93% | -3.51% | -1.09% | ⭐ Lagging |
-| 4 | **PET** | 46,850 | -1.86% | +7.67% | +22.02% | +34.28% | ⭐⭐⭐⭐ Leader |
-| 5 | **MSN** | 76,700 | -0.96% | +0.90% | -0.52% | -2.46% | ⭐⭐ Middle |
-| 6 | **VNM** | 60,800 | -1.11% | -3.29% | -5.33% | -1.24% | ⭐ Lagging |
-| 7 | **MCH** | 137,800 | -1.56% | -4.59% | -11.95% | +2.25% | ⭐ Lagging |
-| 8 | **SAB** | 47,600 | +3.98% | +4.31% | +0.55% | +3.36% | ⭐⭐⭐ Tăng |
-| 9 | **PAN** | 32,000 | +0.59% | +0.90% | +6.23% | +3.81% | ⭐⭐ Tăng |
-| 10 | **VHC** | 62,300 | +2.53% | +3.50% | +5.06% | +7.49% | ⭐⭐⭐ Tăng |
+**FPT** — Điều chỉnh sâu nhất:
+- MA200 Score **-21.95%** — điều chỉnh sâu nhất trong ngành
+- MA100 Score **-16.98%** — xu hướng dài hạn rất yếu
+- Tín hiệu VPA: **Markdown** — đang trong xu hướng giảm, cần thời gian phục hồi
 
 ---
 
-## 🔄 PHẦN III: QUAN SÁT LUÂN CHUYỂN LIÊN NGÀNH
+### 🍺 E. NGÀNH THỰC PHẨM — PHÂN HÓA MẠNH
 
-### 3.1. Mô hình luân chuyển dòng tiền
+Ngành thực phẩm đang trong **giai đoạn phân hóa mạnh** với SAB dẫn đầu trong khi KDC sụp đổ.
+
+#### Bảng xếp hạng 8 mã Thực phẩm đại diện
+
+| Hạng | Mã | Giá | MA10 | MA20 | MA50 | MA100 | MA200 | Tín hiệu VPA |
+|------|-----|-----|------|------|------|-------|-------|-------------|
+| 🥇 | **SAB** | 47,350 | +1.72% | **+3.46%** | **+3.77%** | +0.03% | +2.82% | 🟢 Tăng mạnh |
+| 🥈 | **VHC** | 61,700 | -0.40% | **+1.59%** | **+2.52%** | +4.06% | +6.46% | 🟢 Tăng ổn định |
+| 🥉 | **MSN** | 76,800 | -1.75% | **-0.84%** | **+1.03%** | -0.39% | -2.33% | 🟡 Phục hồi |
+| 4 | **BAF** | 35,900 | -1.37% | **+0.27%** | **+0.09%** | -1.07% | +2.31% | 🟡 Trung lập dương |
+| 5 | **VNM** | 60,900 | -0.77% | **-0.95%** | **-3.13%** | -5.17% | -1.08% | 🟡 Điều chỉnh nhẹ |
+| 6 | **ANV** | 23,950 | -2.48% | **-1.78%** | **-2.36%** | -7.17% | -9.51% | 🔴 Yếu |
+| 7 | **MCH** | 136,500 | -2.15% | **-2.45%** | **-5.48%** | -12.77% | +1.29% | 🔴 Điều chỉnh |
+| 8 | **KDC** | 45,950 | -0.51% | **-3.08%** | **-6.76%** | -8.14% | -10.00% | 🔴 Yếu nhất |
+
+**Phân tích chi tiết:**
+
+**SAB (Sài Gòn Bia)** — Dẫn đầu ngành:
+- MA20 Score **+3.46%**, MA50 Score **+3.77%** — momentum tăng rõ rệt
+- Giá **47,350** đang trong giai đoạn markup
+- Tín hiệu VPA: **Markup** — xu hướng tăng đang được duy trì
+
+**VHC (Vĩnh Hoàn)** — Tăng ổn định:
+- MA200 Score **+6.46%** — xu hướng dài hạn tích cực
+- MA100 Score **+4.06%** — momentum dài hạn ổn định
+- Tín hiệu VPA: **Steady uptrend** — xu hướng tăng ổn định
+
+**KDC (KIDO)** — Yếu nhất:
+- MA20 Score **-3.08%**, MA50 Score **-6.76%**, MA200 Score **-10.00%**
+- Giá sụp đổ từ vùng **48,600** xuống **41,600**
+- Tín hiệu VPA: **SOW** — áp lực bán mạnh
+
+---
+
+## III. QUAN SÁT LUÂN CHUYỂN LIÊN NGÀNH
+
+### 1. Mô hình luân chuyển dòng tiền
 
 ```
-╔══════════════════════════════════════════════════════════════════╗
-║                    LUÂN CHUYỂN DÒNG TIỀN                       ║
-╠══════════════════════════════════════════════════════════════════╣
-║                                                                  ║
-║  BẤT ĐỘNG SẢN (VNREAL)     ◄◄◄◄◄  Dòng tiền MẠNH NHẤT         ║
-║  MA200: +46.05%                                                 ║
-║                                                                  ║
-║  NGÂN HÀNG (VNFIN)         ◄◄◄  Dòng tiền PHỤC HỒI             ║
-║  MA50: +1.17%                                                   ║
-║                                                                  ║
-║  CÔNG NGHIỆP (VNIND)       ◄◄  Dòng tiền TRUNG TÍNH            ║
-║  MA50: +1.33%                                                   ║
-║                                                                  ║
-║  TIÊU DÙNG (VNCONS)        ◄  Dòng tiền YẾU                   ║
-║  MA20: -0.60%                                                   ║
-║                                                                  ║
-║  CÔNG NGHỆ (VNMITECH)      ►  Dòng tiền RÚT NHẸ               ║
-║  MA200: -3.73%                                                  ║
-║                                                                  ║
-║  NĂNG LƯỢNG (VNENE)        ►►  Dòng tiền RÚT MẠNH             ║
-║  MA50: -10.20%                                                  ║
-║                                                                  ║
-║  Y TẾ (VNHEAL)             ►►►  Dòng tiền RÚT MẠNH NHẤT       ║
-║  MA20: -4.68%                                                   ║
-║                                                                  ║
-║  CỔ TỨC (VNDIVIDEND)       ►►►  Dòng tiền RÚT MẠNH            ║
-║  MA50: -6.79%                                                   ║
-║                                                                  ║
-╚══════════════════════════════════════════════════════════════════╝
+┌─────────────────────────────────────────────────────────────────┐
+│                    DÒNG TIỀN THÔNG MINH                         │
+│                                                                 │
+│   GIAI ĐOẠN 1: BẤT ĐỘNG SẢN (VNREAL)                           │
+│   MA20: +13.32% | MA50: +25.61% | MA200: +46.24%              │
+│   ████████████████████████████████████████ MARKUP MẠNH         │
+│   Leaders: VRE, VIC, VHM, NVL                                  │
+│   → Dòng tiền đang chảy mạnh, bắt đầu chốt lời một phần       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│   GIAI ĐOẠN 2: NGÂN HÀNG (VNFIN)                               │
+│   MA20: +0.02% | MA50: +0.58% | MA200: -2.40%                 │
+│   ████████████████████░░░░░░░░░░░░░░░░░░ TÍCH LŨY             │
+│   Leaders: NAB, KLB, TCB, STB                                  │
+│   → Dòng tiền bắt đầu quan tâm, tích lũy trước breakout       │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│   GIAI ĐOẠN 3: CHỨNG KHOÁN & THỰC PHẨM                        │
+│   Chứng khoán: MA20 -1.60% (SSI) — Điều chỉnh sâu            │
+│   Thực phẩm: MA20 +3.46% (SAB) — Phân hóa                     │
+│   → Chứng khoán chờ phục hồi, Thực phẩm chọn lọc             │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│   GIAI ĐOẠN 4: CÔNG NGHỆ & Y TẾ (TRÁNH)                        │
+│   Công nghệ: MA20 -0.61% — Đang điều chỉnh                    │
+│   Y tế: MA20 -4.64% — Yếu nhất                                 │
+│   → Chưa có tín hiệu mua, cần thời gian phục hồi              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2. Phân tích theo chu kỳ Wyckoff liên ngành
+### 2. Phân tích giai đoạn Wyckoff từng ngành
 
-| Giai đoạn | Ngành | Tín hiệu |
-|-----------|-------|----------|
-| **Markup (Tăng giá)** | Bất động sản | SOS mạnh, volume xác nhận |
-| **Markup (Tăng giá)** | Ngân hàng | SPRING thành công, bắt đầu Markup |
-| **Accumulation (Tích lũy)** | Công nghiệp | Test lại đáy, chuẩn bị breakout |
-| **Distribution (Phân phối)** | Năng lượng | UT xuất hiện, dòng tiền rút |
-| **Markdown (Giảm giá)** | Y tế | SOW rõ rệt, xu hướng giảm |
-| **Markdown (Giảm giá)** | Cổ tức | SOW mạnh, không có hỗ trợ |
+| Ngành | Giai đoạn Wyckoff | Mô tả | Cơ hội/Rủi ro |
+|-------|-------------------|-------|---------------|
+| **Bất đng sản** | Markup → Potential Top | Đã tăng mạnh, bắt đầu có áp lực chốt lời | ⚠️ Rủi ro chốt lời tăng |
+| **Ngân hàng** | Accumulation | Dòng tiền đang tích lũy, chờ breakout | 🟢 Cơ hội tốt |
+| **Chứng khoán** | Accumulation/Test | Điều chỉnh sau đợt tăng, tích lũy lại | 🟡 Chờ xác nhận |
+| **Thực phẩm** | Markup/Distribution | Phân hóa — SAB markup, KDC distribution | 🟡 Chọn lọc |
+| **Công nghệ** | Markdown | Đang trong xu hướng giảm, chờ tích lũy | 🔴 Tránh |
+| **Y tế** | Markdown | Yếu nhất, chưa có tín hiệu dừng | 🔴 Tránh |
 
-### 3.3. Tương quan với thị trường quốc tế
+### 3. Ma trận luân chuyển dòng tiền
 
-| Chỉ số | Giá | MA20 | MA50 | MA200 | Xu hướng |
-|--------|-----|------|------|-------|----------|
-| **S&P 500** | 7,230.12 | +3.16% | +5.98% | +7.46% | ✅ Tăng |
-| **NASDAQ 100** | 27,710.36 | +5.62% | +10.05% | +11.63% | ✅ Tăng mạnh |
-| **Dow Jones** | 49,499.27 | +1.70% | +3.42% | +4.85% | ✅ Tăng |
-| **Nikkei 225** | 59,513.12 | +3.01% | +6.28% | +19.65% | ✅ Tăng mạnh |
-| **Hang Seng** | 26,216.39 | +1.14% | +2.21% | +1.05% | ✅ Tăng nhẹ |
-| **FTSE 100** | 10,363.90 | -1.13% | -0.46% | +5.51% | ⚠️ Điều chỉnh |
-| **VIX** | 16.99 | -11.66% | -23.62% | -7.05% | ✅ Giảm (tích cực) |
-
-**Nhận định:** Thị trường toàn cầu đang trong xu hướng tăng, VIX giảm mạnh — môi trường thuận lợi cho dòng tiền chảy vào thị trường mới nổi như Việt Nam. Nikkei 225 dẫn đầu khu vực với MA200 +19.65%.
-
----
-
-## 🏆 PHẦN IV: BẢNG XẾP HẠNG CỔ PHIẾU ĐA NGÀNH THỐNG NHẤT
-
-### 4.1. Top 20 mã dẫn đầu thị trường (theo MA Score tổng hợp)
-
-| Hạng | Mã | Ngành | MA10 | MA20 | MA50 | MA100 | MA200 | Điểm |
-|------|-----|-------|------|------|------|-------|-------|------|
-| 🥇 | **VIC** | BĐS | +2.72% | +17.77% | +31.36% | +34.56% | +76.75% | 165 |
-| 🥈 | **VHM** | BĐS | -0.03% | +8.50% | +27.10% | +28.03% | +35.79% | 99 |
-| 🥉 | **VRE** | BĐS | +11.61% | +17.21% | +21.98% | +13.40% | +8.84% | 73 |
-| 4 | **NVL** | BĐS | +2.47% | +10.74% | +31.82% | +37.87% | +28.85% | 112 |
-| 5 | **LPB** | Ngân hàng | +1.81% | +1.71% | +8.05% | +9.35% | +7.41% | 28 |
-| 6 | **STB** | Ngân hàng | +2.33% | +3.74% | +4.89% | +12.20% | +18.65% | 42 |
-| 7 | **TCB** | Ngân hàng | +1.46% | +5.37% | +5.38% | +0.79% | -3.60% | 9 |
-| 8 | **CTD** | Xây dựng | +5.16% | +9.02% | +10.37% | +14.62% | +15.83% | 55 |
-| 9 | **DXP** | Xây dựng | +5.37% | +6.73% | +13.03% | +21.97% | +28.73% | 76 |
-| 10 | **HCM** | Chứng khoán | -0.28% | +3.39% | +12.45% | +14.62% | +10.23% | 40 |
-| 11 | **TCI** | Chứng khoán | +0.48% | +3.08% | +12.65% | +12.83% | +6.36% | 35 |
-| 12 | **PET** | Dầu khí | -0.37% | -1.86% | +7.67% | +22.02% | +34.28% | 62 |
-| 13 | **BMS** | Chứng khoán | +1.32% | +3.00% | +8.04% | +12.81% | +13.15% | 38 |
-| 14 | **HSG** | Công nghiệp | +1.96% | +4.33% | +7.08% | +4.18% | -3.98% | 14 |
-| 15 | **DRI** | Công nghiệp | +5.70% | +7.88% | +7.19% | +8.77% | +12.12% | 42 |
-| 16 | **VHC** | Thực phẩm | +0.47% | +2.53% | +3.50% | +5.06% | +7.49% | 19 |
-| 17 | **SAB** | Thực phẩm | +2.20% | +3.98% | +4.31% | +0.55% | +3.36% | 14 |
-| 18 | **GMD** | Dịch vụ | +1.36% | +2.35% | -0.50% | +8.17% | +12.50% | 24 |
-| 19 | **HDB** | Ngân hàng | -0.24% | +1.06% | +1.36% | -0.70% | +5.90% | 8 |
-| 20 | **MWG** | Bán lẻ | -1.39% | +1.26% | -0.16% | -1.63% | +3.62% | 2 |
-
-### 4.2. Top 15 mã yếu nhất (cần tránh)
-
-| Hạng | Mã | Ngành | MA10 | MA20 | MA50 | MA100 | MA200 | Đánh giá |
-|------|-----|-------|------|------|------|-------|-------|----------|
-| 1 | **CTS** | Chứng khoán | -0.80% | -2.80% | -5.61% | -13.25% | -23.67% | ❌ |
-| 2 | **EVS** | Chứng khoán | -3.97% | -6.98% | -9.95% | -16.30% | -26.52% | ❌ |
-| 3 | **SCR** | BĐS | -1.11% | -1.76% | -1.41% | -10.72% | -23.07% | ❌ |
-| 4 | **AGG** | BĐS | -0.16% | -0.73% | -4.09% | -9.37% | -21.90% | ❌ |
-| 5 | **BVS** | Chứng khoán | -1.99% | -3.90% | -7.00% | -11.65% | -21.33% | ❌ |
-| 6 | **SHS** | Chứng khoán | -2.19% | -2.91% | -2.25% | -9.25% | -19.60% | ❌ |
-| 7 | **FTS** | Chứng khoán | -1.44% | -3.63% | -6.43% | -13.58% | -22.14% | ❌ |
-| 8 | **VND** | Chứng khoán | -0.55% | -0.67% | -2.78% | -9.17% | -18.07% | ❌ |
-| 9 | **MBS** | Chứng khoán | -1.71% | -3.30% | -3.78% | -6.72% | -15.78% | ❌ |
-| 10 | **HDC** | BĐS | +2.78% | +2.91% | +2.44% | -7.61% | -25.18% | ❌ |
-| 11 | **KDH** | BĐS | -1.93% | -2.31% | -3.61% | -10.65% | -17.75% | ❌ |
-| 12 | **PDR** | BĐS | +1.32% | +1.32% | +2.73% | -5.80% | -17.80% | ❌ |
-| 13 | **HDG** | BĐS | -3.70% | -6.10% | -6.44% | -5.33% | -10.42% | ❌ |
-| 14 | **ACB** | Ngân hàng | -1.23% | -1.44% | -1.24% | -2.47% | -5.24% | ⚠️ |
-| 15 | **BID** | Ngân hàng | +0.72% | +1.18% | -2.33% | -5.64% | -0.98% | ⚠️ |
+```
+                    Mạnh ◄────────────────────────────► Yếu
+                    
+BĐS     ████████████████████████████████████░░░░  (Đỉnh chu kỳ)
+Ngân hàng ██████████████████████░░░░░░░░░░░░░░  (Tích lũy)
+Chứng khoán ████████████████░░░░░░░░░░░░░░░░░░  (Điều chỉnh)
+Thực phẩm ████████████████████░░░░░░░░░░░░░░░░  (Phân hóa)
+Công nghệ ████████████░░░░░░░░░░░░░░░░░░░░░░░░  (Yếu)
+Y tế      ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░  (Yếu nhất)
+```
 
 ---
 
-## 📋 PHẦN V: KHUYẾN NGHỊ CHIẾN LƯỢC
+## IV. BẢNG XẾP HẠNG CỔ PHIẾU ĐA NGÀNH THỐNG NHẤT
 
-### 5.1. Khuyến nghị theo khung thời gian
+### Top 20 mã nên theo dõi (Leaders)
 
-#### Ngắn hạn (1-4 tuần)
+| Hạng | Mã | Ngành | MA20 | MA50 | MA200 | Xu hướng | Tín hiệu |
+|------|-----|-------|------|------|-------|----------|----------|
+| 🥇 | **VIC** | BĐS | +18.77% | +32.52% | +78.33% | 🟢🟢 | Xu hướng dài hạn tốt nhất |
+| 🥈 | **VRE** | BĐS | +17.37% | +22.15% | +9.00% | 🟢🟢 | Breakout mạnh nhất |
+| 🥉 | **VHM** | BĐS | +6.24% | +24.37% | +32.82% | 🟢 | Phục hồi mạnh |
+| 4 | **NVL** | BĐS | +10.74% | +31.82% | +28.85% | 🟢 | Tăng mạnh |
+| 5 | **GVR** | Cao su | +9.60% | +4.43% | +16.42% | 🟢 | Bùng nổ |
+| 6 | **NRC** | BĐS | +10.75% | +15.00% | +12.99% | 🟢 | Hồi phục |
+| 7 | **NAB** | NH | +5.38% | +6.76% | -0.94% | 🟢 | Tăng mạnh nhất NH |
+| 8 | **KLB** | NH | +4.17% | +6.25% | -0.81% | 🟢 | Tăng mạnh |
+| 9 | **TCB** | NH | +4.93% | +4.92% | -4.02% | 🟢 | Đồng bộ mạnh |
+| 10 | **SAB** | TP | +3.46% | +3.77% | +2.82% | 🟢 | Breakout |
+| 11 | **VNZ** | CN | +4.25% | +1.34% | -10.04% | 🟢 | Mạnh nhất CN |
+| 12 | **TCI** | CK | +3.54% | +13.17% | +6.87% | 🟢 | Tăng mạnh |
+| 13 | **HCM** | CK | +1.39% | +10.20% | +7.99% | 🟢 | Dẫn đầu CK |
+| 14 | **VHC** | TP | +1.59% | +2.52% | +6.46% | 🟢 | Tăng ổn định |
+| 15 | **STB** | NH | +1.85% | +2.91% | +16.38% | 🟢 | Xu hướng dài tốt |
+| 16 | **FOX** | CN | -0.85% | +1.54% | +13.10% | 🟡 | Phục hồi |
+| 17 | **CTG** | NH | +1.63% | +0.37% | +0.76% | 🟡 | Tích lũy |
+| 18 | **HDB** | NH | +1.06% | +1.36% | +5.90% | 🟡 | Tích lũy dương |
+| 19 | **VCB** | NH | +1.90% | +0.53% | -2.10% | 🟡 | Breakout KL |
+| 20 | **MSN** | TP | -0.84% | +1.03% | -2.33% | 🟡 | Phục hồi |
 
-| Hành động | Mã | Lý do |
-|-----------|-----|-------|
-| ✅ **MUA** | VIC, VHM, VRE | Dẫn đầu ngành BĐS, xu hướng tăng mạnh |
-| ✅ **MUA** | LPB, TCB, STB | Dẫn đầu ngành Ngân hàng, cấu trúc kỹ thuật tốt |
-| ✅ **MUA** | CTD, DXP | Dẫn đầu nhóm Công nghiệp/Xây dựng |
-| ✅ **MUA** | HCM, TCI | Dẫn đầu ngành Chứng khoán |
-| ⏸️ **CHỜ** | VCB, VPB, MBB | Cần thêm tín hiệu xác nhận |
-| ❌ **TRÁNH** | AGG, VND, MBS, SHS, CTS | Xu hướng giảm rõ rệt |
+### Top 10 mã nên tránh (Lagging)
 
-#### Trung hạn (1-3 tháng)
+| Hạng | Mã | Ngành | MA20 | MA50 | MA200 | Lý do |
+|------|-----|-------|------|------|-------|-------|
+| 1 | **SHB** | NH | -4.28% | -4.38% | -7.57% | Phân phối lớn, KL 62 triệu |
+| 2 | **CTS** | CK | -3.32% | -6.13% | -24.10% | Điều chỉnh sâu |
+| 3 | **HSS** | CK | -3.46% | -2.82% | -20.07% | Yếu |
+| 4 | **VTK** | CN | -3.19% | -3.78% | -7.02% | Yếu |
+| 5 | **KDH** | BĐS | -3.04% | -4.36% | -18.40% | Yếu nhất BĐS |
+| 6 | **ACB** | NH | -2.24% | -2.07% | -6.05% | Phân phối |
+| 7 | **VCI** | CK | -3.86% | -3.40% | -7.23% | Điều chỉnh sâu |
+| 8 | **MBS** | CK | -3.77% | -4.26% | -16.21% | Yếu |
+| 9 | **FPT** | CN | -2.19% | -7.11% | -21.95% | Điều chỉnh sâu nhất CN |
+| 10 | **KDC** | TP | -3.08% | -6.76% | -10.00% | Sụp đổ |
 
-| Chiến lược | Ngành ưu tiên | Mã tiêu biểu |
-|------------|---------------|--------------|
-| **Tích lũy** | Bất động sản | VIC, VHM, VRE, NVL |
-| **Tích lũy** | Ngân hàng | TCB, LPB, STB, HDB |
-| **Chờ đợi** | Công nghiệp | CTD, DXP, HSG, GMD |
-| **Tránh** | Y tế, Năng lượng, Cổ tức | IMP, DVN, PLC |
+---
 
-#### Dài hạn (3-12 tháng)
+## V. KHUYẾN NGHỊ CHIẾN LƯỢC
 
-- Thị trường Việt Nam đang trong **xu hướng tăng dài hạn** (VNINDEX MA200 +8.96%)
-- Các mã dẫn đầu ngành sẽ tiếp tục outperform
-- Chiến lược **buy and hold** cho nhóm leaders
-- **DCA (Dollar Cost Averaging)** cho nhóm phục hồi
+### 1. Chiến lược theo ngành
 
-### 5.2. Quản lý rủi ro
+| Ngành | Chiến lược | Mã ưu tiên | Mã tránh |
+|-------|-----------|------------|----------|
+| **Bất động sản** | Nắm giữ, chốt lời từng phần | VIC, VRE, VHM | KDH |
+| **Ngân hàng** | Tích lũy giai đoạn tích lũy | NAB, KLB, TCB, STB | SHB, ACB |
+| **Chứng khoán** | Chờ xác nhận phục hồi | HCM, TCI | HSS, CTS |
+| **Thực phẩm** | Chọn lọc, mua mạnh | SAB, VHC | KDC |
+| **Công nghệ** | Tránh | VNZ (theo dõi) | FPT, CMG |
+| **Y tế** | Tránh | — | Tất cả |
 
-| Rủi ro | Mức độ | Biện pháp |
-|--------|--------|-----------|
-| Khối lượng giảm mạnh | Trung bình | Theo dõi volume, cắt lỗ nếu giảm >5% |
-| NVL điều chỉnh mạnh | Cao | Theo dõi tín hiệu exhaustion |
-| VIX tăng đột biến | Thấp | VIX đang ở mức thấp, ít khả năng tăng mạnh |
-| USD/VND biến động | Thấp | Tỷ giá ổn định ở 26,355 |
-| Chính sách thay đổi | Trung bình | Theo dõi tin tức kinh tế vĩ mô |
+### 2. Phân bổ vốn đề xuất
 
-### 5.3. Tỷ lệ danh mục đề xuất
+```
+┌─────────────────────────────────────────────────────────────┐
+│              PHÂN BỔ VỐN ĐỀ XUẤT                           │
+├─────────────────────────────────────────────────────────────┤
+│  Bất động sản:  ████████████████████  35% (Nắm giữ)        │
+│  Ngân hàng:     ██████████████████    30% (Tích lũy)       │
+│  Thực phẩm:     ██████████            15% (Chọn lọc)       │
+│  Chứng khoán:   ████████              10% (Chờ xác nhận)   │
+│  Tiền mặt:      ████████              10% (Phòng thủ)      │
+└─────────────────────────────────────────────────────────────┘
+```
 
-| Nhóm | Tỷ lệ | Mã tiêu biểu |
-|------|-------|--------------|
-| **Bất động sản** | 35% | VIC, VHM, VRE |
-| **Ngân hàng** | 25% | TCB, LPB, STB |
-| **Công nghiệp/Dịch vụ** | 15% | CTD, DXP, GMD |
-| **Chứng khoán** | 10% | HCM, TCI, BMS |
-| **Tiêu dùng** | 10% | MWG, PET, VHC |
-| **Tiền mặt** | 5% | — |
+### 3. Điểm mua/điều chỉnh
+
+| Mã | Vùng mua tiềm năng | Vùng cắt lỗ | Mục tiêu |
+|----|-------------------|-------------|----------|
+| **VIC** | 195,000-200,000 | 185,000 | 230,000 |
+| **VRE** | 31,000-32,000 | 29,500 | 36,000 |
+| **NAB** | 13,500-13,800 | 13,000 | 15,500 |
+| **KLB** | 14,000-14,200 | 13,500 | 16,000 |
+| **TCB** | 32,000-32,500 | 31,000 | 36,000 |
+| **SAB** | 45,000-46,000 | 44,000 | 50,000 |
+
+---
+
+## VI. RỦI RO CHÍNH
+
+| Rủi ro | Mức độ | Mô tả | Biện pháp |
+|--------|--------|--------|-----------|
+| Điều chỉnh kỹ thuật | **Trung bình** | Nhiều mã đã tăng +30-60% trong 3 tuần, có áp lực chốt lời | Chốt lời từng phần, đặt cắt lỗ |
+| Phân hóa ngành | **Cao** | Chỉ nên chọn mạnh, tránh mua mã lagging bằng cảm xúc | Tuỳ chọn nghiêm ngặt |
+| Thanh khoản | **Thấp-Trung bình** | Khối lượng đang giảm trong phiên điều chỉnh | Theo dõi khối lượng |
+| Vĩ mô | **Thấp** | Lãi suất giảm, chính sách hỗ trợ | Tích cực |
+| Rủi ro từ FPT | **Trung bình** | Mã CN lớn nhất điều chỉnh sâu, ảnh hưởng tâm lý | Tránh cho đến khi có tín hiệu đảo chiều |
+
+---
+
+## VII. KẾT LUẬN
+
+Thị trường chứng khoán Việt Nam đang trong **giai đoạn tăng mạnh** với:
+- **VNINDEX** MA200 +8.87% — xu hướng tăng dài hạn rõ ràng
+- **Bất động sản** là ngành dẫn đầu tuyệt đối (VNREAL MA200 +46.24%)
+- **Ngân hàng** đang tích lũy, sẵn sàng cho đợt tăng tiếp theo
+- **Công nghệ và Y tế** đang yếu, cần thời gian phục hồi
+
+**Nguyên tắc vàng:** Mua mạnh, tránh yếu. Chỉ can thiệp vào các mã có MA20 Score > 3% và MA50 Score dương.
 
 ---
 
 ## ⚠️ TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM
 
-Tất cả phân tích và thông tin được cung cấp bởi **AIPriceAction Investment Advisor** chỉ nhằm mục đích thông tin và giáo dục. Đây **KHÔNG PHẢI** lời khuyên đầu tư hoặc khuyến nghị mua, bán hoặc nắm giữ bất kỳ chứng khoán nào.
+Tất cả phân tích và thông tin được cung cấp bởi **AIPriceAction** chỉ nhằm mục đích **thông tin và giáo dục**. Đây **KHÔNG PHẢI** lời khuyên đầu tư hoặc khuyến nghị mua, bán hoặc nắm giữ bất kỳ chứng khoán nào.
 
-**Các điểm quan trọng:**
-
-- 📉 Đầu tư vào cổ phiếu có nguy cơ mất vốn đáng kể
-- 📊 Hiệu suất quá khứ không đảm bảo kết quả tương lai
-- 🔍 Bạn nên tự nghiên cứu và thẩm định kỹ lưỡng
-- 👨‍💼 Cân nhắc tham khảo ý kiến cố vấn tài chính có trình độ trước khi đưa ra quyết định đầu tư
-- ⚖️ AIPriceAction và các cộng tác viên không chịu trách nhiệm cho bất kỳ tổn thất đầu tư nào
-- 🔄 Điều kiện thị trường có thể thay đổi nhanh chóng và không lường trước
-- 💰 Luôn chỉ đầu tư số tiền bạn có thể chấp nhận mất
-
----
-
-**Website:** https://aipriceaction.com/
-
-**© 2026 AIPriceAction Investment Advisor. Bảo lưu mọi quyền.**
+**Các điểm chính:**
+- Đầu tư vào cổ phiếu có nguy cơ mất vốn đáng kể
+- Hiệu suất quá khứ không đảm bảo kết quả tương lai
+- Bạn nên tự nghiên cứu và thẩm định kỹ lưỡng
+- Cân nhắc tham khảo ý kiến cố vấn tài chính có trình độ trước khi đưa ra quyết định đầu tư
+- AIPriceAction và các cộng tác viên không chịu trách nhiệm cho bất kỳ tổn thất đầu tư nào
+- Điều kiện thị trường có thể thay đổi nhanh chóng và không lường trước
+- **Luôn chỉ đầu tư số tiền bạn có thể chấp nhận mất**
 
 ---
 
-[4] Done in 1170.3s | Checkpoint: /var/folders/hd/20zqmjkj7cd0wm4rv2230bm00000gn/T/aipriceaction-checkpoints/019df168-d9ec-7559-5d6e-4b3c2a23d485
+*Phân tích được thực hiện bởi **AIPriceAction Investment Advisor** — https://aipriceaction.com/*
+
+---
+
+[4] Done in 1141.1s | Checkpoint: /var/folders/hd/20zqmjkj7cd0wm4rv2230bm00000gn/T/aipriceaction-checkpoints/019df206-bcdd-ffe2-d0b4-625ec6dea19b
