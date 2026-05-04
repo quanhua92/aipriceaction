@@ -559,9 +559,8 @@ def build_graph(checkpointer=None):
 def main(resume_id: str | None = None):
     started_at = time.time()
 
-    print("---")
+    print("<!-- AIPriceAction Multi-Agent Research -->")
     print()
-    print(f"  AIPriceAction Multi-Agent Research")
     print(f"  Model:    {settings.openai_model}")
     print(f"  Base URL: {settings.openai_base_url}")
     print(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
