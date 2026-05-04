@@ -23,8 +23,11 @@ from __future__ import annotations
 
 import json
 import operator
+import tempfile
 import time
-from typing import Annotated
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Annotated, Any
 
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -35,6 +38,7 @@ from langgraph.types import Send
 from typing_extensions import TypedDict
 
 from aipriceaction import AIPriceAction, AIContextBuilder
+from aipriceaction.checkpoint import PersistentCheckpointSaver, PostPutCallback
 from aipriceaction.settings import settings
 from aipriceaction.system import get_system_prompt
 
@@ -132,15 +136,19 @@ You are a sector analyst for the Vietnamese stock market.
 ## Instructions
 {instruction}
 
-## Research Workflow (MANDATORY)
-The market snapshot only shows the latest bar. You MUST fetch historical data
-using tools to perform proper analysis. Do NOT analyze the snapshot alone.
+## Research Workflow — TOOL CALLS ARE MANDATORY
+You MUST call tools before producing any analysis. The market snapshot alone
+is insufficient — it only shows the latest bar. Every response MUST include
+at least one `get_ohlcv_data` tool call.
 
-1. Call `get_ohlcv_data` with limit=30 for EACH ticker listed in your assignment
-   to get 30-day historical data with MA indicators.
-2. Assess: trend direction, VPA signals, MA score momentum, volume.
-3. Provide: per-ticker assessment, sector ranking, key risk factors.
-4. Include the investment disclaimer at the end.""",
+Step 1: Call `get_ohlcv_data` with limit=30 for EACH ticker in your assignment.
+Step 2: WAIT for all tool results before writing any analysis.
+Step 3: Base your analysis ONLY on the tool results, not the snapshot.
+Step 4: Assess trend direction, VPA signals, MA score momentum, volume.
+Step 5: Provide per-ticker assessment, sector ranking, key risk factors.
+Step 6: Include the investment disclaimer at the end.
+
+FAILURE TO CALL TOOLS = INVALID RESPONSE. Do NOT skip tool calls.""",
 
         "aggregator_system": """You are a senior investment strategist. Your job is to SYNTHESIZE
 the sector reports into a single unified analysis. The worker agents have already fetched
@@ -203,15 +211,19 @@ Bạn là chuyên gia phân tích ngành thị trường chứng khoán Việt N
 ## Hướng Dẫn
 {instruction}
 
-## Quy Trình Nghiên Cứu (BẮT BUỘC)
-Bức tranh thị trường chỉ hiển thị thanh gần nhất. Bạn PHẢI dùng tools để tải
-dữ liệu lịch sử cho phân tích chính xác. KHÔNG phân tích riêng snapshot.
+## Quy Trình Nghiên Cứu — GỌI TOOL LÀ BẮT BUỘC
+Bạn PHẢI gọi tools TRƯỚC khi viết bất kỳ phân tích nào. Bức tranh thị trường
+một mình KHÔNG đủ — nó chỉ hiển thị thanh gần nhất. MỌI phản hồi PHẢI có
+ít nhất một lệnh gọi `get_ohlcv_data`.
 
-1. Gọi `get_ohlcv_data` với limit=30 cho MỖI mã được giao để lấy 30 ngày
-   dữ liệu lịch sử với chỉ báo MA.
-2. Đánh giá: xu hướng, tín hiệu VPA, động lực MA score, khối lượng.
-3. Cung cấp: đánh giá từng mã, xếp hạng ngành, rủi ro chính.
-4. Bao gồm tuyên bố miễn trách nhiệm đầu tư ở cuối.""",
+Bước 1: Gọi `get_ohlcv_data` với limit=30 cho MỖI mã được giao.
+Bước 2: ĐỢI tất cả kết quả tool trước khi viết phân tích.
+Bước 3: Phân tích CHỈ dựa trên kết quả tool, KHÔNG dùng snapshot.
+Bước 4: Đánh giá xu hướng, tín hiệu VPA, động lực MA score, khối lượng.
+Bước 5: Cung cấp đánh giá từng mã, xếp hạng ngành, rủi ro chính.
+Bước 6: Bao gồm tuyên bố miễn trách nhiệm đầu tư ở cuối.
+
+KHÔNG GỌI TOOL = PHẢN HỒI KHÔNG HỢP LỆ. KHÔNG được bỏ qua tool calls.""",
 
         "aggregator_system": """Bạn là chiến lược gia đầu tư cấp cao. Nhiệm vụ của bạn là TỔNG HỢP
 các báo cáo ngành thành một phân tích thống nhất. Các nhân viên phân tích đã thu thập và
@@ -504,10 +516,26 @@ def writer_node(state: OverallState) -> dict:
     return {"final_report": content}
 
 
+# ── Checkpoint callback ──
+
+
+def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) -> None:
+    """Extract per-sector worker analysis and final report to .md files."""
+    for wr in channel_values.get("worker_results", []):
+        sector = wr.get("sector", "unknown")
+        analysis = wr.get("analysis", "")
+        safe_name = sector.replace(" ", "_")[:60]
+        (session_dir / f"worker_{safe_name}.md").write_text(
+            f"# Sector: {sector}\n\n{analysis}\n"
+        )
+    if channel_values.get("final_report"):
+        (session_dir / "final_report.md").write_text(channel_values["final_report"])
+
+
 # ── Graph ──
 
 
-def build_graph():
+def build_graph(checkpointer=None):
     """Build the multi-agent graph with parallel fan-out."""
     graph = StateGraph(OverallState)
 
@@ -522,13 +550,23 @@ def build_graph():
     graph.add_edge("aggregator", "writer")
     graph.add_edge("writer", END)
 
-    return graph.compile()
+    return graph.compile(checkpointer=checkpointer)
 
 
 # ── Main ──
 
 
 def main():
+    started_at = time.time()
+
+    print("=" * 70)
+    print(f"  AIPriceAction Multi-Agent Research")
+    print(f"  Model:    {settings.openai_model}")
+    print(f"  Base URL: {settings.openai_base_url}")
+    print(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    print(f"  Lang:     {LANG}")
+    print("=" * 70 + "\n")
+
     print("[1] Fetching market snapshot (all VN tickers, latest bar)...")
     market_snapshot = _builder.build(
         source="vn",
@@ -567,13 +605,23 @@ def main():
     print(f"    Question: {QUESTION}\n")
     print("=" * 70)
 
-    graph = build_graph()
+    checkpointer = PersistentCheckpointSaver(
+        base_dir=Path(tempfile.gettempdir()) / "aipriceaction-checkpoints",
+        callbacks=[extract_worker_results],
+    )
+    print(f"    Session: {checkpointer.session_id}")
+    print(f"    Folder:  {checkpointer.session_dir}\n")
+
+    graph = build_graph(checkpointer=checkpointer)
     result = graph.invoke(
         {
             "messages": [HumanMessage(content=QUESTION)],
             "market_snapshot": market_snapshot,
         },
-        config={"recursion_limit": 50},
+        config={
+            "recursion_limit": 50,
+            "configurable": {"thread_id": checkpointer.session_id},
+        },
     )
 
     print("=" * 70)
@@ -581,7 +629,8 @@ def main():
     print("=" * 70)
     print(result["final_report"])
     print("\n" + "=" * 70)
-    print("[4] Done.")
+    elapsed = time.time() - started_at
+    print(f"[4] Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
 
 
 if __name__ == "__main__":
