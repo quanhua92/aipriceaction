@@ -556,27 +556,33 @@ def build_graph(checkpointer=None):
 # ── Main ──
 
 
-def main():
+def main(resume_id: str | None = None):
     started_at = time.time()
 
-    print("=" * 70)
+    print("---")
+    print()
     print(f"  AIPriceAction Multi-Agent Research")
     print(f"  Model:    {settings.openai_model}")
     print(f"  Base URL: {settings.openai_base_url}")
     print(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print(f"  Lang:     {LANG}")
-    print("=" * 70 + "\n")
+    if resume_id:
+        print(f"  Resume:   {resume_id}")
+    print()
+    print("---")
+    print()
 
-    print("[1] Fetching market snapshot (all VN tickers, latest bar)...")
-    market_snapshot = _builder.build(
-        source="vn",
-        interval="1D",
-        limit=1,
-        reference_ticker=None,
-        include_system_prompt=False,
-    )
-    tickers = _client.get_tickers(source="vn")
-    print(f"    Tickers: {len(tickers)}\n")
+    if not resume_id:
+        print("[1] Fetching market snapshot (all VN tickers, latest bar)...")
+        market_snapshot = _builder.build(
+            source="vn",
+            interval="1D",
+            limit=1,
+            reference_ticker=None,
+            include_system_prompt=False,
+        )
+        tickers = _client.get_tickers(source="vn")
+        print(f"    Tickers: {len(tickers)}\n")
 
     _QUESTIONS = {
         "en": (
@@ -603,9 +609,11 @@ def main():
 
     print(f"[2] Starting multi-agent research...\n")
     print(f"    Question: {QUESTION}\n")
-    print("=" * 70)
+    print("---")
+    print()
 
     checkpointer = PersistentCheckpointSaver(
+        session_id=resume_id,
         base_dir=Path(tempfile.gettempdir()) / "aipriceaction-checkpoints",
         callbacks=[extract_worker_results],
     )
@@ -613,24 +621,46 @@ def main():
     print(f"    Folder:  {checkpointer.session_dir}\n")
 
     graph = build_graph(checkpointer=checkpointer)
-    result = graph.invoke(
-        {
-            "messages": [HumanMessage(content=QUESTION)],
-            "market_snapshot": market_snapshot,
-        },
-        config={
-            "recursion_limit": 50,
-            "configurable": {"thread_id": checkpointer.session_id},
-        },
-    )
 
-    print("=" * 70)
-    print("[3] FINAL REPORT")
-    print("=" * 70)
+    if resume_id:
+        print("    Resuming from checkpoint...\n")
+        result = graph.invoke(
+            None,
+            config={
+                "recursion_limit": 50,
+                "configurable": {"thread_id": checkpointer.session_id},
+            },
+        )
+    else:
+        result = graph.invoke(
+            {
+                "messages": [HumanMessage(content=QUESTION)],
+                "market_snapshot": market_snapshot,
+            },
+            config={
+                "recursion_limit": 50,
+                "configurable": {"thread_id": checkpointer.session_id},
+            },
+        )
+
+    print("---")
+    print()
+    print("## [3] FINAL REPORT")
+    print()
+    print("---")
+    print()
     print(result["final_report"])
-    print("\n" + "=" * 70)
+    print()
+    print("---")
+    print()
     elapsed = time.time() - started_at
     print(f"[4] Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
+
+
+if __name__ == "__main__":
+    import sys
+    resume_id = sys.argv[1] if len(sys.argv) > 1 else None
+    main(resume_id=resume_id)
 
 
 if __name__ == "__main__":
