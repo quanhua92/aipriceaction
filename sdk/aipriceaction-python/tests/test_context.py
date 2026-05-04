@@ -326,3 +326,124 @@ class TestAnswer:
         assert "Second answer was bearish." in call_arg
         assert "=== Question ===" in call_arg
         assert "New question?" in call_arg
+
+
+class TestBuildSource:
+    def test_build_source_limit_1_uses_live_api(self, tmp_path):
+        """build(source='vn', limit=1) fetches from live API, not S3."""
+        responses.start()
+        # Tickers metadata
+        responses.get(
+            "https://s3.aipriceaction.com/meta/tickers.json",
+            json=[
+                {"source": "vn", "ticker": "VCB", "name": "Vietcombank", "group": "BANK"},
+                {"source": "vn", "ticker": "FPT", "name": "FPT Corp", "group": "TECH"},
+                {"source": "crypto", "ticker": "BTCUSDT", "name": "Bitcoin", "group": "CRYPTO"},
+            ],
+        )
+        # Live API response (contains both vn and crypto)
+        responses.get(
+            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            json={
+                "VCB": [{"time": "2026-05-04", "open": 60500, "high": 60600, "low": 60000, "close": 60300, "volume": 1445700, "close_changed": 2.1}],
+                "FPT": [{"time": "2026-05-04", "open": 74800, "high": 75000, "low": 74600, "close": 74900, "volume": 500000, "close_changed": -0.5}],
+                "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "high": 80420, "low": 78288, "close": 80343, "volume": 3985}],
+            },
+        )
+        builder = AIContextBuilder(
+            base_url="https://s3.aipriceaction.com",
+            cache_dir=str(tmp_path),
+        )
+        context = builder.build(
+            source="vn",
+            interval="1D",
+            limit=1,
+            reference_ticker=None,
+            include_system_prompt=False,
+        )
+        responses.stop()
+        responses.reset()
+
+        assert "VCB" in context
+        assert "FPT" in context
+        # Crypto should be filtered out since source="vn"
+        assert "BTCUSDT" not in context
+
+    def test_build_source_crypto_filters_vn(self, tmp_path):
+        """build(source='crypto', limit=1) only includes crypto tickers."""
+        responses.start()
+        responses.get(
+            "https://s3.aipriceaction.com/meta/tickers.json",
+            json=[
+                {"source": "vn", "ticker": "VCB", "name": "Vietcombank", "group": "BANK"},
+                {"source": "crypto", "ticker": "BTCUSDT", "name": "Bitcoin", "group": "CRYPTO"},
+            ],
+        )
+        responses.get(
+            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            json={
+                "VCB": [{"time": "2026-05-04", "open": 60500, "high": 60600, "low": 60000, "close": 60300, "volume": 1445700}],
+                "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "high": 80420, "low": 78288, "close": 80343, "volume": 3985}],
+            },
+        )
+        builder = AIContextBuilder(
+            base_url="https://s3.aipriceaction.com",
+            cache_dir=str(tmp_path),
+        )
+        context = builder.build(
+            source="crypto",
+            interval="1D",
+            limit=1,
+            reference_ticker=None,
+            include_system_prompt=False,
+        )
+        responses.stop()
+        responses.reset()
+
+        assert "BTCUSDT" in context
+        assert "VCB" not in context
+
+
+class TestLiveDataToRecords:
+    def test_filters_vn_source(self):
+        live_data = {
+            "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
+            "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
+        }
+        records = AIContextBuilder._live_data_to_records(live_data, source="vn")
+        assert "VCB" in records
+        assert "BTCUSDT" not in records
+
+    def test_filters_crypto_source(self):
+        live_data = {
+            "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
+            "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
+        }
+        records = AIContextBuilder._live_data_to_records(live_data, source="crypto")
+        assert "BTCUSDT" in records
+        assert "VCB" not in records
+
+    def test_no_source_returns_all(self):
+        live_data = {
+            "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
+            "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
+        }
+        records = AIContextBuilder._live_data_to_records(live_data)
+        assert "VCB" in records
+        assert "BTCUSDT" in records
+
+    def test_preserves_close_changed(self):
+        live_data = {
+            "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000, "close_changed": 2.1}],
+        }
+        records = AIContextBuilder._live_data_to_records(live_data)
+        assert records["VCB"][0].close_changed == 2.1
+
+    def test_skips_empty_candles(self):
+        live_data = {
+            "VCB": [],
+            "FPT": [{"time": "2026-05-04", "open": 74800, "close": 74900, "high": 75000, "low": 74600, "volume": 500}],
+        }
+        records = AIContextBuilder._live_data_to_records(live_data)
+        assert "VCB" not in records
+        assert "FPT" in records

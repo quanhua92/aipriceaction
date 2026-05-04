@@ -82,6 +82,16 @@ When enabled, for native intervals (`1D`, `1h`, `1m`) the SDK:
 
 Live responses are cached in memory for 120 seconds to avoid redundant API calls. On API failure, stale cached data is returned if available.
 
+### Direct live data access
+
+Use `fetch_live_data()` to get the raw live API response (all tickers, latest bar) without S3 — useful for market snapshots:
+
+```python
+data = client.fetch_live_data("1D")  # {"VCB": [{"time": ..., "open": ..., ...}], ...}
+```
+
+Returns a dict mapping ticker symbol to a list of candle dicts. Cached in memory for 120 seconds.
+
 Point to a self-hosted instance with `live_url`:
 
 ```python
@@ -106,6 +116,9 @@ context = builder.build(ticker="VCB", interval="1D")
 
 # Multi ticker
 context = builder.build(tickers=["VCB", "FPT", "TCB"], interval="1D")
+
+# All tickers for a source (uses live API when limit=1 for speed)
+context = builder.build(source="vn", interval="1D", limit=1, reference_ticker=None, include_system_prompt=False)
 
 # No data — system prompt + disclaimer only
 context = builder.build()
@@ -353,10 +366,10 @@ See [examples/langchain_agent.py](examples/langchain_agent.py) for the full exam
 Build a multi-agent system with LangGraph `Send()` for parallel sector research.
 
 ```
-START → [supervisor] → Send() fan-out → [worker agents x N] → [aggregator] → [writer] → END
+START → fetch market snapshot → [supervisor] → Send() fan-out → [worker agents x N] → [aggregator] → [writer] → END
 ```
 
-Each node runs a specialized role with a tailored system prompt via `get_system_prompt()` bool flags:
+The supervisor receives a full market snapshot (latest bar for all VN tickers via the live API) and uses it to pick the most relevant sectors and tickers for each worker. Workers and the aggregator also receive the snapshot as context for cross-referencing. Each node runs a specialized role with a tailored system prompt via `get_system_prompt()` bool flags:
 
 ```python
 from langchain.agents import create_agent

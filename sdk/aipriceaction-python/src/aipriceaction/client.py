@@ -680,7 +680,7 @@ class AIPriceAction:
 
     # ── Live data overlay ──
 
-    def _fetch_live_data(self, interval: str) -> Optional[dict]:
+    def fetch_live_data(self, interval: str) -> Optional[dict]:
         """Fetch live OHLCV data from the REST API with caching.
 
         Returns the parsed JSON dict (ticker -> list of candles), or None on failure.
@@ -695,7 +695,7 @@ class AIPriceAction:
         limit = _LIVE_LIMITS.get(interval, 1)
         url = (
             f"{self._live_url}/tickers"
-            f"?interval={interval}&mode=all&format=json&limit={limit}&ma=false"
+            f"?interval={interval}&mode=all&format=json&limit={limit}&ma=true"
         )
 
         try:
@@ -926,7 +926,7 @@ class AIPriceAction:
 
         # Overlay live data on top of S3 data (before MA computation)
         if self.use_live and norm_interval in _LIVE_NATIVE_INTERVALS:
-            live_data = self._fetch_live_data(norm_interval)
+            live_data = self.fetch_live_data(norm_interval)
             if live_data is not None:
                 result = self._merge_live_data(result, live_data, resolved)
 

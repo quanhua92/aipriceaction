@@ -14,7 +14,7 @@ from aipriceaction import AIPriceAction
 def mock_live():
     """Mock live API endpoint for 1D interval."""
     responses.get(
-        "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+        "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
         json={
             "VCB": [
                 {
@@ -115,24 +115,24 @@ class TestLiveInit:
         assert c._live_url == "https://my-api.com"
 
 
-# ── _fetch_live_data tests ──
+# ── fetch_live_data tests ──
 
 class TestFetchLiveData:
-    def test_fetch_live_data_success(self, client_live):
+    def testfetch_live_data_success(self, client_live):
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
             json=data,
         )
-        result = client_live._fetch_live_data("1D")
+        result = client_live.fetch_live_data("1D")
         assert result is not None
         assert "VCB" in result
         assert client_live._live_cache["1D"]["data"] is result
         responses.stop()
         responses.reset()
 
-    def test_fetch_live_data_cached(self, client_live):
+    def testfetch_live_data_cached(self, client_live):
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         call_count = 0
@@ -144,26 +144,26 @@ class TestFetchLiveData:
 
         responses.add_callback(
             responses.GET,
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
             callback=callback,
             content_type="application/json",
         )
-        result1 = client_live._fetch_live_data("1D")
-        result2 = client_live._fetch_live_data("1D")
+        result1 = client_live.fetch_live_data("1D")
+        result2 = client_live.fetch_live_data("1D")
         assert call_count == 1
         assert result1 is result2
         responses.stop()
         responses.reset()
 
-    def test_fetch_live_data_stale_fallback(self, client_live):
+    def testfetch_live_data_stale_fallback(self, client_live):
         """API error returns stale cached data."""
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
             json=data,
         )
-        client_live._fetch_live_data("1D")
+        client_live.fetch_live_data("1D")
 
         # Expire cache
         client_live._live_cache["1D"]["fetched_at"] = 0
@@ -171,28 +171,28 @@ class TestFetchLiveData:
         # Second call fails
         responses.reset()
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
             status=500,
         )
-        stale = client_live._fetch_live_data("1D")
+        stale = client_live.fetch_live_data("1D")
         assert stale is not None
         assert "VCB" in stale
         responses.stop()
         responses.reset()
 
-    def test_fetch_live_data_no_cache_on_error(self, client_live):
+    def testfetch_live_data_no_cache_on_error(self, client_live):
         """No cache + API error returns None."""
         responses.start()
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
             status=500,
         )
-        result = client_live._fetch_live_data("1D")
+        result = client_live.fetch_live_data("1D")
         assert result is None
         responses.stop()
         responses.reset()
 
-    def test_fetch_live_data_correct_limit_per_interval(self, client_live):
+    def testfetch_live_data_correct_limit_per_interval(self, client_live):
         """Verify URL contains correct limit for each interval."""
         responses.start()
         urls_seen = []
@@ -209,7 +209,7 @@ class TestFetchLiveData:
         )
 
         for interval in ("1D", "1h", "1m"):
-            client_live._fetch_live_data(interval)
+            client_live.fetch_live_data(interval)
 
         assert len(urls_seen) == 3
         assert "limit=1" in urls_seen[0]

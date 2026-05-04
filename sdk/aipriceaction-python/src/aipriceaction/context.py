@@ -170,6 +170,7 @@ class AIContextBuilder:
         interval: str = "1D",
         limit: int | None = None,
         *,
+        source: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
         reference_ticker: str = "VNINDEX",
@@ -182,6 +183,8 @@ class AIContextBuilder:
             tickers: List of ticker symbols for multi-ticker mode.
             interval: Time interval. Default "1D".
             limit: Max rows per ticker.
+            source: Filter by data source ("vn" or "crypto"). When set with no
+                ticker/tickers, fetches all tickers for that source.
             start_date: Start date (inclusive).
             end_date: End date (inclusive).
             reference_ticker: Reference ticker for market context. Default "VNINDEX".
@@ -230,6 +233,28 @@ class AIContextBuilder:
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info(tickers)
+        elif source and effective_limit == 1:
+            # All tickers for a source with limit=1: use live API directly
+            # (single request, no S3 iteration).
+            live_data = self._client.fetch_live_data(interval)
+            if live_data:
+                self._market_data = self._live_data_to_records(live_data, source)
+                symbols = list(self._market_data.keys())
+                self._tickers_info = self._build_tickers_info(symbols)
+        elif source:
+            # All tickers for a source with limit > 1: use S3 via get_ohlcv.
+            df = self._client.get_ohlcv(
+                source=source,
+                interval=interval,
+                limit=effective_limit,
+                start_date=start_date,
+                end_date=end_date,
+                ma=ma,
+                ema=(self._ma_type == "ema"),
+            )
+            self._market_data = self._df_to_records(df)
+            symbols = df["symbol"].unique().tolist() if not df.empty else []
+            self._tickers_info = self._build_tickers_info(symbols)
 
         # Fetch reference ticker if specified and not already included
         if reference_ticker and reference_ticker != single_ticker and (
@@ -303,6 +328,44 @@ class AIContextBuilder:
                 for col in _OPTIONAL_COLS:
                     if col in row.index and pd.notna(row[col]):
                         kwargs[col] = float(row[col])
+                records.append(Ticker(**kwargs))
+            result[sym] = records
+        return result
+
+    @staticmethod
+    def _live_data_to_records(
+        live_data: dict, source: str | None = None
+    ) -> dict[str, list[Ticker]]:
+        """Convert fetch_live_data() JSON to dict of Ticker lists.
+
+        Filters by source when provided by checking if the symbol ends with
+        "USDT" (crypto) or not (vn).
+        """
+        result: dict[str, list[Ticker]] = {}
+        for sym, candles in live_data.items():
+            if not candles:
+                continue
+            if source == "vn" and sym.endswith("USDT"):
+                continue
+            if source == "crypto" and not sym.endswith("USDT"):
+                continue
+            records = []
+            for c in candles:
+                kwargs: dict = {
+                    "symbol": sym,
+                    "time": str(c.get("time", "")),
+                    "open": float(c.get("open", 0)),
+                    "high": float(c.get("high", 0)),
+                    "low": float(c.get("low", 0)),
+                    "close": float(c.get("close", 0)),
+                    "volume": int(c.get("volume", 0)),
+                }
+                for col in ("close_changed", "volume_changed",
+                            "ma10", "ma20", "ma50", "ma100", "ma200",
+                            "ma10_score", "ma20_score", "ma50_score",
+                            "ma100_score", "ma200_score"):
+                    if c.get(col) is not None:
+                        kwargs[col] = float(c[col])
                 records.append(Ticker(**kwargs))
             result[sym] = records
         return result
