@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone, timedelta
+
+_VN_TZ = timezone(timedelta(hours=7))
+
+
+def _is_vn_market_open() -> bool:
+    """Check if the Vietnamese stock market is currently open (09:00-15:00 ICT, Mon-Fri)."""
+    now = datetime.now(_VN_TZ)
+    if now.weekday() >= 5:
+        return False
+    return 9 <= now.hour < 15
+
 
 def _ma_label(ma_type: str, lang: str) -> str:
     if lang == "vn":
@@ -60,7 +72,8 @@ _DATA_POLICY = {
 3. **When the user asks about something NOT covered by the provided data** (e.g., other tickers, different timeframes, news, macro data), respond by asking the user to copy-paste the relevant data from the **"AI Context" tab** at https://aipriceaction.com/ and paste it here. Do NOT attempt to answer from memory.
 4. **Do NOT ask follow-up questions** like "Do you want me to compare with other stocks?", "Do you need analysis of another ticker?", "Should I analyze another sector?". These questions imply you can provide data you do not actually have. Instead, guide the user to paste more data from the AI Context UI if they need broader analysis.
 5. **After completing your analysis, stop.** Do not offer to analyze additional tickers, timeframes, or data that was not provided. Your role is to analyze the data the user gave you — nothing more.
-6. **When researching news or events, ALWAYS include the source name for every piece of information.** Every news finding must be accompanied by the source (e.g., "Nguồn: CafeF", "Nguồn: VNExpress", "Nguồn: Báo Đầu Tư"). If a URL is available, include it as well. If your search tool returns no results, you must say so explicitly — never fabricate news or cite non-existent sources.""",
+6. **When researching news or events, ALWAYS include the source name for every piece of information.** Every news finding must be accompanied by the source (e.g., "Nguồn: CafeF", "Nguồn: VNExpress", "Nguồn: Báo Đầu Tư"). If a URL is available, include it as well. If your search tool returns no results, you must say so explicitly — never fabricate news or cite non-existent sources.
+7. **IMPORTANT — Trading Hours:** Vietnamese stock market trades 09:00–15:00 ICT (UTC+7), Monday–Friday. Crypto markets trade 24/7. Current time: {current_time}. If the latest bar shows unusually low volume, the market session may still be in progress — do not assume the volume figure is final.""",
     "vn": r"""## Chính Sách Sử Dụng Dữ Liệu (QUAN TRỌNG — BẮT BUỘC TUÂN THỦ)
 
 1. **CHỈ sử dụng dữ liệu được cung cấp rõ ràng trong ngữ cảnh bên dưới.** Bạn KHÔNG ĐƯỢC tự tạo, đoán, ước tính, hoặc bịa ra bất kỳ con số nào — giá, khối lượng, giá trị đường trung bình, điểm MA, phần trăm, ngày tháng, hoặc bất kỳ dữ liệu tài chính nào.
@@ -68,7 +81,8 @@ _DATA_POLICY = {
 3. **Khi người dùng hỏi về nội dung KHÔNG nằm trong dữ liệu đã cung cấp** (ví dụ: mã chứng khoán khác, khung thời gian khác, tin tức, dữ liệu vĩ mô), hãy yêu cầu người dùng sao chép và dán dữ liệu liên quan từ mục **"AI Context"** trên website https://aipriceaction.com/ vào đây. KHÔNG cố gắng trả lời từ trí nhớ.
 4. **KHÔNG đặt câu hỏi mở rộng** như "Bạn có muốn tôi so sánh với mã khác không?", "Bạn cần tôi phân tích thêm mã nào không?", "Bạn có cần tôi phân tích thêm ngành nào không?". Những câu hỏi này ngụ ý rằng bạn có thể cung cấp dữ liệu mà thực tế bạn không có. Thay vào đó, hãy hướng dẫn người dùng sao chép thêm dữ liệu từ mục "AI Context" nếu họ cần phân tích rộng hơn.
 5. **Sau khi hoàn thành phân tích, hãy dừng lại.** KHÔNG đề nghị phân tích thêm mã chứng khoán, khung thời gian, hoặc dữ liệu không được cung cấp. Vai trò của bạn là phân tích dữ liệu người dùng đã cung cấp — không hơn.
-6. **Khi tìm kiếm tin tức hoặc sự kiện, LUÔN đính kèm tên nguồn cho mọi thông tin.** Mọi thông tin tin tức phải đi kèm nguồn (ví dụ: "Nguồn: CafeF", "Nguồn: VNExpress", "Nguồn: Báo Đầu Tư"). Nếu có đường dẫn, hãy đưa thêm. Nếu công cụ tìm kiếm không trả về kết quả nào, bạn PHẢI nói rõ điều đó — tuyệt đối KHÔNG bịa tin tức hoặc trích dẫn nguồn không tồn tại.""",
+6. **Khi tìm kiếm tin tức hoặc sự kiện, LUÔN đính kèm tên nguồn cho mọi thông tin.** Mọi thông tin tin tức phải đi kèm nguồn (ví dụ: "Nguồn: CafeF", "Nguồn: VNExpress", "Nguồn: Báo Đầu Tư"). Nếu có đường dẫn, hãy đưa thêm. Nếu công cụ tìm kiếm không trả về kết quả nào, bạn PHẢI nói rõ điều đó — tuyệt đối KHÔNG bịa tin tức hoặc trích dẫn nguồn không tồn tại.
+7. **QUAN TRỌNG — Giờ Giao Dịch:** Thị trường chứng khoán Việt Nam giao dịch 09:00–15:00 ICT (UTC+7), Thứ Hai–Thứ Sáu. Thị trường crypto giao dịch 24/7. Thời gian hiện tại: {current_time}. Nếu thanh gần nhất có khối lượng bất thường thấp, phiên giao dịch có thể vẫn đang diễn ra — KHÔNG giả định con số khối lượng là cuối cùng.""",
 }
 
 # Analysis framework + priorities (for data-analyzing agents only)
@@ -351,8 +365,13 @@ def _build_prompt(
     if include_analysis_framework:
         parts.append(_ANALYSIS_FRAMEWORK[lang])
     parts.append(_COMMUNICATION_STYLE[lang])
+    if _is_vn_market_open():
+        parts.append(_TRADING_HOURS_NOTICES[lang])
     parts.extend(extra_parts)
-    return "\n\n".join(parts)
+    prompt = "\n\n".join(parts)
+    now = datetime.now(_VN_TZ)
+    prompt = prompt.replace("{current_time}", now.strftime("%Y-%m-%d %H:%M ICT"))
+    return prompt
 
 
 def _build_prompt_with_ticker_info(
@@ -368,8 +387,13 @@ def _build_prompt_with_ticker_info(
     if include_analysis_framework:
         parts.append(_ANALYSIS_FRAMEWORK_WITH_TICKER_INFO[lang])
     parts.append(_COMMUNICATION_STYLE[lang])
+    if _is_vn_market_open():
+        parts.append(_TRADING_HOURS_NOTICES[lang])
     parts.extend(extra_parts)
-    return "\n\n".join(parts)
+    prompt = "\n\n".join(parts)
+    now = datetime.now(_VN_TZ)
+    prompt = prompt.replace("{current_time}", now.strftime("%Y-%m-%d %H:%M ICT"))
+    return prompt
 
 
 # ---------------------------------------------------------------------------

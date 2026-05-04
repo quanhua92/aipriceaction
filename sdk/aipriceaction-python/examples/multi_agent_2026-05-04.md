@@ -1,4 +1,4 @@
-<!-- AIPriceAction Multi-Agent Research -->
+# AIPriceAction Multi-Agent Research
 
   Model:    openrouter/owl-alpha
   Base URL: https://openrouter.ai/api/v1
