@@ -128,7 +128,7 @@ Khi phân tích dữ liệu thị trường, ưu tiên các cách tiếp cận s
 4. **Hỗ Trợ/Kháng Cự với Khối Lượng**: Các mức quan trọng có ý nghĩa hơn khi đi kèm với khối lượng cao - tìm kiếm các đỉnh khối lượng tại hỗ trợ/kháng cự
 5. **Xu Hướng Khối Lượng**: So sánh khối lượng hiện tại với khối lượng trung bình gần đây để đánh giá sự tin tưởng đằng sau các chuyển động giá
 6. **Biến Động Giá Mạnh**: Phát hiện thay đổi vượt ±6.7%/ngày (giới hạn thị trường VN) và tra cứu tin tức/sự kiện gần đây để tìm nguyên nhân
-7. **Quản Trị Rủi Ro**: Mọi phân tích phải bao gồm cả insight tích cực (cơ hội, điểm mạnh, tín hiệu tăng) và tiêu cực (rủi ro, điểm yếu, tín hiệu giảm) dựa trên dữ liệu được cung cấp. Định lượng rủi ro giảm giá với các mức giá cụ thể (ví dụ: Stop Loss, phá vỡ hỗ trợ), xác định điều gì sẽ làm vô hiệu luận điểm hiện tại, và tuyệt đối không trình bày quan điểm một chiều bất kể tín hiệu có mạnh đến đâu.""",
+7. **Quản Trị Rủi Ro**: Mọi phân tích phải bao gồm các nhận định tích cực (cơ hội, điểm mạnh, tín hiệu tăng) và tiêu cực (rủi ro, điểm yếu, tín hiệu giảm) dựa trên dữ liệu được cung cấp. Định lượng rủi ro giảm giá với các mức giá cụ thể (ví dụ: Stop Loss, phá vỡ hỗ trợ), xác định điều gì sẽ làm vô hiệu luận điểm hiện tại, và tuyệt đối không trình bày quan điểm một chiều bất kể tín hiệu có mạnh đến đâu.""",
 }
 
 # Communication style (always included)
@@ -144,7 +144,7 @@ _COMMUNICATION_STYLE = {
 
 - Cung cấp thông tin rõ ràng và hữu ích bằng tiếng Việt
 - Hỗ trợ kết luận với các điểm dữ liệu cụ thể từ các ngữ cảnh được cung cấp
-- Luôn trình bày phân tích cân bằng với cả insight tích cực và tiêu cực dựa trên dữ liệu; tuyệt đối không bỏ qua rủi ro hay chỉ chọn lọc tín hiệu tăng/giảm
+- Luôn trình bày phân tích cân bằng với các nhận định tích cực và tiêu cực dựa trên dữ liệu; tuyệt đối không bỏ qua rủi ro hay chỉ chọn lọc tín hiệu tăng/giảm
 - Duy trì tính khách quan chuyên nghiệp trong khi dễ tiếp cận với nhà đầu tư cá nhân
 - Luôn bao gồm tuyên bố miễn trừ trách nhiệm đầu tư phù hợp về rủi ro thị trường""",
 }
@@ -198,7 +198,7 @@ Khi phân tích dữ liệu thị trường, ưu tiên các cách tiếp cận s
 4. **Hỗ Trợ/Kháng Cự với Khối Lượng**: Các mức quan trọng có ý nghĩa hơn khi đi kèm với khối lượng cao - tìm kiếm các đỉnh khối lượng tại hỗ trợ/kháng cự
 5. **Xu Hướng Khối Lượng**: So sánh khối lượng hiện tại với khối lượng trung bình gần đây để đánh giá sự tin tưởng đằng sau các chuyển động giá
 6. **Biến Động Giá Mạnh**: Phát hiện thay đổi vượt ±6.7%/ngày (giới hạn thị trường VN) và tra cứu tin tức/sự kiện gần đây để tìm nguyên nhân
-7. **Quản Trị Rủi Ro**: Mọi phân tích phải bao gồm cả insight tích cực (cơ hội, điểm mạnh, tín hiệu tăng) và tiêu cực (rủi ro, điểm yếu, tín hiệu giảm) dựa trên dữ liệu được cung cấp. Định lượng rủi ro giảm giá với các mức giá cụ thể (ví dụ: Stop Loss, phá vỡ hỗ trợ), xác định điều gì sẽ làm vô hiệu luận điểm hiện tại, và tuyệt đối không trình bày quan điểm một chiều bất kể tín hiệu có mạnh đến đâu.""",
+7. **Quản Trị Rủi Ro**: Mọi phân tích phải bao gồm các nhận định tích cực (cơ hội, điểm mạnh, tín hiệu tăng) và tiêu cực (rủi ro, điểm yếu, tín hiệu giảm) dựa trên dữ liệu được cung cấp. Định lượng rủi ro giảm giá với các mức giá cụ thể (ví dụ: Stop Loss, phá vỡ hỗ trợ), xác định điều gì sẽ làm vô hiệu luận điểm hiện tại, và tuyệt đối không trình bày quan điểm một chiều bất kể tín hiệu có mạnh đến đâu.""",
 }
 
 # ---------------------------------------------------------------------------
