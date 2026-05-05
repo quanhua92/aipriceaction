@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import time as _time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
@@ -902,9 +903,10 @@ class AIPriceAction:
 
         days = self._date_range(ma_buffer_start, end)
 
-        # Fetch and concatenate
+        # Fetch and concatenate (parallel with concurrency 8)
         frames: list[pd.DataFrame] = []
-        for src, sym in resolved:
+
+        def _fetch_one(src, sym):
             df = self._fetch_ohlcv_for_ticker(
                 src,
                 sym,
@@ -912,10 +914,16 @@ class AIPriceAction:
                 days,
                 need_rows=need_rows,
             )
-            if df.empty:
-                continue
-            df["symbol"] = sym
-            frames.append(df)
+            if not df.empty:
+                df["symbol"] = sym
+            return df
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = {pool.submit(_fetch_one, src, sym): sym for src, sym in resolved}
+            for future in as_completed(futures):
+                df = future.result()
+                if not df.empty:
+                    frames.append(df)
 
         if not frames:
             return pd.DataFrame(
