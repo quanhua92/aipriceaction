@@ -11,7 +11,7 @@ Pattern:
   3. Send() fans out to N worker agents simultaneously
   4. Each worker fetches detailed OHLCV data via tools
   5. Aggregator synthesizes all worker outputs into unified analysis
-  6. Writer formats the analysis into a final publication-ready report
+  6. Reviewer validates the report for data integrity (up to 3 rounds)
 
 Requires OPENAI_API_KEY in .env or environment.
 
@@ -114,6 +114,9 @@ class OverallState(TypedDict):
     subtasks: list[Subtask]
     worker_results: Annotated[list[WorkerResult], operator.add]
     analysis: str
+    review_result: str          # "approve" or "reject"
+    review_feedback: str        # feedback string when rejected
+    review_round: int           # tracks retry count (0, 1, 2)
     final_report: str
 
 
@@ -166,42 +169,41 @@ and analyzed all the data — you must build on their findings, not start from s
 3. Build a unified multi-sector ranking table from the worker findings.
 4. Identify cross-sector rotation patterns and relative strength.
 5. Highlight key opportunities and risks across sectors.
-6. Do NOT fetch any data — use only what the worker reports provide.
-7. Do NOT include the investment disclaimer.""",
+6. KHÔNG tải thêm dữ liệu — chỉ sử dụng thông tin từ báo cáo nhân viên.
+7. Include the investment disclaimer at the very end.
+8. DATA GROUNDING — The worker reports below are your ONLY data source for individual tickers.
+   - Quote MA scores, prices, and other numbers EXACTLY as the workers reported them. Do NOT recalculate or modify them.
+   - If a worker analyzed 3 stocks in a sector, your sector table must only have those 3 stocks. Do NOT pad it with others.
+   - Do NOT add any stock/ticker that does not appear in the worker reports.
+   - For sector-level index data (e.g. VNINDEX, VNFIN, VNREAL) you may reference what the workers cited.""",
 
-        "aggregator_user": """## Market Snapshot (latest bar for all VN tickers)
-{market_snapshot}
-
-## Sector Analysis Reports (from worker agents)
+        "aggregator_user": """## Sector Analysis Reports (from worker agents)
 {sector_reports}
 
 ## Original Question
 {question}""",
 
-        "writer_system": """Current time: __CURRENT_TIME__ (ICT, UTC+7)
+        "reviewer_system": """Current time: __CURRENT_TIME__ (ICT, UTC+7)
 
-You are a senior investment writer. Your job is to FORMAT the
-analyst report into a clean, publication-ready document. Do NOT add new analysis or ask
-for data — work exclusively with the content provided.
+You are a data quality reviewer. Your job is to FACT-CHECK the aggregator's report
+against the worker reports. You do NOT rewrite — you only validate and provide feedback.
 
-## Instructions
-Format the analyst report into a professional final report:
-1. Executive summary
-2. Sector-by-sector analysis with ranking tables
-3. Cross-sector rotation observations
-4. Unified multi-sector ticker ranking table
-5. Strategic recommendations
-6. Include the investment disclaimer at the very end.
-Write in a clear, structured format with headers, tables, and bullet points.""",
+## Check List
+1. **Phantom stocks**: Does the report mention any ticker that does NOT appear in the worker reports? List them.
+2. **MA score fidelity**: Pick 3-5 MA scores from the report and verify they match the worker reports exactly. Flag any mismatches.
+3. **Table completeness**: Does each sector table only contain stocks that were actually analyzed by the corresponding worker?
+4. **Missing data**: Are there any numbers in the report that don't appear in any worker report?
 
-        "writer_user": """## Market Snapshot (latest bar for all VN tickers)
-{market_snapshot}
+## Output Format
+If everything passes, output EXACTLY: APPROVE
+If there are issues, output: REJECT\\n\\n- [issue 1]\\n- [issue 2]\\n...
+Be specific — cite the exact numbers that don't match or the exact phantom stocks.""",
 
-## Analyst Report
-{analysis}
+        "reviewer_user": """## Worker Reports (source of truth)
+{worker_reports}
 
-## Original Question
-{question}""",
+## Aggregator Output (to review)
+{analysis}""",
     },
     "vn": {
         "supervisor": """Bạn là giám đốc nghiên cứu phân tích thị trường chứng khoán Việt Nam.
@@ -250,41 +252,40 @@ phân tích toàn bộ dữ liệu — bạn phải xây dựng trên kết qu�
 4. Xác định mô hình luân chuyển ngành và sức mạnh tương đối.
 5. Nhấn mạnh cơ hội và rủi ro chính giữa các ngành.
 6. KHÔNG tải thêm dữ liệu — chỉ sử dụng thông tin từ báo cáo nhân viên.
-7. KHÔNG bao gồm tuyên bố miễn trách nhiệm đầu tư.""",
+7. Bao gồm tuyên bố miễn trách nhiệm đầu tư ở cuối.
+8. CỘT DỮ LIỆU — Báo cáo nhân viên bên dưới là NGUỒN DỮ LIỆU DUY NHẤT cho từng mã cổ phiếu.
+   - Trích dẫn điểm MA, giá, và các số liệu NGUYÊN VĂN như nhân viên báo cáo. KHÔNG tính lại hay sửa đổi.
+   - Nếu nhân viên chỉ phân tích 3 mã trong ngành, bảng ngành chỉ được có 3 mã đó. KHÔNG thêm mã khác.
+   - KHÔNG thêm bất kỳ mã cổ phiếu nào không có trong báo cáo nhân viên.
+   - Với dữ liệu chỉ số ngành (VD: VNINDEX, VNFIN, VNREAL) có thể tham khảo từ báo cáo nhân viên.""",
 
-        "aggregator_user": """## Bức Tranh Thị Trường (thanh gần nhất cho tất cả mã VN)
-{market_snapshot}
-
-## Báo Cáo Phân Tích Ngành (từ các nhân viên phân tích)
+        "aggregator_user": """## Báo Cáo Phân Tích Ngành (từ các nhân viên phân tích)
 {sector_reports}
 
 ## Câu Hỏi Gốc
 {question}""",
 
-        "writer_system": """Thời gian hiện tại: __CURRENT_TIME__ (ICT, UTC+7)
+        "reviewer_system": """Thời gian hiện tại: __CURRENT_TIME__ (ICT, UTC+7)
 
-Bạn là biên tập viên đầu tư cấp cao. Nhiệm vụ của bạn là TRÌNH BÀY
-báo cáo phân tích thành tài liệu chuyên nghiệp, sẵn sàng xuất bản. KHÔNG thêm phân tích mới
-hay yêu cầu dữ liệu — chỉ làm việc với nội dung đã cung cấp.
+Bạn là người kiểm tra chất lượng dữ liệu. Nhiệm vụ của bạn là KIỂM TRA THỰC TẾ
+báo cáo của người tổng hợp so với báo cáo nhân viên. Bạn KHÔNG viết lại — chỉ kiểm tra và phản hồi.
 
-## Hướng Dẫn
-Trình bày báo cáo thành tài liệu cuối cùng chuyên nghiệp:
-1. Tóm tắt điều hành
-2. Phân tích từng ngành với bảng xếp hạng
-3. Quan sát luân chuyển liên ngành
-4. Bảng xếp hạng cổ phiếu đa ngành thống nhất
-5. Khuyến nghị chiến lược
-6. Bao gồm tuyên bố miễn trách nhiệm đầu tư ở cuối.
-Viết rõ ràng, có cấu trúc với tiêu đề, bảng, và gạch đầu dòng.""",
+## Danh Sách Kiểm Tra
+1. **Mã cổ phiếu ma**: Báo cáo có nhắc đến mã nào KHÔNG có trong báo cáo nhân viên không? Liệt kê chúng.
+2. **Độ chính xác điểm MA**: Chọn 3-5 điểm MA từ báo cáo và xác nhận chúng KHỚP NGUYÊN VĂN với báo cáo nhân viên. Đánh dấu bất kỳ sự sai lệch nào.
+3. **Đầy đủ bảng**: Mỗi bảng ngành chỉ chứa các mã được nhân viên phân tích thực tế?
+4. **Dữ liệu thiếu**: Có số liệu nào trong báo cáo không xuất hiện trong bất kỳ báo cáo nhân viên nào không?
 
-        "writer_user": """## Bức Tranh Thị Trường (thanh gần nhất cho tất cả mã VN)
-{market_snapshot}
+## Định Dạng Đầu Ra
+Nếu mọi thứ đạt, xuất CHÍNH XÁC: APPROVE
+Nếu có vấn đề, xuất: REJECT\\n\\n- [vấn đề 1]\\n- [vấn đề 2]\\n...
+Cụ thể — trích dẫn chính xác các số không khớp hoặc các mã cổ phiếu ma.""",
 
-## Báo Cáo Phân Tích
-{analysis}
+        "reviewer_user": """## Báo Cáo Nhân Viên (nguồn sự thật)
+{worker_reports}
 
-## Câu Hỏi Gốc
-{question}""",
+## Đầu Ra Người Tổng Hợp (cần kiểm tra)
+{analysis}""",
     },
 }
 
@@ -473,7 +474,8 @@ def worker_node(state: dict) -> dict:
 def aggregator_node(state: OverallState) -> dict:
     """Synthesize worker reports into unified analysis (no tools — pure LLM)."""
     results = state["worker_results"]
-    print(f"[Aggregator] Synthesizing {len(results)} sector reports...\n")
+    round_num = state.get("review_round", 0)
+    print(f"[Aggregator] Synthesizing {len(results)} sector reports (round {round_num + 1})...\n")
 
     user_question = ""
     for msg in state["messages"]:
@@ -485,16 +487,20 @@ def aggregator_node(state: OverallState) -> dict:
     for wr in results:
         sector_reports += f"\n### {wr['sector']} ({', '.join(wr['tickers'])})\n\n{wr['analysis']}\n\n"
 
+    feedback = state.get("review_feedback", "")
+    feedback_section = ""
+    if feedback:
+        feedback_section = f"\n\n## Reviewer Feedback (round {round_num})\nFix these issues in your report:\n{feedback}\n"
+
     system_prompt = (
         get_system_prompt(LANG, include_data_policy=False, include_analysis_framework=True)
         + "\n\n"
         + _P["aggregator_system"].replace("__CURRENT_TIME__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M ICT"))
     )
     user_message = _P["aggregator_user"].format(
-        market_snapshot=state["market_snapshot"],
         sector_reports=sector_reports,
         question=user_question,
-    )
+    ) + feedback_section
 
     response = _invoke_with_retry(lambda: llm.invoke([
         SystemMessage(content=system_prompt),
@@ -503,45 +509,72 @@ def aggregator_node(state: OverallState) -> dict:
     content = response.content or ""
 
     print(f"[Aggregator] Analysis synthesized ({len(content):,} chars)\n")
-    return {"analysis": content}
+    return {"analysis": content, "review_round": round_num}
 
 
-def writer_node(state: OverallState) -> dict:
-    """Format the analysis into a final publication-ready report."""
-    print(f"[Writer] Formatting final report...\n")
+MAX_REVIEW_ROUNDS = 3
 
-    user_question = ""
-    for msg in state["messages"]:
-        if isinstance(msg, HumanMessage):
-            user_question = msg.content
-            break
+
+def reviewer_node(state: OverallState) -> dict:
+    """Review aggregator output for data integrity."""
+    round_num = state.get("review_round", 0)
+    label = f"Reviewer (round {round_num + 1})"
+    print(f"[{label}] Checking data integrity...")
+
+    worker_reports = ""
+    for wr in state["worker_results"]:
+        worker_reports += f"\n### {wr['sector']} ({', '.join(wr['tickers'])})\n\n{wr['analysis']}\n\n"
 
     system_prompt = (
         get_system_prompt(LANG, include_data_policy=False, include_analysis_framework=False)
         + "\n\n"
-        + _P["writer_system"].replace("__CURRENT_TIME__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M ICT"))
+        + _P["reviewer_system"].replace("__CURRENT_TIME__", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M ICT"))
     )
-    user_message = _P["writer_user"].format(
-        market_snapshot=state["market_snapshot"],
+    user_message = _P["reviewer_user"].format(
+        worker_reports=worker_reports,
         analysis=state.get("analysis", ""),
-        question=user_question,
     )
 
     response = _invoke_with_retry(lambda: llm.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_message),
     ]))
-    content = response.content or ""
+    content = (response.content or "").strip()
 
-    print(f"[Writer] Report generated ({len(content):,} chars)\n")
-    return {"final_report": content}
+    if content.upper().startswith("APPROVE"):
+        print(f"[{label}] APPROVED")
+        return {
+            "review_result": "approve",
+            "review_feedback": "",
+            "final_report": state.get("analysis", ""),
+        }
+    else:
+        print(f"[{label}] REJECTED:\n{content[:500]}")
+        return {
+            "review_result": "reject",
+            "review_feedback": content,
+        }
+
+
+def review_router(state: OverallState) -> str:
+    if state.get("review_result") == "approve":
+        return "end"
+    if state.get("review_round", 0) >= MAX_REVIEW_ROUNDS - 1:
+        print("[Reviewer] Max rounds reached, accepting current output")
+        return "end"
+    return "aggregator"
+
+
+def end_node(state: OverallState) -> dict:
+    """Passthrough — final_report is already set by reviewer_node."""
+    return {}
 
 
 # ── Checkpoint callback ──
 
 
 def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) -> None:
-    """Extract per-sector worker analysis and final report to .md files."""
+    """Extract per-sector worker analysis and intermediate outputs to .md files."""
     for wr in channel_values.get("worker_results", []):
         sector = wr.get("sector", "unknown")
         analysis = wr.get("analysis", "")
@@ -549,8 +582,27 @@ def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) ->
         (session_dir / f"worker_{safe_name}.md").write_text(
             f"# Sector: {sector}\n\n{analysis}\n"
         )
-    if channel_values.get("final_report"):
-        (session_dir / "final_report.md").write_text(channel_values["final_report"])
+
+    # Every aggregator output (round 1, 2, 3...)
+    analysis = channel_values.get("analysis", "")
+    if analysis:
+        round_num = channel_values.get("review_round", 0)
+        suffix = f"_round{round_num}" if round_num > 0 else ""
+        (session_dir / f"aggregator_output{suffix}.md").write_text(analysis)
+
+    # Reviewer feedback for the current round
+    feedback = channel_values.get("review_feedback", "")
+    result = channel_values.get("review_result", "")
+    if feedback or result:
+        round_num = channel_values.get("review_round", 0)
+        (session_dir / f"reviewer_round{round_num + 1}.md").write_text(
+            f"# Review Result: {result.upper()}\n\n{feedback}"
+        )
+
+    # Final report (only on approve/max rounds)
+    final = channel_values.get("final_report", "")
+    if final:
+        (session_dir / "final_report.md").write_text(final)
 
 
 # ── Graph ──
@@ -563,13 +615,15 @@ def build_graph(checkpointer=None):
     graph.add_node("supervisor", supervisor_node)
     graph.add_node("worker", worker_node)
     graph.add_node("aggregator", aggregator_node)
-    graph.add_node("writer", writer_node)
+    graph.add_node("reviewer", reviewer_node)
+    graph.add_node("end", end_node)
 
     graph.add_edge(START, "supervisor")
     graph.add_conditional_edges("supervisor", fan_out, ["worker"])
     graph.add_edge("worker", "aggregator")
-    graph.add_edge("aggregator", "writer")
-    graph.add_edge("writer", END)
+    graph.add_edge("aggregator", "reviewer")
+    graph.add_conditional_edges("reviewer", review_router, ["aggregator", "end"])
+    graph.add_edge("end", END)
 
     return graph.compile(checkpointer=checkpointer)
 
