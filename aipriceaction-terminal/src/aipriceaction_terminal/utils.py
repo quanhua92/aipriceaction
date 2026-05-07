@@ -19,3 +19,11 @@ def write_context_result(
 def write_error(log: RichLog, error: Exception) -> None:
     """Write a formatted error to a RichLog."""
     log.write(f"[bold red]Error:[/bold red] {error}")
+
+
+def write_export_result(log: RichLog, filepath: str, context_len: int) -> None:
+    """Write a formatted export success message to a RichLog."""
+    log.write(
+        f"[bold green]Exported[/bold green] {context_len:,} chars to "
+        f"[bold]{filepath}[/bold]\n"
+    )

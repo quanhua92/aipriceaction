@@ -1,13 +1,15 @@
 """Chat tab: message history + input + slash commands."""
 
 import asyncio
+from datetime import datetime
+from pathlib import Path
 
 from textual import work
 from textual.widgets import RichLog, Input
 from textual.containers import Vertical
 
 from .widgets import ChatInput
-from .utils import write_context_result, write_error
+from .utils import write_context_result, write_error, write_export_result
 
 
 class ChatTab(Vertical):
@@ -70,6 +72,8 @@ class ChatTab(Vertical):
             log.write(
                 "[bold yellow]Available commands:[/bold yellow]\n"
                 "  /analyze <ticker> [interval] - Build AI context (e.g. /analyze VIC or /analyze STB 1h)\n"
+                "  /export <ticker> [tickers...] [--interval 1D] [--path ~/dir/]\n"
+                "                        - Export AI context to markdown file\n"
                 "  /deep-research [q]   - Multi-agent deep research (not yet implemented)\n"
                 "  /exit                - Quit the application\n"
                 "  /help                - Show this help message\n"
@@ -96,6 +100,34 @@ class ChatTab(Vertical):
                 "[dim]This will eventually run the multi-agent LangGraph pipeline "
                 "(supervisor -> parallel workers -> aggregator -> reviewer).[/dim]\n"
             )
+        elif cmd == "/export":
+            args = text.split()[1:]  # skip /export
+            tickers: list[str] = []
+            interval: str | None = None
+            out_path: str | None = None
+            i = 0
+            while i < len(args):
+                if args[i] == "--interval" and i + 1 < len(args):
+                    interval = args[i + 1]
+                    i += 2
+                elif args[i] == "--path" and i + 1 < len(args):
+                    out_path = args[i + 1]
+                    i += 2
+                else:
+                    tickers.append(args[i])
+                    i += 1
+            if not tickers:
+                log.write(
+                    "[bold red]Usage: /export <ticker> [tickers...] "
+                    "[--interval 1D] [--path ~/dir/][/bold red]"
+                )
+                return
+            interval = interval or self.app.interval
+            export_dir = Path(out_path).expanduser() if out_path else Path("~/aipriceaction-exports").expanduser()
+            ticker_label = "_".join(tickers)
+            log.write(f"[bold cyan]You:[/bold cyan] /export {ticker_label} --interval {interval}")
+            log.write("[dim]Building context and exporting...[/dim]")
+            self._run_export(tickers, interval, export_dir)
         else:
             log.write(f"[bold red]Unknown command:[/bold red] {cmd}")
 
@@ -111,6 +143,37 @@ class ChatTab(Vertical):
 
             log = self.query_one("#chat-log", RichLog)
             write_context_result(log, ticker, interval, context)
+        except Exception as e:
+            log = self.query_one("#chat-log", RichLog)
+            write_error(log, e)
+
+    @work(exclusive=True)
+    async def _run_export(
+        self, tickers: list[str], interval: str, export_dir: Path
+    ) -> None:
+        """Build AI context and export to markdown file."""
+        try:
+            builder = self.app.builder
+
+            if len(tickers) == 1:
+                context = await asyncio.to_thread(
+                    builder.build, ticker=tickers[0], interval=interval
+                )
+            else:
+                context = await asyncio.to_thread(
+                    builder.build, tickers=tickers, interval=interval
+                )
+
+            export_dir.mkdir(parents=True, exist_ok=True)
+            ticker_label = "_".join(tickers)
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            filename = f"{ticker_label}_{interval}_{date_str}.md"
+            filepath = export_dir / filename
+
+            await asyncio.to_thread(filepath.write_text, context, encoding="utf-8")
+
+            log = self.query_one("#chat-log", RichLog)
+            write_export_result(log, str(filepath), len(context))
         except Exception as e:
             log = self.query_one("#chat-log", RichLog)
             write_error(log, e)

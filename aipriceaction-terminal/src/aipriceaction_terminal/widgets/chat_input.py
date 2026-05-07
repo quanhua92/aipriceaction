@@ -12,6 +12,7 @@ _COMMANDS: list[tuple[str, str]] = [
     ("/clear", "/clear"),
     ("/deep-research [question]", "/deep-research"),
     ("/exit", "/exit"),
+    ("/export <ticker> [ticker...] [--interval] [--path]", "/export"),
     ("/help", "/help"),
 ]
 
