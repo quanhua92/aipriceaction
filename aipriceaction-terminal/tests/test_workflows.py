@@ -129,15 +129,22 @@ async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
     await pilot.press("5")
     await pilot.pause(0.1)
 
-    # Clear the input programmatically, then type to filter and select
+    # Clear input and type to trigger autocomplete filtering
     ticker_input = pilot.app.query_one("#ticker-input", Input)
-    ticker_input.value = "FPT"
-    await pilot.pause(0.1)
-
-    # Focus, arrow down to highlight, Enter to select
+    ticker_input.value = ""
+    await pilot.pause(0.05)
     await pilot.click("#ticker-input")
-    await pilot.pause(0.1)
-    await pilot.press("down")
+    await pilot.press("F")
+    await pilot.press("P")
+    await pilot.press("T")
+    await pilot.press("space")
+    await pilot.press("C")
+    await pilot.press("o")
+    await pilot.press("r")
+    await pilot.press("p")
+    await pilot.pause(0.2)
+
+    # Press Enter to select the top fuzzy match
     await pilot.press("enter")
     await pilot.pause(0.1)
 

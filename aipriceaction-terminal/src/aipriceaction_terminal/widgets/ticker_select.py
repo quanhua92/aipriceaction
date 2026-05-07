@@ -10,6 +10,12 @@ from textual_autocomplete import AutoComplete, DropdownItem
 class _TickerAutoComplete(AutoComplete):
     """AutoComplete that fills the input with the ticker symbol (option.id) on selection."""
 
+    DEFAULT_CSS = """
+    _TickerAutoComplete AutoCompleteList {
+        max-height: 20;
+    }
+    """
+
     def _complete(self, option_index: int) -> None:
         """Override to use option.id (ticker symbol) instead of option.value (label)."""
         if not self.display or self.option_list.option_count == 0:
@@ -21,6 +27,58 @@ class _TickerAutoComplete(AutoComplete):
         with self.prevent(Input.Changed):
             self.apply_completion(completion_value, self._get_target_state())
         self.post_completion()
+
+    def should_show_dropdown(self, search_string: str) -> bool:
+        """Show dropdown even when search string is empty (show all on focus)."""
+        return self.option_list.option_count > 0
+
+    def get_matches(
+        self,
+        target_state,
+        candidates: list[DropdownItem],
+        search_string: str,
+    ) -> list[DropdownItem]:
+        """Override to boost ticker symbol matches above company name matches.
+
+        The default fuzzy matcher only sees the label (e.g. '[VN] VIC - Tập đoàn
+        VINGROUP') and can rank VICEM companies above the actual VIC ticker.
+        We add a score boost when the query matches the ticker symbol (option.id).
+        """
+        if not search_string:
+            return list(candidates)
+
+        query_lower = search_string.lower()
+        boosted: list[tuple[DropdownItem, float]] = []
+        match = self._fuzzy_search.match
+
+        for candidate in candidates:
+            label_score, offsets = match(query_lower, candidate.value)
+            # Check if query matches the ticker symbol (option.id)
+            ticker_id = getattr(candidate, "id", None) or ""
+            id_match = query_lower in ticker_id.lower() if ticker_id else False
+
+            if id_match and label_score > 0:
+                # Ticker symbol match + label match → highest priority
+                final_score = 2.0 + label_score
+            elif id_match:
+                # Ticker symbol matches but label doesn't (e.g. short ticker)
+                final_score = 1.5
+            elif label_score > 0:
+                final_score = label_score
+            else:
+                continue
+
+            highlighted = self.apply_highlights(candidate.main, offsets)
+            item = type(candidate)(
+                main=highlighted,
+                prefix=candidate.prefix,
+                id=candidate.id,
+                disabled=candidate.disabled,
+            )
+            boosted.append((item, final_score))
+
+        boosted.sort(key=lambda x: x[1], reverse=True)
+        return [item for item, _ in boosted]
 
 
 class TickerSelect(Vertical):
@@ -75,10 +133,5 @@ class TickerSelect(Vertical):
     # --- Candidate provider for AutoComplete -----------------------------------
 
     def _get_candidates(self, state) -> list[DropdownItem]:
-        """Return filtered dropdown items based on current input text."""
-        query = state.text.strip().lower()
-        matches = []
-        for label, val in self._all_options:
-            if not query or query in label.lower() or query in val.lower():
-                matches.append(DropdownItem(label, id=val))
-        return matches
+        """Return all options; the library's fuzzy matcher handles filtering."""
+        return [DropdownItem(label, id=val) for label, val in self._all_options]
