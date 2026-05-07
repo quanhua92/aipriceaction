@@ -53,6 +53,7 @@ class AIPriceActionApp(App):
         self.builder = AIContextBuilder(lang=self.language)
         self.client = AAPClient()
         self._load_ticker_options()
+        self.query_one("#chat-input", Input).focus()
 
     @work(exclusive=True)
     async def _load_ticker_options(self) -> None:

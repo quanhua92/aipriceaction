@@ -64,20 +64,27 @@ class ChatTab(Vertical):
         if cmd == "/help":
             log.write(
                 "[bold yellow]Available commands:[/bold yellow]\n"
-                "  /analyze <ticker>    - Build AI context for a ticker (e.g. /analyze VIC)\n"
+                "  /analyze <ticker> [interval] - Build AI context (e.g. /analyze VIC or /analyze STB 1h)\n"
                 "  /deep-research [q]   - Multi-agent deep research (not yet implemented)\n"
+                "  /exit                - Quit the application\n"
                 "  /help                - Show this help message\n"
                 "  /clear               - Clear chat history\n"
             )
         elif cmd == "/clear":
             log.clear()
+        elif cmd == "/exit":
+            self.app.exit()
+        elif cmd == "/clear":
+            log.clear()
         elif cmd == "/analyze":
             if not arg:
-                log.write("[bold red]Usage: /analyze <ticker>[/bold red] (e.g. /analyze VIC)")
+                log.write("[bold red]Usage: /analyze <ticker> [interval][/bold red] (e.g. /analyze VIC or /analyze STB 1h)")
                 return
-            log.write(f"[bold cyan]You:[/bold cyan] /analyze {arg}")
+            interval = parts[2] if len(parts) > 2 else self.app.interval
+            ticker = arg
+            log.write(f"[bold cyan]You:[/bold cyan] /analyze {ticker} {interval}")
             log.write("[dim]Building context...[/dim]")
-            self._run_analyze(arg)
+            self._run_analyze(ticker, interval)
         elif cmd == "/deep-research":
             question = " ".join(parts[1:]) if len(parts) > 1 else ""
             log.write("[bold cyan]You:[/bold cyan] /deep-research" + (f" {question}" if question else ""))
@@ -90,11 +97,10 @@ class ChatTab(Vertical):
             log.write(f"[bold red]Unknown command:[/bold red] {cmd}")
 
     @work(exclusive=True)
-    async def _run_analyze(self, ticker: str) -> None:
+    async def _run_analyze(self, ticker: str, interval: str) -> None:
         """Build AI context for a ticker in a background worker."""
         try:
             builder = self.app.builder
-            interval = self.app.interval
 
             context = await asyncio.to_thread(
                 builder.build, ticker=ticker, interval=interval
