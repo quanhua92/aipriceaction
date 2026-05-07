@@ -76,6 +76,18 @@ def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 20) -> str:
 
 
 @tool
+def approve_report() -> str:
+    """Approve the report. Call this when ALL data integrity checks pass — no phantom stocks, MA scores match, tables are complete, no fabricated numbers."""
+    return "APPROVED"
+
+
+@tool
+def reject_report(feedback: str) -> str:
+    """Reject the report. Call this when you find data integrity issues. Provide specific feedback listing each issue with exact numbers/tickers that don't match."""
+    return f"REJECTED: {feedback}"
+
+
+@tool
 def get_ticker_list(source: str | None = None) -> str:
     """List available ticker symbols and metadata."""
     tickers = _client.get_tickers(source=source)
@@ -194,10 +206,10 @@ against the worker reports. You do NOT rewrite — you only validate and provide
 3. **Table completeness**: Does each sector table only contain stocks that were actually analyzed by the corresponding worker?
 4. **Missing data**: Are there any numbers in the report that don't appear in any worker report?
 
-## Output Format
-If everything passes, output EXACTLY: APPROVE
-If there are issues, output: REJECT\\n\\n- [issue 1]\\n- [issue 2]\\n...
-Be specific — cite the exact numbers that don't match or the exact phantom stocks.""",
+## Output
+You MUST call one of these tools when done:
+- `approve_report` — if all checks pass
+- `reject_report(feedback="...")` — if there are issues (list each issue with exact numbers/tickers)""",
 
         "reviewer_user": """## Worker Reports (source of truth)
 {worker_reports}
@@ -276,10 +288,10 @@ báo cáo của người tổng hợp so với báo cáo nhân viên. Bạn KHÔ
 3. **Đầy đủ bảng**: Mỗi bảng ngành chỉ chứa các mã được nhân viên phân tích thực tế?
 4. **Dữ liệu thiếu**: Có số liệu nào trong báo cáo không xuất hiện trong bất kỳ báo cáo nhân viên nào không?
 
-## Định Dạng Đầu Ra
-Nếu mọi thứ đạt, xuất CHÍNH XÁC: APPROVE
-Nếu có vấn đề, xuất: REJECT\\n\\n- [vấn đề 1]\\n- [vấn đề 2]\\n...
-Cụ thể — trích dẫn chính xác các số không khớp hoặc các mã cổ phiếu ma.""",
+## Đầu Ra
+Bạn PHẢI gọi một trong hai tool khi xong:
+- `approve_report` — nếu mọi kiểm tra đạt
+- `reject_report(feedback="...")` — nếu có vấn đề (liệt kê từng vấn đề với số liệu/mã cụ thể)""",
 
         "reviewer_user": """## Báo Cáo Nhân Viên (nguồn sự thật)
 {worker_reports}
@@ -516,7 +528,7 @@ MAX_REVIEW_ROUNDS = 3
 
 
 def reviewer_node(state: OverallState) -> dict:
-    """Review aggregator output for data integrity."""
+    """Review aggregator output for data integrity via tool-calling."""
     round_num = state.get("review_round", 0)
     label = f"Reviewer (round {round_num + 1})"
     print(f"[{label}] Checking data integrity...")
@@ -535,25 +547,37 @@ def reviewer_node(state: OverallState) -> dict:
         analysis=state.get("analysis", ""),
     )
 
-    response = _invoke_with_retry(lambda: llm.invoke([
+    reviewer = llm.bind_tools([approve_report, reject_report])
+    response = _invoke_with_retry(lambda: reviewer.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=user_message),
     ]))
-    content = (response.content or "").strip()
 
-    if content.upper().startswith("APPROVE"):
-        print(f"[{label}] APPROVED")
-        return {
-            "review_result": "approve",
-            "review_feedback": "",
-            "final_report": state.get("analysis", ""),
-        }
-    else:
-        print(f"[{label}] REJECTED:\n{content[:500]}")
-        return {
-            "review_result": "reject",
-            "review_feedback": content,
-        }
+    for tc in (response.tool_calls or []):
+        name = tc["name"]
+        args = tc["args"]
+        if name == "approve_report":
+            print(f"[{label}] APPROVED")
+            return {
+                "review_result": "approve",
+                "review_feedback": "",
+                "final_report": state.get("analysis", ""),
+            }
+        elif name == "reject_report":
+            feedback = args.get("feedback", "")
+            print(f"[{label}] REJECTED:\n{feedback[:500]}")
+            return {
+                "review_result": "reject",
+                "review_feedback": feedback,
+            }
+
+    # Fallback: no tool called — treat as reject with the text content as feedback
+    content = (response.content or "").strip()
+    print(f"[{label}] NO TOOL CALLED, treating as reject:\n{content[:500]}")
+    return {
+        "review_result": "reject",
+        "review_feedback": content or "Reviewer did not call approve_report or reject_report tool.",
+    }
 
 
 def review_router(state: OverallState) -> str:
