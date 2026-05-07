@@ -1,7 +1,9 @@
 """Main application: TabbedContent shell with shared state."""
 
+import asyncio
 import time
 
+from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.reactive import reactive
@@ -25,6 +27,7 @@ class AIPriceActionApp(App):
     ticker: reactive[str] = reactive("VNINDEX")
     interval: reactive[str] = reactive("1D")
     language: reactive[str] = reactive("en")
+    ticker_options: reactive[list[tuple[str, str]]] = reactive(list)
 
     _quit_requested_at: float = 0.0
 
@@ -46,7 +49,28 @@ class AIPriceActionApp(App):
         self.register_theme(AI_GREEN)
         self.theme = "ai-green"
         from aipriceaction import AIContextBuilder
+        from aipriceaction import AIPriceAction as AAPClient
         self.builder = AIContextBuilder(lang=self.language)
+        self.client = AAPClient()
+        self._load_ticker_options()
+
+    @work(exclusive=True)
+    async def _load_ticker_options(self) -> None:
+        """Load ticker list from SDK and populate ticker_options reactive."""
+        try:
+            tickers = await asyncio.to_thread(self.client.get_tickers)
+            source_tags = {"vn": "[VN]", "crypto": "[CRYPTO]", "yahoo": "[YH]", "sjc": "[SJC]"}
+            options = []
+            for t in tickers:
+                tag = source_tags.get(t.source, f"[{t.source.upper()}]")
+                label = f"{tag} {t.ticker}"
+                if t.name:
+                    label += f" - {t.name}"
+                options.append((label, t.ticker))
+            options.sort(key=lambda x: x[0])
+            self.ticker_options = options
+        except Exception as e:
+            self.notify(f"Failed to load tickers: {e}", severity="error")
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)

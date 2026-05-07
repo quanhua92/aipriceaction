@@ -10,9 +10,12 @@ from conftest import richlog_text
 
 
 @pytest.fixture()
-async def app(mock_builder):
-    """Mount the app with AIContextBuilder patched."""
-    with patch("aipriceaction.AIContextBuilder", return_value=mock_builder):
+async def app(mock_builder, mock_client):
+    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+    with (
+        patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
+        patch("aipriceaction.AIPriceAction", return_value=mock_client),
+    ):
         async with AIPriceActionApp().run_test() as pilot:
             yield pilot, mock_builder
 

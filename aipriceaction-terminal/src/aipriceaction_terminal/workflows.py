@@ -9,6 +9,7 @@ from textual.widgets import (
 )
 
 from .utils import write_context_result, write_error
+from .widgets import TickerSelect
 
 
 class AnalyzePane(Vertical):
@@ -31,16 +32,13 @@ class AnalyzePane(Vertical):
         width: 10;
         height: auto;
     }
-    .wf-input-short {
-        width: 20;
-    }
     """
 
 
     def compose(self):
         with Horizontal(classes="wf-row"):
             yield Static("Ticker:", classes="wf-label")
-            yield Input(value="VNINDEX", id="wf-ticker", classes="wf-input-short")
+            yield TickerSelect(value="VNINDEX", id="wf-ticker")
             yield Static("Interval:", classes="wf-label")
             yield Select(
                 [("1m", "1m"), ("1h", "1h"), ("1D", "1D")],
@@ -53,10 +51,9 @@ class AnalyzePane(Vertical):
         yield RichLog(id="wf-output", highlight=True, markup=True)
 
     def on_mount(self) -> None:
-        self.query_one("#wf-ticker", Input).value = self.app.ticker
         self.query_one("#wf-interval", Select).value = self.app.interval
         self.query_one("#wf-output", RichLog).write(
-            "[dim italic]Enter a ticker and click Analyze to build AI context.[/dim italic]\n"
+            "[dim italic]Select a ticker and click Analyze to build AI context.[/dim italic]\n"
         )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -64,16 +61,9 @@ class AnalyzePane(Vertical):
             return
         self._do_analyze()
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        if event.input.id == "wf-ticker":
-            self._do_analyze()
-
     def _do_analyze(self) -> None:
-        ticker = self.query_one("#wf-ticker", Input).value.strip().upper()
+        ticker = self.query_one("#wf-ticker", TickerSelect).value
         interval = self.query_one("#wf-interval", Select).value
-        if not ticker:
-            self.app.notify("Please enter a ticker symbol", severity="error")
-            return
         log = self.query_one("#wf-output", RichLog)
         log.write(f"[bold cyan]Analyze:[/bold cyan] {ticker} ({interval})")
         log.write("[dim]Building context...[/dim]")

@@ -14,6 +14,25 @@ def mock_builder():
     return builder
 
 
+@pytest.fixture()
+def mock_client():
+    """Return a mock AIPriceAction client with empty ticker list."""
+    client = MagicMock()
+    client.get_tickers.return_value = []
+    return client
+
+
+@pytest.fixture()
+def sample_ticker_options():
+    """Return sample ticker options for TickerSelect."""
+    return [
+        ("[CRYPTO] BTCUSDT - Bitcoin", "BTCUSDT"),
+        ("[VN] FPT - FPT Corporation", "FPT"),
+        ("[VN] VCB - Vietcombank", "VCB"),
+        ("[VN] VNINDEX", "VNINDEX"),
+    ]
+
+
 def richlog_text(log: RichLog) -> str:
     """Extract plain text from a RichLog widget (strips Rich markup)."""
     parts = []

@@ -9,9 +9,12 @@ from aipriceaction_terminal.app import AIPriceActionApp
 
 
 @pytest.fixture()
-async def app(mock_builder):
-    """Mount the app with AIContextBuilder patched."""
-    with patch("aipriceaction.AIContextBuilder", return_value=mock_builder):
+async def app(mock_builder, mock_client):
+    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+    with (
+        patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
+        patch("aipriceaction.AIPriceAction", return_value=mock_client),
+    ):
         async with AIPriceActionApp().run_test() as pilot:
             yield pilot, mock_builder
 
@@ -137,7 +140,7 @@ async def test_action_focus_first_input_in_workflows(app):
     await pilot.pause(0.1)
     focused = pilot.app.focused
     assert focused is not None
-    assert focused.id == "wf-ticker"
+    assert focused.id == "ticker-input"
 
 
 async def test_action_show_help(app):

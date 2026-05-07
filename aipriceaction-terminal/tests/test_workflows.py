@@ -6,14 +6,23 @@ import pytest
 from textual.widgets import RichLog, Input, Select
 
 from aipriceaction_terminal.app import AIPriceActionApp
+from aipriceaction_terminal.widgets import TickerSelect
 from conftest import richlog_text
 
 
 @pytest.fixture()
-async def app(mock_builder):
-    """Mount the app with AIContextBuilder patched."""
-    with patch("aipriceaction.AIContextBuilder", return_value=mock_builder):
+async def app(mock_builder, mock_client, sample_ticker_options):
+    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+    with (
+        patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
+        patch("aipriceaction.AIPriceAction", return_value=mock_client),
+    ):
         async with AIPriceActionApp().run_test() as pilot:
+            # Switch to workflows tab so TickerSelect is mounted
+            await pilot.press("5")
+            await pilot.pause(0.1)
+            pilot.app.ticker_options = sample_ticker_options
+            await pilot.pause(0.1)
             yield pilot, mock_builder
 
 
@@ -32,9 +41,9 @@ async def test_analyze_pane_default_values(app):
     await pilot.press("5")
     await pilot.pause(0.1)
 
-    ticker_input = pilot.app.query_one("#wf-ticker", Input)
+    ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
     interval_select = pilot.app.query_one("#wf-interval", Select)
-    assert ticker_input.value == "VNINDEX"
+    assert ticker_select.value == "VNINDEX"
     assert interval_select.value == "1D"
 
 
@@ -55,32 +64,16 @@ async def test_analyze_pane_button_triggers_build(app):
     assert "Context built" in text
 
 
-async def test_analyze_pane_empty_ticker_shows_error(app):
+async def test_analyze_pane_select_different_ticker(app):
     pilot, builder = app
     await pilot.press("5")
     await pilot.pause(0.1)
 
-    ticker_input = pilot.app.query_one("#wf-ticker", Input)
-    ticker_input.value = ""
-    await pilot.click("#wf-ticker")
-    await pilot.press("enter")
+    ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
+    ticker_select.value = "FPT"
     await pilot.pause(0.1)
 
-    builder.build.assert_not_called()
-
-    notifications = pilot.app._notifications
-    assert any("ticker" in str(n).lower() for n in notifications)
-
-
-async def test_analyze_pane_input_submitted(app):
-    pilot, builder = app
-    await pilot.press("5")
-    await pilot.pause(0.1)
-
-    ticker_input = pilot.app.query_one("#wf-ticker", Input)
-    ticker_input.value = "FPT"
-    await pilot.click("#wf-ticker")
-    await pilot.press("enter")
+    await pilot.click("#wf-analyze-btn")
     await pilot.pause(0.3)
 
     builder.build.assert_called_once()
@@ -95,8 +88,9 @@ async def test_analyze_pane_custom_interval(app):
 
     interval_select = pilot.app.query_one("#wf-interval", Select)
     interval_select.value = "1h"
-    await pilot.click("#wf-ticker")
-    await pilot.press("enter")
+    await pilot.pause(0.1)
+
+    await pilot.click("#wf-analyze-btn")
     await pilot.pause(0.3)
 
     builder.build.assert_called_once()
@@ -116,6 +110,42 @@ async def test_analyze_pane_error_handling(app):
 
     text = richlog_text(pilot.app.query_one("#wf-output", RichLog))
     assert "build failed" in text
+
+
+async def test_analyze_pane_options_update_on_load(app):
+    """Verify that watch_app_ticker_options populates the Select when options load."""
+    pilot, _ = app
+    await pilot.press("5")
+    await pilot.pause(0.1)
+
+    ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
+    # Default value should be preserved
+    assert ticker_select.value == "VNINDEX"
+
+
+async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
+    """Verify that selecting from autocomplete puts the ticker symbol (not label) into input."""
+    pilot, builder = app
+    await pilot.press("5")
+    await pilot.pause(0.1)
+
+    # Clear the input programmatically, then type to filter and select
+    ticker_input = pilot.app.query_one("#ticker-input", Input)
+    ticker_input.value = "FPT"
+    await pilot.pause(0.1)
+
+    # Focus, arrow down to highlight, Enter to select
+    await pilot.click("#ticker-input")
+    await pilot.pause(0.1)
+    await pilot.press("down")
+    await pilot.press("enter")
+    await pilot.pause(0.1)
+
+    ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
+    # The input should contain just the ticker symbol, not the full label
+    assert ticker_select.value == "FPT"
+    # And it should NOT contain the label text
+    assert "FPT Corporation" not in ticker_input.value
 
 
 async def test_deep_research_pane_mount_message(app):
