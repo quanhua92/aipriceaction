@@ -114,7 +114,7 @@ async def test_action_confirm_quit_timeout(app):
 async def test_action_focus_none(app):
     pilot, _ = app
     # Focus something first
-    await pilot.click("#chat-input")
+    await pilot.click("#chat-input-field")
     assert pilot.app.focused is not None
 
     await pilot.press("escape")
@@ -128,7 +128,7 @@ async def test_action_focus_first_input_in_chat(app):
     await pilot.pause(0.1)
     focused = pilot.app.focused
     assert focused is not None
-    assert focused.id == "chat-input"
+    assert focused.id == "chat-input-field"
 
 
 async def test_action_focus_first_input_in_workflows(app):
