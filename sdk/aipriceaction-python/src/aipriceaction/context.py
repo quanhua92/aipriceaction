@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone, timedelta
+from __future__ import annotations
 
 import pandas as pd
 
-from .client import AIPriceAction, _parse_utc
+import pandas as pd
+
+from .client import AIPriceAction
 from .ticker import Ticker
 from .system import (
     _ma_label,
@@ -15,38 +17,13 @@ from .system import (
 from .single import get_single_templates
 from .multi import get_multi_templates
 
-# Intervals that display date only (no time)
-DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
-
-
-# ---------------------------------------------------------------------------
-# Time formatting helpers
-# ---------------------------------------------------------------------------
-
-
-def _to_local_time(dt: datetime, tz: timezone) -> str:
-    return dt.astimezone(tz).strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _to_local_date(dt: datetime, tz: timezone) -> str:
-    return dt.astimezone(tz).strftime("%Y-%m-%d")
-
-
-def _format_time(time_str: str, interval: str, tz: timezone) -> str:
-    dt = _parse_utc(time_str)
-    if dt is None:
-        return time_str
-    if interval in DATE_ONLY_INTERVALS:
-        return _to_local_date(dt, tz)
-    return _to_local_time(dt, tz)
-
 
 # ---------------------------------------------------------------------------
 # Record formatting
 # ---------------------------------------------------------------------------
 
 
-def _format_record(record: Ticker, interval: str, tz: timezone) -> str:
+def _format_record(record: Ticker) -> str:
     """Format a single Ticker into key=value line format.
 
     Only includes non-None optional fields. Omits total_money_changed
@@ -54,7 +31,7 @@ def _format_record(record: Ticker, interval: str, tz: timezone) -> str:
     """
     fields: list[str] = [
         f"ticker={record.symbol}",
-        f"time={_format_time(record.time, interval, tz)}",
+        f"time={record.time}",
         f"open={record.open:.2f}",
         f"high={record.high:.2f}",
         f"low={record.low:.2f}",
@@ -82,14 +59,14 @@ def _format_record(record: Ticker, interval: str, tz: timezone) -> str:
     return " ".join(fields)
 
 
-def _format_ticker_block(ticker: str, records: list[Ticker], interval: str, tz: timezone) -> str:
+def _format_ticker_block(ticker: str, records: list[Ticker], interval: str) -> str:
     """Format a block of records for one ticker."""
     if not records:
         return ""
     sorted_recs = sorted(records, key=lambda r: r.time)
     lines = [f"## {ticker} ({len(sorted_recs)} records)"]
     for rec in sorted_recs:
-        lines.append(_format_record(rec, interval, tz))
+        lines.append(_format_record(rec))
     return "\n".join(lines)
 
 
@@ -142,7 +119,6 @@ class AIContextBuilder:
         self._client = AIPriceAction(base_url=base_url, cache_dir=cache_dir, utc_offset=utc_offset)
         self._lang = lang
         self._ma_type = ma_type
-        self._tz = timezone(timedelta(hours=utc_offset)) if utc_offset != 0 else timezone.utc
         self._interval: str = "1D"
         self._is_trading_hours: bool = False
         self._market_data: dict[str, list[Ticker]] | None = None
@@ -482,7 +458,7 @@ class AIContextBuilder:
         for ticker in sorted(self._market_data.keys()):
             records = self._market_data[ticker]
             if records:
-                lines.append(_format_ticker_block(ticker, records, self._interval, self._tz))
+                lines.append(_format_ticker_block(ticker, records, self._interval))
                 lines.append("")
 
         return "\n".join(lines)
@@ -530,11 +506,11 @@ class AIContextBuilder:
 
         if has_ref and self._ref_ticker and self._ref_data:
             lines.append(
-                _format_ticker_block(self._ref_ticker, self._ref_data, self._interval, self._tz)
+                _format_ticker_block(self._ref_ticker, self._ref_data, self._interval)
             )
             lines.append("")
 
-        lines.append(_format_ticker_block(ticker, records, self._interval, self._tz))
+        lines.append(_format_ticker_block(ticker, records, self._interval))
         return "\n".join(lines)
 
     # -- internal build_context --

@@ -404,6 +404,28 @@ class TestBuildSource:
         assert "VCB" not in context
 
 
+class TestTimeFormatPassThrough:
+    """Verify that build() does not double-convert timezone from the client.
+
+    The client's get_ohlcv() already converts UTC -> UTC+7 via _convert_time_column.
+    The context builder must pass the time string through as-is, not re-parse
+    it as UTC and shift again (which would produce times like 18:00, 21:00
+    for a stock that only trades 09:00-15:00 ICT).
+    """
+
+    def test_context_uses_client_time_unchanged(self, mock_s3, builder):
+        """Times in context output must match what the client returned, no double shift."""
+        context = builder.build(
+            ticker="VCB", interval="1D",
+            start_date="2025-04-29", end_date="2025-04-29",
+        )
+        # Client returns "2025-04-29" for daily data (date only).
+        # Context must show the same date, not shifted to "2025-04-29 07:00:00" etc.
+        assert "time=2025-04-29" in context
+        # Must NOT contain any shifted datetime for this date-only interval
+        assert "2025-04-29 07:00:00" not in context
+
+
 class TestLiveDataToRecords:
     def test_filters_vn_source(self):
         live_data = {
