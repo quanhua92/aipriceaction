@@ -26,7 +26,7 @@ class _CommandAutoComplete(AutoComplete):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(prevent_default_enter=False, **kwargs)
+        super().__init__(prevent_default_enter=True, **kwargs)
 
     def should_show_dropdown(self, search_string: str) -> bool:
         """Only show dropdown when input starts with /."""
@@ -87,10 +87,16 @@ class ChatInput(Vertical):
         text = state.text.strip()
         if not text.startswith("/"):
             return []
-        query = text[1:].lower()  # everything after /
+        # Extract the command word (before any space / args)
+        cmd_word = text.split()[0]
+        query = cmd_word[1:].lower()
+        # If the command is already a complete match, no need to suggest
+        for _, cmd in _COMMANDS:
+            if cmd[1:].lower() == query:
+                return []
         matches = []
         for label, cmd in _COMMANDS:
-            if query in cmd[1:].lower():  # match against command name without /
+            if query in cmd[1:].lower():
                 matches.append(DropdownItem(label, id=cmd))
         return matches
 
