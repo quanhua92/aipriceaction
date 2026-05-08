@@ -11,11 +11,12 @@ from conftest import richlog_text
 
 
 @pytest.fixture()
-async def app(mock_builder, mock_client, sample_ticker_options):
-    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+async def app(mock_builder, mock_client, mock_agent, sample_ticker_options):
+    """Mount the app with AIContextBuilder, AIPriceAction, and AgentSession patched."""
     with (
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
+        patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent),
     ):
         async with AIPriceActionApp().run_test() as pilot:
             # Switch to workflows tab so TickerSelect is mounted

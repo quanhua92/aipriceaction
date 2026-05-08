@@ -110,6 +110,37 @@ class TickerSelect(Vertical):
     def on_mount(self) -> None:
         self.watch(self.app, "ticker_options", self._on_ticker_options, init=False)
 
+    _GLOBAL_KEYS = frozenset(("1", "2", "3", "4", "5", "6", "question_mark"))
+    _TAB_MAP: dict[str, str] = {
+        "1": "chat",
+        "2": "tickers-vn",
+        "3": "tickers-crypto",
+        "4": "tickers-global",
+        "5": "workflows",
+        "6": "settings",
+    }
+
+    def on_key(self, event) -> None:
+        """Intercept global shortcut keys when ticker Input is focused.
+
+        Textual filters typeable-key bindings when an Input is focused,
+        so we handle tab-switch and help keys manually.
+        """
+        if self.app.focused != self.query_one("#ticker-input", Input):
+            return
+        autocomplete = self.query_one(_TickerAutoComplete)
+        if autocomplete.display:
+            return
+        if event.key in self._GLOBAL_KEYS:
+            input_widget = self.query_one("#ticker-input", Input)
+            if input_widget.value:
+                input_widget.value = input_widget.value[:-1]
+            if event.key in self._TAB_MAP:
+                self.app.action_switch_tab(self._TAB_MAP[event.key])
+            elif event.key == "question_mark":
+                self.app.action_show_help()
+            event.stop()
+
     # --- value property -------------------------------------------------------
 
     @property

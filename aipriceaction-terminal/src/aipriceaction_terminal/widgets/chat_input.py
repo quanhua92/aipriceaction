@@ -16,6 +16,38 @@ _COMMANDS: list[tuple[str, str]] = [
     ("/help", "/help"),
 ]
 
+# Keys that should trigger app-level actions (tab switch, help) even when
+# an Input is focused. Textual filters these from the binding chain, so we
+# handle them manually in the Input's on_key.
+_GLOBAL_KEYS = frozenset(("1", "2", "3", "4", "5", "6", "question_mark"))
+_TAB_MAP: dict[str, str] = {
+    "1": "chat",
+    "2": "tickers-vn",
+    "3": "tickers-crypto",
+    "4": "tickers-global",
+    "5": "workflows",
+    "6": "settings",
+}
+
+
+class _GlobalKeyInput(Input):
+    """Input that forwards global shortcut keys (1-6, ?) to the App.
+
+    Textual removes typeable-key bindings from the binding chain when an
+    Input is focused. This subclass overrides _on_key to intercept global
+    keys before Input processes them as typed characters.
+    """
+
+    async def _on_key(self, event) -> None:
+        if event.key in _GLOBAL_KEYS:
+            event.stop()
+            if event.key in _TAB_MAP:
+                self.app.action_switch_tab(_TAB_MAP[event.key])
+            elif event.key == "question_mark":
+                self.app.action_show_help()
+        else:
+            await super()._on_key(event)
+
 
 class _CommandAutoComplete(AutoComplete):
     """AutoComplete that only activates for slash commands."""
@@ -65,7 +97,7 @@ class ChatInput(Vertical):
         self._history_index: int = -1
 
     def compose(self):
-        yield Input(placeholder="Type a message or /analyze <ticker>...", id="chat-input-field")
+        yield _GlobalKeyInput(placeholder="Type a message or /analyze <ticker>...", id="chat-input-field")
         yield _CommandAutoComplete(
             target="#chat-input-field",
             candidates=self._get_candidates,

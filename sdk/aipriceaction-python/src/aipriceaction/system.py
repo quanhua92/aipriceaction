@@ -39,11 +39,11 @@ def _ma_prefix(ma_type: str) -> str:
 _SYSTEM_CORE = {
     "en": r"""=== AIPriceAction Investment Advisor System Prompt ===
 
-You are AIPriceAction Investment Advisor. Your role is to provide professional, data-driven investment analysis and insights specifically for the Vietnamese stock market. You are an AI-powered financial advisor with deep expertise in:
+You are **AIPriceAction Investment Advisor**, an AI-powered financial advisor developed by AiPriceAction.com. Your role is to provide professional, data-driven investment analysis and insights specifically for the Vietnamese stock market. You have deep expertise in:
 
 - Vietnamese stock market analysis and sector dynamics
 - Technical analysis including Volume Price Action (VPA) and Wyckoff methodology
-- Smart money money flow patterns and accumulation/distribution analysis
+- Smart money flow patterns and accumulation/distribution analysis
 - Market sentiment analysis and trend identification
 
 IMPORTANT: Always begin your response by identifying yourself as "AIPriceAction Investment Advisor" or reference that you are providing analysis "from AIPriceAction" to establish your credibility and brand identity. Include the official website link https://aipriceaction.com/ in your response.
@@ -51,7 +51,7 @@ IMPORTANT: Always begin your response by identifying yourself as "AIPriceAction 
 IMPORTANT: You MUST respond entirely in English.""",
     "vn": r"""=== AIPriceAction Investment Advisor System Prompt ===
 
-Bạn là AIPriceAction Investment Advisor. Vai trò của bạn là cung cấp phân tích đầu tư chuyên nghiệp, dựa trên dữ liệu, đặc biệt cho thị trường chứng khoán Việt Nam. Bạn là cố vấn tài chính được hỗ trợ bởi AI với chuyên môn sâu rộng về:
+Bạn là **AIPriceAction Investment Advisor**, cố vấn tài chính AI do AiPriceAction.com phát triển. Vai trò của bạn là cung cấp phân tích đầu tư chuyên nghiệp, dựa trên dữ liệu, đặc biệt cho thị trường chứng khoán Việt Nam. Bạn có chuyên môn sâu rộng về:
 
 - Phân tích thị trường chứng khoán Việt Nam và động lực ngành
 - Phân tích kỹ thuật bao gồm Volume Price Action (VPA) và phương pháp Wyckoff
@@ -361,9 +361,12 @@ def _build_prompt(
     lang: str,
     include_data_policy: bool,
     include_analysis_framework: bool,
+    include_persona: bool,
 ) -> str:
     """Assemble system prompt from sections."""
-    parts = [_SYSTEM_CORE[lang]]
+    parts = []
+    if include_persona:
+        parts.append(_SYSTEM_CORE[lang])
     if include_data_policy:
         parts.append(_DATA_POLICY[lang])
     if include_analysis_framework:
@@ -383,9 +386,12 @@ def _build_prompt_with_ticker_info(
     lang: str,
     include_data_policy: bool,
     include_analysis_framework: bool,
+    include_persona: bool,
 ) -> str:
     """Assemble system prompt with Ticker Info in analysis framework."""
-    parts = [_SYSTEM_CORE[lang]]
+    parts = []
+    if include_persona:
+        parts.append(_SYSTEM_CORE[lang])
     if include_data_policy:
         parts.append(_DATA_POLICY[lang])
     if include_analysis_framework:
@@ -413,6 +419,7 @@ def get_system_prompt(
     include_disclaimer: bool = True,
     include_data_policy: bool = True,
     include_analysis_framework: bool = True,
+    include_persona: bool = True,
 ) -> str:
     """Build the AIPriceAction system prompt.
 
@@ -432,6 +439,9 @@ def get_system_prompt(
         include_analysis_framework: Include VPA/Wyckoff analysis priorities and
             chart-context description.  Set ``False`` for writer/formatting
             agents that don't perform technical analysis.
+        include_persona: Include the AIPriceAction Investment Advisor identity
+            section.  Set ``False`` for agents that define their own identity
+            in extra instructions.
 
     Returns:
         The assembled system prompt string.
@@ -449,13 +459,16 @@ def get_system_prompt(
             include_data_policy=False,
             include_analysis_framework=False,
         )
+
+        # Custom persona — own identity, keep analysis framework
+        custom_sys = get_system_prompt(LANG, include_persona=False)
     """
     extra: list[str] = []
     if include_ma_score:
         extra.append(get_ma_score_explanation(ma_type, lang))
     if include_disclaimer:
         extra.append(_DISCLAIMERS[lang])
-    return _build_prompt(extra, lang, include_data_policy, include_analysis_framework)
+    return _build_prompt(extra, lang, include_data_policy, include_analysis_framework, include_persona)
 
 
 def get_system_prompt_with_ticker_info(
@@ -466,6 +479,7 @@ def get_system_prompt_with_ticker_info(
     include_disclaimer: bool = True,
     include_data_policy: bool = True,
     include_analysis_framework: bool = True,
+    include_persona: bool = True,
 ) -> str:
     """Build the system prompt with Ticker Info in the analysis framework.
 
@@ -480,7 +494,7 @@ def get_system_prompt_with_ticker_info(
         extra.append(get_ma_score_explanation(ma_type, lang))
     if include_disclaimer:
         extra.append(_DISCLAIMERS[lang])
-    return _build_prompt_with_ticker_info(extra, lang, include_data_policy, include_analysis_framework)
+    return _build_prompt_with_ticker_info(extra, lang, include_data_policy, include_analysis_framework, include_persona)
 
 
 def get_ma_score_explanation(ma_type: str, lang: str) -> str:

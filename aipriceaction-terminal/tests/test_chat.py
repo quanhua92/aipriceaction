@@ -10,11 +10,12 @@ from conftest import richlog_text
 
 
 @pytest.fixture()
-async def app(mock_builder, mock_client):
-    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+async def app(mock_builder, mock_client, mock_agent):
+    """Mount the app with AIContextBuilder, AIPriceAction, and AgentSession patched."""
     with (
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
+        patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent),
     ):
         async with AIPriceActionApp().run_test() as pilot:
             yield pilot, mock_builder
@@ -33,11 +34,11 @@ async def test_chat_input_regular_message(app):
     chat_input.value = "hello"
     await pilot.click("#chat-input-field")
     await pilot.press("enter")
-    await pilot.pause(0.1)
+    await pilot.pause(0.5)
 
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
     assert "You: hello" in text
-    assert "not yet implemented" in text.lower()
+    assert "Hello from agent" in text
 
 
 async def test_chat_input_empty_does_nothing(app):

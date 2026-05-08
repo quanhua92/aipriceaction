@@ -67,5 +67,7 @@ class SettingsTab(Vertical):
                 self.app.language = language
                 from aipriceaction import AIContextBuilder
                 self.app.builder = AIContextBuilder(lang=language)
+                from .agents import AgentSession, AgentConfig
+                self.app.agent = AgentSession(AgentConfig(lang=language))
 
             self.app.notify(f"Settings applied: {ticker} / {interval} / {language}")

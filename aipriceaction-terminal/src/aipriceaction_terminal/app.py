@@ -31,6 +31,15 @@ class AIPriceActionApp(App):
 
     _quit_requested_at: float = 0.0
 
+    _TAB_KEYS: dict[str, str] = {
+        "1": "chat",
+        "2": "tickers-vn",
+        "3": "tickers-crypto",
+        "4": "tickers-global",
+        "5": "workflows",
+        "6": "settings",
+    }
+
     # -- Key bindings (whichkey-style footer) --
     BINDINGS: list[BindingType] = [
         Binding("ctrl+q", "confirm_quit", "Quit", key_display="ctrl+q", priority=True),
@@ -52,6 +61,8 @@ class AIPriceActionApp(App):
         from aipriceaction import AIPriceAction as AAPClient
         self.builder = AIContextBuilder(lang=self.language)
         self.client = AAPClient()
+        from .agents import AgentSession, AgentConfig
+        self.agent = AgentSession(AgentConfig(lang=self.language))
         self._load_ticker_options()
         self.query_one("#chat-input-field", Input).focus()
 

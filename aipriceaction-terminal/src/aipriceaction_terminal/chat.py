@@ -23,6 +23,7 @@ class ChatTab(Vertical):
         height: 1fr;
         border: solid $accent;
         padding: 1;
+        overflow-x: hidden;
     }
     #chat-input {
         height: 3;
@@ -30,7 +31,7 @@ class ChatTab(Vertical):
     """
 
     def compose(self):
-        yield RichLog(id="chat-log", highlight=True, markup=True)
+        yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True, min_width=1)
         yield ChatInput(id="chat-input")
 
     def on_mount(self) -> None:
@@ -56,10 +57,7 @@ class ChatTab(Vertical):
             self._handle_slash_command(text)
         else:
             log.write(f"[bold cyan]You:[/bold cyan] {text}")
-            log.write(
-                "[dim italic]AI responses not yet implemented. "
-                "Use /analyze to build ticker context.[/dim italic]\n"
-            )
+            self._run_agent_chat(text)
 
     def _handle_slash_command(self, text: str) -> None:
         parts = text.split(maxsplit=2)
@@ -81,6 +79,7 @@ class ChatTab(Vertical):
             )
         elif cmd == "/clear":
             log.clear()
+            self.app.agent.clear_history()
         elif cmd == "/exit":
             self.app.exit()
         elif cmd == "/analyze":
@@ -177,3 +176,38 @@ class ChatTab(Vertical):
         except Exception as e:
             log = self.query_one("#chat-log", RichLog)
             write_error(log, e)
+
+    @work(exclusive=True)
+    async def _run_agent_chat(self, message: str) -> None:
+        """Stream an agent response into the chat log."""
+        log = self.query_one("#chat-log", RichLog)
+        try:
+            from .agents.callbacks import StreamEventType
+            buffer: list[str] = []
+
+            def flush() -> None:
+                """Write buffered tokens as a single line to the RichLog."""
+                if buffer:
+                    log.write("".join(buffer))
+                    buffer.clear()
+
+            async for event in self.app.agent.stream(message):
+                if event.type == StreamEventType.TOKEN:
+                    buffer.append(event.content)
+                    # Flush on newline to get line-by-line streaming
+                    if "\n" in event.content:
+                        flush()
+                elif event.type == StreamEventType.DONE:
+                    flush()
+                    log.write("")  # trailing newline
+                else:
+                    # Tool calls, errors — flush any pending tokens first
+                    flush()
+                    if event.type == StreamEventType.TOOL_CALL_START:
+                        log.write(f"[dim italic]{event.content}[/dim italic]")
+                    elif event.type == StreamEventType.TOOL_RESULT:
+                        log.write(f"[dim]{event.content}[/dim]")
+                    elif event.type == StreamEventType.ERROR:
+                        log.write(f"[bold red]{event.content}[/bold red]")
+        except Exception as e:
+            log.write(f"[bold red]Agent error: {e}[/bold red]\n")

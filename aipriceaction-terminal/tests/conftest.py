@@ -23,6 +23,21 @@ def mock_client():
 
 
 @pytest.fixture()
+def mock_agent():
+    """Return a mock AgentSession with a canned stream response."""
+    agent = MagicMock()
+
+    async def _mock_stream(message):
+        from aipriceaction_terminal.agents.callbacks import StreamEvent, StreamEventType
+        yield StreamEvent(type=StreamEventType.TOKEN, content="Hello from agent.")
+        yield StreamEvent(type=StreamEventType.DONE)
+
+    agent.stream = _mock_stream
+    agent.clear_history = MagicMock()
+    return agent
+
+
+@pytest.fixture()
 def sample_ticker_options():
     """Return sample ticker options for TickerSelect."""
     return [

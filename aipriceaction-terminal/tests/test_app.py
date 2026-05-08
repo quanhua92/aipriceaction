@@ -9,11 +9,12 @@ from aipriceaction_terminal.app import AIPriceActionApp
 
 
 @pytest.fixture()
-async def app(mock_builder, mock_client):
-    """Mount the app with AIContextBuilder and AIPriceAction patched."""
+async def app(mock_builder, mock_client, mock_agent):
+    """Mount the app with AIContextBuilder, AIPriceAction, and AgentSession patched."""
     with (
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
+        patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent),
     ):
         async with AIPriceActionApp().run_test() as pilot:
             yield pilot, mock_builder
