@@ -11,6 +11,7 @@ from typing import Any
 
 class StreamEventType(Enum):
     TOKEN = "token"
+    THINKING = "thinking"
     TOOL_CALL_START = "tool_call_start"
     TOOL_RESULT = "tool_result"
     ERROR = "error"
@@ -27,6 +28,36 @@ class StreamEvent:
 
 
 StreamCallback = Callable[[StreamEvent], Awaitable[None]]
+
+
+def _extract_reasoning_content(message: Any) -> str:
+    """Extract reasoning/thinking content from an AIMessageChunk.
+
+    Checks multiple fields where different providers store reasoning tokens:
+    - ``additional_kwargs["reasoning_content"]`` — OpenRouter, DeepSeek, XAI, Groq
+    - ``content_blocks`` with ``type="reasoning"`` — Anthropic, OpenAI
+    """
+    # Check additional_kwargs first (most common for OpenAI-compatible providers)
+    ak = getattr(message, "additional_kwargs", None)
+    if ak and isinstance(ak, dict) and "reasoning_content" in ak:
+        content = ak["reasoning_content"]
+        if content:
+            return content
+
+    # Check content_blocks for type="reasoning"
+    blocks = getattr(message, "content_blocks", None)
+    if blocks:
+        for block in blocks:
+            if isinstance(block, dict) and block.get("type") == "reasoning":
+                text = block.get("reasoning", "")
+                if text:
+                    return text
+            elif hasattr(block, "type") and block.type == "reasoning":
+                text = getattr(block, "reasoning", "")
+                if text:
+                    return text
+
+    return ""
 
 
 class StreamCallbackHandler:
@@ -78,6 +109,14 @@ class StreamCallbackHandler:
         msg_type = type(message).__name__
 
         if msg_type in ("AIMessageChunk", "AIMessage"):
+            # Reasoning/thinking tokens
+            reasoning = _extract_reasoning_content(message)
+            if reasoning:
+                events.append(StreamEvent(
+                    type=StreamEventType.THINKING,
+                    content=reasoning,
+                ))
+
             # Tool calls
             if getattr(message, "tool_calls", None):
                 if self.show_tool_calls:
@@ -87,6 +126,7 @@ class StreamCallbackHandler:
                             type=StreamEventType.TOOL_CALL_START,
                             content=f"{tc['name']}({args_preview})",
                         ))
+
             # Content tokens (partial chunks from streaming)
             if message.content:
                 events.append(StreamEvent(
