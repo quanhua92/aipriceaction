@@ -74,7 +74,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
     """Factory: creates the get_ohlcv_data tool."""
 
     @tool
-    def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 30) -> str:
+    def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 5) -> str:
         """Fetch OHLCV data for a ticker. Returns formatted context with MA indicators and scores.
 
         Args:
