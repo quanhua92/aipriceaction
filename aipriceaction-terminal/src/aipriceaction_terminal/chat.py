@@ -185,7 +185,6 @@ class ChatTab(Vertical):
             from .agents.callbacks import StreamEventType
             buffer: list[str] = []
             thinking_buf: list[str] = []
-            thinking_line_idx: int | None = None
 
             def flush() -> None:
                 """Write buffered tokens as a single line to the RichLog."""
@@ -193,44 +192,30 @@ class ChatTab(Vertical):
                     log.write("".join(buffer))
                     buffer.clear()
 
+            def flush_thinking() -> None:
+                """Write buffered thinking tokens as a dim line."""
+                if thinking_buf:
+                    log.write(f"[dim italic]{''.join(thinking_buf)}[/dim italic]")
+                    thinking_buf.clear()
+
             async for event in self.app.agent.stream(message):
                 if event.type == StreamEventType.THINKING:
-                    # Buffer thinking tokens silently
                     thinking_buf.append(event.content)
-                    if thinking_line_idx is None:
-                        # Show indicator on first thinking token
-                        log.write("[dim italic]Thinking...[/dim italic]")
-                        thinking_line_idx = len(log.lines) - 1
 
                 elif event.type == StreamEventType.TOKEN:
-                    # First real token after thinking — replace indicator with summary
-                    if thinking_line_idx is not None:
-                        char_count = len("".join(thinking_buf))
-                        thinking_summary = f"[dim italic]Thought for {char_count:,} chars[/dim italic]"
-                        # Rewrite the "Thinking..." line in-place
-                        log.lines[thinking_line_idx] = thinking_summary  # type: ignore[index]
-                        log.refresh()
-                        thinking_line_idx = None
-                        thinking_buf.clear()
+                    if thinking_buf:
+                        flush_thinking()
                     buffer.append(event.content)
-                    # Flush on newline to get line-by-line streaming
                     if "\n" in event.content:
                         flush()
 
                 elif event.type == StreamEventType.DONE:
-                    # If still thinking when done, replace indicator with summary
-                    if thinking_line_idx is not None:
-                        char_count = len("".join(thinking_buf))
-                        thinking_summary = f"[dim italic]Thought for {char_count:,} chars[/dim italic]"
-                        log.lines[thinking_line_idx] = thinking_summary  # type: ignore[index]
-                        log.refresh()
-                        thinking_line_idx = None
-                        thinking_buf.clear()
+                    if thinking_buf:
+                        flush_thinking()
                     flush()
-                    log.write("")  # trailing newline
+                    log.write("")
 
                 else:
-                    # Tool calls, errors — flush any pending tokens first
                     flush()
                     if event.type == StreamEventType.TOOL_CALL_START:
                         log.write(f"[dim italic]{event.content}[/dim italic]")

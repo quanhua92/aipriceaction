@@ -1,12 +1,29 @@
 """Tests for ChatTab slash commands and interaction."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from textual.widgets import RichLog, Input
 
+from aipriceaction_terminal.agents.callbacks import StreamEvent, StreamEventType
 from aipriceaction_terminal.app import AIPriceActionApp
 from conftest import richlog_text
+
+
+@pytest.fixture()
+def mock_agent_with_thinking():
+    """Mock agent that emits THINKING then TOKEN then DONE."""
+    agent = MagicMock()
+
+    async def _mock_stream(message):
+        yield StreamEvent(type=StreamEventType.THINKING, content="let me think")
+        yield StreamEvent(type=StreamEventType.THINKING, content=" some more")
+        yield StreamEvent(type=StreamEventType.TOKEN, content="Answer here.")
+        yield StreamEvent(type=StreamEventType.DONE)
+
+    agent.stream = _mock_stream
+    agent.clear_history = MagicMock()
+    return agent
 
 
 @pytest.fixture()
@@ -176,6 +193,27 @@ async def test_chat_slash_unknown_command(app):
 
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
     assert "Unknown command" in text
+
+
+async def test_chat_input_with_thinking_tokens(mock_builder, mock_client, mock_agent_with_thinking):
+    """Agent that emits THINKING events should stream them visibly, not crash."""
+    with (
+        patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
+        patch("aipriceaction.AIPriceAction", return_value=mock_client),
+        patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent_with_thinking),
+    ):
+        async with AIPriceActionApp().run_test() as pilot:
+            chat_input = pilot.app.query_one("#chat-input-field", Input)
+            chat_input.value = "hello"
+            await pilot.click("#chat-input-field")
+            await pilot.press("enter")
+            await pilot.pause(0.5)
+
+            log = pilot.app.query_one("#chat-log", RichLog)
+            text = richlog_text(log)
+            assert "You: hello" in text
+            assert "let me think some more" in text
+            assert "Answer here" in text
 
 
 async def test_chat_slash_commands_case_insensitive(app):

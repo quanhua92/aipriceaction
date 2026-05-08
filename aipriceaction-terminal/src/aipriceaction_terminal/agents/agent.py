@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from langchain.agents import create_agent
+from langchain_core.messages import AIMessageChunk
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -16,6 +17,41 @@ from .config import AgentConfig, TRANSIENT_ERROR_KEYWORDS
 if TYPE_CHECKING:
     from .personas import Persona
     from .tools import ToolRegistry
+
+
+class OpenRouterChatOpenAI(ChatOpenAI):
+    """ChatOpenAI subclass that preserves reasoning tokens from OpenRouter.
+
+    OpenRouter reasoning models (e.g. nvidia/nemotron-3-nano-omni-reasoning) return
+    a ``reasoning`` string field in the streaming delta.  LangChain's default
+    ``_convert_delta_to_message_chunk`` ignores this field, so we override
+    ``_convert_chunk_to_generation_chunk`` to inject it into
+    ``AIMessageChunk.additional_kwargs["reasoning_content"]`` after the chunk is built.
+    """
+
+    def _convert_chunk_to_generation_chunk(
+        self,
+        chunk: dict[str, Any],
+        default_chunk_class: type,
+        base_generation_info: dict[str, Any] | None,
+    ) -> Any:
+        """Build the generation chunk, then inject reasoning into additional_kwargs."""
+        result = super()._convert_chunk_to_generation_chunk(
+            chunk, default_chunk_class, base_generation_info
+        )
+        if result is None:
+            return result
+
+        # Extract reasoning from the raw delta before LangChain discards it.
+        choices = chunk.get("choices", [])
+        if choices:
+            delta = choices[0].get("delta")
+            if isinstance(delta, dict):
+                reasoning = delta.get("reasoning")
+                if reasoning and isinstance(result.message, AIMessageChunk):
+                    result.message.additional_kwargs["reasoning_content"] = reasoning
+
+        return result
 
 
 class AgentSession:
@@ -39,10 +75,11 @@ class AgentSession:
 
     def _build_agent(self) -> object:
         """Build the LangChain agent from current config/persona/tools."""
-        llm = ChatOpenAI(
+        llm = OpenRouterChatOpenAI(
             api_key=self.config.api_key,
             base_url=self.config.base_url,
             model=self.config.model,
+            extra_body={"reasoning": {"enabled": True}},
         )
         system_prompt = self.persona.build_system_prompt(self.config.lang)
         lc_tools = self.tools.get_tools()

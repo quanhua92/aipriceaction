@@ -1,9 +1,10 @@
 """Tests for thinking/reasoning token detection and rendering."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
+from aipriceaction_terminal.agents.agent import OpenRouterChatOpenAI
 from aipriceaction_terminal.agents.callbacks import (
     StreamCallbackHandler,
     StreamEvent,
@@ -148,3 +149,89 @@ class TestStreamCallbackHandlerThinking:
         assert len(events) == 2
         assert events[0].type == StreamEventType.THINKING
         assert events[1].type == StreamEventType.TOKEN
+
+
+class TestOpenRouterChatOpenAI:
+    """Test the ReasoningChatOpenAI subclass that injects reasoning from raw delta."""
+
+    def test_injects_reasoning_into_additional_kwargs(self):
+        """The subclass should move delta.reasoning into additional_kwargs."""
+        llm = OpenRouterChatOpenAI(
+            api_key="test",
+            base_url="http://localhost",
+            model="test-model",
+            extra_body={"reasoning": {"enabled": True}},
+        )
+
+        # Simulate a raw OpenRouter streaming chunk with reasoning
+        raw_chunk = {
+            "choices": [
+                {
+                    "delta": {
+                        "role": "assistant",
+                        "reasoning": "We need to count the items...",
+                        "content": "",
+                    }
+                }
+            ]
+        }
+
+        result = llm._convert_chunk_to_generation_chunk(
+            raw_chunk, MagicMock, None
+        )
+
+        assert result is not None
+        assert result.message.additional_kwargs.get("reasoning_content") == "We need to count the items..."
+
+    def test_no_reasoning_passthrough(self):
+        """Chunk without reasoning field should be unchanged."""
+        llm = OpenRouterChatOpenAI(
+            api_key="test",
+            base_url="http://localhost",
+            model="test-model",
+            extra_body={"reasoning": {"enabled": True}},
+        )
+
+        raw_chunk = {
+            "choices": [
+                {
+                    "delta": {
+                        "role": "assistant",
+                        "content": "Hello",
+                    }
+                }
+            ]
+        }
+
+        result = llm._convert_chunk_to_generation_chunk(
+            raw_chunk, MagicMock, None
+        )
+
+        assert result is not None
+        assert "reasoning_content" not in result.message.additional_kwargs
+        assert result.message.content == "Hello"
+
+    def test_usage_only_chunk_handled(self):
+        """Chunk with no choices (usage-only) should be handled by parent."""
+        from langchain_core.messages import AIMessageChunk
+
+        llm = OpenRouterChatOpenAI(
+            api_key="test",
+            base_url="http://localhost",
+            model="test-model",
+        )
+
+        raw_chunk = {"choices": [], "usage": {"total_tokens": 10}}
+        result = llm._convert_chunk_to_generation_chunk(raw_chunk, AIMessageChunk, None)
+        assert result is not None  # usage-only chunk is not None
+        assert result.message.content == ""
+
+    def test_extra_body_configured(self):
+        """extra_body should be set on the instance."""
+        llm = OpenRouterChatOpenAI(
+            api_key="test",
+            base_url="http://localhost",
+            model="test-model",
+            extra_body={"reasoning": {"enabled": True}},
+        )
+        assert llm.extra_body == {"reasoning": {"enabled": True}}
