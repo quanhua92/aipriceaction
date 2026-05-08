@@ -120,14 +120,20 @@ def create_ticker_list_tool(lang: str = "en") -> ToolDef:
         if not tickers:
             return "No tickers found."
 
-        lines = [f"=== Available tickers (source={source or 'all'}) ===\n"]
-        lines.append(f"{'symbol':<12s}  {'name':<40s}  {'group':<30s}  {'source'}")
-        lines.append("-" * 100)
-        for t in tickers:
-            name = (t.name or "")[:38]
-            group = (t.group or "")[:28]
-            lines.append(f"{t.ticker:<12s}  {name:<40s}  {group:<30s}  {t.source}")
-        lines.append(f"\nTotal: {len(tickers)} tickers")
+        from collections import Counter
+
+        source_counts = Counter(t.source for t in tickers)
+        group_counts = Counter(t.group for t in tickers if t.group)
+
+        lines = [f"Available tickers (source={source or 'all'}), total: {len(tickers)}"]
+        lines.append("Counts by source: " + ", ".join(f"{s}={c}" for s, c in source_counts.most_common()))
+        lines.append("Groups: " + ", ".join(f"{g}={c}" for g, c in group_counts.most_common(15)))
+        lines.append("")
+
+        # Symbols only, comma-separated for compactness
+        symbols = [t.ticker for t in tickers]
+        lines.append("Symbols: " + ", ".join(symbols))
+
         return "\n".join(lines)
 
     return ToolDef(

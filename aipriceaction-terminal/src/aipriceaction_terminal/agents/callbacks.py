@@ -75,6 +75,13 @@ class StreamCallbackHandler:
     ) -> None:
         self.show_tool_calls = show_tool_calls
         self.show_tool_results = show_tool_results
+        # Buffer tool calls during streaming; keyed by tool_call_id.
+        # Values accumulate raw args string from tool_call_chunks.
+        self._pending_tool_calls: dict[str, dict[str, str]] = {}
+        # OpenAI streaming only sends `id` on the first chunk per tool call.
+        # Subsequent chunks carry only `index` + partial `args`.
+        # This maps index → tool_call_id so we can associate them.
+        self._index_to_id: dict[int, str] = {}
 
     def process_agent_event(self, event: Any) -> list[StreamEvent]:
         """Convert a single LangGraph stream event to StreamEvents.
@@ -117,15 +124,45 @@ class StreamCallbackHandler:
                     content=reasoning,
                 ))
 
-            # Tool calls
-            if getattr(message, "tool_calls", None):
-                if self.show_tool_calls:
-                    for tc in message.tool_calls:
-                        args_preview = json.dumps(tc["args"], ensure_ascii=False)
-                        events.append(StreamEvent(
-                            type=StreamEventType.TOOL_CALL_START,
-                            content=f"{tc['name']}({args_preview})",
-                        ))
+            # Tool calls — accumulate raw chunks, emit parsed call when ToolMessage arrives
+            tool_call_chunks = getattr(message, "tool_call_chunks", None)
+            if tool_call_chunks:
+                for tc_chunk in tool_call_chunks:
+                    _get = tc_chunk.get if isinstance(tc_chunk, dict) else lambda k, d=None: getattr(tc_chunk, k, d)
+                    tc_id = _get("id") or ""
+                    tc_index = _get("index")
+
+                    # First chunk has id + index → record the mapping
+                    if tc_id and tc_index is not None:
+                        self._index_to_id[tc_index] = tc_id
+                    # Subsequent chunks only have index → look up the id
+                    elif not tc_id and tc_index is not None:
+                        tc_id = self._index_to_id.get(tc_index, "")
+
+                    if not tc_id:
+                        continue
+                    if tc_id not in self._pending_tool_calls:
+                        self._pending_tool_calls[tc_id] = {"name": "", "args_str": ""}
+                    entry = self._pending_tool_calls[tc_id]
+                    chunk_name = _get("name") or ""
+                    if chunk_name:
+                        entry["name"] = chunk_name
+                    chunk_args = _get("args") or ""
+                    if chunk_args:
+                        entry["args_str"] += chunk_args
+            elif getattr(message, "tool_calls", None):
+                # Fallback for non-streaming AIMessage (e.g. stream_mode="updates")
+                for tc in message.tool_calls:
+                    tc_id = tc.get("id", "")
+                    if not tc_id:
+                        continue
+                    if tc_id not in self._pending_tool_calls:
+                        self._pending_tool_calls[tc_id] = {"name": "", "args_str": ""}
+                    entry = self._pending_tool_calls[tc_id]
+                    if tc.get("name"):
+                        entry["name"] = tc["name"]
+                    if isinstance(tc.get("args"), dict):
+                        entry["args_str"] = json.dumps(tc["args"], ensure_ascii=False)
 
             # Content tokens (partial chunks from streaming)
             if message.content:
@@ -135,6 +172,21 @@ class StreamCallbackHandler:
                 ))
 
         elif msg_type in ("ToolMessage",):
+            # Flush buffered tool call now that execution is complete
+            tc_id = getattr(message, "tool_call_id", "")
+            if tc_id and tc_id in self._pending_tool_calls and self.show_tool_calls:
+                tc_info = self._pending_tool_calls.pop(tc_id)
+                raw_args = tc_info.get("args_str", "")
+                try:
+                    args = json.loads(raw_args) if raw_args else {}
+                except json.JSONDecodeError:
+                    args = {}
+                args_preview = json.dumps(args, ensure_ascii=False)
+                events.append(StreamEvent(
+                    type=StreamEventType.TOOL_CALL_START,
+                    content=f"{tc_info['name']}({args_preview})",
+                ))
+
             if self.show_tool_results:
                 events.append(StreamEvent(
                     type=StreamEventType.TOOL_RESULT,
