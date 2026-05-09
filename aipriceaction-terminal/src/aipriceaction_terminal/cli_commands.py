@@ -70,22 +70,36 @@ def cmd_analyze(args) -> None:
         sys.exit(1)
 
     print(f"[build] Context ready ({len(context):,} chars, {build_elapsed:.1f}s)", file=sys.stderr)
-    print(f"[analyze] Asking: {question[:80]}{'...' if len(question) > 80 else ''}", file=sys.stderr)
+    print(f"[analyze] Asking:\n{question}", file=sys.stderr)
 
-    try:
-        response = builder.answer(question)
-    except ValueError as e:
-        print(f"[error] {e}", file=sys.stderr)
+    # LLM analysis with retry on empty/transient failures
+    max_attempts = 3
+    response = ""
+    last_error: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            response = builder.answer(question)
+        except Exception as e:
+            last_error = e
+            print(f"[error] Attempt {attempt + 1}/{max_attempts}: {type(e).__name__}: {e}", file=sys.stderr)
+            if attempt < max_attempts - 1:
+                import time as _time
+                _time.sleep(2)
+            continue
+        if response.strip():
+            break
+        print(f"[warn] Attempt {attempt + 1}/{max_attempts}: LLM returned empty response", file=sys.stderr)
+        last_error = RuntimeError("LLM returned empty response")
+    else:
+        elapsed = time.time() - t0
+        print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
+        if last_error:
+            print(f"[error] Failed after {max_attempts} attempts: {last_error}", file=sys.stderr)
         sys.exit(1)
 
     elapsed = time.time() - t0
     print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
     print()
-
-    if not response.strip():
-        print("[warn] LLM returned empty response. The model may not support the context size or language mismatch.", file=sys.stderr)
-        sys.exit(1)
-
     print(response)
 
 
