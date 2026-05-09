@@ -12,6 +12,7 @@ from aipriceaction_terminal.app import AIPriceActionApp
 async def app(mock_builder, mock_client, mock_agent):
     """Mount the app with AIContextBuilder, AIPriceAction, and AgentSession patched."""
     with (
+        patch("aipriceaction_terminal.app.load_settings", return_value={"ticker": "VNINDEX", "interval": "1D", "language": "en"}),
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
         patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent),
