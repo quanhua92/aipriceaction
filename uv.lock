@@ -12,13 +12,13 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "aipa",
+    "aipa-cli",
     "aipriceaction",
     "aipriceaction-workspace",
 ]
 
 [[package]]
-name = "aipa"
+name = "aipa-cli"
 source = { editable = "aipriceaction-terminal" }
 dependencies = [
     { name = "aipriceaction" },

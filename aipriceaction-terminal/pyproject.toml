@@ -31,8 +31,8 @@ Homepage = "https://github.com/quanhua92/aipriceaction"
 Repository = "https://github.com/quanhua92/aipriceaction"
 
 [project.scripts]
-aipa = "aipriceaction_terminal.app:main"
-aipa-cli = "aipriceaction_terminal.app:main"
+aipa = "aipriceaction_terminal.cli:run"
+aipa-cli = "aipriceaction_terminal.cli:run"
 
 [build-system]
 requires = ["hatchling"]
