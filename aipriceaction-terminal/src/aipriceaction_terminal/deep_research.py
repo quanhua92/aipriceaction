@@ -366,13 +366,25 @@ def _build_graph(checkpointer=None, lang: str = "en"):
         if getattr(response, "tool_calls", None):
             for tc in response.tool_calls:
                 if tc["name"] == "create_subtasks":
-                    subtasks_data = tc["args"]["subtasks"]
+                    raw = tc["args"].get("subtasks")
+                    if isinstance(raw, str):
+                        try:
+                            subtasks_data = json.loads(raw)
+                        except json.JSONDecodeError:
+                            subtasks_data = None
+                    elif isinstance(raw, list):
+                        subtasks_data = raw
 
         if not subtasks_data:
             raise ValueError(f"Supervisor did not call create_subtasks tool. Response: {(response.content or '')[:300]}")
 
         subtasks = []
         for st in subtasks_data:
+            if isinstance(st, str):
+                try:
+                    st = json.loads(st)
+                except json.JSONDecodeError:
+                    continue
             sector = st.get("sector", "Unknown")
             tickers = st.get("tickers", st.get("ticker_list", []))
             tickers = tickers[:10]
