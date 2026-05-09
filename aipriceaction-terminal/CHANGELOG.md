@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.10] - 2026-05-09
+
+### Added
+- Add `/new` slash command to start a fresh chat session (clears history and agent state)
+- Add `aipa resume` CLI command to list sessions or open TUI with a resumed session
+- Add `/save`, `/resume`, `/sessions`, `/new` to the `?` keyboard shortcuts notification
+
+### Fixed
+- Prevent 1-6 tab switch keys from firing while typing in chat input (press Esc first to blur input)
+- Fix session resume crash when `app.agent` is not yet initialized during mount
+
 ## [0.1.9] - 2026-05-09
 
 ### Added
