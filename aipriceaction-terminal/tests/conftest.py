@@ -6,6 +6,41 @@ import pytest
 from textual.widgets import RichLog
 
 
+# ---------------------------------------------------------------------------
+# Pytest configuration: markers and CLI options
+# ---------------------------------------------------------------------------
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--integration",
+        action="store_true",
+        default=False,
+        help="Run integration tests that call the real OpenRouter API.",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers",
+        "integration: marks tests that call the real OpenRouter API (requires --integration)",
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    if config.getoption("--integration"):
+        return
+    skip_integration = pytest.mark.skip(reason="needs --integration option to run")
+    for item in items:
+        if "integration" in item.keywords:
+            item.add_marker(skip_integration)
+
+
+# ---------------------------------------------------------------------------
+# Shared fixtures
+# ---------------------------------------------------------------------------
+
+
 @pytest.fixture()
 def mock_builder():
     """Return a mock AIContextBuilder with a canned build response."""
@@ -24,12 +59,33 @@ def mock_client():
 
 @pytest.fixture()
 def mock_agent():
-    """Return a mock AgentSession with a canned stream response."""
+    """Return a mock AgentSession with a simple TOKEN + DONE stream."""
     agent = MagicMock()
 
     async def _mock_stream(message):
         from aipriceaction_terminal.agents.callbacks import StreamEvent, StreamEventType
         yield StreamEvent(type=StreamEventType.TOKEN, content="Hello from agent.")
+        yield StreamEvent(type=StreamEventType.DONE)
+
+    agent.stream = _mock_stream
+    agent.clear_history = MagicMock()
+    return agent
+
+
+@pytest.fixture()
+def mock_agent_with_tool_call():
+    """Return a mock AgentSession that simulates a tool call cycle."""
+    agent = MagicMock()
+
+    async def _mock_stream(message):
+        from aipriceaction_terminal.agents.callbacks import StreamEvent, StreamEventType
+        yield StreamEvent(type=StreamEventType.THINKING, content="Need to fetch data...")
+        yield StreamEvent(
+            type=StreamEventType.TOOL_CALL_START,
+            content='get_ohlcv_data({"ticker": "VCB", "interval": "1D"})',
+        )
+        yield StreamEvent(type=StreamEventType.TOOL_RESULT, content="[1,234 chars]")
+        yield StreamEvent(type=StreamEventType.TOKEN, content="VCB is trending up at 95.0.")
         yield StreamEvent(type=StreamEventType.DONE)
 
     agent.stream = _mock_stream

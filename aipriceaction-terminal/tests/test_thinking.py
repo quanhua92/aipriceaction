@@ -1,8 +1,10 @@
-"""Tests for thinking/reasoning token detection and rendering."""
+"""Tests for thinking/reasoning token detection and rendering.
 
-from unittest.mock import MagicMock, patch
+Uses real AIMessageChunk objects (not MagicMock) to match actual LangChain
+message types produced by OpenRouter streaming.
+"""
 
-import pytest
+from langchain_core.messages import AIMessageChunk
 
 from aipriceaction_terminal.agents.agent import OpenRouterChatOpenAI
 from aipriceaction_terminal.agents.callbacks import (
@@ -11,6 +13,10 @@ from aipriceaction_terminal.agents.callbacks import (
     StreamEventType,
     _extract_reasoning_content,
 )
+from openrouter_responses import (
+    SIMPLE_TEXT_EVENTS,
+    THINKING_EVENTS,
+)
 
 
 class TestExtractReasoningContent:
@@ -18,52 +24,28 @@ class TestExtractReasoningContent:
 
     def test_additional_kwargs_reasoning_content(self):
         """OpenRouter, DeepSeek, XAI, Groq store reasoning in additional_kwargs."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": "Let me think about this..."}
+        msg = AIMessageChunk(
+            content="",
+            additional_kwargs={"reasoning_content": "Let me think about this..."},
+        )
         assert _extract_reasoning_content(msg) == "Let me think about this..."
 
     def test_additional_kwargs_empty_reasoning(self):
         """Empty reasoning_content should return empty string."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": ""}
+        msg = AIMessageChunk(
+            content="",
+            additional_kwargs={"reasoning_content": ""},
+        )
         assert _extract_reasoning_content(msg) == ""
-
-    def test_content_blocks_dict_reasoning(self):
-        """Anthropic/OpenAI use content_blocks with type='reasoning' dict."""
-        block = {"type": "reasoning", "reasoning": "Analyzing the data..."}
-        msg = MagicMock()
-        msg.additional_kwargs = {}
-        msg.content_blocks = [block]
-        assert _extract_reasoning_content(msg) == "Analyzing the data..."
-
-    def test_content_blocks_object_reasoning(self):
-        """Content blocks may be objects with .type and .reasoning attrs."""
-        block = MagicMock()
-        block.type = "reasoning"
-        block.reasoning = "Step by step reasoning..."
-        msg = MagicMock()
-        msg.additional_kwargs = {}
-        msg.content_blocks = [block]
-        assert _extract_reasoning_content(msg) == "Step by step reasoning..."
 
     def test_no_reasoning(self):
         """Regular AIMessageChunk without reasoning returns empty string."""
-        msg = MagicMock()
-        msg.additional_kwargs = {}
-        msg.content_blocks = []
+        msg = AIMessageChunk(content="Hello")
         assert _extract_reasoning_content(msg) == ""
 
     def test_additional_kwargs_missing(self):
-        """Message without additional_kwargs returns empty string."""
-        msg = MagicMock(spec=[])  # minimal mock, no additional_kwargs
-        msg.content_blocks = []
-        assert _extract_reasoning_content(msg) == ""
-
-    def test_additional_kwargs_none(self):
-        """Message with additional_kwargs=None returns empty string."""
-        msg = MagicMock()
-        msg.additional_kwargs = None
-        msg.content_blocks = []
+        """AIMessage with no additional_kwargs key returns empty string."""
+        msg = AIMessageChunk(content="Hello")
         assert _extract_reasoning_content(msg) == ""
 
 
@@ -72,11 +54,10 @@ class TestStreamCallbackHandlerThinking:
 
     def test_aimessagechunk_with_reasoning_content(self):
         """AIMessageChunk with reasoning_content emits THINKING event."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": "thinking here"}
-        msg.content = ""
-        msg.tool_calls = None
-        msg.__class__.__name__ = "AIMessageChunk"
+        msg = AIMessageChunk(
+            content="",
+            additional_kwargs={"reasoning_content": "thinking here"},
+        )
 
         handler = StreamCallbackHandler()
         events = handler._process_message(msg)
@@ -87,11 +68,10 @@ class TestStreamCallbackHandlerThinking:
 
     def test_aimessagechunk_with_reasoning_and_content(self):
         """AIMessageChunk with both reasoning and content emits both events."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": "hmm"}
-        msg.content = "Here is my answer"
-        msg.tool_calls = None
-        msg.__class__.__name__ = "AIMessageChunk"
+        msg = AIMessageChunk(
+            content="Here is my answer",
+            additional_kwargs={"reasoning_content": "hmm"},
+        )
 
         handler = StreamCallbackHandler()
         events = handler._process_message(msg)
@@ -102,12 +82,7 @@ class TestStreamCallbackHandlerThinking:
 
     def test_aimessagechunk_content_only_no_thinking(self):
         """Regular AIMessageChunk without reasoning only emits TOKEN."""
-        msg = MagicMock()
-        msg.additional_kwargs = {}
-        msg.content_blocks = []
-        msg.content = "Hello"
-        msg.tool_calls = None
-        msg.__class__.__name__ = "AIMessageChunk"
+        msg = AIMessageChunk(content="Hello")
 
         handler = StreamCallbackHandler()
         events = handler._process_message(msg)
@@ -118,14 +93,12 @@ class TestStreamCallbackHandlerThinking:
 
     def test_process_agent_event_tuple_with_reasoning(self):
         """Full pipeline: stream_mode='messages' tuple with reasoning."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": "deep thought"}
-        msg.content = "answer"
-        msg.tool_calls = None
-        msg.__class__.__name__ = "AIMessageChunk"
+        msg = AIMessageChunk(
+            content="answer",
+            additional_kwargs={"reasoning_content": "deep thought"},
+        )
 
         handler = StreamCallbackHandler()
-        # Simulate stream_mode="messages" tuple
         events = handler.process_agent_event((msg, {}))
 
         assert len(events) == 2
@@ -136,26 +109,59 @@ class TestStreamCallbackHandlerThinking:
 
     def test_process_agent_event_updates_with_reasoning(self):
         """Full pipeline: stream_mode='updates' dict with reasoning."""
-        msg = MagicMock()
-        msg.additional_kwargs = {"reasoning_content": "analyzing"}
-        msg.content = "result"
-        msg.tool_calls = None
-        msg.__class__.__name__ = "AIMessageChunk"
+        msg = AIMessageChunk(
+            content="result",
+            additional_kwargs={"reasoning_content": "analyzing"},
+        )
 
         handler = StreamCallbackHandler()
-        # Simulate stream_mode="updates" dict
         events = handler.process_agent_event({"agent": {"messages": [msg]}})
 
         assert len(events) == 2
         assert events[0].type == StreamEventType.THINKING
         assert events[1].type == StreamEventType.TOKEN
 
+    def test_thinking_fixture_events(self):
+        """Verify THINKING fixture produces THINKING then TOKEN events."""
+        handler = StreamCallbackHandler()
+        all_events: list[StreamEvent] = []
+        for event_tuple in THINKING_EVENTS:
+            all_events.extend(handler.process_agent_event(event_tuple))
+
+        thinking = [e for e in all_events if e.type == StreamEventType.THINKING]
+        tokens = [e for e in all_events if e.type == StreamEventType.TOKEN]
+
+        assert len(thinking) == 2
+        assert thinking[0].content == "The user is asking about "
+        assert thinking[1].content == "VNINDEX performance."
+        assert len(tokens) == 2
+        assert tokens[0].content == "VNINDEX "
+        assert tokens[1].content == "closed at 1,250.5 today."
+
+    def test_simple_text_fixture_no_thinking(self):
+        """Simple text fixture should produce only TOKEN events."""
+        handler = StreamCallbackHandler()
+        all_events: list[StreamEvent] = []
+        for event_tuple in SIMPLE_TEXT_EVENTS:
+            all_events.extend(handler.process_agent_event(event_tuple))
+
+        thinking = [e for e in all_events if e.type == StreamEventType.THINKING]
+        tokens = [e for e in all_events if e.type == StreamEventType.TOKEN]
+
+        assert thinking == []
+        assert len(tokens) == 3
+        assert tokens[0].content == "Hello"
+        assert tokens[1].content == " there"
+        assert tokens[2].content == "!"
+
 
 class TestOpenRouterChatOpenAI:
-    """Test the ReasoningChatOpenAI subclass that injects reasoning from raw delta."""
+    """Test the OpenRouterChatOpenAI subclass that injects reasoning from raw delta."""
 
     def test_injects_reasoning_into_additional_kwargs(self):
         """The subclass should move delta.reasoning into additional_kwargs."""
+        from unittest.mock import MagicMock
+
         llm = OpenRouterChatOpenAI(
             api_key="test",
             base_url="http://localhost",
@@ -185,6 +191,8 @@ class TestOpenRouterChatOpenAI:
 
     def test_no_reasoning_passthrough(self):
         """Chunk without reasoning field should be unchanged."""
+        from unittest.mock import MagicMock
+
         llm = OpenRouterChatOpenAI(
             api_key="test",
             base_url="http://localhost",
@@ -213,8 +221,6 @@ class TestOpenRouterChatOpenAI:
 
     def test_usage_only_chunk_handled(self):
         """Chunk with no choices (usage-only) should be handled by parent."""
-        from langchain_core.messages import AIMessageChunk
-
         llm = OpenRouterChatOpenAI(
             api_key="test",
             base_url="http://localhost",
