@@ -12,9 +12,43 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "aipa",
     "aipriceaction",
-    "aipriceaction-terminal",
     "aipriceaction-workspace",
+]
+
+[[package]]
+name = "aipa"
+source = { editable = "aipriceaction-terminal" }
+dependencies = [
+    { name = "aipriceaction" },
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+    { name = "langgraph" },
+    { name = "textual" },
+    { name = "textual-autocomplete" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aipriceaction", editable = "sdk/aipriceaction-python" },
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+    { name = "langgraph" },
+    { name = "textual", specifier = ">=3.0.0" },
+    { name = "textual-autocomplete", specifier = ">=4.0.6" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
 ]
 
 [[package]]
@@ -53,41 +87,6 @@ requires-dist = [
 dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "responses", specifier = ">=0.25" },
-]
-
-[[package]]
-name = "aipriceaction-terminal"
-version = "0.1.0"
-source = { editable = "aipriceaction-terminal" }
-dependencies = [
-    { name = "aipriceaction" },
-    { name = "langchain-core" },
-    { name = "langchain-openai" },
-    { name = "langgraph" },
-    { name = "textual" },
-    { name = "textual-autocomplete" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aipriceaction", editable = "sdk/aipriceaction-python" },
-    { name = "langchain-core" },
-    { name = "langchain-openai" },
-    { name = "langgraph" },
-    { name = "textual", specifier = ">=3.0.0" },
-    { name = "textual-autocomplete", specifier = ">=4.0.6" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-asyncio", specifier = ">=0.24" },
 ]
 
 [[package]]

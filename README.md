@@ -1,6 +1,6 @@
 # aipriceaction
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/)
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
 
 Vietnamese stock, US stock, cryptocurrency, and commodity data management system with PostgreSQL backend and Redis edge cache. Fetches, stores, and serves OHLCV market data with technical indicators via REST API. All endpoints serve from Redis first for low latency, with automatic fallback to PostgreSQL when Redis is unavailable.
 
@@ -309,6 +309,21 @@ When enabled via environment variables, the server runs background sync workers:
     ]
 }
 ```
+
+## AIPA Terminal
+
+Textual-based terminal interface for AI-powered ticker analysis with streaming chat, thinking/reasoning display, and workflow tabs.
+
+```bash
+# Run directly (no install)
+uvx aipa-cli
+
+# Or install as a standalone tool
+uv tool install aipa-cli
+aipa
+```
+
+Requires an OpenAI-compatible API key (set via `OPENAI_API_KEY` or `OPENAI_BASE_URL` for custom providers like OpenRouter). See [aipriceaction-terminal/](aipriceaction-terminal/) for source code and [CHANGELOG](aipriceaction-terminal/CHANGELOG.md).
 
 ## Python SDK
 

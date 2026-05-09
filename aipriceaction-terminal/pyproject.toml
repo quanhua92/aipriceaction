@@ -1,7 +1,11 @@
 [project]
-name = "aipriceaction-terminal"
-version = "0.1.0"
+name = "aipa-cli"
+dynamic = ["version"]
 description = "Terminal TUI for AI-powered ticker analysis"
+authors = [
+    {name = "Quan Hua", email = "quanhua92@gmail.com"},
+]
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -12,6 +16,19 @@ dependencies = [
     "langchain-openai",
     "langgraph",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Office/Business :: Financial",
+]
+
+[project.urls]
+Homepage = "https://github.com/quanhua92/aipriceaction"
+Repository = "https://github.com/quanhua92/aipriceaction"
 
 [project.scripts]
 aipa = "aipriceaction_terminal.app:main"
@@ -20,8 +37,14 @@ aipa = "aipriceaction_terminal.app:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "src/aipriceaction_terminal/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/aipriceaction_terminal"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/aipriceaction_terminal", "tests", "pyproject.toml", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [dependency-groups]
 dev = [
