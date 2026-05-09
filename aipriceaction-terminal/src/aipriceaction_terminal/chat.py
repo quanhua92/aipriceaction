@@ -10,7 +10,31 @@ from textual.containers import Vertical, VerticalScroll
 from textual.screen import Screen
 
 from .widgets import ChatInput
-from .utils import write_context_result, write_error, write_export_result
+from .utils import write_error, write_export_result, stream_agent_to_log
+
+
+def _resolve_tui_question(
+    builder: object,
+    ticker: str,
+    question_index: int | None,
+    custom_question: str | None,
+) -> str:
+    """Resolve the analysis question for TUI /analyze command."""
+    if custom_question:
+        return custom_question
+
+    templates = builder.questions("single")
+    if not templates:
+        return f"Analyze {ticker} based on the provided data."
+
+    idx = question_index if question_index is not None else 0
+    idx = max(0, min(idx, len(templates) - 1))
+    template = templates[idx]
+
+    try:
+        return template["question"].format(ticker=ticker)
+    except KeyError:
+        return template["question"]
 
 
 class ThinkingModal(Screen[None]):
@@ -179,10 +203,13 @@ class ChatTab(Vertical):
         if cmd == "/help":
             log.write(
                 "[bold yellow]Available commands:[/bold yellow]\n"
-                "  /analyze <ticker> [interval] - Build AI context (e.g. /analyze VIC or /analyze STB 1h)\n"
+                "  /analyze <ticker> [interval|index] [--question TEXT]\n"
+                "             Analyze ticker with AI (e.g. /analyze VIC)\n"
+                "             Use index 0-5 to pick question template\n"
+                "             Use --question for custom question\n"
                 "  /export <ticker> [tickers...] [--interval 1D] [--path ~/dir/]\n"
                 "                        - Export AI context to markdown file\n"
-                "  /deep-research [q]   - Multi-agent deep research (not yet implemented)\n"
+                "  /deep-research [q]   - Multi-agent deep research\n"
                 "  /exit                - Quit the application\n"
                 "  /help                - Show this help message\n"
                 "  /clear               - Clear chat history\n"
@@ -193,14 +220,15 @@ class ChatTab(Vertical):
         elif cmd == "/exit":
             self.app.exit()
         elif cmd == "/analyze":
-            if not arg:
-                log.write("[bold red]Usage: /analyze <ticker> [interval][/bold red] (e.g. /analyze VIC or /analyze STB 1h)")
-                return
-            interval = parts[2] if len(parts) > 2 else self.app.interval
-            ticker = arg
-            log.write(f"[bold cyan]You:[/bold cyan] /analyze {ticker} {interval}")
-            log.write("[dim]Building context...[/dim]")
-            self._run_analyze(ticker, interval)
+            self._handle_analyze(text, parts)
+        elif cmd == "/deep-research":
+            question = " ".join(parts[1:]) if len(parts) > 1 else ""
+            log.write("[bold cyan]You:[/bold cyan] /deep-research" + (f" {question}" if question else ""))
+            log.write(
+                "[bold yellow]Deep research is not yet implemented.[/bold yellow]\n"
+                "[dim]This will eventually run the multi-agent LangGraph pipeline "
+                "(supervisor -> parallel workers -> aggregator -> reviewer).[/dim]\n"
+            )
         elif cmd == "/deep-research":
             question = " ".join(parts[1:]) if len(parts) > 1 else ""
             log.write("[bold cyan]You:[/bold cyan] /deep-research" + (f" {question}" if question else ""))
@@ -240,20 +268,90 @@ class ChatTab(Vertical):
         else:
             log.write(f"[bold red]Unknown command:[/bold red] {cmd}")
 
+    _KNOWN_INTERVALS = frozenset(("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"))
+
+    def _handle_analyze(self, text: str, parts: list[str]) -> None:
+        """Parse /analyze command and dispatch to _run_analyze."""
+        log = self.query_one("#chat-log", RichLog)
+        rest = text[len("/analyze"):].strip()
+
+        if not rest:
+            log.write(
+                "[bold red]Usage:[/bold red] /analyze <ticker> [interval|index] [--question TEXT]\n"
+                "  e.g. /analyze VIC\n"
+                "       /analyze STB 1h\n"
+                "       /analyze VCB 2\n"
+                "       /analyze VCB --question What is the support level?"
+            )
+            return
+
+        # Parse --question flag
+        custom_question: str | None = None
+        if "--question" in rest:
+            rest, _, custom_question = rest.partition("--question")
+            custom_question = custom_question.strip()
+            rest = rest.strip()
+
+        tokens = rest.split()
+        ticker = tokens[0].upper()
+
+        # Determine question_index and interval
+        question_index: int | None = None
+        interval = self.app.interval
+
+        if len(tokens) > 1:
+            second = tokens[1]
+            if second in self._KNOWN_INTERVALS:
+                interval = second
+            elif second.isdigit():
+                question_index = int(second)
+
+        log.write(f"[bold cyan]You:[/bold cyan] /analyze {ticker} {interval}")
+        log.write("[dim]Building context and analyzing...[/dim]")
+        self._run_analyze(ticker, interval, question_index=question_index, custom_question=custom_question)
+
     @work(exclusive=True)
-    async def _run_analyze(self, ticker: str, interval: str) -> None:
-        """Build AI context for a ticker in a background worker."""
+    async def _run_analyze(
+        self,
+        ticker: str,
+        interval: str,
+        *,
+        question_index: int | None = None,
+        custom_question: str | None = None,
+    ) -> None:
+        """Build context and stream AI analysis for a ticker."""
+        log = self.query_one("#chat-log", RichLog)
         try:
             builder = self.app.builder
 
+            # Build context without system prompt (agent has it already)
             context = await asyncio.to_thread(
-                builder.build, ticker=ticker, interval=interval
+                builder.build, ticker=ticker, interval=interval,
+                include_system_prompt=False,
             )
 
-            log = self.query_one("#chat-log", RichLog)
-            write_context_result(log, ticker, interval, context)
+            log.write(f"[dim]Context ready: {len(context):,} chars[/dim]")
+
+            # Resolve question
+            question = _resolve_tui_question(
+                builder, ticker, question_index, custom_question,
+            )
+
+            # Compose the message for the agent
+            message = (
+                f"<analysis_context>\n{context}\n</analysis_context>\n\n"
+                f"{question}\n\n"
+                f"Base your analysis ONLY on the provided data above."
+            )
+
+            await stream_agent_to_log(
+                log,
+                self.app.agent,
+                message,
+                on_thinking_update=self._show_thinking_area,
+                on_thinking_done=self._on_thinking_done,
+            )
         except Exception as e:
-            log = self.query_one("#chat-log", RichLog)
             write_error(log, e)
 
     @work(exclusive=True)
@@ -292,54 +390,22 @@ class ChatTab(Vertical):
         """Stream an agent response into the chat log."""
         log = self.query_one("#chat-log", RichLog)
         try:
-            from .agents.callbacks import StreamEventType
-            buffer: list[str] = []
-            thinking_buf: list[str] = []
-
-            def flush() -> None:
-                """Write buffered tokens as a single line to the RichLog."""
-                if buffer:
-                    log.write("".join(buffer))
-                    buffer.clear()
-
-            def collapse_thinking() -> None:
-                """Collapse thinking area: write summary to log, store text."""
-                if thinking_buf:
-                    text = "".join(thinking_buf)
-                    thinking_buf.clear()
-                    # Skip trivial fragments (e.g. trailing "." from the model)
-                    if len(text.strip()) <= 1:
-                        self._hide_thinking_area()
-                        return
-                    self._store_thinking(text)
-                    self._hide_thinking_area()
-                    log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")
-
-            async for event in self.app.agent.stream(message):
-                if event.type == StreamEventType.THINKING:
-                    thinking_buf.append(event.content)
-                    self._show_thinking_area("".join(thinking_buf))
-
-                elif event.type == StreamEventType.TOKEN:
-                    if thinking_buf:
-                        collapse_thinking()
-                    buffer.append(event.content)
-                    if "\n" in event.content:
-                        flush()
-
-                elif event.type == StreamEventType.DONE:
-                    if thinking_buf:
-                        collapse_thinking()
-                    flush()
-                    log.write("")
-
-                else:
-                    flush()
-                    if event.type == StreamEventType.TOOL_CALL_START:
-                        log.write(f"[dim italic]{event.content}[/dim italic]")
-                    elif event.type == StreamEventType.TOOL_RESULT:
-                        log.write(f"[dim]{event.content}[/dim]")
-                    elif event.type == StreamEventType.ERROR:
-                        log.write(f"[bold red]{event.content}[/bold red]")
+            await stream_agent_to_log(
+                log,
+                self.app.agent,
+                message,
+                on_thinking_update=self._show_thinking_area,
+                on_thinking_done=self._on_thinking_done,
+            )
         except Exception as e:
             log.write(f"[bold red]Agent error: {e}[/bold red]\n")
+
+    def _on_thinking_done(self, text: str) -> None:
+        """Called when a thinking block finishes. Store and collapse."""
+        if not text or len(text.strip()) <= 1:
+            self._hide_thinking_area()
+            return
+        self._store_thinking(text)
+        self._hide_thinking_area()
+        log = self.query_one("#chat-log", RichLog)
+        log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")

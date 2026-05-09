@@ -7,13 +7,15 @@ from textual.containers import Vertical, Horizontal
 from textual.widgets import (
     Static, RichLog, Input, Button, Select, TabbedContent, TabPane,
 )
+from textual import on
 
-from .utils import write_context_result, write_error
+from .utils import write_error, stream_agent_to_log
 from .widgets import TickerSelect
+from .chat import _resolve_tui_question
 
 
 class AnalyzePane(Vertical):
-    """Single-ticker context analysis workflow."""
+    """Single-ticker AI analysis workflow."""
 
     DEFAULT_CSS = """
     AnalyzePane {
@@ -32,6 +34,9 @@ class AnalyzePane(Vertical):
         width: 10;
         height: auto;
     }
+    #wf-custom-question {
+        width: 1fr;
+    }
     """
 
 
@@ -47,14 +52,44 @@ class AnalyzePane(Vertical):
                 id="wf-interval",
             )
         with Horizontal(classes="wf-row"):
+            yield Static("Question:", classes="wf-label")
+            yield Select(
+                [("Default", "default")],
+                value="default",
+                allow_blank=False,
+                id="wf-question",
+            )
+            yield Input(
+                placeholder="Custom question (overrides dropdown)...",
+                id="wf-custom-question",
+            )
+        with Horizontal(classes="wf-row"):
             yield Button("Analyze", id="wf-analyze-btn", variant="primary")
         yield RichLog(id="wf-output", highlight=True, markup=True)
 
     def on_mount(self) -> None:
-        self.query_one("#wf-interval", Select).value = self.app.interval
+        interval_select = self.query_one("#wf-interval", Select)
+        if hasattr(self.app, "interval"):
+            interval_select.value = self.app.interval
+        if hasattr(self.app, "builder"):
+            self._populate_question_select()
         self.query_one("#wf-output", RichLog).write(
-            "[dim italic]Select a ticker and click Analyze to build AI context.[/dim italic]\n"
+            "[dim italic]Select a ticker, pick a question (optional), and click Analyze.[/dim italic]\n"
         )
+
+    def _populate_question_select(self) -> None:
+        """Populate question dropdown from the question bank."""
+        builder = self.app.builder
+        templates = builder.questions("single")
+        options = [(t["title"], str(i)) for i, t in enumerate(templates)]
+        question_select = self.query_one("#wf-question", Select)
+        question_select.set_options(options)
+
+    @on(Input.Changed, "#wf-custom-question")
+    def _on_custom_question_changed(self, event: Input.Changed) -> None:
+        """When user types a custom question, reset dropdown to Default."""
+        if event.input.value.strip():
+            self.query_one("#wf-question", Select).value = "default"
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id != "wf-analyze-btn":
@@ -64,22 +99,56 @@ class AnalyzePane(Vertical):
     def _do_analyze(self) -> None:
         ticker = self.query_one("#wf-ticker", TickerSelect).value
         interval = self.query_one("#wf-interval", Select).value
+
+        # Resolve question: custom question overrides dropdown
+        custom_question = self.query_one("#wf-custom-question", Input).value.strip()
+        question_select_value = self.query_one("#wf-question", Select).value
+        question_index: int | None = None
+        if not custom_question and question_select_value not in ("default", None):
+            question_index = int(question_select_value)
+
         log = self.query_one("#wf-output", RichLog)
-        log.write(f"[bold cyan]Analyze:[/bold cyan] {ticker} ({interval})")
-        log.write("[dim]Building context...[/dim]")
-        self._run_analyze(ticker, interval)
+        q_label = custom_question[:50] if custom_question else f"template {question_index or 0}"
+        log.write(f"[bold cyan]Analyze:[/bold cyan] {ticker} ({interval}) [{q_label}]")
+        log.write("[dim]Building context and analyzing...[/dim]")
+        self._run_analyze(ticker, interval, question_index=question_index, custom_question=custom_question or None)
 
     @work(exclusive=True)
-    async def _run_analyze(self, ticker: str, interval: str) -> None:
+    async def _run_analyze(
+        self,
+        ticker: str,
+        interval: str,
+        *,
+        question_index: int | None = None,
+        custom_question: str | None = None,
+    ) -> None:
+        """Build context and stream AI analysis for a ticker."""
+        log = self.query_one("#wf-output", RichLog)
         try:
             builder = self.app.builder
+
+            # Build context without system prompt (agent has it already)
             context = await asyncio.to_thread(
-                builder.build, ticker=ticker, interval=interval
+                builder.build, ticker=ticker, interval=interval,
+                include_system_prompt=False,
             )
-            log = self.query_one("#wf-output", RichLog)
-            write_context_result(log, ticker, interval, context)
+
+            log.write(f"[dim]Context ready: {len(context):,} chars[/dim]")
+
+            # Resolve question
+            question = _resolve_tui_question(
+                builder, ticker, question_index, custom_question,
+            )
+
+            # Compose the message for the agent
+            message = (
+                f"<analysis_context>\n{context}\n</analysis_context>\n\n"
+                f"{question}\n\n"
+                f"Base your analysis ONLY on the provided data above."
+            )
+
+            await stream_agent_to_log(log, self.app.agent, message)
         except Exception as e:
-            log = self.query_one("#wf-output", RichLog)
             write_error(log, e)
 
 

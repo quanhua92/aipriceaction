@@ -130,7 +130,7 @@ async def test_chat_slash_analyze_with_ticker(app):
 
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
     assert "VCB" in text
-    assert "Context built" in text
+    assert "Context ready" in text
 
 
 async def test_chat_slash_analyze_calls_builder(app):
@@ -141,7 +141,7 @@ async def test_chat_slash_analyze_calls_builder(app):
     await pilot.press("enter")
     await pilot.pause(0.3)
 
-    mock_builder.build.assert_called_once_with(ticker="VCB", interval="1D")
+    mock_builder.build.assert_called_once_with(ticker="VCB", interval="1D", include_system_prompt=False)
 
 
 async def test_chat_slash_analyze_error_handling(app):
@@ -277,4 +277,4 @@ async def test_chat_slash_commands_case_insensitive(app):
     await pilot.press("enter")
     await pilot.pause(0.3)
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
-    assert "Context built" in text
+    assert "Context ready" in text

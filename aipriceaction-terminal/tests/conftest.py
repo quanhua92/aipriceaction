@@ -46,6 +46,13 @@ def mock_builder():
     """Return a mock AIContextBuilder with a canned build response."""
     builder = MagicMock()
     builder.build.return_value = "Line 1\nLine 2\nLine 3\nLine 4\nLine 5"
+    builder.questions.return_value = [
+        {
+            "title": "Trading Opportunity",
+            "snippet": "Identify opportunities",
+            "question": "Analyze {ticker} trading opportunities.",
+        },
+    ]
     return builder
 
 

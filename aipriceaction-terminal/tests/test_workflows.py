@@ -62,7 +62,7 @@ async def test_analyze_pane_button_triggers_build(app):
     assert call_kwargs["interval"] == "1D"
 
     text = richlog_text(pilot.app.query_one("#wf-output", RichLog))
-    assert "Context built" in text
+    assert "Context ready" in text
 
 
 async def test_analyze_pane_select_different_ticker(app):

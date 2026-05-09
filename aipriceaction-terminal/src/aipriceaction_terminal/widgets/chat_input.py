@@ -8,7 +8,7 @@ from textual_autocomplete import AutoComplete, DropdownItem
 
 
 _COMMANDS: list[tuple[str, str]] = [
-    ("/analyze <ticker> [interval]", "/analyze"),
+    ("/analyze <ticker> [interval|index] [--question TEXT]", "/analyze"),
     ("/clear", "/clear"),
     ("/deep-research [question]", "/deep-research"),
     ("/exit", "/exit"),
