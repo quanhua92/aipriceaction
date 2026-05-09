@@ -80,13 +80,14 @@ class TestValueFromEnvOrDotenv:
             assert _value_from_env_or_dotenv("openai_api_key", "api_key") is False
 
     def test_returns_false_when_settings_json_differs(self):
-        """User explicitly set a different value in settings.json → not from .env."""
+        """User explicitly set a different value in settings.json but SDK reads from .env → from .env."""
         with (
             patch("aipriceaction_terminal.settings_tab.settings") as mock_sdk,
             patch("aipriceaction_terminal.settings_tab.load_settings", return_value={"api_key": "sk-from-ui"}),
         ):
             mock_sdk.openai_api_key = "sk-from-dotenv"
-            assert _value_from_env_or_dotenv("openai_api_key", "api_key") is False
+            # saved_val != sdk_val → effective value is from env/.env (overrode settings)
+            assert _value_from_env_or_dotenv("openai_api_key", "api_key") is True
 
     def test_returns_false_when_sdk_empty(self):
         """No value anywhere → not from .env."""
@@ -191,7 +192,7 @@ async def test_hint_shows_dotenv_when_sdk_has_key_and_json_empty():
 
 
 async def test_hint_shows_settings_when_json_has_value():
-    """Hint says 'settings' when settings.json has the value."""
+    """Hint says 'settings' when settings.json has the value and SDK matches."""
     saved = {
         "ticker": "VNINDEX", "interval": "1D", "language": "en",
         "api_key": "sk-saved-in-ui", "openai_base_url": "", "openai_model": "",
@@ -204,7 +205,8 @@ async def test_hint_shows_settings_when_json_has_value():
         patch("aipriceaction.AIPriceAction"),
         patch("aipriceaction_terminal.agents.AgentSession"),
     ):
-        mock_sdk.openai_api_key = "sk-from-dotenv"
+        # SDK value must match settings.json for the hint to say "settings"
+        mock_sdk.openai_api_key = "sk-saved-in-ui"
         mock_sdk.openai_base_url = "https://openrouter.ai/api/v1"
         mock_sdk.openai_model = "openai/gpt-oss-20b"
         mock_sdk.ai_context_lang = "en"

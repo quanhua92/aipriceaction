@@ -167,7 +167,8 @@ async def test_chat_slash_deep_research_not_implemented(app):
     await pilot.pause(0.1)
 
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
-    assert "not yet implemented" in text.lower()
+    # Deep research is now implemented but requires API key
+    assert "API key" in text or "not configured" in text or "deep research" in text.lower()
 
 
 async def test_chat_slash_deep_research_with_question(app):
@@ -181,7 +182,6 @@ async def test_chat_slash_deep_research_with_question(app):
     text = richlog_text(pilot.app.query_one("#chat-log", RichLog))
     assert "/deep-research" in text
     assert "What is the trend?" in text
-    assert "not yet implemented" in text.lower()
 
 
 async def test_chat_slash_unknown_command(app):

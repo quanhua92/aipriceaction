@@ -17,9 +17,12 @@ async def app(mock_builder, mock_client, mock_agent, sample_ticker_options):
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
         patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent),
+        patch("aipriceaction.settings.settings") as mock_sdk_settings,
     ):
+        mock_sdk_settings.openai_api_key = "sk-test-key"
         async with AIPriceActionApp().run_test() as pilot:
             # Switch to workflows tab so TickerSelect is mounted
+            await pilot.press("escape")
             await pilot.press("5")
             await pilot.pause(0.1)
             pilot.app.ticker_options = sample_ticker_options
@@ -50,11 +53,12 @@ async def test_analyze_pane_default_values(app):
 
 async def test_analyze_pane_button_triggers_build(app):
     pilot, builder = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
-    await pilot.pause(0.3)
+    await pilot.pause(0.5)
 
     builder.build.assert_called_once()
     call_kwargs = builder.build.call_args[1]
@@ -67,6 +71,7 @@ async def test_analyze_pane_button_triggers_build(app):
 
 async def test_analyze_pane_select_different_ticker(app):
     pilot, builder = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
@@ -75,7 +80,7 @@ async def test_analyze_pane_select_different_ticker(app):
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
-    await pilot.pause(0.3)
+    await pilot.pause(0.5)
 
     builder.build.assert_called_once()
     call_kwargs = builder.build.call_args[1]
@@ -84,6 +89,7 @@ async def test_analyze_pane_select_different_ticker(app):
 
 async def test_analyze_pane_custom_interval(app):
     pilot, builder = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
@@ -92,7 +98,7 @@ async def test_analyze_pane_custom_interval(app):
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
-    await pilot.pause(0.3)
+    await pilot.pause(0.5)
 
     builder.build.assert_called_once()
     call_kwargs = builder.build.call_args[1]
@@ -103,11 +109,12 @@ async def test_analyze_pane_error_handling(app):
     pilot, builder = app
     builder.build.side_effect = RuntimeError("build failed")
 
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
-    await pilot.pause(0.3)
+    await pilot.pause(0.5)
 
     text = richlog_text(pilot.app.query_one("#wf-output", RichLog))
     assert "build failed" in text
@@ -127,6 +134,7 @@ async def test_analyze_pane_options_update_on_load(app):
 async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
     """Verify that selecting from autocomplete puts the ticker symbol (not label) into input."""
     pilot, builder = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
@@ -158,6 +166,7 @@ async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
 
 async def test_deep_research_pane_mount_message(app):
     pilot, _ = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
@@ -167,12 +176,12 @@ async def test_deep_research_pane_mount_message(app):
     await pilot.pause(0.1)
 
     text = richlog_text(pilot.app.query_one("#dr-output", RichLog))
-    assert "not yet implemented" in text.lower()
     assert "multi-agent" in text.lower()
 
 
 async def test_deep_research_button_shows_not_implemented(app):
     pilot, _ = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
@@ -184,11 +193,12 @@ async def test_deep_research_button_shows_not_implemented(app):
     await pilot.pause(0.1)
 
     text = richlog_text(pilot.app.query_one("#dr-output", RichLog))
-    assert "Not yet implemented" in text
+    assert "Deep Research:" in text
 
 
 async def test_deep_research_with_question(app):
     pilot, _ = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 

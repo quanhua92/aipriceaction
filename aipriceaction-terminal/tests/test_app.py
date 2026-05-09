@@ -49,15 +49,19 @@ async def test_action_switch_tab_with_keys(app):
     pilot, _ = app
     tabs = pilot.app.query_one(TabbedContent)
 
+    await pilot.press("escape")  # blur any focused input
     await pilot.press("1")
     assert tabs.active == "chat"
 
+    await pilot.press("escape")
     await pilot.press("2")
     assert tabs.active == "tickers-vn"
 
+    await pilot.press("escape")
     await pilot.press("5")
     assert tabs.active == "workflows"
 
+    await pilot.press("escape")
     await pilot.press("6")
     assert tabs.active == "settings"
 
@@ -66,9 +70,11 @@ async def test_action_switch_tab_with_numbers_3_4(app):
     pilot, _ = app
     tabs = pilot.app.query_one(TabbedContent)
 
+    await pilot.press("escape")
     await pilot.press("3")
     assert tabs.active == "tickers-crypto"
 
+    await pilot.press("escape")
     await pilot.press("4")
     assert tabs.active == "tickers-global"
 
@@ -135,6 +141,7 @@ async def test_action_focus_first_input_in_chat(app):
 
 async def test_action_focus_first_input_in_workflows(app):
     pilot, _ = app
+    await pilot.press("escape")
     await pilot.press("5")
     await pilot.pause(0.1)
 
