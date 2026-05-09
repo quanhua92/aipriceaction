@@ -102,3 +102,20 @@ aipriceaction/src/
 
 - **TypeScript SDK** in `sdk/aipriceaction-js/`, built with pnpm. See `sdk/aipriceaction-js/README.md` for usage.
 - **Python SDK** in `sdk/aipriceaction-python/`, reads from S3 archive via plain HTTP. See `sdk/aipriceaction-python/` and README.md for usage.
+- **Python CLI (aipa)** in `aipriceaction-terminal/`, Textual TUI + CLI subcommands. See `aipriceaction-terminal/README.md` for usage.
+
+## Bumping SDK and CLI Versions
+
+When bumping the Python SDK or CLI, follow this checklist:
+
+### Python SDK (`aipriceaction`)
+1. Bump version in `sdk/aipriceaction-python/src/aipriceaction/__init__.py`
+2. Add entry to `sdk/aipriceaction-python/CHANGELOG.md`
+
+### Python CLI (`aipa-cli` / `aipriceaction-terminal`)
+1. Bump version in `aipriceaction-terminal/src/aipriceaction_terminal/__init__.py`
+2. Add entry to `aipriceaction-terminal/CHANGELOG.md`
+3. If the CLI now needs a newer SDK minimum, update `requires` in `aipriceaction-terminal/pyproject.toml`
+
+### Commit
+- Commit all version bumps and changelog updates together (conventional commit message, e.g. `chore: bump aipa-cli to 0.1.7`)
