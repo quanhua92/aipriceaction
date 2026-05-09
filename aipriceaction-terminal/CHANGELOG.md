@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-05-09
+
+### Added
+- Add `aipa setup` interactive CLI command for first-run configuration (language, reference ticker, API key, base URL, model)
+- Add `setup_done` flag to user settings, auto-run setup before commands that need an API key (`analyze`, `deep-research`, TUI)
+- Add "First-Run Setup" section to README documenting which commands require setup
+
+### Changed
+- Lazy-load `AgentSession` in TUI instead of creating on mount, preventing crash when no API key is configured
+- Guard agent usage in chat (`_run_agent_chat`, `_run_analyze`, `/clear`) and settings tab with `_ensure_agent()`
+
+### Fixed
+- Fix crash on `aipa` launch when no API key is configured (`OpenAIError: Missing credentials`)
+
 ## [0.1.5] - 2026-05-09
 
 ### Changed
