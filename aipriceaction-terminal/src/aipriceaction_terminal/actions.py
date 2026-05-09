@@ -66,8 +66,8 @@ class AppActions:
 
     def action_show_help(self) -> None:
         self.app.notify(
-            "1-6: Switch tabs | ctrl+q: Quit | "
+            "1-6: Switch tabs | ctrl+q: Quit | ctrl+o: Thinking | "
             "esc: Back | enter: Focus input | "
-            "Chat: /help for commands",
+            "Chat: /new /save /sessions /resume /help",
             title="Keyboard Shortcuts",
         )
