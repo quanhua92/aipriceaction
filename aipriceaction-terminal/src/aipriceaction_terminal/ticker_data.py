@@ -11,7 +11,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.message import Message
 from textual.reactive import reactive
-from textual.widgets import Static, Tree
+from textual.widgets import Input, Static, Tree
 from textual.widgets._tree import TreeNode
 
 _MODE_LABELS = {
@@ -71,9 +71,6 @@ class TickerGroupTree(Tree[TickerRow]):
 
     DEFAULT_CSS = """
     TickerGroupTree {
-        width: 20%;
-        min-width: 30;
-        border-right: solid $primary;
         padding: 0 1;
     }
     """
@@ -235,6 +232,15 @@ class TickerDataTab(Vertical):
     #td-main {
         height: 1fr;
     }
+    #td-left {
+        width: 20%;
+        min-width: 30;
+        border-right: solid $primary;
+    }
+    #td-filter {
+        padding: 0 1;
+        height: 3;
+    }
     """
 
     loading: reactive[bool] = reactive(False)
@@ -249,7 +255,9 @@ class TickerDataTab(Vertical):
     def compose(self) -> ComposeResult:
         yield Static(f" {self._label}", id="td-status")
         with Horizontal(id="td-main"):
-            yield TickerGroupTree(f" {self._label}", id="td-tree")
+            with Vertical(id="td-left"):
+                yield Input(placeholder="Filter tickers...", id="td-filter")
+                yield TickerGroupTree(f" {self._label}", id="td-tree")
             yield TickerDetailPanel(id="td-detail")
 
     def on_mount(self) -> None:
@@ -260,6 +268,55 @@ class TickerDataTab(Vertical):
 
     def on_ticker_group_tree_ticker_selected(self, event: TickerGroupTree.TickerSelected) -> None:
         self.query_one(TickerDetailPanel).update_ticker(event.ticker)
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "td-filter":
+            self.query_one(TickerGroupTree).focus()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        if event.input.id == "td-filter":
+            self._populate_tree(event.value.strip())
+
+    @staticmethod
+    def _fuzzy_match(query: str, symbol: str, name: str) -> bool:
+        q = query.lower()
+        return q in symbol.lower() or q in name.lower()
+
+    def _populate_tree(self, query: str = "") -> None:
+        tree = self.query_one(TickerGroupTree)
+        tree.root.remove_children()
+        tree.clear()
+        tree.show_root = False
+        tree.root.expand()
+
+        first_ticker_node: TreeNode[TickerRow] | None = None
+
+        for group in self._groups:
+            if query:
+                matched = [
+                    t for t in group.tickers
+                    if self._fuzzy_match(query, t.symbol, t.name)
+                ]
+                if not matched:
+                    continue
+            else:
+                matched = group.tickers
+
+            label = f"{group.name} ({len(matched)})"
+            group_node: TreeNode[TickerRow] = tree.root.add(label, data=None)
+            group_node.expand()
+
+            for ticker in matched:
+                close_str = self._format_close(ticker.close)
+                vol_str = self._format_volume_short(ticker.volume)
+                child_label = f"{ticker.symbol:<8} {close_str:>12} {vol_str:>8}"
+                node = group_node.add(child_label, data=ticker)
+                if first_ticker_node is None:
+                    first_ticker_node = node
+
+        if first_ticker_node is not None:
+            tree.select_node(first_ticker_node)
+            self.query_one(TickerDetailPanel).update_ticker(first_ticker_node.data)
 
     @work(exclusive=True)
     async def _load_data(self) -> None:
@@ -340,24 +397,6 @@ class TickerDataTab(Vertical):
             status.update(f" {self._label} — Error: {e}")
         finally:
             self.loading = False
-
-    def _populate_tree(self) -> None:
-        tree = self.query_one(TickerGroupTree)
-        tree.root.remove_children()
-        tree.clear()
-        tree.show_root = False
-        tree.root.expand()
-
-        for group in self._groups:
-            label = f"{group.name} ({len(group.tickers)})"
-            group_node: TreeNode[TickerRow] = tree.root.add(label, data=None)
-            group_node.expand()
-
-            for ticker in group.tickers:
-                close_str = self._format_close(ticker.close)
-                vol_str = self._format_volume_short(ticker.volume)
-                child_label = f"{ticker.symbol:<8} {close_str:>12} {vol_str:>8}"
-                group_node.add(child_label, data=ticker)
 
     def action_refresh(self) -> None:
         if not self.loading:
