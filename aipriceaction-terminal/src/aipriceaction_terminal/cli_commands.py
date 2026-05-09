@@ -43,19 +43,21 @@ async def cmd_analyze(args) -> None:
 
     t0 = time.time()
 
+    include_system_prompt = not args.no_system_prompt
+
     if len(args.tickers) == 1:
         context = await asyncio.to_thread(
             builder.build,
             ticker=args.tickers[0],
             **build_kwargs,
-            include_system_prompt=not args.context_only,
+            include_system_prompt=include_system_prompt,
         )
     else:
         context = await asyncio.to_thread(
             builder.build,
             tickers=args.tickers,
             **build_kwargs,
-            include_system_prompt=not args.context_only,
+            include_system_prompt=include_system_prompt,
         )
 
     build_elapsed = time.time() - t0

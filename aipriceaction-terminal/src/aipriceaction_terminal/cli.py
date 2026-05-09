@@ -34,7 +34,8 @@ def run():
     p_analyze.add_argument("--ma-type", default="ema", choices=["ema", "sma"])
     p_analyze.add_argument("--question", default=None, help="Custom analysis question")
     p_analyze.add_argument("--questions", action="store_true", help="List available question templates and exit")
-    p_analyze.add_argument("--context-only", action="store_true", help="Dump raw context without LLM (no API key needed)")
+    p_analyze.add_argument("--context-only", action="store_true", help="Dump raw context without calling LLM (no API key needed)")
+    p_analyze.add_argument("--no-system-prompt", action="store_true", help="Exclude system prompt from context output")
 
     # aipa get-ohlcv-data TICKER [--interval 1D] [--limit N]
     #   [--start-date] [--end-date] [--source] [--ma] [--ema]
