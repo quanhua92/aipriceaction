@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-05-09
+
+### Fixed
+- Respect `.env` file priority over `settings.json` by parsing `.env` first in `apply_settings_to_env()`, giving correct order: real env vars > `.env` > `settings.json`
+- Fix `_value_from_env_or_dotenv()` inverted logic and check `.env` directly when both sources match, so settings tab hints show the correct source
+- Guard AnalyzePane with `_ensure_agent()` to prevent `'NoneType' has no attribute 'stream'` crash when no API key is configured at TUI launch
+
 ## [0.1.7] - 2026-05-09
 
 ### Fixed
