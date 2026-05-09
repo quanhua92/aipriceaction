@@ -106,7 +106,11 @@ class AIPriceActionApp(App):
         tabs.active = tab_id
 
     def action_focus_none(self) -> None:
-        """Blur any focused widget to restore app-level key bindings."""
+        """Blur any focused widget, or dismiss a modal if one is showing."""
+        from .chat import ThinkingModal
+        if isinstance(self.screen_stack[-1], ThinkingModal):
+            self.pop_screen()
+            return
         self.set_focus(None)
 
     def action_focus_first_input(self) -> None:

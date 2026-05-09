@@ -80,7 +80,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
         Args:
             ticker: Ticker symbol (e.g. VCB, FPT, BTCUSDT).
             interval: Time interval — "1D" (default), "1h", or "1m".
-            limit: Number of bars to return (default 30).
+            limit: Number of bars to return (default 5).
         """
         _, builder = _ensure_clients(lang)
         try:

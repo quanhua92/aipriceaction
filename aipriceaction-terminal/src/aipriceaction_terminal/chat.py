@@ -16,7 +16,7 @@ from .utils import write_context_result, write_error, write_export_result
 class ThinkingModal(Screen[None]):
     """Modal overlay showing full thinking text."""
 
-    BINDINGS = [("escape", "close"), ("ctrl+o", "close")]
+    BINDINGS = [("ctrl+o", "close")]
 
     DEFAULT_CSS = """
     ThinkingModal {
