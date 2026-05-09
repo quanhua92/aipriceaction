@@ -5,15 +5,74 @@ from datetime import datetime
 from pathlib import Path
 
 from textual import work
-from textual.widgets import RichLog, Input
-from textual.containers import Vertical
+from textual.widgets import RichLog, Input, Static
+from textual.containers import Vertical, VerticalScroll
+from textual.screen import Screen
 
 from .widgets import ChatInput
 from .utils import write_context_result, write_error, write_export_result
 
 
+class ThinkingModal(Screen[None]):
+    """Modal overlay showing full thinking text."""
+
+    BINDINGS = [("escape", "close"), ("ctrl+o", "close")]
+
+    DEFAULT_CSS = """
+    ThinkingModal {
+        align: center middle;
+    }
+
+    #thinking-dialog {
+        width: 90%;
+        height: 80%;
+        max-width: 160;
+        border: thick $accent;
+        background: $surface;
+        padding: 0;
+    }
+
+    #thinking-title {
+        height: 3;
+        width: 100%;
+        content-align: center middle;
+        color: $text;
+        text-style: bold;
+        border-bottom: solid $accent;
+        padding: 0 1;
+    }
+
+    #thinking-scroll {
+        width: 100%;
+        height: 1fr;
+        padding: 1;
+        color: $text-muted;
+    }
+    """
+
+    def __init__(self, thinking_text: str) -> None:
+        super().__init__()
+        self.thinking_text = thinking_text
+
+    def compose(self):
+        with Vertical(id="thinking-dialog"):
+            yield Static("Thinking (Esc / Ctrl+O to close)", id="thinking-title")
+            yield VerticalScroll(Static(id="thinking-full"), id="thinking-scroll")
+
+    def on_mount(self) -> None:
+        self.query_one("#thinking-full", Static).update(self.thinking_text)
+        scroll = self.query_one("#thinking-scroll", VerticalScroll)
+        scroll.can_focus = True
+        scroll.focus()
+
+    def action_close(self) -> None:
+        self.app.pop_screen()
+
+
 class ChatTab(Vertical):
     """Chat interface for AI ticker analysis."""
+
+    BINDINGS = [("ctrl+o", "show_thinking", "Thinking")]
 
     DEFAULT_CSS = """
     ChatTab {
@@ -25,6 +84,17 @@ class ChatTab(Vertical):
         padding: 1;
         overflow-x: hidden;
     }
+    #thinking-area {
+        height: 3;
+        border: solid $accent;
+        padding: 0 1;
+        overflow-y: hidden;
+        color: $text-muted;
+        text-style: italic;
+    }
+    #thinking-area.hidden {
+        display: none;
+    }
     #chat-input {
         height: 3;
     }
@@ -32,14 +102,46 @@ class ChatTab(Vertical):
 
     def compose(self):
         yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True, min_width=1)
+        yield Static(id="thinking-area", classes="hidden")
         yield ChatInput(id="chat-input")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._thinking_history: list[str] = []
 
     def on_mount(self) -> None:
         log = self.query_one("#chat-log", RichLog)
+        log.can_focus = False
         log.write(
             "[bold cyan]AIPriceAction Terminal[/bold cyan]\n"
             "Type [bold]/help[/bold] for available commands.\n"
         )
+
+    def _show_thinking_area(self, text: str) -> None:
+        """Show the thinking area with truncated text."""
+        area = self.query_one("#thinking-area", Static)
+        area.remove_class("hidden")
+        truncated = text[-200:] if len(text) > 200 else text
+        area.update(truncated)
+
+    def _hide_thinking_area(self) -> None:
+        """Hide the thinking area and clear its content."""
+        area = self.query_one("#thinking-area", Static)
+        area.add_class("hidden")
+        area.update("")
+
+    def _store_thinking(self, text: str) -> None:
+        """Store complete thinking text for later viewing with Ctrl+O."""
+        self._thinking_history.append(text)
+
+    def action_show_thinking(self) -> None:
+        """Push a modal with the last thinking text, or pop if already showing."""
+        # If ThinkingModal is already on top, just close it
+        if isinstance(self.app.screen_stack[-1], ThinkingModal):
+            self.app.pop_screen()
+            return
+        if self._thinking_history:
+            self.app.push_screen(ThinkingModal(self._thinking_history[-1]))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
@@ -192,26 +294,34 @@ class ChatTab(Vertical):
                     log.write("".join(buffer))
                     buffer.clear()
 
-            def flush_thinking() -> None:
-                """Write buffered thinking tokens as a dim line."""
+            def collapse_thinking() -> None:
+                """Collapse thinking area: write summary to log, store text."""
                 if thinking_buf:
-                    log.write(f"[dim italic]{''.join(thinking_buf)}[/dim italic]")
+                    text = "".join(thinking_buf)
                     thinking_buf.clear()
+                    # Skip trivial fragments (e.g. trailing "." from the model)
+                    if len(text.strip()) <= 1:
+                        self._hide_thinking_area()
+                        return
+                    self._store_thinking(text)
+                    self._hide_thinking_area()
+                    log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")
 
             async for event in self.app.agent.stream(message):
                 if event.type == StreamEventType.THINKING:
                     thinking_buf.append(event.content)
+                    self._show_thinking_area("".join(thinking_buf))
 
                 elif event.type == StreamEventType.TOKEN:
                     if thinking_buf:
-                        flush_thinking()
+                        collapse_thinking()
                     buffer.append(event.content)
                     if "\n" in event.content:
                         flush()
 
                 elif event.type == StreamEventType.DONE:
                     if thinking_buf:
-                        flush_thinking()
+                        collapse_thinking()
                     flush()
                     log.write("")
 

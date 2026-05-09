@@ -12,13 +12,14 @@ from conftest import richlog_text
 
 @pytest.fixture()
 def mock_agent_with_thinking():
-    """Mock agent that emits THINKING then TOKEN then DONE."""
+    """Mock agent that emits THINKING then TOKEN then a trailing-dot THINKING then DONE."""
     agent = MagicMock()
 
     async def _mock_stream(message):
         yield StreamEvent(type=StreamEventType.THINKING, content="let me think")
         yield StreamEvent(type=StreamEventType.THINKING, content=" some more")
         yield StreamEvent(type=StreamEventType.TOKEN, content="Answer here.")
+        yield StreamEvent(type=StreamEventType.THINKING, content=".")
         yield StreamEvent(type=StreamEventType.DONE)
 
     agent.stream = _mock_stream
@@ -196,7 +197,7 @@ async def test_chat_slash_unknown_command(app):
 
 
 async def test_chat_input_with_thinking_tokens(mock_builder, mock_client, mock_agent_with_thinking):
-    """Agent that emits THINKING events should stream them visibly, not crash."""
+    """Agent that emits THINKING events should collapse thinking into summary, not pollute chat log."""
     with (
         patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
         patch("aipriceaction.AIPriceAction", return_value=mock_client),
@@ -212,8 +213,42 @@ async def test_chat_input_with_thinking_tokens(mock_builder, mock_client, mock_a
             log = pilot.app.query_one("#chat-log", RichLog)
             text = richlog_text(log)
             assert "You: hello" in text
-            assert "let me think some more" in text
+            # Thinking text should NOT appear directly in chat log
+            assert "let me think some more" not in text
+            # Summary line should appear exactly once (trailing "." is filtered)
+            assert text.count("Thought for") == 1
+            assert "Ctrl+O to view" in text
+            # Answer should appear
             assert "Answer here" in text
+
+
+async def test_chat_ctrl_o_shows_thinking_modal(mock_builder, mock_client, mock_agent_with_thinking):
+    """Pressing Ctrl+O after thinking should push a ThinkingModal, and Ctrl+O again should pop it."""
+    from aipriceaction_terminal.chat import ThinkingModal
+
+    with (
+        patch("aipriceaction.AIContextBuilder", return_value=mock_builder),
+        patch("aipriceaction.AIPriceAction", return_value=mock_client),
+        patch("aipriceaction_terminal.agents.AgentSession", return_value=mock_agent_with_thinking),
+    ):
+        async with AIPriceActionApp().run_test() as pilot:
+            chat_input = pilot.app.query_one("#chat-input-field", Input)
+            chat_input.value = "hello"
+            await pilot.click("#chat-input-field")
+            await pilot.press("enter")
+            await pilot.pause(0.5)
+
+            # Press Ctrl+O to open thinking modal
+            await pilot.press("ctrl+o")
+            await pilot.pause(0.1)
+
+            assert isinstance(pilot.app.screen_stack[-1], ThinkingModal)
+
+            # Ctrl+O again should close the modal (toggle behavior via ChatTab binding)
+            await pilot.press("ctrl+o")
+            await pilot.pause(0.1)
+
+            assert not isinstance(pilot.app.screen_stack[-1], ThinkingModal)
 
 
 async def test_chat_slash_commands_case_insensitive(app):
