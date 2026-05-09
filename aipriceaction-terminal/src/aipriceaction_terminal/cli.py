@@ -12,6 +12,9 @@ def _ensure_setup() -> None:
 
 
 def run():
+    from .user_settings import apply_settings_to_env
+    apply_settings_to_env()
+
     parser = argparse.ArgumentParser(prog="aipa", description="AIPriceAction terminal")
     sub = parser.add_subparsers(dest="command")
 
