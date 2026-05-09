@@ -362,26 +362,39 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
             f"## User Question\n{user_question}"
         )
 
-        response = await _invoke_with_retry(lambda: supervisor.ainvoke([
-            SystemMessage(content=_P["supervisor"]),
-            HumanMessage(content=user_message),
-        ]), output=output)
-
+        # Retry up to 3 times if the model doesn't call the tool
+        max_tool_retries = 3
         subtasks_data = None
-        if getattr(response, "tool_calls", None):
-            for tc in response.tool_calls:
-                if tc["name"] == "create_subtasks":
-                    raw = tc["args"].get("subtasks")
-                    if isinstance(raw, str):
-                        try:
-                            subtasks_data = json.loads(raw)
-                        except json.JSONDecodeError:
-                            subtasks_data = None
-                    elif isinstance(raw, list):
-                        subtasks_data = raw
+        response = None
+        for attempt in range(max_tool_retries):
+            extra = ""
+            if attempt > 0:
+                extra = "\n\nIMPORTANT: You MUST call the `create_subtasks` tool. Do NOT respond with plain text."
+            response = await _invoke_with_retry(lambda: supervisor.ainvoke([
+                SystemMessage(content=_P["supervisor"]),
+                HumanMessage(content=user_message + extra),
+            ]), output=output)
+
+            if getattr(response, "tool_calls", None):
+                for tc in response.tool_calls:
+                    if tc["name"] == "create_subtasks":
+                        raw = tc["args"].get("subtasks")
+                        if isinstance(raw, str):
+                            try:
+                                subtasks_data = json.loads(raw)
+                            except json.JSONDecodeError:
+                                subtasks_data = None
+                        elif isinstance(raw, list):
+                            subtasks_data = raw
+                        if subtasks_data:
+                            break
+
+            if subtasks_data:
+                break
+            _out(f"[Supervisor] No tool call on attempt {attempt + 1}/{max_tool_retries}, retrying...")
 
         if not subtasks_data:
-            raise ValueError(f"Supervisor did not call create_subtasks tool. Response: {(response.content or '')[:300]}")
+            raise ValueError(f"Supervisor did not call create_subtasks tool after {max_tool_retries} attempts. Response: {(response.content or '')[:300]}")
 
         subtasks = []
         for st in subtasks_data:
