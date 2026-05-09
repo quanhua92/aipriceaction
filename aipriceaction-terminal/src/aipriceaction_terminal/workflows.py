@@ -125,6 +125,9 @@ class AnalyzePane(Vertical):
         """Build context and stream AI analysis for a ticker."""
         log = self.query_one("#wf-output", RichLog)
         try:
+            if not self.app._ensure_agent():
+                log.write("[red]Error: No API key configured. Run 'aipa setup' or set OPENAI_API_KEY.[/red]")
+                return
             builder = self.app.builder
 
             # Build context without system prompt (agent has it already)

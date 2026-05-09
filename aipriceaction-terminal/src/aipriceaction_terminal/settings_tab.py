@@ -22,15 +22,22 @@ def _value_from_env_or_dotenv(sdk_attr: str, settings_json_key: str) -> bool:
     sdk_val = getattr(settings, sdk_attr, "")
     if not sdk_val:
         return False
-    # If settings.json has a different (non-empty) value, the user explicitly
-    # configured it there — treat settings.json as the source.
     saved_val = load_settings().get(settings_json_key, "")
-    if saved_val and saved_val != sdk_val:
-        return False
-    # If settings.json is empty (or matches SDK), the value originates from
-    # .env / env / SDK default.
+    # No value in settings.json → effective value is from env/.env/SDK default.
     if not saved_val:
         return True
+    # settings.json has a different value → env/.env overrode it.
+    if saved_val != sdk_val:
+        return True
+    # Both match — check if .env also provides this value (it has higher
+    # priority than settings.json, so .env is the real source).
+    from .user_settings import _load_dotenv_values, _find_dotenv
+    env_var = next((ev for _, jk, ev, _ in _API_FIELDS if jk == settings_json_key), None)
+    if env_var:
+        dotenv_val = _load_dotenv_values(_find_dotenv()).get(env_var, "")
+        if dotenv_val == sdk_val:
+            return True
+    # Value only exists in settings.json.
     return False
 
 
