@@ -324,14 +324,18 @@ class ChatTab(Vertical):
             log.write("[dim]No saved sessions found.[/dim]\n")
             return
 
-        # No argument: list sessions
+        # No argument: list recent sessions
         if arg is None:
+            recent = sessions[:50]
+            total = len(sessions)
             log.write("[bold yellow]Saved sessions:[/bold yellow]\n")
-            for i, meta in enumerate(sessions):
+            for i, meta in enumerate(recent):
                 log.write(
                     f"  [bold cyan]{i}[/bold cyan]  {meta.title}\n"
                     f"      {meta.updated_at}  |  {meta.message_count} messages  |  {meta.session_id[:12]}...\n"
                 )
+            if total > 50:
+                log.write(f"[dim]Showing 50 of {total} sessions. Use /resume <session_id> for older ones.[/dim]\n")
             log.write(
                 "[dim]Use /resume <number> or /resume <session_id> to load a session.[/dim]\n"
             )
