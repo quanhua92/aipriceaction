@@ -56,7 +56,6 @@ def cmd_analyze(args) -> None:
         )
 
     build_elapsed = time.time() - t0
-    ticker_label = args.tickers[0] if len(args.tickers) == 1 else ",".join(args.tickers)
 
     # --context-only: dump raw context and exit
     if args.context_only:
@@ -118,6 +117,47 @@ def cmd_get_ohlcv(args) -> None:
         ema=args.ema,
     )
     print(df.to_string(index=False))
+
+
+def cmd_resume(args) -> None:
+    """List recent sessions, or open TUI with a resumed session."""
+    from .session import SessionManager
+
+    sm = SessionManager()
+    sessions = sm.list_sessions()
+
+    if args.session is None:
+        # No arg: list recent sessions and exit
+        if not sessions:
+            print("No saved sessions found.")
+            return
+        for i, meta in enumerate(sessions[:20]):
+            print(f"  {i:<4} {meta.title:<40} {meta.updated_at:<20} {meta.message_count:>4} msgs  {meta.session_id}")
+        print(f"\n{len(sessions)} session(s) total. Use `aipa resume <index>` or `aipa resume <session_id_prefix>` to open in TUI.")
+        return
+
+    # Resolve session and open TUI
+    target = args.session
+    if target.isdigit():
+        idx = int(target)
+        if 0 <= idx < len(sessions):
+            session_id = sessions[idx].session_id
+        else:
+            print(f"Error: Index {idx} out of range (0-{len(sessions) - 1})", file=sys.stderr)
+            sys.exit(1)
+    else:
+        matches = [s for s in sessions if s.session_id.startswith(target)]
+        if len(matches) == 1:
+            session_id = matches[0].session_id
+        elif len(matches) > 1:
+            print(f"Error: {len(matches)} sessions match prefix '{target}'. Use a longer prefix.", file=sys.stderr)
+            sys.exit(1)
+        else:
+            print(f"Error: No session found matching '{target}'", file=sys.stderr)
+            sys.exit(1)
+
+    from .app import main
+    main(resume_session=session_id)
 
 
 def cmd_deep_research(

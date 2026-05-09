@@ -58,6 +58,10 @@ def run():
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
 
+    # aipa resume [session_id|index]
+    p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session")
+    p_resume.add_argument("session", nargs="?", default=None, help="Session ID prefix or list index (default: most recent)")
+
     args = parser.parse_args()
 
     if args.command == "setup":
@@ -80,6 +84,9 @@ def run():
             output=args.output,
             lang=args.lang,
         )
+    elif args.command == "resume":
+        from .cli_commands import cmd_resume
+        cmd_resume(args)
     else:
         _ensure_setup()
         from .app import main

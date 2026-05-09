@@ -11,6 +11,7 @@ from textual.screen import Screen
 
 from .widgets import ChatInput
 from .utils import write_error, write_export_result, stream_agent_to_log
+from .session import SessionManager, ChatMessage
 
 
 def _resolve_tui_question(
@@ -137,17 +138,41 @@ class ChatTab(Vertical):
         yield Static(id="thinking-area", classes="hidden")
         yield ChatInput(id="chat-input")
 
-    def __init__(self, **kwargs):
+    def __init__(self, resume_session: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self._thinking_history: list[tuple[str, str]] = []
+        self._session = SessionManager()
+        self._resumed_history: list[ChatMessage] = []
+        self._resume_session = resume_session
 
     def on_mount(self) -> None:
         log = self.query_one("#chat-log", RichLog)
         log.can_focus = False
+
+        if self._resume_session:
+            # Resume an existing session
+            self._load_session(self._resume_session, log)
+        else:
+            # Auto-create a new session
+            self._session.create_session()
+
         log.write(
             "[bold cyan]AIPriceAction Terminal[/bold cyan]\n"
             "Type [bold]/help[/bold] for available commands.\n"
         )
+
+    def _make_on_message(self) -> callable:
+        """Return an on_message callback that persists agent events to the session."""
+        def _cb(msg_dict: dict) -> None:
+            self._session.append_message(
+                ChatMessage(
+                    ts=msg_dict["ts"],
+                    type=msg_dict["type"],
+                    content=msg_dict["content"],
+                    metadata=msg_dict.get("metadata", {}),
+                )
+            )
+        return _cb
 
     def _show_thinking_area(self, text: str) -> None:
         """Show the thinking area with truncated text."""
@@ -175,6 +200,24 @@ class ChatTab(Vertical):
         if self._thinking_history:
             self.app.push_screen(ThinkingModal(self._thinking_history))
 
+    def _prepend_resumed_context(self, message: str) -> str:
+        """If there's resumed history, prepend it as context to the user message."""
+        if not self._resumed_history:
+            return message
+
+        lines = ["<chat_history>"]
+        for msg in self._resumed_history:
+            if msg.type == "user":
+                lines.append(f"User: {msg.content}")
+            elif msg.type == "assistant":
+                lines.append(f"AI: {msg.content}")
+        lines.append("</chat_history>")
+        lines.append("")
+        lines.append(message)
+
+        self._resumed_history = []
+        return "\n".join(lines)
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
         if not text:
@@ -190,6 +233,14 @@ class ChatTab(Vertical):
         if text.startswith("/"):
             self._handle_slash_command(text)
         else:
+            # Persist user message
+            self._session.append_message(
+                ChatMessage(
+                    ts=datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                    type="user",
+                    content=text,
+                )
+            )
             log.write(f"[bold cyan]You:[/bold cyan] {text}")
             self._run_agent_chat(text)
 
@@ -210,14 +261,25 @@ class ChatTab(Vertical):
                 "  /export <ticker> [tickers...] [--interval 1D] [--path ~/dir/]\n"
                 "                        - Export AI context to markdown file\n"
                 "  /deep-research [q]   - Multi-agent deep research\n"
+                "  /save [path]         - Export chat to markdown (default: ~/aipriceaction-chat-<id>.md)\n"
+                "  /resume              - List saved sessions\n"
+                "  /resume <index>      - Load session by number from list\n"
+                "  /resume <session_id> - Load session by UUID\n"
+                "  /sessions            - Alias for /resume\n"
+                "  /new                 - Start new chat session\n"
                 "  /exit                - Quit the application\n"
                 "  /help                - Show this help message\n"
-                "  /clear               - Clear chat history\n"
+                "  /clear               - Clear chat display only"
             )
         elif cmd == "/clear":
             log.clear()
-            if self.app.agent is not None:
+        elif cmd == "/new":
+            log.clear()
+            if getattr(self.app, "agent", None) is not None:
                 self.app.agent.clear_history()
+            self._session.create_session()
+            self._resumed_history = []
+            log.write("[dim]New session started.[/dim]\n")
         elif cmd == "/exit":
             self.app.exit()
         elif cmd == "/analyze":
@@ -230,14 +292,10 @@ class ChatTab(Vertical):
                 "[dim]This will eventually run the multi-agent LangGraph pipeline "
                 "(supervisor -> parallel workers -> aggregator -> reviewer).[/dim]\n"
             )
-        elif cmd == "/deep-research":
-            question = " ".join(parts[1:]) if len(parts) > 1 else ""
-            log.write("[bold cyan]You:[/bold cyan] /deep-research" + (f" {question}" if question else ""))
-            log.write(
-                "[bold yellow]Deep research is not yet implemented.[/bold yellow]\n"
-                "[dim]This will eventually run the multi-agent LangGraph pipeline "
-                "(supervisor -> parallel workers -> aggregator -> reviewer).[/dim]\n"
-            )
+        elif cmd == "/save":
+            self._handle_save(arg)
+        elif cmd == "/resume" or cmd == "/sessions":
+            self._handle_resume(arg)
         elif cmd == "/export":
             args = text.split()[1:]  # skip /export
             tickers: list[str] = []
@@ -268,6 +326,105 @@ class ChatTab(Vertical):
             self._run_export(tickers, interval, export_dir)
         else:
             log.write(f"[bold red]Unknown command:[/bold red] {cmd}")
+
+    def _handle_save(self, path_arg: str | None) -> None:
+        """Handle /save command to export current session to markdown."""
+        log = self.query_one("#chat-log", RichLog)
+        try:
+            output_path = Path(path_arg).expanduser() if path_arg else None
+            result_path = self._session.export_to_markdown(output_path=output_path)
+            log.write(
+                f"[bold green]Chat exported[/bold green] to [bold]{result_path}[/bold]\n"
+            )
+        except ValueError as e:
+            log.write(f"[bold red]Cannot export:[/bold red] {e}\n")
+        except Exception as e:
+            write_error(log, e)
+
+    def _handle_resume(self, arg: str | None) -> None:
+        """Handle /resume and /sessions commands."""
+        log = self.query_one("#chat-log", RichLog)
+
+        sessions = self._session.list_sessions()
+        if not sessions:
+            log.write("[dim]No saved sessions found.[/dim]\n")
+            return
+
+        # No argument: list sessions
+        if arg is None:
+            log.write("[bold yellow]Saved sessions:[/bold yellow]\n")
+            for i, meta in enumerate(sessions):
+                log.write(
+                    f"  [bold cyan]{i}[/bold cyan]  {meta.title}\n"
+                    f"      {meta.updated_at}  |  {meta.message_count} messages  |  {meta.session_id[:12]}...\n"
+                )
+            log.write(
+                "[dim]Use /resume <number> or /resume <session_id> to load a session.[/dim]\n"
+            )
+            return
+
+        # Try numeric index first
+        if arg.isdigit():
+            idx = int(arg)
+            if 0 <= idx < len(sessions):
+                self._load_session(sessions[idx].session_id, log)
+                return
+            else:
+                log.write(f"[bold red]Invalid index:[/bold red] {idx}. Range: 0-{len(sessions) - 1}\n")
+                return
+
+        # Try matching by session ID prefix
+        matches = [s for s in sessions if s.session_id.startswith(arg)]
+        if len(matches) == 1:
+            self._load_session(matches[0].session_id, log)
+        elif len(matches) > 1:
+            log.write(
+                f"[bold red]Ambiguous session ID:[/bold red] {len(matches)} sessions match '{arg}'. "
+                "Use a longer prefix.\n"
+            )
+        else:
+            log.write(f"[bold red]No session found matching:[/bold red] {arg}\n")
+
+    def _load_session(self, session_id: str, log: RichLog) -> None:
+        """Load a session, replay messages into the log, and set up context restoration."""
+        messages = self._session.load_session(session_id)
+        if not messages:
+            log.write("[bold red]Session has no messages.[/bold red]\n")
+            return
+
+        meta = None
+        for s in self._session.list_sessions():
+            if s.session_id == session_id:
+                meta = s
+                break
+
+        log.clear()
+        log.write(
+            f"[bold green]Session resumed:[/bold green] {meta.title if meta else session_id[:12]}\n"
+        )
+
+        for msg in messages:
+            if msg.type == "user":
+                log.write(f"[bold cyan]You:[/bold cyan] {msg.content}")
+            elif msg.type == "assistant":
+                log.write(msg.content)
+                log.write("")
+            elif msg.type == "tool_call":
+                log.write(f"[dim italic]{msg.content}[/dim italic]")
+            elif msg.type == "tool_result":
+                log.write(f"[dim]{msg.content}[/dim]")
+            elif msg.type == "error":
+                log.write(f"[bold red]{msg.content}[/bold red]")
+            elif msg.type == "system":
+                log.write(f"[dim]{msg.content}[/dim]")
+
+        log.write("")
+
+        # Set resumed history for LLM context restoration on next message
+        self._resumed_history = [m for m in messages if m.type in ("user", "assistant")]
+
+        if getattr(self.app, "agent", None) is not None:
+            self.app.agent.clear_history()
 
     _KNOWN_INTERVALS = frozenset(("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"))
 
@@ -309,6 +466,17 @@ class ChatTab(Vertical):
 
         log.write(f"[bold cyan]You:[/bold cyan] /analyze {ticker} {interval}")
         log.write("[dim]Building context and analyzing...[/dim]")
+
+        # Persist user message for /analyze
+        display_text = f"/analyze {ticker} {interval}"
+        self._session.append_message(
+            ChatMessage(
+                ts=datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                type="user",
+                content=display_text,
+            )
+        )
+
         self._run_analyze(ticker, interval, question_index=question_index, custom_question=custom_question)
 
     @work(exclusive=True)
@@ -352,12 +520,16 @@ class ChatTab(Vertical):
                 f"Base your analysis ONLY on the provided data above."
             )
 
+            # Prepend resumed context if applicable
+            message = self._prepend_resumed_context(message)
+
             await stream_agent_to_log(
                 log,
                 self.app.agent,
                 message,
                 on_thinking_update=self._show_thinking_area,
                 on_thinking_done=self._on_thinking_done,
+                on_message=self._make_on_message(),
             )
         except Exception as e:
             write_error(log, e)
@@ -404,12 +576,16 @@ class ChatTab(Vertical):
             )
             return
         try:
+            # Prepend resumed context if applicable
+            message = self._prepend_resumed_context(message)
+
             await stream_agent_to_log(
                 log,
                 self.app.agent,
                 message,
                 on_thinking_update=self._show_thinking_area,
                 on_thinking_done=self._on_thinking_done,
+                on_message=self._make_on_message(),
             )
         except Exception as e:
             log.write(f"[bold red]Agent error: {e}[/bold red]\n")

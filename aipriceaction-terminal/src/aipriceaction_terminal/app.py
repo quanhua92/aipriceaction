@@ -31,6 +31,10 @@ class AIPriceActionApp(AppActions, App):
     language: reactive[str] = reactive("en")
     ticker_options: reactive[list[tuple[str, str]]] = reactive(list)
 
+    def __init__(self, resume_session: str | None = None, **kwargs):
+        self._resume_session = resume_session
+        super().__init__(**kwargs)
+
     def on_mount(self) -> None:
         self.register_theme(AI_GREEN)
         self.theme = "ai-green"
@@ -86,7 +90,7 @@ class AIPriceActionApp(AppActions, App):
         yield Header(show_clock=True)
         with TabbedContent(initial="chat"):
             with TabPane("Chat", id="chat"):
-                yield ChatTab()
+                yield ChatTab(resume_session=self._resume_session)
             with TabPane("Vietnam", id="tickers-vn"):
                 yield TickerDataTab(mode="vn")
             with TabPane("Crypto", id="tickers-crypto"):
@@ -100,9 +104,9 @@ class AIPriceActionApp(AppActions, App):
         yield Footer()
 
 
-def main():
+def main(resume_session: str | None = None):
     """Entry point."""
-    app = AIPriceActionApp()
+    app = AIPriceActionApp(resume_session=resume_session)
     app.run()
 
 

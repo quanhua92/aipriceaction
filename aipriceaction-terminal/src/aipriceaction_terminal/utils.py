@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Awaitable
+from collections.abc import Callable
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from textual.widgets import RichLog
 
 if TYPE_CHECKING:
-    from .agents.callbacks import StreamEventType
+    pass
 
 
 def write_context_result(
@@ -44,6 +45,7 @@ async def stream_agent_to_log(
     *,
     on_thinking_update: Callable[[str], None] | None = None,
     on_thinking_done: Callable[[str], None] | None = None,
+    on_message: Callable[[dict], None] | None = None,
 ) -> str:
     """Stream an agent response into a RichLog. Returns the full response text.
 
@@ -57,6 +59,9 @@ async def stream_agent_to_log(
         message: The user message to send to the agent.
         on_thinking_update: Called with accumulated thinking text on each chunk.
         on_thinking_done: Called with complete thinking text when thinking ends.
+        on_message: Called with a dict {"ts", "type", "content", "metadata"}
+            for each persistable event (tool_call, tool_result, error, assistant).
+            Thinking tokens are NOT emitted.
 
     Returns:
         The full response text from the agent.
@@ -85,6 +90,15 @@ async def stream_agent_to_log(
             if on_thinking_done:
                 on_thinking_done(text)
 
+    def _emit(msg_type: str, content: str, metadata: dict | None = None) -> None:
+        if on_message:
+            on_message({
+                "ts": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                "type": msg_type,
+                "content": content,
+                "metadata": metadata or {},
+            })
+
     async for event in agent.stream(message):
         if event.type == StreamEventType.THINKING:
             thinking_buf.append(event.content)
@@ -103,14 +117,20 @@ async def stream_agent_to_log(
                 collapse_thinking()
             flush()
             log.write("")
+            response_text = "".join(full_response)
+            if response_text.strip():
+                _emit("assistant", response_text)
 
         else:
             flush()
             if event.type == StreamEventType.TOOL_CALL_START:
                 log.write(f"[dim italic]{event.content}[/dim italic]")
+                _emit("tool_call", event.content)
             elif event.type == StreamEventType.TOOL_RESULT:
                 log.write(f"[dim]{event.content}[/dim]")
+                _emit("tool_result", event.content, {"char_count": len(event.content)})
             elif event.type == StreamEventType.ERROR:
                 log.write(f"[bold red]{event.content}[/bold red]")
+                _emit("error", event.content)
 
     return "".join(full_response)

@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-05-09
+
+### Added
+- Add persistent chat sessions stored as JSONL files under `~/.aipriceaction/sessions/<uuid>/`
+- Add `/save [path]` command to export current chat session to markdown
+- Add `/resume [index|session_id]` command to list and reload previous sessions
+- Add `/sessions` command as alias for `/resume`
+- Auto-create new session on app launch, auto-title from first user message
+- Restore LLM context on session resume by prepending conversation history as `<chat_history>` block on first message
+- Thinking tokens are excluded from session persistence (only user, assistant, tool_call, tool_result, error, system messages stored)
+
+### Changed
+- `/clear` now starts a fresh session (previous session preserved on disk)
+
 ## [0.1.8] - 2026-05-09
 
 ### Fixed

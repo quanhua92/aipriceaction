@@ -14,6 +14,10 @@ _COMMANDS: list[tuple[str, str]] = [
     ("/exit", "/exit"),
     ("/export <ticker> [ticker...] [--interval] [--path]", "/export"),
     ("/help", "/help"),
+    ("/new", "/new"),
+    ("/resume [session_id|index]", "/resume"),
+    ("/save [path]", "/save"),
+    ("/sessions", "/sessions"),
 ]
 
 # Keys that should trigger app-level actions (tab switch, help) even when

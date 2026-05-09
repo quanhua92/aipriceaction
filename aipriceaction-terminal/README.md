@@ -178,6 +178,25 @@ Interactive first-run configuration. Prompts for language, reference ticker, API
 aipa setup
 ```
 
+### `aipa resume`
+
+List saved chat sessions or open the TUI with a resumed one. Sessions are auto-saved under `~/.aipriceaction/sessions/`.
+
+```
+# List recent sessions
+aipa resume
+
+# Open TUI with a specific session
+aipa resume 0
+
+# Open TUI by UUID prefix
+aipa resume 0194a2b3
+```
+
+| Argument | Description |
+|---|---|
+| `session` | Session ID prefix or list index (omit to list all) |
+
 ## First-Run Setup
 
 Commands that require an API key will auto-run `aipa setup` on first use if not yet configured. Commands that don't need an API key always work immediately.
@@ -187,6 +206,7 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa get-ohlcv-data` | No setup needed |
 | `aipa analyze VCB --context-only` | No setup needed |
 | `aipa analyze VCB --questions` | No setup needed |
+| `aipa resume` | No setup needed |
 | `aipa setup` | Runs setup |
 | `aipa` | Auto-runs setup first |
 | `aipa analyze VCB` | Auto-runs setup first |
@@ -209,9 +229,18 @@ Launch the TUI with `aipa`. The interface has three tabs:
 /analyze VCB --question What is support?   # Custom question
 /export VCB FPT               # Export context to markdown file
 /deep-research                # Multi-agent research
-/clear                        # Clear chat history
+/save                         # Export chat to markdown (default: ~/aipriceaction-chat-<id>.md)
+/save ~/my-chat.md            # Export chat to custom path
+/resume                       # List saved sessions
+/resume 0                     # Load session by index
+/resume 0194a2b3              # Load session by UUID prefix
+/sessions                     # Alias for /resume
+/new                          # Start new session (clears history)
+/clear                        # Clear chat display only
 /exit                         # Quit
 ```
+
+Chat sessions are auto-saved to `~/.aipriceaction/sessions/` and restored with full LLM context when resumed.
 
 Press `Ctrl+O` in the Chat tab to view thinking/reasoning history.
 
