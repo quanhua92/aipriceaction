@@ -1,6 +1,7 @@
 """CLI dispatcher: routes to TUI or subcommands."""
 
 import argparse
+import asyncio
 
 
 def _ensure_setup() -> None:
@@ -71,7 +72,7 @@ def run():
         if not getattr(args, "context_only", False) and not getattr(args, "questions", False):
             _ensure_setup()
         from .cli_commands import cmd_analyze
-        cmd_analyze(args)
+        asyncio.run(cmd_analyze(args))
     elif args.command == "get-ohlcv-data":
         from .cli_commands import cmd_get_ohlcv
         cmd_get_ohlcv(args)

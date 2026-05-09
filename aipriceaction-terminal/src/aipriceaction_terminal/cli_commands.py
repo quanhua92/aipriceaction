@@ -15,7 +15,7 @@ def _resolve_lang(arg_lang: str | None) -> str:
     return load_settings().get("language", "en")
 
 
-def cmd_analyze(args) -> None:
+async def cmd_analyze(args) -> None:
     from aipriceaction import AIContextBuilder
 
     lang = _resolve_lang(args.lang)
@@ -44,13 +44,15 @@ def cmd_analyze(args) -> None:
     t0 = time.time()
 
     if len(args.tickers) == 1:
-        context = builder.build(
+        context = await asyncio.to_thread(
+            builder.build,
             ticker=args.tickers[0],
             **build_kwargs,
             include_system_prompt=not args.context_only,
         )
     else:
-        context = builder.build(
+        context = await asyncio.to_thread(
+            builder.build,
             tickers=args.tickers,
             **build_kwargs,
             include_system_prompt=not args.context_only,
@@ -64,7 +66,7 @@ def cmd_analyze(args) -> None:
         return
 
     # LLM analysis
-    question = _resolve_question(builder, args)
+    question = _resolve_cli_question(builder, args)
     if not question:
         print("No question resolved. Use --question TEXT or pick from --questions.", file=sys.stderr)
         sys.exit(1)
@@ -78,13 +80,12 @@ def cmd_analyze(args) -> None:
     last_error: Exception | None = None
     for attempt in range(max_attempts):
         try:
-            response = builder.answer(question)
+            response = await asyncio.to_thread(builder.answer, question)
         except Exception as e:
             last_error = e
             print(f"[error] Attempt {attempt + 1}/{max_attempts}: {type(e).__name__}: {e}", file=sys.stderr)
             if attempt < max_attempts - 1:
-                import time as _time
-                _time.sleep(2)
+                await asyncio.sleep(2)
             continue
         if response.strip():
             break
@@ -175,21 +176,20 @@ def cmd_deep_research(
     ))
 
 
-def _resolve_question(builder, args) -> str:
-    """Resolve the analysis question from args or question bank default."""
+def _resolve_cli_question(builder, args) -> str:
+    """Resolve the analysis question from args or question bank default.
+
+    For single ticker, delegates to the shared resolve_tui_question().
+    Multi-ticker falls back to its own logic (TUI doesn't support multi-ticker).
+    """
     if args.question:
         return args.question
 
-    # For single ticker, use question bank template 0 with {ticker} interpolated
     if len(args.tickers) == 1:
-        templates = builder.questions("single")
-        if templates:
-            try:
-                return templates[0]["question"].format(ticker=args.tickers[0])
-            except KeyError:
-                return templates[0]["question"]
+        from .analyze import resolve_tui_question
+        return resolve_tui_question(builder, args.tickers[0], question_index=0, custom_question=None)
 
-    # For multi-ticker, use question bank template 0
+    # Multi-ticker: use question bank template 0
     templates = builder.questions("multi")
     if templates:
         return templates[0]["question"]
