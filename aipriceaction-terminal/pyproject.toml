@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-aipriceaction-terminal = "aipriceaction_terminal.app:main"
+aipa = "aipriceaction_terminal.app:main"
 
 [build-system]
 requires = ["hatchling"]
