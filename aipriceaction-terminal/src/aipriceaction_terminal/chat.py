@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from textual import work
+from textual.binding import Binding
 from textual.widgets import RichLog, Input, Static
 from textual.containers import Vertical, VerticalScroll
 from textual.screen import Screen
@@ -12,30 +13,7 @@ from textual.screen import Screen
 from .widgets import ChatInput
 from .utils import write_error, write_export_result, stream_agent_to_log
 from .session import SessionManager, ChatMessage
-
-
-def _resolve_tui_question(
-    builder: object,
-    ticker: str,
-    question_index: int | None,
-    custom_question: str | None,
-) -> str:
-    """Resolve the analysis question for TUI /analyze command."""
-    if custom_question:
-        return custom_question
-
-    templates = builder.questions("single")
-    if not templates:
-        return f"Analyze {ticker} based on the provided data."
-
-    idx = question_index if question_index is not None else 0
-    idx = max(0, min(idx, len(templates) - 1))
-    template = templates[idx]
-
-    try:
-        return template["question"].format(ticker=ticker)
-    except KeyError:
-        return template["question"]
+from .analyze import run_tui_analyze
 
 
 class ThinkingModal(Screen[None]):
@@ -105,7 +83,7 @@ class ThinkingModal(Screen[None]):
 class ChatTab(Vertical):
     """Chat interface for AI ticker analysis."""
 
-    BINDINGS = [("ctrl+o", "show_thinking", "Thinking")]
+    BINDINGS = [Binding("ctrl+o", "show_thinking", "Thinking", key_display="ctrl+o")]
 
     DEFAULT_CSS = """
     ChatTab {
@@ -200,10 +178,10 @@ class ChatTab(Vertical):
         if self._thinking_history:
             self.app.push_screen(ThinkingModal(self._thinking_history))
 
-    def _prepend_resumed_context(self, message: str) -> str:
-        """If there's resumed history, prepend it as context to the user message."""
+    def _build_resumed_prefix(self) -> str | None:
+        """Build <chat_history> prefix from resumed session, then clear it."""
         if not self._resumed_history:
-            return message
+            return None
 
         lines = ["<chat_history>"]
         for msg in self._resumed_history:
@@ -213,7 +191,6 @@ class ChatTab(Vertical):
                 lines.append(f"AI: {msg.content}")
         lines.append("</chat_history>")
         lines.append("")
-        lines.append(message)
 
         self._resumed_history = []
         return "\n".join(lines)
@@ -498,35 +475,14 @@ class ChatTab(Vertical):
                 )
                 return
 
-            builder = self.app.builder
+            # Build resumed context prefix (cleared after first use)
+            prefix = self._build_resumed_prefix()
 
-            # Build context without system prompt (agent has it already)
-            context = await asyncio.to_thread(
-                builder.build, ticker=ticker, interval=interval,
-                include_system_prompt=False,
-            )
-
-            log.write(f"[dim]Context ready: {len(context):,} chars[/dim]")
-
-            # Resolve question
-            question = _resolve_tui_question(
-                builder, ticker, question_index, custom_question,
-            )
-
-            # Compose the message for the agent
-            message = (
-                f"<analysis_context>\n{context}\n</analysis_context>\n\n"
-                f"{question}\n\n"
-                f"Base your analysis ONLY on the provided data above."
-            )
-
-            # Prepend resumed context if applicable
-            message = self._prepend_resumed_context(message)
-
-            await stream_agent_to_log(
-                log,
-                self.app.agent,
-                message,
+            await run_tui_analyze(
+                log, self.app.agent, self.app.builder, ticker, interval,
+                question_index=question_index,
+                custom_question=custom_question,
+                prefix=prefix,
                 on_thinking_update=self._show_thinking_area,
                 on_thinking_done=self._on_thinking_done,
                 on_message=self._make_on_message(),
@@ -577,7 +533,9 @@ class ChatTab(Vertical):
             return
         try:
             # Prepend resumed context if applicable
-            message = self._prepend_resumed_context(message)
+            prefix = self._build_resumed_prefix()
+            if prefix:
+                message = prefix + message
 
             await stream_agent_to_log(
                 log,

@@ -1,7 +1,5 @@
 """Workflows tab: nested tabs for different workflow types."""
 
-import asyncio
-
 from textual import work
 from textual.containers import Vertical, Horizontal
 from textual.widgets import (
@@ -9,9 +7,9 @@ from textual.widgets import (
 )
 from textual import on
 
-from .utils import write_error, stream_agent_to_log
+from .utils import write_error
+from .analyze import run_tui_analyze
 from .widgets import TickerSelect
-from .chat import _resolve_tui_question
 
 
 class AnalyzePane(Vertical):
@@ -128,29 +126,11 @@ class AnalyzePane(Vertical):
             if not self.app._ensure_agent():
                 log.write("[red]Error: No API key configured. Run 'aipa setup' or set OPENAI_API_KEY.[/red]")
                 return
-            builder = self.app.builder
-
-            # Build context without system prompt (agent has it already)
-            context = await asyncio.to_thread(
-                builder.build, ticker=ticker, interval=interval,
-                include_system_prompt=False,
+            await run_tui_analyze(
+                log, self.app.agent, self.app.builder, ticker, interval,
+                question_index=question_index,
+                custom_question=custom_question,
             )
-
-            log.write(f"[dim]Context ready: {len(context):,} chars[/dim]")
-
-            # Resolve question
-            question = _resolve_tui_question(
-                builder, ticker, question_index, custom_question,
-            )
-
-            # Compose the message for the agent
-            message = (
-                f"<analysis_context>\n{context}\n</analysis_context>\n\n"
-                f"{question}\n\n"
-                f"Base your analysis ONLY on the provided data above."
-            )
-
-            await stream_agent_to_log(log, self.app.agent, message)
         except Exception as e:
             write_error(log, e)
 
@@ -215,7 +195,7 @@ class DeepResearchPane(Vertical):
         question = self.query_one("#dr-question", Input).value.strip()
         log = self.query_one("#dr-output", RichLog)
         log.write(
-            f"[bold cyan]Deep Research:[/bold cyan]"
+            "[bold cyan]Deep Research:[/bold cyan]"
             + (f" {question}" if question else "")
         )
         log.write(
