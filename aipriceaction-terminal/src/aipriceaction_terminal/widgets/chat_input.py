@@ -20,34 +20,27 @@ _COMMANDS: list[tuple[str, str]] = [
     ("/sessions", "/sessions"),
 ]
 
-# Keys that should trigger app-level actions (tab switch, help) even when
+# Keys that should trigger app-level actions (help) even when
 # an Input is focused. Textual filters these from the binding chain, so we
 # handle them manually in the Input's on_key.
-_GLOBAL_KEYS = frozenset(("1", "2", "3", "4", "5", "6", "question_mark"))
-_TAB_MAP: dict[str, str] = {
-    "1": "chat",
-    "2": "tickers-vn",
-    "3": "tickers-crypto",
-    "4": "tickers-global",
-    "5": "workflows",
-    "6": "settings",
-}
+_GLOBAL_KEYS = frozenset(("question_mark",))
 
 
 class _GlobalKeyInput(Input):
-    """Input that forwards global shortcut keys (1-6, ?) to the App.
+    """Input that forwards global shortcut keys (?) to the App.
 
     Textual removes typeable-key bindings from the binding chain when an
     Input is focused. This subclass overrides _on_key to intercept global
     keys before Input processes them as typed characters.
+
+    Tab switch (1-6) works via app-level bindings when Input is not focused.
+    Press Esc to blur the input, then use 1-6 to switch tabs.
     """
 
     async def _on_key(self, event) -> None:
         if event.key in _GLOBAL_KEYS:
             event.stop()
-            if event.key in _TAB_MAP:
-                self.app.action_switch_tab(_TAB_MAP[event.key])
-            elif event.key == "question_mark":
+            if event.key == "question_mark":
                 self.app.action_show_help()
         else:
             await super()._on_key(event)
