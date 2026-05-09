@@ -120,6 +120,26 @@ def cmd_get_ohlcv(args) -> None:
         ma=args.ma,
         ema=args.ema,
     )
+    if not getattr(args, "no_system_prompt", False):
+        from aipriceaction.system import get_system_prompt
+
+        lang = _resolve_lang(None)
+        prompt = get_system_prompt(
+            lang,
+            include_data_policy=False,
+            include_analysis_framework=False,
+            include_ma_score=False,
+            include_disclaimer=False,
+        )
+        # Short persona: identity sentence + key communication rules
+        paragraphs = prompt.split("\n\n")
+        identity_para = paragraphs[1] if len(paragraphs) > 1 else ""
+        identity = identity_para.split(".")[0] + "." if "." in identity_para else identity_para
+        comm_lines = paragraphs[-1].strip().split("\n")
+        print(identity)
+        for line in comm_lines[:3]:
+            print(line)
+        print()
     print(df.to_string(index=False))
 
 

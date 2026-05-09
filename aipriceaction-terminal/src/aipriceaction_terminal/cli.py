@@ -49,6 +49,7 @@ def run():
     p_ohlcv.add_argument("--ma", action="store_true", default=True)
     p_ohlcv.add_argument("--no-ma", dest="ma", action="store_false")
     p_ohlcv.add_argument("--ema", action="store_true", default=False)
+    p_ohlcv.add_argument("--no-system-prompt", action="store_true", help="Exclude persona header from output")
 
     # aipa deep-research [question]
     p_deep = sub.add_parser("deep-research", help="Multi-agent deep research")
