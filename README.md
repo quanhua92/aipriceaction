@@ -320,7 +320,10 @@ uvx aipa-cli
 
 # Or install as a standalone tool
 uv tool install aipa-cli
+
+# Use either command
 aipa
+aipa-cli
 ```
 
 Requires an OpenAI-compatible API key (set via `OPENAI_API_KEY` or `OPENAI_BASE_URL` for custom providers like OpenRouter). See [aipriceaction-terminal/](aipriceaction-terminal/) for source code and [CHANGELOG](aipriceaction-terminal/CHANGELOG.md).

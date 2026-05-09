@@ -12,6 +12,10 @@ uvx aipa-cli
 
 # Or install as a standalone tool
 uv tool install aipa-cli
+
+# Use either command
+aipa
+aipa-cli
 ```
 
 ## Requirements
