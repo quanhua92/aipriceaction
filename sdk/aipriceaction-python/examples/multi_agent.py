@@ -521,7 +521,7 @@ def aggregator_node(state: OverallState) -> dict:
     content = response.content or ""
 
     print(f"[Aggregator] Analysis synthesized ({len(content):,} chars)\n")
-    return {"analysis": content, "review_round": round_num}
+    return {"analysis": content, "review_round": round_num + 1}
 
 
 MAX_REVIEW_ROUNDS = 3

@@ -479,7 +479,7 @@ def _build_graph(checkpointer=None, lang: str = "en"):
         content = response.content or ""
 
         print(f"[Aggregator] Analysis synthesized ({len(content):,} chars)", flush=True)
-        return {"analysis": content, "review_round": round_num}
+        return {"analysis": content, "review_round": round_num + 1}
 
     MAX_REVIEW_ROUNDS = 3
 
