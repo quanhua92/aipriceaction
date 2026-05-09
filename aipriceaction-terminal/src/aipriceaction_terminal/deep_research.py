@@ -1,16 +1,18 @@
-"""Multi-agent deep research pipeline adapted for CLI use.
+"""Multi-agent deep research pipeline adapted for CLI and TUI use.
 
 Adapted from examples/multi_agent.py into a proper importable module.
 Runs supervisor -> parallel workers -> aggregator -> reviewer pipeline.
+All public functions are async to avoid blocking the TUI event loop.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import operator
-import sys
 import tempfile
 import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any
@@ -246,26 +248,28 @@ Gọi `approve_report` hoặc `reject_report(feedback="...")`.""",
 # -- Helpers --
 
 
-def _invoke_with_retry(llm_call, retries: int = 5, base_delay: float = 10.0):
+async def _invoke_with_retry(llm_call, retries: int = 5, base_delay: float = 10.0, output: Callable[[str], None] | None = None):
     """Invoke an LLM call with retry on transient API errors."""
+    _out = output or print
     transient = ("429", "500", "502", "503", "504", "timeout", "connection", "overloaded")
     for attempt in range(retries):
         try:
-            return llm_call()
+            return await llm_call()
         except Exception as e:
             err_str = str(e).lower()
             is_transient = any(code in err_str for code in transient)
             if is_transient and attempt < retries - 1:
                 delay = base_delay * (2 ** attempt)
                 delay = min(delay, 60)
-                print(f"    [retry] {type(e).__name__}: {str(e)[:80]} (attempt {attempt + 1}/{retries}, wait {delay:.0f}s)", flush=True)
-                time.sleep(delay)
+                _out(f"    [retry] {type(e).__name__}: {str(e)[:80]} (attempt {attempt + 1}/{retries}, wait {delay:.0f}s)")
+                await asyncio.sleep(delay)
             else:
                 raise
 
 
-def _run_agent_with_tools(system_prompt: str, user_message: str, label: str = "", retries: int = 5) -> str:
+async def _run_agent_with_tools(system_prompt: str, user_message: str, label: str = "", retries: int = 5, output: Callable[[str], None] | None = None) -> str:
     """Run a create_agent with tools, retry on rate-limit, return final text."""
+    _out = output or print
     llm = ChatOpenAI(
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
@@ -281,7 +285,7 @@ def _run_agent_with_tools(system_prompt: str, user_message: str, label: str = ""
     for attempt in range(retries):
         try:
             result_parts = []
-            for event in agent.stream(
+            async for event in agent.astream(
                 {"messages": [HumanMessage(content=user_message)]},
                 stream_mode="updates",
             ):
@@ -290,10 +294,10 @@ def _run_agent_with_tools(system_prompt: str, user_message: str, label: str = ""
                         msg_type = type(msg).__name__
                         if msg_type == "AIMessage" and getattr(msg, "tool_calls", None):
                             for tc in msg.tool_calls:
-                                print(f"  [{label}] [tool call] {tc['name']}({tc['args']})", flush=True)
+                                _out(f"  [{label}] [tool call] {tc['name']}({tc['args']})")
                         elif msg_type == "ToolMessage":
                             preview = msg.content[:150].replace("\n", " ")
-                            print(f"  [{label}] [tool result] {preview}...", flush=True)
+                            _out(f"  [{label}] [tool result] {preview}...")
                         elif msg_type == "AIMessage" and msg.content:
                             result_parts.append(msg.content)
             result_text = max(result_parts, key=len) if result_parts else ""
@@ -302,8 +306,8 @@ def _run_agent_with_tools(system_prompt: str, user_message: str, label: str = ""
             last_error = e
             if "429" in str(e) and attempt < retries - 1:
                 delay = min(10.0 * (2 ** attempt), 60)
-                print(f"  [{label}] [retry] Rate limited, wait {delay:.0f}s (attempt {attempt + 1}/{retries})", flush=True)
-                time.sleep(delay)
+                _out(f"  [{label}] [retry] Rate limited, wait {delay:.0f}s (attempt {attempt + 1}/{retries})")
+                await asyncio.sleep(delay)
     assert last_error is not None
     raise last_error
 
@@ -335,16 +339,17 @@ def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) ->
 # -- Graph nodes --
 
 
-def _build_graph(checkpointer=None, lang: str = "en"):
+def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], None] | None = None):
     """Build the multi-agent graph with parallel fan-out."""
     _P = _PROMPTS[lang]
+    _out = output or print
     llm = ChatOpenAI(
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
         model=settings.openai_model,
     )
 
-    def supervisor_node(state: OverallState) -> dict:
+    async def supervisor_node(state: OverallState) -> dict:
         user_question = ""
         for msg in state["messages"]:
             if isinstance(msg, HumanMessage):
@@ -357,10 +362,10 @@ def _build_graph(checkpointer=None, lang: str = "en"):
             f"## User Question\n{user_question}"
         )
 
-        response = _invoke_with_retry(lambda: supervisor.invoke([
+        response = await _invoke_with_retry(lambda: supervisor.ainvoke([
             SystemMessage(content=_P["supervisor"]),
             HumanMessage(content=user_message),
-        ]))
+        ]), output=output)
 
         subtasks_data = None
         if getattr(response, "tool_calls", None):
@@ -391,10 +396,10 @@ def _build_graph(checkpointer=None, lang: str = "en"):
             instruction = st.get("instruction", f"Analyze {sector} sector")
             subtasks.append(Subtask(sector=sector, tickers=tickers, instruction=instruction))
 
-        print(f"[Supervisor] Decomposed into {len(subtasks)} subtasks:", flush=True)
+        _out(f"[Supervisor] Decomposed into {len(subtasks)} subtasks:")
         for st in subtasks:
-            print(f"  - {st['sector']}: {', '.join(st['tickers'])}", flush=True)
-        print(flush=True)
+            _out(f"  - {st['sector']}: {', '.join(st['tickers'])}")
+        _out("")
 
         return {"subtasks": subtasks}
 
@@ -412,40 +417,41 @@ def _build_graph(checkpointer=None, lang: str = "en"):
             for st in state["subtasks"]
         ]
 
-    def worker_node(state: dict) -> dict:
+    async def worker_node(state: dict) -> dict:
         sector = state["sector"]
         tickers = state["tickers"]
 
-        print(f"  [Worker:{sector}] Starting analysis for {', '.join(tickers)}...", flush=True)
+        _out(f"  [Worker:{sector}] Starting analysis for {', '.join(tickers)}...")
 
         try:
             system_prompt = get_system_prompt(lang) + "\n\n" + _P["worker_role"].format(
                 instruction=state["instruction"],
             )
 
-            result_text = _run_agent_with_tools(
+            result_text = await _run_agent_with_tools(
                 system_prompt=system_prompt,
                 user_message=state["messages"][0].content if state["messages"] else state["instruction"],
                 label=f"Worker:{sector}",
+                output=output,
             )
 
-            print(f"  [Worker:{sector}] Analysis complete ({len(result_text):,} chars)", flush=True)
+            _out(f"  [Worker:{sector}] Analysis complete ({len(result_text):,} chars)")
 
             return {"worker_results": [WorkerResult(
                 sector=sector, tickers=tickers, analysis=result_text,
             )]}
 
         except Exception as e:
-            print(f"  [Worker:{sector}] ERROR: {e}", flush=True)
+            _out(f"  [Worker:{sector}] ERROR: {e}")
             return {"worker_results": [WorkerResult(
                 sector=sector, tickers=tickers,
                 analysis=f"[Analysis failed for {sector}: {e}]",
             )]}
 
-    def aggregator_node(state: OverallState) -> dict:
+    async def aggregator_node(state: OverallState) -> dict:
         results = state["worker_results"]
         round_num = state.get("review_round", 0)
-        print(f"[Aggregator] Synthesizing {len(results)} sector reports (round {round_num + 1})...", flush=True)
+        _out(f"[Aggregator] Synthesizing {len(results)} sector reports (round {round_num + 1})...")
 
         user_question = ""
         for msg in state["messages"]:
@@ -472,21 +478,21 @@ def _build_graph(checkpointer=None, lang: str = "en"):
             question=user_question,
         ) + feedback_section
 
-        response = _invoke_with_retry(lambda: llm.invoke([
+        response = await _invoke_with_retry(lambda: llm.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_message),
-        ]))
+        ]), output=output)
         content = response.content or ""
 
-        print(f"[Aggregator] Analysis synthesized ({len(content):,} chars)", flush=True)
+        _out(f"[Aggregator] Analysis synthesized ({len(content):,} chars)")
         return {"analysis": content, "review_round": round_num + 1}
 
     MAX_REVIEW_ROUNDS = 3
 
-    def reviewer_node(state: OverallState) -> dict:
+    async def reviewer_node(state: OverallState) -> dict:
         round_num = state.get("review_round", 0)
         label = f"Reviewer (round {round_num + 1})"
-        print(f"[{label}] Checking data integrity...", flush=True)
+        _out(f"[{label}] Checking data integrity...")
 
         worker_reports = ""
         for wr in state["worker_results"]:
@@ -503,16 +509,16 @@ def _build_graph(checkpointer=None, lang: str = "en"):
         )
 
         reviewer = llm.bind_tools([approve_report, reject_report])
-        response = _invoke_with_retry(lambda: reviewer.invoke([
+        response = await _invoke_with_retry(lambda: reviewer.ainvoke([
             SystemMessage(content=system_prompt),
             HumanMessage(content=user_message),
-        ]))
+        ]), output=output)
 
         for tc in (response.tool_calls or []):
             name = tc["name"]
             args = tc["args"]
             if name == "approve_report":
-                print(f"[{label}] APPROVED", flush=True)
+                _out(f"[{label}] APPROVED")
                 return {
                     "review_result": "approve",
                     "review_feedback": "",
@@ -520,14 +526,14 @@ def _build_graph(checkpointer=None, lang: str = "en"):
                 }
             elif name == "reject_report":
                 feedback = args.get("feedback", "")
-                print(f"[{label}] REJECTED:\n{feedback[:500]}", flush=True)
+                _out(f"[{label}] REJECTED:\n{feedback[:500]}")
                 return {
                     "review_result": "reject",
                     "review_feedback": feedback,
                 }
 
         content = (response.content or "").strip()
-        print(f"[{label}] NO TOOL CALLED, treating as reject", flush=True)
+        _out(f"[{label}] NO TOOL CALLED, treating as reject")
         return {
             "review_result": "reject",
             "review_feedback": content or "Reviewer did not call approve_report or reject_report tool.",
@@ -537,7 +543,7 @@ def _build_graph(checkpointer=None, lang: str = "en"):
         if state.get("review_result") == "approve":
             return "end"
         if state.get("review_round", 0) >= MAX_REVIEW_ROUNDS - 1:
-            print("[Reviewer] Max rounds reached, accepting current output", flush=True)
+            _out("[Reviewer] Max rounds reached, accepting current output")
             return "end"
         return "aggregator"
 
@@ -592,12 +598,13 @@ _DEFAULT_QUESTIONS = {
 # -- Public API --
 
 
-def run_deep_research(
+async def run_deep_research(
     question: str = "",
     resume_id: str | None = None,
     output_file: str | None = None,
     lang: str | None = None,
-) -> None:
+    output: Callable[[str], None] | None = None,
+) -> str:
     """Run the multi-agent deep research pipeline.
 
     Args:
@@ -605,32 +612,37 @@ def run_deep_research(
         resume_id: Checkpoint session ID to resume from.
         output_file: Save final report to this file path.
         lang: Override language (defaults to settings.ai_context_lang).
+        output: Callback for progress output. Defaults to print() for CLI compat.
+
+    Returns:
+        The final report text.
     """
     started_at = time.time()
     effective_lang = lang or settings.ai_context_lang
+    _out = output or print
 
     if not settings.openai_api_key:
-        print("Error: OPENAI_API_KEY is not set. Set it via environment variable or .env file.", file=sys.stderr)
-        import sys
-        sys.exit(1)
+        _out("Error: OPENAI_API_KEY is not set. Set it via environment variable or .env file.")
+        raise SystemExit(1)
 
-    print("# AIPriceAction Multi-Agent Research", flush=True)
-    print(flush=True)
-    print(f"  Model:    {settings.openai_model}", flush=True)
-    print(f"  Base URL: {settings.openai_base_url}", flush=True)
-    print(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}", flush=True)
-    print(f"  Lang:     {effective_lang}", flush=True)
+    _out("# AIPriceAction Multi-Agent Research")
+    _out("")
+    _out(f"  Model:    {settings.openai_model}")
+    _out(f"  Base URL: {settings.openai_base_url}")
+    _out(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    _out(f"  Lang:     {effective_lang}")
     if resume_id:
-        print(f"  Resume:   {resume_id}", flush=True)
-    print(flush=True)
-    print("---", flush=True)
-    print(flush=True)
+        _out(f"  Resume:   {resume_id}")
+    _out("")
+    _out("---")
+    _out("")
 
     # Ensure clients are initialized
     _ensure_clients(effective_lang)
 
+    market_snapshot = ""
     if not resume_id:
-        print("[1] Fetching market snapshot (all VN tickers, latest bar)...", flush=True)
+        _out("[1] Fetching market snapshot (all VN tickers, latest bar)...")
         _, builder = _ensure_clients(effective_lang)
         market_snapshot = builder.build(
             source="vn",
@@ -641,32 +653,32 @@ def run_deep_research(
         )
         client, _ = _ensure_clients(effective_lang)
         tickers = client.get_tickers(source="vn")
-        print(f"    Tickers: {len(tickers)}", flush=True)
-        print(flush=True)
+        _out(f"    Tickers: {len(tickers)}")
+        _out("")
 
     effective_question = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
 
-    print(f"[2] Starting multi-agent research...", flush=True)
-    print(f"    Question: {effective_question}", flush=True)
-    print(flush=True)
-    print("---", flush=True)
-    print(flush=True)
+    _out("[2] Starting multi-agent research...")
+    _out(f"    Question: {effective_question}")
+    _out("")
+    _out("---")
+    _out("")
 
     checkpointer = PersistentCheckpointSaver(
         session_id=resume_id,
         base_dir=Path(tempfile.gettempdir()) / "aipriceaction-checkpoints",
         callbacks=[extract_worker_results],
     )
-    print(f"    Session: {checkpointer.session_id}", flush=True)
-    print(f"    Folder:  {checkpointer.session_dir}", flush=True)
-    print(flush=True)
+    _out(f"    Session: {checkpointer.session_id}")
+    _out(f"    Folder:  {checkpointer.session_dir}")
+    _out("")
 
-    graph = _build_graph(checkpointer=checkpointer, lang=effective_lang)
+    graph = _build_graph(checkpointer=checkpointer, lang=effective_lang, output=_out)
 
     if resume_id:
-        print("    Resuming from checkpoint...", flush=True)
-        print(flush=True)
-        result = graph.invoke(
+        _out("    Resuming from checkpoint...")
+        _out("")
+        result = await graph.ainvoke(
             None,
             config={
                 "recursion_limit": 50,
@@ -674,7 +686,7 @@ def run_deep_research(
             },
         )
     else:
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {
                 "messages": [HumanMessage(content=effective_question)],
                 "market_snapshot": market_snapshot,
@@ -685,24 +697,26 @@ def run_deep_research(
             },
         )
 
-    print("---", flush=True)
-    print(flush=True)
-    print("## [3] FINAL REPORT", flush=True)
-    print(flush=True)
-    print("---", flush=True)
-    print(flush=True)
+    _out("---")
+    _out("")
+    _out("## [3] FINAL REPORT")
+    _out("")
+    _out("---")
+    _out("")
 
     report = result["final_report"]
-    print(report, flush=True)
-    print(flush=True)
-    print("---", flush=True)
-    print(flush=True)
+    _out(report)
+    _out("")
+    _out("---")
+    _out("")
 
     elapsed = time.time() - started_at
-    print(f"[4] Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}", flush=True)
+    _out(f"[4] Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
 
     if output_file:
         output_path = Path(output_file).expanduser()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(report, encoding="utf-8")
-        print(f"Report saved to: {output_path}", flush=True)
+        _out(f"Report saved to: {output_path}")
+
+    return report

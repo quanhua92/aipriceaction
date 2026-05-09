@@ -264,11 +264,8 @@ class ChatTab(Vertical):
         elif cmd == "/deep-research":
             question = " ".join(parts[1:]) if len(parts) > 1 else ""
             log.write("[bold cyan]You:[/bold cyan] /deep-research" + (f" {question}" if question else ""))
-            log.write(
-                "[bold yellow]Deep research is not yet implemented.[/bold yellow]\n"
-                "[dim]This will eventually run the multi-agent LangGraph pipeline "
-                "(supervisor -> parallel workers -> aggregator -> reviewer).[/dim]\n"
-            )
+            log.write("[dim]Starting multi-agent deep research...[/dim]\n")
+            self._run_deep_research(question)
         elif cmd == "/save":
             self._handle_save(arg)
         elif cmd == "/resume" or cmd == "/sessions":
@@ -557,3 +554,38 @@ class ChatTab(Vertical):
         self._hide_thinking_area()
         log = self.query_one("#chat-log", RichLog)
         log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")
+
+    @work(exclusive=True)
+    async def _run_deep_research(self, question: str) -> None:
+        """Run deep research pipeline and stream output to chat log."""
+        from .deep_research import run_deep_research
+
+        log = self.query_one("#chat-log", RichLog)
+        try:
+            if not self.app._ensure_agent():
+                log.write(
+                    "[bold yellow]API key not configured.[/bold yellow]\n"
+                    "Set it in the Settings tab or run [bold]aipa setup[/bold]."
+                )
+                return
+
+            def _output(text: str) -> None:
+                log.write(text)
+
+            report = await run_deep_research(
+                question=question,
+                lang=getattr(self.app, "lang", None),
+                output=_output,
+            )
+            # Persist assistant message
+            self._session.append_message(
+                ChatMessage(
+                    ts=datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f"),
+                    type="assistant",
+                    content=report,
+                )
+            )
+        except SystemExit:
+            log.write("[bold red]OPENAI_API_KEY is not set.[/bold red]\n")
+        except Exception as e:
+            write_error(log, e)

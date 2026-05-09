@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import time
 
@@ -169,7 +170,9 @@ def cmd_deep_research(
     from .deep_research import run_deep_research
 
     effective_lang = _resolve_lang(lang)
-    run_deep_research(question=question, resume_id=resume, output_file=output, lang=effective_lang)
+    asyncio.run(run_deep_research(
+        question=question, resume_id=resume, output_file=output, lang=effective_lang,
+    ))
 
 
 def _resolve_question(builder, args) -> str:

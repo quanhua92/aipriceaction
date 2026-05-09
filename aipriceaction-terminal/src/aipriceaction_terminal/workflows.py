@@ -176,8 +176,8 @@ class DeepResearchPane(Vertical):
 
     def on_mount(self) -> None:
         self.query_one("#dr-output", RichLog).write(
-            "[bold yellow]Deep research is not yet implemented.[/bold yellow]\n\n"
-            "[dim]This will run the multi-agent LangGraph pipeline:\n"
+            "[bold yellow]Multi-Agent Deep Research[/bold yellow]\n\n"
+            "[dim]This runs the multi-agent LangGraph pipeline:\n"
             "  supervisor -> parallel workers -> aggregator -> reviewer\n\n"
             "Enter a question and click Deep Research when ready.[/dim]\n"
         )
@@ -198,10 +198,32 @@ class DeepResearchPane(Vertical):
             "[bold cyan]Deep Research:[/bold cyan]"
             + (f" {question}" if question else "")
         )
-        log.write(
-            "[bold yellow]Not yet implemented.[/bold yellow]\n"
-            "[dim]Will trigger multi_agent.main() in a future update.[/dim]\n"
-        )
+        log.write("[dim]Starting multi-agent deep research...[/dim]\n")
+        self._run_deep_research(question)
+
+    @work(exclusive=True)
+    async def _run_deep_research(self, question: str) -> None:
+        """Run deep research pipeline and stream output to the RichLog."""
+        from .deep_research import run_deep_research
+
+        log = self.query_one("#dr-output", RichLog)
+        try:
+            if not self.app._ensure_agent():
+                log.write("[red]Error: No API key configured. Run 'aipa setup' or set OPENAI_API_KEY.[/red]")
+                return
+
+            def _output(text: str) -> None:
+                log.write(text)
+
+            await run_deep_research(
+                question=question,
+                lang=getattr(self.app, "lang", None),
+                output=_output,
+            )
+        except SystemExit:
+            log.write("[bold red]OPENAI_API_KEY is not set.[/bold red]\n")
+        except Exception as e:
+            write_error(log, e)
 
 
 class WorkflowsTab(Vertical):
