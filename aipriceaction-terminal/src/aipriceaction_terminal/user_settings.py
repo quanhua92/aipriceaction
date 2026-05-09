@@ -10,6 +10,9 @@ _DEFAULTS = {
     "ticker": "VNINDEX",
     "interval": "1D",
     "language": "en",
+    "api_key": "",
+    "openai_base_url": "",
+    "openai_model": "",
 }
 
 
