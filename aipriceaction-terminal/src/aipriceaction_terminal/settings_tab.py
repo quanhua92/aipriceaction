@@ -3,6 +3,8 @@
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Static, Input, Button, Select
 
+from .user_settings import save_settings
+
 
 class SettingsTab(Vertical):
     """Settings configuration."""
@@ -71,3 +73,4 @@ class SettingsTab(Vertical):
                 self.app.agent = AgentSession(AgentConfig(lang=language))
 
             self.app.notify(f"Settings applied: {ticker} / {interval} / {language}")
+            save_settings({"ticker": ticker, "interval": interval, "language": language})

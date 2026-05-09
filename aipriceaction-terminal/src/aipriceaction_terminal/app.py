@@ -14,6 +14,7 @@ from .chat import ChatTab
 from .workflows import WorkflowsTab
 from .ticker_data import TickerDataTab
 from .settings_tab import SettingsTab
+from .user_settings import load_settings
 
 
 class AIPriceActionApp(App):
@@ -57,6 +58,10 @@ class AIPriceActionApp(App):
     def on_mount(self) -> None:
         self.register_theme(AI_GREEN)
         self.theme = "ai-green"
+        saved = load_settings()
+        self.ticker = saved["ticker"]
+        self.interval = saved["interval"]
+        self.language = saved["language"]
         from aipriceaction import AIContextBuilder
         from aipriceaction import AIPriceAction as AAPClient
         self.builder = AIContextBuilder(lang=self.language)
@@ -64,6 +69,10 @@ class AIPriceActionApp(App):
         from .agents import AgentSession, AgentConfig
         self.agent = AgentSession(AgentConfig(lang=self.language))
         self._load_ticker_options()
+        # Populate SettingsTab widgets with loaded values
+        self.query_one("#setting-ticker", Input).value = self.ticker
+        self.query_one("#setting-interval", Select).value = self.interval
+        self.query_one("#setting-language", Select).value = self.language
         self.query_one("#chat-input-field", Input).focus()
 
     @work(exclusive=True)
