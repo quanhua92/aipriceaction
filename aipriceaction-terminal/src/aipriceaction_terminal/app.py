@@ -47,7 +47,7 @@ class AIPriceActionApp(AppActions, App):
         from aipriceaction import AIContextBuilder
         from aipriceaction import AIPriceAction as AAPClient
         self.builder = AIContextBuilder(lang=self.language)
-        self.client = AAPClient()
+        self.client = AAPClient(use_live=True)
         self._load_ticker_options()
         # Populate SettingsTab widgets with loaded values
         self.query_one("#setting-ticker", Input).value = self.ticker
