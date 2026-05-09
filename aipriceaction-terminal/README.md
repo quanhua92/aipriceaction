@@ -71,6 +71,12 @@ aipa get-ohlcv-data VCB --interval 1D --limit 10
 
 # Fetch with date range and no moving averages
 aipa get-ohlcv-data VCB --start-date 2026-04-01 --end-date 2026-04-30 --no-ma
+
+# List saved chat sessions
+aipa resume
+
+# Open TUI with a resumed session
+aipa resume 0
 ```
 
 ## CLI Commands
@@ -214,11 +220,14 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 
 ## TUI
 
-Launch the TUI with `aipa`. The interface has three tabs:
+Launch the TUI with `aipa`. The interface has six tabs:
 
 - **Chat** — AI-powered chat with streaming responses, thinking/reasoning display, slash commands, and arrow-key history navigation
+- **Vietnam** — Browse and search Vietnamese stock tickers
+- **Crypto** — Browse and search cryptocurrency tickers
+- **Global** — Browse and search global/Yahoo tickers
 - **Workflows** — Structured analysis forms with question bank dropdown for ticker analysis and deep research
-- **Tickers** — Browse and search available tickers
+- **Settings** — Configure API key, model, base URL, and other preferences
 
 ### Slash Commands (Chat tab)
 
