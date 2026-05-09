@@ -21,14 +21,17 @@ aipa-cli
 ## Requirements
 
 - Python 3.13+
-- An OpenAI-compatible API key (`OPENAI_API_KEY`)
+- An OpenAI-compatible API key (`OPENAI_API_KEY`) — only needed for AI analysis, not for data fetching
 - Optional: set `OPENAI_BASE_URL` for custom providers like OpenRouter
 
 ## Quick Start
 
 ```bash
-# Launch the TUI (chat, workflows, ticker browser)
+# Launch the TUI — first run auto-starts interactive setup
 aipa
+
+# Or run setup manually at any time
+aipa setup
 
 # AI analysis with default question template
 aipa analyze VCB
@@ -141,7 +144,7 @@ aipa deep-research --lang vn
 
 ### `aipa get-ohlcv-data`
 
-Fetch raw OHLCV data as a table (no LLM involved).
+Fetch raw OHLCV data as a table (no LLM involved, works without setup).
 
 ```
 # Default: daily data with EMA indicators
@@ -165,6 +168,29 @@ aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
 | `--source` | Filter by source: `vn` or `crypto` |
 | `--ma` / `--no-ma` | Include/exclude moving averages (default: included) |
 | `--ema` | Use EMA instead of SMA |
+
+### `aipa setup`
+
+Interactive first-run configuration. Prompts for language, reference ticker, API key, base URL, and model. Settings are saved to `~/.aipriceaction/settings.json`. Re-running shows current values as defaults.
+
+```
+# Run interactively
+aipa setup
+```
+
+## First-Run Setup
+
+Commands that require an API key will auto-run `aipa setup` on first use if not yet configured. Commands that don't need an API key always work immediately.
+
+| Command | Setup required? |
+|---|---|
+| `aipa get-ohlcv-data` | No setup needed |
+| `aipa analyze VCB --context-only` | No setup needed |
+| `aipa analyze VCB --questions` | No setup needed |
+| `aipa setup` | Runs setup |
+| `aipa` | Auto-runs setup first |
+| `aipa analyze VCB` | Auto-runs setup first |
+| `aipa deep-research` | Auto-runs setup first |
 
 ## TUI
 

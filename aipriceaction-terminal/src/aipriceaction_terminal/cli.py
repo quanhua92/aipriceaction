@@ -3,6 +3,14 @@
 import argparse
 
 
+def _ensure_setup() -> None:
+    """Run interactive setup if setup_done is not set."""
+    from .user_settings import load_settings
+    if not load_settings().get("setup_done"):
+        from .cli_setup import cmd_setup
+        cmd_setup()
+
+
 def run():
     parser = argparse.ArgumentParser(prog="aipa", description="AIPriceAction terminal")
     sub = parser.add_subparsers(dest="command")
@@ -44,15 +52,24 @@ def run():
     p_deep.add_argument("--output", default=None, help="Save final report to file")
     p_deep.add_argument("--lang", default=None, choices=["en", "vn"], help="Override language")
 
+    # aipa setup
+    sub.add_parser("setup", help="Interactive first-run setup")
+
     args = parser.parse_args()
 
-    if args.command == "analyze":
+    if args.command == "setup":
+        from .cli_setup import cmd_setup
+        cmd_setup()
+    elif args.command == "analyze":
+        if not getattr(args, "context_only", False) and not getattr(args, "questions", False):
+            _ensure_setup()
         from .cli_commands import cmd_analyze
         cmd_analyze(args)
     elif args.command == "get-ohlcv-data":
         from .cli_commands import cmd_get_ohlcv
         cmd_get_ohlcv(args)
     elif args.command == "deep-research":
+        _ensure_setup()
         from .cli_commands import cmd_deep_research
         cmd_deep_research(
             question=" ".join(args.question) if args.question else "",
@@ -61,5 +78,6 @@ def run():
             lang=args.lang,
         )
     else:
+        _ensure_setup()
         from .app import main
         main()

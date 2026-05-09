@@ -13,6 +13,7 @@ _DEFAULTS = {
     "api_key": "",
     "openai_base_url": "",
     "openai_model": "",
+    "setup_done": False,
 }
 
 

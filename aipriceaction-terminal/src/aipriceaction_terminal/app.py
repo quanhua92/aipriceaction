@@ -38,12 +38,12 @@ class AIPriceActionApp(AppActions, App):
         self.ticker = saved["ticker"]
         self.interval = saved["interval"]
         self.language = saved["language"]
+        self.agent = None
+        self._agent_lang: str | None = None
         from aipriceaction import AIContextBuilder
         from aipriceaction import AIPriceAction as AAPClient
         self.builder = AIContextBuilder(lang=self.language)
         self.client = AAPClient()
-        from .agents import AgentSession, AgentConfig
-        self.agent = AgentSession(AgentConfig(lang=self.language))
         self._load_ticker_options()
         # Populate SettingsTab widgets with loaded values
         self.query_one("#setting-ticker", Input).value = self.ticker
@@ -68,6 +68,19 @@ class AIPriceActionApp(AppActions, App):
             self.ticker_options = options
         except Exception as e:
             self.notify(f"Failed to load tickers: {e}", severity="error")
+
+    def _ensure_agent(self) -> bool:
+        """Lazy-create AgentSession on first use. Returns False if API key is missing."""
+        if self.agent is not None and self._agent_lang == self.language:
+            return True
+        from aipriceaction.settings import settings
+        if not settings.openai_api_key:
+            self.agent = None
+            return False
+        from .agents import AgentSession, AgentConfig
+        self.agent = AgentSession(AgentConfig(lang=self.language))
+        self._agent_lang = self.language
+        return True
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)

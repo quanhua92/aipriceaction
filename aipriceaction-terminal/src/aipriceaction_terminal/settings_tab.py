@@ -151,8 +151,13 @@ class SettingsTab(Vertical):
                 self.app.language = language
                 from aipriceaction import AIContextBuilder
                 self.app.builder = AIContextBuilder(lang=language)
-                from .agents import AgentSession, AgentConfig
-                self.app.agent = AgentSession(AgentConfig(lang=language))
+                try:
+                    from .agents import AgentSession, AgentConfig
+                    self.app.agent = AgentSession(AgentConfig(lang=language))
+                    self.app._agent_lang = language
+                except Exception:
+                    self.app.agent = None
+                    self.app._agent_lang = None
 
             data: dict = {
                 "ticker": ticker,

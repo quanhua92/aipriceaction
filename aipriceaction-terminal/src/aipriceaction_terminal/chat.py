@@ -216,7 +216,8 @@ class ChatTab(Vertical):
             )
         elif cmd == "/clear":
             log.clear()
-            self.app.agent.clear_history()
+            if self.app.agent is not None:
+                self.app.agent.clear_history()
         elif cmd == "/exit":
             self.app.exit()
         elif cmd == "/analyze":
@@ -322,6 +323,13 @@ class ChatTab(Vertical):
         """Build context and stream AI analysis for a ticker."""
         log = self.query_one("#chat-log", RichLog)
         try:
+            if not self.app._ensure_agent():
+                log.write(
+                    "[bold yellow]API key not configured.[/bold yellow]\n"
+                    "Set it in the Settings tab or run [bold]aipa setup[/bold]."
+                )
+                return
+
             builder = self.app.builder
 
             # Build context without system prompt (agent has it already)
@@ -389,6 +397,12 @@ class ChatTab(Vertical):
     async def _run_agent_chat(self, message: str) -> None:
         """Stream an agent response into the chat log."""
         log = self.query_one("#chat-log", RichLog)
+        if not self.app._ensure_agent():
+            log.write(
+                "[bold yellow]API key not configured.[/bold yellow]\n"
+                "Set it in the Settings tab or run [bold]aipa setup[/bold]."
+            )
+            return
         try:
             await stream_agent_to_log(
                 log,
