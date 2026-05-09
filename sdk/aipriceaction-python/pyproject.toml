@@ -36,7 +36,7 @@ path = "src/aipriceaction/__init__.py"
 packages = ["src/aipriceaction"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/aipriceaction", "tests", "examples", "pyproject.toml", "README.md", "LICENSE"]
+include = ["src/aipriceaction", "tests", "examples", "pyproject.toml", "README.md", "LICENSE", "CHANGELOG.md"]
 
 
 [tool.pytest.ini_options]
