@@ -50,17 +50,25 @@ class ThinkingModal(Screen[None]):
     }
     """
 
-    def __init__(self, thinking_text: str) -> None:
+    def __init__(self, history: list[tuple[str, str]]) -> None:
         super().__init__()
-        self.thinking_text = thinking_text
+        self._history = history
 
     def compose(self):
+        count = len(self._history)
         with Vertical(id="thinking-dialog"):
-            yield Static("Thinking (Esc / Ctrl+O to close)", id="thinking-title")
-            yield VerticalScroll(Static(id="thinking-full"), id="thinking-scroll")
+            yield Static(
+                f"Thinking ({count} {'entry' if count == 1 else 'entries'}) (Esc / Ctrl+O to close)",
+                id="thinking-title",
+            )
+            with VerticalScroll(id="thinking-scroll"):
+                for i, (ts, text) in enumerate(self._history):
+                    if i > 0:
+                        yield Static("─" * 60, classes="thinking-separator")
+                    yield Static(f"[bold]{ts}[/bold]", classes="thinking-ts")
+                    yield Static(text, classes="thinking-text")
 
     def on_mount(self) -> None:
-        self.query_one("#thinking-full", Static).update(self.thinking_text)
         scroll = self.query_one("#thinking-scroll", VerticalScroll)
         scroll.can_focus = True
         scroll.focus()
@@ -107,7 +115,7 @@ class ChatTab(Vertical):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._thinking_history: list[str] = []
+        self._thinking_history: list[tuple[str, str]] = []
 
     def on_mount(self) -> None:
         log = self.query_one("#chat-log", RichLog)
@@ -131,17 +139,17 @@ class ChatTab(Vertical):
         area.update("")
 
     def _store_thinking(self, text: str) -> None:
-        """Store complete thinking text for later viewing with Ctrl+O."""
-        self._thinking_history.append(text)
+        """Store complete thinking text with timestamp for later viewing with Ctrl+O."""
+        ts = datetime.now().strftime("%H:%M:%S")
+        self._thinking_history.append((ts, text))
 
     def action_show_thinking(self) -> None:
-        """Push a modal with the last thinking text, or pop if already showing."""
-        # If ThinkingModal is already on top, just close it
+        """Push a modal with full thinking history, or pop if already showing."""
         if isinstance(self.app.screen_stack[-1], ThinkingModal):
             self.app.pop_screen()
             return
         if self._thinking_history:
-            self.app.push_screen(ThinkingModal(self._thinking_history[-1]))
+            self.app.push_screen(ThinkingModal(self._thinking_history))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
