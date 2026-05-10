@@ -97,8 +97,13 @@ async def cmd_analyze(args) -> None:
 
     tokens: list[str] = []
     current_tool: str | None = None
+    thinking_buf = ""
+    in_thinking = False
     async for event in session.stream(message):
         if event.type == StreamEventType.TOOL_CALL_START:
+            if in_thinking:
+                print(file=sys.stderr, flush=True)
+                in_thinking = False
             print(f"[tool] {event.content}", file=sys.stderr)
             current_tool = event.content
         elif event.type == StreamEventType.TOOL_RESULT:
@@ -106,13 +111,25 @@ async def cmd_analyze(args) -> None:
                 print(f"[tool-result] {event.content}", file=sys.stderr)
                 current_tool = None
         elif event.type == StreamEventType.THINKING:
-            print(f"[thinking] {event.content[:200]}...", file=sys.stderr)
+            thinking_buf += event.content
+            if len(thinking_buf) % 80 < len(event.content):
+                preview = thinking_buf[-100:].lstrip()
+                print(f"\r[thinking] {preview}", end="", file=sys.stderr, flush=True)
+            in_thinking = True
         elif event.type == StreamEventType.ERROR:
+            if in_thinking:
+                print(file=sys.stderr, flush=True)
+                in_thinking = False
             print(f"[error] {event.content}", file=sys.stderr)
         elif event.type == StreamEventType.TOKEN:
+            if in_thinking:
+                print(file=sys.stderr, flush=True)
+                in_thinking = False
             tokens.append(event.content)
         elif event.type == StreamEventType.DONE:
-            pass
+            if in_thinking:
+                print(file=sys.stderr, flush=True)
+                in_thinking = False
 
     elapsed = time.time() - t0
     print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
