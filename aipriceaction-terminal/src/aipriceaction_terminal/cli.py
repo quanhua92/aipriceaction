@@ -36,6 +36,7 @@ def run():
     p_analyze.add_argument("--questions", action="store_true", help="List available question templates and exit")
     p_analyze.add_argument("--context-only", action="store_true", help="Dump raw context without calling LLM (no API key needed)")
     p_analyze.add_argument("--no-system-prompt", action="store_true", help="Exclude system prompt from context output")
+    p_analyze.add_argument("--verbose", action="store_true", help="Show thinking tokens during analysis")
 
     # aipa get-ohlcv-data TICKER [--interval 1D] [--limit N]
     #   [--start-date] [--end-date] [--source] [--ma] [--ema]

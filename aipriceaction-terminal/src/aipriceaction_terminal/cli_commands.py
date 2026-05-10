@@ -18,6 +18,10 @@ def _resolve_lang(arg_lang: str | None) -> str:
 async def cmd_analyze(args) -> None:
     from aipriceaction import AIContextBuilder
 
+    args.tickers = [t.upper() for t in args.tickers]
+    if args.reference_ticker:
+        args.reference_ticker = args.reference_ticker.upper()
+
     lang = _resolve_lang(args.lang)
     builder = AIContextBuilder(lang=lang, ma_type=args.ma_type)
 
@@ -99,11 +103,20 @@ async def cmd_analyze(args) -> None:
     current_tool: str | None = None
     thinking_buf = ""
     in_thinking = False
+    verbose = getattr(args, "verbose", False)
+
+    def _flush_thinking() -> None:
+        """Clear the updating preview line and print remaining thinking content."""
+        nonlocal in_thinking
+        if not in_thinking:
+            return
+        # Clear the truncated \r preview line
+        print(f"\r{' ' * 120}\r", end="", file=sys.stderr, flush=True)
+        in_thinking = False
+
     async for event in session.stream(message):
         if event.type == StreamEventType.TOOL_CALL_START:
-            if in_thinking:
-                print(file=sys.stderr, flush=True)
-                in_thinking = False
+            _flush_thinking()
             print(f"[tool] {event.content}", file=sys.stderr)
             current_tool = event.content
         elif event.type == StreamEventType.TOOL_RESULT:
@@ -112,24 +125,18 @@ async def cmd_analyze(args) -> None:
                 current_tool = None
         elif event.type == StreamEventType.THINKING:
             thinking_buf += event.content
-            if len(thinking_buf) % 80 < len(event.content):
+            if verbose and len(thinking_buf) % 80 < len(event.content):
                 preview = thinking_buf[-100:].lstrip()
                 print(f"\r[thinking] {preview}", end="", file=sys.stderr, flush=True)
             in_thinking = True
         elif event.type == StreamEventType.ERROR:
-            if in_thinking:
-                print(file=sys.stderr, flush=True)
-                in_thinking = False
+            _flush_thinking()
             print(f"[error] {event.content}", file=sys.stderr)
         elif event.type == StreamEventType.TOKEN:
-            if in_thinking:
-                print(file=sys.stderr, flush=True)
-                in_thinking = False
+            _flush_thinking()
             tokens.append(event.content)
         elif event.type == StreamEventType.DONE:
-            if in_thinking:
-                print(file=sys.stderr, flush=True)
-                in_thinking = False
+            _flush_thinking()
 
     elapsed = time.time() - t0
     print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
@@ -139,12 +146,14 @@ async def cmd_analyze(args) -> None:
         print("[error] Agent returned empty response.", file=sys.stderr)
         sys.exit(1)
 
-    print()
+    print("\n[result]", file=sys.stderr)
     print(response)
 
 
 def cmd_get_ohlcv(args) -> None:
     from aipriceaction import AIPriceAction
+
+    args.ticker = args.ticker.upper()
 
     client = AIPriceAction()
     df = client.get_ohlcv(
