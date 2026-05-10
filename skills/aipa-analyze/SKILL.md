@@ -137,6 +137,7 @@ aipa analyze BTCUSDT --source crypto
 | "Get price data for VCB" | Use the `aipa-data` skill instead |
 | "Show me OHLCV candles for BTC" | Use the `aipa-data` skill instead |
 | "What are the top stocks today?" | `aipa live-data` (no AI, quick market overview) |
+| "What banking stocks are available?" | `aipa ticker-list --source vn --group NGAN_HANG` |
 
 Key rule: **AI insights → `aipa-analyze`, raw numbers → `aipa-data`, comprehensive report → `aipa-research`, quick market overview → `aipa live-data`**.
 

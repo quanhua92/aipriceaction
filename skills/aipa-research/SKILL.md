@@ -188,6 +188,7 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 | "Which sectors are leading?" | `aipa deep-research` (cross-sector analysis) |
 | "Most active tickers right now?" | `aipa live-data` (no AI, instant top list) |
 | "Top stocks by trading value" | `aipa live-data --top 20` (no AI) |
+| "What tickers are in the real estate sector?" | `aipa ticker-list --source vn --group BAT_DONG_SAN` |
 
 ### Key Differences
 

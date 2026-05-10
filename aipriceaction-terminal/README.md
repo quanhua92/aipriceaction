@@ -90,6 +90,15 @@ aipa live-data --source crypto --top 10
 # Latest candle for specific tickers
 aipa live-data VCB TCB MBB
 
+# List available tickers
+aipa ticker-list
+
+# List tickers by source and group
+aipa ticker-list --source vn --group NGAN_HANG
+
+# Compact output (symbols only)
+aipa ticker-list --source crypto --compact
+
 # List saved chat sessions
 aipa resume
 
@@ -224,6 +233,30 @@ aipa live-data VCB TCB MBB
 | `--interval` | Time interval: `1D`, `1h`, `1m` (default: `1D`) |
 | `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
 
+### `aipa ticker-list`
+
+List available ticker symbols with metadata (name, group, exchange, source). No LLM involved, no API key needed.
+
+```
+# All tickers
+aipa ticker-list
+
+# Filter by source
+aipa ticker-list --source vn
+
+# Filter by group (e.g. banking sector)
+aipa ticker-list --source vn --group NGAN_HANG
+
+# Compact: symbols only, comma-separated
+aipa ticker-list --source crypto --compact
+```
+
+| Flag | Description |
+|---|---|
+| `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
+| `--group` | Filter by group (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
+| `--compact` | Output symbols only, comma-separated |
+
 ### `aipa setup`
 
 Interactive first-run configuration. Prompts for language, reference ticker, API key, base URL, and model. Settings are saved to `~/.aipriceaction/settings.json`. Re-running shows current values as defaults.
@@ -260,6 +293,7 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 |---|---|
 | `aipa get-ohlcv-data` | No setup needed |
 | `aipa live-data` | No setup needed |
+| `aipa ticker-list` | No setup needed |
 | `aipa analyze VCB --context-only` | No setup needed |
 | `aipa analyze VCB --questions` | No setup needed |
 | `aipa resume` | No setup needed |

@@ -180,6 +180,46 @@ aipa get-ohlcv-data VCB --no-ma --no-system-prompt
 
 ---
 
+## `aipa ticker-list` — List Available Tickers
+
+List available ticker symbols with metadata (name, group, exchange, source). No LLM involved, no API key needed.
+
+Use this to discover what tickers are available before fetching data.
+
+```bash
+aipa ticker-list [--source vn|crypto|global|sjc] [--group GROUP] [--compact]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--source` | — | Filter by source: `vn`, `crypto`, `global`, `sjc` |
+| `--group` | — | Filter by group (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
+| `--compact` | — | Output symbols only, comma-separated |
+
+### Usage Examples
+
+```bash
+# All tickers
+aipa ticker-list
+
+# VN stocks only
+aipa ticker-list --source vn
+
+# Banking sector
+aipa ticker-list --source vn --group NGAN_HANG
+
+# Crypto symbols only (for passing to other commands)
+aipa ticker-list --source crypto --compact
+```
+
+### Data Fields
+
+Each row includes: ticker, name, group, exchange, source.
+
+---
+
 ## `aipa live-data` — Top Tickers by Trading Value
 
 Fetch the latest candle for all tickers or specific tickers. No LLM involved, no API key needed. When no tickers are specified, returns top N tickers sorted by trading value (close × volume) descending.
@@ -259,6 +299,8 @@ Each row includes: date/time, open, high, low, close, volume. When `--ma` is ena
 | "What are the top stocks today?" | `aipa live-data` (this skill) |
 | "Most active tickers" | `aipa live-data` (this skill) |
 | "Show me market overview" | `aipa live-data` (this skill) |
+| "What tickers are available?" | `aipa ticker-list` (this skill) |
+| "List banking stocks" | `aipa ticker-list --source vn --group NGAN_HANG` (this skill) |
 | "Analyze VCB" | `aipa-analyze` (AI analysis) |
 | "Compare FPT and VNM" | `aipa-analyze` (AI comparison) |
 | "Research the banking sector" | `aipa-research` (multi-agent pipeline) |
@@ -286,3 +328,5 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.
 
 9. **Use `aipa live-data` for market overview**: When you need to identify the most active tickers or get a broad market snapshot, use `aipa live-data` instead of fetching individual tickers. It returns the latest candle sorted by trading value. Call it first with no arguments to discover what's moving, then drill into specific tickers with `get-ohlcv-data`.
+
+10. **Use `aipa ticker-list` to discover tickers**: When you need to know what tickers are available or find tickers in a specific sector, use `aipa ticker-list`. Add `--group` to filter by sector (e.g. `NGAN_HANG` for banking) and `--compact` to get a comma-separated list for passing to other commands.

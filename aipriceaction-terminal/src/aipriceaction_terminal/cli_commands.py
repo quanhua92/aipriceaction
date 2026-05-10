@@ -278,6 +278,33 @@ def cmd_live_data(args) -> None:
     print(df.to_string(index=False))
 
 
+def cmd_ticker_list(args) -> None:
+    from aipriceaction import AIPriceAction
+
+    client = AIPriceAction()
+    tickers = client.get_tickers(source=args.source)
+
+    if args.group:
+        tickers = [t for t in tickers if (t.group or "") == args.group]
+
+    if not tickers:
+        print("No tickers found.", file=sys.stderr)
+        sys.exit(1)
+
+    if args.compact:
+        print(", ".join(t.ticker for t in tickers))
+        return
+
+    import pandas as pd
+
+    df = pd.DataFrame([
+        {"ticker": t.ticker, "name": t.name or "", "group": t.group or "", "exchange": t.exchange or "", "source": t.source}
+        for t in tickers
+    ])
+    print(df.to_string(index=False))
+    print(f"\nTotal: {len(tickers)} tickers")
+
+
 def cmd_resume(args) -> None:
     """List recent sessions, or open TUI with a resumed session."""
     from .session import SessionManager
