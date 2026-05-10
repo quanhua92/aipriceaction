@@ -4,7 +4,15 @@ AI agent skills for financial market analysis using the [aipa CLI](https://aipri
 
 ## Installation
 
-### Option A: Clone and copy (fastest)
+### Option A: npx skills (recommended)
+
+```bash
+npx skills add quanhua92/aipriceaction
+```
+
+This will prompt you to select skills and target agents (Claude Code, Gemini CLI, Codex, Cursor, etc.), then install them via symlink.
+
+### Option B: Clone and copy
 
 ```bash
 git clone --depth 1 https://github.com/quanhua92/aipriceaction.git /tmp/aipriceaction
@@ -22,7 +30,7 @@ cp -r /tmp/aipriceaction/skills/aipa-research ~/.claude/skills/aipa-research
 rm -rf /tmp/aipriceaction
 ```
 
-### Option B: Manual copy
+### Option C: Manual copy
 
 If you already have the repo cloned, copy the skill folders:
 
