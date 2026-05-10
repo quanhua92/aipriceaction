@@ -197,6 +197,7 @@ aipa live-data [TICKERS...] [--top 50] [--interval 1D]
 | `TICKERS...` | — | Optional ticker symbols (auto-uppercased). Omit for top N by trading value. |
 | `--top N` | `50` | Number of top tickers to show when no tickers specified |
 | `--interval` | `1D` | Time interval: `1D`, `1h`, `1m` |
+| `--source` | — | Filter by source: `vn`, `crypto`, `global`, `sjc` |
 
 ### Usage Examples
 
@@ -209,6 +210,12 @@ aipa live-data --top 10
 
 # Top 20 hourly
 aipa live-data --interval 1h --top 20
+
+# Filter by source: SJC gold
+aipa live-data --source sjc
+
+# Filter by source: crypto top 10
+aipa live-data --source crypto --top 10
 
 # Specific tickers only
 aipa live-data VCB TCB MBB

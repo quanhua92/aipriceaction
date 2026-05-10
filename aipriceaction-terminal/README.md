@@ -81,6 +81,12 @@ aipa live-data
 # Top 10 VN stocks by trading value
 aipa live-data --top 10
 
+# SJC gold data
+aipa live-data --source sjc
+
+# Crypto top 10
+aipa live-data --source crypto --top 10
+
 # Latest candle for specific tickers
 aipa live-data VCB TCB MBB
 
@@ -216,6 +222,7 @@ aipa live-data VCB TCB MBB
 | `TICKERS...` | Optional ticker symbols (omit for top N) |
 | `--top N` | Number of top tickers to show (default: 50) |
 | `--interval` | Time interval: `1D`, `1h`, `1m` (default: `1D`) |
+| `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
 
 ### `aipa setup`
 

@@ -18,7 +18,7 @@ def _resolve_lang(arg_lang: str | None) -> str:
 async def cmd_analyze(args) -> None:
     from aipriceaction import AIContextBuilder
 
-    args.tickers = [t.upper() for t in args.tickers]
+    args.tickers = _resolve_tickers(args.tickers)
     if args.reference_ticker:
         args.reference_ticker = args.reference_ticker.upper()
 
@@ -155,7 +155,7 @@ async def cmd_analyze(args) -> None:
 def cmd_get_ohlcv(args) -> None:
     from aipriceaction import AIPriceAction
 
-    raw_tickers = [t.upper() for t in args.tickers]
+    raw_tickers = _resolve_tickers(args.tickers)
     client = AIPriceAction()
 
     if not getattr(args, "no_system_prompt", False):
@@ -205,13 +205,27 @@ def cmd_get_ohlcv(args) -> None:
         print(df.to_string(index=False))
 
 
+_TICKER_ALIASES = {"SJC": "SJC-GOLD"}
+
+
+def _resolve_tickers(raw: list[str]) -> list[str]:
+    return [_TICKER_ALIASES.get(t.upper(), t.upper()) for t in raw]
+
+
 def cmd_live_data(args) -> None:
     from aipriceaction import AIPriceAction
 
     client = AIPriceAction()
-    tickers = [t.upper() for t in args.tickers] if args.tickers else None
+    tickers = _resolve_tickers(args.tickers) if args.tickers else None
     interval = args.interval
     top = args.top
+    source = args.source
+
+    # Build source filter set from ticker metadata
+    source_set: set[str] | None = None
+    if source:
+        meta = client.get_tickers(source=source)
+        source_set = {t.ticker for t in meta}
 
     try:
         data = client.fetch_live_data(interval)
@@ -225,6 +239,8 @@ def cmd_live_data(args) -> None:
     rows: list[dict] = []
     for symbol, candles in data.items():
         if tickers and symbol not in tickers:
+            continue
+        if source_set and symbol not in source_set:
             continue
         if not candles:
             continue

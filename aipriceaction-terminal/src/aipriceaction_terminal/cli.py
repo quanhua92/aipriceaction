@@ -65,6 +65,7 @@ def run():
     p_live.add_argument("tickers", nargs="*", help="Ticker symbol(s) (omit for top N by trading value)")
     p_live.add_argument("--top", type=int, default=50, help="Number of top tickers when no tickers specified (default: 50)")
     p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m"])
+    p_live.add_argument("--source", default=None, choices=["vn", "crypto", "global", "sjc"], help="Filter by data source")
 
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
