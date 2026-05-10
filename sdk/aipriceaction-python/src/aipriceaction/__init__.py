@@ -19,4 +19,4 @@ __all__ = [
     "PostPutCallback",
     "load_session",
 ]
-__version__ = "0.1.9"
+__version__ = "0.1.10"
