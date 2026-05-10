@@ -83,8 +83,10 @@ async def cmd_analyze(args) -> None:
     # Agent-based analysis with tool support
     from aipriceaction.settings import settings as sdk_settings
     if not sdk_settings.openai_api_key:
-        print("[error] OPENAI_API_KEY not set. Cannot run agent analysis.", file=sys.stderr)
-        sys.exit(1)
+        print(context)
+        print("[info] OPENAI_API_KEY not set. Context printed above (no LLM analysis).", file=sys.stderr)
+        print("[info] Run 'aipa setup' to configure your API key.", file=sys.stderr)
+        return
 
     from .agents import AgentSession, AgentConfig
     from .agents.callbacks import StreamEventType
@@ -235,12 +237,14 @@ def cmd_deep_research(
     resume: str | None = None,
     output: str | None = None,
     lang: str | None = None,
+    context_only: bool = False,
 ) -> None:
     from .deep_research import run_deep_research
 
     effective_lang = _resolve_lang(lang)
     asyncio.run(run_deep_research(
         question=question, resume_id=resume, output_file=output, lang=effective_lang,
+        context_only=context_only,
     ))
 
 

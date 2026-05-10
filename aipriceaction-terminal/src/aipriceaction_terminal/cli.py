@@ -58,6 +58,7 @@ def run():
     p_deep.add_argument("--resume", default=None, help="Resume from checkpoint session ID")
     p_deep.add_argument("--output", default=None, help="Save final report to file")
     p_deep.add_argument("--lang", default=None, choices=["en", "vn"], help="Override language")
+    p_deep.add_argument("--context-only", action="store_true", help="Dump market snapshot without running the pipeline (no API key needed)")
 
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
@@ -80,13 +81,15 @@ def run():
         from .cli_commands import cmd_get_ohlcv
         cmd_get_ohlcv(args)
     elif args.command == "deep-research":
-        _ensure_setup()
+        if not getattr(args, "context_only", False):
+            _ensure_setup()
         from .cli_commands import cmd_deep_research
         cmd_deep_research(
             question=" ".join(args.question) if args.question else "",
             resume=args.resume,
             output=args.output,
             lang=args.lang,
+            context_only=args.context_only,
         )
     elif args.command == "resume":
         from .cli_commands import cmd_resume

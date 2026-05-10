@@ -8,6 +8,7 @@ All public functions are async to avoid blocking the TUI event loop.
 from __future__ import annotations
 
 import asyncio
+import sys
 import json
 import operator
 import tempfile
@@ -617,6 +618,7 @@ async def run_deep_research(
     output_file: str | None = None,
     lang: str | None = None,
     output: Callable[[str], None] | None = None,
+    context_only: bool = False,
 ) -> str:
     """Run the multi-agent deep research pipeline.
 
@@ -632,11 +634,27 @@ async def run_deep_research(
     """
     started_at = time.time()
     effective_lang = lang or settings.ai_context_lang
-    _out = output or print
+    _out = output or (lambda m: print(m, file=sys.stderr) if context_only else print(m))
 
-    if not settings.openai_api_key:
-        _out("Error: OPENAI_API_KEY is not set. Set it via environment variable or .env file.")
-        raise SystemExit(1)
+    if not settings.openai_api_key and not context_only:
+        _out("# AIPriceAction Multi-Agent Research (dry run)")
+        _out("")
+        _out("No API key configured. Cannot run the research pipeline.")
+        _out("")
+        _out("## Pipeline Steps")
+        _out("")
+        _out("  [1] Fetch market snapshot — all VN tickers, latest daily bar")
+        _out("  [2] Supervisor agent — decomposes question into sector-specific subtasks")
+        _out("  [3] Worker agents (parallel) — research each subtask with tool-calling (get_ohlcv_data, get_live_data, get_ticker_list)")
+        _out("  [4] Aggregator — merges worker results into unified draft report")
+        _out("  [5] Reviewer — checks accuracy, adds missing analysis, produces final report")
+        _out("")
+        effective_q = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
+        _out(f"  Question: {effective_q}")
+        _out(f"  Lang:     {effective_lang}")
+        _out("")
+        _out("Run 'aipa setup' to configure your API key, then re-run this command.")
+        return
 
     _out("# AIPriceAction Multi-Agent Research")
     _out("")
@@ -668,6 +686,10 @@ async def run_deep_research(
         tickers = client.get_tickers(source="vn")
         _out(f"    Tickers: {len(tickers)}")
         _out("")
+
+    if context_only:
+        print(market_snapshot)
+        return market_snapshot
 
     effective_question = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
 

@@ -138,6 +138,9 @@ aipa deep-research --output ~/reports/market-analysis.md
 # Resume from a previous checkpoint session
 aipa deep-research --resume 019e0cbb-0466-fa9f-d68c-2da40d35a68f
 
+# Dump market snapshot without running the pipeline (no API key needed)
+aipa deep-research --context-only
+
 # Force Vietnamese output
 aipa deep-research --lang vn
 ```
@@ -147,6 +150,7 @@ aipa deep-research --lang vn
 | `--resume ID` | Resume from a checkpoint session ID |
 | `--output FILE` | Save final report to file |
 | `--lang` | Language: `en` or `vn` (default: saved setting) |
+| `--context-only` | Dump market snapshot without running the pipeline (no API key needed) |
 
 ### `aipa get-ohlcv-data`
 
@@ -217,6 +221,7 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa` | Auto-runs setup first |
 | `aipa analyze VCB` | Auto-runs setup first |
 | `aipa deep-research` | Auto-runs setup first |
+| `aipa deep-research --context-only` | No setup needed |
 
 ## TUI
 

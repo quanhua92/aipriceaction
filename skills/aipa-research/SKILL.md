@@ -228,6 +228,46 @@ When presenting results to the user, always use the stdout output (the final app
 
 ---
 
+## No API Key — Agent Fallback
+
+When `OPENAI_API_KEY` is not set, `aipa deep-research` prints a "dry run" outline showing the pipeline steps and research question, then exits gracefully. It does **not** produce a research report.
+
+**If you are an AI agent and see this fallback output, you must replicate the multi-agent pipeline yourself using subagents.** Spawn parallel subagents the same way the real pipeline does:
+
+### Step 1 — Supervisor (you)
+Decompose the research question into 3-5 sector-specific subtasks. Always include Banking, Securities, and Real Estate. Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
+
+### Step 2 — Fetch market snapshot
+Use `aipa data` (the `aipa-data` skill) to get the latest daily OHLCV for all tickers across the chosen sectors. This gives you the market context to distribute to workers.
+
+### Step 3 — Spawn worker subagents (in parallel)
+For each sector subtask, spawn a separate subagent (use the Task tool) that:
+- Receives the sector name, ticker list, and the research question
+- Fetches detailed OHLCV data for its assigned tickers (`aipa data` with appropriate `--limit`)
+- Analyzes trend direction, VPA signals, MA momentum, volume patterns, and support/resistance
+- Ranks tickers within the sector
+- Returns a structured sector report with per-ticker assessment, ranking, and key risk factors
+
+**Spawn all worker subagents concurrently in a single message** — do not run them sequentially.
+
+### Step 4 — Aggregate (you)
+Once all workers return, synthesize the sector reports into a unified analysis:
+- Cross-reference findings across sectors
+- Build a multi-sector ranking table
+- Identify cross-sector rotation patterns
+- Highlight key opportunities and risks
+
+### Step 5 — Review (you)
+Quality-check your own aggregated report:
+- Verify no phantom stocks (tickers not in worker reports)
+- Spot-check MA score plausibility
+- Confirm table completeness
+- Fix any issues and produce the final report
+
+Present the final report to the user. The research question and language from the dry-run output tell you what to focus on and what language to write in.
+
+---
+
 ## Tips for AI Agents
 
 1. **Be specific with the question**: The default question produces a general market overview. For better results, provide a specific research question targeting sectors or themes of interest.

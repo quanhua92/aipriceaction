@@ -207,6 +207,21 @@ When presenting results to the user, always use the stdout output (after the `[r
 
 ---
 
+## No API Key — Agent Fallback
+
+When `OPENAI_API_KEY` is not set, `aipa analyze` prints the raw context to stdout and exits with `[info]` messages instead of an error. The context contains all the OHLCV data, MA scores, and market metadata needed for analysis.
+
+**If you are an AI agent and see this fallback output, you should perform the analysis yourself** using the printed context:
+
+1. Read the OHLCV data, MA scores, and market context from the stdout output
+2. Apply the same analytical framework the CLI would have used (Wyckoff, VPA, MA momentum, etc.)
+3. Produce the analysis result as if the LLM agent had generated it
+4. Present the result to the user in the same format the CLI normally would
+
+The context output is identical to `aipa analyze --context-only`, so treat it as your input data and do the reasoning yourself.
+
+---
+
 ## Tips for AI Agents
 
 1. **Auto-uppercase**: Ticker symbols are automatically converted to uppercase. You can pass `vcb`, `btcusdt`, etc. — they will be treated as `VCB`, `BTCUSDT`.
