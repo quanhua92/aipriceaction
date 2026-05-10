@@ -36,6 +36,7 @@ from aipriceaction.system import get_system_prompt
 
 _client: AIPriceAction | None = None
 _builder: AIContextBuilder | None = None
+_source: str = "vn"
 
 
 def _ensure_clients(lang: str = "en") -> tuple[AIPriceAction, AIContextBuilder]:
@@ -45,6 +46,47 @@ def _ensure_clients(lang: str = "en") -> tuple[AIPriceAction, AIContextBuilder]:
     if _builder is None or _builder._lang != lang:
         _builder = AIContextBuilder(lang=lang)
     return _client, _builder
+
+
+def _ensure_source(source: str) -> None:
+    global _source
+    _source = source
+
+
+_SOURCE_CONFIG: dict[str, dict[str, str]] = {
+    "vn": {
+        "market_name_en": "Vietnamese stock market",
+        "market_name_vn": "thị trường chứng khoán Việt Nam",
+        "mandatory_sectors_en": "Banking, Securities, Real Estate",
+        "mandatory_sectors_vn": "Ngân hàng, Chứng khoán, Bất động sản",
+        "optional_hint_en": "Pick 0-2 additional sectors based on market activity.",
+        "optional_hint_vn": "Chọn thêm 0-2 ngành dựa trên hoạt động thị trường.",
+    },
+    "crypto": {
+        "market_name_en": "cryptocurrency market",
+        "market_name_vn": "thị trường tiền mã hóa",
+        "mandatory_sectors_en": "Layer 1 (BTC, ETH, SOL), DeFi, AI tokens",
+        "mandatory_sectors_vn": "Layer 1 (BTC, ETH, SOL), DeFi, AI tokens",
+        "optional_hint_en": "Pick 0-2 additional sectors (e.g., Memecoins, Gaming, RWA).",
+        "optional_hint_vn": "Chọn thêm 0-2 ngành (ví dụ: Memecoins, Gaming, RWA).",
+    },
+    "yahoo": {
+        "market_name_en": "global stock market",
+        "market_name_vn": "thị trường chứng khoán toàn cầu",
+        "mandatory_sectors_en": "Technology, Financials, Energy",
+        "mandatory_sectors_vn": "Công nghệ, Tài chính, Năng lượng",
+        "optional_hint_en": "Pick 0-2 additional sectors (e.g., Healthcare, Consumer, Industrials).",
+        "optional_hint_vn": "Chọn thêm 0-2 ngành (ví dụ: Y tế, Tiêu dùng, Công nghiệp).",
+    },
+    "sjc": {
+        "market_name_en": "commodities market",
+        "market_name_vn": "thị trường hàng hóa",
+        "mandatory_sectors_en": "Gold / Precious Metals",
+        "mandatory_sectors_vn": "Vàng / Kim loại quý",
+        "optional_hint_en": "",
+        "optional_hint_vn": "",
+    },
+}
 
 
 # -- Tools --
@@ -67,6 +109,7 @@ def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 20) -> str:
             limit=limit,
             reference_ticker=None,
             include_system_prompt=False,
+            source=_source,
         )
     except Exception as e:
         return f"Error fetching {ticker}: {e}"
@@ -91,11 +134,12 @@ def reject_report(feedback: str) -> str:
 def get_ticker_list(source: str | None = None) -> str:
     """List available ticker symbols and metadata."""
     client, _ = _ensure_clients()
-    tickers = client.get_tickers(source=source)
+    effective_source = source or _source
+    tickers = client.get_tickers(source=effective_source)
     if not tickers:
         return "No tickers found."
 
-    lines = [f"Available tickers (source={source or 'all'}), total: {len(tickers)}"]
+    lines = [f"Available tickers (source={effective_source}), total: {len(tickers)}"]
     symbols = [t.ticker for t in tickers]
     lines.append("Symbols: " + ", ".join(symbols))
     return "\n".join(lines)
@@ -132,16 +176,16 @@ class OverallState(TypedDict):
 
 _PROMPTS = {
     "en": {
-        "supervisor": """You are a research supervisor for Vietnamese stock market analysis.
+        "supervisor": """You are a research supervisor for {market_name} analysis.
 Break research questions into 3-5 sector subtasks.
-You MUST include these 3 sectors: Banking, Securities, Real Estate.
-Pick 0-2 additional sectors based on market activity.
+You MUST include these sectors: {mandatory_sectors}.
+{optional_hint}
 
 For each sector: select ONLY the top 10 most representative tickers based on the snapshot.
 Call the `create_subtasks` tool with your subtasks.""",
 
         "worker_role": """## Your Role
-You are a sector analyst for the Vietnamese stock market.
+You are a sector analyst for the {market_name}.
 
 ## Instructions
 {instruction}
@@ -189,15 +233,15 @@ Call `approve_report` or `reject_report(feedback="...")`.""",
 {analysis}""",
     },
     "vn": {
-        "supervisor": """Bạn là giám đốc nghiên cứu phân tích thị trường chứng khoán Việt Nam.
+        "supervisor": """Bạn là giám đốc nghiên cứu phân tích {market_name}.
 Phân tích câu hỏi thành 3-5 nhiệm vụ ngành.
-Bắt buộc gồm: Ngân hàng, Chứng khoán, Bất động sản.
-Chọn thêm 0-2 ngành dựa trên hoạt động thị trường.
+Bắt buộc gồm: {mandatory_sectors}.
+{optional_hint}
 Mỗi ngành: tối đa 10 mã đại diện nhất.
 Gọi tool `create_subtasks` với các nhiệm vụ.""",
 
         "worker_role": """## Vai Trò
-Bạn là chuyên gia phân tích ngành thị trường chứng khoán Việt Nam.
+Bạn là chuyên gia phân tích ngành {market_name}.
 
 ## Hướng Dẫn
 {instruction}
@@ -340,10 +384,12 @@ def extract_worker_results(channel_values: dict[str, Any], session_dir: Path) ->
 # -- Graph nodes --
 
 
-def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], None] | None = None):
+def _build_graph(checkpointer=None, lang: str = "en", source: str = "vn", output: Callable[[str], None] | None = None):
     """Build the multi-agent graph with parallel fan-out."""
     _P = _PROMPTS[lang]
+    _cfg = _SOURCE_CONFIG.get(source, _SOURCE_CONFIG["vn"])
     _out = output or print
+    _ensure_source(source)
     llm = ChatOpenAI(
         api_key=settings.openai_api_key,
         base_url=settings.openai_base_url,
@@ -372,7 +418,11 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
             if attempt > 0:
                 extra = "\n\nIMPORTANT: You MUST call the `create_subtasks` tool. Do NOT respond with plain text."
             response = await _invoke_with_retry(lambda: supervisor.ainvoke([
-                SystemMessage(content=_P["supervisor"]),
+                SystemMessage(content=_P["supervisor"].format(
+                    market_name=_cfg[f"market_name_{lang}"],
+                    mandatory_sectors=_cfg[f"mandatory_sectors_{lang}"],
+                    optional_hint=_cfg[f"optional_hint_{lang}"],
+                )),
                 HumanMessage(content=user_message + extra),
             ]), output=output)
 
@@ -439,6 +489,7 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
 
         try:
             system_prompt = get_system_prompt(lang) + "\n\n" + _P["worker_role"].format(
+                market_name=_cfg[f"market_name_{lang}"],
                 instruction=state["instruction"],
             )
 
@@ -587,7 +638,7 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
 
 _PIPELINE_STEPS = """## Pipeline Steps
 
-  [1] Fetch market snapshot — all VN tickers, latest daily bar
+  [1] Fetch market snapshot — tickers from selected source, latest daily bar
   [2] Supervisor agent — decomposes question into sector-specific subtasks
   [3] Worker agents (parallel) — research each subtask with tool-calling (get_ohlcv_data, get_live_data, get_ticker_list)
   [4] Aggregator — merges worker results into unified draft report (retries up to 3 rounds on reviewer feedback)
@@ -597,28 +648,96 @@ _PIPELINE_STEPS = """## Pipeline Steps
 # -- Questions --
 
 
-_DEFAULT_QUESTIONS = {
-    "en": (
-        "Provide a comprehensive market overview of the Vietnamese stock market. "
-        "Use the market snapshot to identify the most active sectors and tickers, "
-        "then research 3-5 sectors in depth (must include Banking, Securities, Real Estate) "
-        "with full OHLCV data. "
-        "For each sector: select only the top 10 most representative tickers, "
-        "assess trend direction, VPA signals, MA score momentum, "
-        "volume confirmation, and identify sector leaders vs laggards. "
-        "Then synthesize cross-sector rotation patterns and provide a unified ranking."
-    ),
-    "vn": (
-        "Cung cấp tổng quan thị trường chứng khoán Việt Nam toàn diện. "
-        "Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, "
-        "sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Ngân hàng, Chứng khoán, Bất động sản) "
-        "với dữ liệu OHLCV đầy đủ. "
-        "Mỗi ngành: chỉ chọn tối đa 10 mã đại diện nhất, "
-        "đánh giá xu hướng, tín hiệu VPA, động lực MA score, "
-        "xác nhận khối lượng, và xác định mã dẫn đầu/lagging. "
-        "Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất."
-    ),
+_DEFAULT_QUESTIONS: dict[str, dict[str, str]] = {
+    "vn": {
+        "en": (
+            "Provide a comprehensive market overview of the Vietnamese stock market. "
+            "Use the market snapshot to identify the most active sectors and tickers, "
+            "then research 3-5 sectors in depth (must include Banking, Securities, Real Estate) "
+            "with full OHLCV data. "
+            "For each sector: select only the top 10 most representative tickers, "
+            "assess trend direction, VPA signals, MA score momentum, "
+            "volume confirmation, and identify sector leaders vs laggards. "
+            "Then synthesize cross-sector rotation patterns and provide a unified ranking."
+        ),
+        "vn": (
+            "Cung cấp tổng quan thị trường chứng khoán Việt Nam toàn diện. "
+            "Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, "
+            "sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Ngân hàng, Chứng khoán, Bất động sản) "
+            "với dữ liệu OHLCV đầy đủ. "
+            "Mỗi ngành: chỉ chọn tối đa 10 mã đại diện nhất, "
+            "đánh giá xu hướng, tín hiệu VPA, động lực MA score, "
+            "xác nhận khối lượng, và xác định mã dẫn đầu/lagging. "
+            "Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất."
+        ),
+    },
+    "crypto": {
+        "en": (
+            "Provide a comprehensive market overview of the cryptocurrency market. "
+            "Use the market snapshot to identify the most active sectors and tokens, "
+            "then research 3-5 sectors in depth (must include Layer 1, DeFi, AI tokens) "
+            "with full OHLCV data. "
+            "For each sector: select only the top 10 most representative tokens, "
+            "assess trend direction, VPA signals, MA score momentum, "
+            "volume confirmation, and identify sector leaders vs laggards. "
+            "Then synthesize cross-sector rotation patterns and provide a unified ranking."
+        ),
+        "vn": (
+            "Cung cấp tổng quan thị trường tiền mã hóa toàn diện. "
+            "Sử dụng bức tranh thị trường để xác định ngành và token hoạt động mạnh nhất, "
+            "sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Layer 1, DeFi, AI tokens) "
+            "với dữ liệu OHLCV đầy đủ. "
+            "Mỗi ngành: chỉ chọn tối đa 10 token đại diện nhất, "
+            "đánh giá xu hướng, tín hiệu VPA, động lực MA score, "
+            "xác nhận khối lượng, và xác định token dẫn đầu/lagging. "
+            "Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất."
+        ),
+    },
+    "yahoo": {
+        "en": (
+            "Provide a comprehensive market overview of the global stock market. "
+            "Use the market snapshot to identify the most active sectors and tickers, "
+            "then research 3-5 sectors in depth (must include Technology, Financials, Energy) "
+            "with full OHLCV data. "
+            "For each sector: select only the top 10 most representative tickers, "
+            "assess trend direction, VPA signals, MA score momentum, "
+            "volume confirmation, and identify sector leaders vs laggards. "
+            "Then synthesize cross-sector rotation patterns and provide a unified ranking."
+        ),
+        "vn": (
+            "Cung cấp tổng quan thị trường chứng khoán toàn cầu toàn diện. "
+            "Sử dụng bức tranh thị trường để xác định ngành và mã hoạt động mạnh nhất, "
+            "sau đó nghiên cứu sâu 3-5 ngành (bắt buộc gồm Công nghệ, Tài chính, Năng lượng) "
+            "với dữ liệu OHLCV đầy đủ. "
+            "Mỗi ngành: chỉ chọn tối đa 10 mã đại diện nhất, "
+            "đánh giá xu hướng, tín hiệu VPA, động lực MA score, "
+            "xác nhận khối lượng, và xác định mã dẫn đầu/lagging. "
+            "Sau đó tổng hợp mô hình luân chuyển liên ngành và xếp hạng thống nhất."
+        ),
+    },
+    "sjc": {
+        "en": (
+            "Provide a comprehensive market overview of the commodities market. "
+            "Use the market snapshot to analyze gold and precious metals. "
+            "Research the Gold / Precious Metals sector in depth with full OHLCV data. "
+            "Assess trend direction, VPA signals, MA score momentum, volume confirmation. "
+            "Provide a unified ranking of the available instruments."
+        ),
+        "vn": (
+            "Cung cấp tổng quan thị trường hàng hóa toàn diện. "
+            "Sử dụng bức tranh thị trường để phân tích vàng và kim loại quý. "
+            "Nghiên cứu sâu ngành Vàng / Kim loại quý với dữ liệu OHLCV đầy đủ. "
+            "Đánh giá xu hướng, tín hiệu VPA, động lực MA score, xác nhận khối lượng. "
+            "Cung cấp xếp hạng thống nhất các công cụ có sẵn."
+        ),
+    },
 }
+
+
+def _get_default_question(lang: str, source: str) -> str:
+    """Get the default research question for a given language and source."""
+    source_questions = _DEFAULT_QUESTIONS.get(source, _DEFAULT_QUESTIONS["vn"])
+    return source_questions.get(lang, source_questions["en"])
 
 
 # -- Public API --
@@ -631,6 +750,7 @@ async def run_deep_research(
     lang: str | None = None,
     output: Callable[[str], None] | None = None,
     run_pipeline: bool = False,
+    source: str | None = None,
 ) -> str:
     """Run the multi-agent deep research pipeline.
 
@@ -642,12 +762,14 @@ async def run_deep_research(
         output: Callback for progress output. Defaults to print() for CLI compat.
         run_pipeline: If False (default), fetch and print market snapshot only.
             If True, run the full multi-agent pipeline (takes 5-10 min).
+        source: Data source filter (e.g. "vn", "crypto", "yahoo"). Defaults to "vn".
 
     Returns:
         The final report text, or market snapshot if run_pipeline is False.
     """
     started_at = time.time()
     effective_lang = lang or settings.ai_context_lang
+    effective_source = source or "vn"
     _out = output or (lambda m: print(m, file=sys.stderr) if not run_pipeline else print(m))
 
     if not settings.openai_api_key and run_pipeline:
@@ -669,28 +791,30 @@ async def run_deep_research(
     _out(f"  Base URL: {settings.openai_base_url}")
     _out(f"  Started:  {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     _out(f"  Lang:     {effective_lang}")
+    _out(f"  Source:   {effective_source}")
     if resume_id:
         _out(f"  Resume:   {resume_id}")
     _out("")
     _out("---")
     _out("")
 
-    # Ensure clients are initialized
+    # Ensure clients and source are initialized
     _ensure_clients(effective_lang)
+    _ensure_source(effective_source)
 
     market_snapshot = ""
     if not resume_id:
-        _out("[1] Fetching market snapshot (all VN tickers, latest bar)...")
+        _out(f"[1] Fetching market snapshot (all {effective_source} tickers, latest bar)...")
         _, builder = _ensure_clients(effective_lang)
         market_snapshot = builder.build(
-            source="vn",
+            source=effective_source,
             interval="1D",
             limit=1,
             reference_ticker=None,
             include_system_prompt=False,
         )
         client, _ = _ensure_clients(effective_lang)
-        tickers = client.get_tickers(source="vn")
+        tickers = client.get_tickers(source=effective_source)
         _out(f"    Tickers: {len(tickers)}")
         _out("")
 
@@ -710,7 +834,7 @@ async def run_deep_research(
     _out("[!] The full multi-agent pipeline typically takes 5-10 minutes.")
     _out("")
 
-    effective_question = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
+    effective_question = question or _get_default_question(effective_lang, effective_source)
 
     _out("[2] Starting multi-agent research...")
     _out(f"    Question: {effective_question}")
@@ -727,7 +851,7 @@ async def run_deep_research(
     _out(f"    Folder:  {checkpointer.session_dir}")
     _out("")
 
-    graph = _build_graph(checkpointer=checkpointer, lang=effective_lang, output=_out)
+    graph = _build_graph(checkpointer=checkpointer, lang=effective_lang, source=effective_source, output=_out)
 
     if resume_id:
         _out("    Resuming from checkpoint...")

@@ -58,6 +58,7 @@ def run():
     p_deep.add_argument("--resume", default=None, help="Resume from checkpoint session ID")
     p_deep.add_argument("--output", default=None, help="Save final report to file")
     p_deep.add_argument("--lang", default=None, choices=["en", "vn"], help="Override language")
+    p_deep.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source (default: vn)")
     p_deep.add_argument("--run", action="store_true", help="Run the full multi-agent pipeline (5-10 min). Default is context-only (market snapshot).")
 
     # aipa live-data [tickers...] [--interval 1D] [--top 50]
@@ -109,6 +110,7 @@ def run():
             output=args.output,
             lang=args.lang,
             run_pipeline=args.run,
+            source=args.source,
         )
     elif args.command == "resume":
         from .cli_commands import cmd_resume

@@ -360,13 +360,14 @@ def cmd_deep_research(
     output: str | None = None,
     lang: str | None = None,
     run_pipeline: bool = False,
+    source: str | None = None,
 ) -> None:
     from .deep_research import run_deep_research
 
     effective_lang = _resolve_lang(lang)
     asyncio.run(run_deep_research(
         question=question, resume_id=resume, output_file=output, lang=effective_lang,
-        run_pipeline=run_pipeline,
+        run_pipeline=run_pipeline, source=_resolve_source(source),
     ))
 
 
