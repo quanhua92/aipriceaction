@@ -5,16 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12] - 2026-05-10
+
+### Added
+- Ticker data tab with grouped live data tree and detail panel
+- Ticker filter input with auto-select first match
+- Candlestick chart using plotext with auto-selected candle count based on widget width
+
+### Fixed
+- Limit /resume session list to 50 most recent sessions
+
 ## [0.1.11] - 2026-05-09
 
 ### Changed
 - Convert `cmd_analyze` CLI command to async using `asyncio.to_thread` for `builder.build()` and `builder.answer()`
 - Unify single-ticker question resolution in CLI with shared `resolve_tui_question()` from `analyze.py`
+- Deduplicate TUI analyze logic into shared `analyze.py` module
+- Convert `deep_research` to async with output callback for TUI integration
 - Include system prompt in `--context-only` output by default (add `--no-system-prompt` flag to opt out)
 - Add short persona header to `get-ohlcv-data` output using `get_system_prompt` from SDK (add `--no-system-prompt` flag to opt out)
 
 ### Fixed
 - Fix 15 pre-existing test failures: tab switching key consumption, deep research test expectations, settings hint logic, and workflow analyze agent initialization
+- Retry supervisor when LLM responds with text instead of calling create_subtasks tool
 
 ## [0.1.10] - 2026-05-09
 
@@ -26,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Prevent 1-6 tab switch keys from firing while typing in chat input (press Esc first to blur input)
 - Fix session resume crash when `app.agent` is not yet initialized during mount
+- Update help notify with session commands and ctrl+o shortcut
+
+### Docs
+- Fix README tab count and add resume examples to Quick Start
 
 ## [0.1.9] - 2026-05-09
 
