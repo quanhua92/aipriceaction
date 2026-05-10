@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.25] - 2026-05-11
+
+### Changed
+- Auto-detect reference ticker by data source: `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global/yahoo stocks. `--reference-ticker` flag now defaults to auto-detect instead of hardcoded `VNINDEX`.
+
 ## [0.1.24] - 2026-05-11
 
 ### Changed
