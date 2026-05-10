@@ -153,7 +153,7 @@ aipa analyze VCB --lang en
 | `--limit N` | Number of bars (default: 20) |
 | `--source` | Filter by source: `vn` or `crypto` |
 | `--start-date` / `--end-date` | Date range (e.g. `2026-04-01`) |
-| `--reference-ticker` | Reference ticker for market context (default: `VNINDEX`) |
+| `--reference-ticker` | Override auto-detected reference ticker (auto: `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global) |
 | `--lang` | Language: `en` or `vn` (default: saved setting) |
 | `--ma-type` | Moving average type: `ema` or `sma` (default: `ema`) |
 

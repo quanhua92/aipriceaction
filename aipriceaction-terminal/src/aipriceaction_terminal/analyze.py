@@ -9,6 +9,27 @@ from textual.widgets import RichLog
 
 from .utils import stream_agent_to_log
 
+_DEFAULT_REFERENCE: dict[str, str] = {
+    "crypto": "BTCUSDT",
+    "vn": "VNINDEX",
+    "yahoo": "^GSPC",
+}
+
+
+def _resolve_reference_ticker(builder: object, ticker: str) -> str:
+    """Pick the right reference ticker based on the primary ticker's source."""
+    try:
+        all_tickers = builder._client.get_tickers()
+        for t in all_tickers:
+            if t.ticker == ticker:
+                return _DEFAULT_REFERENCE.get(t.source, "VNINDEX")
+    except Exception:
+        pass
+    # Fallback: USDT suffix → crypto
+    if ticker.upper().endswith("USDT"):
+        return "BTCUSDT"
+    return "VNINDEX"
+
 
 def resolve_tui_question(
     builder: object,
@@ -45,6 +66,7 @@ async def run_tui_analyze(
     question_index: int | None = None,
     custom_question: str | None = None,
     prefix: str | None = None,
+    reference_ticker: str | None = None,
     on_thinking_update: Callable[[str], None] | None = None,
     on_thinking_done: Callable[[str], None] | None = None,
     on_message: Callable[[dict], None] | None = None,
@@ -53,9 +75,12 @@ async def run_tui_analyze(
 
     Shared by ChatTab and AnalyzePane to avoid duplicating the analyze flow.
     """
+    reference_ticker = reference_ticker or _resolve_reference_ticker(builder, ticker)
+
     context = await asyncio.to_thread(
         builder.build, ticker=ticker, interval=interval,
         include_system_prompt=False,
+        reference_ticker=reference_ticker,
     )
 
     log.write(f"[dim]Context ready: {len(context):,} chars[/dim]")

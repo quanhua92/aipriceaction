@@ -29,7 +29,7 @@ def run():
     p_analyze.add_argument("--source", default=None)
     p_analyze.add_argument("--start-date", default=None)
     p_analyze.add_argument("--end-date", default=None)
-    p_analyze.add_argument("--reference-ticker", default="VNINDEX")
+    p_analyze.add_argument("--reference-ticker", default=None, help="Override auto-detected reference ticker (e.g. BTCUSDT, VNINDEX, ^GSPC)")
     p_analyze.add_argument("--lang", default=None, choices=["en", "vn"])
     p_analyze.add_argument("--ma-type", default="ema", choices=["ema", "sma"])
     p_analyze.add_argument("--question", default=None, help="Custom analysis question")

@@ -81,7 +81,7 @@ aipa analyze TICKER [TICKERS...] [options]
 | `--source` | auto-detect | Filter by source: `vn`, `crypto`, `global` |
 | `--start-date` | — | Start date (e.g. `2025-04-01`) |
 | `--end-date` | — | End date (e.g. `2025-04-30`) |
-| `--reference-ticker` | `VNINDEX` | Reference ticker for market context |
+| `--reference-ticker` | auto-detect | Reference ticker: `VNINDEX` (VN stocks), `BTCUSDT` (crypto), `^GSPC` (global) |
 | `--lang` | saved setting | Language: `en` or `vn` |
 | `--ma-type` | `ema` | Moving average type: `ema` or `sma` |
 | `--question TEXT` | template 0 | Custom analysis question (overrides templates) |
@@ -117,7 +117,7 @@ aipa analyze VCB --context-only
 # Show thinking tokens during analysis
 aipa analyze HPG --verbose
 
-# Custom reference ticker
+# Override auto-detected reference ticker
 aipa analyze VCB --reference-ticker VN30
 
 # Specific source
@@ -244,4 +244,4 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 
 9. **Combine with `--limit`**: More bars = more context. Use `--limit 50` or `--limit 100` for deeper analysis. Default is 20.
 
-10. **Reference ticker**: The default reference ticker is `VNINDEX` (Vietnam market index). For crypto, consider removing it or setting a crypto index if available.
+10. **Reference ticker**: Auto-detected based on the ticker's source — `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global stocks. Use `--reference-ticker` to override.

@@ -25,6 +25,11 @@ async def cmd_analyze(args) -> None:
     lang = _resolve_lang(args.lang)
     builder = AIContextBuilder(lang=lang, ma_type=args.ma_type)
 
+    # Auto-detect reference ticker if user didn't explicitly override
+    if args.reference_ticker is None and len(args.tickers) == 1:
+        from .analyze import _resolve_reference_ticker
+        args.reference_ticker = _resolve_reference_ticker(builder, args.tickers[0])
+
     # --questions: list question bank and exit
     if args.questions:
         mode = "single" if len(args.tickers) == 1 else "multi"
