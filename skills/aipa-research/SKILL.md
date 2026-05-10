@@ -46,7 +46,7 @@ Run `aipa setup` for interactive first-run configuration. Settings are saved to 
 
 **Before running any research, you MUST ask the user which mode they want** using `AskUserQuestion`:
 
-1. **Fast Research (Recommended)** — Run `aipa deep-research` to get the market snapshot, then you (the AI agent) replicate the multi-agent pipeline using subagents + `aipa data`. No API key needed. This is the recommended default — it produces thorough results without the 5-10 minute wait.
+1. **Fast Research (Recommended)** — Run `aipa deep-research` to get the market snapshot, then you (the AI agent) replicate the multi-agent pipeline using subagents + `aipa get-ohlcv-data`. No API key needed. This is the recommended default — it produces thorough results without the 5-10 minute wait.
 2. **Full pipeline (`--run`)** — Run `aipa deep-research --run` to use the actual CLI multi-agent pipeline. Takes 5-10 minutes and requires an API key configured via `aipa setup`.
 
 Only skip asking if the user's request explicitly indicates they want the full CLI pipeline (e.g., "run the full pipeline", "use --run").
@@ -241,7 +241,7 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 ### Step 3 — Spawn worker subagents (in parallel)
 For each sector subtask, spawn a separate subagent (use the Task tool) that:
 - Receives the sector name, ticker list, the research question, and the market snapshot
-- Fetches detailed OHLCV data for its assigned tickers (`aipa data` with appropriate `--limit`)
+- Fetches detailed OHLCV data for its assigned tickers (`aipa get-ohlcv-data` with appropriate `--limit`)
 - Analyzes trend direction, VPA signals, MA momentum, volume patterns, and support/resistance
 - Ranks tickers within the sector
 - Returns a structured sector report with per-ticker assessment, ranking, and key risk factors
