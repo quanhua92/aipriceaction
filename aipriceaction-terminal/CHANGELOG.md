@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] - 2026-05-10
+
+### Added
+- `--context-only` flag to `aipa deep-research` dumps market snapshot without running the pipeline (no API key needed)
+
+### Changed
+- `aipa analyze` with no API key prints built context to stdout with setup hint instead of erroring and exiting
+- `aipa deep-research` with no API key prints dry-run pipeline outline with setup hint instead of erroring and exiting
+- Updated `aipa-analyze` and `aipa-research` skills with agent fallback instructions for when no API key is available
+
 ## [0.1.17] - 2026-05-10
 
 ### Fixed
