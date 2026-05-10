@@ -367,6 +367,122 @@ class TestMaIndicators:
             assert "2025-04-24" in str(row["time"])
 
 
+class TestSortOrder:
+    """Bug: get_ohlcv result is not sorted by time when yearly files are fetched.
+
+    Yearly files are fetched in reverse year order (2026, 2025) and concatenated
+    without sorting. tail(limit) then takes rows by index position, not by date.
+    This causes the output to show newer dates first and older dates at the bottom.
+    """
+
+    @pytest.fixture
+    def mock_two_yearly_files(self):
+        """Mock S3 with 2026 yearly (5 rows) and 2025 yearly (10 rows).
+
+        When concatenated in fetch order: [2026(5), 2025(10)] = 15 rows.
+        tail(10) takes the last 10 = all 2025 rows, making the output look like
+        it only has 2025 data even though 2026 data exists.
+        """
+        import re
+        import responses
+        from datetime import timedelta
+
+        responses.start()
+
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            json=[{"source": "vn", "ticker": "VIC", "name": "VIC", "group": "REAL_ESTATE"}],
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            headers={"x-amz-meta-content-hash": "sort-test"},
+        )
+
+        # 2026 yearly: 5 rows, Jan 6-10
+        rows_2026 = []
+        for i in range(5):
+            d = date(2026, 1, 6) + timedelta(days=i)
+            rows_2026.append(f"{d.isoformat()} 00:00:00,{160000+i*1000},{161000+i*1000},{159000+i*1000},{160500+i*1000},2000000")
+        url_2026 = "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VIC/yearly/VIC-1D-2026.csv"
+        responses.get(url_2026, body="\n".join(rows_2026))
+        responses.head(url_2026, headers={"x-amz-meta-content-hash": "2026"})
+
+        # 2025 yearly: 10 rows, Dec 22-31
+        rows_2025 = []
+        for i in range(10):
+            d = date(2025, 12, 22) + timedelta(days=i)
+            rows_2025.append(f"{d.isoformat()} 00:00:00,{150000+i*500},{151000+i*500},{149000+i*500},{150500+i*500},1000000")
+        url_2025 = "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VIC/yearly/VIC-1D-2025.csv"
+        responses.get(url_2025, body="\n".join(rows_2025))
+        responses.head(url_2025, headers={"x-amz-meta-content-hash": "2025"})
+
+        # Catch-all
+        responses.get(
+            re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+            status=404,
+        )
+        responses.head(
+            re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+            status=404,
+        )
+
+        yield
+
+        responses.stop()
+        responses.reset()
+
+    def test_result_should_be_sorted_by_time(self, mock_two_yearly_files, tmp_path):
+        """Bug: result from yearly files is not sorted by time.
+
+        With 2026 yearly (5 rows) + 2025 yearly (10 rows), the result has
+        2026 rows first, 2025 rows last. The last row should be the most
+        recent date (2026-01-10) but is actually the oldest (2025-12-22).
+        """
+        from aipriceaction import AIPriceAction
+
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            utc_offset=0,
+        )
+
+        df = client.get_ohlcv("VIC", interval="1D", ma=False)
+
+        first_date = str(df.iloc[0]["time"])
+        last_date = str(df.iloc[-1]["time"])
+
+        # Bug: first row is 2026, last row is 2025 (wrong order)
+        # Fixed: first row should be oldest, last row should be newest
+        assert first_date < last_date, (
+            f"Bug confirmed: result is not sorted by time. "
+            f"First row is {first_date}, last row is {last_date}. "
+            f"Last row should be the most recent date, not the oldest."
+        )
+
+    def test_tail_should_return_most_recent_rows(self, mock_two_yearly_files, tmp_path):
+        """Bug: tail(limit) takes by index position, not by date.
+
+        With limit=10 and 15 total rows [2026(5), 2025(10)], tail(10) returns
+        all 2025 rows — the oldest data — instead of the 10 most recent rows.
+        """
+        from aipriceaction import AIPriceAction
+
+        client = AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            utc_offset=0,
+        )
+
+        df = client.get_ohlcv("VIC", interval="1D", limit=10, ma=False)
+
+        last_date = str(df.iloc[-1]["time"])
+
+        assert "2026" in last_date, (
+            f"Bug confirmed: tail(10) returned rows ending at {last_date}. "
+            f"The last row should be the most recent date (2026-01-10), "
+            f"not an older date from 2025."
+        )
+
 class TestIndicators:
     """Unit tests for the indicators module."""
 

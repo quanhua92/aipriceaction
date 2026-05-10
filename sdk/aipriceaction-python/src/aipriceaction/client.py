@@ -533,7 +533,10 @@ class AIPriceAction:
                     frames.append(df)
             if not frames:
                 return pd.DataFrame(columns=_OHLCV_COLUMNS)
-            return pd.concat(frames, ignore_index=True)
+            result = pd.concat(frames, ignore_index=True)
+            if not result.empty and "time" in result.columns:
+                result = result.sort_values("time").reset_index(drop=True)
+            return result
 
         # 1D and 1h intervals: prefer yearly files
         start = min(days)
@@ -574,7 +577,7 @@ class AIPriceAction:
             if not result.empty and "time" in result.columns:
                 result = result.drop_duplicates(
                     subset=["time"], keep="first"
-                ).reset_index(drop=True)
+                ).sort_values("time").reset_index(drop=True)
             return result
 
         # Compute remaining days: only dates NOT within a fully-covered year,
@@ -604,9 +607,9 @@ class AIPriceAction:
 
         result = pd.concat(all_frames, ignore_index=True)
 
-        # Deduplicate by time (in case a day appears in both yearly and per-day)
+        # Deduplicate and sort by time (yearly files fetched in reverse year order)
         if not result.empty and "time" in result.columns:
-            result = result.drop_duplicates(subset=["time"], keep="first").reset_index(
+            result = result.drop_duplicates(subset=["time"], keep="first").sort_values("time").reset_index(
                 drop=True
             )
 
