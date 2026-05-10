@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from __future__ import annotations
-
 import pandas as pd
 
-import pandas as pd
 
 from .client import AIPriceAction
 from .ticker import Ticker
@@ -308,22 +305,24 @@ class AIContextBuilder:
             result[sym] = records
         return result
 
-    @staticmethod
     def _live_data_to_records(
-        live_data: dict, source: str | None = None
+        self, live_data: dict, source: str | None = None
     ) -> dict[str, list[Ticker]]:
         """Convert fetch_live_data() JSON to dict of Ticker lists.
 
-        Filters by source when provided by checking if the symbol ends with
-        "USDT" (crypto) or not (vn).
+        Filters by source when provided using ticker metadata from tickers.json.
         """
+        # Build symbol -> source lookup from ticker metadata
+        source_lookup: dict[str, str] = {}
+        if source:
+            for t in self._client.get_tickers():
+                source_lookup[t.ticker] = t.source
+
         result: dict[str, list[Ticker]] = {}
         for sym, candles in live_data.items():
             if not candles:
                 continue
-            if source == "vn" and sym.endswith("USDT"):
-                continue
-            if source == "crypto" and not sym.endswith("USDT"):
+            if source and source_lookup.get(sym) != source:
                 continue
             records = []
             for c in candles:

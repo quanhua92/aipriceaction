@@ -427,45 +427,63 @@ class TestTimeFormatPassThrough:
 
 
 class TestLiveDataToRecords:
-    def test_filters_vn_source(self):
+    @pytest.fixture
+    def builder(self):
+        from unittest.mock import MagicMock
+        from aipriceaction.models import TickerInfo
+
+        b = AIContextBuilder.__new__(AIContextBuilder)
+        mock_client = MagicMock()
+        mock_client.get_tickers.return_value = [
+            TickerInfo(source="vn", ticker="VCB"),
+            TickerInfo(source="vn", ticker="FPT"),
+            TickerInfo(source="crypto", ticker="BTCUSDT"),
+            TickerInfo(source="yahoo", ticker="AAPL"),
+        ]
+        b._client = mock_client
+        return b
+
+    def test_filters_vn_source(self, builder):
         live_data = {
             "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
             "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
+            "AAPL": [{"time": "2026-05-04", "open": 185, "close": 187, "high": 188, "low": 184, "volume": 5000}],
         }
-        records = AIContextBuilder._live_data_to_records(live_data, source="vn")
+        records = builder._live_data_to_records(live_data, source="vn")
         assert "VCB" in records
         assert "BTCUSDT" not in records
+        assert "AAPL" not in records
 
-    def test_filters_crypto_source(self):
+    def test_filters_crypto_source(self, builder):
         live_data = {
             "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
             "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
         }
-        records = AIContextBuilder._live_data_to_records(live_data, source="crypto")
+        records = builder._live_data_to_records(live_data, source="crypto")
         assert "BTCUSDT" in records
         assert "VCB" not in records
 
-    def test_no_source_returns_all(self):
+    def test_no_source_returns_all(self, builder):
         live_data = {
             "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000}],
             "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "close": 80343, "high": 80420, "low": 78288, "volume": 500}],
         }
-        records = AIContextBuilder._live_data_to_records(live_data)
+        records = builder._live_data_to_records(live_data)
         assert "VCB" in records
         assert "BTCUSDT" in records
 
-    def test_preserves_close_changed(self):
+    def test_preserves_close_changed(self, builder):
         live_data = {
             "VCB": [{"time": "2026-05-04", "open": 60500, "close": 60300, "high": 60600, "low": 60000, "volume": 1000, "close_changed": 2.1}],
         }
-        records = AIContextBuilder._live_data_to_records(live_data)
+        records = builder._live_data_to_records(live_data)
         assert records["VCB"][0].close_changed == 2.1
 
-    def test_skips_empty_candles(self):
+    def test_skips_empty_candles(self, builder):
         live_data = {
             "VCB": [],
             "FPT": [{"time": "2026-05-04", "open": 74800, "close": 74900, "high": 75000, "low": 74600, "volume": 500}],
         }
-        records = AIContextBuilder._live_data_to_records(live_data)
+        records = builder._live_data_to_records(live_data)
         assert "VCB" not in records
         assert "FPT" in records
