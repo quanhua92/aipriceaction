@@ -14,6 +14,8 @@ from textual.reactive import reactive
 from textual.widgets import Input, Static, Tree
 from textual.widgets._tree import TreeNode
 
+from aipriceaction_terminal.chart import OHLCVChart
+
 _MODE_LABELS = {
     "vn": "VN Tickers",
     "crypto": "Crypto",
@@ -35,6 +37,7 @@ class TickerRow:
     symbol: str
     name: str = ""
     group: str = ""
+    time: str = ""
     close: float = 0.0
     volume: float = 0.0
     open_: float = 0.0
@@ -97,12 +100,15 @@ class TickerDetailPanel(VerticalScroll):
     }
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, source: str = "vn", **kwargs):
         super().__init__(**kwargs)
+        self.source = source
+        self._chart = OHLCVChart(id="td-chart")
         self._content = Static(id="td-detail")
         self._content.border_title = ""
 
     def compose(self) -> ComposeResult:
+        yield self._chart
         yield self._content
 
     def update_ticker(self, ticker: TickerRow) -> None:
@@ -120,6 +126,10 @@ class TickerDetailPanel(VerticalScroll):
 
         # OHLCV
         ohlcv = Text()
+        if ticker.time:
+            ohlcv.append("Time:    ", style="bold")
+            ohlcv.append(ticker.time)
+            ohlcv.append("\n")
         ohlcv.append("Close:   ", style="bold")
         ohlcv.append(self._fmt_number(ticker.close))
         ohlcv.append("\nOpen:    ", style="bold")
@@ -171,12 +181,30 @@ class TickerDetailPanel(VerticalScroll):
 
         self._content.border_title = f" {ticker.symbol} "
         self._content.update(Text("\n").join(lines))
+        self._load_chart(ticker.symbol)
 
     def show_placeholder(self, label: str) -> None:
         self._content.border_title = ""
         self._content.update(
             Text(f"Select a ticker from the {label} tree to view details.", style="dim italic")
         )
+        self._chart.show_loading()
+
+    @work(exclusive=True)
+    async def _load_chart(self, symbol: str) -> None:
+        """Fetch OHLCV data and render chart asynchronously."""
+        self._chart.show_loading()
+        try:
+            client = self.app.client
+            df = await asyncio.to_thread(
+                client.get_ohlcv, ticker=symbol, interval="1D", limit=30, source=self.source,
+            )
+            if df is not None and not df.empty:
+                self._chart.build_chart(df)
+            else:
+                self._chart.show_error("No data")
+        except Exception as e:
+            self._chart.show_error(f"Chart error: {e}")
 
     @staticmethod
     def _fmt_number(v: float) -> Text:
@@ -258,7 +286,7 @@ class TickerDataTab(Vertical):
             with Vertical(id="td-left"):
                 yield Input(placeholder="Filter tickers...", id="td-filter")
                 yield TickerGroupTree(f" {self._label}", id="td-tree")
-            yield TickerDetailPanel(id="td-detail")
+            yield TickerDetailPanel(source=self.source, id="td-detail")
 
     def on_mount(self) -> None:
         self.query_one(TickerDetailPanel).show_placeholder(self._label)
@@ -353,6 +381,7 @@ class TickerDataTab(Vertical):
                         symbol=symbol,
                         name=name or "",
                         group=group or "",
+                        time=str(c.get("time", ""))[:10],
                         close=c.get("close", 0.0) or 0.0,
                         volume=c.get("volume", 0.0) or 0.0,
                         open_=c.get("open", 0.0) or 0.0,
