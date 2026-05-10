@@ -144,9 +144,91 @@ def create_ticker_list_tool(lang: str = "en") -> ToolDef:
     )
 
 
+def create_live_data_tool(lang: str = "en") -> ToolDef:
+    """Factory: creates the get_live_data tool."""
+
+    @tool
+    def get_live_data(tickers: str = "", interval: str = "1D", top: int = 50) -> str:
+        """Fetch the latest live candle for one or more tickers at once.
+
+        Prefer calling this FIRST with tickers="" (all tickers) to get
+        a broad market overview before drilling into specific tickers. This returns
+        the top 50 tickers sorted by trading value (close * volume) descending,
+        so the most actively traded tickers appear first. Note: this is only the
+        top 50 out of all tickers in the market — use get_ticker_list to see
+        the full list, and get_ohlcv_data for tickers not shown here.
+
+        Returns one line per ticker in the same key=value format as get_ohlcv_data,
+        but only the most recent candle.
+
+        If you need multiple candles (historical context), use get_ohlcv_data instead.
+
+        Args:
+            tickers: Comma-separated ticker symbols. Leave empty ("") to get top tickers by trading value.
+            interval: Time interval — "1D" (default), "1h", or "1m".
+            top: Maximum number of tickers to return when tickers="" (default 50). Increase this value if you need more tickers (e.g. top=200).
+        """
+        client, _ = _ensure_clients(lang)
+        try:
+            data = client.fetch_live_data(interval)
+        except Exception as e:
+            return f"Error fetching live data: {e}"
+        if data is None:
+            return "Failed to fetch live data."
+
+        filter_set = {t.strip() for t in tickers.split(",") if t.strip()} if tickers else None
+
+        # Collect (trading_value, line) pairs sorted by value descending
+        entries: list[tuple[float, str]] = []
+        for symbol, candles in data.items():
+            if filter_set and symbol not in filter_set:
+                continue
+            if not candles:
+                continue
+            c = candles[-1]
+            fields: list[str] = [f"ticker={symbol}"]
+            time = str(c.get("time", ""))[:16]
+            if time:
+                fields.append(f"time={time}")
+            for key in ("open", "high", "low", "close", "volume"):
+                val = c.get(key)
+                if val is not None:
+                    fields.append(f"{key}={val:.2f}" if key != "volume" else f"{key}={val}")
+            for key in ("ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                         "close_changed", "volume_changed"):
+                val = c.get(key)
+                if val is not None:
+                    fields.append(f"{key}={val:.2f}")
+            line = " ".join(fields)
+            close = c.get("close") or 0
+            vol = c.get("volume") or 0
+            entries.append((close * vol, line))
+
+        if not entries:
+            return f"No live data found for tickers={tickers or 'all'} ({interval})."
+
+        # When listing all tickers, sort by trading value and cap
+        if not filter_set:
+            total = len(entries)
+            entries.sort(key=lambda x: x[0], reverse=True)
+            entries = entries[:top]
+            header = f"Top {top} of {total} tickers by trading value ({interval}), sorted descending:"
+            return header + "\n" + "\n".join(line for _, line in entries)
+
+        return "\n".join(line for _, line in entries)
+
+    return ToolDef(
+        tool=get_live_data,
+        name="get_live_data",
+        description="Fetch the latest live candle for one or more tickers at once.",
+        category="market_data",
+    )
+
+
 def get_default_tools(lang: str = "en") -> ToolRegistry:
     """Return a ToolRegistry pre-loaded with the built-in market data tools."""
     registry = ToolRegistry()
     registry.register(create_ohlcv_tool(lang))
     registry.register(create_ticker_list_tool(lang))
+    registry.register(create_live_data_tool(lang))
     return registry
