@@ -34,11 +34,27 @@ aipa deep-research
 
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `OPENAI_API_KEY` | Yes | — | API key for the LLM provider |
+| `OPENAI_API_KEY` | Only with `--run` | — | API key for the LLM provider |
 | `OPENAI_BASE_URL` | No | OpenRouter | Base URL for OpenAI-compatible API |
 | `OPENAI_MODEL` | No | `openrouter/owl-alpha` | Model to use for analysis |
 
 Run `aipa setup` for interactive first-run configuration. Settings are saved to `~/.aipriceaction/settings.json`.
+
+---
+
+## Pre-Execution: Ask the User
+
+**Before running any research, you MUST ask the user which mode they want** using `AskUserQuestion`:
+
+1. **Fast Research (Recommended)** — Run `aipa deep-research` to get the market snapshot, then you (the AI agent) replicate the multi-agent pipeline using subagents + `aipa data`. No API key needed. This is the recommended default — it produces thorough results without the 5-10 minute wait.
+2. **Full pipeline (`--run`)** — Run `aipa deep-research --run` to use the actual CLI multi-agent pipeline. Takes 5-10 minutes and requires an API key configured via `aipa setup`.
+
+Only skip asking if the user's request explicitly indicates they want the full CLI pipeline (e.g., "run the full pipeline", "use --run").
+
+- If the user chooses **Fast Research**: follow the [Fast Research: Agent-Driven Pipeline](#fast-research-agent-driven-pipeline) section below.
+- If the user chooses **Full pipeline**: run `aipa deep-research --run [QUESTION]` and present the stdout output.
+
+---
 
 ## Available Data Sources
 
@@ -64,7 +80,7 @@ Run `aipa setup` for interactive first-run configuration. Settings are saved to 
 
 ## `aipa deep-research` — Multi-Agent Research Pipeline
 
-Run a comprehensive multi-agent research pipeline. The pipeline analyzes multiple sectors in parallel, cross-references findings, and produces a unified market report with quality review.
+The default behavior (`aipa deep-research` without flags) fetches and prints a market snapshot of all VN tickers. Add `--run` to execute the full multi-agent pipeline.
 
 ```bash
 aipa deep-research [QUESTION] [options]
@@ -75,6 +91,7 @@ aipa deep-research [QUESTION] [options]
 | Flag | Default | Description |
 |---|---|---|
 | `QUESTION` | market overview | Research question (optional) |
+| `--run` | off | Run the full multi-agent pipeline (5-10 min). Without this, only dumps market snapshot. |
 | `--resume ID` | — | Resume from a checkpoint session ID |
 | `--output FILE` | — | Save final report to file |
 | `--lang` | saved setting | Language: `en` or `vn` |
@@ -82,23 +99,26 @@ aipa deep-research [QUESTION] [options]
 ### Usage Examples
 
 ```bash
-# Comprehensive market overview (default question)
+# Market snapshot only (default, fast, no API key needed)
 aipa deep-research
 
-# Research a specific sector
-aipa deep-research "Deep research on the banking sector: analyze top 10 banks by market cap, assess trend direction, VPA signals, MA momentum, and identify leaders vs laggards"
+# Market snapshot with a custom question in the output
+aipa deep-research "Research banking sector"
 
-# Real estate deep dive
-aipa deep-research "Comprehensive analysis of Vietnamese real estate stocks: identify accumulation patterns, compare relative strength, and assess sector rotation"
+# Run the FULL multi-agent pipeline (slow, 5-10 min, requires API key)
+aipa deep-research --run
 
-# Save report to file
-aipa deep-research --output banking_report.md
+# Full pipeline with a custom research question
+aipa deep-research --run "Deep research on the banking sector: analyze top 10 banks by market cap, assess trend direction, VPA signals, MA momentum, and identify leaders vs laggards"
 
-# Vietnamese output
-aipa deep-research "Phân tích toàn diện thị trường chứng khoán Việt Nam" --lang vn
+# Save full pipeline report to file
+aipa deep-research --run --output banking_report.md
+
+# Vietnamese output (full pipeline)
+aipa deep-research --run "Phân tích toàn diện thị trường chứng khoán Việt Nam" --lang vn
 
 # Resume an interrupted research session
-aipa deep-research --resume abc123
+aipa deep-research --run --resume abc123
 ```
 
 ---
@@ -175,6 +195,44 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 
 ---
 
+## Fast Research: Agent-Driven Pipeline
+
+This is the **recommended** approach for research. Run `aipa deep-research` to get the market snapshot, then you (the AI agent) orchestrate the multi-agent pipeline using subagents. This produces equally thorough results and does not require an API key or `aipa setup`.
+
+### Step 1 — Fetch market snapshot
+Run `aipa deep-research` (without `--run`) to fetch the latest market snapshot of all VN tickers. This gives you the market context to distribute to workers.
+
+### Step 2 — Supervisor (you)
+Using the market snapshot, decompose the research question into 3-5 sector-specific subtasks. Always include Banking, Securities, and Real Estate. Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
+
+### Step 3 — Spawn worker subagents (in parallel)
+For each sector subtask, spawn a separate subagent (use the Task tool) that:
+- Receives the sector name, ticker list, the research question, and the market snapshot
+- Fetches detailed OHLCV data for its assigned tickers (`aipa data` with appropriate `--limit`)
+- Analyzes trend direction, VPA signals, MA momentum, volume patterns, and support/resistance
+- Ranks tickers within the sector
+- Returns a structured sector report with per-ticker assessment, ranking, and key risk factors
+
+**Spawn all worker subagents concurrently in a single message** — do not run them sequentially.
+
+### Step 4 — Aggregate (you)
+Once all workers return, synthesize the sector reports into a unified analysis:
+- Cross-reference findings across sectors
+- Build a multi-sector ranking table
+- Identify cross-sector rotation patterns
+- Highlight key opportunities and risks
+
+### Step 5 — Review (you)
+Quality-check your own aggregated report:
+- Verify no phantom stocks (tickers not in worker reports)
+- Spot-check MA score plausibility
+- Confirm table completeness
+- Fix any issues and produce the final report
+
+Present the final report to the user. Use the research question and the user's language to determine focus and output language.
+
+---
+
 ## When to Use Research vs Analyze
 
 | Scenario | Use |
@@ -182,10 +240,10 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 | "Analyze VCB" | `aipa analyze VCB` (single ticker) |
 | "Compare FPT and VNM" | `aipa analyze FPT VNM` (quick comparison) |
 | "What's the trend for BTCUSDT?" | `aipa analyze BTCUSDT` (focused question) |
-| "Research the banking sector" | `aipa deep-research` (multi-agent, sector-wide) |
-| "Comprehensive market overview" | `aipa deep-research` (full market scan) |
-| "Deep dive into real estate" | `aipa deep-research "..."` (thorough investigation) |
-| "Which sectors are leading?" | `aipa deep-research` (cross-sector analysis) |
+| "Research the banking sector" | `aipa-research` skill (multi-agent, sector-wide) |
+| "Comprehensive market overview" | `aipa-research` skill (full market scan) |
+| "Deep dive into real estate" | `aipa-research` skill (thorough investigation) |
+| "Which sectors are leading?" | `aipa-research` skill (cross-sector analysis) |
 | "Most active tickers right now?" | `aipa live-data` (no AI, instant top list) |
 | "Top stocks by trading value" | `aipa live-data --top 20` (no AI) |
 | "What tickers are in the real estate sector?" | `aipa ticker-list --source vn --group BAT_DONG_SAN` |
@@ -193,7 +251,8 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 ### Key Differences
 
 - **`aipa analyze`**: Fast, focused on 1-5 tickers, single LLM call, results in seconds.
-- **`aipa deep-research`**: Slower, covers entire sectors, multiple LLM calls across agents, results in minutes. Produces a comprehensive report with quality review.
+- **`aipa deep-research --run`**: Covers entire sectors, multiple LLM calls across agents, results in minutes. Produces a comprehensive report with quality review.
+- **Fast Research (agent-driven)**: You replicate the pipeline with subagents. Thorough results without the CLI wait time.
 
 Use `deep-research` when:
 - The question spans multiple sectors
@@ -231,59 +290,19 @@ When presenting results to the user, always use the stdout output (the final app
 
 ---
 
-## No API Key — Agent Fallback
-
-When `OPENAI_API_KEY` is not set, `aipa deep-research` prints a "dry run" outline showing the pipeline steps and research question, then exits gracefully. It does **not** produce a research report.
-
-**If you are an AI agent and see this fallback output, you must replicate the multi-agent pipeline yourself using subagents.** Spawn parallel subagents the same way the real pipeline does:
-
-### Step 1 — Supervisor (you)
-Decompose the research question into 3-5 sector-specific subtasks. Always include Banking, Securities, and Real Estate. Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
-
-### Step 2 — Fetch market snapshot
-Use `aipa data` (the `aipa-data` skill) to get the latest daily OHLCV for all tickers across the chosen sectors. This gives you the market context to distribute to workers.
-
-### Step 3 — Spawn worker subagents (in parallel)
-For each sector subtask, spawn a separate subagent (use the Task tool) that:
-- Receives the sector name, ticker list, and the research question
-- Fetches detailed OHLCV data for its assigned tickers (`aipa data` with appropriate `--limit`)
-- Analyzes trend direction, VPA signals, MA momentum, volume patterns, and support/resistance
-- Ranks tickers within the sector
-- Returns a structured sector report with per-ticker assessment, ranking, and key risk factors
-
-**Spawn all worker subagents concurrently in a single message** — do not run them sequentially.
-
-### Step 4 — Aggregate (you)
-Once all workers return, synthesize the sector reports into a unified analysis:
-- Cross-reference findings across sectors
-- Build a multi-sector ranking table
-- Identify cross-sector rotation patterns
-- Highlight key opportunities and risks
-
-### Step 5 — Review (you)
-Quality-check your own aggregated report:
-- Verify no phantom stocks (tickers not in worker reports)
-- Spot-check MA score plausibility
-- Confirm table completeness
-- Fix any issues and produce the final report
-
-Present the final report to the user. The research question and language from the dry-run output tell you what to focus on and what language to write in.
-
----
-
 ## Tips for AI Agents
 
-1. **Be specific with the question**: The default question produces a general market overview. For better results, provide a specific research question targeting sectors or themes of interest.
+1. **Fast Research is the default**: Unless the user explicitly asks for `--run`, run `aipa deep-research` to get the snapshot, then orchestrate the pipeline yourself (Step 1-5 above).
 
-2. **Save reports**: Use `--output FILE` to save the report. This is useful for sharing or later reference.
+2. **Be specific with the question**: The default question produces a general market overview. For better results, provide a specific research question targeting sectors or themes of interest.
 
-3. **It takes time**: The pipeline runs multiple agents sequentially and in parallel. Expect it to take several minutes. Don't rush it.
+3. **Save reports**: Use `--output FILE` with `--run` to save the report. This is useful for sharing or later reference.
 
-4. **Resume on failure**: If a session is interrupted, the session ID is printed in the output. Use `--resume ID` to continue.
+4. **Resume on failure**: If a `--run` session is interrupted, the session ID is printed in the output. Use `--resume ID` to continue.
 
-5. **Vietnamese analysis**: Add `--lang vn` when the user communicates in Vietnamese or wants Vietnamese output.
+5. **Vietnamese analysis**: Add `--lang vn` when the user communicates in Vietnamese or wants Vietnamese output. For Fast Research, write the report in the user's language.
 
-6. **Combine with analyze**: For a complete workflow, use `deep-research` for the broad picture, then `analyze` for deep dives into specific tickers identified in the research.
+6. **Combine with analyze**: For a complete workflow, use deep research for the broad picture, then `analyze` for deep dives into specific tickers identified in the research.
 
 7. **The pipeline self-corrects**: The reviewer may reject the aggregator's output and request revisions. This is normal and ensures quality. The pipeline retries up to 3 times.
 
