@@ -37,7 +37,6 @@ aipa deep-research
 | `OPENAI_API_KEY` | Yes | — | API key for the LLM provider |
 | `OPENAI_BASE_URL` | No | OpenRouter | Base URL for OpenAI-compatible API |
 | `OPENAI_MODEL` | No | `openrouter/owl-alpha` | Model to use for analysis |
-| `DATABASE_URL` | No | `http://localhost:3000` | Backend API URL |
 
 Run `aipa setup` for interactive first-run configuration. Settings are saved to `~/.aipriceaction/settings.json`.
 

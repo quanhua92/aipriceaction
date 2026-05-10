@@ -31,11 +31,7 @@ aipa get-ohlcv-data VCB
 
 ## Environment Variables
 
-| Variable | Required | Default | Purpose |
-|---|---|---|---|
-| `DATABASE_URL` | No | `http://localhost:3000` | Backend API URL |
-
-No API key is needed for fetching data. Only the backend API must be reachable.
+None required. `get-ohlcv-data` fetches data from public S3 archives — no backend API or API key needed.
 
 ## Available Data Sources
 
@@ -228,7 +224,7 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 ## Tips for AI Agents
 
-1. **No API key needed**: `get-ohlcv-data` only hits the backend API, not the LLM. It works without `OPENAI_API_KEY`.
+1. **No API key or backend needed**: `get-ohlcv-data` fetches from public S3 archives. Works without `OPENAI_API_KEY` or a running backend.
 
 2. **Auto-uppercase**: Ticker symbols are automatically uppercased. `vcb`, `btcusdt`, `spy` all work.
 

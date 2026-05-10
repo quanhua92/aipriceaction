@@ -4,27 +4,38 @@ AI agent skills for financial market analysis using the [aipa CLI](https://aipri
 
 ## Installation
 
-Claude Code discovers skills from `.claude/skills/<name>/SKILL.md` (project-level) or `~/.claude/skills/<name>/SKILL.md` (user-level).
+### Option A: Clone and copy (fastest)
 
 ```bash
-# Option A: symlink (project-level)
-cd /path/to/your/project
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-data .claude/skills/aipa-data
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-research .claude/skills/aipa-research
+git clone --depth 1 https://github.com/quanhua92/aipriceaction.git /tmp/aipriceaction
 
-# Option B: symlink (user-level, available in all projects)
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-analyze ~/.claude/skills/aipa-analyze
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-data ~/.claude/skills/aipa-data
-ln -s /Volumes/data/workspace/aipriceaction/skills/aipa-research ~/.claude/skills/aipa-research
+# Project-level
+cp -r /tmp/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
+cp -r /tmp/aipriceaction/skills/aipa-data .claude/skills/aipa-data
+cp -r /tmp/aipriceaction/skills/aipa-research .claude/skills/aipa-research
 
-# Option C: copy (if you prefer)
-cp -r /Volumes/data/workspace/aipriceaction/skills/aipa-analyze .claude/skills/
-cp -r /Volumes/data/workspace/aipriceaction/skills/aipa-data .claude/skills/
-cp -r /Volumes/data/workspace/aipriceaction/skills/aipa-research .claude/skills/
+# Or personal (all projects)
+cp -r /tmp/aipriceaction/skills/aipa-analyze ~/.claude/skills/aipa-analyze
+cp -r /tmp/aipriceaction/skills/aipa-data ~/.claude/skills/aipa-data
+cp -r /tmp/aipriceaction/skills/aipa-research ~/.claude/skills/aipa-research
+
+rm -rf /tmp/aipriceaction
 ```
 
-After installing, restart Claude Code. You can verify skills are loaded by asking "what skills are available?"
+### Option B: Manual copy
+
+If you already have the repo cloned, copy the skill folders:
+
+```bash
+# Project-level (from your project root)
+cp -r /path/to/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
+cp -r /path/to/aipriceaction/skills/aipa-data .claude/skills/aipa-data
+cp -r /path/to/aipriceaction/skills/aipa-research .claude/skills/aipa-research
+git add .claude/skills/
+git commit -m "add aipa CLI skills for financial analysis"
+```
+
+Restart Claude Code after installing. Verify by asking "what skills are available?"
 
 ## Available Skills
 
@@ -35,8 +46,6 @@ After installing, restart Claude Code. You can verify skills are loaded by askin
 | **aipa-research** | Multi-agent deep research — sector-wide investigation, comprehensive market reports with supervisor/worker/reviewer pipeline |
 
 ## Example Prompts
-
-Once installed, try these prompts in Claude Code:
 
 ### Data Fetch (aipa-data)
 
@@ -69,7 +78,6 @@ Once installed, try these prompts in Claude Code:
 
 - Python 3.10+ with [uv](https://docs.astral.sh/uv/) installed
 - `OPENAI_API_KEY` environment variable set (or configured via `aipa setup`)
-- Backend API running (default: `http://localhost:3000`) or set `DATABASE_URL`
 
 Install the CLI:
 
