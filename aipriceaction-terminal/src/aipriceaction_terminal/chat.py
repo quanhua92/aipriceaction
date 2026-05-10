@@ -6,11 +6,11 @@ from pathlib import Path
 
 from textual import work
 from textual.binding import Binding
-from textual.widgets import RichLog, Input, Static
+from textual.widgets import Input, Static
 from textual.containers import Vertical, VerticalScroll
 from textual.screen import Screen
 
-from .widgets import ChatInput
+from .widgets import ChatInput, SafeRichLog
 from .utils import write_error, write_export_result, stream_agent_to_log
 from .session import SessionManager, ChatMessage
 from .analyze import run_tui_analyze
@@ -112,7 +112,7 @@ class ChatTab(Vertical):
     """
 
     def compose(self):
-        yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True, min_width=1)
+        yield SafeRichLog(id="chat-log", highlight=True, markup=True, wrap=True, min_width=1)
         yield Static(id="thinking-area", classes="hidden")
         yield ChatInput(id="chat-input")
 
@@ -124,7 +124,7 @@ class ChatTab(Vertical):
         self._resume_session = resume_session
 
     def on_mount(self) -> None:
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         log.can_focus = False
 
         if self._resume_session:
@@ -205,7 +205,7 @@ class ChatTab(Vertical):
         chat_input = self.query_one("#chat-input", ChatInput)
         chat_input.push_history(text)
 
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
 
         if text.startswith("/"):
             self._handle_slash_command(text)
@@ -226,7 +226,7 @@ class ChatTab(Vertical):
         cmd = parts[0].lower()
         arg = parts[1] if len(parts) > 1 else None
 
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
 
         if cmd == "/help":
             log.write(
@@ -303,7 +303,7 @@ class ChatTab(Vertical):
 
     def _handle_save(self, path_arg: str | None) -> None:
         """Handle /save command to export current session to markdown."""
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         try:
             output_path = Path(path_arg).expanduser() if path_arg else None
             result_path = self._session.export_to_markdown(output_path=output_path)
@@ -317,7 +317,7 @@ class ChatTab(Vertical):
 
     def _handle_resume(self, arg: str | None) -> None:
         """Handle /resume and /sessions commands."""
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
 
         sessions = self._session.list_sessions()
         if not sessions:
@@ -363,7 +363,7 @@ class ChatTab(Vertical):
         else:
             log.write(f"[bold red]No session found matching:[/bold red] {arg}\n")
 
-    def _load_session(self, session_id: str, log: RichLog) -> None:
+    def _load_session(self, session_id: str, log: SafeRichLog) -> None:
         """Load a session, replay messages into the log, and set up context restoration."""
         messages = self._session.load_session(session_id)
         if not messages:
@@ -408,7 +408,7 @@ class ChatTab(Vertical):
 
     def _handle_analyze(self, text: str, parts: list[str]) -> None:
         """Parse /analyze command and dispatch to _run_analyze."""
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         rest = text[len("/analyze"):].strip()
 
         if not rest:
@@ -467,7 +467,7 @@ class ChatTab(Vertical):
         custom_question: str | None = None,
     ) -> None:
         """Build context and stream AI analysis for a ticker."""
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         try:
             if not self.app._ensure_agent():
                 log.write(
@@ -516,16 +516,16 @@ class ChatTab(Vertical):
 
             await asyncio.to_thread(filepath.write_text, context, encoding="utf-8")
 
-            log = self.query_one("#chat-log", RichLog)
+            log = self.query_one("#chat-log", SafeRichLog)
             write_export_result(log, str(filepath), len(context))
         except Exception as e:
-            log = self.query_one("#chat-log", RichLog)
+            log = self.query_one("#chat-log", SafeRichLog)
             write_error(log, e)
 
     @work(exclusive=True)
     async def _run_agent_chat(self, message: str) -> None:
         """Stream an agent response into the chat log."""
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         if not self.app._ensure_agent():
             log.write(
                 "[bold yellow]API key not configured.[/bold yellow]\n"
@@ -556,7 +556,7 @@ class ChatTab(Vertical):
             return
         self._store_thinking(text)
         self._hide_thinking_area()
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")
 
     @work(exclusive=True)
@@ -564,7 +564,7 @@ class ChatTab(Vertical):
         """Run deep research pipeline and stream output to chat log."""
         from .deep_research import run_deep_research
 
-        log = self.query_one("#chat-log", RichLog)
+        log = self.query_one("#chat-log", SafeRichLog)
         try:
             if not self.app._ensure_agent():
                 log.write(

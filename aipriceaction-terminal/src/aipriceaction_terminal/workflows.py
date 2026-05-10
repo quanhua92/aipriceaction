@@ -3,13 +3,13 @@
 from textual import work
 from textual.containers import Vertical, Horizontal
 from textual.widgets import (
-    Static, RichLog, Input, Button, Select, TabbedContent, TabPane,
+    Static, Input, Button, Select, TabbedContent, TabPane,
 )
 from textual import on
 
 from .utils import write_error
 from .analyze import run_tui_analyze
-from .widgets import TickerSelect
+from .widgets import TickerSelect, SafeRichLog
 
 
 class AnalyzePane(Vertical):
@@ -63,7 +63,7 @@ class AnalyzePane(Vertical):
             )
         with Horizontal(classes="wf-row"):
             yield Button("Analyze", id="wf-analyze-btn", variant="primary")
-        yield RichLog(id="wf-output", highlight=True, markup=True)
+        yield SafeRichLog(id="wf-output", highlight=True, markup=True)
 
     def on_mount(self) -> None:
         interval_select = self.query_one("#wf-interval", Select)
@@ -71,7 +71,7 @@ class AnalyzePane(Vertical):
             interval_select.value = self.app.interval
         if hasattr(self.app, "builder"):
             self._populate_question_select()
-        self.query_one("#wf-output", RichLog).write(
+        self.query_one("#wf-output", SafeRichLog).write(
             "[dim italic]Select a ticker, pick a question (optional), and click Analyze.[/dim italic]\n"
         )
 
@@ -105,7 +105,7 @@ class AnalyzePane(Vertical):
         if not custom_question and question_select_value not in ("default", None):
             question_index = int(question_select_value)
 
-        log = self.query_one("#wf-output", RichLog)
+        log = self.query_one("#wf-output", SafeRichLog)
         q_label = custom_question[:50] if custom_question else f"template {question_index or 0}"
         log.write(f"[bold cyan]Analyze:[/bold cyan] {ticker} ({interval}) [{q_label}]")
         log.write("[dim]Building context and analyzing...[/dim]")
@@ -121,7 +121,7 @@ class AnalyzePane(Vertical):
         custom_question: str | None = None,
     ) -> None:
         """Build context and stream AI analysis for a ticker."""
-        log = self.query_one("#wf-output", RichLog)
+        log = self.query_one("#wf-output", SafeRichLog)
         try:
             if not self.app._ensure_agent():
                 log.write("[red]Error: No API key configured. Run 'aipa setup' or set OPENAI_API_KEY.[/red]")
@@ -172,10 +172,10 @@ class DeepResearchPane(Vertical):
                 id="dr-question",
             )
             yield Button("Deep Research", id="dr-btn", variant="success")
-        yield RichLog(id="dr-output", highlight=True, markup=True)
+        yield SafeRichLog(id="dr-output", highlight=True, markup=True)
 
     def on_mount(self) -> None:
-        self.query_one("#dr-output", RichLog).write(
+        self.query_one("#dr-output", SafeRichLog).write(
             "[bold yellow]Multi-Agent Deep Research[/bold yellow]\n\n"
             "[dim]This runs the multi-agent LangGraph pipeline:\n"
             "  supervisor -> parallel workers -> aggregator -> reviewer\n\n"
@@ -193,7 +193,7 @@ class DeepResearchPane(Vertical):
 
     def _do_deep_research(self) -> None:
         question = self.query_one("#dr-question", Input).value.strip()
-        log = self.query_one("#dr-output", RichLog)
+        log = self.query_one("#dr-output", SafeRichLog)
         log.write(
             "[bold cyan]Deep Research:[/bold cyan]"
             + (f" {question}" if question else "")
@@ -203,10 +203,10 @@ class DeepResearchPane(Vertical):
 
     @work(exclusive=True)
     async def _run_deep_research(self, question: str) -> None:
-        """Run deep research pipeline and stream output to the RichLog."""
+        """Run deep research pipeline and stream output to the SafeRichLog."""
         from .deep_research import run_deep_research
 
-        log = self.query_one("#dr-output", RichLog)
+        log = self.query_one("#dr-output", SafeRichLog)
         try:
             if not self.app._ensure_agent():
                 log.write("[red]Error: No API key configured. Run 'aipa setup' or set OPENAI_API_KEY.[/red]")
