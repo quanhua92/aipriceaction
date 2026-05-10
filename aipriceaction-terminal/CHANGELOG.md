@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.22] - 2026-05-10
+
+### Changed
+- `aipa deep-research` now defaults to context-only (market snapshot). Add `--run` to execute the full multi-agent pipeline (5-10 min)
+- Removed `--context-only` flag from `deep-research`; replaced with `--run`
+- Pipeline steps summary and `--run` hint printed after context-only snapshot and after full pipeline completion
+
+### Fixed
+- `end_node` in deep-research pipeline now falls back to last aggregator output when reviewer rejects all 3 rounds (previously threw KeyError on `final_report`)
+
 ## [0.1.21] - 2026-05-10
 
 ### Added
