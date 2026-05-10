@@ -26,7 +26,6 @@ _MODE_LABELS = {
 _MODE_TO_SOURCE = {
     "vn": "vn",
     "crypto": "crypto",
-    "global": "yahoo",
 }
 
 
@@ -37,6 +36,7 @@ class TickerRow:
     symbol: str
     name: str = ""
     group: str = ""
+    source: str = ""
     time: str = ""
     close: float = 0.0
     volume: float = 0.0
@@ -181,7 +181,7 @@ class TickerDetailPanel(VerticalScroll):
 
         self._content.border_title = f" {ticker.symbol} "
         self._content.update(Text("\n").join(lines))
-        self._load_chart(ticker.symbol)
+        self._load_chart(ticker.symbol, ticker.source or self.source)
 
     def show_placeholder(self, label: str) -> None:
         self._content.border_title = ""
@@ -191,13 +191,13 @@ class TickerDetailPanel(VerticalScroll):
         self._chart.show_loading()
 
     @work(exclusive=True)
-    async def _load_chart(self, symbol: str) -> None:
+    async def _load_chart(self, symbol: str, source: str = "") -> None:
         """Fetch OHLCV data and render chart asynchronously."""
         self._chart.show_loading()
         try:
             client = self.app.client
             df = await asyncio.to_thread(
-                client.get_ohlcv, ticker=symbol, interval="1D", limit=80, source=self.source,
+                client.get_ohlcv, ticker=symbol, interval="1D", limit=80, source=source or None,
             )
             if df is not None and not df.empty:
                 self._chart.build_chart(df)
@@ -276,7 +276,7 @@ class TickerDataTab(Vertical):
     def __init__(self, mode: str = "vn", **kwargs):
         super().__init__(**kwargs)
         self.mode = mode
-        self.source = _MODE_TO_SOURCE.get(mode, mode)
+        self.source = _MODE_TO_SOURCE.get(mode, mode) if mode != "global" else ""
         self._groups: list[GroupData] = []
         self._label = _MODE_LABELS.get(mode, mode)
 
@@ -354,7 +354,11 @@ class TickerDataTab(Vertical):
         try:
             client = self.app.client
             # Fetch tickers metadata (group, name) in a thread
-            tickers_info = await asyncio.to_thread(client.get_tickers, source=self.source)
+            if self.mode == "global":
+                all_tickers = await asyncio.to_thread(client.get_tickers, source=None)
+                tickers_info = [t for t in all_tickers if t.source not in ("vn", "crypto")]
+            else:
+                tickers_info = await asyncio.to_thread(client.get_tickers, source=self.source)
             # Fetch live data in a thread
             live_data = await asyncio.to_thread(client.fetch_live_data, "1D")
             if live_data is None:
@@ -362,10 +366,10 @@ class TickerDataTab(Vertical):
                 self.loading = False
                 return
 
-            # Build symbol→TickerInfo lookup
-            info_map: dict[str, tuple[str | None, str | None]] = {}
+            # Build symbol→TickerInfo lookup (group, name, source)
+            info_map: dict[str, tuple[str | None, str | None, str]] = {}
             for t in tickers_info:
-                info_map[t.ticker] = (t.group, t.name)
+                info_map[t.ticker] = (t.group, t.name, t.source)
 
             # Build TickerRow list from live data, filtered to this source
             rows: list[TickerRow] = []
@@ -375,12 +379,13 @@ class TickerDataTab(Vertical):
                 if not candles:
                     continue
                 c = candles[-1]  # latest candle
-                group, name = info_map[symbol]
+                group, name, src = info_map[symbol]
                 rows.append(
                     TickerRow(
                         symbol=symbol,
                         name=name or "",
                         group=group or "",
+                        source=src,
                         time=str(c.get("time", ""))[:10],
                         close=c.get("close", 0.0) or 0.0,
                         volume=c.get("volume", 0.0) or 0.0,
