@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.16] - 2026-05-10
+
+### Added
+- Ctrl+C to cancel agent streaming in ChatTab (works during chat, /analyze, /deep-research)
+- `--verbose` flag to `aipa analyze` to show thinking tokens (hidden by default)
+- `[result]` marker line before final response in CLI analyze output
+
+### Changed
+- CLI `aipa analyze` and `aipa get-ohlcv-data` auto-uppercase ticker symbols (lowercase input like `vic` now works)
+- Thinking preview line in CLI is properly cleared when thinking phase ends
+
 ## [0.1.15] - 2026-05-10
 
 ### Changed
