@@ -75,22 +75,34 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
 
     @tool
     def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 5) -> str:
-        """Fetch OHLCV data for a ticker. Returns formatted context with MA indicators and scores.
+        """Fetch historical OHLCV data with MA indicators and scores.
+
+        Accepts a single ticker or multiple comma-separated tickers.
 
         Args:
-            ticker: Ticker symbol (e.g. VCB, FPT, BTCUSDT).
+            ticker: Ticker symbol(s), comma-separated for multiple (e.g. "VCB" or "VHM,VIC,GEX,BID,VRE").
             interval: Time interval — "1D" (default), "1h", or "1m".
             limit: Number of bars to return (default 5).
         """
         _, builder = _ensure_clients(lang)
+        symbols = [t.strip() for t in ticker.split(",") if t.strip()]
         try:
-            ctx = builder.build(
-                ticker=ticker,
-                interval=interval,
-                limit=limit,
-                reference_ticker=None,
-                include_system_prompt=False,
-            )
+            if len(symbols) == 1:
+                ctx = builder.build(
+                    ticker=symbols[0],
+                    interval=interval,
+                    limit=limit,
+                    reference_ticker=None,
+                    include_system_prompt=False,
+                )
+            else:
+                ctx = builder.build(
+                    tickers=symbols,
+                    interval=interval,
+                    limit=limit,
+                    reference_ticker=None,
+                    include_system_prompt=False,
+                )
         except Exception as e:
             return f"Error fetching {ticker}: {e}"
         if not ctx.strip():
