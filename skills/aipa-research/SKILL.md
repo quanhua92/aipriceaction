@@ -80,7 +80,7 @@ Only skip asking if the user's request explicitly indicates they want the full C
 
 ## `aipa deep-research` — Multi-Agent Research Pipeline
 
-The default behavior (`aipa deep-research` without flags) fetches and prints a market snapshot of all VN tickers. Add `--run` to execute the full multi-agent pipeline.
+The default behavior (`aipa deep-research` without flags) fetches and prints a market snapshot. Add `--run` to execute the full multi-agent pipeline. Use `--source` to target different markets — the supervisor, workers, prompts, and default question all adapt to the selected source.
 
 ```bash
 aipa deep-research [QUESTION] [options]
@@ -92,6 +92,7 @@ aipa deep-research [QUESTION] [options]
 |---|---|---|
 | `QUESTION` | market overview | Research question (optional) |
 | `--run` | off | Run the full multi-agent pipeline (5-10 min). Without this, only dumps market snapshot. |
+| `--source` | `vn` | Data source: `vn`, `crypto`, `global`, `sjc` |
 | `--resume ID` | — | Resume from a checkpoint session ID |
 | `--output FILE` | — | Save final report to file |
 | `--lang` | saved setting | Language: `en` or `vn` |
@@ -102,11 +103,20 @@ aipa deep-research [QUESTION] [options]
 # Market snapshot only (default, fast, no API key needed)
 aipa deep-research
 
+# Crypto market snapshot
+aipa deep-research --source crypto
+
 # Market snapshot with a custom question in the output
 aipa deep-research "Research banking sector"
 
 # Run the FULL multi-agent pipeline (slow, 5-10 min, requires API key)
 aipa deep-research --run
+
+# Full pipeline for global stocks
+aipa deep-research --source global --run
+
+# Full pipeline for crypto
+aipa deep-research --source crypto --run
 
 # Full pipeline with a custom research question
 aipa deep-research --run "Deep research on the banking sector: analyze top 10 banks by market cap, assess trend direction, VPA signals, MA momentum, and identify leaders vs laggards"
@@ -152,9 +162,15 @@ Final Report
 
 ### Pipeline Stages
 
-1. **Market Snapshot**: Fetches latest OHLCV data for all VN tickers to identify active sectors and tickers.
+1. **Market Snapshot**: Fetches latest OHLCV data for all tickers from the selected source (`--source`, default `vn`) to identify active sectors and tickers.
 
-2. **Supervisor**: Analyzes the research question and market snapshot. Decomposes into 3-5 sector-specific subtasks. Always includes Banking, Securities, and Real Estate. Adds 0-2 additional sectors based on market activity.
+2. **Supervisor**: Analyzes the research question and market snapshot. Decomposes into 3-5 sector-specific subtasks. Mandatory sectors depend on the source:
+   - **VN**: Banking, Securities, Real Estate
+   - **Crypto**: Layer 1 (BTC, ETH, SOL), DeFi, AI tokens
+   - **Global/Yahoo**: Technology, Financials, Energy
+   - **SJC**: Gold / Precious Metals
+
+   Adds 0-2 additional sectors based on market activity.
 
 3. **Parallel Workers**: Each worker handles one sector:
    - Fetches OHLCV data for each assigned ticker (limit=20 bars)
@@ -183,9 +199,9 @@ Research sessions are checkpointed to disk. Each session gets a unique ID. Inter
 
 ```
 /tmp/aipriceaction-checkpoints/{session_id}/
-├── worker_Banking.md
-├── worker_Securities.md
-├── worker_Real_Estate.md
+├── worker_Technology.md
+├── worker_Financials.md
+├── worker_Energy.md
 ├── worker_Additional_Sector.md
 ├── aggregator_output.md
 └── final_report.md
@@ -200,10 +216,27 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 This is the **recommended** approach for research. Run `aipa deep-research` to get the market snapshot, then you (the AI agent) orchestrate the multi-agent pipeline using subagents. This produces equally thorough results and does not require an API key or `aipa setup`.
 
 ### Step 1 — Fetch market snapshot
-Run `aipa deep-research` (without `--run`) to fetch the latest market snapshot of all VN tickers. This gives you the market context to distribute to workers.
+Run `aipa deep-research` (without `--run`) to fetch the latest market snapshot. Use `--source` to select the market (default: `vn`). This gives you the market context to distribute to workers.
+
+```bash
+# VN stocks (default)
+aipa deep-research
+
+# Crypto
+aipa deep-research --source crypto
+
+# Global stocks
+aipa deep-research --source global
+```
 
 ### Step 2 — Supervisor (you)
-Using the market snapshot, decompose the research question into 3-5 sector-specific subtasks. Always include Banking, Securities, and Real Estate. Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
+Using the market snapshot, decompose the research question into 3-5 sector-specific subtasks. Mandatory sectors depend on the source:
+- **VN**: Banking, Securities, Real Estate
+- **Crypto**: Layer 1, DeFi, AI tokens
+- **Global**: Technology, Financials, Energy
+- **SJC**: Gold / Precious Metals
+
+Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
 
 ### Step 3 — Spawn worker subagents (in parallel)
 For each sector subtask, spawn a separate subagent (use the Task tool) that:
@@ -306,6 +339,8 @@ When presenting results to the user, always use the stdout output (the final app
 
 7. **The pipeline self-corrects**: The reviewer may reject the aggregator's output and request revisions. This is normal and ensures quality. The pipeline retries up to 3 times.
 
-8. **Mandatory sectors**: Banking, Securities, and Real Estate are always included. The supervisor adds 0-2 more sectors based on market conditions. You cannot customize which sectors are analyzed.
+8. **Mandatory sectors depend on source**: Each source has its own set of mandatory sectors (e.g., VN uses Banking/Securities/Real Estate, crypto uses Layer 1/DeFi/AI tokens, global uses Technology/Financials/Energy). The supervisor adds 0-2 more sectors based on market conditions.
 
 9. **Auto-uppercase**: Ticker symbols in questions are automatically processed. The pipeline handles uppercase conversion internally.
+
+10. **Use `--source` for non-VN markets**: Add `--source crypto`, `--source global`, or `--source sjc` to research other markets. The supervisor, workers, tools, and default question all adapt to the selected source automatically.

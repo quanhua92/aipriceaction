@@ -60,8 +60,14 @@ aipa analyze VCB FPT VIC --interval 1D
 # Market snapshot only (default, fast, no API key needed)
 aipa deep-research
 
+# Market snapshot for crypto
+aipa deep-research --source crypto
+
 # Run the full multi-agent deep research pipeline (5-10 min)
 aipa deep-research --run
+
+# Full pipeline for global stocks
+aipa deep-research --source global --run
 
 # Full pipeline with a custom question and save report to file
 aipa deep-research --run "Which sectors are leading the market?" --output report.md
@@ -153,14 +159,20 @@ aipa analyze VCB --lang en
 
 ### `aipa deep-research`
 
-Multi-agent deep research pipeline: supervisor decomposes into sector subtasks, parallel workers fetch data and analyze, aggregator synthesizes, and reviewer validates data integrity. By default, dumps a market snapshot only. Add `--run` to execute the full pipeline (takes 5-10 minutes).
+Multi-agent deep research pipeline: supervisor decomposes into sector subtasks, parallel workers fetch data and analyze, aggregator synthesizes, and reviewer validates data integrity. By default, dumps a market snapshot only. Add `--run` to execute the full pipeline (takes 5-10 minutes). Use `--source` to target different markets — the supervisor, workers, and default question all adapt to the selected source.
 
 ```
-# Default: market snapshot only (fast, no API key needed)
+# Default: VN market snapshot only (fast, no API key needed)
 aipa deep-research
+
+# Crypto market snapshot
+aipa deep-research --source crypto
 
 # Run the full multi-agent pipeline
 aipa deep-research --run
+
+# Full pipeline for global stocks
+aipa deep-research --source global --run
 
 # Full pipeline with custom research question
 aipa deep-research --run "Compare banking vs real estate sectors"
@@ -178,6 +190,7 @@ aipa deep-research --run --lang vn
 | Flag | Description |
 |---|---|
 | `--run` | Run the full multi-agent pipeline (5-10 min). Default is market snapshot only. |
+| `--source` | Data source: `vn` (default), `crypto`, `global`, `sjc` |
 | `--resume ID` | Resume from a checkpoint session ID |
 | `--output FILE` | Save final report to file |
 | `--lang` | Language: `en` or `vn` (default: saved setting) |
