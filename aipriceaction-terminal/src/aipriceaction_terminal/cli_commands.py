@@ -155,19 +155,9 @@ async def cmd_analyze(args) -> None:
 def cmd_get_ohlcv(args) -> None:
     from aipriceaction import AIPriceAction
 
-    args.ticker = args.ticker.upper()
-
+    raw_tickers = [t.upper() for t in args.tickers]
     client = AIPriceAction()
-    df = client.get_ohlcv(
-        ticker=args.ticker,
-        interval=args.interval,
-        limit=args.limit,
-        start_date=args.start_date,
-        end_date=args.end_date,
-        source=args.source,
-        ma=args.ma,
-        ema=args.ema,
-    )
+
     if not getattr(args, "no_system_prompt", False):
         from aipriceaction.system import get_system_prompt
 
@@ -188,7 +178,31 @@ def cmd_get_ohlcv(args) -> None:
         for line in comm_lines[:3]:
             print(line)
         print()
-    print(df.to_string(index=False))
+
+    if len(raw_tickers) == 1:
+        df = client.get_ohlcv(
+            ticker=raw_tickers[0],
+            interval=args.interval,
+            limit=args.limit,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            source=args.source,
+            ma=args.ma,
+            ema=args.ema,
+        )
+        print(df.to_string(index=False))
+    else:
+        df = client.get_ohlcv(
+            tickers=raw_tickers,
+            interval=args.interval,
+            limit=args.limit,
+            start_date=args.start_date,
+            end_date=args.end_date,
+            source=args.source,
+            ma=args.ma,
+            ema=args.ema,
+        )
+        print(df.to_string(index=False))
 
 
 def cmd_resume(args) -> None:

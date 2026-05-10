@@ -55,14 +55,14 @@ None required. `get-ohlcv-data` fetches data from public S3 archives — no back
 Fetch raw OHLCV price data without AI analysis. Outputs price data with optional moving averages.
 
 ```bash
-aipa get-ohlcv-data TICKER [options]
+aipa get-ohlcv-data TICKER [TICKERS...] [options]
 ```
 
 ### Flags
 
 | Flag | Default | Description |
 |---|---|---|
-| `TICKER` | — | Ticker symbol (auto-uppercased) |
+| `TICKER [TICKERS...]` | — | One or more ticker symbols (auto-uppercased) |
 | `--interval` | `1D` | Time interval: `1m`, `1h`, `1D` |
 | `--limit N` | — | Number of bars |
 | `--start-date` | — | Start date (e.g. `2025-01-01`) |
@@ -146,19 +146,14 @@ aipa get-ohlcv-data BNBUSDT --limit 50 --ema
 ### Vietnamese Stocks
 
 ```bash
-# Banking sector quick look
-aipa get-ohlcv-data VCB --limit 30
-aipa get-ohlcv-data TCB --limit 30
-aipa get-ohlcv-data MBB --limit 30
-aipa get-ohlcv-data CTG --limit 30
+# Banking sector — all in one call
+aipa get-ohlcv-data VCB TCB MBB CTG --limit 30
+
+# Blue chips
+aipa get-ohlcv-data VIC FPT VNM --limit 50
 
 # Market index
 aipa get-ohlcv-data VNINDEX --limit 50
-
-# Blue chips
-aipa get-ohlcv-data VIC --limit 50
-aipa get-ohlcv-data FPT --limit 50
-aipa get-ohlcv-data VNM --limit 50
 ```
 
 ### Global Stocks
@@ -238,4 +233,4 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 7. **`--ema` flag controls SMA vs EMA**: By default, EMA is shown. Add `--ema` to switch to SMA (yes, the flag name is counterintuitive — it means "use EMA calculation" which overrides the default).
 
-8. **One ticker per call**: Unlike `analyze`, `get-ohlcv-data` takes a single ticker. To compare multiple tickers, run multiple commands.
+8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.

@@ -69,6 +69,9 @@ aipa deep-research --resume <session-id>
 # Fetch raw OHLCV data as a table
 aipa get-ohlcv-data VCB --interval 1D --limit 10
 
+# Fetch multiple tickers at once
+aipa get-ohlcv-data VCB TCB MBB --limit 10
+
 # Fetch with date range and no moving averages
 aipa get-ohlcv-data VCB --start-date 2026-04-01 --end-date 2026-04-30 --no-ma
 
@@ -178,6 +181,8 @@ aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
 | `--source` | Filter by source: `vn` or `crypto` |
 | `--ma` / `--no-ma` | Include/exclude moving averages (default: included) |
 | `--ema` | Use EMA instead of SMA |
+
+Note: Pass multiple space-separated ticker symbols (e.g. `VCB TCB MBB`) to fetch them in one call.
 
 ### `aipa setup`
 

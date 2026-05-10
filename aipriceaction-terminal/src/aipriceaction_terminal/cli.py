@@ -41,7 +41,7 @@ def run():
     # aipa get-ohlcv-data TICKER [--interval 1D] [--limit N]
     #   [--start-date] [--end-date] [--source] [--ma] [--ema]
     p_ohlcv = sub.add_parser("get-ohlcv-data", help="Fetch raw OHLCV data")
-    p_ohlcv.add_argument("ticker", help="Ticker symbol")
+    p_ohlcv.add_argument("tickers", nargs="+", help="Ticker symbol(s)")
     p_ohlcv.add_argument("--interval", default="1D")
     p_ohlcv.add_argument("--limit", type=int, default=None)
     p_ohlcv.add_argument("--start-date", default=None)
