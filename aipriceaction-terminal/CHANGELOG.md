@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.20] - 2026-05-10
+## [0.1.21] - 2026-05-10
+
+### Added
+- `aipa ticker-list` command to list available tickers with name, group, exchange, and source metadata
+- `--source` filter to `aipa live-data` (vn, crypto, global/yahoo, sjc)
+- `SJC` -> `SJC-GOLD` ticker alias across analyze, get-ohlcv-data, and live-data
+
+### Fixed
+- `--source global` now correctly maps to `yahoo` internally, preventing hangs when fetching global/Yahoo tickers
+EOF
+
 
 ### Added
 - `aipa live-data` command to fetch the latest candle for all tickers, sorted by trading value (close × volume) descending
