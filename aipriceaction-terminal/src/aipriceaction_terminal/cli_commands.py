@@ -39,7 +39,7 @@ async def cmd_analyze(args) -> None:
     build_kwargs = dict(
         interval=args.interval,
         limit=args.limit if args.limit is not None else 20,
-        source=args.source,
+        source=_resolve_source(args.source),
         start_date=args.start_date,
         end_date=args.end_date,
         reference_ticker=args.reference_ticker,
@@ -186,7 +186,7 @@ def cmd_get_ohlcv(args) -> None:
             limit=args.limit,
             start_date=args.start_date,
             end_date=args.end_date,
-            source=args.source,
+            source=_resolve_source(args.source),
             ma=args.ma,
             ema=args.ema,
         )
@@ -198,7 +198,7 @@ def cmd_get_ohlcv(args) -> None:
             limit=args.limit,
             start_date=args.start_date,
             end_date=args.end_date,
-            source=args.source,
+            source=_resolve_source(args.source),
             ma=args.ma,
             ema=args.ema,
         )
@@ -207,9 +207,17 @@ def cmd_get_ohlcv(args) -> None:
 
 _TICKER_ALIASES = {"SJC": "SJC-GOLD"}
 
+_SOURCE_ALIASES = {"global": "yahoo"}
+
 
 def _resolve_tickers(raw: list[str]) -> list[str]:
     return [_TICKER_ALIASES.get(t.upper(), t.upper()) for t in raw]
+
+
+def _resolve_source(source: str | None) -> str | None:
+    if source is None:
+        return None
+    return _SOURCE_ALIASES.get(source, source)
 
 
 def cmd_live_data(args) -> None:
@@ -282,7 +290,7 @@ def cmd_ticker_list(args) -> None:
     from aipriceaction import AIPriceAction
 
     client = AIPriceAction()
-    tickers = client.get_tickers(source=args.source)
+    tickers = client.get_tickers(source=_resolve_source(args.source))
 
     if args.group:
         tickers = [t for t in tickers if (t.group or "") == args.group]

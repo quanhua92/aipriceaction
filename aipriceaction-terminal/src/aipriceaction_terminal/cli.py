@@ -65,11 +65,11 @@ def run():
     p_live.add_argument("tickers", nargs="*", help="Ticker symbol(s) (omit for top N by trading value)")
     p_live.add_argument("--top", type=int, default=50, help="Number of top tickers when no tickers specified (default: 50)")
     p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m"])
-    p_live.add_argument("--source", default=None, choices=["vn", "crypto", "global", "sjc"], help="Filter by data source")
+    p_live.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source")
 
     # aipa ticker-list [--source vn] [--group NGAN_HANG]
     p_tlist = sub.add_parser("ticker-list", help="List available ticker symbols and metadata")
-    p_tlist.add_argument("--source", default=None, choices=["vn", "crypto", "global", "sjc"], help="Filter by data source")
+    p_tlist.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source")
     p_tlist.add_argument("--group", default=None, help="Filter by group (e.g. NGAN_HANG, CHUNG_KHOAN)")
     p_tlist.add_argument("--compact", action="store_true", help="Output symbols only, comma-separated")
 
