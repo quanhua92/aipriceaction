@@ -66,7 +66,8 @@ async def run_tui_analyze(
     message = (
         f"<analysis_context>\n{context}\n</analysis_context>\n\n"
         f"{question}\n\n"
-        f"Base your analysis ONLY on the provided data above."
+        f"You have tools available (get_live_data, get_ohlcv_data, get_ticker_list). "
+        f"Use them if you need additional data beyond what is provided above."
     )
 
     if prefix:

@@ -76,32 +76,52 @@ async def cmd_analyze(args) -> None:
     print(f"[build] Context ready ({len(context):,} chars, {build_elapsed:.1f}s)", file=sys.stderr)
     print(f"[analyze] Asking:\n{question}", file=sys.stderr)
 
-    # LLM analysis with retry on empty/transient failures
-    max_attempts = 3
-    response = ""
-    last_error: Exception | None = None
-    for attempt in range(max_attempts):
-        try:
-            response = await asyncio.to_thread(builder.answer, question)
-        except Exception as e:
-            last_error = e
-            print(f"[error] Attempt {attempt + 1}/{max_attempts}: {type(e).__name__}: {e}", file=sys.stderr)
-            if attempt < max_attempts - 1:
-                await asyncio.sleep(2)
-            continue
-        if response.strip():
-            break
-        print(f"[warn] Attempt {attempt + 1}/{max_attempts}: LLM returned empty response", file=sys.stderr)
-        last_error = RuntimeError("LLM returned empty response")
-    else:
-        elapsed = time.time() - t0
-        print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
-        if last_error:
-            print(f"[error] Failed after {max_attempts} attempts: {last_error}", file=sys.stderr)
+    # Agent-based analysis with tool support
+    from aipriceaction.settings import settings as sdk_settings
+    if not sdk_settings.openai_api_key:
+        print("[error] OPENAI_API_KEY not set. Cannot run agent analysis.", file=sys.stderr)
         sys.exit(1)
+
+    from .agents import AgentSession, AgentConfig
+    from .agents.callbacks import StreamEventType
+
+    agent_config = AgentConfig(lang=lang)
+    session = AgentSession(agent_config)
+
+    message = (
+        f"<analysis_context>\n{context}\n</analysis_context>\n\n"
+        f"{question}\n\n"
+        f"You have tools available (get_live_data, get_ohlcv_data, get_ticker_list). "
+        f"Use them if you need additional data beyond what is provided above."
+    )
+
+    tokens: list[str] = []
+    current_tool: str | None = None
+    async for event in session.stream(message):
+        if event.type == StreamEventType.TOOL_CALL_START:
+            print(f"[tool] {event.content}", file=sys.stderr)
+            current_tool = event.content
+        elif event.type == StreamEventType.TOOL_RESULT:
+            if current_tool:
+                print(f"[tool-result] {event.content}", file=sys.stderr)
+                current_tool = None
+        elif event.type == StreamEventType.THINKING:
+            print(f"[thinking] {event.content[:200]}...", file=sys.stderr)
+        elif event.type == StreamEventType.ERROR:
+            print(f"[error] {event.content}", file=sys.stderr)
+        elif event.type == StreamEventType.TOKEN:
+            tokens.append(event.content)
+        elif event.type == StreamEventType.DONE:
+            pass
 
     elapsed = time.time() - t0
     print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
+
+    response = "".join(tokens).strip()
+    if not response:
+        print("[error] Agent returned empty response.", file=sys.stderr)
+        sys.exit(1)
+
     print()
     print(response)
 
