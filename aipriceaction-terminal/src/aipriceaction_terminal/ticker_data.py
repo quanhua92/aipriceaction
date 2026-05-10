@@ -197,7 +197,7 @@ class TickerDetailPanel(VerticalScroll):
         try:
             client = self.app.client
             df = await asyncio.to_thread(
-                client.get_ohlcv, ticker=symbol, interval="1D", limit=30, source=self.source,
+                client.get_ohlcv, ticker=symbol, interval="1D", limit=80, source=self.source,
             )
             if df is not None and not df.empty:
                 self._chart.build_chart(df)
@@ -261,7 +261,7 @@ class TickerDataTab(Vertical):
         height: 1fr;
     }
     #td-left {
-        width: 20%;
+        width: 15%;
         min-width: 30;
         border-right: solid $primary;
     }
