@@ -590,7 +590,10 @@ def review_router(state: OverallState) -> str:
 
 
 def end_node(state: OverallState) -> dict:
-    """Passthrough — final_report is already set by reviewer_node."""
+    """Passthrough — final_report is set by reviewer_node on approve,
+    or falls back to the last aggregator output when max rounds reached."""
+    if not state.get("final_report"):
+        return {"final_report": state.get("analysis", "")}
     return {}
 
 

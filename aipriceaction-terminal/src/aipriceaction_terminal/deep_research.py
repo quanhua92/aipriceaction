@@ -585,6 +585,15 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
     return graph.compile(checkpointer=checkpointer)
 
 
+_PIPELINE_STEPS = """## Pipeline Steps
+
+  [1] Fetch market snapshot — all VN tickers, latest daily bar
+  [2] Supervisor agent — decomposes question into sector-specific subtasks
+  [3] Worker agents (parallel) — research each subtask with tool-calling (get_ohlcv_data, get_live_data, get_ticker_list)
+  [4] Aggregator — merges worker results into unified draft report (retries up to 3 rounds on reviewer feedback)
+  [5] Reviewer — checks data integrity, approves or rejects with feedback"""
+
+
 # -- Questions --
 
 
@@ -646,20 +655,13 @@ async def run_deep_research(
         _out("")
         _out("No API key configured. Cannot run the research pipeline.")
         _out("")
-        _out("## Pipeline Steps")
+        _out(_PIPELINE_STEPS)
         _out("")
-        _out("  [1] Fetch market snapshot — all VN tickers, latest daily bar")
-        _out("  [2] Supervisor agent — decomposes question into sector-specific subtasks")
-        _out("  [3] Worker agents (parallel) — research each subtask with tool-calling (get_ohlcv_data, get_live_data, get_ticker_list)")
-        _out("  [4] Aggregator — merges worker results into unified draft report")
-        _out("  [5] Reviewer — checks accuracy, adds missing analysis, produces final report")
+        _out("Run 'aipa setup' to configure your API key, then re-run:")
         _out("")
-        effective_q = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
-        _out(f"  Question: {effective_q}")
-        _out(f"  Lang:     {effective_lang}")
+        _out("  aipa deep-research --run")
         _out("")
-        _out("Run 'aipa setup' to configure your API key, then re-run this command.")
-        return
+        return ""
 
     _out("# AIPriceAction Multi-Agent Research")
     _out("")
@@ -694,6 +696,15 @@ async def run_deep_research(
 
     if not run_pipeline:
         print(market_snapshot)
+        print("")
+        print("---")
+        print("")
+        print("This is a market snapshot only. To run the full multi-agent pipeline:")
+        print("")
+        print("  aipa deep-research --run")
+        print("")
+        print(_PIPELINE_STEPS)
+        print("")
         return market_snapshot
 
     _out("[!] The full multi-agent pipeline typically takes 5-10 minutes.")
@@ -754,7 +765,10 @@ async def run_deep_research(
     _out("")
 
     elapsed = time.time() - started_at
-    _out(f"[4] Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
+    _out(f"Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
+    _out("")
+    _out(_PIPELINE_STEPS)
+    _out("")
 
     if output_file:
         output_path = Path(output_file).expanduser()
