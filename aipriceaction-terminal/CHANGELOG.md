@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.23] - 2026-05-11
+
+### Added
+- `--source` flag to `aipa deep-research` (vn, crypto, global, sjc) — supervisor, workers, tools, prompts, and default questions all adapt to the selected source
+- Per-source mandatory sectors: VN (Banking, Securities, Real Estate), crypto (Layer 1, DeFi, AI tokens), global (Technology, Financials, Energy), SJC (Gold / Precious Metals)
+- Source-specific default research questions for all four data sources in both EN and VN
+
+### Changed
+- `deep-research` pipeline steps description now says "tickers from selected source" instead of "all VN tickers"
+- Worker tools `get_ohlcv_data` and `get_ticker_list` now pass/filter by the active source
+
 ## [0.1.22] - 2026-05-10
 
 ### Changed
