@@ -109,13 +109,15 @@ aipriceaction/src/
 When bumping the Python SDK or CLI, follow this checklist:
 
 ### Python SDK (`aipriceaction`)
-1. Bump version in `sdk/aipriceaction-python/src/aipriceaction/__init__.py`
-2. Add entry to `sdk/aipriceaction-python/CHANGELOG.md`
+1. Run `git log` to review commits since the last version bump
+2. Bump version in `sdk/aipriceaction-python/src/aipriceaction/__init__.py`
+3. Add entry to `sdk/aipriceaction-python/CHANGELOG.md`
 
 ### Python CLI (`aipa-cli` / `aipriceaction-terminal`)
-1. Bump version in `aipriceaction-terminal/src/aipriceaction_terminal/__init__.py`
-2. Add entry to `aipriceaction-terminal/CHANGELOG.md`
-3. If the CLI now needs a newer SDK minimum, update `requires` in `aipriceaction-terminal/pyproject.toml`
+1. Run `git log` to review commits since the last version bump
+2. Bump version in `aipriceaction-terminal/src/aipriceaction_terminal/__init__.py`
+3. Add entry to `aipriceaction-terminal/CHANGELOG.md`
+4. If the CLI now needs a newer SDK minimum, update `requires` in `aipriceaction-terminal/pyproject.toml`
 
 ### Commit
 - Commit all version bumps and changelog updates together (conventional commit message, e.g. `chore: bump aipa-cli to 0.1.7`)
