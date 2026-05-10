@@ -359,14 +359,14 @@ def cmd_deep_research(
     resume: str | None = None,
     output: str | None = None,
     lang: str | None = None,
-    context_only: bool = False,
+    run_pipeline: bool = False,
 ) -> None:
     from .deep_research import run_deep_research
 
     effective_lang = _resolve_lang(lang)
     asyncio.run(run_deep_research(
         question=question, resume_id=resume, output_file=output, lang=effective_lang,
-        context_only=context_only,
+        run_pipeline=run_pipeline,
     ))
 
 

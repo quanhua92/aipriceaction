@@ -58,7 +58,7 @@ def run():
     p_deep.add_argument("--resume", default=None, help="Resume from checkpoint session ID")
     p_deep.add_argument("--output", default=None, help="Save final report to file")
     p_deep.add_argument("--lang", default=None, choices=["en", "vn"], help="Override language")
-    p_deep.add_argument("--context-only", action="store_true", help="Dump market snapshot without running the pipeline (no API key needed)")
+    p_deep.add_argument("--run", action="store_true", help="Run the full multi-agent pipeline (5-10 min). Default is context-only (market snapshot).")
 
     # aipa live-data [tickers...] [--interval 1D] [--top 50]
     p_live = sub.add_parser("live-data", help="Latest candle with top tickers by trading value")
@@ -100,7 +100,7 @@ def run():
         from .cli_commands import cmd_ticker_list
         cmd_ticker_list(args)
     elif args.command == "deep-research":
-        if not getattr(args, "context_only", False):
+        if getattr(args, "run", False):
             _ensure_setup()
         from .cli_commands import cmd_deep_research
         cmd_deep_research(
@@ -108,7 +108,7 @@ def run():
             resume=args.resume,
             output=args.output,
             lang=args.lang,
-            context_only=args.context_only,
+            run_pipeline=args.run,
         )
     elif args.command == "resume":
         from .cli_commands import cmd_resume

@@ -219,6 +219,7 @@ class DeepResearchPane(Vertical):
                 question=question,
                 lang=getattr(self.app, "lang", None),
                 output=_output,
+                run_pipeline=True,
             )
         except SystemExit:
             log.write("[bold red]OPENAI_API_KEY is not set.[/bold red]\n")

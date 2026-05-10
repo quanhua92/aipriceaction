@@ -562,6 +562,9 @@ def _build_graph(checkpointer=None, lang: str = "en", output: Callable[[str], No
         return "aggregator"
 
     def end_node(state: OverallState) -> dict:
+        # If reviewer never approved (max rounds), use the last analysis as final report
+        if not state.get("final_report"):
+            return {"final_report": state.get("analysis", "")}
         return {}
 
     # Build graph
@@ -618,7 +621,7 @@ async def run_deep_research(
     output_file: str | None = None,
     lang: str | None = None,
     output: Callable[[str], None] | None = None,
-    context_only: bool = False,
+    run_pipeline: bool = False,
 ) -> str:
     """Run the multi-agent deep research pipeline.
 
@@ -628,15 +631,17 @@ async def run_deep_research(
         output_file: Save final report to this file path.
         lang: Override language (defaults to settings.ai_context_lang).
         output: Callback for progress output. Defaults to print() for CLI compat.
+        run_pipeline: If False (default), fetch and print market snapshot only.
+            If True, run the full multi-agent pipeline (takes 5-10 min).
 
     Returns:
-        The final report text.
+        The final report text, or market snapshot if run_pipeline is False.
     """
     started_at = time.time()
     effective_lang = lang or settings.ai_context_lang
-    _out = output or (lambda m: print(m, file=sys.stderr) if context_only else print(m))
+    _out = output or (lambda m: print(m, file=sys.stderr) if not run_pipeline else print(m))
 
-    if not settings.openai_api_key and not context_only:
+    if not settings.openai_api_key and run_pipeline:
         _out("# AIPriceAction Multi-Agent Research (dry run)")
         _out("")
         _out("No API key configured. Cannot run the research pipeline.")
@@ -687,9 +692,12 @@ async def run_deep_research(
         _out(f"    Tickers: {len(tickers)}")
         _out("")
 
-    if context_only:
+    if not run_pipeline:
         print(market_snapshot)
         return market_snapshot
+
+    _out("[!] The full multi-agent pipeline typically takes 5-10 minutes.")
+    _out("")
 
     effective_question = question or _DEFAULT_QUESTIONS.get(effective_lang, _DEFAULT_QUESTIONS["en"])
 

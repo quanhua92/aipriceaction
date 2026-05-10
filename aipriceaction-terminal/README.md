@@ -57,14 +57,17 @@ aipa analyze BTCUSDT --interval 1h --ma-type sma
 # Analyze multiple tickers at once
 aipa analyze VCB FPT VIC --interval 1D
 
-# Run multi-agent deep research pipeline
+# Market snapshot only (default, fast, no API key needed)
 aipa deep-research
 
-# Deep research with a custom question and save report to file
-aipa deep-research "Which sectors are leading the market?" --output report.md
+# Run the full multi-agent deep research pipeline (5-10 min)
+aipa deep-research --run
+
+# Full pipeline with a custom question and save report to file
+aipa deep-research --run "Which sectors are leading the market?" --output report.md
 
 # Resume a previous deep-research session from checkpoint
-aipa deep-research --resume <session-id>
+aipa deep-research --run --resume <session-id>
 
 # Fetch raw OHLCV data as a table
 aipa get-ohlcv-data VCB --interval 1D --limit 10
@@ -150,34 +153,34 @@ aipa analyze VCB --lang en
 
 ### `aipa deep-research`
 
-Multi-agent deep research pipeline: supervisor decomposes into sector subtasks, parallel workers fetch data and analyze, aggregator synthesizes, and reviewer validates data integrity.
+Multi-agent deep research pipeline: supervisor decomposes into sector subtasks, parallel workers fetch data and analyze, aggregator synthesizes, and reviewer validates data integrity. By default, dumps a market snapshot only. Add `--run` to execute the full pipeline (takes 5-10 minutes).
 
 ```
-# Default: comprehensive market overview with all VN sectors
+# Default: market snapshot only (fast, no API key needed)
 aipa deep-research
 
-# Custom research question
-aipa deep-research "Compare banking vs real estate sectors"
+# Run the full multi-agent pipeline
+aipa deep-research --run
+
+# Full pipeline with custom research question
+aipa deep-research --run "Compare banking vs real estate sectors"
 
 # Save final report to file
-aipa deep-research --output ~/reports/market-analysis.md
+aipa deep-research --run --output ~/reports/market-analysis.md
 
 # Resume from a previous checkpoint session
-aipa deep-research --resume 019e0cbb-0466-fa9f-d68c-2da40d35a68f
+aipa deep-research --run --resume 019e0cbb-0466-fa9f-d68c-2da40d35a68f
 
-# Dump market snapshot without running the pipeline (no API key needed)
-aipa deep-research --context-only
-
-# Force Vietnamese output
-aipa deep-research --lang vn
+# Force Vietnamese output (full pipeline)
+aipa deep-research --run --lang vn
 ```
 
 | Flag | Description |
 |---|---|
+| `--run` | Run the full multi-agent pipeline (5-10 min). Default is market snapshot only. |
 | `--resume ID` | Resume from a checkpoint session ID |
 | `--output FILE` | Save final report to file |
 | `--lang` | Language: `en` or `vn` (default: saved setting) |
-| `--context-only` | Dump market snapshot without running the pipeline (no API key needed) |
 
 ### `aipa get-ohlcv-data`
 
@@ -300,8 +303,8 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa setup` | Runs setup |
 | `aipa` | Auto-runs setup first |
 | `aipa analyze VCB` | Auto-runs setup first |
-| `aipa deep-research` | Auto-runs setup first |
-| `aipa deep-research --context-only` | No setup needed |
+| `aipa deep-research` | No setup needed (market snapshot only) |
+| `aipa deep-research --run` | Auto-runs setup first |
 
 ## TUI
 

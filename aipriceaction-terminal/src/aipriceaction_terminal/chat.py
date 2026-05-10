@@ -592,6 +592,7 @@ class ChatTab(Vertical):
                 question=question,
                 lang=getattr(self.app, "lang", None),
                 output=_output,
+                run_pipeline=True,
             )
             # Persist assistant message
             self._session.append_message(
