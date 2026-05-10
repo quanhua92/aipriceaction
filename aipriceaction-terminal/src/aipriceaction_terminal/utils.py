@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -43,6 +44,7 @@ async def stream_agent_to_log(
     agent: object,
     message: str,
     *,
+    cancel_event: asyncio.Event | None = None,
     on_thinking_update: Callable[[str], None] | None = None,
     on_thinking_done: Callable[[str], None] | None = None,
     on_message: Callable[[dict], None] | None = None,
@@ -57,6 +59,8 @@ async def stream_agent_to_log(
         log: The RichLog widget to write output into.
         agent: An AgentSession instance with a .stream() method.
         message: The user message to send to the agent.
+        cancel_event: If set, the streaming loop breaks early and returns
+            whatever has been accumulated so far.
         on_thinking_update: Called with accumulated thinking text on each chunk.
         on_thinking_done: Called with complete thinking text when thinking ends.
         on_message: Called with a dict {"ts", "type", "content", "metadata"}
@@ -100,6 +104,16 @@ async def stream_agent_to_log(
             })
 
     async for event in agent.stream(message):
+        if cancel_event and cancel_event.is_set():
+            collapse_thinking()
+            flush()
+            log.write("[dim]Stream cancelled.[/dim]")
+            log.write("")
+            response_text = "".join(full_response)
+            if response_text.strip():
+                _emit("assistant", response_text)
+            return "".join(full_response)
+
         if event.type == StreamEventType.THINKING:
             thinking_buf.append(event.content)
             if on_thinking_update:

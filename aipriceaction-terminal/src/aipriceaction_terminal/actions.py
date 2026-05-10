@@ -66,8 +66,21 @@ class AppActions:
 
     def action_show_help(self) -> None:
         self.app.notify(
-            "1-6: Switch tabs | ctrl+q: Quit | ctrl+o: Thinking | "
+            "1-6: Switch tabs | ctrl+q: Quit | ctrl+c: Stop | ctrl+o: Thinking | "
             "esc: Back | enter: Focus input | "
             "Chat: /new /save /sessions /resume /help",
             title="Keyboard Shortcuts",
         )
+
+    def action_cancel_stream(self) -> None:
+        """Forward ctrl+c to ChatTab only when the chat tab is active."""
+        try:
+            tabs = self.query_one(TabbedContent)
+            if tabs.active != "chat":
+                return
+            from .chat import ChatTab
+            chat_tab = self.query(ChatTab).first()
+            if chat_tab:
+                chat_tab.action_cancel_stream()
+        except Exception:
+            pass

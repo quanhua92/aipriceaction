@@ -13,6 +13,7 @@ _TAB_KEYS: dict[str, str] = {
 
 BINDINGS: list[BindingType] = [
     Binding("ctrl+q", "confirm_quit", "Quit", key_display="ctrl+q", priority=True),
+    Binding("ctrl+c", "cancel_stream", "Stop chat", key_display="ctrl+c", priority=True),
     Binding("1", "switch_tab('chat')", "Chat", key_display="1"),
     Binding("2", "switch_tab('tickers-vn')", "Vietnam", key_display="2"),
     Binding("3", "switch_tab('tickers-crypto')", "Crypto", key_display="3"),

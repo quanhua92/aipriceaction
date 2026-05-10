@@ -23,7 +23,7 @@ _COMMANDS: list[tuple[str, str]] = [
 # Keys that should trigger app-level actions (help) even when
 # an Input is focused. Textual filters these from the binding chain, so we
 # handle them manually in the Input's on_key.
-_GLOBAL_KEYS = frozenset(("question_mark",))
+_GLOBAL_KEYS = frozenset(("question_mark", "ctrl+c"))
 
 
 class _GlobalKeyInput(Input):
@@ -42,6 +42,12 @@ class _GlobalKeyInput(Input):
             event.stop()
             if event.key == "question_mark":
                 self.app.action_show_help()
+            elif event.key == "ctrl+c":
+                # Forward to the nearest ancestor ChatTab that handles cancel_stream
+                for ancestor in self.ancestors_with_self:
+                    if hasattr(ancestor, "action_cancel_stream"):
+                        ancestor.action_cancel_stream()
+                        break
         else:
             await super()._on_key(event)
 

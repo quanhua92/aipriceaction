@@ -83,7 +83,10 @@ class ThinkingModal(Screen[None]):
 class ChatTab(Vertical):
     """Chat interface for AI ticker analysis."""
 
-    BINDINGS = [Binding("ctrl+o", "show_thinking", "Thinking", key_display="ctrl+o")]
+    BINDINGS = [
+        Binding("ctrl+o", "show_thinking", "Thinking", key_display="ctrl+o"),
+        Binding("ctrl+c", "cancel_stream", "Stop", key_display="ctrl+c"),
+    ]
 
     DEFAULT_CSS = """
     ChatTab {
@@ -122,6 +125,7 @@ class ChatTab(Vertical):
         self._session = SessionManager()
         self._resumed_history: list[ChatMessage] = []
         self._resume_session = resume_session
+        self._cancel_event = asyncio.Event()
 
     def on_mount(self) -> None:
         log = self.query_one("#chat-log", SafeRichLog)
@@ -177,6 +181,10 @@ class ChatTab(Vertical):
             return
         if self._thinking_history:
             self.app.push_screen(ThinkingModal(self._thinking_history))
+
+    def action_cancel_stream(self) -> None:
+        """Cancel a running agent stream via Ctrl+C."""
+        self._cancel_event.set()
 
     def _build_resumed_prefix(self) -> str | None:
         """Build <chat_history> prefix from resumed session, then clear it."""
@@ -469,6 +477,7 @@ class ChatTab(Vertical):
         """Build context and stream AI analysis for a ticker."""
         log = self.query_one("#chat-log", SafeRichLog)
         try:
+            self._cancel_event.clear()
             if not self.app._ensure_agent():
                 log.write(
                     "[bold yellow]API key not configured.[/bold yellow]\n"
@@ -481,6 +490,7 @@ class ChatTab(Vertical):
 
             await run_tui_analyze(
                 log, self.app.agent, self.app.builder, ticker, interval,
+                cancel_event=self._cancel_event,
                 question_index=question_index,
                 custom_question=custom_question,
                 prefix=prefix,
@@ -533,6 +543,7 @@ class ChatTab(Vertical):
             )
             return
         try:
+            self._cancel_event.clear()
             # Prepend resumed context if applicable
             prefix = self._build_resumed_prefix()
             if prefix:
@@ -542,6 +553,7 @@ class ChatTab(Vertical):
                 log,
                 self.app.agent,
                 message,
+                cancel_event=self._cancel_event,
                 on_thinking_update=self._show_thinking_area,
                 on_thinking_done=self._on_thinking_done,
                 on_message=self._make_on_message(),
