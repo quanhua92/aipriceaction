@@ -186,6 +186,8 @@ Use `--resume ID` to continue an interrupted or previously completed session.
 | "Comprehensive market overview" | `aipa deep-research` (full market scan) |
 | "Deep dive into real estate" | `aipa deep-research "..."` (thorough investigation) |
 | "Which sectors are leading?" | `aipa deep-research` (cross-sector analysis) |
+| "Most active tickers right now?" | `aipa live-data` (no AI, instant top list) |
+| "Top stocks by trading value" | `aipa live-data --top 20` (no AI) |
 
 ### Key Differences
 

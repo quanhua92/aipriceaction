@@ -75,6 +75,15 @@ aipa get-ohlcv-data VCB TCB MBB --limit 10
 # Fetch with date range and no moving averages
 aipa get-ohlcv-data VCB --start-date 2026-04-01 --end-date 2026-04-30 --no-ma
 
+# Top tickers by trading value (latest candle)
+aipa live-data
+
+# Top 10 VN stocks by trading value
+aipa live-data --top 10
+
+# Latest candle for specific tickers
+aipa live-data VCB TCB MBB
+
 # List saved chat sessions
 aipa resume
 
@@ -184,6 +193,30 @@ aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
 
 Note: Pass multiple space-separated ticker symbols (e.g. `VCB TCB MBB`) to fetch them in one call.
 
+### `aipa live-data`
+
+Fetch the latest candle for all tickers or specific tickers. No LLM involved, no API key needed. When no tickers are specified, returns top N tickers sorted by trading value (close × volume) descending.
+
+```
+# Top 50 by trading value (default)
+aipa live-data
+
+# Top 10
+aipa live-data --top 10
+
+# Hourly interval
+aipa live-data --interval 1h
+
+# Specific tickers
+aipa live-data VCB TCB MBB
+```
+
+| Flag | Description |
+|---|---|
+| `TICKERS...` | Optional ticker symbols (omit for top N) |
+| `--top N` | Number of top tickers to show (default: 50) |
+| `--interval` | Time interval: `1D`, `1h`, `1m` (default: `1D`) |
+
 ### `aipa setup`
 
 Interactive first-run configuration. Prompts for language, reference ticker, API key, base URL, and model. Settings are saved to `~/.aipriceaction/settings.json`. Re-running shows current values as defaults.
@@ -219,6 +252,7 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | Command | Setup required? |
 |---|---|
 | `aipa get-ohlcv-data` | No setup needed |
+| `aipa live-data` | No setup needed |
 | `aipa analyze VCB --context-only` | No setup needed |
 | `aipa analyze VCB --questions` | No setup needed |
 | `aipa resume` | No setup needed |

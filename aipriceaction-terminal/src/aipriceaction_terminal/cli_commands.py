@@ -205,6 +205,63 @@ def cmd_get_ohlcv(args) -> None:
         print(df.to_string(index=False))
 
 
+def cmd_live_data(args) -> None:
+    from aipriceaction import AIPriceAction
+
+    client = AIPriceAction()
+    tickers = [t.upper() for t in args.tickers] if args.tickers else None
+    interval = args.interval
+    top = args.top
+
+    try:
+        data = client.fetch_live_data(interval)
+    except Exception as e:
+        print(f"Error fetching live data: {e}", file=sys.stderr)
+        sys.exit(1)
+    if data is None:
+        print("Failed to fetch live data.", file=sys.stderr)
+        sys.exit(1)
+
+    rows: list[dict] = []
+    for symbol, candles in data.items():
+        if tickers and symbol not in tickers:
+            continue
+        if not candles:
+            continue
+        c = candles[-1]
+        close = c.get("close") or 0
+        vol = c.get("volume") or 0
+        rows.append({
+            "ticker": symbol,
+            "time": str(c.get("time", ""))[:16],
+            "open": c.get("open"),
+            "high": c.get("high"),
+            "low": c.get("low"),
+            "close": close,
+            "volume": vol,
+            "value": close * vol,
+            "close_changed": c.get("close_changed"),
+            "volume_changed": c.get("volume_changed"),
+            "ma10_score": c.get("ma10_score"),
+            "ma50_score": c.get("ma50_score"),
+        })
+
+    if not rows:
+        print(f"No data found for tickers={tickers or 'all'} ({interval}).", file=sys.stderr)
+        sys.exit(1)
+
+    if not tickers:
+        rows.sort(key=lambda r: r["value"], reverse=True)
+        rows = rows[:top]
+
+    import pandas as pd
+    df = pd.DataFrame(rows)
+    # Reorder columns: drop 'value' from display, put it after volume
+    cols = ["ticker", "time", "open", "high", "low", "close", "volume", "close_changed", "volume_changed", "ma10_score", "ma50_score"]
+    df = df[cols]
+    print(df.to_string(index=False))
+
+
 def cmd_resume(args) -> None:
     """List recent sessions, or open TUI with a resumed session."""
     from .session import SessionManager

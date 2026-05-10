@@ -180,6 +180,46 @@ aipa get-ohlcv-data VCB --no-ma --no-system-prompt
 
 ---
 
+## `aipa live-data` — Top Tickers by Trading Value
+
+Fetch the latest candle for all tickers or specific tickers. No LLM involved, no API key needed. When no tickers are specified, returns top N tickers sorted by trading value (close × volume) descending.
+
+Use this to quickly identify the most actively traded tickers and get a market overview.
+
+```bash
+aipa live-data [TICKERS...] [--top 50] [--interval 1D]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `TICKERS...` | — | Optional ticker symbols (auto-uppercased). Omit for top N by trading value. |
+| `--top N` | `50` | Number of top tickers to show when no tickers specified |
+| `--interval` | `1D` | Time interval: `1D`, `1h`, `1m` |
+
+### Usage Examples
+
+```bash
+# Top 50 by trading value (broad market overview)
+aipa live-data
+
+# Top 10 only
+aipa live-data --top 10
+
+# Top 20 hourly
+aipa live-data --interval 1h --top 20
+
+# Specific tickers only
+aipa live-data VCB TCB MBB
+```
+
+### Data Fields
+
+Each row includes: ticker, time, open, high, low, close, volume, close_changed (%), volume_changed (%), ma10_score, ma50_score.
+
+---
+
 ## Interpreting Output
 
 The CLI outputs to two streams:
@@ -209,6 +249,9 @@ Each row includes: date/time, open, high, low, close, volume. When `--ma` is ena
 | "Show me OHLCV candles for BTC" | `aipa-data` (this skill) |
 | "What's the moving average for FPT?" | `aipa-data` (this skill) |
 | "Historical prices for VNINDEX" | `aipa-data` (this skill) |
+| "What are the top stocks today?" | `aipa live-data` (this skill) |
+| "Most active tickers" | `aipa live-data` (this skill) |
+| "Show me market overview" | `aipa live-data` (this skill) |
 | "Analyze VCB" | `aipa-analyze` (AI analysis) |
 | "Compare FPT and VNM" | `aipa-analyze` (AI comparison) |
 | "Research the banking sector" | `aipa-research` (multi-agent pipeline) |
@@ -234,3 +277,5 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 7. **`--ema` flag controls SMA vs EMA**: By default, EMA is shown. Add `--ema` to switch to SMA (yes, the flag name is counterintuitive — it means "use EMA calculation" which overrides the default).
 
 8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.
+
+9. **Use `aipa live-data` for market overview**: When you need to identify the most active tickers or get a broad market snapshot, use `aipa live-data` instead of fetching individual tickers. It returns the latest candle sorted by trading value. Call it first with no arguments to discover what's moving, then drill into specific tickers with `get-ohlcv-data`.

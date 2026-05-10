@@ -60,6 +60,12 @@ def run():
     p_deep.add_argument("--lang", default=None, choices=["en", "vn"], help="Override language")
     p_deep.add_argument("--context-only", action="store_true", help="Dump market snapshot without running the pipeline (no API key needed)")
 
+    # aipa live-data [tickers...] [--interval 1D] [--top 50]
+    p_live = sub.add_parser("live-data", help="Latest candle with top tickers by trading value")
+    p_live.add_argument("tickers", nargs="*", help="Ticker symbol(s) (omit for top N by trading value)")
+    p_live.add_argument("--top", type=int, default=50, help="Number of top tickers when no tickers specified (default: 50)")
+    p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m"])
+
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
 
@@ -80,6 +86,9 @@ def run():
     elif args.command == "get-ohlcv-data":
         from .cli_commands import cmd_get_ohlcv
         cmd_get_ohlcv(args)
+    elif args.command == "live-data":
+        from .cli_commands import cmd_live_data
+        cmd_live_data(args)
     elif args.command == "deep-research":
         if not getattr(args, "context_only", False):
             _ensure_setup()
