@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15] - 2026-05-10
+
+### Changed
+- Analyze agent (TUI and CLI) can now call tools alongside pre-built context instead of being restricted to provided data only
+- CLI `aipa analyze` rewritten to use `AgentSession` with tool support, replacing the plain `builder.answer()` LLM call (tool calls streamed to stderr)
+
+### Added
+- `get_live_data` agent tool for quick market overview (top 50 by trading value)
+- `get_ohlcv_data` now supports comma-separated multi-ticker input
+- System prompts updated to guide AI to call `get_live_data` first for broad overview
+
 ## [0.1.14] - 2026-05-10
 
 ### Fixed
