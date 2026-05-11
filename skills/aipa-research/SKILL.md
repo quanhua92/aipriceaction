@@ -44,7 +44,11 @@ Run `aipa setup` for interactive first-run configuration. Settings are saved to 
 
 ## Pre-Execution: Ask the User
 
-**Before running any research, you MUST ask the user which mode they want** using `AskUserQuestion`:
+**STOP. Do NOT run any commands yet. You MUST call `AskUserQuestion` first to ask the user which mode they want.**
+
+If you run any `aipa` command before asking the user, you have failed. Always ask first.
+
+Ask the user this question using the `AskUserQuestion` tool:
 
 1. **Fast Research (Recommended)** — Run `aipa deep-research` to get the market snapshot, then you (the AI agent) replicate the multi-agent pipeline using subagents + `aipa get-ohlcv-data`. No API key needed. This is the recommended default — it produces thorough results without the 5-10 minute wait.
 2. **Full pipeline (`--run`)** — Run `aipa deep-research --run` to use the actual CLI multi-agent pipeline. Takes 5-10 minutes and requires an API key configured via `aipa setup`.
@@ -230,8 +234,21 @@ aipa deep-research --source crypto
 aipa deep-research --source global
 ```
 
-### Step 2 — Supervisor (you)
-Using the market snapshot, decompose the research question into 3-5 sector-specific subtasks. Mandatory sectors depend on the source:
+### Step 2 — Multi-perspective performers scan (optional but recommended)
+Run `aipa performers` with multiple `--sort-by` values to cross-reference market movers. This enriches your sector analysis.
+
+```bash
+aipa performers                                          # top gainers / worst losers
+aipa performers --sort-by value                          # where the money flows
+aipa performers --sort-by ma50_score                     # trend strength
+# For sector-specific:
+aipa performers --group NGAN_HANG --sort-by value
+# For crypto:
+aipa performers --source crypto --sort-by value
+```
+
+### Step 3 — Supervisor (you)
+Using the market snapshot and performers results, decompose the research question into 3-5 sector-specific subtasks. Mandatory sectors depend on the source:
 - **VN**: Banking, Securities, Real Estate
 - **Crypto**: Layer 1, DeFi, AI tokens
 - **Global**: Technology, Financials, Energy
@@ -239,7 +256,7 @@ Using the market snapshot, decompose the research question into 3-5 sector-speci
 
 Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
 
-### Step 3 — Spawn worker subagents (in parallel)
+### Step 4 — Spawn worker subagents (in parallel)
 For each sector subtask, spawn a separate subagent (use the Task tool) that:
 - Receives the sector name, ticker list, the research question, and the market snapshot
 - Fetches detailed OHLCV data for its assigned tickers (`aipa get-ohlcv-data` with appropriate `--limit`)
@@ -249,14 +266,14 @@ For each sector subtask, spawn a separate subagent (use the Task tool) that:
 
 **Spawn all worker subagents concurrently in a single message** — do not run them sequentially.
 
-### Step 4 — Aggregate (you)
+### Step 5 — Aggregate (you)
 Once all workers return, synthesize the sector reports into a unified analysis:
 - Cross-reference findings across sectors
 - Build a multi-sector ranking table
 - Identify cross-sector rotation patterns
 - Highlight key opportunities and risks
 
-### Step 5 — Review (you)
+### Step 6 — Review (you)
 Quality-check your own aggregated report:
 - Verify no phantom stocks (tickers not in worker reports)
 - Spot-check MA score plausibility
@@ -281,6 +298,7 @@ Present the final report to the user. Use the research question and the user's l
 | "Most active tickers right now?" | `aipa live-data` (no AI, instant top list) |
 | "Top gainers / losers" | `aipa performers` (no AI) |
 | "Best stocks by trading value" | `aipa performers --sort-by value` (no AI) |
+| "Banking sector top movers" | `aipa performers --group NGAN_HANG --sort-by value` (no AI) |
 | "Volume profile / POC / value area" | `aipa volume-profile TICKER` (no AI) |
 | "What tickers are in the real estate sector?" | `aipa ticker-list --source vn --group BAT_DONG_SAN` |
 
