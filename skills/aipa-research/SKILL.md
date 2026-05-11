@@ -348,12 +348,16 @@ When presenting results to the user, always use the stdout output (the final app
 
 10. **Use `--source` for non-VN markets**: Add `--source crypto`, `--source global`, or `--source sjc` to research other markets. The supervisor, workers, tools, and default question all adapt to the selected source automatically.
 
-11. **Use `aipa performers` to identify leaders and laggards**: Before or during research, run `aipa performers` to quickly identify which tickers are leading or lagging. This helps you pick better tickers for sector workers and provides ranking context for the final report. Examples:
-    - `aipa performers` — top/worst VN stocks by price change
-    - `aipa performers --sort-by value --limit 20` — highest trading value
-    - `aipa performers --sort-by ma200_score` — strongest/weakest long-term trends
-    - `aipa performers --source crypto --sort-by volume` — most active crypto
-    - `aipa performers --sort-by total_money_changed` — biggest money flow changes
+11. **Use `aipa performers` to identify leaders and laggards — run multiple perspectives**: Before or during research, run `aipa performers` with multiple `--sort-by` values. **Always run at least these two**: default (price change) and value (trading value). Add MA scores for trend context. Cross-referencing the lists helps you pick better tickers for sector workers and provides richer ranking context for the final report.
+
+    ```bash
+    aipa performers                                          # price change — top gainers / worst losers
+    aipa performers --sort-by value                          # trading value — where the money flows
+    aipa performers --sort-by ma50_score                     # MA50 trend — strongest/weakest medium-term trends
+    aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
+    aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
+    aipa performers --source crypto --sort-by value          # crypto by trading value
+    ```
 
 12. **Use `aipa volume-profile` for key price levels**: When workers need support/resistance context for a sector, run `aipa volume-profile TICKER` on the top movers to get POC, value area, and volume-weighted statistics. This gives concrete price levels for the sector reports. Examples:
     - `aipa volume-profile VCB` — today's volume profile

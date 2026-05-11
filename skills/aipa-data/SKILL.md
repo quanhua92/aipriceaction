@@ -434,6 +434,16 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 10. **Use `aipa ticker-list` to discover tickers**: When you need to know what tickers are available or find tickers in a specific sector, use `aipa ticker-list`. Add `--group` to filter by sector (e.g. `NGAN_HANG` for banking) and `--compact` to get a comma-separated list for passing to other commands.
 
-11. **Use `aipa performers` for ranking**: When you need to identify top gainers, worst losers, or rank tickers by MA scores or money flow, use `aipa performers`. It returns two lists (top and worst) sorted by your chosen metric. The AI agent can also call the `get_performers` tool directly.
+11. **Use `aipa performers` for ranking — run multiple perspectives**: When the user asks about market movers, top stocks, or "what's happening", run `aipa performers` with multiple `--sort-by` values to get a multi-perspective view. **Always run at least these two**: default (price change) and value (trading value). Add MA scores when the user cares about trends. Run them all — do not pick just one:
+
+    ```bash
+    aipa performers                                          # price change — top gainers / worst losers
+    aipa performers --sort-by value                          # trading value — where the money flows
+    aipa performers --sort-by ma50_score                     # MA50 trend — strongest/weakest medium-term trends
+    aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
+    aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
+    ```
+
+    Cross-referencing these lists gives much richer insight than any single sort. A ticker appearing in both the top gainers AND top value lists is more significant than one appearing in only one. The AI agent can also call the `get_performers` tool directly.
 
 12. **Use `aipa volume-profile` for volume analysis**: When you need to identify key price levels based on traded volume, use `aipa volume-profile`. It shows where the most volume was traded (POC), the value area, and volume-weighted statistics from 1-minute data. The AI agent can also call the `get_volume_profile` tool directly.

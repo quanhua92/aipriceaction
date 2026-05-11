@@ -249,11 +249,16 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 
 10. **Reference ticker**: Auto-detected based on the ticker's source — `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global stocks. Use `--reference-ticker` to override.
 
-11. **Use `aipa performers` to find tickers to analyze**: When the user asks "what should I analyze?" or "what's moving today?", run `aipa performers` to get top/worst lists, then analyze the interesting ones with `aipa analyze`. Examples:
-    - `aipa performers` — top/worst by price change (VN default)
-    - `aipa performers --sort-by value --limit 20` — highest trading value
-    - `aipa performers --sort-by ma50_score --source crypto` — strongest crypto trends
-    - `aipa performers --sort-by total_money_changed` — biggest money flow changes
+11. **Use `aipa performers` to find tickers to analyze — run multiple perspectives**: When the user asks "what should I analyze?" or "what's moving today?", run `aipa performers` with multiple `--sort-by` values to get a multi-perspective view. **Always run at least these two**: default (price change) and value (trading value). Add MA scores when the user cares about trends. Cross-referencing the lists reveals more significant tickers. Then analyze the interesting ones with `aipa analyze`.
+
+    ```bash
+    aipa performers                                          # price change — top gainers / worst losers
+    aipa performers --sort-by value                          # trading value — where the money flows
+    aipa performers --sort-by ma50_score                     # MA50 trend — strongest/weakest medium-term trends
+    aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
+    aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
+    aipa performers --source crypto --sort-by value          # crypto by trading value
+    ```
 
 12. **Use `aipa volume-profile` for support/resistance context**: When analyzing a ticker and the user asks about key price levels, support, resistance, or "where is the volume?", run `aipa volume-profile TICKER` to get POC (Point of Control), value area, and volume-weighted statistics. This gives you concrete price levels to reference in your analysis. Examples:
     - `aipa volume-profile VCB` — today's profile
