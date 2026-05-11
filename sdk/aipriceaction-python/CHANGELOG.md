@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12] - 2026-05-11
+
+### Added
+- Add `ma` parameter to `fetch_live_data()` (default `True`) to control whether backend computes MA scores, reducing response size and timeout risk for aggregated intervals
+- Add client-side OHLCV aggregation module (`aggregator.py`) supporting non-native intervals: `5m`, `15m`, `30m`, `4h`, `1W`, `2W`
+- `get_ohlcv()` now supports all intervals (native + aggregated) — base data is fetched and aggregated client-side
+- Expand live data request limits for aggregated intervals (`5m: 12`, `15m: 4`, `30m: 2`, `4h: 6`, `1W: 4`, `2W: 2`)
+
+### Fixed
+- `get_ohlcv()` now passes `ma=False` to `fetch_live_data()` since MA is computed locally after merge — avoids wasted bandwidth
+- Increase live request timeout from 5s to 15s to handle larger responses
+- Fix test that expected `ValueError` for aggregated intervals (now supported via aggregator)
+
 ## [0.1.11] - 2026-05-11
 
 ### Fixed
