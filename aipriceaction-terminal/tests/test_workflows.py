@@ -23,7 +23,7 @@ async def app(mock_builder, mock_client, mock_agent, sample_ticker_options):
         async with AIPriceActionApp().run_test() as pilot:
             # Switch to workflows tab so TickerSelect is mounted
             await pilot.press("escape")
-            await pilot.press("5")
+            await pilot.press("2")
             await pilot.pause(0.1)
             pilot.app.ticker_options = sample_ticker_options
             await pilot.pause(0.1)
@@ -32,8 +32,8 @@ async def app(mock_builder, mock_client, mock_agent, sample_ticker_options):
 
 async def test_workflows_tab_has_nested_tabs(app):
     pilot, _ = app
-    # Switch to workflows tab (key 5)
-    await pilot.press("5")
+    # Switch to workflows tab (key 2)
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     assert pilot.app.query_one("#wf-analyze") is not None
@@ -42,7 +42,7 @@ async def test_workflows_tab_has_nested_tabs(app):
 
 async def test_analyze_pane_default_values(app):
     pilot, _ = app
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
@@ -54,7 +54,7 @@ async def test_analyze_pane_default_values(app):
 async def test_analyze_pane_button_triggers_build(app):
     pilot, builder = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
@@ -72,7 +72,7 @@ async def test_analyze_pane_button_triggers_build(app):
 async def test_analyze_pane_select_different_ticker(app):
     pilot, builder = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
@@ -90,7 +90,7 @@ async def test_analyze_pane_select_different_ticker(app):
 async def test_analyze_pane_custom_interval(app):
     pilot, builder = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     interval_select = pilot.app.query_one("#wf-interval", Select)
@@ -110,7 +110,7 @@ async def test_analyze_pane_error_handling(app):
     builder.build.side_effect = RuntimeError("build failed")
 
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     await pilot.click("#wf-analyze-btn")
@@ -123,7 +123,7 @@ async def test_analyze_pane_error_handling(app):
 async def test_analyze_pane_options_update_on_load(app):
     """Verify that watch_app_ticker_options populates the Select when options load."""
     pilot, _ = app
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     ticker_select = pilot.app.query_one("#wf-ticker", TickerSelect)
@@ -135,7 +135,7 @@ async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
     """Verify that selecting from autocomplete puts the ticker symbol (not label) into input."""
     pilot, builder = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     # Clear input and type to trigger autocomplete filtering
@@ -167,7 +167,7 @@ async def test_analyze_pane_autocomplete_select_puts_ticker_symbol(app):
 async def test_deep_research_pane_mount_message(app):
     pilot, _ = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     # Switch to deep research sub-tab
@@ -182,7 +182,7 @@ async def test_deep_research_pane_mount_message(app):
 async def test_deep_research_button_shows_not_implemented(app):
     pilot, _ = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     nested_tc = pilot.app.query("WorkflowsTab TabbedContent").first()
@@ -199,7 +199,7 @@ async def test_deep_research_button_shows_not_implemented(app):
 async def test_deep_research_with_question(app):
     pilot, _ = app
     await pilot.press("escape")
-    await pilot.press("5")
+    await pilot.press("2")
     await pilot.pause(0.1)
 
     nested_tc = pilot.app.query("WorkflowsTab TabbedContent").first()

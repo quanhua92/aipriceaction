@@ -113,10 +113,10 @@ class TickerSelect(Vertical):
     _GLOBAL_KEYS = frozenset(("1", "2", "3", "4", "5", "6", "question_mark"))
     _TAB_MAP: dict[str, str] = {
         "1": "chat",
-        "2": "tickers-vn",
-        "3": "tickers-crypto",
-        "4": "tickers-global",
-        "5": "workflows",
+        "2": "workflows",
+        "3": "tickers-vn",
+        "4": "tickers-crypto",
+        "5": "tickers-global",
         "6": "settings",
     }
 

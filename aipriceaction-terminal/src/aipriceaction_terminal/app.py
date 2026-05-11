@@ -91,14 +91,14 @@ class AIPriceActionApp(AppActions, App):
         with TabbedContent(initial="chat"):
             with TabPane("Chat", id="chat"):
                 yield ChatTab(resume_session=self._resume_session)
+            with TabPane("Workflows", id="workflows"):
+                yield WorkflowsTab()
             with TabPane("Vietnam", id="tickers-vn"):
                 yield TickerDataTab(mode="vn")
             with TabPane("Crypto", id="tickers-crypto"):
                 yield TickerDataTab(mode="crypto")
             with TabPane("Global", id="tickers-global"):
                 yield TickerDataTab(mode="global")
-            with TabPane("Workflows", id="workflows"):
-                yield WorkflowsTab()
             with TabPane("Settings", id="settings"):
                 yield SettingsTab()
         yield Footer()
