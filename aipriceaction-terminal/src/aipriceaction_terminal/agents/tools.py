@@ -199,7 +199,7 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
                 continue
             c = candles[-1]
             fields: list[str] = [f"ticker={symbol}"]
-            time = str(c.get("time", ""))[:16]
+            time = client.convert_time(str(c.get("time", "")), interval)
             if time:
                 fields.append(f"time={time}")
             for key in ("open", "high", "low", "close", "volume"):

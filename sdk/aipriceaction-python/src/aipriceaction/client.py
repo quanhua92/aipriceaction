@@ -121,7 +121,7 @@ class AIPriceAction:
         cache_dir: Optional[str] = None,
         *,
         freshness_ttl: float = 300.0,
-        use_live: bool = False,
+        use_live: bool = True,
         live_url: str = "https://api.aipriceaction.com",
         utc_offset: int = 7,
     ):
@@ -791,6 +791,15 @@ class AIPriceAction:
         return pd.concat(all_rows, ignore_index=True)
 
     # ── OHLCV data (mirrors /tickers endpoint) ──
+
+    def convert_time(self, time_str: str, interval: str = "1D") -> str:
+        """Convert a UTC time string to the configured timezone (public API).
+
+        Returns the time string unchanged when utc_offset=0.
+        """
+        if self._utc_offset is None:
+            return time_str
+        return self._convert_time_str(time_str, interval)
 
     def _convert_time_str(self, time_str: str, interval: str) -> str:
         """Convert a UTC time string to the configured timezone."""

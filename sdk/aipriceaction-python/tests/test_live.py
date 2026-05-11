@@ -92,9 +92,9 @@ def mock_s3_base():
 # ── Init tests ──
 
 class TestLiveInit:
-    def test_init_use_live_default_false(self, tmp_path):
+    def test_init_use_live_default_true(self, tmp_path):
         c = AIPriceAction("http://example.com", cache_dir=str(tmp_path))
-        assert c.use_live is False
+        assert c.use_live is True
         assert c._live_cache == {}
 
     def test_init_use_live_true(self, tmp_path):
@@ -113,6 +113,25 @@ class TestLiveInit:
             live_url="https://my-api.com/",
         )
         assert c._live_url == "https://my-api.com"
+
+
+# ── convert_time tests ──
+
+class TestConvertTime:
+    def test_intraday_utc_to_local(self, tmp_path):
+        c = AIPriceAction("http://example.com", cache_dir=str(tmp_path), utc_offset=7)
+        result = c.convert_time("2025-05-11T07:06:00", "1m")
+        assert result == "2025-05-11 14:06:00"
+
+    def test_daily_date_only(self, tmp_path):
+        c = AIPriceAction("http://example.com", cache_dir=str(tmp_path), utc_offset=7)
+        result = c.convert_time("2025-04-29", "1D")
+        assert result == "2025-04-29"
+
+    def test_utc_offset_0_passthrough(self, tmp_path):
+        c = AIPriceAction("http://example.com", cache_dir=str(tmp_path), utc_offset=0)
+        result = c.convert_time("2025-05-11T07:06:00", "1m")
+        assert result == "2025-05-11T07:06:00"
 
 
 # ── fetch_live_data tests ──

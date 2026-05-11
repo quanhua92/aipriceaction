@@ -10,6 +10,13 @@ from aipriceaction_terminal.agents.tools import (
 )
 
 
+def _mock_convert_time(time_str: str, interval: str = "1D") -> str:
+    """Simplified convert_time for mocks: date-only for 1D, else truncate to 16 chars."""
+    if interval == "1D" and "T" not in time_str and " " not in time_str:
+        return time_str
+    return time_str[:16]
+
+
 @pytest.fixture(autouse=True)
 def reset_tool_clients():
     """Reset lazy singletons before each test so patching works."""
@@ -22,6 +29,7 @@ def reset_tool_clients():
 def mock_clients():
     """Patch the lazy singletons used by tool factories."""
     mock_client = MagicMock()
+    mock_client.convert_time.side_effect = _mock_convert_time
     mock_builder = MagicMock()
 
     with (
@@ -162,3 +170,22 @@ class TestGetLiveData:
         # When specific tickers are requested, top cap is not applied
         assert "ticker=VCB" in result
         assert "ticker=FPT" in result
+
+    def test_convert_time_called_for_display(self, mock_clients):
+        """Agent tool calls client.convert_time() for timezone conversion."""
+        mock_client = mock_clients[0]
+        mock_client.fetch_live_data.return_value = {
+            "VCB": [{"time": "2025-05-11T07:06:00", "open": 95, "high": 96,
+                     "low": 94, "close": 95.5, "volume": 800}],
+        }
+        # Use the real convert_time behavior via side_effect
+        from aipriceaction import AIPriceAction
+        real_client = AIPriceAction.__new__(AIPriceAction)
+        from datetime import timedelta, timezone
+        real_client._utc_offset = timezone(timedelta(hours=7))
+        mock_client.convert_time.side_effect = real_client.convert_time
+
+        tool_def = create_live_data_tool()
+        result = tool_def.tool.invoke({"tickers": "VCB", "interval": "1m"})
+
+        assert "time=2025-05-11 14:06" in result

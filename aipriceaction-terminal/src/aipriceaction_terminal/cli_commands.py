@@ -262,7 +262,7 @@ def cmd_live_data(args) -> None:
         vol = c.get("volume") or 0
         rows.append({
             "ticker": symbol,
-            "time": str(c.get("time", ""))[:16],
+            "time": client.convert_time(str(c.get("time", "")), interval),
             "open": c.get("open"),
             "high": c.get("high"),
             "low": c.get("low"),
