@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand};
 use crate::db;
 use crate::models::interval::Interval;
 use crate::providers::binance::BinanceProvider;
+use crate::providers::udf::UdfProvider;
 use crate::providers::vci::VciProvider;
 use crate::providers::yahoo::YahooProvider;
 use crate::services::checkpoint;
@@ -159,6 +160,21 @@ pub enum Commands {
         /// Create bucket if it doesn't exist
         #[arg(long)]
         create_bucket: bool,
+    },
+    /// Test TradingView UDF providers (Vietstock, VNDirect, DNSE, VPS)
+    TestUdf {
+        /// Ticker symbol to test (default: VNINDEX)
+        #[arg(long, default_value = "VNINDEX")]
+        ticker: String,
+        /// Source to test: vietstock, vndirect, dnse, vps, or all (default: all)
+        #[arg(long, default_value = "all")]
+        source: String,
+        /// Rate limit per client (requests per minute, default: 30)
+        #[arg(long, default_value = "30")]
+        rate_limit: u32,
+        /// Number of data points to request (default: 10)
+        #[arg(long, default_value = "10")]
+        count_back: u32,
     },
 }
 
@@ -1686,6 +1702,200 @@ pub fn run() {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 crate::workers::s3_archive::test_s3(ticker, interval, days, create_bucket).await;
+            });
+        }
+        Commands::TestUdf {
+            ticker,
+            source,
+            rate_limit,
+            count_back,
+        } => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(async {
+                use crate::providers::udf::ALL_SOURCES;
+
+                let sources: Vec<&str> = if source == "all" {
+                    ALL_SOURCES.to_vec()
+                } else {
+                    vec![source.as_str()]
+                };
+
+                for src in &sources {
+                    tracing::info!("{}", "═".repeat(60));
+                    tracing::info!("UDF Provider: {} (rate_limit={}/min)", src, rate_limit);
+                    tracing::info!("{}", "═".repeat(60));
+
+                    let provider = match UdfProvider::new(src, rate_limit) {
+                        Ok(p) => p,
+                        Err(e) => {
+                            tracing::error!("Failed to create {} provider: {}", src, e);
+                            continue;
+                        }
+                    };
+                    tracing::info!("Connected with {} client(s)", provider.client_count());
+
+                    // 1. OHLCV test for each interval
+                    tracing::info!("{}", "─".repeat(60));
+                    tracing::info!(
+                        "OHLCV Test — ticker={}, count_back={}",
+                        ticker, count_back
+                    );
+
+                    for interval in &["1D", "1H", "1m"] {
+                        tracing::info!("  Fetching {} ...", interval);
+                        match provider
+                            .get_history(&ticker, interval, count_back, None)
+                            .await
+                        {
+                            Ok(data) => {
+                                let count = data.len();
+                                if count > 0 {
+                                    let first = &data[0];
+                                    let last = &data[count - 1];
+                                    tracing::info!(
+                                        "    ✅ {} | {} records | {} → {}",
+                                        interval,
+                                        count,
+                                        first.time.format("%Y-%m-%d %H:%M"),
+                                        last.time.format("%Y-%m-%d %H:%M"),
+                                    );
+                                    for row in data.iter().take(3) {
+                                        tracing::info!(
+                                            "       {} | O:{} H:{} L:{} C:{} V:{}",
+                                            row.time.format("%Y-%m-%d %H:%M"),
+                                            row.open,
+                                            row.high,
+                                            row.low,
+                                            row.close,
+                                            row.volume,
+                                        );
+                                    }
+                                    if count > 3 {
+                                        tracing::info!("       ... ({} more)", count - 3);
+                                    }
+                                } else {
+                                    tracing::info!("    ⚠️  {} | 0 records returned", interval);
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("    ❌ {} | error: {}", interval, e);
+                            }
+                        }
+
+                        // Sleep between intervals to respect rate limits
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    }
+
+                    // 2. /config test
+                    tracing::info!("{}", "─".repeat(60));
+                    tracing::info!("UDF Protocol: /config");
+                    match provider.get_config().await {
+                        Ok(Some(config)) => {
+                            tracing::info!("    ✅ config received");
+                            if let Some(resolutions) = &config.supported_resolutions {
+                                tracing::info!("       supported_resolutions: {}", resolutions);
+                            }
+                            if let Some(supports_time) = config.supports_time {
+                                tracing::info!("       supports_time: {}", supports_time);
+                            }
+                            if let Some(supports_search) = config.supports_search {
+                                tracing::info!("       supports_search: {}", supports_search);
+                            }
+                        }
+                        Ok(None) => {
+                            tracing::info!("    ⚠️  /config not supported (404)");
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ /config error: {}", e);
+                        }
+                    }
+
+                    // 3. /symbols test
+                    tracing::info!("UDF Protocol: /symbols?symbol={}", ticker);
+                    match provider.get_symbol_info(&ticker).await {
+                        Ok(Some(info)) => {
+                            tracing::info!("    ✅ symbol info received");
+                            tracing::info!(
+                                "       description: {}",
+                                info.description.unwrap_or_else(|| "-".to_string())
+                            );
+                            tracing::info!(
+                                "       exchange: {}",
+                                info.exchange.unwrap_or_else(|| "-".to_string())
+                            );
+                            if let Some(ps) = info.pricescale {
+                                tracing::info!("       pricescale: {}", ps);
+                            }
+                            if let Some(mm) = info.minmov {
+                                tracing::info!("       minmov: {}", mm);
+                            }
+                            if let Some(session) = info.session {
+                                tracing::info!("       session: {}", session);
+                            }
+                            if let Some(tz) = info.timezone {
+                                tracing::info!("       timezone: {}", tz);
+                            }
+                        }
+                        Ok(None) => {
+                            tracing::info!("    ⚠️  /symbols not supported (404)");
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ /symbols error: {}", e);
+                        }
+                    }
+
+                    // 4. /search test
+                    let query = &ticker[..ticker.len().min(2)];
+                    tracing::info!("UDF Protocol: /search?query={}", query);
+                    match provider.search(query, 5).await {
+                        Ok(Some(results)) => {
+                            tracing::info!("    ✅ {} result(s)", results.len());
+                            for item in results.iter().take(5) {
+                                tracing::info!(
+                                    "       {} | {} | {} | {}",
+                                    item.symbol.as_deref().unwrap_or("?"),
+                                    item.exchange.as_deref().unwrap_or("?"),
+                                    item.description.as_deref().unwrap_or("?"),
+                                    item.r#type.as_deref().unwrap_or("?"),
+                                );
+                            }
+                        }
+                        Ok(None) => {
+                            tracing::info!("    ⚠️  /search not supported (404)");
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ /search error: {}", e);
+                        }
+                    }
+
+                    // 5. /time test
+                    tracing::info!("UDF Protocol: /time");
+                    match provider.get_server_time().await {
+                        Ok(Some(time)) => {
+                            let dt = chrono::DateTime::<chrono::Utc>::from_timestamp(time, 0);
+                            let time_str = dt
+                                .map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string())
+                                .unwrap_or_else(|| time.to_string());
+                            tracing::info!("    ✅ server time: {} ({})", time, time_str);
+                        }
+                        Ok(None) => {
+                            tracing::info!("    ⚠️  /time not supported (404)");
+                        }
+                        Err(e) => {
+                            tracing::error!("    ❌ /time error: {}", e);
+                        }
+                    }
+
+                    // Summary
+                    tracing::info!("{}", "─".repeat(60));
+                    tracing::info!(
+                        "Test complete — source={}, ticker={}, clients={}, rate_limit={}/min",
+                        src,
+                        ticker,
+                        provider.client_count(),
+                        rate_limit
+                    );
+                }
             });
         }
     }

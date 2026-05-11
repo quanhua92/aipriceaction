@@ -19,7 +19,7 @@ skills/                     Claude Code skills for market analysis workflows
 
 | Market            | Provider      | Ticker examples        | Intervals        |
 | ----------------- | ------------- | ---------------------- | ---------------- |
-| Vietnamese stocks | VCI / Vietcap | VCB, FPT, VNINDEX      | 1m, 1h, 1D       |
+| Vietnamese stocks | VCI / Vietstock / VNDirect / VPS | VCB, FPT, VNINDEX      | 1m, 1h, 1D       |
 | US / intl. stocks | Yahoo Finance | AAPL, GOOGL, GC=F      | 1m, 1h, 1D       |
 | Cryptocurrency    | Binance       | BTCUSDT, ETHUSDT       | 1m, 1h, 1D       |
 | SJC gold          | sjc.com.vn    | SJC-GOLD               | 1D               |

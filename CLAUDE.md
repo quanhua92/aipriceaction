@@ -38,12 +38,13 @@ Docker alternative: `docker compose up -d` (includes PostgreSQL 18 with pgvector
 ```
 aipriceaction/src/
 ├── main.rs              # Entry point, delegates to cli::run()
-├── cli.rs               # clap-based CLI: serve, status, stats, import, test-vci, test-binance, test-perf
+├── cli.rs               # clap-based CLI: serve, status, stats, import, test-vci, test-binance, test-udf, test-perf
 ├── constants.rs         # All tuning knobs (worker intervals, priority tiers, cache config, API defaults)
 ├── db.rs                # PostgreSQL connection via sqlx + auto-migration on startup
 ├── models/              # Data structures (Interval enum, OHLCV rows, ticker metadata)
 ├── providers/           # External API clients
 │   ├── vci.rs           # VCI/Vietcap — Vietnamese stock data with multi-client rate limiting
+│   ├── udf.rs           # TradingView UDF — multi-broker VN stock data (Vietstock, VNDirect, DNSE, VPS)
 │   ├── binance.rs       # Binance — cryptocurrency data
 │   └── ohlcv.rs         # Shared OHLCV fetch/save helpers
 ├── queries/             # SQL query implementations (ohlcv joins, batch queries, aggregations)

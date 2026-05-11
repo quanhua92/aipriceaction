@@ -16,7 +16,7 @@ The SDK reads OHLCV data from an S3-compatible archive. All sources are auto-det
 
 | Source | Examples | Intervals |
 |---|---|---|
-| Vietnamese stocks (VCI) | `VCB`, `FPT`, `VNINDEX` | `1m`, `1h`, `1D` |
+| Vietnamese stocks (VCI / Vietstock / VNDirect / VPS) | `VCB`, `FPT`, `VNINDEX` | `1m`, `1h`, `1D` |
 | US / international stocks (Yahoo) | `AAPL`, `GOOGL`, `GC=F` | `1m`, `1h`, `1D` |
 | Cryptocurrency (Binance) | `BTCUSDT`, `ETHUSDT` | `1m`, `1h`, `1D` |
 | SJC gold | `SJC-GOLD` | `1D` |

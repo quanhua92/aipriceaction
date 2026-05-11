@@ -137,6 +137,10 @@ docker compose up -d postgres
 # Test Yahoo Finance provider connectivity (US/international stocks)
 ./target/release/aipriceaction test-yahoo --ticker AAPL
 
+# Test TradingView UDF providers (Vietstock, VNDirect, DNSE, VPS)
+./target/release/aipriceaction test-udf --ticker VNINDEX --source all
+./target/release/aipriceaction test-udf --ticker VCB --source vietstock
+
 # Test SOCKS5 proxy connectivity against Yahoo Finance API
 ./target/release/aipriceaction test-proxy
 
@@ -302,6 +306,50 @@ When enabled via environment variables, the server runs background sync workers:
     ]
 }
 ```
+
+## UDF Providers (TradingView-compatible)
+
+The `src/providers/udf.rs` module implements a generic TradingView UDF (Universal Data Feed) provider that connects to multiple Vietnamese broker endpoints. Unlike the default VCI provider (`src/providers/vci.rs`) which uses Vietcap's proprietary POST-based gap-chart API, UDF providers use the standard TradingView GET-based protocol with columnar JSON responses (`t`, `o`, `h`, `l`, `c`, `v` arrays).
+
+### VCI vs UDF comparison
+
+| Feature | VCI Provider (`vci.rs`) | UDF Provider (`udf.rs`) |
+|---------|------------------------|------------------------|
+| Protocol | POST to `/chart/OHLCChart/gap-chart` | GET to `/history?symbol=...&resolution=...` |
+| Response format | Wrapped in array: `[{o:[], h:[], ...}]` | Flat: `{t:[], o:[], h:[], s:"ok"}` |
+| Source | Vietcap only | 4 brokers (Vietstock, VNDirect, DNSE, VPS) |
+| Authentication | Browser-like headers + origin/referer | Browser-like headers + referer per broker |
+| Use case | Primary production worker | Alternative/fallback data sources |
+
+### Supported sources
+
+| Source | Base URL | History path | Stock path | UDF protocol |
+|--------|----------|-------------|------------|-------------|
+| Vietstock | `api.vietstock.vn/tvnew` | `/history` | `/history` | Full (/config, /symbols, /search, /time) |
+| VNDirect | `dchart-api.vndirect.com.vn/dchart` | `/history` | `/history` | Full (/config, /symbols, /search, /time) |
+| DNSE | `api.dnse.com.vn/chart-api/v2` | `/ohlcs/index` | `/ohlcs/stock` | None (OHLCV only) |
+| VPS | `histdatafeed.vps.com.vn/tradingview` | `/history` | `/history` | Partial (/symbols, /search, /time; no /config) |
+
+DNSE uses separate endpoints for index (`/ohlcs/index`) and stock (`/ohlcs/stock`) tickers. The provider auto-detects by trying the stock endpoint first and falling back to index.
+
+### Price normalization
+
+All UDF providers return prices normalized to match VCI's raw convention (e.g. VCB: 60,400). Providers that return face-value prices (VNDirect, DNSE, VPS) are automatically multiplied by 1000. Index tickers (VNINDEX, VN30, etc.) are detected via `is_index_ticker()` and skip normalization since their prices are already correct across all providers.
+
+### Test command
+
+```bash
+# Test all 4 providers at once
+./target/release/aipriceaction test-udf --ticker VNINDEX --source all --count-back 10
+
+# Test a single provider
+./target/release/aipriceaction test-udf --ticker VCB --source vietstock
+
+# Test a specific stock across all providers
+./target/release/aipriceaction test-udf --ticker FPT --source all
+```
+
+The `test-udf` command tests OHLCV fetching (1D, 1H, 1m intervals) plus optional UDF protocol endpoints (`/config`, `/symbols`, `/search`, `/time`) for each provider, showing which endpoints each broker supports. There is a 1s sleep between each interval test to respect rate limits.
 
 ## AIPA Terminal
 
