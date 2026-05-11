@@ -81,7 +81,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
 
         Args:
             ticker: Ticker symbol(s), comma-separated for multiple (e.g. "VCB" or "VHM,VIC,GEX,BID,VRE").
-            interval: Time interval — "1D" (default), "1h", or "1m".
+            interval: Time interval — "1D" (default), "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W".
             limit: Number of bars to return (default 5).
         """
         _, builder = _ensure_clients(lang)
@@ -177,7 +177,7 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
 
         Args:
             tickers: Comma-separated ticker symbols. Leave empty ("") to get top tickers by trading value.
-            interval: Time interval — "1D" (default), "1h", or "1m".
+            interval: Time interval — "1D" (default), "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W".
             top: Maximum number of tickers to return when tickers="" (default 50). Increase this value if you need more tickers (e.g. top=200).
         """
         client, _ = _ensure_clients(lang)
