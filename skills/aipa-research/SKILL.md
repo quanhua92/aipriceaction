@@ -357,6 +357,8 @@ When presenting results to the user, always use the stdout output (the final app
     aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
     aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
     aipa performers --source crypto --sort-by value          # crypto by trading value
+    aipa performers --group NGAN_HANG --sort-by value        # banking sector by trading value
+    aipa performers --group CHUNG_KHOAN --sort-by close_changed  # securities sector top gainers
     ```
 
 12. **Use `aipa volume-profile` for key price levels**: When workers need support/resistance context for a sector, run `aipa volume-profile TICKER` on the top movers to get POC, value area, and volume-weighted statistics. This gives concrete price levels for the sector reports. Examples:

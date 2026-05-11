@@ -283,7 +283,7 @@ Each row includes: ticker, time, open, high, low, close, volume, close_changed (
 Rank top and worst performers from live daily data by any metric. No LLM involved, no API key needed. Defaults to VN stocks.
 
 ```bash
-aipa performers [--sort-by close_changed] [--direction desc] [--limit 10] [--source vn]
+aipa performers [--sort-by close_changed] [--direction desc] [--limit 10] [--source vn] [--group NGAN_HANG]
 ```
 
 ### Flags
@@ -295,6 +295,7 @@ aipa performers [--sort-by close_changed] [--direction desc] [--limit 10] [--sou
 | `--limit N` | `10` | Number of entries per list |
 | `--min-volume N` | `10000` | Minimum volume for VN tickers |
 | `--source` | `vn` | Data source: `vn`, `crypto`, `global`, `sjc` |
+| `--group` | — | Filter by sector: `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`, `CONG_NGHE`, `DAU_KHI`, etc. |
 
 ### Usage Examples
 
@@ -316,6 +317,15 @@ aipa performers --sort-by value --limit 10
 
 # By money flow
 aipa performers --sort-by total_money_changed --limit 15
+
+# Banking sector only, sorted by value
+aipa performers --group NGAN_HANG --sort-by value
+
+# Securities sector top gainers
+aipa performers --group CHUNG_KHOAN --sort-by close_changed --limit 5
+
+# Real estate sector by MA50 trend
+aipa performers --group BAT_DONG_SAN --sort-by ma50_score
 ```
 
 ---
@@ -442,6 +452,8 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
     aipa performers --sort-by ma50_score                     # MA50 trend — strongest/weakest medium-term trends
     aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
     aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
+    aipa performers --group NGAN_HANG --sort-by value        # banking sector by trading value
+    aipa performers --group CHUNG_KHOAN --sort-by close_changed  # securities sector top gainers
     ```
 
     Cross-referencing these lists gives much richer insight than any single sort. A ticker appearing in both the top gainers AND top value lists is more significant than one appearing in only one. The AI agent can also call the `get_performers` tool directly.

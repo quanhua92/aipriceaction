@@ -247,6 +247,7 @@ def create_performers_tool(lang: str = "en") -> ToolDef:
         direction: str = "desc",
         limit: int = 10,
         source: str | None = None,
+        group: str | None = None,
     ) -> str:
         """Rank top and worst performers from live daily data by a chosen metric.
 
@@ -262,6 +263,8 @@ def create_performers_tool(lang: str = "en") -> ToolDef:
                 or "asc" (weakest first in top).
             limit: Number of entries per list (default 10, max 100).
             source: Filter by source — "vn" (default), "crypto", "yahoo". None = vn.
+            group: Filter by group/sector — e.g. "NGAN_HANG", "CHUNG_KHOAN",
+                "BAT_DONG_SAN", "CONG_NGHE", "DAU_KHI". None = all sectors.
         """
         from aipriceaction.performers import build_performers
 
@@ -279,6 +282,11 @@ def create_performers_tool(lang: str = "en") -> ToolDef:
             sector_map = {t.ticker: t.group for t in tickers_meta if t.group}
             source_symbols = {t.ticker for t in tickers_meta}
             data = {k: v for k, v in data.items() if k in source_symbols}
+
+        # Filter by group/sector if specified
+        if group:
+            group_upper = group.upper()
+            data = {k: v for k, v in data.items() if sector_map.get(k, "").upper() == group_upper}
 
         top, worst = build_performers(
             data, sector_map,

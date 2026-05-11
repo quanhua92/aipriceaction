@@ -75,7 +75,7 @@ def run():
     p_tlist.add_argument("--compact", action="store_true", help="Output symbols only, comma-separated")
 
     # aipa performers [--sort-by close_changed] [--direction desc] [--limit 10]
-    #   [--min-volume 10000] [--source vn]
+    #   [--min-volume 10000] [--source vn] [--group NGAN_HANG]
     p_perf = sub.add_parser("performers", help="Top/worst performers ranked by a chosen metric")
     p_perf.add_argument("--sort-by", default="close_changed",
         choices=["close_changed", "volume", "value", "volume_changed",
@@ -85,6 +85,7 @@ def run():
     p_perf.add_argument("--limit", type=int, default=10)
     p_perf.add_argument("--min-volume", type=int, default=10000)
     p_perf.add_argument("--source", default="vn", choices=["vn", "crypto", "global", "yahoo", "sjc"])
+    p_perf.add_argument("--group", default=None, help="Filter by group/sector (e.g. NGAN_HANG, CHUNG_KHOAN, BAT_DONG_SAN)")
 
     # aipa volume-profile TICKER [--date YYYY-MM-DD] [--start-date] [--end-date]
     #   [--source vn] [--bins 50] [--value-area-pct 70]

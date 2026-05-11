@@ -304,6 +304,12 @@ aipa performers --sort-by ma50_score --limit 20
 
 # Crypto performers
 aipa performers --source crypto --limit 5
+
+# Banking sector only
+aipa performers --group NGAN_HANG --sort-by value
+
+# Securities sector top gainers
+aipa performers --group CHUNG_KHOAN --sort-by close_changed --limit 5
 ```
 
 | Flag | Description |
@@ -313,6 +319,7 @@ aipa performers --source crypto --limit 5
 | `--limit N` | Entries per list (default: 10) |
 | `--min-volume N` | Min volume filter for VN tickers (default: 10000) |
 | `--source` | Data source: `vn` (default), `crypto`, `global`, `yahoo`, `sjc` |
+| `--group` | Filter by sector (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
 
 ### `aipa volume-profile`
 

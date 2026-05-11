@@ -258,6 +258,8 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
     aipa performers --sort-by ma20_score                     # MA20 trend — strongest/weakest short-term trends
     aipa performers --sort-by total_money_changed            # money flow change — unusual capital activity
     aipa performers --source crypto --sort-by value          # crypto by trading value
+    aipa performers --group NGAN_HANG --sort-by value        # banking sector by trading value
+    aipa performers --group CHUNG_KHOAN --sort-by close_changed  # securities sector top gainers
     ```
 
 12. **Use `aipa volume-profile` for support/resistance context**: When analyzing a ticker and the user asks about key price levels, support, resistance, or "where is the volume?", run `aipa volume-profile TICKER` to get POC (Point of Control), value area, and volume-weighted statistics. This gives you concrete price levels to reference in your analysis. Examples:

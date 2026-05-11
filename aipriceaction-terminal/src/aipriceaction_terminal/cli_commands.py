@@ -421,6 +421,11 @@ def cmd_performers(args) -> None:
         source_symbols = {t.ticker for t in tickers_meta}
         data = {k: v for k, v in data.items() if k in source_symbols}
 
+    # Filter by group/sector if specified
+    if args.group:
+        group_upper = args.group.upper()
+        data = {k: v for k, v in data.items() if sector_map.get(k, "").upper() == group_upper}
+
     top, worst = build_performers(
         data, sector_map,
         sort_by=args.sort_by,
