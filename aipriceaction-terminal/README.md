@@ -108,6 +108,21 @@ aipa ticker-list --source vn --group NGAN_HANG
 # Compact output (symbols only)
 aipa ticker-list --source crypto --compact
 
+# Top 10 VN performers by price change (default)
+aipa performers
+
+# Top 5 by volume
+aipa performers --sort-by volume --limit 5
+
+# Top 10 by trading value
+aipa performers --sort-by value --limit 10
+
+# Volume profile for VCB today
+aipa volume-profile VCB
+
+# Volume profile for BTCUSDT
+aipa volume-profile BTCUSDT --source crypto --bins 30
+
 # List saved chat sessions
 aipa resume
 
@@ -273,6 +288,59 @@ aipa ticker-list --source crypto --compact
 | `--group` | Filter by group (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
 | `--compact` | Output symbols only, comma-separated |
 
+### `aipa performers`
+
+Rank top and worst performers by any metric. Fetches live daily data with MA indicators — no API key needed. Defaults to VN stocks.
+
+```
+# Top 10 VN stocks by price change (default)
+aipa performers
+
+# Top 5 by volume, ascending
+aipa performers --sort-by volume --direction asc --limit 5
+
+# Top 20 by MA50 score
+aipa performers --sort-by ma50_score --limit 20
+
+# Crypto performers
+aipa performers --source crypto --limit 5
+```
+
+| Flag | Description |
+|---|---|
+| `--sort-by` | Metric: `close_changed` (default), `volume`, `value`, `volume_changed`, `ma10_score`, `ma20_score`, `ma50_score`, `ma100_score`, `ma200_score`, `total_money_changed` |
+| `--direction` | `desc` (default) or `asc` |
+| `--limit N` | Entries per list (default: 10) |
+| `--min-volume N` | Min volume filter for VN tickers (default: 10000) |
+| `--source` | Data source: `vn` (default), `crypto`, `global`, `yahoo`, `sjc` |
+
+### `aipa volume-profile`
+
+Volume-by-price histogram analysis from 1-minute data. Shows POC, value area, volume-weighted statistics, and a visual bar chart — no API key needed.
+
+```
+# Today's profile for VCB
+aipa volume-profile VCB
+
+# Specific date
+aipa volume-profile VCB --date 2026-05-09
+
+# Crypto with fewer bins
+aipa volume-profile BTCUSDT --source crypto --bins 30
+
+# Date range with custom value area
+aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09 --value-area-pct 80
+```
+
+| Flag | Description |
+|---|---|
+| `TICKER` | Ticker symbol (required) |
+| `--date` | Single date (YYYY-MM-DD), defaults to today |
+| `--start-date` / `--end-date` | Date range |
+| `--source` | Source for tick size logic: `vn` (default), `crypto`, `global`, `yahoo`, `sjc` |
+| `--bins N` | Number of price bins (default: 50, range: 2–200) |
+| `--value-area-pct` | Value area target % (default: 70, range: 60–90) |
+
 ### `aipa setup`
 
 Interactive first-run configuration. Prompts for language, reference ticker, API key, base URL, and model. Settings are saved to `~/.aipriceaction/settings.json`. Re-running shows current values as defaults.
@@ -310,6 +378,8 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa get-ohlcv-data` | No setup needed |
 | `aipa live-data` | No setup needed |
 | `aipa ticker-list` | No setup needed |
+| `aipa performers` | No setup needed |
+| `aipa volume-profile VCB` | No setup needed |
 | `aipa analyze VCB --context-only` | No setup needed |
 | `aipa analyze VCB --questions` | No setup needed |
 | `aipa resume` | No setup needed |

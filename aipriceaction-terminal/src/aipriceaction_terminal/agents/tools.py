@@ -238,10 +238,180 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
     )
 
 
+def create_performers_tool(lang: str = "en") -> ToolDef:
+    """Factory: creates the get_performers tool."""
+
+    @tool
+    def get_performers(
+        sort_by: str = "close_changed",
+        direction: str = "desc",
+        limit: int = 10,
+        source: str | None = None,
+    ) -> str:
+        """Rank top and worst performers from live daily data by a chosen metric.
+
+        Returns two ranked lists (top and worst) of performers. Useful for
+        identifying market leaders, laggards, and sector trends.
+
+        Args:
+            sort_by: Metric to rank by — "close_changed" (default), "volume",
+                "value" (close × volume), "volume_changed",
+                "ma10_score", "ma20_score", "ma50_score",
+                "ma100_score", "ma200_score", "total_money_changed".
+            direction: Sort direction — "desc" (default, strongest first in top)
+                or "asc" (weakest first in top).
+            limit: Number of entries per list (default 10, max 100).
+            source: Filter by source — "vn" (default), "crypto", "yahoo". None = vn.
+        """
+        from aipriceaction.performers import build_performers
+
+        client, _ = _ensure_clients(lang)
+        try:
+            data = client.fetch_live_data("1D", ma=True)
+        except Exception as e:
+            return f"Error fetching live data: {e}"
+        if not data:
+            return "No live data available."
+
+        sector_map: dict[str, str] = {}
+        if source:
+            tickers_meta = client.get_tickers(source=source)
+            sector_map = {t.ticker: t.group for t in tickers_meta if t.group}
+            source_symbols = {t.ticker for t in tickers_meta}
+            data = {k: v for k, v in data.items() if k in source_symbols}
+
+        top, worst = build_performers(
+            data, sector_map,
+            sort_by=sort_by,
+            direction=direction,
+            limit=limit,
+            source=source,
+        )
+
+        lines = [f"Top {len(top)} performers (by {sort_by}, {direction}):"]
+        for i, p in enumerate(top, 1):
+            chg = f"{p.close_changed:+.2f}%" if p.close_changed is not None else "N/A"
+            sector = f" [{p.sector}]" if p.sector else ""
+            lines.append(f"  {i}. {p.symbol}: close={p.close:.2f} change={chg} vol={p.volume:,} value={p.value:,.0f}{sector}")
+
+        lines.append(f"\nWorst {len(worst)} performers (by {sort_by}):")
+        for i, p in enumerate(worst, 1):
+            chg = f"{p.close_changed:+.2f}%" if p.close_changed is not None else "N/A"
+            sector = f" [{p.sector}]" if p.sector else ""
+            lines.append(f"  {i}. {p.symbol}: close={p.close:.2f} change={chg} vol={p.volume:,} value={p.value:,.0f}{sector}")
+
+        return "\n".join(lines)
+
+    return ToolDef(
+        tool=get_performers,
+        name="get_performers",
+        description="Rank top and worst performers by price change, volume, or MA scores.",
+        category="market_data",
+    )
+
+
+def create_volume_profile_tool(lang: str = "en") -> ToolDef:
+    """Factory: creates the get_volume_profile tool."""
+
+    @tool
+    def get_volume_profile(
+        ticker: str,
+        date: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        bins: int = 50,
+        value_area_pct: float = 70.0,
+    ) -> str:
+        """Compute volume-by-price histogram for a ticker using 1-minute data.
+
+        Returns the Point of Control (POC), Value Area, volume-weighted statistics,
+        and the binned profile. Useful for identifying key support/resistance levels
+        based on where the most volume traded.
+
+        Args:
+            ticker: Ticker symbol (e.g. "VCB", "BTCUSDT").
+            date: Single date in YYYY-MM-DD format. Defaults to today.
+            start_date: Start date (YYYY-MM-DD). Alternative to --date.
+            end_date: End date (YYYY-MM-DD). Defaults to start_date.
+            bins: Number of price bins (default 50, range 2-200).
+            value_area_pct: Value area target percentage (default 70, range 60-90).
+        """
+        from datetime import date as date_type
+
+        from aipriceaction.volume_profile import compute_volume_profile
+
+        client, _ = _ensure_clients(lang)
+        ticker = ticker.upper()
+
+        # Resolve date range
+        if date:
+            sd = ed = date
+        elif start_date:
+            sd = start_date
+            ed = end_date or start_date
+        else:
+            today = date_type.today().isoformat()
+            sd = ed = today
+
+        # Resolve source for tick size
+        source = "vn"
+        try:
+            tickers_meta = client.get_tickers()
+            for t in tickers_meta:
+                if t.ticker == ticker:
+                    source = t.source or "vn"
+                    break
+        except Exception:
+            pass
+
+        try:
+            df = client.get_ohlcv(ticker, interval="1m", start_date=sd, end_date=ed, ma=False)
+        except Exception as e:
+            return f"Error fetching 1m data for {ticker}: {e}"
+
+        if df is None or df.empty:
+            return f"No 1m data found for {ticker} on {sd}."
+
+        result = compute_volume_profile(df, ticker, source=source, bins=bins, value_area_pct=value_area_pct)
+
+        lines = [
+            f"Volume Profile: {result.symbol} ({sd})",
+            f"Volume: {result.total_volume:,}  Minutes: {result.total_minutes}",
+            f"Range: {result.price_range.low:.2f} - {result.price_range.high:.2f}",
+            f"POC: {result.poc.price:.2f} ({result.poc.percentage:.1f}%)",
+            f"Value Area: {result.value_area.low:.2f} - {result.value_area.high:.2f} ({result.value_area.percentage:.1f}%)",
+        ]
+
+        if result.statistics:
+            s = result.statistics
+            lines.append(f"Mean: {s.mean_price:.2f}  Median: {s.median_price:.2f}  "
+                         f"StdDev: {s.std_deviation:.2f}  Skew: {s.skewness:.4f}")
+
+        if result.profile:
+            lines.append(f"\nProfile ({len(result.profile)} bins):")
+            max_vol = max(p.volume for p in result.profile)
+            for level in result.profile:
+                bar_len = int(level.volume / max_vol * 25) if max_vol > 0 else 0
+                bar = "\u2588" * bar_len
+                lines.append(f"  {level.price:>10.2f}  vol={level.volume:>10,.0f}  "
+                             f"{level.percentage:>5.1f}%  {bar}")
+
+        return "\n".join(lines)
+
+    return ToolDef(
+        tool=get_volume_profile,
+        name="get_volume_profile",
+        description="Volume-by-price histogram with POC, value area, and statistics.",
+        category="market_data",
+    )
+
+
 def get_default_tools(lang: str = "en") -> ToolRegistry:
     """Return a ToolRegistry pre-loaded with the built-in market data tools."""
     registry = ToolRegistry()
     registry.register(create_ohlcv_tool(lang))
     registry.register(create_ticker_list_tool(lang))
     registry.register(create_live_data_tool(lang))
+    registry.register(create_performers_tool(lang))
+    registry.register(create_volume_profile_tool(lang))
     return registry

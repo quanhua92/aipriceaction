@@ -396,3 +396,143 @@ def _resolve_cli_question(builder, args) -> str:
         return templates[0]["question"]
 
     return ""
+
+
+def cmd_performers(args) -> None:
+    """CLI handler: aipa performers."""
+    from aipriceaction import AIPriceAction
+    from aipriceaction.performers import build_performers
+
+    client = AIPriceAction()
+    source = _resolve_source(args.source)
+
+    # Fetch live 1D data with MA indicators
+    data = client.fetch_live_data("1D", ma=True)
+    if not data:
+        print("No live data available.", file=sys.stderr)
+        sys.exit(1)
+
+    # Build sector map from ticker metadata
+    sector_map: dict[str, str] = {}
+    if source:
+        tickers_meta = client.get_tickers(source=source)
+        sector_map = {t.ticker: t.group for t in tickers_meta if t.group}
+        # Filter live data to source tickers
+        source_symbols = {t.ticker for t in tickers_meta}
+        data = {k: v for k, v in data.items() if k in source_symbols}
+
+    top, worst = build_performers(
+        data, sector_map,
+        sort_by=args.sort_by,
+        direction=args.direction,
+        limit=args.limit,
+        min_volume=args.min_volume,
+        source=source,
+    )
+
+    import pandas as pd
+
+    if top:
+        print(f"\n=== Top {len(top)} Performers (by {args.sort_by}, {args.direction}) ===")
+        df = pd.DataFrame([_performer_to_dict(p) for p in top])
+        print(df.to_string(index=False))
+
+    if worst:
+        print(f"\n=== Worst {len(worst)} Performers (by {args.sort_by}, {args.direction}) ===")
+        df = pd.DataFrame([_performer_to_dict(p) for p in worst])
+        print(df.to_string(index=False))
+
+
+def _performer_to_dict(p) -> dict:
+    """Convert PerformerInfo to a flat dict for display."""
+    return {
+        "ticker": p.symbol,
+        "close": p.close,
+        "volume": p.volume,
+        "value": f"{p.value:,.0f}",
+        "close_changed": f"{p.close_changed:+.2f}" if p.close_changed is not None else "",
+        "volume_changed": f"{p.volume_changed:+.2f}" if p.volume_changed is not None else "",
+        "ma10_score": f"{p.ma10_score:.1f}" if p.ma10_score is not None else "",
+        "ma50_score": f"{p.ma50_score:.1f}" if p.ma50_score is not None else "",
+        "ma200_score": f"{p.ma200_score:.1f}" if p.ma200_score is not None else "",
+        "sector": p.sector or "",
+    }
+
+
+def cmd_volume_profile(args) -> None:
+    """CLI handler: aipa volume-profile."""
+    from datetime import date
+
+    from aipriceaction import AIPriceAction
+    from aipriceaction.volume_profile import compute_volume_profile
+
+    client = AIPriceAction()
+    ticker = args.ticker.upper()
+
+    # Resolve date range
+    if args.date:
+        start_date = end_date = args.date
+    elif args.start_date:
+        start_date = args.start_date
+        end_date = args.end_date or args.start_date
+    else:
+        today = date.today().isoformat()
+        start_date = end_date = today
+
+    # Resolve source for tick size
+    source = _resolve_source(args.source) or "vn"
+    # Auto-detect from ticker metadata if not specified
+    if args.source is None:
+        try:
+            tickers_meta = client.get_tickers()
+            for t in tickers_meta:
+                if t.ticker == ticker:
+                    source = t.source or "vn"
+                    break
+        except Exception:
+            pass
+
+    # Fetch 1m data
+    df = client.get_ohlcv(
+        ticker,
+        interval="1m",
+        start_date=start_date,
+        end_date=end_date,
+        ma=False,
+    )
+
+    if df is None or df.empty:
+        print(f"No 1m data found for {ticker} on {start_date}.", file=sys.stderr)
+        sys.exit(1)
+
+    result = compute_volume_profile(
+        df, ticker,
+        source=source,
+        bins=args.bins,
+        value_area_pct=args.value_area_pct,
+    )
+
+    print(f"\n=== Volume Profile: {result.symbol} ({start_date}) ===")
+    print(f"Total Volume: {result.total_volume:,}  |  Minutes: {result.total_minutes}")
+    print(f"Price Range: {result.price_range.low:.2f} - {result.price_range.high:.2f}  "
+          f"(spread: {result.price_range.spread:.2f})")
+    print(f"\nPOC: {result.poc.price:.2f}  volume={result.poc.volume:,.0f}  "
+          f"({result.poc.percentage:.1f}%)")
+    print(f"Value Area: {result.value_area.low:.2f} - {result.value_area.high:.2f}  "
+          f"volume={result.value_area.volume:,.0f}  ({result.value_area.percentage:.1f}%)")
+
+    if result.statistics:
+        s = result.statistics
+        print("\nStatistics:")
+        print(f"  Mean: {s.mean_price:.2f}  Median: {s.median_price:.2f}  "
+              f"StdDev: {s.std_deviation:.2f}  Skewness: {s.skewness:.4f}")
+
+    if result.profile:
+        print(f"\n{'Price':>12}  {'Volume':>12}  {'%':>6}  {'Cum%':>6}  Bar")
+        print("-" * 60)
+        max_vol = max(p.volume for p in result.profile) if result.profile else 1.0
+        for level in result.profile:
+            bar_len = int(level.volume / max_vol * 30) if max_vol > 0 else 0
+            bar = "\u2588" * bar_len
+            print(f"{level.price:>12.2f}  {level.volume:>12,.0f}  {level.percentage:>5.1f}%  "
+                  f"{level.cumulative_percentage:>5.1f}%  {bar}")

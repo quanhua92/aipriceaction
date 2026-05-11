@@ -74,6 +74,29 @@ def run():
     p_tlist.add_argument("--group", default=None, help="Filter by group (e.g. NGAN_HANG, CHUNG_KHOAN)")
     p_tlist.add_argument("--compact", action="store_true", help="Output symbols only, comma-separated")
 
+    # aipa performers [--sort-by close_changed] [--direction desc] [--limit 10]
+    #   [--min-volume 10000] [--source vn]
+    p_perf = sub.add_parser("performers", help="Top/worst performers ranked by a chosen metric")
+    p_perf.add_argument("--sort-by", default="close_changed",
+        choices=["close_changed", "volume", "value", "volume_changed",
+                 "ma10_score", "ma20_score", "ma50_score", "ma100_score", "ma200_score",
+                 "total_money_changed"])
+    p_perf.add_argument("--direction", default="desc", choices=["desc", "asc"])
+    p_perf.add_argument("--limit", type=int, default=10)
+    p_perf.add_argument("--min-volume", type=int, default=10000)
+    p_perf.add_argument("--source", default="vn", choices=["vn", "crypto", "global", "yahoo", "sjc"])
+
+    # aipa volume-profile TICKER [--date YYYY-MM-DD] [--start-date] [--end-date]
+    #   [--source vn] [--bins 50] [--value-area-pct 70]
+    p_vp = sub.add_parser("volume-profile", help="Volume-by-price histogram analysis")
+    p_vp.add_argument("ticker", help="Ticker symbol")
+    p_vp.add_argument("--date", default=None, help="Single date (YYYY-MM-DD)")
+    p_vp.add_argument("--start-date", default=None, help="Start date (YYYY-MM-DD)")
+    p_vp.add_argument("--end-date", default=None, help="End date (YYYY-MM-DD)")
+    p_vp.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"])
+    p_vp.add_argument("--bins", type=int, default=50, help="Number of price bins (2-200)")
+    p_vp.add_argument("--value-area-pct", type=float, default=70.0, help="Value area target percentage (60-90)")
+
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
 
@@ -100,6 +123,12 @@ def run():
     elif args.command == "ticker-list":
         from .cli_commands import cmd_ticker_list
         cmd_ticker_list(args)
+    elif args.command == "performers":
+        from .cli_commands import cmd_performers
+        cmd_performers(args)
+    elif args.command == "volume-profile":
+        from .cli_commands import cmd_volume_profile
+        cmd_volume_profile(args)
     elif args.command == "deep-research":
         if getattr(args, "run", False):
             _ensure_setup()
