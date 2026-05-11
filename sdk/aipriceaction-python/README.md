@@ -16,9 +16,9 @@ The SDK reads OHLCV data from an S3-compatible archive. All sources are auto-det
 
 | Source | Examples | Intervals |
 |---|---|---|
-| Vietnamese stocks (VCI / Vietstock / VNDirect / VPS) | `VCB`, `FPT`, `VNINDEX` | `1m`, `1h`, `1D` |
-| US / international stocks (Yahoo) | `AAPL`, `GOOGL`, `GC=F` | `1m`, `1h`, `1D` |
-| Cryptocurrency (Binance) | `BTCUSDT`, `ETHUSDT` | `1m`, `1h`, `1D` |
+| Vietnamese stocks (VCI / Vietstock / VNDirect / VPS) | `VCB`, `FPT`, `VNINDEX` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
+| US / international stocks (Yahoo) | `AAPL`, `GOOGL`, `GC=F` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
+| Cryptocurrency (Binance) | `BTCUSDT`, `ETHUSDT` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | SJC gold | `SJC-GOLD` | `1D` |
 
 ## Quick Start
@@ -74,11 +74,13 @@ client = AIPriceAction(use_live=True)
 df = client.get_ohlcv("VCB", interval="1D", limit=5, ma=False)
 ```
 
-When enabled, for native intervals (`1D`, `1h`, `1m`) the SDK:
+When enabled, the SDK:
 - Fetches live data from the REST API (`https://api.aipriceaction.com` by default)
 - Overwrites the last candle(s) from S3 with live data
 - Appends any newer candles not yet in the archive
 - Falls back to S3-only data if the live API is unreachable
+
+Native intervals (`1D`, `1h`, `1m`) are stored in the archive. Aggregated intervals (`5m`, `15m`, `30m`, `4h`, `1W`, `2W`) are computed client-side from base data.
 
 Live responses are cached in memory for 120 seconds to avoid redundant API calls. On API failure, stale cached data is returned if available.
 

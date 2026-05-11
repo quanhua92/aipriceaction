@@ -149,7 +149,7 @@ aipa analyze VCB --lang en
 | `--question TEXT` | Custom analysis question |
 | `--questions` | List available question templates and exit |
 | `--context-only` | Dump raw context without LLM (no API key needed) |
-| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W` (default: `1D`) |
+| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
 | `--limit N` | Number of bars (default: 20) |
 | `--source` | Filter by source: `vn` or `crypto` |
 | `--start-date` / `--end-date` | Date range (e.g. `2026-04-01`) |
@@ -215,7 +215,7 @@ aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
 
 | Flag | Description |
 |---|---|
-| `--interval` | Time interval (default: `1D`) |
+| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
 | `--limit N` | Number of bars |
 | `--start-date` / `--end-date` | Date range |
 | `--source` | Filter by source: `vn` or `crypto` |
@@ -246,7 +246,7 @@ aipa live-data VCB TCB MBB
 |---|---|
 | `TICKERS...` | Optional ticker symbols (omit for top N) |
 | `--top N` | Number of top tickers to show (default: 50) |
-| `--interval` | Time interval: `1D`, `1h`, `1m` (default: `1D`) |
+| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
 | `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
 
 ### `aipa ticker-list`
@@ -324,10 +324,10 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 Launch the TUI with `aipa`. The interface has six tabs:
 
 - **Chat** — AI-powered chat with streaming responses, thinking/reasoning display, slash commands, and arrow-key history navigation
+- **Workflows** — Structured analysis forms with question bank dropdown for ticker analysis and deep research
 - **Vietnam** — Browse and search Vietnamese stock tickers
 - **Crypto** — Browse and search cryptocurrency tickers
 - **Global** — Browse and search global/Yahoo tickers
-- **Workflows** — Structured analysis forms with question bank dropdown for ticker analysis and deep research
 - **Settings** — Configure API key, model, base URL, and other preferences
 
 ### Slash Commands (Chat tab)
