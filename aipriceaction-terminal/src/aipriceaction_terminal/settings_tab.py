@@ -87,7 +87,7 @@ class SettingsTab(Vertical):
         with Horizontal(classes="setting-row"):
             yield Static("Interval:", classes="setting-label")
             yield Select(
-                [("1m", "1m"), ("1h", "1h"), ("1D", "1D")],
+                [("1m", "1m"), ("5m", "5m"), ("15m", "15m"), ("30m", "30m"), ("1h", "1h"), ("4h", "4h"), ("1D", "1D"), ("1W", "1W"), ("2W", "2W")],
                 value="1D",
                 allow_blank=False,
                 id="setting-interval",

@@ -412,7 +412,7 @@ class ChatTab(Vertical):
         if getattr(self.app, "agent", None) is not None:
             self.app.agent.clear_history()
 
-    _KNOWN_INTERVALS = frozenset(("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "1M"))
+    _KNOWN_INTERVALS = frozenset(("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "2W"))
 
     def _handle_analyze(self, text: str, parts: list[str]) -> None:
         """Parse /analyze command and dispatch to _run_analyze."""
