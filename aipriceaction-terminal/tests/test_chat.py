@@ -141,7 +141,7 @@ async def test_chat_slash_analyze_calls_builder(app):
     await pilot.press("enter")
     await pilot.pause(0.3)
 
-    mock_builder.build.assert_called_once_with(ticker="VCB", interval="1D", include_system_prompt=False)
+    mock_builder.build.assert_called_once_with(ticker="VCB", interval="1D", include_system_prompt=False, reference_ticker="VNINDEX")
 
 
 async def test_chat_slash_analyze_error_handling(app):
