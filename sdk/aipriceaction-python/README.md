@@ -104,6 +104,55 @@ client = AIPriceAction(
 )
 ```
 
+## Analysis
+
+Local analysis modules that compute directly on fetched data — no backend API calls required.
+
+### Performers
+
+Rank top/worst performers from live daily data by any metric (price change, volume, MA scores, etc.):
+
+```python
+from aipriceaction import AIPriceAction, build_performers
+
+client = AIPriceAction()
+
+# Fetch live 1D data with MA indicators
+live_data = client.fetch_live_data("1D", ma=True)
+
+# Build sector map from ticker metadata
+tickers = client.get_tickers(source="vn")
+sector_map = {t.ticker: t.group for t in tickers if t.group}
+
+# Get top 10 and worst 10 by price change
+top, worst = build_performers(live_data, sector_map, sort_by="close_changed", limit=10)
+
+for p in top:
+    print(f"{p.symbol}: {p.close_changed:+.2f}%  sector={p.sector}")
+```
+
+### Volume Profile
+
+Compute volume-by-price histogram from 1-minute bars:
+
+```python
+from aipriceaction import AIPriceAction, compute_volume_profile
+
+client = AIPriceAction()
+
+# Fetch 1m data for a specific date
+df = client.get_ohlcv("VCB", interval="1m", start_date="2026-05-09", end_date="2026-05-09")
+
+result = compute_volume_profile(df, "VCB", source="vn", bins=50)
+
+print(f"POC: {result.poc.price:.0f} ({result.poc.percentage:.1f}%)")
+print(f"Value Area: {result.value_area.low:.0f} - {result.value_area.high:.0f}")
+print(f"Mean: {result.statistics.mean_price:.0f}, StdDev: {result.statistics.std_deviation:.0f}")
+
+for level in result.profile:
+    print(f"  {level.price:>10.0f}  vol={level.volume:>10.0f}  {level.percentage:.1f}%  cum={level.cumulative_percentage:.1f}%")
+```
+
 ## AI Context Builder
 
 Build structured context strings for LLM-powered investment analysis. Accepts the same `utc_offset` parameter as `AIPriceAction` (default 7 = UTC+7).

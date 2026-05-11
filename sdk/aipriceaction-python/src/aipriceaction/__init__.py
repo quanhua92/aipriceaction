@@ -5,6 +5,8 @@ from .context import AIContextBuilder
 from .settings import Settings, settings
 from .llm_models import Model, OpenRouter
 from .checkpoint import PersistentCheckpointSaver, PostPutCallback, load_session
+from .performers import PerformerInfo, build_performers
+from .volume_profile import VolumeProfileResult, compute_volume_profile
 
 __all__ = [
     "AIPriceAction",
@@ -18,5 +20,9 @@ __all__ = [
     "PersistentCheckpointSaver",
     "PostPutCallback",
     "load_session",
+    "PerformerInfo",
+    "build_performers",
+    "VolumeProfileResult",
+    "compute_volume_profile",
 ]
 __version__ = "0.1.12"
