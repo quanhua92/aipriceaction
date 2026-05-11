@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.27] - 2026-05-11
+
+### Added
+- `aipa performers` CLI command: rank top/worst performers by price change, volume, value (close × volume), MA scores, or money flow (defaults to VN stocks)
+- `aipa volume-profile TICKER` CLI command: volume-by-price histogram analysis with POC, value area, and statistics
+- `get_performers` and `get_volume_profile` agent tools for AI-powered market analysis
+
+### Changed
+- Require `aipriceaction>=0.1.13` for performers and volume_profile modules
+
 ## [0.1.26] - 2026-05-11
 
 ### Added

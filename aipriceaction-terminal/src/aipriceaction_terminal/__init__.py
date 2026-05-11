@@ -1,4 +1,4 @@
 """AIPriceAction Terminal - TUI chat interface for ticker analysis."""
 
-__version__ = "0.1.26"
+__version__ = "0.1.27"
 
