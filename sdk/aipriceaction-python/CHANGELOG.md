@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.13] - 2026-05-11
+
+### Added
+- `performers` module: `build_performers()` function and `PerformerInfo` dataclass for top/worst performer ranking from live daily data (port of Rust `performers.rs`), with `value` field (close × volume) and `value` sort option
+- `volume_profile` module: `compute_volume_profile()` function and `VolumeProfileResult` dataclass for volume-by-price histogram analysis with POC, value area, and statistics (port of Rust `volume_profile.rs`)
+- Both modules are pure Python with no external dependencies beyond pandas for volume_profile input
+
 ## [0.1.12] - 2026-05-11
 
 ### Added
