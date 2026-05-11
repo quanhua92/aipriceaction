@@ -279,7 +279,9 @@ Present the final report to the user. Use the research question and the user's l
 | "Deep dive into real estate" | `aipa-research` skill (thorough investigation) |
 | "Which sectors are leading?" | `aipa-research` skill (cross-sector analysis) |
 | "Most active tickers right now?" | `aipa live-data` (no AI, instant top list) |
-| "Top stocks by trading value" | `aipa live-data --top 20` (no AI) |
+| "Top gainers / losers" | `aipa performers` (no AI) |
+| "Best stocks by trading value" | `aipa performers --sort-by value` (no AI) |
+| "Volume profile / POC / value area" | `aipa volume-profile TICKER` (no AI) |
 | "What tickers are in the real estate sector?" | `aipa ticker-list --source vn --group BAT_DONG_SAN` |
 
 ### Key Differences
@@ -345,3 +347,15 @@ When presenting results to the user, always use the stdout output (the final app
 9. **Auto-uppercase**: Ticker symbols in questions are automatically processed. The pipeline handles uppercase conversion internally.
 
 10. **Use `--source` for non-VN markets**: Add `--source crypto`, `--source global`, or `--source sjc` to research other markets. The supervisor, workers, tools, and default question all adapt to the selected source automatically.
+
+11. **Use `aipa performers` to identify leaders and laggards**: Before or during research, run `aipa performers` to quickly identify which tickers are leading or lagging. This helps you pick better tickers for sector workers and provides ranking context for the final report. Examples:
+    - `aipa performers` — top/worst VN stocks by price change
+    - `aipa performers --sort-by value --limit 20` — highest trading value
+    - `aipa performers --sort-by ma200_score` — strongest/weakest long-term trends
+    - `aipa performers --source crypto --sort-by volume` — most active crypto
+    - `aipa performers --sort-by total_money_changed` — biggest money flow changes
+
+12. **Use `aipa volume-profile` for key price levels**: When workers need support/resistance context for a sector, run `aipa volume-profile TICKER` on the top movers to get POC, value area, and volume-weighted statistics. This gives concrete price levels for the sector reports. Examples:
+    - `aipa volume-profile VCB` — today's volume profile
+    - `aipa volume-profile BTCUSDT --source crypto --bins 30` — crypto profile
+    - `aipa volume-profile VCB --start-date 2026-05-05 --end-date 2026-05-09` — multi-day profile

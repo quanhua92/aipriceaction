@@ -137,6 +137,9 @@ aipa analyze BTCUSDT --source crypto
 | "Get price data for VCB" | Use the `aipa-data` skill instead |
 | "Show me OHLCV candles for BTC" | Use the `aipa-data` skill instead |
 | "What are the top stocks today?" | `aipa live-data` (no AI, quick market overview) |
+| "Top gainers / losers" | `aipa performers` (no AI) |
+| "Best stocks by trading value" | `aipa performers --sort-by value` (no AI) |
+| "Volume profile / POC / value area" | `aipa volume-profile TICKER` (no AI) |
 | "What banking stocks are available?" | `aipa ticker-list --source vn --group NGAN_HANG` |
 
 Key rule: **AI insights → `aipa-analyze`, raw numbers → `aipa-data`, comprehensive report → `aipa-research`, quick market overview → `aipa live-data`**.
@@ -245,3 +248,16 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 9. **Combine with `--limit`**: More bars = more context. Use `--limit 50` or `--limit 100` for deeper analysis. Default is 20.
 
 10. **Reference ticker**: Auto-detected based on the ticker's source — `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global stocks. Use `--reference-ticker` to override.
+
+11. **Use `aipa performers` to find tickers to analyze**: When the user asks "what should I analyze?" or "what's moving today?", run `aipa performers` to get top/worst lists, then analyze the interesting ones with `aipa analyze`. Examples:
+    - `aipa performers` — top/worst by price change (VN default)
+    - `aipa performers --sort-by value --limit 20` — highest trading value
+    - `aipa performers --sort-by ma50_score --source crypto` — strongest crypto trends
+    - `aipa performers --sort-by total_money_changed` — biggest money flow changes
+
+12. **Use `aipa volume-profile` for support/resistance context**: When analyzing a ticker and the user asks about key price levels, support, resistance, or "where is the volume?", run `aipa volume-profile TICKER` to get POC (Point of Control), value area, and volume-weighted statistics. This gives you concrete price levels to reference in your analysis. Examples:
+    - `aipa volume-profile VCB` — today's profile
+    - `aipa volume-profile VCB --date 2026-05-08` — specific date
+    - `aipa volume-profile VCB --start-date 2026-05-05 --end-date 2026-05-09` — date range
+    - `aipa volume-profile BTCUSDT --source crypto --bins 30` — crypto with fewer bins
+    - `aipa volume-profile FPT --start-date 2026-05-01 --end-date 2026-05-09 --bins 30 --value-area-pct 80` — full options

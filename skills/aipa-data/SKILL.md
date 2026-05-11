@@ -4,10 +4,15 @@ description: >
   Fetch raw OHLCV price data using the aipa CLI. Use this skill whenever the
   user asks for price data, candle data, OHLCV data, historical prices, stock
   quotes, crypto prices, moving averages, volume data, or any raw market data
-  without AI analysis. Also use when the user wants to inspect what data is
-  available, build charts, perform their own calculations, or get numbers for
-  a spreadsheet. Even if the user doesn't mention "aipa", trigger this skill
-  for any raw financial data request.
+  without AI analysis. Also use for: top performers, worst performers, best
+  stocks, top gainers, biggest losers, market movers, ranking tickers by
+  price change / volume / value / MA scores / money flow (`aipa performers`);
+  volume profile, POC, point of control, value area, support/resistance by
+  volume, volume-by-price histogram (`aipa volume-profile`). Also use when
+  the user wants to inspect what data is available, build charts, perform
+  their own calculations, or get numbers for a spreadsheet. Even if the user
+  doesn't mention "aipa", trigger this skill for any raw financial data or
+  market ranking request.
 ---
 
 # aipa-data
@@ -273,6 +278,92 @@ Each row includes: ticker, time, open, high, low, close, volume, close_changed (
 
 ---
 
+## `aipa performers` — Top/Worst Performers
+
+Rank top and worst performers from live daily data by any metric. No LLM involved, no API key needed. Defaults to VN stocks.
+
+```bash
+aipa performers [--sort-by close_changed] [--direction desc] [--limit 10] [--source vn]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--sort-by` | `close_changed` | Metric: `close_changed`, `volume`, `value`, `volume_changed`, `ma10_score`, `ma20_score`, `ma50_score`, `ma100_score`, `ma200_score`, `total_money_changed` |
+| `--direction` | `desc` | Sort direction: `desc` (strongest first) or `asc` (weakest first) |
+| `--limit N` | `10` | Number of entries per list |
+| `--min-volume N` | `10000` | Minimum volume for VN tickers |
+| `--source` | `vn` | Data source: `vn`, `crypto`, `global`, `sjc` |
+
+### Usage Examples
+
+```bash
+# Top 10 VN stocks by price change (default)
+aipa performers
+
+# Top 5 by volume, ascending
+aipa performers --sort-by volume --direction asc --limit 5
+
+# Top 20 by MA50 score
+aipa performers --sort-by ma50_score --limit 20
+
+# Crypto performers
+aipa performers --source crypto --limit 5
+
+# Top 10 by trading value (close × volume)
+aipa performers --sort-by value --limit 10
+
+# By money flow
+aipa performers --sort-by total_money_changed --limit 15
+```
+
+---
+
+## `aipa volume-profile` — Volume-by-Price Histogram
+
+Volume profile analysis from 1-minute data showing Point of Control (POC), Value Area, and volume-weighted statistics. No LLM involved, no API key needed.
+
+```bash
+aipa volume-profile TICKER [--date YYYY-MM-DD] [--source vn] [--bins 50] [--value-area-pct 70]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `TICKER` | — | Ticker symbol (required) |
+| `--date` | today | Single date (YYYY-MM-DD) |
+| `--start-date` / `--end-date` | — | Date range |
+| `--source` | auto-detect | Source for tick size: `vn`, `crypto`, `global`, `sjc` |
+| `--bins N` | `50` | Number of price bins (2–200) |
+| `--value-area-pct` | `70` | Value area target % (60–90) |
+
+### Usage Examples
+
+```bash
+# Today's profile for VCB
+aipa volume-profile VCB
+
+# Specific date
+aipa volume-profile VCB --date 2026-05-09
+
+# Crypto with fewer bins
+aipa volume-profile BTCUSDT --source crypto --bins 30
+
+# Date range with wider value area
+aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09 --value-area-pct 80
+```
+
+### Output
+
+- **POC** (Point of Control): price level with the highest volume
+- **Value Area**: price range containing the target % of total volume (default 70%)
+- **Statistics**: volume-weighted mean, median, standard deviation, skewness
+- **Profile**: binned price levels with volume, percentage, and visual bar chart
+
+---
+
 ## Interpreting Output
 
 The CLI outputs to two streams:
@@ -307,6 +398,12 @@ Each row includes: date/time, open, high, low, close, volume. When `--ma` is ena
 | "Show me market overview" | `aipa live-data` (this skill) |
 | "What tickers are available?" | `aipa ticker-list` (this skill) |
 | "List banking stocks" | `aipa ticker-list --source vn --group NGAN_HANG` (this skill) |
+| "Top gainers / losers" | `aipa performers` (this skill) |
+| "Best performing stocks" | `aipa performers --sort-by close_changed` (this skill) |
+| "Rank by MA score" | `aipa performers --sort-by ma50_score` (this skill) |
+| "Volume profile for VCB" | `aipa volume-profile VCB` (this skill) |
+| "Where is the POC?" | `aipa volume-profile TICKER` (this skill) |
+| "Support/resistance by volume" | `aipa volume-profile TICKER` (this skill) |
 | "Analyze VCB" | `aipa-analyze` (AI analysis) |
 | "Compare FPT and VNM" | `aipa-analyze` (AI comparison) |
 | "Research the banking sector" | `aipa-research` (multi-agent pipeline) |
@@ -336,3 +433,7 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 9. **Use `aipa live-data` for market overview**: When you need to identify the most active tickers or get a broad market snapshot, use `aipa live-data` instead of fetching individual tickers. It returns the latest candle sorted by trading value. Call it first with no arguments to discover what's moving, then drill into specific tickers with `get-ohlcv-data`.
 
 10. **Use `aipa ticker-list` to discover tickers**: When you need to know what tickers are available or find tickers in a specific sector, use `aipa ticker-list`. Add `--group` to filter by sector (e.g. `NGAN_HANG` for banking) and `--compact` to get a comma-separated list for passing to other commands.
+
+11. **Use `aipa performers` for ranking**: When you need to identify top gainers, worst losers, or rank tickers by MA scores or money flow, use `aipa performers`. It returns two lists (top and worst) sorted by your chosen metric. The AI agent can also call the `get_performers` tool directly.
+
+12. **Use `aipa volume-profile` for volume analysis**: When you need to identify key price levels based on traded volume, use `aipa volume-profile`. It shows where the most volume was traded (POC), the value area, and volume-weighted statistics from 1-minute data. The AI agent can also call the `get_volume_profile` tool directly.
