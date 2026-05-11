@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.26] - 2026-05-11
+
+### Added
+- Support aggregated intervals (`5m`, `15m`, `30m`, `4h`, `1W`, `2W`) in `get-ohlcv-data`, `live-data`, and agent tools
+- Smart MA strategy: `live-data` and agent tools request MA scores only for native intervals (`1D`, `1h`, `1m`), skip for aggregated intervals where MA is meaningless with few bars
+- Expand interval selectors in TUI Settings and Workflows tabs to include all 9 intervals
+- Move Workflows tab to position 2 (key `2`) right after Chat
+
+### Changed
+- Require `aipriceaction>=0.1.12` for client-side OHLCV aggregation and `fetch_live_data` `ma` parameter
+
+### Fixed
+- Update agent tool docstrings to list all supported intervals so the AI knows `4h`, `1W`, etc. are valid
+- Fix test assertion for auto-detected `reference_ticker` in `/analyze` build call
+
 ## [0.1.25] - 2026-05-11
 
 ### Changed
