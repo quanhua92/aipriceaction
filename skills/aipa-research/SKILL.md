@@ -75,6 +75,7 @@ Only skip asking if the user's request explicitly indicates they want the full C
 | `4h` | 4 hours |
 | `1D` | 1 day (default) |
 | `1W` | 1 week |
+| `2W` | 2 weeks |
 
 ---
 

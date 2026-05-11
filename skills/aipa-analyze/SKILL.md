@@ -76,7 +76,7 @@ aipa analyze TICKER [TICKERS...] [options]
 | Flag | Default | Description |
 |---|---|---|
 | `TICKER [TICKERS...]` | — | One or more ticker symbols (auto-uppercased) |
-| `--interval` | `1D` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W` |
+| `--interval` | `1D` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | `--limit N` | `20` | Number of bars/candles to fetch |
 | `--source` | auto-detect | Filter by source: `vn`, `crypto`, `global` |
 | `--start-date` | — | Start date (e.g. `2025-04-01`) |
