@@ -122,9 +122,13 @@ class TestGetOhlcv:
         with pytest.raises(ValueError, match="Invalid interval"):
             client.get_ohlcv("VCB", interval="99m")
 
-    def test_aggregated_interval_not_available(self, mock_s3, client):
-        with pytest.raises(ValueError, match="Aggregated interval"):
-            client.get_ohlcv("VCB", interval="5m")
+    def test_aggregated_interval_resolves_base(self):
+        """Aggregated intervals resolve to their base interval."""
+        from aipriceaction.aggregator import resolve_interval
+
+        base, agg = resolve_interval("5m")
+        assert base == "1m"
+        assert agg == "5m"
 
     def test_hourly_interval_alias(self, mock_s3, client):
         """hourly should normalize to 1h (no data mocked but no error)."""

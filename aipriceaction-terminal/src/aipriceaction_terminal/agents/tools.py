@@ -182,7 +182,8 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
         """
         client, _ = _ensure_clients(lang)
         try:
-            data = client.fetch_live_data(interval)
+            is_native = interval in {"1D", "1h", "1m"}
+            data = client.fetch_live_data(interval, ma=is_native)
         except Exception as e:
             return f"Error fetching live data: {e}"
         if data is None:

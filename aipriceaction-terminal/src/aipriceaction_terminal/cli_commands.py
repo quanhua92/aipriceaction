@@ -241,7 +241,8 @@ def cmd_live_data(args) -> None:
         source_set = {t.ticker for t in meta}
 
     try:
-        data = client.fetch_live_data(interval)
+        is_native = interval in {"1D", "1h", "1m"}
+        data = client.fetch_live_data(interval, ma=is_native)
     except Exception as e:
         print(f"Error fetching live data: {e}", file=sys.stderr)
         sys.exit(1)

@@ -65,7 +65,7 @@ def run():
     p_live = sub.add_parser("live-data", help="Latest candle with top tickers by trading value")
     p_live.add_argument("tickers", nargs="*", help="Ticker symbol(s) (omit for top N by trading value)")
     p_live.add_argument("--top", type=int, default=50, help="Number of top tickers when no tickers specified (default: 50)")
-    p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m"])
+    p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W"])
     p_live.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source")
 
     # aipa ticker-list [--source vn] [--group NGAN_HANG]

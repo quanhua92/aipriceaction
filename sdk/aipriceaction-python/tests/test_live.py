@@ -151,6 +151,20 @@ class TestFetchLiveData:
         responses.stop()
         responses.reset()
 
+    def testfetch_live_data_ma_false(self, client_live):
+        """ma=False should produce URL with ma=false."""
+        responses.start()
+        data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
+        responses.get(
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            json=data,
+        )
+        result = client_live.fetch_live_data("1D", ma=False)
+        assert result is not None
+        assert "VCB" in result
+        responses.stop()
+        responses.reset()
+
     def testfetch_live_data_cached(self, client_live):
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
@@ -472,8 +486,42 @@ class TestGetOhlcvLive:
         assert len(df) == 1
         assert df.iloc[0]["close"] == 56887.44
 
-    def test_get_ohlcv_live_overlays_data(self, mock_s3_base, mock_live, client_live):
+    def test_get_ohlcv_live_overlays_data(self, mock_s3_base, client_live):
         """Live data overwrites S3 data when use_live=True."""
+        # get_ohlcv calls fetch_live_data with ma=False
+        responses.get(
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            json={
+                "VCB": [
+                    {
+                        "time": "2025-04-29",
+                        "open": 58000,
+                        "high": 58500,
+                        "low": 57500,
+                        "close": 58200,
+                        "volume": 2000000,
+                        "symbol": "VCB",
+                        "close_changed": 2.3,
+                        "volume_changed": 1.1,
+                        "total_money_changed": 50000,
+                    }
+                ],
+                "FPT": [
+                    {
+                        "time": "2025-04-29",
+                        "open": 147000,
+                        "high": 148000,
+                        "low": 146000,
+                        "close": 147500,
+                        "volume": 900000,
+                        "symbol": "FPT",
+                        "close_changed": 1.0,
+                        "volume_changed": 0.5,
+                        "total_money_changed": 10000,
+                    }
+                ],
+            },
+        )
         responses.get(
             "http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-2025-04-28.csv",
             body="2025-04-28 00:00:00,57284.56,57880.24,57086.00,57086.00,1657552",

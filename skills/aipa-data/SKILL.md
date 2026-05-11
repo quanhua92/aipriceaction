@@ -47,6 +47,12 @@ None required. `get-ohlcv-data` fetches data from public S3 archives — no back
 | `1D` | 1 day (default) | Swing trading, trend analysis |
 | `1h` | 1 hour | Intraday analysis, day trading |
 | `1m` | 1 minute | Scalping, micro structure |
+| `5m` | 5 minutes | Scalping, micro structure |
+| `15m` | 15 minutes | Intraday patterns |
+| `30m` | 30 minutes | Intraday patterns |
+| `4h` | 4 hours | Swing trading, intraday |
+| `1W` | 1 week | Medium-term trend analysis |
+| `2W` | 2 weeks | Medium-term trend analysis |
 
 ---
 
@@ -63,7 +69,7 @@ aipa get-ohlcv-data TICKER [TICKERS...] [options]
 | Flag | Default | Description |
 |---|---|---|
 | `TICKER [TICKERS...]` | — | One or more ticker symbols (auto-uppercased) |
-| `--interval` | `1D` | Time interval: `1m`, `1h`, `1D` |
+| `--interval` | `1D` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | `--limit N` | — | Number of bars |
 | `--start-date` | — | Start date (e.g. `2025-01-01`) |
 | `--end-date` | — | End date (e.g. `2025-05-01`) |

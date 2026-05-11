@@ -56,15 +56,24 @@ _ALL_INTERVALS = {
     "4h",
     "1W",
     "2W",
-    "1M",
 }
 
 # Live data overlay settings
 _LIVE_CACHE_TTL = 120.0
-_LIVE_REQUEST_TIMEOUT = 5.0
-_LIVE_LIMITS: dict[str, int] = {"1D": 1, "1h": 5, "1m": 60}
+_LIVE_REQUEST_TIMEOUT = 15.0
+_LIVE_LIMITS: dict[str, int] = {
+    "1D": 1,
+    "1h": 5,
+    "1m": 60,
+    "5m": 12,
+    "15m": 4,
+    "30m": 2,
+    "4h": 6,
+    "1W": 4,
+    "2W": 2,
+}
 _LIVE_NATIVE_INTERVALS = {"1D", "1h", "1m"}
-_DATE_ONLY_INTERVALS = {"1D", "1W", "2W", "1M"}
+_DATE_ONLY_INTERVALS = {"1D", "1W", "2W"}
 
 
 def _parse_utc(utc_string: str) -> datetime | None:
@@ -684,7 +693,7 @@ class AIPriceAction:
 
     # ── Live data overlay ──
 
-    def fetch_live_data(self, interval: str) -> Optional[dict]:
+    def fetch_live_data(self, interval: str, *, ma: bool = True) -> Optional[dict]:
         """Fetch live OHLCV data from the REST API with caching.
 
         Returns the parsed JSON dict (ticker -> list of candles), or None on failure.
@@ -699,7 +708,7 @@ class AIPriceAction:
         limit = _LIVE_LIMITS.get(interval, 1)
         url = (
             f"{self._live_url}/tickers"
-            f"?interval={interval}&mode=all&format=json&limit={limit}&ma=true"
+            f"?interval={interval}&mode=all&format=json&limit={limit}&ma={str(ma).lower()}"
         )
 
         try:
@@ -834,10 +843,11 @@ class AIPriceAction:
 
         Mirrors the /tickers REST API endpoint parameters.
 
-        When ``use_live=True`` is set on the client and the interval is a native
-        one (``1D``, ``1h``, ``1m``), live data from the REST API is overlaid on
-        top of S3 data — the last candle(s) are overwritten and any newer candles
-        are appended. If the live API is unreachable, stale S3 data is used.
+        When ``use_live=True`` is set on the client, live data from the REST API
+        is overlaid on top of S3 data — the last candle(s) are overwritten and
+        any newer candles are appended. Works for both native and aggregated
+        intervals (the backend handles aggregation server-side). If the live API
+        is unreachable, stale S3 data is used.
 
         Args:
             ticker: Single ticker symbol (e.g. "VCB", "BTCUSDT"). None = all tickers.
@@ -866,8 +876,10 @@ class AIPriceAction:
         if interval.upper() not in {i.upper() for i in _ALL_INTERVALS}:
             raise ValueError(f"Invalid interval '{interval}'. Valid: {_ALL_INTERVALS}")
 
-        # Normalize interval to S3 key format
-        norm_interval = self._normalize_interval(interval)
+        # Resolve interval: native or aggregated (base interval + optional aggregation)
+        from .aggregator import resolve_interval, base_bars_per_candle
+
+        base_interval, agg_interval = resolve_interval(interval)
 
         # Resolve ticker symbols
         sym_list = None
@@ -900,10 +912,17 @@ class AIPriceAction:
         has_explicit_start = start_date is not None
         need_rows = total_need if not has_explicit_start else None
 
+        # For aggregated intervals, scale by base_bars_per_candle so we fetch
+        # enough base bars to produce the requested number of aggregated candles.
+        if agg_interval is not None and need_rows is not None:
+            need_rows = need_rows * base_bars_per_candle(agg_interval)
+
         if start is None:
             # No explicit start: generous upper bound in calendar days.
             # _fetch_backwards stops early when enough rows are collected.
-            lookback = _ma_buffer_days(norm_interval) + 500 if ma else 400
+            lookback = _ma_buffer_days(base_interval) + 500 if ma else 400
+            if agg_interval is not None:
+                lookback = lookback * base_bars_per_candle(agg_interval)
             start = end - timedelta(days=lookback)
 
         # Expand start for MA buffer only when explicit start_date is given
@@ -911,7 +930,7 @@ class AIPriceAction:
         ma_buffer_start = start
         user_start = start
         if ma and has_explicit_start:
-            ma_buffer_start = start - timedelta(days=_ma_buffer_days(norm_interval))
+            ma_buffer_start = start - timedelta(days=_ma_buffer_days(base_interval))
 
         days = self._date_range(ma_buffer_start, end)
 
@@ -922,7 +941,7 @@ class AIPriceAction:
             df = self._fetch_ohlcv_for_ticker(
                 src,
                 sym,
-                norm_interval,
+                base_interval,
                 days,
                 need_rows=need_rows,
             )
@@ -944,11 +963,35 @@ class AIPriceAction:
 
         result = pd.concat(frames, ignore_index=True)
 
-        # Overlay live data on top of S3 data (before MA computation)
-        if self.use_live and norm_interval in _LIVE_NATIVE_INTERVALS:
-            live_data = self.fetch_live_data(norm_interval)
-            if live_data is not None:
-                result = self._merge_live_data(result, live_data, resolved)
+        # Aggregate base data into target interval (before live overlay)
+        if agg_interval is not None:
+            from .aggregator import aggregate_ohlcv
+
+            all_agg: list[pd.DataFrame] = []
+            for sym, group in result.groupby("symbol", sort=False):
+                group = group.sort_values("time").reset_index(drop=True)
+                # Determine source for hour alignment offset
+                src_for_sym = next(
+                    (s for s, t in resolved if t == sym), "vn"
+                )
+                agg_df = aggregate_ohlcv(
+                    group.drop(columns=["symbol"]),
+                    agg_interval,
+                    source=src_for_sym,
+                )
+                agg_df["symbol"] = sym
+                all_agg.append(agg_df)
+            result = pd.concat(all_agg, ignore_index=True)
+
+        # Overlay live data on top of S3 data (before MA computation).
+        # The backend supports aggregated intervals directly, so we pass
+        # the original interval (aggregated or native) to the live API.
+        if self.use_live:
+            live_interval = agg_interval if agg_interval else base_interval
+            if live_interval in _LIVE_NATIVE_INTERVALS or agg_interval is not None:
+                live_data = self.fetch_live_data(live_interval, ma=False)
+                if live_data is not None:
+                    result = self._merge_live_data(result, live_data, resolved)
 
         # Compute MA indicators per symbol
         if ma:

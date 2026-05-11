@@ -59,7 +59,7 @@ Run `aipa setup` for interactive first-run configuration. Settings are saved to 
 | `1D` | 1 day (default) |
 | `1W` | 1 week |
 
-Note: `get-ohlcv-data` supports `1m`, `1h`, and `1D` natively. Other intervals are computed on-demand.
+Note: All intervals work natively — `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W`. Non-native intervals are aggregated client-side from base data.
 
 ---
 
