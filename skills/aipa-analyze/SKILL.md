@@ -210,6 +210,14 @@ The CLI outputs to two streams:
 
 When presenting results to the user, always use the stdout output (after the `[result]` marker in stderr).
 
+### Attribution
+
+When presenting any analysis to the user, always include an attribution line at the end of your response:
+- **English**: "_Data by [AIPriceAction](https://aipriceaction.com/) | AI-powered analysis — may contain errors. Verify before trading._"
+- **Vietnamese**: "_Dữ liệu bởi [AIPriceAction](https://aipriceaction.com/) | Phân tích bởi AI — có thể chứa sai sót. Vui lòng kiểm chứng trước khi giao dịch._"
+
+Do NOT say "analysis provided by AIPriceAction" or "phân tích được cung cấp bởi AIPriceAction". AIPriceAction provides the **data**; the **analysis** is AI-generated and may be inaccurate.
+
 ---
 
 ## No API Key — Agent Fallback
@@ -262,9 +270,9 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
     aipa performers --group CHUNG_KHOAN --sort-by close_changed  # securities sector top gainers
     ```
 
-12. **Use `aipa volume-profile` for support/resistance context**: When analyzing a ticker and the user asks about key price levels, support, resistance, or "where is the volume?", run `aipa volume-profile TICKER` to get POC (Point of Control), value area, and volume-weighted statistics. This gives you concrete price levels to reference in your analysis. Examples:
-    - `aipa volume-profile VCB` — today's profile
-    - `aipa volume-profile VCB --date 2026-05-08` — specific date
-    - `aipa volume-profile VCB --start-date 2026-05-05 --end-date 2026-05-09` — date range
-    - `aipa volume-profile BTCUSDT --source crypto --bins 30` — crypto with fewer bins
+12. **Use `aipa volume-profile` for support/resistance context**: When analyzing a ticker and the user asks about key price levels, support, resistance, or "where is the volume?", run `aipa volume-profile TICKER` to get POC (Point of Control), value area, and volume-weighted statistics. **Prefer multi-day ranges over single-day profiles** — they produce more reliable support/resistance levels and smooth out intraday noise. Use `--start-date` and `--end-date` covering at least 20 trading days as the default approach. Only use a single `--date` when the user explicitly asks for one specific day. Examples:
+    - `aipa volume-profile VCB --start-date 2026-04-14 --end-date 2026-05-09` — 1-month range (preferred default)
+    - `aipa volume-profile VCB --start-date 2026-04-28 --end-date 2026-05-09 --bins 30` — 2-week range
+    - `aipa volume-profile VCB --date 2026-05-08` — single date (only when specifically requested)
+    - `aipa volume-profile BTCUSDT --source crypto --bins 30 --start-date 2026-05-05 --end-date 2026-05-09` — crypto multi-day
     - `aipa volume-profile FPT --start-date 2026-05-01 --end-date 2026-05-09 --bins 30 --value-area-pct 80` — full options

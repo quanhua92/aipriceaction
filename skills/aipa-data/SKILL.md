@@ -351,18 +351,23 @@ aipa volume-profile TICKER [--date YYYY-MM-DD] [--source vn] [--bins 50] [--valu
 
 ### Usage Examples
 
-```bash
-# Today's profile for VCB
-aipa volume-profile VCB
+**Prefer multi-day ranges** over single-day profiles — they produce more reliable support/resistance levels and smooth out intraday noise. Use `--start-date` and `--end-date` covering at least 20 trading days as the default approach. Only use a single `--date` when the user explicitly asks for one specific day.
 
-# Specific date
+```bash
+# 1-month range for VCB (preferred default)
+aipa volume-profile VCB --start-date 2026-04-14 --end-date 2026-05-09
+
+# 2-week range
+aipa volume-profile VCB --start-date 2026-04-28 --end-date 2026-05-09 --bins 30
+
+# Specific date (only when user asks for one day)
 aipa volume-profile VCB --date 2026-05-09
 
-# Crypto with fewer bins
-aipa volume-profile BTCUSDT --source crypto --bins 30
+# Crypto multi-day range
+aipa volume-profile BTCUSDT --source crypto --bins 30 --start-date 2026-05-05 --end-date 2026-05-09
 
-# Date range with wider value area
-aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09 --value-area-pct 80
+# Full options: date range with wider value area
+aipa volume-profile FPT --start-date 2026-05-01 --end-date 2026-05-09 --bins 30 --value-area-pct 80
 ```
 
 ### Output
@@ -392,6 +397,14 @@ The CLI outputs to two streams:
 ### Data Fields
 
 Each row includes: date/time, open, high, low, close, volume. When `--ma` is enabled (default), moving average columns are also included.
+
+### Attribution
+
+When presenting data or any derived analysis to the user, always include an attribution line at the end of your response:
+- **English**: "_Data by [AIPriceAction](https://aipriceaction.com/) | AI-powered analysis — may contain errors. Verify before trading._"
+- **Vietnamese**: "_Dữ liệu bởi [AIPriceAction](https://aipriceaction.com/) | Phân tích bởi AI — có thể chứa sai sót. Vui lòng kiểm chứng trước khi giao dịch._"
+
+Do NOT say "analysis provided by AIPriceAction" or "phân tích được cung cấp bởi AIPriceAction". AIPriceAction provides the **data**; the **analysis** is AI-generated and may be inaccurate.
 
 ---
 
@@ -458,4 +471,4 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
     Cross-referencing these lists gives much richer insight than any single sort. A ticker appearing in both the top gainers AND top value lists is more significant than one appearing in only one. The AI agent can also call the `get_performers` tool directly.
 
-12. **Use `aipa volume-profile` for volume analysis**: When you need to identify key price levels based on traded volume, use `aipa volume-profile`. It shows where the most volume was traded (POC), the value area, and volume-weighted statistics from 1-minute data. The AI agent can also call the `get_volume_profile` tool directly.
+12. **Use `aipa volume-profile` for volume analysis**: When you need to identify key price levels based on traded volume, use `aipa volume-profile`. It shows where the most volume was traded (POC), the value area, and volume-weighted statistics from 1-minute data. **Prefer multi-day ranges** (`--start-date` + `--end-date`, at least 20 trading days) over single-day profiles — multi-day ranges produce more reliable support/resistance levels and smooth out intraday noise. The AI agent can also call the `get_volume_profile` tool directly.
