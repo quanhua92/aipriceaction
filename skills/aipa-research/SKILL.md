@@ -28,6 +28,14 @@ uvx aipa-cli deep-research
 # Persistent install
 uv tool install aipa-cli
 aipa deep-research
+
+# Fallback: pip (if uv is not available)
+pip install aipa-cli
+aipa deep-research
+
+# Last fallback: system pip (if pip fails due to PEP 668)
+python3 -m pip install aipa-cli --break-system-packages
+aipa deep-research
 ```
 
 ## Environment Variables

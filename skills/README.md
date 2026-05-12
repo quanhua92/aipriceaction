@@ -84,7 +84,7 @@ Restart Claude Code after installing. Verify by asking "what skills are availabl
 
 ## Prerequisites
 
-- Python 3.10+ with [uv](https://docs.astral.sh/uv/) installed
+- Python 3.10+
 - `OPENAI_API_KEY` environment variable set (or configured via `aipa setup`)
 
 Install the CLI:
@@ -95,6 +95,14 @@ uvx aipa-cli analyze VCB
 
 # Persistent install
 uv tool install aipa-cli
+aipa analyze VCB
+
+# Fallback: pip (if uv is not available)
+pip install aipa-cli
+aipa analyze VCB
+
+# Last fallback: system pip (if pip fails due to PEP 668)
+python3 -m pip install aipa-cli --break-system-packages
 aipa analyze VCB
 ```
 

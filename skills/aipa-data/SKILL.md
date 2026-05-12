@@ -32,6 +32,14 @@ uvx aipa-cli get-ohlcv-data VCB
 # Persistent install
 uv tool install aipa-cli
 aipa get-ohlcv-data VCB
+
+# Fallback: pip (if uv is not available)
+pip install aipa-cli
+aipa get-ohlcv-data VCB
+
+# Last fallback: system pip (if pip fails due to PEP 668)
+python3 -m pip install aipa-cli --break-system-packages
+aipa get-ohlcv-data VCB
 ```
 
 ## Environment Variables

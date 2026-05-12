@@ -27,6 +27,14 @@ uvx aipa-cli analyze VCB
 # Persistent install
 uv tool install aipa-cli
 aipa analyze VCB
+
+# Fallback: pip (if uv is not available)
+pip install aipa-cli
+aipa analyze VCB
+
+# Last fallback: system pip (if pip fails due to PEP 668)
+python3 -m pip install aipa-cli --break-system-packages
+aipa analyze VCB
 ```
 
 ## Environment Variables
