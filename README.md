@@ -1,92 +1,158 @@
 # AIPriceAction
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
+**Financial data platform with AI-powered analysis for Vietnamese stocks, crypto, and global markets.**
 
-Market data platform for Vietnamese stocks, US stocks, cryptocurrencies, commodities, and SJC gold. Fetches, stores, and serves OHLCV data with technical indicators through a REST API backed by PostgreSQL and Redis. This repository contains the Rust backend, client SDKs (Python and TypeScript), a terminal-based analysis tool, and Claude Code skills for AI-powered market research.
+[![PyPI - aipriceaction](https://img.shields.io/pypi/v/aipriceaction?label=aipriceaction&color=blue)](https://pypi.org/project/aipriceaction/)
+[![PyPI - aipa-cli](https://img.shields.io/pypi/v/aipa-cli?label=aipa-cli&color=blue)](https://pypi.org/project/aipa-cli/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/quanhua92/aipriceaction)](https://hub.docker.com/r/quanhua92/aipriceaction)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Repository structure
+---
 
+## Get started in 30 seconds
+
+```bash
+npx skills add quanhua92/aipriceaction
 ```
-aipriceaction/              Rust backend -- API server, background workers, PostgreSQL + Redis
-sdk/
-  aipriceaction-python/     Python SDK -- reads from S3 archive, no credentials needed
-  aipriceaction-js/         TypeScript SDK -- type-safe API client
-aipriceaction-terminal/     Python TUI and CLI for AI-powered ticker analysis
-skills/                     Claude Code skills for market analysis workflows
+
+Then ask any AI agent:
+
+> "Analyze VIC with volume profile and price action"
+
+> "Show me today's top performers by trading value"
+
+> "Get the volume profile for VIC — where is the POC?"
+
+> "Compare FPT and TCB technical analysis"
+
+> "Research the banking sector"
+
+Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), and **aipa-research** (multi-agent deep research). Works with Claude Code, Gemini CLI, and Codex.
+
+---
+
+## Install
+
+| I want to... | Install | One-liner |
+|---|---|---|
+| Add AI agent skills | `npx skills add quanhua92/aipriceaction` | No Python needed |
+| Use the CLI / TUI | `uv tool install aipa-cli` | Terminal analysis |
+| Build with Python | `pip install aipriceaction` | Pandas DataFrames |
+
+---
+
+## Featured capabilities
+
+### Volume Profile
+
+POC, value area, and volume-by-price histogram from 1-minute data.
+
+```bash
+aipa volume-profile VCB
+aipa volume-profile BTCUSDT --source crypto --bins 30
+aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09
 ```
+
+### Top Performers
+
+Rank tickers by price change, volume, MA scores, money flow, or sector.
+
+```bash
+aipa performers --sort-by value --limit 5
+aipa performers --sort-by ma50_score --group NGAN_HANG
+aipa performers --sort-by total_money_changed --source crypto
+```
+
+### AI Analysis
+
+Wyckoff, VPA, and smart money signals with structured context.
+
+```bash
+aipa analyze VCB --interval 1D
+aipa analyze VCB FPT VIC --interval 1h
+aipa deep-research --run
+```
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources ["📡 Data Sources"]
+        VN["VCI · Vietstock · VNDirect<br/>VPS · DNSE<br/>VN Stocks"]
+        BIN["Binance<br/>Crypto"]
+        YAH["Yahoo Finance<br/>US / Global"]
+        SJC["sjc.com.vn<br/>SJC Gold"]
+    end
+
+    subgraph Backend ["🦀 Rust Backend"]
+        W["Background Workers"]
+        PG[("PostgreSQL")]
+        RD[("Redis")]
+        API["REST API<br/>:3000"]
+        W --> PG --> RD --> API
+    end
+
+    subgraph S3 ["🗄️ S3 Archive"]
+        CSV["Daily CSV<br/>Yearly CSV<br/>+ tickers.json"]
+    end
+
+    subgraph Consumers ["👥 Consumers"]
+        SDK["Python SDK<br/>pip install aipriceaction"]
+        CLI["AIPA CLI<br/>uv tool install aipa-cli"]
+        SKILLS["AI Agent Skills<br/>aipa-data · aipa-analyze · aipa-research"]
+        WEB["aipriceaction.com<br/>Web Frontend"]
+    end
+
+    VN & BIN & YAH & SJC --> W
+    API -- "sync every 60m" --> CSV
+    CSV -- "plain HTTP<br/>no credentials" --> SDK
+    API -- "live overlay" --> SDK
+    SDK --> CLI --> SKILLS
+    API --> WEB
+```
+
+---
 
 ## Data sources
 
-| Market            | Provider      | Ticker examples        | Intervals        |
-| ----------------- | ------------- | ---------------------- | ---------------- |
-| Vietnamese stocks | VCI / Vietstock / VNDirect / VPS | VCB, FPT, VNINDEX      | 1m, 1h, 1D       |
-| US / intl. stocks | Yahoo Finance | AAPL, GOOGL, GC=F      | 1m, 1h, 1D       |
-| Cryptocurrency    | Binance       | BTCUSDT, ETHUSDT       | 1m, 1h, 1D       |
-| SJC gold          | sjc.com.vn    | SJC-GOLD               | 1D               |
+| Market | Provider | Ticker examples | Intervals |
+|---|---|---|---|
+| Vietnamese stocks | VCI / Vietstock / VNDirect / VPS | VCB, FPT, VNINDEX | 1m, 1h, 1D |
+| US / intl. stocks | Yahoo Finance | AAPL, GOOGL, GC=F | 1m, 1h, 1D |
+| Cryptocurrency | Binance | BTCUSDT, ETHUSDT | 1m, 1h, 1D |
+| SJC gold | sjc.com.vn | SJC-GOLD | 1D |
 
-## Rust backend
+Aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M) are computed on-demand from base 1m/1D data.
 
-Axum-based REST API with background workers that sync OHLCV data from multiple providers into PostgreSQL. Data is served through a Redis edge cache for low-latency reads, with automatic fallback to PostgreSQL when Redis is unavailable. Supports aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M) computed on-demand from base 1m/1D data. Deploys as a single Docker container or at scale behind HAProxy with rolling updates.
+---
 
-Exports data to a self-hosted S3 archive as per-day CSV files with enriched ticker metadata, which the SDKs consume directly.
+## Components
 
-See [aipriceaction/README.md](aipriceaction/README.md) for setup, API reference, environment variables, and configuration.
+### AI Agent Skills
 
-## Claude Code skills
+Three skills for Claude Code, Gemini CLI, and Codex: **aipa-data** fetches raw OHLCV data, **aipa-analyze** runs AI-powered single/multi-ticker analysis with Wyckoff and VPA patterns, **aipa-research** runs a multi-agent supervisor/worker/reviewer pipeline for sector-wide deep research. See [skills/README.md](skills/README.md).
 
-Agent skills for financial market analysis, compatible with Claude Code, Gemini CLI, and Codex. Three skills cover different use cases:
+### AIPA Terminal
 
-- **aipa-data** -- fetches raw OHLCV price data (candle data, moving averages, historical prices) without AI analysis
-- **aipa-analyze** -- AI-powered single and multi-ticker analysis with technical indicators, Wyckoff patterns, and trading insights
-- **aipa-research** -- multi-agent deep research pipeline with a supervisor/worker/reviewer architecture for sector-wide investigation and comprehensive market reports
+Textual-based TUI with streaming chat, thinking/reasoning display, autocomplete, and slash commands. Also ships CLI subcommands for non-interactive analysis, volume profile, performers, live data, and deep research. See [aipriceaction-terminal/README.md](aipriceaction-terminal/README.md).
 
-See [skills/README.md](skills/README.md) for installation and usage.
+### Python SDK
 
-## AIPA Terminal
+Reads OHLCV data from a public S3 archive via plain HTTP — no credentials needed. Returns pandas DataFrames with optional MA indicators and scores. Includes an AI Context Builder for LLM-powered analysis, LangChain/LangGraph agent integration, and live data overlay. See [sdk/aipriceaction-python/README.md](sdk/aipriceaction-python/README.md).
 
-Textual-based terminal interface for AI-powered ticker analysis. Provides both an interactive TUI with streaming chat, thinking/reasoning display, autocomplete, and slash commands, plus a set of CLI subcommands for non-interactive use.
+### Rust Backend
 
-The `analyze` command builds structured context from OHLCV data and sends it to an LLM with a question. It supports single and multi-ticker analysis, customizable question templates (Wyckoff, support/resistance, momentum, news impact), and configurable interval and MA type. The `deep-research` command runs a multi-agent pipeline that produces comprehensive market reports with session checkpointing for resume.
+Axum REST API with background workers that sync OHLCV data from multiple providers into PostgreSQL, served through a Redis edge cache. Deploys as a single Docker container. See [aipriceaction/README.md](aipriceaction/README.md).
 
-Other commands include `live-data` for browsing current market prices (with filtering by source and top-N sorting), `ticker-list` for discovering available tickers, and `get-ohlcv-data` for dumping raw candle data without calling an LLM. Works with any OpenAI-compatible provider via `OPENAI_BASE_URL`.
+### Frontend
 
-```bash
-# Run directly (no install)
-uvx aipa-cli
+Human-facing web UI at [aipriceaction.com](https://aipriceaction.com). Source at [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web).
 
-# Or install as a standalone tool
-uv tool install aipa-cli
-```
+---
 
-See [aipriceaction-terminal/README.md](aipriceaction-terminal/README.md) for full documentation and CLI reference.
-
-## Python SDK
-
-Reads OHLCV data from a public S3 archive via plain HTTP -- no API credentials or S3 SDK needed. Data is returned as pandas DataFrames with optional moving average indicators and MA scores. The SDK auto-detects the market from the ticker symbol (priority: vn > yahoo > sjc > crypto), or you can override with an explicit source parameter.
-
-Beyond data access, the SDK includes an AI Context Builder (`AIContextBuilder`) that constructs structured context strings for LLM-powered investment analysis. The builder assembles composable system prompts from togglable sections (data policy, analysis framework, MA score explanation, disclaimer), supports multi-ticker and multi-timeframe contexts, and optimizes for LLM KV cache by reusing the same context prefix across follow-up questions. A built-in `answer()` method calls any OpenAI-compatible LLM directly.
-
-For agent frameworks, the SDK integrates with LangChain and LangGraph. The provided examples demonstrate ReAct agents with tool-calling and multi-agent parallel research pipelines using `Send()`. Live data can be overlaid on top of S3 data via `use_live=True`, which fetches from the REST API and falls back to archive-only when the API is unreachable.
-
-```bash
-pip install aipriceaction
-```
-
-See [sdk/aipriceaction-python/README.md](sdk/aipriceaction-python/README.md) for documentation and examples.
-
-## TypeScript SDK
-
-Type-safe API client for the AIPriceAction REST API, works in both Node.js and browsers. Uses the native fetch API with zero runtime dependencies, and includes automatic retry with exponential backoff. Covers ticker queries, top performers, MA scores, sector analysis, RRG charts, and CSV export.
-
-```bash
-pnpm add aipriceaction-js
-```
-
-See [sdk/aipriceaction-js/README.md](sdk/aipriceaction-js/README.md) for documentation.
-
-## Quick start
-
-The backend runs in Docker with PostgreSQL and Redis included:
+## Self-host
 
 ```bash
 cd aipriceaction
@@ -95,6 +161,20 @@ docker compose up -d
 ```
 
 See [aipriceaction/README.md](aipriceaction/README.md) for the full setup guide, build-from-source instructions, and production deployment with HAProxy.
+
+---
+
+## Repository structure
+
+```
+aipriceaction/              Rust backend -- API server, background workers, PostgreSQL + Redis
+sdk/
+  aipriceaction-python/     Python SDK -- reads from S3 archive, no credentials needed
+aipriceaction-terminal/     Python TUI and CLI for AI-powered ticker analysis
+skills/                     Claude Code skills for market analysis workflows
+```
+
+---
 
 ## Development
 
