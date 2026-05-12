@@ -159,19 +159,39 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &axum::extract::Request<_>| {
+                    let client_ip = request.headers()
+                        .get("x-forwarded-for")
+                        .or_else(|| request.headers().get("x-real-ip"))
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("-");
                     tracing::info_span!(
                         "http_request",
                         method = %request.method(),
                         uri = %request.uri(),
-                        version = ?request.version(),
+                        client_ip = client_ip,
                         status_code = tracing::field::Empty,
-                        latency = tracing::field::Empty,
+                        latency_ms = tracing::field::Empty,
                     )
                 })
                 .on_response(|response: &Response<_>, latency: Duration, span: &tracing::Span| {
                     span.record("status_code", response.status().as_u16());
-                    span.record("latency", latency.as_millis() as u64);
-                    tracing::info!(status = %response.status(), latency_ms = latency.as_millis(), "response sent");
+                    span.record("latency_ms", latency.as_millis() as u64);
+                    tracing::info!(
+                        parent: span.id(),
+                        status = %response.status(),
+                        latency_ms = latency.as_millis(),
+                        "response sent",
+                    );
+                })
+                .on_failure(|error: tower_http::classify::ServerErrorsFailureClass, latency: Duration, span: &tracing::Span| {
+                    span.record("status_code", 500u16);
+                    span.record("latency_ms", latency.as_millis() as u64);
+                    tracing::error!(
+                        parent: span.id(),
+                        error = %error,
+                        latency_ms = latency.as_millis(),
+                        "request failed",
+                    );
                 }),
         )
         .layer(TimeoutLayer::new(Duration::from_secs(180)))
