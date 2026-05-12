@@ -7,6 +7,8 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/quanhua92/aipriceaction)](https://hub.docker.com/r/quanhua92/aipriceaction)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
+[Tiếng Việt](README.vn.md)
+
 ---
 
 ## Get started in 30 seconds
