@@ -18,7 +18,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 axum = { version = "0.8.4", features = ["multipart"] }
 axum-extra = { version = "0.10.1", features = ["query"] }
-tower-http = { version = "0.6.2", features = ["cors", "compression-gzip", "compression-deflate", "compression-br", "timeout", "fs", "limit"] }
+tower-http = { version = "0.6.2", features = ["cors", "compression-gzip", "compression-deflate", "compression-br", "timeout", "fs", "limit", "trace"] }
 uuid = { version = "1", features = ["v4", "v7", "serde"] }
 sha2 = "0.10"
 hex = "0.4"
@@ -34,3 +34,9 @@ http = "1"
 aws-creds = "0.39"
 rust-s3 = { version = "0.37.1", default-features = false, features = ["tokio-rustls-tls", "with-tokio"] }
 futures = "0.3.32"
+opentelemetry = "0.31"
+opentelemetry_sdk = "0.31"
+opentelemetry-otlp = { version = "0.31", default-features = false, features = [
+    "trace", "http-proto", "reqwest-blocking-client", "reqwest-rustls"
+] }
+tracing-opentelemetry = "0.32"

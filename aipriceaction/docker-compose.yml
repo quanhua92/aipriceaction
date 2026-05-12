@@ -17,6 +17,11 @@ services:
       - S3_ENDPOINT=http://rustfs:9000
       # Pre-loads last 500 candles per ticker on fresh deploy. Comment out to skip.
       - CHECKPOINT_FILE=/app/data/checkpoint.json.gz
+      # OpenTelemetry — enable tracing export to OpenObserve
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENDPOINT=http://openobserve:5080
+      - OTEL_SERVICE_NAME=aipriceaction
+      - OTEL_AUTH_HEADER=${OTEL_AUTH_HEADER:-}
     volumes:
       - aipriceaction_data:/app/data
     depends_on:
@@ -24,6 +29,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      openobserve:
+        condition: service_started
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/health"]
@@ -66,8 +73,9 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 120s
 
   # rustfs — S3-compatible object storage (Rust, Apache 2.0)
   rustfs:
@@ -99,6 +107,41 @@ services:
       - rustfs_data:/data
     command: sh -c "chown -R 10001:10001 /data && echo 'Permissions fixed' && exit 0"
     restart: "no"
+
+  # OpenObserve — observability platform (traces, logs, metrics)
+  # Uses rustfs as S3-compatible storage backend
+  openobserve-init:
+    image: minio/mc
+    container_name: aipriceaction-oo-init
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin;
+      mc mb --ignore-existing rustfs/openobserve;
+      echo 'OpenObserve bucket created';
+      "
+    restart: "no"
+
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:latest
+    container_name: aipriceaction-openobserve
+    ports:
+      - "5080:5080"   # HTTP API + UI
+    environment:
+      - ZO_ROOT_USER_EMAIL=${ZO_ROOT_USER_EMAIL:-root@example.com}
+      - ZO_ROOT_USER_PASSWORD=${ZO_ROOT_USER_PASSWORD:-Complexpass#123}
+      - ZO_S3_PROVIDER=minio
+      - ZO_S3_ENDPOINT_URL=http://rustfs:9000
+      - ZO_S3_BUCKET_NAME=openobserve
+      - ZO_S3_ACCESS_KEY=rustfsadmin
+      - ZO_S3_SECRET_KEY=rustfsadmin
+      - ZO_S3_FEATURE_FORCE_PATH_STYLE=true
+    depends_on:
+      openobserve-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 volumes:
   aipriceaction_data:

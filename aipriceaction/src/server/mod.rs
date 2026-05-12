@@ -13,6 +13,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
 use tower_http::limit::RequestBodyLimitLayer;
+use tower_http::trace::TraceLayer;
 use fred::types::ConnectHandle;
 use axum::http::{HeaderValue, HeaderName, Method};
 use axum::response::Response;
@@ -155,6 +156,24 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .merge(main_routes)
         .merge(public_routes)
         .with_state(state)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &axum::extract::Request<_>| {
+                    tracing::info_span!(
+                        "http_request",
+                        method = %request.method(),
+                        uri = %request.uri(),
+                        version = ?request.version(),
+                        status_code = tracing::field::Empty,
+                        latency = tracing::field::Empty,
+                    )
+                })
+                .on_response(|response: &Response<_>, latency: Duration, span: &tracing::Span| {
+                    span.record("status_code", response.status().as_u16());
+                    span.record("latency", latency.as_millis() as u64);
+                    tracing::info!(status = %response.status(), latency_ms = latency.as_millis(), "response sent");
+                }),
+        )
         .layer(TimeoutLayer::new(Duration::from_secs(180)))
         .layer(middleware::from_fn(add_security_headers))
         .layer(CompressionLayer::new())

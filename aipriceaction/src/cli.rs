@@ -178,10 +178,33 @@ pub enum Commands {
     },
 }
 
-pub fn run() {
-    // Load .env file if present (optional — won't error if missing)
-    dotenvy::dotenv().ok();
+/// Returns a future that resolves on Ctrl+C or SIGTERM.
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to listen for ctrl+c");
+    };
 
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to listen for SIGTERM")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => tracing::info!("Received Ctrl+C, shutting down"),
+        () = terminate => tracing::info!("Received SIGTERM, shutting down"),
+    }
+}
+
+/// Initialize a simple fmt tracing subscriber for non-serve commands.
+fn init_fmt_subscriber() {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -189,6 +212,11 @@ pub fn run() {
         )
         .with_target(false)
         .init();
+}
+
+pub fn run() {
+    // Load .env file if present (optional — won't error if missing)
+    dotenvy::dotenv().ok();
 
     let cli = Cli::parse();
 
@@ -196,6 +224,8 @@ pub fn run() {
         Commands::Serve { host, port } => {
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
+                let tracer_provider = crate::tracing_otel::init();
+
                 let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
                     tracing::warn!("DATABASE_URL not set, server will run without database");
                     String::new()
@@ -366,11 +396,18 @@ pub fn run() {
                     .expect("Failed to bind to address");
                 tracing::info!("Listening on {host}:{port}");
                 axum::serve(listener, app)
+                    .with_graceful_shutdown(shutdown_signal())
                     .await
                     .expect("Server error");
+
+                // Flush OTel spans before exiting
+                if let Some(provider) = tracer_provider {
+                    crate::tracing_otel::shutdown_tracer_provider(provider);
+                }
             });
         }
         Commands::Status => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -464,6 +501,7 @@ pub fn run() {
             with_raw,
             with_all,
         } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -747,6 +785,7 @@ pub fn run() {
                 None => None,
             };
 
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -842,6 +881,7 @@ pub fn run() {
             rate_limit,
             count_back,
         } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 // 1. Create VciProvider
@@ -975,6 +1015,7 @@ pub fn run() {
             });
         }
         Commands::TestPerf => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -1426,6 +1467,7 @@ pub fn run() {
             limit,
             rate_limit,
         } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 // 1. Create BinanceProvider
@@ -1496,6 +1538,7 @@ pub fn run() {
             });
         }
         Commands::TestYahoo { ticker, rate_limit } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 // 1. Create YahooProvider
@@ -1625,6 +1668,7 @@ pub fn run() {
             crate::test_redis::run(ticker);
         }
         Commands::BackfillRedis => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -1658,12 +1702,14 @@ pub fn run() {
             });
         }
         Commands::GenerateCompanyInfo { ticker, rate_limit, save } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 crate::generate_company_info::run(ticker, rate_limit, save).await;
             });
         }
         Commands::Checkpoint { candles, output } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let database_url =
@@ -1699,6 +1745,7 @@ pub fn run() {
             });
         }
         Commands::TestS3 { ticker, interval, days, create_bucket } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 crate::workers::s3_archive::test_s3(ticker, interval, days, create_bucket).await;
@@ -1710,6 +1757,7 @@ pub fn run() {
             rate_limit,
             count_back,
         } => {
+            init_fmt_subscriber();
             let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 use crate::providers::udf::ALL_SOURCES;

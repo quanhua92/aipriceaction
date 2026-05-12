@@ -11,6 +11,7 @@ mod queries;
 mod redis;
 mod server;
 mod services;
+mod tracing_otel;
 mod workers;
 
 fn main() {
