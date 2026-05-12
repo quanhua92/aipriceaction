@@ -169,12 +169,12 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
                         method = %request.method(),
                         uri = %request.uri(),
                         client_ip = client_ip,
-                        status_code = tracing::field::Empty,
+                        http_status = tracing::field::Empty,
                         latency_ms = tracing::field::Empty,
                     )
                 })
                 .on_response(|response: &Response<_>, latency: Duration, span: &tracing::Span| {
-                    span.record("status_code", response.status().as_u16());
+                    span.record("http_status", response.status().as_u16());
                     span.record("latency_ms", latency.as_millis() as u64);
                     tracing::info!(
                         parent: span.id(),
@@ -184,7 +184,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
                     );
                 })
                 .on_failure(|error: tower_http::classify::ServerErrorsFailureClass, latency: Duration, span: &tracing::Span| {
-                    span.record("status_code", 500u16);
+                    span.record("http_status", 500u16);
                     span.record("latency_ms", latency.as_millis() as u64);
                     tracing::error!(
                         parent: span.id(),
