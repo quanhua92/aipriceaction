@@ -754,7 +754,21 @@ class AIPriceAction:
         Live candles older than the oldest S3 candle are dropped.
         """
         if s3_df.empty:
-            return s3_df
+            # No S3 data — build result purely from live data
+            all_rows = []
+            for _src, sym in resolved:
+                candles = live_data.get(sym)
+                if candles:
+                    for c in candles:
+                        row = {col: c.get(col) for col in _OHLCV_COLUMNS}
+                        row["symbol"] = sym
+                        all_rows.append(row)
+            if not all_rows:
+                return s3_df
+            result = pd.DataFrame(all_rows)
+            if not result.empty and "time" in result.columns:
+                result = result.sort_values("time").reset_index(drop=True)
+            return result
 
         all_rows: list[pd.DataFrame] = []
 
@@ -957,11 +971,11 @@ class AIPriceAction:
                     frames.append(df)
 
         if not frames:
-            return pd.DataFrame(
+            result = pd.DataFrame(
                 columns=["time", "open", "high", "low", "close", "volume", "symbol"]
             )
-
-        result = pd.concat(frames, ignore_index=True)
+        else:
+            result = pd.concat(frames, ignore_index=True)
 
         # Aggregate base data into target interval (before live overlay)
         if agg_interval is not None:
