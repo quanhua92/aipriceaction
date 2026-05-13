@@ -5,7 +5,9 @@
  * Usage:
  *   node scripts/traces-query.mjs                          # recent traces
  *   node scripts/traces-query.mjs --summary                # summary counts
- *   node scripts/traces-query.mjs --errors                 # failed requests only
+ *   node scripts/traces-query.mjs --errors                 # 5xx server errors only
+ *   node scripts/traces-query.mjs --404                    # 404 not found (hack probes)
+ *   node scripts/traces-query.mjs --5xx                    # 5xx server errors only
  *   node scripts/traces-query.mjs --ip                     # traces with client IP
  *   node scripts/traces-query.mjs --uri /tickers           # filter by URI pattern
  *   node scripts/traces-query.mjs --method POST            # filter by HTTP method
@@ -24,7 +26,8 @@ import { resolve } from "node:path";
 const args = process.argv.slice(2);
 const minutes = parseInt(argValue("--minutes") || "30", 10);
 const mode = args.includes("--summary") ? "summary"
-  : args.includes("--errors") ? "errors"
+  : args.includes("--errors") || args.includes("--5xx") ? "errors"
+  : args.includes("--404") ? "404"
   : args.includes("--ip") ? "ip"
   : "recent";
 const uriFilter = argValue("--uri");
@@ -74,7 +77,9 @@ function buildQuery(mode) {
   let select = "trace_id, span_id, method, uri, client_ip, http_status, latency_ms, duration, start_time";
 
   if (mode === "errors") {
-    conditions.push("(http_status >= 400 OR span_status='ERROR')");
+    conditions.push("(http_status >= 500 OR span_status='ERROR')");
+  } else if (mode === "404") {
+    conditions.push("http_status = 404");
   } else if (mode === "ip") {
     conditions.push("client_ip != '-'");
   }
@@ -168,6 +173,7 @@ async function main() {
     switch (mode) {
       case "summary": renderSummary(hits); break;
       case "errors": renderRecent(hits); break;
+      case "404": renderRecent(hits); break;
       case "ip": renderRecent(hits); break;
       default: renderRecent(hits); break;
     }

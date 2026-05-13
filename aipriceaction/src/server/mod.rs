@@ -144,6 +144,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .route("/sync/{key}", axum::routing::get(sync::sync_get))
         .route("/sync/{key}", axum::routing::post(sync::sync_post))
         .nest("/analysis", analysis_routes())
+        .fallback(api::not_found_handler)
         .layer(RequestBodyLimitLayer::new(5 * 1024 * 1024));
 
     // Public static files with cache headers

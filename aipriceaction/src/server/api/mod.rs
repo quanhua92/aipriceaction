@@ -19,6 +19,7 @@ use super::AppState;
 
 // ── /health ──
 
+#[tracing::instrument(skip(state))]
 pub async fn health(State(state): State<Arc<AppState>>) -> Response {
     let snap = state.health_snapshot.read().await;
 
@@ -349,6 +350,7 @@ async fn handle_mode_all(
 
 // ── POST /tickers/refresh ──
 
+#[tracing::instrument(skip(state))]
 pub async fn tickers_refresh(
     State(state): State<Arc<AppState>>,
     axum::Json(body): axum::Json<RefreshQuery>,
@@ -438,6 +440,7 @@ pub async fn tickers_refresh(
 
 // ── /tickers/group ──
 
+#[tracing::instrument]
 pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
     let result: Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error + Send + Sync>> = match params.mode {
         Mode::Vn => data_loader::load_vn_groups(),
@@ -461,6 +464,7 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
 
 // ── /tickers/name ──
 
+#[tracing::instrument]
 pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
     let result: Result<BTreeMap<String, String>, Box<dyn std::error::Error + Send + Sync>> = match params.mode {
         Mode::Vn => data_loader::load_vn_names(),
@@ -484,11 +488,12 @@ pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
 
 // ── /tickers/info ──
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 pub struct InfoQuery {
     pub ticker: Option<String>,
 }
 
+#[tracing::instrument]
 pub async fn tickers_info(Query(params): Query<InfoQuery>) -> Response {
     let result: Result<Vec<serde_json::Value>, Box<dyn std::error::Error + Send + Sync>> = data_loader::load_merged_info();
 
@@ -526,6 +531,7 @@ pub async fn tickers_info(Query(params): Query<InfoQuery>) -> Response {
 
 // ── /explorer ──
 
+#[tracing::instrument]
 pub async fn explorer_handler() -> Response {
     let index_path = std::path::Path::new("public").join("index.html");
 
@@ -542,4 +548,15 @@ pub async fn explorer_handler() -> Response {
         )
             .into_response(),
     }
+}
+
+// ── 404 fallback ──
+
+#[tracing::instrument]
+pub async fn not_found_handler() -> Response {
+    (
+        StatusCode::NOT_FOUND,
+        Json(serde_json::json!({"error": "not found"})),
+    )
+        .into_response()
 }

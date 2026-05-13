@@ -28,6 +28,7 @@ pub struct RedisReadResult {
 /// When `max_score` is `Some(ts)`, uses ZREVRANGEBYSCORE to start from that
 /// timestamp instead of scanning the entire ZSET tail. This is optimal for
 /// end-only requests where `start_time` is not set.
+#[tracing::instrument(skip(client, tickers))]
 pub async fn batch_read_ohlcv_from_redis(
     client: &Option<RedisClient>,
     source: &str,

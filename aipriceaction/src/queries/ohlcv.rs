@@ -253,6 +253,7 @@ pub async fn get_ohlcv_joined_range(
 /// When `with_ma` is false, SMA/score indicators are skipped (all set to None),
 /// saving CPU time. Change indicators (close_changed, volume_changed,
 /// total_money_changed) are still computed.
+#[tracing::instrument(skip(rows))]
 pub fn enhance_rows(
     ticker: &str,
     rows: Vec<OhlcvRow>,
@@ -487,6 +488,7 @@ pub fn enhance_rows_selective(
 ///
 /// `per_ticker_limit` caps rows per ticker (no cap if None).
 /// `lookback_minutes` shifts `start_time` backwards for SMA accuracy.
+#[tracing::instrument(skip(pool))]
 async fn fetch_ohlcv_batch_raw(
     pool: &PgPool,
     source: &str,
@@ -665,6 +667,7 @@ async fn fetch_ohlcv_batch_raw(
 /// For `limit`, each ticker gets at most `limit` result rows. The underlying query
 /// fetches up to `limit + SMA_MAX_PERIOD` rows per ticker for accurate SMA.
 /// When `with_ma` is false, no SMA buffer is added and MA indicators are skipped.
+#[tracing::instrument(skip(pool))]
 pub async fn get_ohlcv_joined_batch(
     pool: &PgPool,
     source: &str,
