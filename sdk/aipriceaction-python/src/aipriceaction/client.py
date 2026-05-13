@@ -1028,7 +1028,7 @@ class AIPriceAction:
 
             # Trim to user-requested date range
             if ma_buffer_start < user_start:
-                result["_time_parsed"] = pd.to_datetime(result["time"])
+                result["_time_parsed"] = pd.to_datetime(result["time"], format="ISO8601")
                 cutoff = pd.Timestamp(user_start.isoformat())
                 result = result[result["_time_parsed"] >= cutoff].drop(
                     columns=["_time_parsed"]

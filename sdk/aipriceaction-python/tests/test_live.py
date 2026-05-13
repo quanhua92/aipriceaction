@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import date, timedelta
 
 import pandas as pd
 import pytest
@@ -653,3 +654,89 @@ class TestUtcOffset:
         assert df.iloc[0]["time"] == "2025-04-29 19:30:00"
         responses.stop()
         responses.reset()
+
+
+# ── Mixed time format regression test ──
+
+class TestMixedTimeFormatRegression:
+    """Bug: pd.to_datetime fails on mixed time formats after live merge + MA buffer trim.
+
+    After _merge_live_data, the time column can contain both date-only strings
+    ("2025-04-29" from live API) and datetime strings ("2025-04-28 00:00:00"
+    from S3). When start_date triggers MA buffer trimming (client.py:1031),
+    pd.to_datetime(result["time"]) crashes because it can't parse the mixed
+    formats with a single inferred format.
+    """
+
+    @pytest.fixture
+    def mock_s3_date_only_with_live(self, tmp_path):
+        """S3 data with datetime format + live API with date-only format.
+
+        This mimics the real scenario: S3 archive CSVs use "2025-04-28 00:00:00"
+        while the live /tickers API returns "2025-04-29".
+        """
+        responses.start()
+
+        responses.get(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            json=[{"source": "vn", "ticker": "VCB", "name": "VCB", "group": "BANK"}],
+        )
+        responses.head(
+            "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+            headers={"x-amz-meta-content-hash": "mixed-format-test"},
+        )
+
+        # S3 data: 15 days with datetime format (enough for MA buffer)
+        base = date(2025, 4, 15)
+        for i in range(15):
+            d = base + timedelta(days=i)
+            close = 100.0 + i
+            url = f"http://localhost:9000/aipriceaction-archive/ohlcv/vn/VCB/1D/VCB-1D-{d.isoformat()}.csv"
+            responses.get(url, body=f"{d.isoformat()} 00:00:00,{close-1},{close+2},{close-2},{close},{1000000+i*10000}")
+            responses.head(url, headers={"x-amz-meta-content-hash": f"hash-{d.isoformat()}"})
+
+        # Catch-all for unmocked CSVs
+        responses.get(re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"), status=404)
+        responses.head(re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"), status=404)
+
+        # Live API: date-only format (matches real /tickers endpoint for 1D)
+        responses.get(
+            re.compile(r"http://localhost:9000/tickers\?.*"),
+            json={
+                "VCB": [
+                    {"time": "2025-04-29", "open": 128, "high": 130, "low": 126, "close": 128, "volume": 2000000},
+                ],
+            },
+        )
+
+        yield AIPriceAction(
+            "http://localhost:9000/aipriceaction-archive",
+            cache_dir=str(tmp_path),
+            use_live=True,
+            live_url="http://localhost:9000",
+            utc_offset=0,
+        )
+
+        responses.stop()
+        responses.reset()
+
+    def test_get_ohlcv_with_start_date_and_ma_does_not_crash(self, mock_s3_date_only_with_live):
+        """get_ohlcv(start_date=..., ma=True) with mixed time formats should not crash.
+
+        This is the exact call the CLI makes: aipa get-ohlcv-data VCB --start-date 2025-04-28 --end-date 2025-04-29
+        """
+        client = mock_s3_date_only_with_live
+        df = client.get_ohlcv(
+            "VCB", interval="1D",
+            start_date="2025-04-28", end_date="2025-04-29",
+            ma=True,
+        )
+        assert len(df) > 0
+        assert "ma10" in df.columns
+
+    def test_get_ohlcv_without_start_date_still_works(self, mock_s3_date_only_with_live):
+        """get_ohlcv without start_date works (MA buffer trim step is skipped)."""
+        client = mock_s3_date_only_with_live
+        df = client.get_ohlcv("VCB", interval="1D", ma=True)
+        assert len(df) > 0
+        assert "ma10" in df.columns
