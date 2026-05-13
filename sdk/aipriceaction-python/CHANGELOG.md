@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15] - 2026-05-13
+
+### Fixed
+- Fix `get_ohlcv(start_date=..., ma=True)` crash when live API returns date-only time format ("2025-04-29") mixed with S3 datetime format ("2025-04-29 00:00:00") — `pd.to_datetime` now uses `format="ISO8601"` to handle both
+- Update attribution text to clarify data vs AI analysis, prefer multi-day volume profiles
+
 ## [0.1.14] - 2026-05-12
 
 ### Fixed
