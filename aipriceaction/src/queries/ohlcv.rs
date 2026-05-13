@@ -253,7 +253,6 @@ pub async fn get_ohlcv_joined_range(
 /// When `with_ma` is false, SMA/score indicators are skipped (all set to None),
 /// saving CPU time. Change indicators (close_changed, volume_changed,
 /// total_money_changed) are still computed.
-#[tracing::instrument(skip(rows))]
 pub fn enhance_rows(
     ticker: &str,
     rows: Vec<OhlcvRow>,
