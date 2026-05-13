@@ -73,6 +73,8 @@ pub async fn tickers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TickersQuery>,
 ) -> Response {
+    let t0 = std::time::Instant::now();
+
     // Validate interval first (needed for all modes)
     let interval = match NormalizedInterval::parse(
         params.interval.as_deref().unwrap_or("1D"),
@@ -136,6 +138,7 @@ pub async fn tickers(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
+            tracing::info!(step = "cache_hit", elapsed_ms = t0.elapsed().as_millis() as u64);
             let mut resp = response::build_response(cached, params.legacy, params.mode, is_csv);
             resp.headers_mut().insert(
                 HeaderName::from_static("x-data-source"),
@@ -163,13 +166,17 @@ pub async fn tickers(
                 syms.sort();
                 syms.dedup();
                 if !syms.is_empty() {
-                    tracing::debug!("Using Redis cached ticker list: {} tickers for {source}", syms.len());
+                    tracing::info!(step = "resolve_symbols", src = "redis", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
                     syms
                 } else {
-                    fetch::pg_list_tickers(&state.pool, source, extra_sources).await
+                    let syms = fetch::pg_list_tickers(&state.pool, source, extra_sources).await;
+                    tracing::info!(step = "resolve_symbols", src = "pg", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+                    syms
                 }
             } else {
-                fetch::pg_list_tickers(&state.pool, source, extra_sources).await
+                let syms = fetch::pg_list_tickers(&state.pool, source, extra_sources).await;
+                tracing::info!(step = "resolve_symbols", src = "pg", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+                syms
             }
         }
     };
@@ -195,10 +202,13 @@ pub async fn tickers(
         }
     };
 
+    tracing::info!(step = "fetch_done", path = source_tag, tickers = result.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+
     // Store in cache
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         guard.put(cache_key, &result);
+        tracing::info!(step = "cache_store", elapsed_ms = t0.elapsed().as_millis() as u64);
     }
 
     let mut response = response::build_response(result, params.legacy, params.mode, is_csv);
@@ -229,6 +239,8 @@ async fn handle_mode_all(
     params: TickersQuery,
     interval: NormalizedInterval,
 ) -> Response {
+    let t0 = std::time::Instant::now();
+
     // Early return for empty or blank explicit symbol list
     if let Some(ref syms) = params.symbol {
         if syms.is_empty() || syms.iter().all(|s| s.is_empty()) {
@@ -262,6 +274,7 @@ async fn handle_mode_all(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
+            tracing::info!(step = "cache_hit", elapsed_ms = t0.elapsed().as_millis() as u64);
             return response::build_response(cached, params.legacy, params.mode, is_csv);
         }
         drop(guard);
@@ -273,6 +286,8 @@ async fn handle_mode_all(
         &state.pool,
         params.symbol.as_deref(),
     ).await;
+    let sources: Vec<&str> = source_map.keys().map(|s| s.as_str()).collect();
+    tracing::info!(step = "resolve_sources", sources = ?sources, tickers = source_map.values().map(|v| v.len()).sum::<usize>(), elapsed_ms = t0.elapsed().as_millis() as u64);
 
     // Fetch per source in parallel using shared fetch functions
     let mut handles = Vec::new();
@@ -330,10 +345,13 @@ async fn handle_mode_all(
         }
     }
 
+    tracing::info!(step = "fetch_done", path = ?source_tags, tickers = merged.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+
     // Store in cache
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         guard.put(cache_key, &merged);
+        tracing::info!(step = "cache_store", elapsed_ms = t0.elapsed().as_millis() as u64);
     }
 
     let all_redis = !source_tags.is_empty() && source_tags.iter().all(|&t| t == "redis");

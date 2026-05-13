@@ -235,6 +235,7 @@ pub async fn redis_covers_range(
 /// Read cached ticker list from Redis (`meta:ticker_list`).
 /// Returns `Some(Vec<TickerInfo>)` if the key exists and parses correctly.
 /// Returns `None` on missing key, parse error, or timeout (2s).
+#[tracing::instrument(skip(client))]
 pub async fn read_ticker_list_from_redis(
     client: &Option<RedisClient>,
 ) -> Option<Vec<redis_worker::TickerInfo>> {

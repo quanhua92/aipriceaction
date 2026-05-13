@@ -8,6 +8,7 @@ use crate::services::ohlcv;
 
 /// PG fallback for list_tickers_with_extra when Redis doesn't have data.
 /// Returns a Vec of ticker strings, or an empty Vec on error/timeout.
+#[tracing::instrument(skip(pool))]
 pub(crate) async fn pg_list_tickers(
     pool: &PgPool,
     source: &str,
