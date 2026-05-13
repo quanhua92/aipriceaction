@@ -88,6 +88,7 @@ pub(crate) async fn drop_redis_list_all(pool: &PgPool) -> HashMap<String, Vec<St
 
 /// Resolve symbols to their source groups using Redis (fast) or PG fallback.
 /// Returns a map of source → Vec<symbol>.
+#[tracing::instrument(skip(redis_client, pool, symbols))]
 pub(crate) async fn resolve_source_map(
     redis_client: &Option<crate::redis::RedisClient>,
     pool: &PgPool,
@@ -187,6 +188,7 @@ pub(crate) fn parse_date_end(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
 /// When called from `handle_mode_all`, pass `use_redis=true` to enable the
 /// Redis-first path (no `params.redis` check). The single-mode `tickers` handler
 /// passes `use_redis=params.redis` to respect the user's redis flag.
+#[tracing::instrument(skip(pool, redis_client, symbols, extra_sources))]
 pub(crate) async fn fetch_native_tickers(
     pool: &PgPool,
     redis_client: &Option<crate::redis::RedisClient>,
@@ -275,6 +277,7 @@ pub(crate) async fn fetch_native_tickers(
             }
 
             if !result.is_empty() {
+                tracing::info!(path = "redis-snap", tickers = result.len());
                 return (result, "redis-snap", None);
             }
         }
@@ -402,6 +405,7 @@ pub(crate) async fn fetch_native_tickers(
                         });
                         } // end if let Some(redis)
                     }
+                    tracing::info!(path = "redis", tickers = result.len());
                     return (result, "redis", first_meta);
                 }
             }
@@ -454,11 +458,13 @@ pub(crate) async fn fetch_native_tickers(
     }
 
     result.retain(|_, v| !v.is_empty());
+    tracing::info!(path = "postgres", tickers = result.len());
     (result, "postgres", None)
 }
 
 /// Aggregated interval: fetch source data, aggregate, enhance, trim.
 /// Returns (data, source_tag, redis_meta).
+#[tracing::instrument(skip(pool, redis_client, symbols, extra_sources))]
 pub(crate) async fn fetch_aggregated_tickers(
     pool: &PgPool,
     redis_client: &Option<crate::redis::RedisClient>,
