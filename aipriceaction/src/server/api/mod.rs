@@ -212,6 +212,7 @@ pub async fn tickers(
     }
 
     let mut response = response::build_response(result, params.legacy, params.mode, is_csv);
+    tracing::info!(step = "build_response", is_csv, elapsed_ms = t0.elapsed().as_millis() as u64);
     response.headers_mut().insert(
         HeaderName::from_static("x-data-source"),
         HeaderValue::from_static(source_tag),
@@ -359,6 +360,7 @@ async fn handle_mode_all(
     let source_tag = if merged.is_empty() { "empty" } else if all_redis { "redis" } else if any_redis { "mixed" } else { "postgres" };
 
     let mut response = response::build_response(merged, params.legacy, params.mode, is_csv);
+    tracing::info!(step = "build_response", is_csv, elapsed_ms = t0.elapsed().as_millis() as u64);
     response.headers_mut().insert(
         HeaderName::from_static("x-data-source"),
         HeaderValue::from_static(source_tag),

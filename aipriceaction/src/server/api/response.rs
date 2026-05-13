@@ -1,6 +1,7 @@
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json, Response};
 use std::collections::BTreeMap;
+use std::fmt::Write;
 
 use crate::server::types::{Mode, StockDataResponse, is_vn_ticker};
 
@@ -127,34 +128,41 @@ fn price_decimals(close: f64) -> usize {
     else { 2 }
 }
 
-fn fmt_price(v: f64, decimals: usize) -> String {
-    format!("{v:.decimals$}")
+/// Write a formatted price directly into the buffer. Avoids intermediate String allocation.
+fn write_price(buf: &mut String, v: f64, decimals: usize) {
+    // SAFETY: write! to String never fails (std::fmt::Write for String is infallible)
+    let _ = write!(buf, "{v:.decimals$}");
 }
 
-fn fmt_opt_price(v: Option<f64>, decimals: usize) -> String {
-    match v {
-        Some(n) => fmt_price(n, decimals),
-        None => String::new(),
+fn write_opt_price(buf: &mut String, v: Option<f64>, decimals: usize) {
+    if let Some(n) = v {
+        write_price(buf, n, decimals);
     }
 }
 
-/// Round to at most 4 decimal places, stripping trailing zeros.
-fn fmt_pct(v: f64) -> String {
-    let s = format!("{v:.4}");
-    s.trim_end_matches('0').trim_end_matches('.').to_string()
+/// Write a percentage value, trimming trailing zeros. Avoids intermediate String allocation.
+fn write_pct(buf: &mut String, v: f64) {
+    // Format with 4 decimal places, then trim trailing zeros in-place
+    let start = buf.len();
+    let _ = write!(buf, "{v:.4}");
+    // Trim trailing zeros (and optional trailing dot) from the just-written portion
+    let trimmed = buf[start..].trim_end_matches('0').trim_end_matches('.');
+    let trimmed_len = trimmed.len();
+    buf.truncate(start + trimmed_len);
 }
 
-fn fmt_opt_pct(v: Option<f64>) -> String {
-    match v {
-        Some(n) => fmt_pct(n),
-        None => String::new(),
+fn write_opt_pct(buf: &mut String, v: Option<f64>) {
+    if let Some(n) = v {
+        write_pct(buf, n);
     }
 }
 
 fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
-    let mut buf = String::from(
-        "symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed\n",
-    );
+    // Estimate ~180 bytes per row (ticker + OHLCV + 5 MAs + 5 scores + 3 pct changes)
+    let row_count: usize = data.values().map(|v| v.len()).sum();
+    let mut buf = String::with_capacity(200 + row_count * 180);
+
+    buf.push_str("symbol,time,open,high,low,close,volume,ma10,ma20,ma50,ma100,ma200,ma10_score,ma20_score,ma50_score,ma100_score,ma200_score,close_changed,volume_changed,total_money_changed\n");
 
     for (symbol, rows) in data {
         for r in rows {
@@ -163,41 +171,41 @@ fn csv_response(data: &BTreeMap<String, Vec<StockDataResponse>>) -> Response {
             buf.push(',');
             buf.push_str(&r.time);
             buf.push(',');
-            buf.push_str(&fmt_price(r.open, d));
+            write_price(&mut buf, r.open, d);
             buf.push(',');
-            buf.push_str(&fmt_price(r.high, d));
+            write_price(&mut buf, r.high, d);
             buf.push(',');
-            buf.push_str(&fmt_price(r.low, d));
+            write_price(&mut buf, r.low, d);
             buf.push(',');
-            buf.push_str(&fmt_price(r.close, d));
+            write_price(&mut buf, r.close, d);
             buf.push(',');
-            buf.push_str(&r.volume.to_string());
+            let _ = write!(buf, "{}", r.volume);
             buf.push(',');
-            buf.push_str(&fmt_opt_price(r.ma10, d));
+            write_opt_price(&mut buf, r.ma10, d);
             buf.push(',');
-            buf.push_str(&fmt_opt_price(r.ma20, d));
+            write_opt_price(&mut buf, r.ma20, d);
             buf.push(',');
-            buf.push_str(&fmt_opt_price(r.ma50, d));
+            write_opt_price(&mut buf, r.ma50, d);
             buf.push(',');
-            buf.push_str(&fmt_opt_price(r.ma100, d));
+            write_opt_price(&mut buf, r.ma100, d);
             buf.push(',');
-            buf.push_str(&fmt_opt_price(r.ma200, d));
+            write_opt_price(&mut buf, r.ma200, d);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.ma10_score));
+            write_opt_pct(&mut buf, r.ma10_score);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.ma20_score));
+            write_opt_pct(&mut buf, r.ma20_score);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.ma50_score));
+            write_opt_pct(&mut buf, r.ma50_score);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.ma100_score));
+            write_opt_pct(&mut buf, r.ma100_score);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.ma200_score));
+            write_opt_pct(&mut buf, r.ma200_score);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.close_changed));
+            write_opt_pct(&mut buf, r.close_changed);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.volume_changed));
+            write_opt_pct(&mut buf, r.volume_changed);
             buf.push(',');
-            buf.push_str(&fmt_opt_pct(r.total_money_changed));
+            write_opt_pct(&mut buf, r.total_money_changed);
             buf.push('\n');
         }
     }
