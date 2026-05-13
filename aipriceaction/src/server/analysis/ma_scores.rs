@@ -67,6 +67,7 @@ pub struct StockMaInfo {
     pub source: Option<String>,
 }
 
+#[tracing::instrument(skip(state))]
 pub async fn ma_scores_by_sector_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<MaScoresBySectorQuery>,

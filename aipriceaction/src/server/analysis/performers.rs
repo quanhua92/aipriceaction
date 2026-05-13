@@ -116,6 +116,7 @@ fn sort_performers(
     }
 }
 
+#[tracing::instrument(skip(state))]
 pub async fn top_performers_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TopPerformersQuery>,

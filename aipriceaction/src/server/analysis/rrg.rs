@@ -265,6 +265,7 @@ fn align_closes_by_date(
 // Handler (dispatch)
 // ---------------------------------------------------------------------------
 
+#[tracing::instrument(skip(state))]
 pub async fn rrg_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<RrgQuery>,

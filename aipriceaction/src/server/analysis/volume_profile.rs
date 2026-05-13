@@ -82,6 +82,7 @@ fn get_tick_size_crypto(avg_price: f64) -> f64 {
     else { 1.0 }
 }
 
+#[tracing::instrument(skip(state))]
 pub async fn volume_profile_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<VolumeProfileQuery>,

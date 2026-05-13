@@ -67,6 +67,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
 
 // ── /tickers ──
 
+#[tracing::instrument(skip(state))]
 pub async fn tickers(
     State(state): State<Arc<AppState>>,
     Query(params): Query<TickersQuery>,

@@ -72,6 +72,11 @@ pub fn init() -> Option<Arc<SdkTracerProvider>> {
 
     let tracer_provider = Arc::new(tracer_provider);
 
+    // Set global propagator so parent span context is carried across the app
+    opentelemetry::global::set_text_map_propagator(
+        opentelemetry_sdk::propagation::TraceContextPropagator::new(),
+    );
+
     // OTel layer with filter to exclude noisy modules
     let otel_filter = EnvFilter::new("info")
         .add_directive("hyper=off".parse().unwrap())
