@@ -165,14 +165,40 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
                         .or_else(|| request.headers().get("x-real-ip"))
                         .and_then(|v| v.to_str().ok())
                         .unwrap_or("-");
-                    tracing::info_span!(
+                    let span = tracing::info_span!(
                         "http_request",
                         method = %request.method(),
                         uri = %request.uri(),
                         client_ip = client_ip,
                         http_status = tracing::field::Empty,
                         latency_ms = tracing::field::Empty,
-                    )
+                    );
+
+                    // Extract W3C traceparent from incoming headers so this span
+                    // becomes a child of the caller's trace (if present).
+                    if crate::tracing_otel::is_enabled() {
+                        use opentelemetry::trace::TraceContextExt;
+                        use tracing_opentelemetry::OpenTelemetrySpanExt;
+
+                        struct HeaderExtractor<'a>(&'a http::HeaderMap);
+                        impl<'a> opentelemetry::propagation::Extractor for HeaderExtractor<'a> {
+                            fn get(&self, key: &str) -> Option<&str> {
+                                self.0.get(key).and_then(|v| v.to_str().ok())
+                            }
+                            fn keys(&self) -> Vec<&str> {
+                                self.0.keys().map(|k| k.as_str()).collect()
+                            }
+                        }
+
+                        let parent_ctx = opentelemetry::global::get_text_map_propagator(|propagator| {
+                            propagator.extract(&HeaderExtractor(request.headers()))
+                        });
+                        if parent_ctx.has_active_span() {
+                            let _ = span.set_parent(parent_ctx);
+                        }
+                    }
+
+                    span
                 })
                 .on_response(|response: &Response<_>, latency: Duration, span: &tracing::Span| {
                     span.record("http_status", response.status().as_u16());
