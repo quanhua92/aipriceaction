@@ -178,6 +178,15 @@ skills/                     Claude Code skills for market analysis workflows
 
 ---
 
+## Deep dives
+
+| Document | What it covers |
+|---|---|
+| [DATA_FLOW.md](DATA_FLOW.md) | S3 archive, live API, cache freshness, and the merge pipeline |
+| [VOLUME_PROFILE.md](VOLUME_PROFILE.md) | Volume-by-price algorithm: POC, value area, and why uniform distribution |
+| [PERFORMERS.md](PERFORMERS.md) | Top/worst market rankings: metrics, MA scores, money flow |
+| [MULTI_AGENTS_ANALYSIS.md](MULTI_AGENTS_ANALYSIS.md) | AI agent architecture: single-agent analyze vs multi-agent deep-research pipeline |
+
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for development guidelines, architecture details, and contributor instructions.

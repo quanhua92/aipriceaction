@@ -178,6 +178,15 @@ skills/                     Skill cho Claude Code phục vụ quy trình phân t
 
 ---
 
+## Tài liệu chuyên sâu
+
+| Tài liệu | Nội dung |
+|---|---|
+| [DATA_FLOW.md](DATA_FLOW.md) | Lưu trữ S3, API trực tiếp, bộ nhớ đệm và quy trình hợp nhất dữ liệu |
+| [VOLUME_PROFILE.md](VOLUME_PROFILE.md) | Thuật toán khối lượng theo giá: POC, vùng giá trị và phương pháp phân phối đều |
+| [PERFORMERS.md](PERFORMERS.md) | Xếp hạng mã dẫn đầu/kém nhất: chỉ số, điểm MA, dòng tiền |
+| [MULTI_AGENTS_ANALYSIS.md](MULTI_AGENTS_ANALYSIS.md) | Kiến trúc AI agent: phân tích đơn tác vụ vs quy trình đa tác vụ nghiên cứu chuyên sâu |
+
 ## Phát triển
 
 Xem [CLAUDE.md](CLAUDE.md) để biết hướng dẫn phát triển, chi tiết kiến trúc và hướng dẫn cho người đóng góp.
