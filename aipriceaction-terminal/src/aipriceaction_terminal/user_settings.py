@@ -10,7 +10,7 @@ _SETTINGS_FILE = _CONFIG_DIR / "settings.json"
 _DEFAULTS = {
     "ticker": "VNINDEX",
     "interval": "1D",
-    "language": "en",
+    "language": "vn",
     "api_key": "",
     "openai_base_url": "",
     "openai_model": "",
