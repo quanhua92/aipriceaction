@@ -19,15 +19,19 @@ npx skills add quanhua92/aipriceaction
 
 Sau đó hỏi bất kỳ AI agent nào:
 
+> "So sánh VCB, TCB, MBB, CTG trên khung 1h và 1D — ngân hàng nào xu hướng mạnh nhất?"
+
 > "Phân tích VIC với volume profile và price action"
 
-> "Cho tôi xem các mã dẫn đầu hôm nay theo giá trị giao dịch"
+> "So sánh giá vàng SJC với giá vàng thế giới"
 
-> "Lấy volume profile của VIC — POC nằm ở đâu?"
+> "Volume profile của BTCUSDT — POC và value area nằm ở đâu?"
 
-> "So sánh phân tích kỹ thuật FPT và TCB"
+> "Phân tích Wyckoff cho FPT, VNM, HPG"
 
-> "Nghiên cứu sâu về nhóm ngành ngân hàng"
+> "Cho tôi xem các mã dẫn đầu xếp hạng theo giá trị giao dịch"
+
+> "Nghiên cứu chuyên sâu: nhóm ngành nào đang dẫn dắt thị trường VN?"
 
 Ba skill được cài đặt: **aipa-data** (truy xuất dữ liệu OHLCV thô), **aipa-analyze** (phân tích bằng AI) và **aipa-research** (nghiên cứu chuyên sâu đa tác vụ - multi-agent). Hoạt động mượt mà với Claude Code, Gemini CLI và Codex.
 
@@ -37,7 +41,7 @@ Ba skill được cài đặt: **aipa-data** (truy xuất dữ liệu OHLCV thô
 
 | Tôi muốn... | Cách cài đặt | Lệnh cài đặt nhanh |
 |---|---|---|
-| Thêm skill cho AI agent | `npx skills add quanhua92/aipriceaction` | Không cần cài Python |
+| Thêm skill cho AI agent | `npx skills add quanhua92/aipriceaction` | Tự động cài aipa-cli |
 | Sử dụng CLI / TUI | `uv tool install aipa-cli` | Phân tích ngay trên terminal |
 | Xây dựng với Python | `pip install aipriceaction` | Xử lý dữ liệu qua Pandas |
 

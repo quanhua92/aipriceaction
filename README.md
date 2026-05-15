@@ -19,15 +19,19 @@ npx skills add quanhua92/aipriceaction
 
 Then ask any AI agent:
 
+> "Compare VCB, TCB, MBB, CTG across 1h and 1D — which bank has the strongest trend?"
+
 > "Analyze VIC with volume profile and price action"
 
-> "Show me today's top performers by trading value"
+> "Compare SJC gold price with global gold (GC=F)"
 
-> "Get the volume profile for VIC — where is the POC?"
+> "Volume profile for BTCUSDT — where is the POC and value area?"
 
-> "Compare FPT and TCB technical analysis"
+> "Compare FPT, VNM, HPG with Wyckoff analysis"
 
-> "Research the banking sector"
+> "Show me top performers ranked by trading value"
+
+> "Deep research: which sectors are leading the VN market right now?"
 
 Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), and **aipa-research** (multi-agent deep research). Works with Claude Code, Gemini CLI, and Codex.
 
@@ -37,7 +41,7 @@ Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powe
 
 | I want to... | Install | One-liner |
 |---|---|---|
-| Add AI agent skills | `npx skills add quanhua92/aipriceaction` | No Python needed |
+| Add AI agent skills | `npx skills add quanhua92/aipriceaction` | Auto-installs aipa-cli |
 | Use the CLI / TUI | `uv tool install aipa-cli` | Terminal analysis |
 | Build with Python | `pip install aipriceaction` | Pandas DataFrames |
 
