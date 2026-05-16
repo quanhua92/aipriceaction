@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 import time
 
@@ -155,6 +156,29 @@ async def cmd_analyze(args) -> None:
 
     print("\n[result]", file=sys.stderr)
     print(response)
+
+    # Persist input + output to ~/.aipriceaction/analyze/<uuid>/
+    try:
+        import uuid
+        from pathlib import Path
+        from datetime import datetime, timezone
+
+        session_id = str(uuid.uuid4())
+        session_dir = Path.home() / ".aipriceaction" / "analyze" / session_id
+        session_dir.mkdir(parents=True, exist_ok=True)
+
+        meta = {
+            "session_id": session_id,
+            "tickers": args.tickers,
+            "interval": args.interval,
+            "reference_ticker": args.reference_ticker,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        (session_dir / "meta.json").write_text(json.dumps(meta, indent=2))
+        (session_dir / "input.md").write_text(message)
+        (session_dir / "output.md").write_text(response)
+    except Exception:
+        pass
 
 
 def cmd_get_ohlcv(args) -> None:
