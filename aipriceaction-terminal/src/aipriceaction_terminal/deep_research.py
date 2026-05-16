@@ -447,6 +447,10 @@ def _build_graph(checkpointer=None, lang: str = "en", source: str = "vn", output
         if not subtasks_data:
             raise ValueError(f"Supervisor did not call create_subtasks tool after {max_tool_retries} attempts. Response: {(response.content or '')[:300]}")
 
+        # Fetch valid tickers for validation
+        client, _ = _ensure_clients(lang)
+        valid_tickers = {t.ticker.upper() for t in client.get_tickers(source=_source)}
+
         subtasks = []
         for st in subtasks_data:
             if isinstance(st, str):
@@ -456,9 +460,15 @@ def _build_graph(checkpointer=None, lang: str = "en", source: str = "vn", output
                     continue
             sector = st.get("sector", "Unknown")
             tickers = st.get("tickers", st.get("ticker_list", []))
-            tickers = tickers[:10]
+            validated = [t for t in tickers if t.upper() in valid_tickers][:10]
+            if not validated:
+                _out(f"[Supervisor] WARNING: {sector} — no valid tickers, skipping")
+                continue
+            dropped = [t for t in tickers if t.upper() not in valid_tickers]
+            if dropped:
+                _out(f"[Supervisor] {sector} — dropped invalid tickers: {', '.join(dropped)}")
             instruction = st.get("instruction", f"Analyze {sector} sector")
-            subtasks.append(Subtask(sector=sector, tickers=tickers, instruction=instruction))
+            subtasks.append(Subtask(sector=sector, tickers=validated, instruction=instruction))
 
         _out(f"[Supervisor] Decomposed into {len(subtasks)} subtasks:")
         for st in subtasks:
@@ -552,11 +562,11 @@ def _build_graph(checkpointer=None, lang: str = "en", source: str = "vn", output
         _out(f"[Aggregator] Analysis synthesized ({len(content):,} chars)")
         return {"analysis": content, "review_round": round_num + 1}
 
-    MAX_REVIEW_ROUNDS = 3
+    MAX_REVIEW_ROUNDS = 5
 
     async def reviewer_node(state: OverallState) -> dict:
         round_num = state.get("review_round", 0)
-        label = f"Reviewer (round {round_num + 1})"
+        label = f"Reviewer (round {round_num})"
         _out(f"[{label}] Checking data integrity...")
 
         worker_reports = ""
@@ -607,7 +617,7 @@ def _build_graph(checkpointer=None, lang: str = "en", source: str = "vn", output
     def review_router(state: OverallState) -> str:
         if state.get("review_result") == "approve":
             return "end"
-        if state.get("review_round", 0) >= MAX_REVIEW_ROUNDS - 1:
+        if state.get("review_round", 0) >= MAX_REVIEW_ROUNDS:
             _out("[Reviewer] Max rounds reached, accepting current output")
             return "end"
         return "aggregator"
