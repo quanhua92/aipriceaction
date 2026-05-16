@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import uuid
 from collections.abc import Callable
+from datetime import datetime, timezone
+from pathlib import Path
 
 from textual.widgets import RichLog
 
 from .utils import stream_agent_to_log
+
+_ANALYZE_DIR = Path.home() / ".aipriceaction" / "analyze"
 
 _DEFAULT_REFERENCE: dict[str, str] = {
     "crypto": "BTCUSDT",
@@ -99,7 +105,7 @@ async def run_tui_analyze(
     if prefix:
         message = prefix + message
 
-    await stream_agent_to_log(
+    response_text = await stream_agent_to_log(
         log,
         agent,
         message,
@@ -108,3 +114,22 @@ async def run_tui_analyze(
         on_thinking_done=on_thinking_done,
         on_message=on_message,
     )
+
+    # Persist input + output to ~/.aipriceaction/analyze/<uuid>/
+    try:
+        session_id = str(uuid.uuid4())
+        session_dir = _ANALYZE_DIR / session_id
+        session_dir.mkdir(parents=True, exist_ok=True)
+
+        meta = {
+            "session_id": session_id,
+            "ticker": ticker,
+            "interval": interval,
+            "reference_ticker": reference_ticker,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        (session_dir / "meta.json").write_text(json.dumps(meta, indent=2))
+        (session_dir / "input.md").write_text(message)
+        (session_dir / "output.md").write_text(response_text)
+    except Exception:
+        pass  # best-effort, never block the UI
