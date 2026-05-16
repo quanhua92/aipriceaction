@@ -854,7 +854,7 @@ async def run_deep_research(
 
     checkpointer = PersistentCheckpointSaver(
         session_id=resume_id,
-        base_dir=Path.home() / ".aipriceaction" / "checkpoints",
+        base_dir=Path.home() / ".aipriceaction" / "deep-research",
         callbacks=[extract_worker_results],
     )
     _out(f"    Session: {checkpointer.session_id}")

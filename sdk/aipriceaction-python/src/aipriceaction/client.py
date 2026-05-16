@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
-import tempfile
+
 import time as _time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
@@ -149,7 +149,7 @@ class AIPriceAction:
             self._cache_dir = Path(cache_dir)
             self._cache_dir.mkdir(parents=True, exist_ok=True)
         else:
-            self._cache_dir = Path(tempfile.gettempdir()) / "aipriceaction-s3-cache"
+            self._cache_dir = Path.home() / ".aipriceaction" / "s3-cache"
             self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     # ── Freshness helpers ──

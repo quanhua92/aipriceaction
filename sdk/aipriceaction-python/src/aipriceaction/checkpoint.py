@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import pickle
-import tempfile
+
 import time
 import uuid
 from collections.abc import Sequence
@@ -105,7 +105,7 @@ class PersistentCheckpointSaver(
 
     Args:
         base_dir: Root directory for session folders.
-            Defaults to ``$TMPDIR/aipriceaction-checkpoints/``.
+            Defaults to ``~/.aipriceaction/checkpoints/``.
         session_id: Existing session ID to resume from.  A new UUID v7 is
             generated when omitted.
         callbacks: Optional list of ``PostPutCallback`` functions invoked
@@ -125,7 +125,7 @@ class PersistentCheckpointSaver(
         self._session_id = session_id or _uuid7()
 
         if base_dir is None:
-            base_dir = Path(tempfile.gettempdir()) / "aipriceaction-checkpoints"
+            base_dir = Path.home() / ".aipriceaction" / "checkpoints"
         self._base_dir = Path(base_dir)
         self._session_dir = self._base_dir / self._session_id
         self._session_dir.mkdir(parents=True, exist_ok=True)
