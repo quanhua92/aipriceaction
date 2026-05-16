@@ -21,13 +21,11 @@ Developed by AIPriceAction. More data and documentation at https://aipriceaction
 
 ## Installation
 
-```bash
-# One-time use (no install needed)
-uvx aipa-cli deep-research
+**Use `uvx` — it always pulls the latest version from PyPI automatically. No install step needed.**
 
-# Persistent install
-uv tool install aipa-cli
-aipa deep-research
+```bash
+# Preferred: uvx (always up-to-date, no install needed)
+uvx aipa-cli deep-research
 
 # Fallback: pip (if uv is not available)
 pip install aipa-cli
@@ -37,6 +35,20 @@ aipa deep-research
 python3 -m pip install aipa-cli --break-system-packages
 aipa deep-research
 ```
+
+All command examples in this skill use `aipa` for brevity. Replace `aipa` with `uvx aipa-cli` if not installed globally.
+
+## Keeping the CLI Updated
+
+The aipa CLI is actively developed with frequent improvements. **Always prefer `uvx aipa-cli` over `aipa`** — `uvx` auto-resolves the latest version from PyPI on every run, so no manual update is needed.
+
+If `aipa` is installed globally via `pip`, update before each session:
+
+```bash
+pip install --upgrade aipa-cli
+```
+
+The agent should prefer `uvx aipa-cli` for all commands. Only fall back to `aipa` if `uvx` is unavailable.
 
 ## Environment Variables
 

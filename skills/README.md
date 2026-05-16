@@ -90,12 +90,8 @@ Restart Claude Code after installing. Verify by asking "what skills are availabl
 Install the CLI:
 
 ```bash
-# One-time use (no install)
+# Preferred: uvx (always up-to-date, no install needed)
 uvx aipa-cli analyze VCB
-
-# Persistent install
-uv tool install aipa-cli
-aipa analyze VCB
 
 # Fallback: pip (if uv is not available)
 pip install aipa-cli
