@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.33] - 2026-05-18
+
+### Added
+- `aipa watchlist` CLI command with `ls`, `get`, `set` subcommands for managing predefined and custom watchlists
+- Predefined watchlists: VN30 (BSR replaces DGC), VINGROUP, TM, MASAN, INDEX, CROSS
+- Custom watchlists persisted to `~/.aipriceaction/watchlist.json`
+- Predefined watchlist reference table added to all 3 skills (aipa-analyze, aipa-data, aipa-research)
+
 ## [0.1.32] - 2026-05-16
 
 ### Changed
