@@ -101,6 +101,16 @@ def run():
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup")
 
+    # aipa watchlist [ls|get|set]
+    p_wl = sub.add_parser("watchlist", help="Manage watchlists (predefined + custom)")
+    wl_sub = p_wl.add_subparsers(dest="watchlist_command")
+    wl_sub.add_parser("ls", help="List all watchlists")
+    p_wl_get = wl_sub.add_parser("get", help="Show tickers for a watchlist")
+    p_wl_get.add_argument("name", help="Watchlist name")
+    p_wl_set = wl_sub.add_parser("set", help="Create/update a custom watchlist")
+    p_wl_set.add_argument("name", help="Custom watchlist name")
+    p_wl_set.add_argument("tickers", nargs="+", help="Ticker symbols")
+
     # aipa resume [session_id|index]
     p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session")
     p_resume.add_argument("session", nargs="?", default=None, help="Session ID prefix or list index (default: most recent)")
@@ -145,6 +155,9 @@ def run():
     elif args.command == "resume":
         from .cli_commands import cmd_resume
         cmd_resume(args)
+    elif args.command == "watchlist":
+        from .cli_commands import cmd_watchlist
+        cmd_watchlist(args)
     else:
         _ensure_setup()
         from .app import main

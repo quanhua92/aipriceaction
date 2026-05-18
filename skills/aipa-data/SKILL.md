@@ -65,6 +65,36 @@ None required. `get-ohlcv-data` fetches data from public S3 archives — no back
 - **Global/Yahoo** (`source: global/yahoo`): AAPL, TSLA, NVDA, SPY, etc.
 - **SJC Gold** (`source: sjc`): SJC gold prices
 
+### Predefined Watchlists
+
+The CLI has built-in watchlists for common ticker groups. Use `aipa watchlist get <NAME>` to get tickers for a group, or reference them directly when the user asks about a group like "VN30 stocks" or "Vingroup ecosystem".
+
+| Name | Tickers | Count |
+|---|---|---|
+| **VN30** | ACB, BID, **BSR**, CTG, FPT, GAS, GVR, HDB, HPG, LPB, MBB, MSN, MWG, PLX, SAB, SHB, SSB, SSI, STB, TCB, TPB, VCB, VHM, VIB, VIC, VJC, VNM, VPB, VRE, VPL | 30 |
+| **VINGROUP** | VIC, VHM, VRE, VPL | 4 |
+| **TM** | GEX, GEE, VIX, EIB, VGC, IDC | 6 |
+| **MASAN** | MSN, MCH, MSR, MML, VCF, VSN, NET | 7 |
+| **INDEX** | VNINDEX, VN30, VN30F1M, VN100, VNMIDCAP, VNSMALLCAP, VNALLSHARE, VNXALLSHARE, VNFIN, HNX30, VNREAL, VNENE, VNMITECH, VNUTI, VNCONS, VNCOND, VNHEAL, VNIND, VNFINLEAD, VNFINSELECT, VNDIAMOND, VNDIVIDEND | 22 |
+| **CROSS** | VNINDEX, ^GSPC, GC=F, SJC-GOLD, KC=F, BZ=F, BTCUSDT | 7 |
+
+Note: VN30 was updated on 2026-05-13 — DGC removed (placed under controlled status), BSR added as replacement.
+
+```bash
+# List all watchlists (predefined + custom)
+aipa watchlist ls
+
+# Get tickers for a specific watchlist
+aipa watchlist get VN30
+aipa watchlist get VINGROUP
+
+# Create a custom watchlist
+aipa watchlist set MYWATCHLIST FPT VCB HPG VIC
+
+# Using watchlist tickers with get-ohlcv-data
+aipa get-ohlcv-data $(aipa watchlist get VN30 | head -1)
+```
+
 ### Supported Intervals
 
 | Interval | Description | Best For |

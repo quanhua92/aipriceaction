@@ -488,6 +488,51 @@ def _performer_to_dict(p) -> dict:
     }
 
 
+def cmd_watchlist(args) -> None:
+    from .predefined_watchlists import get_predefined_names, get_predefined_tickers, PREDEFINED_DESCRIPTIONS
+    from .user_watchlist import get_watchlist, load_watchlists, set_watchlist
+
+    subcmd = getattr(args, "watchlist_command", None)
+
+    if subcmd == "ls":
+        for name in get_predefined_names():
+            desc = PREDEFINED_DESCRIPTIONS.get(name, "")
+            tickers = get_predefined_tickers(name)
+            print(f"  {name:<12} [predefined] ({len(tickers)} tickers) {desc}")
+        custom = load_watchlists()
+        if custom:
+            for name, tickers in custom.items():
+                print(f"  {name:<12} [custom]     ({len(tickers)} tickers)")
+        else:
+            print("  (no custom watchlists)")
+
+    elif subcmd == "get":
+        name = args.name.upper()
+        tickers = get_watchlist(name)
+        if tickers is None:
+            print(f"Watchlist '{name}' not found.", file=sys.stderr)
+            sys.exit(1)
+        print(",".join(tickers))
+        print(f"({len(tickers)} tickers)", file=sys.stderr)
+
+    elif subcmd == "set":
+        name = args.name.upper()
+        tickers = [t.upper() for t in args.tickers]
+        try:
+            set_watchlist(name, tickers)
+            print(f"Watchlist '{name}' saved with {len(tickers)} tickers.", file=sys.stderr)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    else:
+        print("Usage: aipa watchlist [ls|get|set]", file=sys.stderr)
+        print("  ls          List all watchlists", file=sys.stderr)
+        print("  get <name>  Show tickers for a watchlist", file=sys.stderr)
+        print("  set <name> <tickers...>  Create/update a custom watchlist", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_volume_profile(args) -> None:
     """CLI handler: aipa volume-profile."""
     from datetime import date
