@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.35] - 2026-05-19
+
+### Changed
+- Require aipriceaction>=0.1.17 for persisted freshness cache, parallel per-day fetching, and cached 404s
+
 ## [0.1.34] - 2026-05-19
 
 ### Added
