@@ -113,6 +113,9 @@ aipa watchlist get VINGROUP
 # Create a custom watchlist
 aipa watchlist set MYWATCHLIST FPT VCB HPG VIC
 
+# Delete a custom watchlist
+aipa watchlist rm MYWATCHLIST
+
 # Using watchlist tickers in deep-research worker assignments
 aipa watchlist get VN30  # use these tickers for the VN30 sector worker
 ```

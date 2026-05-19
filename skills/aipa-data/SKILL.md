@@ -91,6 +91,9 @@ aipa watchlist get VINGROUP
 # Create a custom watchlist
 aipa watchlist set MYWATCHLIST FPT VCB HPG VIC
 
+# Delete a custom watchlist
+aipa watchlist rm MYWATCHLIST
+
 # Using watchlist tickers with get-ohlcv-data
 aipa get-ohlcv-data $(aipa watchlist get VN30 | head -1)
 ```
