@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] - 2026-05-19
+
+### Changed
+- Two-phase parallel fetch for non-1D/1h intervals: probe 10 newest days with HEAD checks, read remaining from disk if 5 hash matches confirm freshness (with S3 fallback for missing files)
+- Early stopping counter now increments on both TTL hits and HEAD hash matches, only resets on actual hash mismatch; 404 entries don't affect counter
+- Prune freshness entries older than 2x TTL on flush to prevent unbounded `.freshness.json` growth
+
 ## [0.1.17] - 2026-05-19
 
 ### Added
