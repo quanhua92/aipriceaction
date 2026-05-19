@@ -45,6 +45,16 @@ Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powe
 | Use the CLI / TUI | `uv tool install aipa-cli` | Terminal analysis |
 | Build with Python | `pip install aipriceaction` | Pandas DataFrames |
 
+### Updating
+
+```bash
+# Update AI agent skills
+npx skills update
+
+# Update CLI (if installed via uv tool)
+uv tool upgrade aipa-cli
+```
+
 ---
 
 ## Featured capabilities
@@ -142,7 +152,7 @@ Three skills for Claude Code, Gemini CLI, and Codex: **aipa-data** fetches raw O
 
 ### AIPA Terminal
 
-Textual-based TUI with streaming chat, thinking/reasoning display, autocomplete, and slash commands. Also ships CLI subcommands for non-interactive analysis, volume profile, performers, live data, and deep research. See [aipriceaction-terminal/README.md](aipriceaction-terminal/README.md).
+Textual-based TUI with streaming chat, thinking/reasoning display, autocomplete, and slash commands. Also ships CLI subcommands for non-interactive analysis, volume profile, performers, live data, and deep research. If you're not using `uvx`, ask your AI agent to update: *"update aipa-cli to the latest version"*. See [aipriceaction-terminal/README.md](aipriceaction-terminal/README.md).
 
 ### Python SDK
 
