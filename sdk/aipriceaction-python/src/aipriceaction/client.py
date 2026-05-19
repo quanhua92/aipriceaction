@@ -139,6 +139,8 @@ class AIPriceAction:
         self._session = requests.Session()
         self._tickers_cache: list[TickerInfo] | None = None
         self._freshness: dict[str, dict] = {}
+        self._fresh_cache_hits: int = 0
+        self._fresh_cache_hit_threshold: int = 10
         self._freshness_ttl = freshness_ttl
         self.use_live = use_live
         self._live_url = live_url.rstrip("/")
@@ -160,7 +162,7 @@ class AIPriceAction:
     def _head_content_hash(self, url: str) -> Optional[str]:
         """HEAD request returning x-amz-meta-content-hash. Returns None on error."""
         try:
-            resp = self._session.head(url, timeout=10)
+            resp = self._session.head(url, timeout=5)
             if resp.status_code in (404, 403):
                 return None
             resp.raise_for_status()
@@ -256,15 +258,35 @@ class AIPriceAction:
         Hash differs → return False.
         HEAD fails + disk cache exists → return True (conservative).
         No .hash file yet (upgrade path) → do HEAD, write .hash, trust cache.
+        Cached 404 (empty hash, no file) → return False (skip S3, caller returns None).
         """
-        if not os.path.exists(cache_path):
-            return False
-
         now = _time.monotonic()
         entry = self._freshness.get(cache_path)
 
+        # Check TTL for any cached entry (including 404 misses)
         if entry and (now - entry["checked_at"]) < self._freshness_ttl:
+            if not os.path.exists(cache_path):
+                # Cached 404 — no file on disk, hash is empty
+                self._fresh_cache_hits += 1
+                return False
+            self._fresh_cache_hits += 1
             return True
+
+        # If we've had N consecutive TTL cache hits, assume remaining
+        # files are also fresh — skip the check entirely.
+        if self._fresh_cache_hits >= self._fresh_cache_hit_threshold:
+            if cache_path in self._freshness:
+                if not os.path.exists(cache_path):
+                    return False
+                return True
+
+        if not os.path.exists(cache_path):
+            # No file and no cached entry — need to check S3
+            self._fresh_cache_hits = 0
+            return False
+
+        # Reset — we're about to do real work (HEAD or download)
+        self._fresh_cache_hits = 0
 
         # Beyond TTL or no entry — check server
         server_hash = self._head_content_hash(url)
@@ -487,9 +509,22 @@ class AIPriceAction:
             except (OSError, pd.errors.EmptyDataError):
                 pass
 
-        # Fetch from S3
-        resp = self._session.get(url)
+        # Cached 404 — skip S3 fetch entirely
+        if use_cache and not os.path.exists(cache_path):
+            entry = self._freshness.get(cache_path)
+            if entry and entry.get("hash") == "":
+                return None
+
+        # Fetch from S3 (connect fast, but allow time for large file downloads)
+        resp = self._session.get(url, timeout=(5, 30))
         if resp.status_code in (404, 403):
+            # Cache the miss so we don't re-check S3 for non-existent files
+            if use_cache:
+                self._freshness[cache_path] = {
+                    "hash": "",
+                    "checked_at": _time.monotonic(),
+                }
+                self._flush_freshness()
             return None
         resp.raise_for_status()
 
@@ -607,14 +642,22 @@ class AIPriceAction:
                 return self._fetch_backwards(
                     source, ticker, interval, days, need_rows, use_cache=use_cache
                 )
-            frames: list[pd.DataFrame] = []
-            for day in days:
+            frames: dict[date, pd.DataFrame] = {}
+
+            def _fetch_day(day: date) -> tuple[date, Optional[pd.DataFrame]]:
                 df = self._fetch_csv(source, ticker, interval, day, use_cache=use_cache)
-                if df is not None and not df.empty:
-                    frames.append(df)
+                return day, df
+
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = {pool.submit(_fetch_day, d): d for d in days}
+                for future in as_completed(futures):
+                    day, df = future.result()
+                    if df is not None and not df.empty:
+                        frames[day] = df
             if not frames:
                 return pd.DataFrame(columns=_OHLCV_COLUMNS)
-            result = pd.concat(frames, ignore_index=True)
+            sorted_frames = [frames[d] for d in sorted(frames)]
+            result = pd.concat(sorted_frames, ignore_index=True)
             if not result.empty and "time" in result.columns:
                 result = result.sort_values("time").reset_index(drop=True)
             return result
