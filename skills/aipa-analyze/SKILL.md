@@ -96,7 +96,7 @@ aipa watchlist set MYWATCHLIST FPT VCB HPG VIC
 aipa watchlist rm MYWATCHLIST
 
 # Using watchlist tickers in analyze
-aipa analyze $(aipa watchlist get VN30 | head -1)
+aipa analyze $(aipa watchlist get VN30)
 ```
 
 ### Supported Intervals
