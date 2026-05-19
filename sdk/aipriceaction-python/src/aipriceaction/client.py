@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import tempfile
 
 import time as _time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -129,7 +130,7 @@ class AIPriceAction:
         base_url: Optional[str] = None,
         cache_dir: Optional[str] = None,
         *,
-        freshness_ttl: float = 300.0,
+        freshness_ttl: float = 1800.0,
         use_live: bool = True,
         live_url: str = "https://api.aipriceaction.com",
         utc_offset: int = 7,
@@ -151,6 +152,8 @@ class AIPriceAction:
         else:
             self._cache_dir = Path.home() / ".aipriceaction" / "s3-cache"
             self._cache_dir.mkdir(parents=True, exist_ok=True)
+
+        self._load_freshness()
 
     # ── Freshness helpers ──
 
@@ -180,6 +183,70 @@ class AIPriceAction:
         except OSError:
             return None
 
+    # ── Persisted freshness state ──
+
+    @property
+    def _freshness_path(self) -> Path:
+        return self._cache_dir / ".freshness.json"
+
+    def _load_freshness(self) -> None:
+        """Load persisted freshness state from disk (fault-tolerant).
+
+        Converts wall-clock timestamps from JSON to monotonic so _is_fresh()
+        works without changes.
+        """
+        try:
+            raw = json.loads(self._freshness_path.read_text())
+            if not isinstance(raw, dict) or "freshness" not in raw:
+                return
+            now_mono = _time.monotonic()
+            now_wall = _time.time()
+            for path, entry in raw["freshness"].items():
+                if not isinstance(entry, dict) or "checked_at" not in entry:
+                    continue
+                wall = entry["checked_at"]
+                self._freshness[path] = {
+                    "hash": entry.get("hash", ""),
+                    "checked_at": now_mono - (now_wall - wall),
+                }
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
+    def _flush_freshness(self) -> None:
+        """Atomically persist freshness state to disk.
+
+        Converts monotonic timestamps to wall-clock for cross-process use.
+        Never raises — freshness is purely advisory.
+        """
+        try:
+            now_mono = _time.monotonic()
+            now_wall = _time.time()
+            data = {
+                "_version": 1,
+                "freshness": {
+                    path: {
+                        "hash": entry["hash"],
+                        "checked_at": now_wall - (now_mono - entry["checked_at"]),
+                    }
+                    for path, entry in self._freshness.items()
+                },
+            }
+            fd, tmp = tempfile.mkstemp(
+                dir=str(self._cache_dir), prefix=".freshness.", suffix=".tmp"
+            )
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(data, f)
+                os.replace(tmp, str(self._freshness_path))
+            except BaseException:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
+        except Exception:
+            pass
+
     def _is_fresh(self, cache_path: str, url: str) -> bool:
         """Check if a disk-cached file is still fresh.
 
@@ -208,6 +275,7 @@ class AIPriceAction:
             if disk_hash is not None:
                 # We have a cached hash and disk file — trust cache conservatively
                 self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
+                self._flush_freshness()
                 return True
             # No hash file yet (upgrade path) and server HEAD failed — do HEAD
             # can't determine freshness, skip cache
@@ -217,10 +285,12 @@ class AIPriceAction:
             # No .hash file yet — write it and trust existing disk cache
             self._save_hash(cache_path, server_hash)
             self._freshness[cache_path] = {"hash": server_hash, "checked_at": now}
+            self._flush_freshness()
             return True
 
         if server_hash == disk_hash:
             self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
+            self._flush_freshness()
             return True
 
         # Hash changed — need to re-download
@@ -294,6 +364,7 @@ class AIPriceAction:
             "hash": content_hash or "",
             "checked_at": _time.monotonic(),
         }
+        self._flush_freshness()
 
         return [
             TickerInfo(
@@ -437,6 +508,7 @@ class AIPriceAction:
                 "hash": content_hash or "",
                 "checked_at": _time.monotonic(),
             }
+            self._flush_freshness()
 
         return self._parse_csv(text)
 
