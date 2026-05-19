@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.17] - 2026-05-19
+
+### Added
+- Persist S3 cache freshness state to disk via `.freshness.json` — eliminates redundant HEAD requests across process restarts (TTL 30m)
+- Parallel per-day CSV fetching with ThreadPoolExecutor (8 workers)
+- Cache 404/403 responses so weekend/holiday dates skip S3 entirely
+- Consecutive TTL cache hit counter: after 10 hits, skip freshness checks for remaining files
+
+### Changed
+- Reduce HEAD timeout from 10s to 5s
+- Add (connect=5s, read=30s) timeout to S3 GET requests
+
 ## [0.1.16] - 2026-05-16
 
 ### Changed

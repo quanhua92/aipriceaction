@@ -25,4 +25,4 @@ __all__ = [
     "VolumeProfileResult",
     "compute_volume_profile",
 ]
-__version__ = "0.1.16"
+__version__ = "0.1.17"
