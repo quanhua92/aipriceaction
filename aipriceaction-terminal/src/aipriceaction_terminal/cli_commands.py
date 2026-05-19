@@ -535,7 +535,7 @@ def cmd_watchlist(args) -> None:
         if tickers is None:
             print(f"Watchlist '{name}' not found.", file=sys.stderr)
             sys.exit(1)
-        print(",".join(tickers))
+        print(" ".join(tickers))
         print(f"({len(tickers)} tickers)", file=sys.stderr)
 
     elif subcmd == "set":
