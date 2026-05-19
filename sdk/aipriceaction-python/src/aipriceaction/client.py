@@ -665,7 +665,9 @@ class AIPriceAction:
                 # Phase 2: remaining days
                 phase2 = sorted_days[probe_count:]
                 if phase2 and self._fresh_cache_hits >= match_threshold:
-                    # Enough confirmations — read remaining from disk
+                    # Enough confirmations — read from disk, fetch missing from S3
+                    disk_days = []
+                    missing_days = []
                     for day in phase2:
                         cache_path = self._cache_key(source, ticker, interval, day)
                         if os.path.exists(cache_path):
@@ -674,8 +676,18 @@ class AIPriceAction:
                                 df = self._parse_csv(text)
                                 if df is not None and not df.empty:
                                     frames[day] = df
+                                else:
+                                    missing_days.append(day)
                             except (OSError, pd.errors.EmptyDataError):
-                                pass
+                                missing_days.append(day)
+                        else:
+                            missing_days.append(day)
+                    if missing_days:
+                        futures = {pool.submit(_fetch_day, d): d for d in missing_days}
+                        for future in as_completed(futures):
+                            day, df = future.result()
+                            if df is not None and not df.empty:
+                                frames[day] = df
                 elif phase2:
                     # Not enough confirmations — fetch remaining normally
                     futures = {pool.submit(_fetch_day, d): d for d in phase2}
