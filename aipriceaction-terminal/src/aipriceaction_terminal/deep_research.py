@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated, Any
 
+from .verbose import verbose_log
+
 from langchain.agents import create_agent
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
@@ -761,6 +763,7 @@ async def run_deep_research(
     output: Callable[[str], None] | None = None,
     run_pipeline: bool = False,
     source: str | None = None,
+    verbose: bool = False,
 ) -> str:
     """Run the multi-agent deep research pipeline.
 
@@ -811,10 +814,12 @@ async def run_deep_research(
     # Ensure clients and source are initialized
     _ensure_clients(effective_lang)
     _ensure_source(effective_source)
+    verbose_log("deep-research: clients initialized")
 
     market_snapshot = ""
     if not resume_id:
         _out(f"[1] Fetching market snapshot (all {effective_source} tickers, latest bar)...")
+        verbose_log("deep-research: building market snapshot")
         _, builder = _ensure_clients(effective_lang)
         market_snapshot = builder.build(
             source=effective_source,
@@ -826,6 +831,7 @@ async def run_deep_research(
         client, _ = _ensure_clients(effective_lang)
         tickers = client.get_tickers(source=effective_source)
         _out(f"    Tickers: {len(tickers)}")
+        verbose_log(f"deep-research: snapshot built ({len(tickers)} tickers)")
         _out("")
 
     if not run_pipeline:
@@ -863,6 +869,8 @@ async def run_deep_research(
 
     graph = _build_graph(checkpointer=checkpointer, lang=effective_lang, source=effective_source, output=_out)
 
+    verbose_log("deep-research: starting graph invocation")
+
     if resume_id:
         _out("    Resuming from checkpoint...")
         _out("")
@@ -887,6 +895,7 @@ async def run_deep_research(
 
     _out("---")
     _out("")
+    verbose_log("deep-research: graph complete")
     _out("## [3] FINAL REPORT")
     _out("")
     _out("---")
@@ -899,6 +908,7 @@ async def run_deep_research(
     _out("")
 
     elapsed = time.time() - started_at
+    verbose_log(f"deep-research: total {elapsed:.1f}s")
     _out(f"Done in {elapsed:.1f}s | Checkpoint: {checkpointer.session_dir}")
     _out("")
     _out(_PIPELINE_STEPS)

@@ -7,6 +7,8 @@ import json
 import sys
 import time
 
+from .verbose import verbose_log
+
 
 def _resolve_lang(arg_lang: str | None) -> str:
     """Resolve effective language: CLI arg > saved settings > default."""
@@ -24,6 +26,7 @@ async def cmd_analyze(args) -> None:
         args.reference_ticker = args.reference_ticker.upper()
 
     lang = _resolve_lang(args.lang)
+    verbose_log(f"analyze: resolved lang={lang}")
     builder = AIContextBuilder(lang=lang, ma_type=args.ma_type)
 
     # Auto-detect reference ticker if user didn't explicitly override
@@ -53,6 +56,7 @@ async def cmd_analyze(args) -> None:
 
     t0 = time.time()
 
+    verbose_log(f"analyze: starting context build tickers={args.tickers}")
     include_system_prompt = not args.no_system_prompt
 
     if len(args.tickers) == 1:
@@ -71,6 +75,7 @@ async def cmd_analyze(args) -> None:
         )
 
     build_elapsed = time.time() - t0
+    verbose_log(f"analyze: context built ({len(context):,} chars, {build_elapsed:.3f}s)")
 
     # --context-only: dump raw context and exit
     if args.context_only:
@@ -79,6 +84,7 @@ async def cmd_analyze(args) -> None:
 
     # LLM analysis
     question = _resolve_cli_question(builder, args)
+    verbose_log(f"analyze: resolved question ({len(question)} chars)")
     if not question:
         print("No question resolved. Use --question TEXT or pick from --questions.", file=sys.stderr)
         sys.exit(1)
@@ -99,6 +105,7 @@ async def cmd_analyze(args) -> None:
 
     agent_config = AgentConfig(lang=lang)
     session = AgentSession(agent_config)
+    verbose_log("analyze: agent session created, starting LLM stream")
 
     message = (
         f"<analysis_context>\n{context}\n</analysis_context>\n\n"
@@ -147,6 +154,7 @@ async def cmd_analyze(args) -> None:
             _flush_thinking()
 
     elapsed = time.time() - t0
+    verbose_log(f"analyze: LLM stream complete ({elapsed:.3f}s)")
     print(f"[done] Total: {elapsed:.1f}s", file=sys.stderr)
 
     response = "".join(tokens).strip()
@@ -186,6 +194,8 @@ def cmd_get_ohlcv(args) -> None:
 
     raw_tickers = _resolve_tickers(args.tickers)
     client = AIPriceAction()
+
+    verbose_log(f"get-ohlcv: fetching tickers={raw_tickers}")
 
     if not getattr(args, "no_system_prompt", False):
         from aipriceaction.system import get_system_prompt
@@ -233,6 +243,8 @@ def cmd_get_ohlcv(args) -> None:
         )
         print(df.to_string(index=False))
 
+    verbose_log(f"get-ohlcv: fetched {len(df)} rows")
+
 
 _TICKER_ALIASES = {"SJC": "SJC-GOLD"}
 
@@ -257,6 +269,7 @@ def cmd_live_data(args) -> None:
     interval = args.interval
     top = args.top
     source = args.source
+    verbose_log(f"live-data: interval={interval}, tickers={tickers}, top={top}")
 
     # Build source filter set from ticker metadata
     source_set: set[str] | None = None
@@ -266,6 +279,7 @@ def cmd_live_data(args) -> None:
 
     try:
         is_native = interval in {"1D", "1h", "1m"}
+        verbose_log(f"live-data: fetching live data (native={is_native})")
         data = client.fetch_live_data(interval, ma=is_native)
     except Exception as e:
         print(f"Error fetching live data: {e}", file=sys.stderr)
@@ -274,6 +288,7 @@ def cmd_live_data(args) -> None:
         print("Failed to fetch live data.", file=sys.stderr)
         sys.exit(1)
 
+    verbose_log(f"live-data: fetched {len(data)} symbols")
     rows: list[dict] = []
     for symbol, candles in data.items():
         if tickers and symbol not in tickers:
@@ -391,6 +406,7 @@ def cmd_deep_research(
     lang: str | None = None,
     run_pipeline: bool = False,
     source: str | None = None,
+    verbose: bool = False,
 ) -> None:
     from .deep_research import run_deep_research
 
@@ -398,6 +414,7 @@ def cmd_deep_research(
     asyncio.run(run_deep_research(
         question=question, resume_id=resume, output_file=output, lang=effective_lang,
         run_pipeline=run_pipeline, source=_resolve_source(source),
+        verbose=verbose,
     ))
 
 
@@ -429,12 +446,16 @@ def cmd_performers(args) -> None:
 
     client = AIPriceAction()
     source = _resolve_source(args.source)
+    verbose_log(f"performers: source={source}, sort_by={args.sort_by}")
 
     # Fetch live 1D data with MA indicators
+    verbose_log("performers: fetching live data")
     data = client.fetch_live_data("1D", ma=True)
     if not data:
         print("No live data available.", file=sys.stderr)
         sys.exit(1)
+
+    verbose_log(f"performers: live data fetched, {len(data)} symbols")
 
     # Build sector map from ticker metadata
     sector_map: dict[str, str] = {}
@@ -458,6 +479,8 @@ def cmd_performers(args) -> None:
         min_volume=args.min_volume,
         source=source,
     )
+
+    verbose_log(f"performers: ranked {len(top)} top, {len(worst)} worst")
 
     import pandas as pd
 
@@ -542,6 +565,7 @@ def cmd_volume_profile(args) -> None:
 
     client = AIPriceAction()
     ticker = args.ticker.upper()
+    verbose_log(f"volume-profile: initializing for {ticker}")
 
     # Resolve date range
     if args.date:
@@ -567,6 +591,7 @@ def cmd_volume_profile(args) -> None:
             pass
 
     # Fetch 1m data
+    verbose_log(f"volume-profile: fetching 1m data {start_date} to {end_date}")
     df = client.get_ohlcv(
         ticker,
         interval="1m",
@@ -579,12 +604,16 @@ def cmd_volume_profile(args) -> None:
         print(f"No 1m data found for {ticker} on {start_date}.", file=sys.stderr)
         sys.exit(1)
 
+    verbose_log(f"volume-profile: fetched {len(df)} 1m candles")
+
     result = compute_volume_profile(
         df, ticker,
         source=source,
         bins=args.bins,
         value_area_pct=args.value_area_pct,
     )
+
+    verbose_log(f"volume-profile: computed {result.total_volume:,} total volume, {len(result.profile)} price levels")
 
     print(f"\n=== Volume Profile: {result.symbol} ({start_date}) ===")
     print(f"Total Volume: {result.total_volume:,}  |  Minutes: {result.total_minutes}")
