@@ -114,6 +114,8 @@ def run():
     p_wl_set = wl_sub.add_parser("set", help="Create/update a custom watchlist")
     p_wl_set.add_argument("name", help="Custom watchlist name")
     p_wl_set.add_argument("tickers", nargs="+", help="Ticker symbols")
+    p_wl_rm = wl_sub.add_parser("rm", help="Delete a custom watchlist")
+    p_wl_rm.add_argument("name", help="Custom watchlist name")
 
     # aipa resume [session_id|index]
     p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session")

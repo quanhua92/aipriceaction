@@ -512,7 +512,7 @@ def _performer_to_dict(p) -> dict:
 
 
 def cmd_watchlist(args) -> None:
-    from .predefined_watchlists import get_predefined_names, get_predefined_tickers, PREDEFINED_DESCRIPTIONS
+    from .predefined_watchlists import get_predefined_names, get_predefined_tickers, is_predefined, PREDEFINED_DESCRIPTIONS
     from .user_watchlist import get_watchlist, load_watchlists, set_watchlist
 
     subcmd = getattr(args, "watchlist_command", None)
@@ -548,11 +548,24 @@ def cmd_watchlist(args) -> None:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
 
+    elif subcmd == "rm":
+        name = args.name.upper()
+        if is_predefined(name):
+            print(f"Error: '{name}' is a predefined watchlist and cannot be deleted.", file=sys.stderr)
+            sys.exit(1)
+        from .user_watchlist import delete_watchlist
+        if delete_watchlist(name):
+            print(f"Watchlist '{name}' deleted.", file=sys.stderr)
+        else:
+            print(f"Watchlist '{name}' not found.", file=sys.stderr)
+            sys.exit(1)
+
     else:
-        print("Usage: aipa watchlist [ls|get|set]", file=sys.stderr)
+        print("Usage: aipa watchlist [ls|get|set|rm]", file=sys.stderr)
         print("  ls          List all watchlists", file=sys.stderr)
         print("  get <name>  Show tickers for a watchlist", file=sys.stderr)
         print("  set <name> <tickers...>  Create/update a custom watchlist", file=sys.stderr)
+        print("  rm  <name>  Delete a custom watchlist", file=sys.stderr)
         sys.exit(1)
 
 
