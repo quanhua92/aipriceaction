@@ -223,6 +223,11 @@ class AIPriceAction:
         try:
             now_mono = _time.monotonic()
             now_wall = _time.time()
+            # Prune entries past 2x TTL to prevent unbounded growth
+            cutoff = now_mono - (self._freshness_ttl * 2)
+            self._freshness = {
+                p: e for p, e in self._freshness.items() if e["checked_at"] >= cutoff
+            }
             data = {
                 "_version": 1,
                 "freshness": {
