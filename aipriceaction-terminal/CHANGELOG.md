@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.36] - 2026-05-19
+
+### Added
+- `aipa watchlist rm` subcommand to delete custom watchlists
+
+### Changed
+- Require aipriceaction>=0.1.18 for two-phase parallel fetch with early stopping
+- `watchlist get` outputs space-separated tickers for CLI command substitution (`$(aipa watchlist get VN30)`)
+
 ## [0.1.35] - 2026-05-19
 
 ### Changed
