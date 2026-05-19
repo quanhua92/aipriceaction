@@ -78,15 +78,16 @@ No header row. Columns: `time, open, high, low, close, volume`
 ### Local disk cache
 
 Every CSV fetched from S3 is cached locally to avoid re-downloading.
-Default location: `$TMPDIR/aipriceaction-s3-cache/` (customizable via `cache_dir` parameter).
+Default location: `~/.aipriceaction/s3-cache/` (customizable via `cache_dir` parameter).
 
 ```
-$TMPDIR/aipriceaction-s3-cache/
+~/.aipriceaction/s3-cache/
+  .freshness.json                          <- persisted freshness state (TTL 30 min)
   vn/
     VCB/
       1D/
-        VCB-1D-2024-01-15.csv         <- cached copy
-        VCB-1D-2024-01-15.csv.hash    <- server content hash
+        VCB-1D-2024-01-15.csv              <- cached copy
+        VCB-1D-2024-01-15.csv.hash         <- server content hash
       yearly/
         VCB-1D-2024.csv
         VCB-1D-2024.csv.hash
@@ -95,29 +96,45 @@ $TMPDIR/aipriceaction-s3-cache/
 ### Cache freshness check
 
 Each cached CSV has a `.hash` sidecar file storing the S3 object's content hash.
-Before re-downloading, the SDK checks if the cache is still fresh:
+Before re-downloading, the SDK checks if the cache is still fresh.
+Freshness state is **persisted to disk** via `.freshness.json`, so a cold process start doesn't trigger redundant HEAD requests for files checked within the TTL.
 
 ```
   Is cached file fresh?
 
-  ┌─────────────────────────────────────────────────┐
-  │ Within TTL (default 5 min)?                     │
-  │   YES -> return True (skip HEAD request)         │
-  │   NO  -> continue to server check                │
-  └─────────────────┬───────────────────────────────┘
-                    v
-  ┌─────────────────────────────────────────────────┐
-  │ HEAD request to S3: get x-amz-meta-content-hash │
-  │ Compare with local .hash file                    │
-  │                                                  │
-  │   Hash matches -> update TTL timestamp, fresh!   │
-  │   Hash differs  -> stale, need to re-download    │
-  │   HEAD fails    -> trust cache conservatively    │
-  │   No .hash file -> write it, trust cache         │
-  └─────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────┐
+  │ Load .freshness.json on startup                       │
+  │ Converts wall-clock timestamps → monotonic time       │
+  │ Missing or corrupt file → empty dict (graceful)       │
+  └──────────────────┬───────────────────────────────────┘
+                     v
+  ┌──────────────────────────────────────────────────────┐
+  │ Early stopping: 10+ consecutive cache hits?           │
+  │   YES -> return True (skip all remaining checks)      │
+  └──────────────────┬───────────────────────────────────┘
+                     v
+  ┌──────────────────────────────────────────────────────┐
+  │ Within TTL (default 30 min)?                          │
+  │   YES -> increment hit counter, return True            │
+  │   NO  -> continue to server HEAD check                 │
+  └──────────────────┬───────────────────────────────────┘
+                     v
+  ┌──────────────────────────────────────────────────────┐
+  │ HEAD request to S3: get x-amz-meta-content-hash       │
+  │ Compare with local .hash file                          │
+  │                                                        │
+  │   Hash matches -> update TTL, increment counter        │
+  │   Hash differs -> RESET counter, need to re-download   │
+  │   HEAD fails   -> trust cache, increment counter       │
+  │   No .hash file -> write it, trust cache               │
+  │   404 (no file) -> cached as empty hash, skip S3       │
+  └──────────────────────────────────────────────────────┘
 ```
 
-This avoids downloading the full CSV on every call — a lightweight HEAD request (checking the hash header) is enough to know if the file changed.
+- **TTL 30 minutes**: historical data on S3 rarely changes, so a 30-min freshness window avoids most HEAD requests across consecutive runs
+- **Cached 404s**: weekend/holiday dates that returned 404/403 are cached with `hash=""`, so subsequent runs skip S3 entirely for those dates
+- **Pruning on flush**: entries older than 2x TTL are removed during flush to prevent unbounded `.freshness.json` growth
+- **Atomic writes**: flush uses tempfile + `os.replace()` to avoid corruption from concurrent processes
 
 ---
 
@@ -158,20 +175,29 @@ This means requesting a 2-year range makes **3 requests** (2 yearly + 1 daily), 
 
 ### For 1m and other intervals
 
-Minute data is too granular for yearly files. The SDK fetches daily CSVs **backwards** from the newest date, stopping as soon as it has enough rows:
+Minute data is too granular for yearly files. The SDK uses a **two-phase parallel fetch** strategy:
 
 ```
-  Request: VCB, 1m, need 200 rows
+  Request: VCB, 1m, 30 days
 
-  Day 2024-01-15  <- fetch (got 225 rows) ... enough! stop.
-
-  vs. naive approach:
-
-  Day 2024-01-15  <- fetch
-  Day 2024-01-14  <- fetch
-  Day 2024-01-13  <- fetch  (waste — already have enough)
-  ...
+  Phase 1 — Probe (last 10 days, parallel, 8 workers):
+  ┌─────────────────────────────────────────────────────────┐
+  │  Fetch days [15, 14, 13, 12, 11, 10, 09, 08, 07, 06]   │
+  │  Each fetch checks freshness (TTL or HEAD)               │
+  │  Counter increments on every cache hit or HEAD match     │
+  └─────────────────────────┬───────────────────────────────┘
+                            v
+  ┌──────────────────────────────────────────────────────────────┐
+  │ Counter reached 5 matches?                                   │
+  │   YES -> Phase 2: read remaining 20 days from disk           │
+  │         Files on disk -> read directly (no HEAD, no S3)      │
+  │         Files missing  -> fetch from S3 (parallel, 8 workers)│
+  │   NO  -> Phase 2: fetch remaining 20 days normally           │
+  │         (parallel with HEAD checks)                          │
+  └──────────────────────────────────────────────────────────────┘
 ```
+
+Historical S3 data doesn't change — once 5 of the 10 newest files match their cached hashes, the older files are guaranteed fresh and can be read directly from disk without any network requests.
 
 It also stops after a streak of consecutive 404s (weekends, holidays):
 
@@ -368,8 +394,12 @@ If the live API is down or the ticker isn't tracked, S3 data passes through unch
   │ 3. Generate list of dates to fetch                  │
   │    Apr 2023 ... Jan 15 2024                         │
   │                                                     │
-  │ 4. Fetch S3 data (yearly + daily fallback)          │
-  │    VCB-1D-2023.csv + VCB-1D-2024.csv + today.csv   │
+  │ 4. Fetch S3 data                                    │
+  │    1D/1h: yearly files + daily tail (2-3 requests)  │
+  │    1m/other: two-phase parallel fetch               │
+  │      Phase 1: probe 10 newest days (parallel)       │
+  │      Phase 2: disk-only if 5 hash matches, else     │
+  │               parallel fetch with HEAD checks       │
   │                                                     │
   │ 5. Aggregate if needed                              │
   │    e.g. 1m -> 5m, 15m, 1h, etc.                    │
