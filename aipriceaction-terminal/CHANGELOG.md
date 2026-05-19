@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.34] - 2026-05-19
+
+### Added
+- `--verbose` flag on `analyze`, `get-ohlcv-data`, `volume-profile`, `live-data`, `performers`, `deep-research` commands for performance debugging
+- Timestamped `[VERBOSE HH:MM:SS.mmm +X.XXXs]` logging to stderr at key timing boundaries
+
 ## [0.1.33] - 2026-05-18
 
 ### Added
