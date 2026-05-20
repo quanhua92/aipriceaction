@@ -2,14 +2,14 @@
 
 import argparse
 import asyncio
+import sys
 
 
 def _ensure_setup() -> None:
-    """Run interactive setup if setup_done is not set."""
+    """Warn if setup_done is not set."""
     from .user_settings import load_settings
     if not load_settings().get("setup_done"):
-        from .cli_setup import cmd_setup
-        cmd_setup()
+        print("Warning: setup not done yet. Run 'aipa setup' to configure if needed.", file=sys.stderr)
 
 
 def run():
