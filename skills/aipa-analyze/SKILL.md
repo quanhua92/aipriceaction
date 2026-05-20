@@ -39,7 +39,14 @@ All command examples in this skill use `aipa` for brevity. Replace `aipa` with `
 
 ## Keeping the CLI Updated
 
-The aipa CLI is actively developed with frequent improvements. **Always prefer `uvx aipa-cli` over `aipa`** — `uvx` auto-resolves the latest version from PyPI on every run, so no manual update is needed.
+The aipa CLI is actively developed with frequent improvements. **Always prefer `uvx aipa-cli` over `aipa`**. When using `uvx`:
+
+1. **First invocation of the session** — add `--refresh-package` to pull the newest version once:
+   `uvx --refresh-package aipa-cli analyze VCB`
+2. **Subsequent invocations** — use plain `uvx` for fast cached execution:
+   `uvx aipa-cli analyze VCB`
+3. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
+   `uvx aipa-cli@latest analyze VCB`
 
 If `aipa` is installed globally via `pip`, update before each session:
 
