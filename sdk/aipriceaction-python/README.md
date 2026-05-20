@@ -298,6 +298,7 @@ More examples in [examples/](examples/):
 | [system_prompt_only.py](examples/system_prompt_only.py) | System prompt without ticker data |
 | [langchain_agent.py](examples/langchain_agent.py) | LangChain ReAct agent with AIContextBuilder and tool-calling |
 | [multi_agent.py](examples/multi_agent.py) | Multi-agent parallel sector research with LangGraph Send() |
+| [full_client_demo.py](examples/full_client_demo.py) | Full raw client feature tour — tickers, OHLCV, live data, performers, volume profile |
 
 ## System Prompt
 
