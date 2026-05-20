@@ -37,13 +37,17 @@ Ba skill được cài đặt: **aipa-data** (truy xuất dữ liệu OHLCV thô
 
 ### Dùng ngay không cần cài skill
 
-Chỉ cần tải [AGENTS.md](AGENTS.md) bỏ vào project. Gemini CLI tự nhận diện, còn Claude Code thì thêm vào `CLAUDE.md`:
+Chỉ cần tải [AGENTS.md](AGENTS.md) bỏ vào project. Gemini CLI tự nhận diện, còn Claude Code thì copy hoặc tạo symlink:
 
-```
-@import "AGENTS.md"
+```bash
+# Cách 1: Symlink (tự cập nhật khi AGENTS.md thay đổi)
+ln -s AGENTS.md CLAUDE.md
+
+# Cách 2: Copy (cần cập nhật thủ công)
+cp AGENTS.md CLAUDE.md
 ```
 
-Xong — AI agent đã có sẵn đầy đủ hướng dẫn dùng `aipa-cli`. Yêu cầu máy có Python — AI sẽ tự cài `aipa-cli` lần đầu chạy. Các agent chỉ chạy trên web (VD: Claude.ai web) sẽ không hoạt động. Lưu ý: AGENTS.md khi có bản mới phải tải lại thủ công, còn skill cập nhật dễ dàng qua `npx skills update`.
+Xong — AI agent đã có sẵn đầy đủ hướng dẫn dùng `aipa-cli`. Yêu cầu máy có Python — AI sẽ tự cài `aipa-cli` lần đầu chạy. Các agent chỉ chạy trên web (VD: Claude.ai web) sẽ không hoạt động. Lưu ý: với copy, AGENTS.md khi có bản mới phải tải lại thủ công, còn skill cập nhật dễ dàng qua `npx skills update`.
 
 ---
 

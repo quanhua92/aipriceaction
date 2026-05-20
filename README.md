@@ -37,13 +37,17 @@ Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powe
 
 ### No install — one file
 
-Download [AGENTS.md](AGENTS.md) and drop it in your project root. Gemini CLI auto-detects it; for Claude Code, add this to your `CLAUDE.md`:
+Download [AGENTS.md](AGENTS.md) and drop it in your project root. Gemini CLI auto-detects it; for Claude Code, copy or symlink it:
 
-```
-@import "AGENTS.md"
+```bash
+# Option 1: Symlink (auto-updates when AGENTS.md changes)
+ln -s AGENTS.md CLAUDE.md
+
+# Option 2: Copy (manual update needed)
+cp AGENTS.md CLAUDE.md
 ```
 
-Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills. Requires Python on the machine — the AI auto-installs `aipa-cli` on first use. Web-only agents (e.g. Claude.ai web) won't work. Note: AGENTS.md must be downloaded again manually when updated, while skills update easily via `npx skills update`.
+Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills. Requires Python on the machine — the AI auto-installs `aipa-cli` on first use. Web-only agents (e.g. Claude.ai web) won't work. Note: with copy, AGENTS.md must be downloaded again manually when updated, while skills update easily via `npx skills update`.
 
 ---
 
