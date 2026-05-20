@@ -43,7 +43,7 @@ Download [AGENTS.md](AGENTS.md) and drop it in your project root. Gemini CLI aut
 @import "AGENTS.md"
 ```
 
-Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills.
+Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills. Requires Python on the machine — the AI auto-installs `aipa-cli` on first use. Web-only agents (e.g. Claude.ai web) won't work. Note: AGENTS.md must be downloaded again manually when updated, while skills update easily via `npx skills update`.
 
 ---
 
@@ -51,6 +51,7 @@ Any AI agent now has full `aipa-cli` documentation — raw data commands, analys
 
 | I want to... | Install | One-liner |
 |---|---|---|
+| Use AI agent — no skill install | Download [AGENTS.md](AGENTS.md) | Auto-installs aipa-cli |
 | Add AI agent skills | `npx skills add quanhua92/aipriceaction` | Auto-installs aipa-cli |
 | Use the CLI / TUI | `uv tool install aipa-cli` | Terminal analysis |
 | Build with Python | `pip install aipriceaction` | Pandas DataFrames |

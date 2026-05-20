@@ -35,12 +35,23 @@ Sau đó hỏi bất kỳ AI agent nào:
 
 Ba skill được cài đặt: **aipa-data** (truy xuất dữ liệu OHLCV thô), **aipa-analyze** (phân tích bằng AI) và **aipa-research** (nghiên cứu chuyên sâu đa tác vụ - multi-agent). Hoạt động mượt mà với Claude Code, Gemini CLI và Codex.
 
+### Dùng ngay không cần cài skill
+
+Chỉ cần tải [AGENTS.md](AGENTS.md) bỏ vào project. Gemini CLI tự nhận diện, còn Claude Code thì thêm vào `CLAUDE.md`:
+
+```
+@import "AGENTS.md"
+```
+
+Xong — AI agent đã có sẵn đầy đủ hướng dẫn dùng `aipa-cli`. Yêu cầu máy có Python — AI sẽ tự cài `aipa-cli` lần đầu chạy. Các agent chỉ chạy trên web (VD: Claude.ai web) sẽ không hoạt động. Lưu ý: AGENTS.md khi có bản mới phải tải lại thủ công, còn skill cập nhật dễ dàng qua `npx skills update`.
+
 ---
 
 ## Cài đặt
 
 | Tôi muốn... | Cách cài đặt | Lệnh cài đặt nhanh |
 |---|---|---|
+| Dùng AI agent — không cần cài skill | Tải [AGENTS.md](AGENTS.md) | Tự động cài aipa-cli |
 | Thêm skill cho AI agent | `npx skills add quanhua92/aipriceaction` | Tự động cài aipa-cli |
 | Sử dụng CLI / TUI | `uv tool install aipa-cli` | Phân tích ngay trên terminal |
 | Xây dựng với Python | `pip install aipriceaction` | Xử lý dữ liệu qua Pandas |
