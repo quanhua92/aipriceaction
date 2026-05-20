@@ -315,11 +315,40 @@ When performing analysis (either via the CLI or as agent fallback), follow these
 4. **When researching news or events, ALWAYS include the source name** (e.g., "Source: CafeF", "Source: VNExpress")
 5. **Trading Hours**: VN market trades 09:00–15:00 ICT (UTC+7), Mon–Fri. Crypto 24/7. If the latest bar shows unusually low volume, the session may still be in progress
 
-## T+2 Settlement Rule
+## T+2 Settlement Rule (VN stocks only)
+
+> **This rule applies ONLY to Vietnamese stocks (`--source vn`).** Crypto and global stocks are not subject to T+2 settlement.
 
 > **IMPORTANT:** For all stock purchases in the Vietnamese stock market, shares are only settled and available for trading (selling) on the **afternoon of T+2** (specifically at 13:00 / 1:00 PM on day T+2, not T+3).
 > - **NEVER** propose or attempt to execute any Stop Loss or Take Profit actions on **T+1** (the first business day after the purchase), as the shares have not yet settled.
 > - Always check the purchase date of any stock positions when recommending sell actions.
+
+## Portfolio File
+
+The agent looks for a portfolio file in the working directory to track positions. Accepted file names (checked in order):
+
+1. `DANH_MUC.md`
+2. `PORTFOLIO.md`
+3. `ACCOUNT.md`
+
+If none exists, the agent should ask the user whether they want to create one.
+
+## Watchlist File
+
+The agent also looks for a watchlist file to track tickers being monitored (no positions yet). Accepted file names (checked in order):
+
+1. `THEO_DOI.md`
+2. `WATCHLIST.md`
+
+This tracks potential entry candidates. Include: ticker, sector, watch reason, entry zone, key level, and added date.
+
+## Risk Management Rules (MANDATORY)
+
+1. **Always check settlement status before recommending sell actions (VN stocks only)** — cross-reference buy date with today. For VN stocks, shares are NOT sellable until afternoon of T+2. Does NOT apply to crypto or global stocks
+2. **Every analysis must quantify risk** — include specific Stop Loss and Take Profit levels with reasoning, state what invalidates the thesis, calculate risk-reward ratio
+3. **Never present one-sided analysis** — every ticker must have both bullish signals and bearish risks
+4. **Position sizing awareness** — flag concentration risk when >30% of portfolio is in one sector
+5. **Daily portfolio review** — mark settled positions, check SL/TP hits, flag thesis changes
 
 ---
 

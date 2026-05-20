@@ -324,7 +324,8 @@ Mandatory sectors by source:
 
 ### Step 1: Research Context
 - Review the most recent report (`YYYY-MM-DD.md`) to understand layout style, tracked sectors, and portfolio state.
-- Check `DANH_MUC.md` (if present) for priority tickers.
+- Check `DANH_MUC.md` or `PORTFOLIO.md` or `ACCOUNT.md` (if present) for portfolio positions and priority tickers.
+- Check `THEO_DOI.md` or `WATCHLIST.md` (if present) for tickers being monitored without positions.
 
 ### Step 2: Broad Market Data
 Use `aipa-cli` to build a market overview:
@@ -379,13 +380,88 @@ The CLI outputs to two streams: **stdout** = final result, **stderr** = status m
 | `[done]` | Complete, includes total time |
 | `[result]` | Final output follows |
 
-## 5. Vietnamese Market T+2 Settlement Rule
+## 5. Vietnamese Market T+2 Settlement Rule (VN stocks only)
+
+> [!IMPORTANT]
+> **This rule applies ONLY to Vietnamese stocks (`--source vn`).** Crypto and global stocks are not subject to T+2 settlement.
 
 > [!IMPORTANT]
 > **T+2 Stock Settlement Rule:**
 > * For all stock purchases in the Vietnamese stock market, shares are only settled and available for trading (selling) on the **afternoon of T+2** (specifically at 13:00 / 1:00 PM on day T+2, not T+3).
 > * **NEVER** propose or attempt to execute any Stop Loss (cắt lỗ) or Take Profit (chốt lời) actions on **T+1** (the first business day after the purchase), as the shares have not yet settled and are not available in the account.
 > * Always check the purchase date of any stock positions when drafting daily reports or risk management logs to verify their settlement status before recommending any sell action.
+
+## 6. Account Management & Risk Management
+
+### Portfolio File
+
+The agent looks for a portfolio file in the working directory to track positions. Accepted file names (checked in order):
+
+1. `DANH_MUC.md`
+2. `PORTFOLIO.md`
+3. `ACCOUNT.md`
+
+If none exists, the agent should ask the user whether they want to create one. The portfolio file should track:
+
+| Field | Description |
+|---|---|
+| Ticker | Stock symbol (e.g., VCB, FPT) |
+| Buy Date | Purchase date (required — needed for T+2 settlement checks) |
+| Buy Price | Average entry price |
+| Quantity | Number of shares |
+| Target Price | Take profit level |
+| Stop Loss | Maximum acceptable loss level |
+| Status | `holding`, `settled`, `pending` (T+1) |
+
+### Watchlist File
+
+The agent also looks for a watchlist file to track tickers being monitored (no positions yet). Accepted file names (checked in order):
+
+1. `THEO_DOI.md`
+2. `WATCHLIST.md`
+
+This file tracks tickers of interest — potential entry candidates that the agent should monitor and alert on when conditions align. The watchlist file should include:
+
+| Field | Description |
+|---|---|
+| Ticker | Stock symbol |
+| Sector | Industry group |
+| Watch Reason | Why this ticker is being followed (e.g., "accumulation zone", "awaiting breakout above EMA50") |
+| Entry Zone | Target price range for potential entry |
+| Key Level | Critical support/resistance to watch |
+| Added Date | When it was added to the watchlist |
+
+### Risk Management Rules (MANDATORY)
+
+These rules apply to **every analysis and report**. Violation is a critical error.
+
+1. **Always check settlement status before recommending sell actions (VN stocks only)**
+   - Cross-reference the portfolio file buy date with today's date
+   - For VN stocks: shares bought on day T are **NOT available for selling** until afternoon of T+2 (13:00 ICT)
+   - **NEVER** recommend Stop Loss or Take Profit on T+1 — shares have not settled
+   - This does NOT apply to crypto or global stocks
+
+2. **Every analysis must quantify risk**
+   - Include specific Stop Loss price level with reasoning (e.g., "SL at 24,500 — below EMA50 support")
+   - Include specific Take Profit target with reasoning
+   - State what would invalidate the bullish/bearish thesis
+   - Calculate risk-reward ratio when possible
+
+3. **Never present one-sided analysis**
+   - Every ticker analysis must have both **bullish signals** and **bearish risks**
+   - If only one side exists, explicitly state that and explain why
+   - Never omit risks to make a trade look more attractive
+
+4. **Position sizing awareness**
+   - Never recommend going all-in on a single ticker
+   - Suggest diversification across sectors when managing a portfolio
+   - Flag concentration risk when >30% of portfolio is in one sector
+
+5. **Daily portfolio review checklist**
+   - Mark positions past T+2 as `settled`
+   - Check if any position has hit Stop Loss or Target Price
+   - Flag positions where the thesis has changed (e.g., bearish breakdown below key support)
+   - Update unrealized P&L based on latest close price
 
 ---
 _Developed by [AIPriceAction](https://aipriceaction.com/). More data and documentation at https://aipriceaction.com_
