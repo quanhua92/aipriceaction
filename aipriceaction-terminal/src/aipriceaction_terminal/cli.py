@@ -17,6 +17,7 @@ def run():
     apply_settings_to_env()
 
     parser = argparse.ArgumentParser(prog="aipa", description="AIPriceAction terminal")
+    parser.add_argument("--version", action="store_true", help="Print version and exit")
     sub = parser.add_subparsers(dest="command")
 
     # Shared --verbose flag for performance debugging
@@ -127,6 +128,11 @@ def run():
     if getattr(args, "verbose", False):
         from .verbose import set_verbose
         set_verbose(True)
+
+    if args.version:
+        from . import __version__
+        print(__version__)
+        return
 
     if args.command == "setup":
         from .cli_setup import cmd_setup
