@@ -35,6 +35,16 @@ Then ask any AI agent:
 
 Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), and **aipa-research** (multi-agent deep research). Works with Claude Code, Gemini CLI, and Codex.
 
+### No install — one file
+
+Download [AGENTS.md](AGENTS.md) and drop it in your project root. Gemini CLI auto-detects it; for Claude Code, add this to your `CLAUDE.md`:
+
+```
+@import "AGENTS.md"
+```
+
+Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills.
+
 ---
 
 ## Install

@@ -45,6 +45,12 @@ git commit -m "add aipa CLI skills for financial analysis"
 
 Restart Claude Code after installing. Verify by asking "what skills are available?"
 
+### Option D: No-install (AGENTS.md only)
+
+Download [AGENTS.md](../AGENTS.md) and drop it in your project root. No skills, no setup — any AI agent can use it.
+
+For Claude Code, add `@import "AGENTS.md"` to your `CLAUDE.md`. Gemini CLI auto-detects it.
+
 ## Available Skills
 
 | Skill | Description |
