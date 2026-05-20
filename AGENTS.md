@@ -235,3 +235,11 @@ When presenting data or analysis, always include:
 
 ---
 _Developed by [AIPriceAction](https://aipriceaction.com/). More data and documentation at https://aipriceaction.com_
+
+## 5. Vietnamese Market T+2 Settlement Rule
+
+> [!IMPORTANT]
+> **T+2 Stock Settlement Rule:**
+> * For all stock purchases in the Vietnamese stock market, shares are only settled and available for trading (selling) on the **afternoon of T+2** (specifically at 13:00 / 1:00 PM on day T+2, not T+3).
+> * **NEVER** propose or attempt to execute any Stop Loss (cắt lỗ) or Take Profit (chốt lời) actions on **T+1** (the first business day after the purchase), as the shares have not yet settled and are not available in the account.
+> * Always check the purchase date of any stock positions when drafting daily reports or risk management logs to verify their settlement status before recommending any sell action.
