@@ -140,7 +140,7 @@ aipa get-ohlcv-data TICKER [TICKERS...] [options]
 | `--end-date` | — | End date (e.g. `2025-05-01`) |
 | `--source` | auto-detect | Filter by source: `vn`, `crypto`, `global` |
 | `--ma` / `--no-ma` | included | Include/exclude moving averages |
-| `--ema` | — | Use EMA instead of SMA |
+| `--ema` | — | Switch from default SMA to EMA |
 | `--no-system-prompt` | — | Exclude persona header from output |
 
 ---
@@ -152,7 +152,7 @@ These presets cover the most common data-fetching scenarios. Use them as-is or a
 ### Quick Look
 
 ```bash
-# Last 20 daily candles with EMA (default — fastest)
+# Last 20 daily candles with SMA (default — fastest)
 aipa get-ohlcv-data VCB
 
 # Last 20 daily candles, raw OHLCV only
@@ -162,14 +162,14 @@ aipa get-ohlcv-data VCB --no-ma
 ### Trend Analysis (Swing Trading)
 
 ```bash
-# 50 daily bars with EMA — good for trend identification
+# 50 daily bars with SMA (default) — good for trend identification
 aipa get-ohlcv-data VCB --limit 50
 
 # 100 daily bars for long-term trend
 aipa get-ohlcv-data VIC --limit 100
 
-# SMA instead of EMA for classic trend analysis
-aipa get-ohlcv-data FPT --limit 50 --ema --no-ma
+# EMA for more responsive trend analysis
+aipa get-ohlcv-data FPT --limit 50 --ema
 ```
 
 ### Intraday Data
@@ -210,7 +210,7 @@ aipa get-ohlcv-data ETHUSDT --interval 1h --limit 100
 # SOL raw candles, no MA
 aipa get-ohlcv-data SOLUSDT --limit 30 --no-ma
 
-# BNB daily, SMA
+# BNB daily with EMA
 aipa get-ohlcv-data BNBUSDT --limit 50 --ema
 ```
 
@@ -495,6 +495,16 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 ---
 
+## Data Usage Policy (CRITICAL)
+
+1. **NEVER generate, guess, estimate, or hallucinate any numbers** — prices, volumes, MA values, MA scores, percentages, dates, or any financial data. Only use data from tool results or user-provided context
+2. **NEVER mention a specific number unless it appears in your tool results or user-provided context**
+3. **Use tools proactively** — call `aipa get-ohlcv-data` and/or `aipa performers` BEFORE answering price-related questions. Only fall back to asking the user if tools fail
+4. **When researching news or events, ALWAYS include the source name** (e.g., "Source: CafeF", "Source: VNExpress")
+5. **Trading Hours**: VN market trades 09:00–15:00 ICT (UTC+7), Mon–Fri. Crypto 24/7. If the latest bar shows unusually low volume, the session may still be in progress
+
+---
+
 ## Tips for AI Agents
 
 1. **No API key or backend needed**: `get-ohlcv-data` fetches from public S3 archives. Works without `OPENAI_API_KEY` or a running backend.
@@ -509,7 +519,7 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 6. **Date range vs limit**: Use `--start-date`/`--end-date` for specific periods. Use `--limit` for "last N bars". Don't combine both — the CLI handles conflicts gracefully but the intent is clearer with one approach.
 
-7. **`--ema` flag controls SMA vs EMA**: By default, EMA is shown. Add `--ema` to switch to SMA (yes, the flag name is counterintuitive — it means "use EMA calculation" which overrides the default).
+7. **`--ema` flag controls SMA vs EMA**: By default, SMA is shown. Add `--ema` to switch to EMA.
 
 8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.
 

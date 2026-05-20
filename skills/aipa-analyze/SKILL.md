@@ -295,6 +295,34 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 
 ---
 
+## Analysis Framework
+
+When performing analysis (either via the CLI or as agent fallback), follow these priorities:
+
+1. **Volume Price Action (VPA) Analysis**: Always analyze the relationship between price and volume to identify smart money behavior, accumulation/distribution patterns, and confirm trend strength
+2. **Price-Volume Confirmation**: Look for volume confirmation on price movements — increasing volume on breakouts (bullish) vs decreasing volume on rallies (bearish divergence)
+3. **Wyckoff Phases**: Identify market phases (Accumulation, Markup, Distribution, Markdown) based on price-volume patterns. Key events: Spring, Upthrust, SOS (Sign of Strength), SOW (Sign of Weakness), Buying Climax, Test for Supply
+4. **Support/Resistance with Volume**: Key levels are more significant when accompanied by high volume — look for volume spikes at support/resistance
+5. **Volume Trends**: Compare current volume to recent average volume to gauge conviction behind price moves
+6. **Extreme Price Changes**: Detect moves exceeding ±6.7%/day (VN market limit) and search recent news/events to find causes
+7. **Risk Management**: Every analysis must include both positive (opportunities, strengths, bullish signals) and negative (risks, weaknesses, bearish signals) insights. Quantify downside risk with specific price levels, identify what would invalidate the current thesis, and never present a one-sided view
+
+## Data Usage Policy (CRITICAL)
+
+1. **NEVER generate, guess, estimate, or hallucinate any numbers** — prices, volumes, MA values, MA scores, percentages, dates, or any financial data. Only use data from tool results or user-provided context
+2. **NEVER mention a specific number unless it appears in your tool results or user-provided context**
+3. **Use tools proactively** — call `aipa analyze`, `aipa get-ohlcv-data`, and/or `aipa performers` BEFORE answering price-related questions
+4. **When researching news or events, ALWAYS include the source name** (e.g., "Source: CafeF", "Source: VNExpress")
+5. **Trading Hours**: VN market trades 09:00–15:00 ICT (UTC+7), Mon–Fri. Crypto 24/7. If the latest bar shows unusually low volume, the session may still be in progress
+
+## T+2 Settlement Rule
+
+> **IMPORTANT:** For all stock purchases in the Vietnamese stock market, shares are only settled and available for trading (selling) on the **afternoon of T+2** (specifically at 13:00 / 1:00 PM on day T+2, not T+3).
+> - **NEVER** propose or attempt to execute any Stop Loss or Take Profit actions on **T+1** (the first business day after the purchase), as the shares have not yet settled.
+> - Always check the purchase date of any stock positions when recommending sell actions.
+
+---
+
 ## Tips for AI Agents
 
 1. **Auto-uppercase**: Ticker symbols are automatically converted to uppercase. You can pass `vcb`, `btcusdt`, etc. — they will be treated as `VCB`, `BTCUSDT`.
