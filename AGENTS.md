@@ -464,5 +464,121 @@ These rules apply to **every analysis and report**. Violation is a critical erro
    - Update unrealized P&L based on latest close price
 
 ---
+
+## 7. Common Mistakes & Quality Checklist
+
+These rules were derived from real analysis errors. Treat each one as a **mandatory guard** — not a suggestion.
+
+---
+
+### 7.1 Data Scope Mistakes
+
+**Symptom:** Labeling a ticker as "Markdown" or "Distribution" based only on the last 20 bars, when zooming out reveals it is simply pulling back inside a healthy Markup.
+
+**Rules:**
+
+- **Before assigning any Wyckoff phase** (especially Markdown, Distribution, SOW), you MUST fetch at minimum `--limit 60` daily **AND** `--interval 1W` data. 20-bar default is not enough to distinguish a pullback from a trend reversal.
+- **MA scores alone do not determine phase.** A ticker with MA10 +1.6% and MA20 +10.6% is NOT in Markdown — it may be pulling back in a Markup. Check the full price structure, not just the latest bar.
+- **Weekly timeframe is mandatory for TP setting.** A resistance level that looks like an all-time high on a 60-day daily chart may be just the ceiling of a consolidation range on the weekly. Always check weekly before finalizing TP.
+
+| Situation | Minimum Data Required |
+|---|---|
+| Assigning Markdown / Distribution | `--limit 60` daily + `--interval 1W` |
+| Setting Take Profit targets | `--interval 1W --limit 100` |
+| Confirming SOS / Breakout | `--limit 40` daily to see full base structure |
+| Watchlist entry zone | `--limit 60` daily to map recent swing highs/lows |
+
+---
+
+### 7.2 R:R Validation Before Recording
+
+**Symptom:** A position is entered and recorded in DANH_MUC with an SL that is wider than the distance to TP — resulting in R:R < 1:1 — without any alert.
+
+**Rules:**
+
+- **Always calculate R:R explicitly** before writing any TP/SL pair to any file:
+  - `Risk = Entry - SL`
+  - `Reward = TP - Entry`
+  - `R:R = Reward / Risk`
+
+| R:R | Status | Action |
+|---|---|---|
+| < 1:1 | ❌ BLOCK | Do NOT record this TP. Warn the user. Either widen TP, tighten SL, or reject the trade setup entirely. |
+| 1:1 – 1:2 | ⚠️ WARNING | Record but flag explicitly (e.g., "R:R = 1.2:1 — suboptimal, monitor closely"). |
+| ≥ 1:2 | ✅ OK | Standard — proceed normally. |
+| ≥ 1:3 | ✅✅ IDEAL | Note as high-conviction setup. |
+
+- If R:R < 1:1 was accepted due to exceptional circumstances (e.g., portfolio hedge), document the explicit reason in the trade log.
+- **Entry point matters:** a correct thesis with a bad entry produces bad R:R. If the entry is in the middle of a range (not near support), R:R will structurally be poor regardless of TP target.
+
+---
+
+### 7.3 TP Must Be Anchored to Real Resistance
+
+**Symptom:** Take Profit targets are set at round numbers or "hope levels" without any structural justification — e.g., TP=82 when no swing high, range ceiling, or volume cluster exists at that level.
+
+**Rules:**
+
+Every TP must be anchored to **at least one** of the following (verifiable from data):
+
+1. **Swing high** — a clear prior peak visible in the fetched OHLCV data
+2. **Range/box ceiling** — the top of an identified accumulation or re-accumulation range
+3. **Measured move** — height of the base/range projected from the breakout point
+4. **Long-term MA resistance** — e.g., MA100 or MA200 overhead
+5. **Volume Profile resistance** — high-volume node or Value Area High from `aipa volume-profile`
+
+> [!CAUTION]
+> **Never set TP at a round number** (e.g., 80k, 100k) unless there is a structural reason at that level. Round numbers are psychological, not technical — they will often be missed by a few ticks or blown through.
+
+**Workflow:** Before writing any TP to a file, state the anchor in the note field. If you cannot name a structural reason, the TP is not valid.
+
+---
+
+### 7.4 Cross-File Consistency
+
+**Symptom:** HANH_DONG lists a ticker under "DO NOT BUY" while THEO_DOI still shows it as an active watchlist candidate with an entry zone — creating a silent contradiction across files.
+
+**Rules:**
+
+Whenever any of the three files (HANH_DONG, DANH_MUC, THEO_DOI) is updated, **cross-check the other two** for consistency:
+
+| If you change... | Then also check... |
+|---|---|
+| HANH_DONG "DO NOT BUY" list | THEO_DOI — move ticker to "Avoid" section or remove |
+| HANH_DONG TP/SL | DANH_MUC — sync TP/SL and trade plan |
+| DANH_MUC TP/SL or avg cost | HANH_DONG table + daily report — sync all three |
+| THEO_DOI entry zone | HANH_DONG "Buy on condition" table — sync zone and condition |
+| Daily report positions table | DANH_MUC — verify avg cost, P&L, TP, SL match exactly |
+
+**Average cost calculation:** When a position has multiple buy lots, always recalculate the weighted average explicitly:
+
+```
+avg_cost = (price1 × qty1 + price2 × qty2 + ...) / total_qty
+```
+
+Never carry forward a stale average cost from a previous report without recalculating.
+
+---
+
+### 7.5 Pre-Commit Quality Checklist
+
+Before finalizing any report or file update, run through this checklist:
+
+**Data:**
+- [ ] All MA scores, prices, volumes cited are from fetched tool results — not estimated
+- [ ] Wyckoff phases are supported by ≥ 60 daily bars (not just 20)
+- [ ] TP targets cite a structural anchor (swing high, range ceiling, measured move, VP level)
+
+**Positions:**
+- [ ] Average cost recalculated correctly for all multi-lot positions
+- [ ] R:R explicitly calculated for every TP/SL pair (R:R ≥ 1:2 preferred, < 1:1 blocked)
+- [ ] T+2 settlement status verified for all VN stock positions before recommending any sell
+
+**Cross-file sync:**
+- [ ] HANH_DONG ↔ DANH_MUC: same avg cost, same TP/SL, same quantity
+- [ ] HANH_DONG "DO NOT BUY" ↔ THEO_DOI: no ticker in both simultaneously
+- [ ] Daily report ↔ DANH_MUC: positions table matches exactly
+
+---
 _Developed by [AIPriceAction](https://aipriceaction.com/). More data and documentation at https://aipriceaction.com_
 
