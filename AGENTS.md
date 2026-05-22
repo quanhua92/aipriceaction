@@ -431,6 +431,11 @@ This file tracks tickers of interest — potential entry candidates that the age
 | Key Level | Critical support/resistance to watch |
 | Added Date | When it was added to the watchlist |
 
+### History Management (CRITICAL)
+
+- **NEVER DELETE** transaction history or logs from `DANH_MUC.md` or daily reports without a backup.
+- If the history section becomes too long, **MOVE** older entries to a `HISTORY.md` file to keep the main files concise while preserving the full audit trail.
+
 ### Risk Management Rules (MANDATORY)
 
 These rules apply to **every analysis and report**. Violation is a critical error.
