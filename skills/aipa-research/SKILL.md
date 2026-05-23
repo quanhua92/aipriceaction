@@ -71,11 +71,11 @@ Run `aipa setup` for interactive first-run configuration. Settings are saved to 
 
 ## Pre-Execution: Ask the User
 
-**STOP. Do NOT run any commands yet. You MUST call `AskUserQuestion` first to ask the user which mode they want.**
+**STOP. Do NOT run any commands yet. You MUST call `AskUserQuestion` (or `question` / QuestionTool in compatible agents) first to ask the user which mode they want.**
 
 If you run any `aipa` command before asking the user, you have failed. Always ask first.
 
-Ask the user this question using the `AskUserQuestion` tool:
+Ask the user this question using the `AskUserQuestion` tool (or equivalent `question` tool):
 
 1. **Fast Research (Recommended)** — Run `aipa deep-research` to get the market snapshot, then you (the AI agent) replicate the multi-agent pipeline using subagents + `aipa get-ohlcv-data`. No API key needed. This is the recommended default — it produces thorough results without the 5-10 minute wait.
 2. **Full pipeline (`--run`)** — Run `aipa deep-research --run` to use the actual CLI multi-agent pipeline. Takes 5-10 minutes and requires an API key configured via `aipa setup`.
