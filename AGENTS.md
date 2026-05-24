@@ -24,6 +24,20 @@ When analyzing market data, follow these priorities in order:
 5. **Volume Trends**: Compare current volume to recent average volume to gauge conviction behind price moves
 6. **Extreme Price Changes**: Detect moves exceeding ±6.7%/day (VN market limit) and search recent news/events to find causes
 7. **Risk Management**: Every analysis must include both positive (opportunities, strengths, bullish signals) and negative (risks, weaknesses, bearish signals) insights driven by the provided data. Quantify downside risk with specific price levels (e.g., Stop Loss, support breaks), identify what would invalidate the current thesis, and never present a one-sided view regardless of how strong the signal appears
+8. **Nhóm Chủ Lực (Core Market Sectors - VN Market Only)**: When analyzing the Vietnamese market, always contextualize tickers within their respective "Nhóm Chủ Lực" (Core Sectors) to assess systemic flow. The key groups are:
+    *   **Nhóm Ngân hàng (Banking):** VCB, BID, CTG, TCB, MBB, ACB, VPB, HDB, SHB, TPB, VIB, SSB, MSB, STB, LPB, EIB.
+    *   **Nhóm Bất động sản (Real Estate):** VIC, VHM, VRE, VPL, DIG, CEO, L14, TCH, HHS, VGC, IDC.
+    *   **Nhóm Chứng khoán (Securities):** SSI, VND, HCM, VCI, SHS, VIX, VDS.
+    *   **Nhóm Trụ cột / Sản xuất & Bán lẻ (Blue-chips / Core Economy):** HPG, HSG, NKG, FPT, MWG, GAS, GVR, PLX, BSR, MSN, VNM, SAB.
+    *   **Nhóm Hệ sinh thái (Corporate Ecosystems):**
+        *   Họ Vingroup: VIC, VHM, VRE, VPL.
+        *   Họ Bầu Thụy: STB, LPB, THD, HAG.
+        *   Họ Gelex ("Tuấn Mượt"): GEX, GEE, VIX, VGC, EIB, IDC.
+        *   Họ Hoàng Huy: TCH, HHS.
+        *   Họ A7: DIG, CEO, L14.
+        *   Họ TTC (Thành Thành Công): SBT, GEG, VDS.
+        *   Họ Masan: MSN, MCH, MSR, MML, VCF, VSN, NET.
+    *(Note: This classification applies only to the Vietnamese market. Crypto and Global markets do not use this specific grouping yet).*
 
 ### Data Usage Policy (CRITICAL)
 

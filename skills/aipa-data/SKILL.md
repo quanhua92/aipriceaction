@@ -495,6 +495,27 @@ Key rule: **raw numbers → `aipa-data`, AI insights → `aipa-analyze`, compreh
 
 ---
 
+## Nhóm Chủ Lực (Core Market Sectors - VN Market Only)
+
+When fetching data or ranking VN tickers, be aware of these core sector groupings for contextual reference:
+
+*   **Nhóm Ngân hàng (Banking):** VCB, BID, CTG, TCB, MBB, ACB, VPB, HDB, SHB, TPB, VIB, SSB, MSB, STB, LPB, EIB.
+*   **Nhóm Bất động sản (Real Estate):** VIC, VHM, VRE, VPL, DIG, CEO, L14, TCH, HHS, VGC, IDC.
+*   **Nhóm Chứng khoán (Securities):** SSI, VND, HCM, VCI, SHS, VIX, VDS.
+*   **Nhóm Trụ cột / Sản xuất & Bán lẻ (Blue-chips / Core Economy):** HPG, HSG, NKG, FPT, MWG, GAS, GVR, PLX, BSR, MSN, VNM, SAB.
+*   **Nhóm Hệ sinh thái (Corporate Ecosystems):**
+    *   Họ Vingroup: VIC, VHM, VRE, VPL.
+    *   Họ Bầu Thụy: STB, LPB, THD, HAG.
+    *   Họ Gelex ("Tuấn Mượt"): GEX, GEE, VIX, VGC, EIB, IDC.
+    *   Họ Hoàng Huy: TCH, HHS.
+    *   Họ A7: DIG, CEO, L14.
+    *   Họ TTC (Thành Thành Công): SBT, GEG, VDS.
+    *   Họ Masan: MSN, MCH, MSR, MML, VCF, VSN, NET.
+
+*(Note: This classification applies only to the Vietnamese market. Crypto and Global markets do not use this specific grouping yet.)*
+
+---
+
 ## Data Usage Policy (CRITICAL)
 
 1. **NEVER generate, guess, estimate, or hallucinate any numbers** — prices, volumes, MA values, MA scores, percentages, dates, or any financial data. Only use data from tool results or user-provided context
