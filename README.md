@@ -216,6 +216,15 @@ skills/                     Claude Code skills for market analysis workflows
 | [PERFORMERS.md](PERFORMERS.md) | Top/worst market rankings: metrics, MA scores, money flow |
 | [MULTI_AGENTS_ANALYSIS.md](MULTI_AGENTS_ANALYSIS.md) | AI agent architecture: single-agent analyze vs multi-agent deep-research pipeline |
 
+## Supply chain security
+
+Rust dependencies are managed with [cargo-cooldown](https://crates.io/crates/cargo-cooldown) — a 14-day minimum publish age policy ensures freshly published crates are not picked up until they've been available long enough for maintainers and automated scanners to review. See `aipriceaction/cooldown.toml` for configuration.
+
+```bash
+cargo cooldown update   # instead of cargo update
+cargo cooldown check    # instead of cargo check
+```
+
 ## Development
 
 See [CLAUDE.md](CLAUDE.md) for development guidelines, architecture details, and contributor instructions.

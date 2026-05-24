@@ -23,6 +23,9 @@ cargo test
 # Lint check
 cargo check
 
+# Update dependencies (uses cargo-cooldown with 14-day min publish age)
+cargo cooldown update
+
 # CLI utilities (require compiled binary and DATABASE_URL)
 ./target/release/aipriceaction status
 ./target/release/aipriceaction test-vci --ticker VCB
