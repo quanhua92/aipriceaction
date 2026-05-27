@@ -522,6 +522,26 @@ When fetching data or ranking VN tickers, be aware of these core sector grouping
 4. **When researching news or events, ALWAYS include the source name** (e.g., "Source: CafeF", "Source: VNExpress")
 5. **Trading Hours**: VN market trades 09:00–15:00 ICT (UTC+7), Mon–Fri. Crypto 24/7. If the latest bar shows unusually low volume, the session may still be in progress
 
+## Strict Data Reading & Validation (CRITICAL)
+
+**Symptom:** Misreading or hallucinating the relationship between Price and Moving Averages (e.g., stating a stock is "below EMA20" when it is actually above), or misclassifying a technical event (e.g., calling a failed breakout a "healthy pullback").
+
+**Rules:**
+
+- **Row-by-Row Verification:** When reading OHLCV data output from the CLI, you MUST strictly read the exact row for the exact date requested. Do not accidentally read data from an adjacent row or a different ticker's block in multi-ticker outputs.
+- **Precision Filter with Grep:** To minimize reading errors and context volume, always use `grep -E` to isolate your **target dates** across one or multiple tickers. Use `"time"` as your header anchor.
+  - *Surgical view (Header + Today + Breakout Day):*
+    `uvx aipa-cli get-ohlcv-data TCB MSB STB | grep -E "time|2026-05-27|2026-05-07"`
+  - *Comparing recent days:*
+    `uvx aipa-cli get-ohlcv-data VND | grep -E "time|2026-05-27|2026-05-26"`
+- **Explicit Value Comparison:** Before concluding whether a trend is broken or intact, explicitly state the values being compared: `[Close Price]` vs `[MA/EMA Value]`.
+  - *Example:* "Close is 17.750, EMA20 is 16.881. 17.750 > 16.881 → Price is ABOVE EMA20 (Trend intact)."
+- **Breakout Validation:** A breakout (significant positive price change + high volume) creates a critical support at the **structural breakout level** — the top of the pre-breakout base/range, the prior swing high, or the pattern's neckline. The breakout candle's **Low** is NOT a reliable invalidation point: it can extend well below the structural level due to gap opens, intraday noise, or volatile entry bars.
+  - The correct invalidation is a fall back **below the structural breakout level**, not below the candle's Low.
+  - If price pulls back but stays above the structural level, the breakout is intact — this is a healthy pullback.
+  - If price falls **below the structural breakout level**, it is a **Failed Breakout / Structural Violation**.
+  - *Action:* Always identify the pre-breakout structure first. Only then assess whether a pullback is healthy (above structure) or a failure (below structure).
+
 ---
 
 ## Tips for AI Agents
