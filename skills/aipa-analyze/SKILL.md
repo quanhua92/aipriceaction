@@ -41,11 +41,9 @@ All command examples in this skill use `aipa` for brevity. Replace `aipa` with `
 
 The aipa CLI is actively developed with frequent improvements. **Always prefer `uvx aipa-cli` over `aipa`**. When using `uvx`:
 
-1. **First invocation of the session** — add `--refresh-package` to pull the newest version once:
-   `uvx --refresh-package aipa-cli analyze VCB`
-2. **Subsequent invocations** — use plain `uvx` for fast cached execution:
+1. **Use plain `uvx` for fast cached execution:**
    `uvx aipa-cli analyze VCB`
-3. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
+2. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
    `uvx aipa-cli@latest analyze VCB`
 
 If `aipa` is installed globally via `pip`, update before each session:
@@ -183,6 +181,60 @@ aipa analyze VCB --reference-ticker VN30
 # Specific source
 aipa analyze BTCUSDT --source crypto
 ```
+
+---
+
+## Analysis Workflow
+
+Follow this multi-step workflow for every analysis request. Do NOT just run `aipa analyze` and stop.
+
+### Step 1: Daily Timeframe Analysis
+
+Run `aipa analyze` on the daily chart first. Use `--limit 50` minimum for sufficient context. For Wyckoff phase identification or TP setting, use `--limit 60` or higher.
+
+```bash
+aipa analyze VCB --limit 50
+```
+
+### Step 2: Volume Profile for Support/Resistance
+
+Run `aipa volume-profile` to get structural price levels (POC, Value Area, high-volume nodes). Use a multi-day range covering at least 20 trading days.
+
+```bash
+aipa volume-profile VCB --start-date 2026-04-14 --end-date 2026-05-27
+```
+
+**Note:** The dates above are examples. Always use a range covering at least **30 trading days** (roughly 6 calendar weeks) ending on today. Calculate `--start-date` dynamically.
+
+Cross-reference the volume profile levels with the daily analysis — key S/R levels with high volume clusters are more significant.
+
+### Step 3: Intraday Deep Dive (If Needed)
+
+Based on the daily analysis, decide whether an intraday look adds value:
+
+| Trigger | Action |
+|---|---|
+| Daily shows breakout/reversal forming NOW | Run `--interval 1h --limit 50` to see entry timing |
+| Daily shows tight consolidation near key level | Run `--interval 4h --limit 50` to check for patterns |
+| User asks about entry/exit timing or scalping | Run `--interval 15m --limit 50` for micro structure |
+| Daily chart is clear and no timing ambiguity | Skip intraday — daily analysis is sufficient |
+
+```bash
+# 1h for entry/exit timing
+aipa analyze VCB --interval 1h --limit 50
+
+# 15m for scalping or micro structure
+aipa analyze VCB --interval 15m --limit 50
+```
+
+### Step 4: Present Combined Analysis
+
+Synthesize all steps into a single response:
+- **Daily chart**: Trend, Wyckoff phase, key levels
+- **Volume profile**: Structural S/R with volume confirmation
+- **Intraday** (if run): Entry/exit timing, short-term patterns
+
+Do NOT present each step as a separate section. Combine insights into a coherent analysis.
 
 ---
 

@@ -73,12 +73,12 @@ aipa <command>
 
 **Always prefer `uvx aipa-cli` over `aipa`.** When using `uvx`:
 
-1. **First invocation of the session** — add `--refresh-package` to pull the newest version once:
-   `uvx --refresh-package aipa-cli <command>`
-2. **Subsequent invocations** — use plain `uvx` for fast cached execution:
+1. **Use plain `uvx` for fast cached execution:**
    `uvx aipa-cli <command>`
-3. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
+2. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
    `uvx aipa-cli@latest <command>`
+
+For global installs, update before each session: `pip install --upgrade aipa-cli`
 
 ### Data Sources
 
@@ -169,7 +169,7 @@ aipa performers --source crypto --sort-by value          # crypto
 
 #### `aipa volume-profile`
 
-**Prefer multi-day ranges** (`--start-date` + `--end-date`, at least 20 trading days) over single day — produces more reliable support/resistance levels.
+**Prefer multi-day ranges** (`--start-date` + `--end-date`, at least 30 trading days) over single day — produces more reliable support/resistance levels.
 
 ```bash
 # 1 month (recommended default)
@@ -288,7 +288,10 @@ Supervisor
     ▼
 Parallel Workers (fan-out)
     │  Each worker analyzes one sector
-    │  Fetches OHLCV data for each ticker
+    │  Fetches OHLCV data for each ticker (limit=50)
+    │  Runs volume-profile for top 3 important tickers (30+ day range)
+    │  Fetches intraday data (1h) for breakout/reversal tickers
+    │  Cross-references volume profile levels with price action
     │  Produces sector-specific report
     ▼
 Aggregator
@@ -314,7 +317,7 @@ Mandatory sectors by source:
 1. Run `aipa deep-research` (without `--run`) to get the market snapshot
 2. Run `aipa performers` with multiple `--sort-by` values for cross-reference
 3. Decompose into 3-5 sector subtasks, pick ~10 tickers per sector
-4. Spawn worker subagents in parallel — each fetches OHLCV data and analyzes one sector
+4. Spawn worker subagents in parallel — each fetches OHLCV data (`--limit 50`), runs volume-profile for top 3 important tickers (30+ trading day range), fetches intraday data for breakout/reversal tickers, and analyzes one sector
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
@@ -348,11 +351,28 @@ Use `aipa-cli` to build a market overview:
 - `performers --group SECTOR`: Check sector-specific movements.
 
 ### Step 3: Deep Analysis
-Use `analyze` with the analysis framework above:
-- **VPA**: Analyze price-volume relationships to identify smart money footprints
-- **Wyckoff Phases**: Identify current phase (Accumulation → Markup → Distribution → Markdown) and key events (Spring, Upthrust, SOS, SOW, Buying Climax, Test for Supply)
-- **MA Momentum**: Evaluate MA Score (EMA10, 20, 50, 200) for trend strength and crossover signals
-- **Support/Resistance**: Confirm key levels with volume — volume spikes at S/R increase significance
+Follow this multi-step analysis for every ticker. Do NOT just run `aipa analyze` and stop.
+
+1. **Daily Timeframe Analysis** — Run `aipa analyze` with `--limit 50` minimum. For Wyckoff phase identification or TP setting, use `--limit 60` or higher.
+   ```bash
+   aipa analyze VCB --limit 50
+   ```
+
+2. **Volume Profile for Support/Resistance** — Run `aipa volume-profile` with a multi-day range covering at least 30 trading days. Cross-reference VP levels (POC, Value Area) with the daily analysis.
+   ```bash
+   aipa volume-profile VCB --start-date 2026-04-14 --end-date 2026-05-27
+   ```
+   **Note:** The dates above are examples. Always use a range covering at least 30 trading days ending on today. Calculate `--start-date` dynamically.
+
+3. **Intraday Deep Dive (If Needed)** — Based on the daily analysis, decide whether an intraday look adds value:
+   - Daily shows breakout/reversal forming NOW → `--interval 1h --limit 50`
+   - Daily shows tight consolidation near key level → `--interval 4h --limit 50`
+   - User asks about entry/exit timing or scalping → `--interval 15m --limit 50`
+   - Daily chart is clear and no timing ambiguity → Skip intraday
+
+4. **Present Combined Analysis** — Synthesize all steps into a single coherent response. Do NOT present each step as a separate section.
+
+Use the analysis framework above (VPA, Wyckoff, MA Momentum, S/R) across all steps.
 - Use `--question` for specific frameworks (e.g., `--question "Wyckoff analysis with phases, events, and price targets"`)
 - Use `--lang vn` for Vietnamese output when the user writes in Vietnamese
 

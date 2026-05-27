@@ -42,11 +42,9 @@ All command examples in this skill use `aipa` for brevity. Replace `aipa` with `
 
 The aipa CLI is actively developed with frequent improvements. **Always prefer `uvx aipa-cli` over `aipa`**. When using `uvx`:
 
-1. **First invocation of the session** — add `--refresh-package` to pull the newest version once:
-   `uvx --refresh-package aipa-cli deep-research`
-2. **Subsequent invocations** — use plain `uvx` for fast cached execution:
+1. **Use plain `uvx` for fast cached execution:**
    `uvx aipa-cli deep-research`
-3. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
+2. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
    `uvx aipa-cli@latest deep-research`
 
 If `aipa` is installed globally via `pip`, update before each session:
@@ -238,10 +236,13 @@ Final Report
    Adds 0-2 additional sectors based on market activity.
 
 3. **Parallel Workers**: Each worker handles one sector:
-   - Fetches OHLCV data for each assigned ticker (limit=20 bars)
-   - Analyzes trend direction, VPA signals, MA score momentum, and volume
-   - Provides per-ticker assessment, sector ranking, and key risk factors
-   - Workers run concurrently for efficiency
+    - Fetches OHLCV data for each assigned ticker (limit=50 bars)
+    - Runs volume profile for the top 3 most important tickers (30+ trading day range)
+    - Fetches intraday data (1h) for tickers showing breakout/reversal patterns
+    - Analyzes trend direction, VPA signals, MA score momentum, volume, and S/R
+    - Cross-references volume profile levels with price action
+    - Provides per-ticker assessment, sector ranking, and key risk factors
+    - Workers run concurrently for efficiency
 
 4. **Aggregator**: Collects all worker reports and synthesizes a unified analysis:
    - Cross-references findings across sectors
@@ -319,8 +320,11 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 ### Step 4 — Spawn worker subagents (in parallel)
 For each sector subtask, spawn a separate subagent (use the Task tool) that:
 - Receives the sector name, ticker list, the research question, and the market snapshot
-- Fetches detailed OHLCV data for its assigned tickers (`aipa get-ohlcv-data` with appropriate `--limit`)
+- Fetches detailed OHLCV data for its assigned tickers (`aipa get-ohlcv-data` with `--limit 50`)
+- Runs `aipa volume-profile` for the **top 3 most important tickers** in its sector (highest trading value, most interesting price action, or portfolio/watchlist tickers). Use a multi-day range covering at least 30 trading days ending on today
+- For tickers showing breakout/reversal patterns or key S/R levels, also fetch **intraday data** (`--interval 1h --limit 50`) to assess entry timing
 - Analyzes trend direction, VPA signals, MA momentum, volume patterns, and support/resistance
+- Cross-references volume profile levels (POC, Value Area High/Low) with OHLCV analysis
 - Ranks tickers within the sector
 - Returns a structured sector report with per-ticker assessment, ranking, and key risk factors
 
