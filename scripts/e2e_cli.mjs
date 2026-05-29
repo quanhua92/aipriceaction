@@ -1,0 +1,392 @@
+#!/usr/bin/env node
+
+import { execSync } from "child_process";
+
+const AIPA = process.env.AIPA || "uv run aipa-cli";
+const GREEN = "\x1b[32m";
+const RED = "\x1b[31m";
+const RESET = "\x1b[0m";
+
+const results = [];
+let pass = 0;
+let badCount = 0;
+
+function ok(label) {
+  results.push(`${GREEN}  PASS${RESET}  ${label}`);
+  pass++;
+}
+
+function bad(label) {
+  results.push(`${RED}  FAIL${RESET}  ${label}`);
+  badCount++;
+}
+
+function run(...args) {
+  try {
+    const out = execSync(`${AIPA} ${args.join(" ")}`, {
+      encoding: "utf-8",
+      timeout: 60_000,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    return { exit: 0, out };
+  } catch (e) {
+    return { exit: e.status ?? 1, out: e.stdout ?? "" };
+  }
+}
+
+function lines(out) {
+  return out.trim().split("\n").filter(Boolean).length;
+}
+
+function contains(out, needle) {
+  return out.includes(needle);
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function monthAgo() {
+  const d = new Date();
+  d.setDate(d.getDate() - 30);
+  return d.toISOString().slice(0, 10);
+}
+
+console.log("=========================================");
+console.log(" AIPriceAction CLI E2E Tests");
+console.log(` CLI: ${AIPA}`);
+console.log(` Date: ${new Date().toISOString().replace("T", " ").slice(0, 19)}`);
+console.log("=========================================\n");
+
+// ===========================
+// get-ohlcv-data
+// ===========================
+
+// Single ticker default
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "20", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data VCB limit=20 (exit=0)") : bad(`get-ohlcv-data VCB limit=20 (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`get-ohlcv-data VCB returns >=10 rows (${lines(r.out)})`) : bad(`get-ohlcv-data VCB returns >=10 rows (${lines(r.out)})`);
+}
+
+// Large limit — yearly path
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "200", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data VCB limit=200 (exit=0)") : bad(`get-ohlcv-data VCB limit=200 (exit=${r.exit})`);
+  lines(r.out) >= 100 ? ok(`get-ohlcv-data VCB limit=200 returns >=100 rows (${lines(r.out)})`) : bad(`get-ohlcv-data VCB limit=200 returns >=100 rows (${lines(r.out)})`);
+}
+
+// Multi-ticker
+{
+  const r = run("get-ohlcv-data", "VCB", "TCB", "MBB", "--limit", "10", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data multi-ticker VCB TCB MBB (exit=0)") : bad(`get-ohlcv-data multi-ticker VCB TCB MBB (exit=${r.exit})`);
+  const outLines = r.out.trim().split("\n").filter(Boolean);
+  const symbols = new Set(outLines.slice(1).map(l => l.trim().split(/\s+/).pop()));
+  symbols.has("VCB") && symbols.has("TCB") && symbols.has("MBB")
+    ? ok("get-ohlcv-data multi-ticker has all 3 symbols")
+    : bad(`get-ohlcv-data multi-ticker missing symbols: ${[...symbols]}`);
+}
+
+// TCX regression: yearly-only ticker should not return 1 row
+{
+  const r = run("get-ohlcv-data", "TCX", "--limit", "200", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data TCX yearly-only regression (exit=0)") : bad(`get-ohlcv-data TCX yearly-only regression (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`get-ohlcv-data TCX returns >=10 rows (${lines(r.out)})`) : bad(`get-ohlcv-data TCX returns >=10 rows (${lines(r.out)})`);
+}
+
+// Explicit date range
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "10", "--no-system-prompt", "--no-ma", "--start-date", "2025-04-28", "--end-date", "2025-04-29");
+  r.exit === 0 ? ok("get-ohlcv-data VCB explicit date range (exit=0)") : bad(`get-ohlcv-data VCB explicit date range (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`get-ohlcv-data VCB date range returns rows (${lines(r.out)})`) : bad(`get-ohlcv-data VCB date range returns rows (${lines(r.out)})`);
+}
+
+// MA indicators present
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "10", "--no-system-prompt");
+  r.exit === 0 ? ok("get-ohlcv-data VCB with MA (exit=0)") : bad(`get-ohlcv-data VCB with MA (exit=${r.exit})`);
+  contains(r.out, "ma10") ? ok("get-ohlcv-data VCB MA includes ma10 column") : bad("get-ohlcv-data VCB MA includes ma10 column");
+  contains(r.out, "ma200") ? ok("get-ohlcv-data VCB MA includes ma200 column") : bad("get-ohlcv-data VCB MA includes ma200 column");
+  contains(r.out, "close_changed") ? ok("get-ohlcv-data VCB MA includes close_changed") : bad("get-ohlcv-data VCB MA includes close_changed");
+}
+
+// EMA instead of SMA
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "10", "--no-system-prompt", "--ema", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data VCB --ema (exit=0)") : bad(`get-ohlcv-data VCB --ema (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`get-ohlcv-data VCB --ema returns rows (${lines(r.out)})`) : bad(`get-ohlcv-data VCB --ema returns rows (${lines(r.out)})`);
+}
+
+// Crypto 1h interval
+{
+  const r = run("get-ohlcv-data", "BTCUSDT", "--source", "crypto", "--interval", "1h", "--limit", "10", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data BTCUSDT 1h interval (exit=0)") : bad(`get-ohlcv-data BTCUSDT 1h interval (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`get-ohlcv-data BTCUSDT 1h returns >=5 rows (${lines(r.out)})`) : bad(`get-ohlcv-data BTCUSDT 1h returns >=5 rows (${lines(r.out)})`);
+}
+
+// Crypto 4h interval
+{
+  const r = run("get-ohlcv-data", "ETHUSDT", "--source", "crypto", "--interval", "4h", "--limit", "10", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data ETHUSDT 4h interval (exit=0)") : bad(`get-ohlcv-data ETHUSDT 4h interval (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`get-ohlcv-data ETHUSDT 4h returns >=5 rows (${lines(r.out)})`) : bad(`get-ohlcv-data ETHUSDT 4h returns >=5 rows (${lines(r.out)})`);
+}
+
+// Crypto weekly interval
+{
+  const r = run("get-ohlcv-data", "BTCUSDT", "--source", "crypto", "--interval", "1W", "--limit", "5", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data BTCUSDT 1W interval (exit=0)") : bad(`get-ohlcv-data BTCUSDT 1W interval (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`get-ohlcv-data BTCUSDT 1W returns >=3 rows (${lines(r.out)})`) : bad(`get-ohlcv-data BTCUSDT 1W returns >=3 rows (${lines(r.out)})`);
+}
+
+// SJC gold
+{
+  const r = run("get-ohlcv-data", "SJC-GOLD", "--source", "sjc", "--limit", "5", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data SJC-GOLD (exit=0)") : bad(`get-ohlcv-data SJC-GOLD (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`get-ohlcv-data SJC-GOLD returns >=3 rows (${lines(r.out)})`) : bad(`get-ohlcv-data SJC-GOLD returns >=3 rows (${lines(r.out)})`);
+}
+
+// VN weekly interval (aggregated)
+{
+  const r = run("get-ohlcv-data", "FPT", "--interval", "1W", "--limit", "5", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("get-ohlcv-data FPT 1W interval (exit=0)") : bad(`get-ohlcv-data FPT 1W interval (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`get-ohlcv-data FPT 1W returns >=3 rows (${lines(r.out)})`) : bad(`get-ohlcv-data FPT 1W returns >=3 rows (${lines(r.out)})`);
+}
+
+// ===========================
+// live-data
+// ===========================
+
+{
+  const r = run("live-data", "--top", "5", "--source", "vn");
+  r.exit === 0 ? ok("live-data top 5 vn (exit=0)") : bad(`live-data top 5 vn (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`live-data returns >=2 rows (${lines(r.out)})`) : bad(`live-data returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("live-data", "VCB", "TCB");
+  r.exit === 0 ? ok("live-data VCB TCB (exit=0)") : bad(`live-data VCB TCB (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`live-data VCB TCB returns >=2 rows (${lines(r.out)})`) : bad(`live-data VCB TCB returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("live-data", "--source", "crypto", "--top", "3");
+  r.exit === 0 ? ok("live-data crypto top 3 (exit=0)") : bad(`live-data crypto top 3 (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`live-data crypto returns >=2 rows (${lines(r.out)})`) : bad(`live-data crypto returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("live-data", "--source", "sjc", "--top", "1");
+  r.exit === 0 ? ok("live-data sjc (exit=0)") : bad(`live-data sjc (exit=${r.exit})`);
+  lines(r.out) >= 1 ? ok(`live-data sjc returns rows (${lines(r.out)})`) : bad(`live-data sjc returns rows (${lines(r.out)})`);
+}
+
+// ===========================
+// performers
+// ===========================
+
+{
+  const r = run("performers", "--limit", "5");
+  r.exit === 0 ? ok("performers top 5 (exit=0)") : bad(`performers top 5 (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`performers returns >=2 rows (${lines(r.out)})`) : bad(`performers returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--sort-by", "value", "--limit", "5");
+  r.exit === 0 ? ok("performers sorted by value (exit=0)") : bad(`performers sorted by value (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`performers value returns >=2 rows (${lines(r.out)})`) : bad(`performers value returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--sort-by", "ma50_score", "--limit", "5");
+  r.exit === 0 ? ok("performers sorted by ma50_score (exit=0)") : bad(`performers sorted by ma50_score (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`performers ma50_score returns >=2 rows (${lines(r.out)})`) : bad(`performers ma50_score returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--direction", "asc", "--limit", "5");
+  r.exit === 0 ? ok("performers ascending (exit=0)") : bad(`performers ascending (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`performers asc returns >=2 rows (${lines(r.out)})`) : bad(`performers asc returns >=2 rows (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--group", "NGAN_HANG", "--limit", "5");
+  r.exit === 0 ? ok("performers banking group (exit=0)") : bad(`performers banking group (exit=${r.exit})`);
+  lines(r.out) >= 1 ? ok(`performers banking returns >=1 row (${lines(r.out)})`) : bad(`performers banking returns >=1 row (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--group", "CHUNG_KHOAN", "--limit", "5");
+  r.exit === 0 ? ok("performers securities group (exit=0)") : bad(`performers securities group (exit=${r.exit})`);
+  lines(r.out) >= 1 ? ok(`performers securities returns >=1 row (${lines(r.out)})`) : bad(`performers securities returns >=1 row (${lines(r.out)})`);
+}
+
+{
+  const r = run("performers", "--source", "crypto", "--limit", "5", "--sort-by", "value");
+  r.exit === 0 ? ok("performers crypto by value (exit=0)") : bad(`performers crypto by value (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`performers crypto value returns >=2 rows (${lines(r.out)})`) : bad(`performers crypto value returns >=2 rows (${lines(r.out)})`);
+}
+
+// ===========================
+// ticker-list
+// ===========================
+
+{
+  const r = run("ticker-list", "--source", "vn", "--group", "NGAN_HANG");
+  r.exit === 0 ? ok("ticker-list vn banking (exit=0)") : bad(`ticker-list vn banking (exit=${r.exit})`);
+  contains(r.out, "VCB") ? ok("ticker-list includes VCB") : bad("ticker-list includes VCB");
+  contains(r.out, "TCB") ? ok("ticker-list includes TCB") : bad("ticker-list includes TCB");
+}
+
+{
+  const r = run("ticker-list", "--source", "crypto", "--compact");
+  r.exit === 0 ? ok("ticker-list crypto compact (exit=0)") : bad(`ticker-list crypto compact (exit=${r.exit})`);
+  contains(r.out, "BTCUSDT") ? ok("ticker-list crypto includes BTCUSDT") : bad("ticker-list crypto includes BTCUSDT");
+  contains(r.out, "ETHUSDT") ? ok("ticker-list crypto includes ETHUSDT") : bad("ticker-list crypto includes ETHUSDT");
+}
+
+{
+  const r = run("ticker-list", "--source", "vn", "--group", "BAT_DONG_SAN");
+  r.exit === 0 ? ok("ticker-list vn real estate (exit=0)") : bad(`ticker-list vn real estate (exit=${r.exit})`);
+  contains(r.out, "VIC") ? ok("ticker-list real estate includes VIC") : bad("ticker-list real estate includes VIC");
+}
+
+{
+  const r = run("ticker-list", "--source", "vn");
+  r.exit === 0 ? ok("ticker-list all vn (exit=0)") : bad(`ticker-list all vn (exit=${r.exit})`);
+  lines(r.out) >= 100 ? ok(`ticker-list all vn returns >=100 tickers (${lines(r.out)})`) : bad(`ticker-list all vn returns >=100 tickers (${lines(r.out)})`);
+}
+
+// ===========================
+// volume-profile
+// ===========================
+
+{
+  const r = run("volume-profile", "VCB", "--start-date", monthAgo(), "--end-date", today());
+  r.exit === 0 ? ok("volume-profile VCB multi-day (exit=0)") : bad(`volume-profile VCB multi-day (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`volume-profile returns >=3 lines (${lines(r.out)})`) : bad(`volume-profile returns >=3 lines (${lines(r.out)})`);
+}
+
+{
+  const r = run("volume-profile", "BTCUSDT", "--source", "crypto", "--start-date", monthAgo(), "--end-date", today(), "--bins", "20");
+  r.exit === 0 ? ok("volume-profile BTCUSDT crypto (exit=0)") : bad(`volume-profile BTCUSDT crypto (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`volume-profile crypto returns >=3 lines (${lines(r.out)})`) : bad(`volume-profile crypto returns >=3 lines (${lines(r.out)})`);
+}
+
+{
+  const r = run("volume-profile", "FPT", "--start-date", monthAgo(), "--end-date", today(), "--bins", "10", "--value-area-pct", "80");
+  r.exit === 0 ? ok("volume-profile FPT with custom bins/VA (exit=0)") : bad(`volume-profile FPT custom params (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`volume-profile FPT returns >=3 lines (${lines(r.out)})`) : bad(`volume-profile FPT returns >=3 lines (${lines(r.out)})`);
+}
+
+// ===========================
+// watchlist
+// ===========================
+
+{
+  const r = run("watchlist", "ls");
+  r.exit === 0 ? ok("watchlist ls (exit=0)") : bad(`watchlist ls (exit=${r.exit})`);
+  lines(r.out) >= 2 ? ok(`watchlist ls returns >=2 lines (${lines(r.out)})`) : bad(`watchlist ls returns >=2 lines (${lines(r.out)})`);
+}
+
+{
+  const r = run("watchlist", "get", "VN30");
+  r.exit === 0 ? ok("watchlist get VN30 (exit=0)") : bad(`watchlist get VN30 (exit=${r.exit})`);
+  contains(r.out, "VCB") ? ok("watchlist VN30 includes VCB") : bad("watchlist VN30 includes VCB");
+  contains(r.out, "FPT") ? ok("watchlist VN30 includes FPT") : bad("watchlist VN30 includes FPT");
+  contains(r.out, "HPG") ? ok("watchlist VN30 includes HPG") : bad("watchlist VN30 includes HPG");
+}
+
+{
+  const r = run("watchlist", "get", "VINGROUP");
+  r.exit === 0 ? ok("watchlist get VINGROUP (exit=0)") : bad(`watchlist get VINGROUP (exit=${r.exit})`);
+  contains(r.out, "VIC") ? ok("watchlist VINGROUP includes VIC") : bad("watchlist VINGROUP includes VIC");
+  contains(r.out, "VHM") ? ok("watchlist VINGROUP includes VHM") : bad("watchlist VINGROUP includes VHM");
+}
+
+{
+  const r = run("watchlist", "get", "INDEX");
+  r.exit === 0 ? ok("watchlist get INDEX (exit=0)") : bad(`watchlist get INDEX (exit=${r.exit})`);
+  contains(r.out, "VNINDEX") ? ok("watchlist INDEX includes VNINDEX") : bad("watchlist INDEX includes VNINDEX");
+}
+
+// ===========================
+// analyze context-only
+// ===========================
+
+{
+  const r = run("analyze", "VCB", "--limit", "20", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze VCB context-only (exit=0)") : bad(`analyze VCB context-only (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`analyze VCB context returns >=10 lines (${lines(r.out)})`) : bad(`analyze VCB context returns >=10 lines (${lines(r.out)})`);
+  contains(r.out, "time") ? ok("analyze VCB context has OHLCV data") : bad("analyze VCB context has OHLCV data");
+  contains(r.out, "VNINDEX") ? ok("analyze VCB context has reference VNINDEX") : bad("analyze VCB context has reference VNINDEX");
+}
+
+{
+  const r = run("analyze", "VCB", "TCB", "MBB", "--limit", "10", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze multi-ticker 3 symbols (exit=0)") : bad(`analyze multi-ticker 3 symbols (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`analyze 3-ticker context returns >=10 lines (${lines(r.out)})`) : bad(`analyze 3-ticker context returns >=10 lines (${lines(r.out)})`);
+  contains(r.out, "VCB") ? ok("analyze multi-ticker context has VCB") : bad("analyze multi-ticker context has VCB");
+  contains(r.out, "TCB") ? ok("analyze multi-ticker context has TCB") : bad("analyze multi-ticker context has TCB");
+  contains(r.out, "MBB") ? ok("analyze multi-ticker context has MBB") : bad("analyze multi-ticker context has MBB");
+}
+
+{
+  const r = run("analyze", "BTCUSDT", "--source", "crypto", "--limit", "10", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze BTCUSDT crypto (exit=0)") : bad(`analyze BTCUSDT crypto (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`analyze BTCUSDT context returns >=5 lines (${lines(r.out)})`) : bad(`analyze BTCUSDT context returns >=5 lines (${lines(r.out)})`);
+  contains(r.out, "BTCUSDT") ? ok("analyze BTCUSDT context has ticker") : bad("analyze BTCUSDT context has ticker");
+}
+
+{
+  const r = run("analyze", "TCX", "--limit", "50", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze TCX yearly-only regression (exit=0)") : bad(`analyze TCX yearly-only regression (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`analyze TCX context returns >=10 lines (${lines(r.out)})`) : bad(`analyze TCX context returns >=10 lines (${lines(r.out)})`);
+}
+
+{
+  const r = run("analyze", "HPG", "--limit", "20", "--interval", "1W", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze HPG 1W interval (exit=0)") : bad(`analyze HPG 1W interval (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`analyze HPG 1W context returns >=5 lines (${lines(r.out)})`) : bad(`analyze HPG 1W context returns >=5 lines (${lines(r.out)})`);
+}
+
+// ===========================
+// deep-research snapshot
+// ===========================
+
+{
+  const r = run("deep-research");
+  r.exit === 0 ? ok("deep-research snapshot (exit=0)") : bad(`deep-research snapshot (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`deep-research snapshot returns >=10 lines (${lines(r.out)})`) : bad(`deep-research snapshot returns >=10 lines (${lines(r.out)})`);
+}
+
+{
+  const r = run("deep-research", "--source", "crypto");
+  r.exit === 0 ? ok("deep-research crypto snapshot (exit=0)") : bad(`deep-research crypto snapshot (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`deep-research crypto snapshot returns >=5 lines (${lines(r.out)})`) : bad(`deep-research crypto snapshot returns >=5 lines (${lines(r.out)})`);
+}
+
+// ===========================
+// --version
+// ===========================
+
+{
+  const r = run("--version");
+  r.exit === 0 ? ok("aipa --version (exit=0)") : bad(`aipa --version (exit=${r.exit})`);
+  /^\d+\.\d+\.\d+$/.test(r.out.trim()) ? ok("aipa --version is semver") : bad(`aipa --version is semver (got: ${r.out.trim().slice(0, 30)})`);
+}
+
+// ===========================
+// Results
+// ===========================
+
+console.log("");
+console.log("=========================================");
+for (const r of results) {
+  console.log(r);
+}
+console.log("=========================================");
+const total = pass + badCount;
+console.log(`  Total: ${total}  ${pass} passed  ${badCount} failed`);
+console.log("=========================================");
+
+process.exit(badCount === 0 ? 0 : 1);
