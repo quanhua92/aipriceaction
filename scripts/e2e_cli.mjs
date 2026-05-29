@@ -59,6 +59,79 @@ console.log(` Date: ${new Date().toISOString().replace("T", " ").slice(0, 19)}`)
 console.log("=========================================\n");
 
 // ===========================
+// TCX edge cases (listed 2025-10-21)
+// Tests: yearly-only data, pre-IPO dates, multiple intervals
+// ===========================
+
+// TCX 1D default — should return all available rows without hanging
+{
+  const r = run("get-ohlcv-data", "TCX", "--limit", "200", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1D limit=200 (exit=0)") : bad(`TCX 1D limit=200 (exit=${r.exit})`);
+  lines(r.out) >= 10 ? ok(`TCX 1D returns >=10 rows (${lines(r.out)})`) : bad(`TCX 1D returns >=10 rows (${lines(r.out)})`);
+  lines(r.out) <= 200 ? ok(`TCX 1D capped at available data (<=200)`) : bad(`TCX 1D capped at available data (got ${lines(r.out)})`);
+}
+
+// TCX 1D with pre-IPO start date — should not hang, returns only post-IPO data
+{
+  const r = run("get-ohlcv-data", "TCX", "--start-date", "2025-01-01", "--end-date", "2025-12-31", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1D pre-IPO start 2025-01-01 (exit=0)") : bad(`TCX 1D pre-IPO start (exit=${r.exit})`);
+  lines(r.out) >= 1 ? ok(`TCX 1D pre-IPO returns >=1 row (${lines(r.out)})`) : bad(`TCX 1D pre-IPO returns >=1 row (${lines(r.out)})`);
+  // All rows should be on or after 2025-10-21 (IPO date)
+  const dataLines = r.out.trim().split("\n").filter(l => l.trim() && !l.startsWith(" "));
+  const earliestDate = dataLines.length > 0 ? dataLines[0].split(/\s+/)[0] : "";
+  earliestDate >= "2025-10-21"
+    ? ok(`TCX 1D earliest row is on/after IPO (${earliestDate})`)
+    : bad(`TCX 1D earliest row before IPO (${earliestDate})`);
+}
+
+// TCX 1D with far pre-IPO start — should not hang with hundreds of pre-IPO dates
+{
+  const r = run("get-ohlcv-data", "TCX", "--start-date", "2024-01-01", "--end-date", "2025-12-31", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1D far pre-IPO start 2024-01-01 (exit=0)") : bad(`TCX 1D far pre-IPO (exit=${r.exit})`);
+  lines(r.out) >= 1 ? ok(`TCX 1D far pre-IPO returns >=1 row (${lines(r.out)})`) : bad(`TCX 1D far pre-IPO returns >=1 row (${lines(r.out)})`);
+}
+
+// TCX 1h — intraday data, should handle gracefully
+{
+  const r = run("get-ohlcv-data", "TCX", "--interval", "1h", "--limit", "50", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1h limit=50 (exit=0)") : bad(`TCX 1h limit=50 (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`TCX 1h returns >=5 rows (${lines(r.out)})`) : bad(`TCX 1h returns >=5 rows (${lines(r.out)})`);
+}
+
+// TCX 1h with pre-IPO start — should not hang
+{
+  const r = run("get-ohlcv-data", "TCX", "--interval", "1h", "--start-date", "2025-06-01", "--end-date", "2025-12-31", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1h pre-IPO start (exit=0)") : bad(`TCX 1h pre-IPO start (exit=${r.exit})`);
+}
+
+// TCX 15m — fine-grained intraday, should not hang
+{
+  const r = run("get-ohlcv-data", "TCX", "--interval", "15m", "--limit", "20", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 15m limit=20 (exit=0)") : bad(`TCX 15m limit=20 (exit=${r.exit})`);
+  lines(r.out) >= 5 ? ok(`TCX 15m returns >=5 rows (${lines(r.out)})`) : bad(`TCX 15m returns >=5 rows (${lines(r.out)})`);
+}
+
+// TCX 1m — finest granularity, may have limited history
+{
+  const r = run("get-ohlcv-data", "TCX", "--interval", "1m", "--limit", "20", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1m limit=20 (exit=0)") : bad(`TCX 1m limit=20 (exit=${r.exit})`);
+}
+
+// TCX 1W — aggregated weekly, should return from IPO onwards
+{
+  const r = run("get-ohlcv-data", "TCX", "--interval", "1W", "--limit", "10", "--no-system-prompt", "--no-ma");
+  r.exit === 0 ? ok("TCX 1W limit=10 (exit=0)") : bad(`TCX 1W limit=10 (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`TCX 1W returns >=3 rows (${lines(r.out)})`) : bad(`TCX 1W returns >=3 rows (${lines(r.out)})`);
+}
+
+// TCX with MA — should not crash on insufficient MA buffer data
+{
+  const r = run("get-ohlcv-data", "TCX", "--limit", "50", "--no-system-prompt");
+  r.exit === 0 ? ok("TCX 1D with MA (exit=0)") : bad(`TCX 1D with MA (exit=${r.exit})`);
+  contains(r.out, "ma10") ? ok("TCX MA includes ma10") : bad("TCX MA includes ma10");
+}
+
+// ===========================
 // get-ohlcv-data
 // ===========================
 
