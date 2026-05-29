@@ -653,6 +653,8 @@ class AIPriceAction:
         _t0 = _time.monotonic()
         logger.debug("[fetch_ticker] %s/%s interval=%s need_rows=%s days=%d", source, ticker, interval, need_rows, len(days))
 
+        _TICKER_TIMEOUT = 60.0
+
         max_total_misses = 20 if source == "vn" else 40
         total_misses = 0
         if interval not in ("1D", "1h") or not days:
@@ -795,6 +797,14 @@ class AIPriceAction:
                 ).sort_values("time").reset_index(drop=True)
             return result
 
+        if _time.monotonic() - _t0 >= _TICKER_TIMEOUT:
+            logger.debug("[fetch_ticker] %s/%s abort before fallback: timeout (%.1fs >= %.1fs), %d rows collected",
+                          source, ticker, _time.monotonic() - _t0, _TICKER_TIMEOUT, yearly_row_count)
+            result = pd.concat(yearly_frames, ignore_index=True) if yearly_frames else pd.DataFrame(columns=_OHLCV_COLUMNS)
+            if not result.empty and "time" in result.columns:
+                result = result.drop_duplicates(subset=["time"], keep="first").sort_values("time").reset_index(drop=True)
+            return result
+
         # Compute remaining days: only dates NOT within a fully-covered year,
         # and only dates at the tail end (after yearly_max_date) in case
         # today's data hasn't been aggregated into the yearly file yet.
@@ -855,6 +865,10 @@ class AIPriceAction:
         fallback_frames: list[pd.DataFrame] = []
         fallback_row_count = yearly_row_count
         for day in remaining_days:
+            if _time.monotonic() - _t0 >= _TICKER_TIMEOUT:
+                logger.debug("[fetch_ticker] %s/%s abort: timeout (%.1fs >= %.1fs), %d rows collected",
+                              source, ticker, _time.monotonic() - _t0, _TICKER_TIMEOUT, yearly_row_count + len(fallback_frames))
+                break
             if need_rows is not None and fallback_row_count >= need_rows:
                 logger.debug("[fetch_ticker] %s/%s fallback: need_rows met (%d >= %d)", source, ticker, fallback_row_count, need_rows)
                 break
