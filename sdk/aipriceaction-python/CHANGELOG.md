@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.20] - 2026-05-29
+
+### Fixed
+- Fixed yearly data being discarded when `remaining_days=0` — affected any ticker with yearly-only coverage (e.g. TCX listed 2025-10-21)
+- Fixed per-day fallback iterating oldest-first, hitting the 20-miss cap before reaching recent dates; now iterates newest-first
+
+## [0.1.19] - 2026-05-29
+
+### Fixed
+- Reduced OHLCV lookback from 900 to proportional `need_rows * 1.6 + 30` days (e.g. 431 for limit=50 instead of 901), eliminating hundreds of unnecessary S3 requests
+- Skip per-day fetch for dates before ticker's earliest yearly data (`yearly_min_date` filter), preventing 403 storms for newly listed tickers
+- Added `total_misses` counter (20 VN, 40 crypto) that aborts entire ticker fetch when too many consecutive misses
+- Added 60s per-ticker timeout — aborts before or during per-day fallback if cumulative time exceeds limit
+
+### Added
+- Verbose `[DEBUG]` logging throughout `get_ohlcv`, `_fetch_ohlcv_for_ticker`, `fetch_live_data`, and `build()` with per-ticker timing, date range categorization, and miss counters
+
 ## [0.1.18] - 2026-05-19
 
 ### Changed

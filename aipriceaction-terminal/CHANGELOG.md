@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.40] - 2026-05-29
+
+### Changed
+- Bump SDK dependency to >=0.1.20
+
+## [0.1.39] - 2026-05-29
+
+### Changed
+- Bump SDK dependency to >=0.1.19 (reduced S3 requests, per-ticker timeout, yearly_min_date filter)
+
+### Added
+- `--verbose` flag on `aipa analyze` enables SDK debug logging (fetch timing, date ranges, miss counters)
+
 ## [0.1.38] - 2026-05-20
 
 ### Added
