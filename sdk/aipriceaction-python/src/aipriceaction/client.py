@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import os
 import tempfile
 
@@ -16,6 +17,8 @@ import pandas as pd
 
 from .exceptions import AIPriceActionError
 from .models import TickerInfo
+
+logger = logging.getLogger("aipriceaction.sdk")
 
 if TYPE_CHECKING:
     from .ticker import Ticker
@@ -499,10 +502,13 @@ class AIPriceAction:
         Shared logic for _fetch_csv and _fetch_csv_yearly.
         Returns a DataFrame, or None if the file doesn't exist (404/403).
         """
+        _t0 = _time.monotonic()
+
         # Try disk cache (with freshness check)
         if use_cache and self._is_fresh(cache_path, url):
             try:
                 text = Path(cache_path).read_text()
+                logger.debug("[fetch_csv] cache hit: %s (%.3fs)", url, _time.monotonic() - _t0)
                 return self._parse_csv(text)
             except (OSError, pd.errors.EmptyDataError):
                 pass
@@ -514,6 +520,7 @@ class AIPriceAction:
                 return None
 
         # Fetch from S3 (connect fast, but allow time for large file downloads)
+        logger.debug("[fetch_csv] GET: %s", url)
         resp = self._session.get(url, timeout=(5, 30))
         if resp.status_code in (404, 403):
             # Cache the miss so we don't re-check S3 for non-existent files
@@ -634,6 +641,8 @@ class AIPriceAction:
         For other intervals: fetches from latest to past, stops when enough rows collected.
         When need_rows is set and no explicit start_date given, uses greedy backwards fetch.
         """
+        _t0 = _time.monotonic()
+        logger.debug("[fetch_ticker] %s/%s interval=%s need_rows=%s days=%d", source, ticker, interval, need_rows, len(days))
         if interval not in ("1D", "1h") or not days:
             # Non-1D or empty: greedy backwards fetch (stop when enough rows)
             if need_rows is not None:
@@ -732,6 +741,8 @@ class AIPriceAction:
             if need_rows is not None and yearly_row_count >= need_rows:
                 break
 
+        logger.debug("[fetch_ticker] %s/%s yearly: %d rows from %d years (%.3fs)", source, ticker, yearly_row_count, len(yearly_frames), _time.monotonic() - _t0)
+
         # If yearly files already have enough rows, skip per-day fallback
         if need_rows is not None and yearly_row_count >= need_rows:
             result = (
@@ -758,12 +769,26 @@ class AIPriceAction:
             # No yearly files fetched, fall back to all days
             remaining_days = days
 
-        # Fetch remaining days one-by-one
+        # Fetch remaining days with early-stop on consecutive misses and row quota.
+        # Without these guards, newer tickers (e.g. listed mid-2024) whose yearly
+        # files have < need_rows rows will iterate hundreds of pre-listing dates,
+        # each producing a 403 from S3.
         fallback_frames: list[pd.DataFrame] = []
+        fallback_row_count = yearly_row_count
+        consecutive_misses = 0
+        max_consecutive_misses = 7 if source == "vn" else 14
         for day in remaining_days:
+            if need_rows is not None and fallback_row_count >= need_rows:
+                break
+            if consecutive_misses >= max_consecutive_misses:
+                break
             df = self._fetch_csv(source, ticker, interval, day, use_cache=use_cache)
             if df is not None and not df.empty:
                 fallback_frames.append(df)
+                fallback_row_count += len(df)
+                consecutive_misses = 0
+            else:
+                consecutive_misses += 1
 
         # Merge all frames
         all_frames = yearly_frames + fallback_frames
@@ -868,10 +893,12 @@ class AIPriceAction:
         )
 
         try:
+            logger.debug("[live] fetching %s", url)
             resp = self._session.get(url, timeout=_LIVE_REQUEST_TIMEOUT)
             resp.raise_for_status()
             data = resp.json()
             self._live_cache[interval] = {"data": data, "fetched_at": now}
+            logger.debug("[live] fetched %d symbols (%.3fs)", len(data), _time.monotonic() - now)
             return data
         except Exception:
             # Return stale cache if available
@@ -1046,10 +1073,13 @@ class AIPriceAction:
         if interval.upper() not in {i.upper() for i in _ALL_INTERVALS}:
             raise ValueError(f"Invalid interval '{interval}'. Valid: {_ALL_INTERVALS}")
 
+        _t0 = _time.monotonic()
+
         # Resolve interval: native or aggregated (base interval + optional aggregation)
         from .aggregator import resolve_interval, base_bars_per_candle
 
         base_interval, agg_interval = resolve_interval(interval)
+        logger.debug("[get_ohlcv] resolved interval: base=%s agg=%s (%.3fs)", base_interval, agg_interval, _time.monotonic() - _t0)
 
         # Resolve ticker symbols
         sym_list = None
@@ -1059,6 +1089,7 @@ class AIPriceAction:
             sym_list = tickers
 
         resolved = self._resolve_tickers(sym_list, source)
+        logger.debug("[get_ohlcv] resolved %d tickers: %s (%.3fs)", len(resolved), resolved, _time.monotonic() - _t0)
 
         # Compute effective limit (matches Rust /tickers defaults)
         is_single = len(resolved) == 1
@@ -1088,9 +1119,12 @@ class AIPriceAction:
             need_rows = need_rows * base_bars_per_candle(agg_interval)
 
         if start is None:
-            # No explicit start: generous upper bound in calendar days.
-            # _fetch_backwards stops early when enough rows are collected.
-            lookback = _ma_buffer_days(base_interval) + 500 if ma else 400
+            if ma and need_rows is not None:
+                lookback = int(need_rows * 1.6) + 30
+            elif ma:
+                lookback = _ma_buffer_days(base_interval)
+            else:
+                lookback = 400
             if agg_interval is not None:
                 lookback = lookback * base_bars_per_candle(agg_interval)
             start = end - timedelta(days=lookback)
@@ -1103,11 +1137,13 @@ class AIPriceAction:
             ma_buffer_start = start - timedelta(days=_ma_buffer_days(base_interval))
 
         days = self._date_range(ma_buffer_start, end)
+        logger.debug("[get_ohlcv] date range: %s to %s (%d days), need_rows=%s (%.3fs)", ma_buffer_start, end, len(days), need_rows, _time.monotonic() - _t0)
 
         # Fetch and concatenate (parallel with concurrency 8)
         frames: list[pd.DataFrame] = []
 
         def _fetch_one(src, sym):
+            t_fetch = _time.monotonic()
             df = self._fetch_ohlcv_for_ticker(
                 src,
                 sym,
@@ -1115,6 +1151,7 @@ class AIPriceAction:
                 days,
                 need_rows=need_rows,
             )
+            logger.debug("[get_ohlcv] fetched %s/%s: %d rows (%.3fs)", src, sym, len(df), _time.monotonic() - t_fetch)
             if not df.empty:
                 df["symbol"] = sym
             return df
@@ -1125,6 +1162,8 @@ class AIPriceAction:
                 df = future.result()
                 if not df.empty:
                     frames.append(df)
+
+        logger.debug("[get_ohlcv] S3 fetch done, %d frames (%.3fs)", len(frames), _time.monotonic() - _t0)
 
         if not frames:
             result = pd.DataFrame(
@@ -1153,18 +1192,23 @@ class AIPriceAction:
                 all_agg.append(agg_df)
             result = pd.concat(all_agg, ignore_index=True)
 
+        logger.debug("[get_ohlcv] pre-live: %d rows in result (%.3fs)", len(result), _time.monotonic() - _t0)
+
         # Overlay live data on top of S3 data (before MA computation).
         # The backend supports aggregated intervals directly, so we pass
         # the original interval (aggregated or native) to the live API.
         if self.use_live:
+            _t_live = _time.monotonic()
             live_interval = agg_interval if agg_interval else base_interval
             if live_interval in _LIVE_NATIVE_INTERVALS or agg_interval is not None:
                 live_data = self.fetch_live_data(live_interval, ma=False)
                 if live_data is not None:
                     result = self._merge_live_data(result, live_data, resolved)
+            logger.debug("[get_ohlcv] live overlay done (%.3fs)", _time.monotonic() - _t_live)
 
         # Compute MA indicators per symbol
         if ma:
+            _t_ma = _time.monotonic()
             from .indicators import compute_indicators
 
             all_rows: list[pd.DataFrame] = []
@@ -1181,6 +1225,8 @@ class AIPriceAction:
                 all_rows.append(group)
 
             result = pd.concat(all_rows, ignore_index=True)
+
+            logger.debug("[get_ohlcv] MA computed (%.3fs)", _time.monotonic() - _t_ma)
 
             # Trim to user-requested date range
             if ma_buffer_start < user_start:

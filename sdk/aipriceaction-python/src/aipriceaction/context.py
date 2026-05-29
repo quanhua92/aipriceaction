@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import time as _time
+
 import pandas as pd
 
 
@@ -13,6 +16,8 @@ from .system import (
 )
 from .single import get_single_templates
 from .multi import get_multi_templates
+
+logger = logging.getLogger("aipriceaction.sdk")
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +177,7 @@ class AIContextBuilder:
         self._interval = interval
         single_ticker: str | None = None
         ma = self._ma_type == "ema"
+        _t0 = _time.monotonic()
 
         if ticker and tickers:
             raise ValueError("Use either 'ticker' or 'tickers', not both")
@@ -183,6 +189,7 @@ class AIContextBuilder:
         # Fetch data
         if ticker:
             single_ticker = ticker
+            logger.debug("[build] fetching single ticker %s (limit=%d)", ticker, effective_limit)
             df = self._client.get_ohlcv(
                 ticker,
                 interval=interval,
@@ -194,7 +201,9 @@ class AIContextBuilder:
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info([ticker])
+            logger.debug("[build] single ticker done: %d symbols, %.3fs", len(self._market_data), _time.monotonic() - _t0)
         elif tickers:
+            logger.debug("[build] fetching multi tickers %s (limit=%d)", tickers, effective_limit)
             df = self._client.get_ohlcv(
                 tickers=tickers,
                 interval=interval,
@@ -206,6 +215,7 @@ class AIContextBuilder:
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info(tickers)
+            logger.debug("[build] multi tickers done: %d symbols, %.3fs", len(self._market_data), _time.monotonic() - _t0)
         elif source and effective_limit == 1:
             # All tickers for a source with limit=1: use live API directly
             # (single request, no S3 iteration).
@@ -233,6 +243,8 @@ class AIContextBuilder:
         if reference_ticker and reference_ticker != single_ticker and (
             not tickers or reference_ticker not in tickers
         ):
+            logger.debug("[build] fetching reference ticker %s", reference_ticker)
+            _t_ref = _time.monotonic()
             ref_df = self._client.get_ohlcv(
                 reference_ticker,
                 interval=interval,
@@ -246,6 +258,7 @@ class AIContextBuilder:
             self._ref_ticker = reference_ticker
             self._ref_data = ref_records.get(reference_ticker, [])
             self._ref_info = self._build_single_ticker_info(reference_ticker)
+            logger.debug("[build] reference ticker done: %d rows, %.3fs", len(self._ref_data), _time.monotonic() - _t_ref)
 
             # In multi-ticker mode, include reference data in market_data
             # so _build_market_data_multi() renders it.

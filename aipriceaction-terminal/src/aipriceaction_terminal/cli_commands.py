@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import sys
 import time
 
@@ -27,6 +28,10 @@ async def cmd_analyze(args) -> None:
 
     lang = _resolve_lang(args.lang)
     verbose_log(f"analyze: resolved lang={lang}")
+
+    if getattr(args, "verbose", False):
+        logging.basicConfig(level=logging.DEBUG, format="[DEBUG] %(message)s", stream=sys.stderr, force=True)
+
     builder = AIContextBuilder(lang=lang, ma_type=args.ma_type)
 
     # Auto-detect reference ticker if user didn't explicitly override
