@@ -748,3 +748,16 @@ class TestCacheInvalidation:
         assert hash_file.read_text().strip() == "fpt-0429-hash"
         assert len(df) == 1
         assert df.iloc[0]["close"] == 146000.0
+
+
+class TestYearlyOnlyFallback:
+    """Regression: yearly data was discarded when remaining_days=0."""
+
+    def test_yearly_data_returned_when_no_remaining_days(self, mock_s3_yearly_only, client):
+        df = client.get_ohlcv(
+            "TCX", interval="1D", limit=200, ma=False,
+        )
+        assert len(df) == 5
+        assert df.iloc[0]["close"] == 100.0
+        assert df.iloc[-1]["close"] == 201.0
+        assert df["symbol"].unique()[0] == "TCX"

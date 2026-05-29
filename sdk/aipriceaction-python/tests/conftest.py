@@ -163,3 +163,51 @@ def client(tmp_path):
         cache_dir=str(tmp_path),
         utc_offset=0,
     )
+
+
+@pytest.fixture
+def mock_s3_yearly_only():
+    """Mock S3 with yearly files covering all requested dates, no per-day files.
+
+    Tests that yearly data is returned even when remaining_days=0 (no per-day fallback needed).
+    Regression test for: yearly frames discarded when remaining_days was empty.
+    """
+    responses.start()
+
+    responses.get(
+        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        json=[{"source": "vn", "ticker": "TCX", "name": "TCX", "group": "REALESTATE"}],
+    )
+    responses.head(
+        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        headers={"x-amz-meta-content-hash": "tickers-yearly-hash"},
+    )
+
+    yearly_2025 = "\n".join(
+        f"{d} 00:00:00,{100.0+i},{105.0+i},{95.0+i},{100.0+i},{500000+i*10000}"
+        for i, d in enumerate(["2025-10-21", "2025-10-22", "2025-10-23"])
+    )
+    yearly_2026 = "\n".join(
+        f"{d} 00:00:00,{200.0+i},{205.0+i},{195.0+i},{200.0+i},{600000+i*10000}"
+        for i, d in enumerate(["2026-01-05", "2026-01-06"])
+    )
+
+    base = "http://localhost:9000/aipriceaction-archive/ohlcv/vn/TCX/yearly"
+    responses.get(f"{base}/TCX-1D-2025.csv", body=yearly_2025)
+    responses.head(f"{base}/TCX-1D-2025.csv", headers={"x-amz-meta-content-hash": "tcx-2025-hash"})
+    responses.get(f"{base}/TCX-1D-2026.csv", body=yearly_2026)
+    responses.head(f"{base}/TCX-1D-2026.csv", headers={"x-amz-meta-content-hash": "tcx-2026-hash"})
+
+    responses.get(
+        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+        status=404,
+    )
+    responses.head(
+        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+        status=404,
+    )
+
+    yield
+
+    responses.stop()
+    responses.reset()

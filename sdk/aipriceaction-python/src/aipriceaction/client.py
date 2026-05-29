@@ -856,11 +856,17 @@ class AIPriceAction:
                           source, ticker, len(remaining_days))
 
         if not remaining_days:
-            logger.debug("[fetch_ticker] %s/%s fallback: skipped (0 remaining days)",
-                          source, ticker)
-            return pd.DataFrame(columns=_OHLCV_COLUMNS)
+            logger.debug("[fetch_ticker] %s/%s fallback: skipped (0 remaining days), returning %d yearly rows",
+                          source, ticker, yearly_row_count)
+            if not yearly_frames:
+                return pd.DataFrame(columns=_OHLCV_COLUMNS)
+            result = pd.concat(yearly_frames, ignore_index=True)
+            if not result.empty and "time" in result.columns:
+                result = result.drop_duplicates(subset=["time"], keep="first").sort_values("time").reset_index(drop=True)
+            return result
 
-        logger.debug("[fetch_ticker] %s/%s fallback: starting per-day fetch for %d days (total_misses=%d/%d)",
+        remaining_days = sorted(remaining_days, reverse=True)
+        logger.debug("[fetch_ticker] %s/%s fallback: starting per-day fetch for %d days newest-first (total_misses=%d/%d)",
                       source, ticker, len(remaining_days), total_misses, max_total_misses)
         fallback_frames: list[pd.DataFrame] = []
         fallback_row_count = yearly_row_count
