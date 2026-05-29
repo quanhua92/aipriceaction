@@ -625,6 +625,15 @@ class AIPriceAction:
         date_str = max_val.split(" ")[0] if " " in max_val else max_val
         return date.fromisoformat(date_str)
 
+    @staticmethod
+    def _min_date_from_yearly(df: pd.DataFrame) -> date:
+        """Get the earliest date from a yearly DataFrame's 'time' column."""
+        if df is None or df.empty:
+            return date.max
+        min_val = str(df["time"].dropna().iloc[0]).strip()
+        date_str = min_val.split(" ")[0] if " " in min_val else min_val
+        return date.fromisoformat(date_str)
+
     def _fetch_ohlcv_for_ticker(
         self,
         source: str,
@@ -719,9 +728,12 @@ class AIPriceAction:
         # Track which years have complete yearly coverage
         yearly_years_covered: set[int] = set()
         yearly_max_date: date | None = None
+        yearly_min_date: date | None = None
 
         # Identify years overlapping the requested range
         years = sorted(set(start.year + i for i in range(end.year - start.year + 1)))
+        logger.debug("[fetch_ticker] %s/%s will try %d yearly files: %s (newest first)",
+                      source, ticker, len(years), list(reversed(years)))
 
         # Try fetching yearly files for each year (newest first for early stop)
         yearly_row_count = 0
@@ -733,18 +745,30 @@ class AIPriceAction:
                 yearly_frames.append(df)
                 yearly_years_covered.add(year)
                 yearly_row_count += len(df)
-                # Track the latest date across all yearly files
+                min_in_year = self._min_date_from_yearly(df)
                 max_in_year = self._max_date_from_yearly(df)
+                logger.debug("[fetch_ticker] %s/%s yearly %d: %d rows (%s ~ %s)",
+                              source, ticker, year, len(df), min_in_year, max_in_year)
                 if yearly_max_date is None or max_in_year > yearly_max_date:
                     yearly_max_date = max_in_year
+                if yearly_min_date is None or min_in_year < yearly_min_date:
+                    yearly_min_date = min_in_year
+            else:
+                logger.debug("[fetch_ticker] %s/%s yearly %d: no file (404/403)", source, ticker, year)
             # Stop early if we have enough rows
             if need_rows is not None and yearly_row_count >= need_rows:
+                logger.debug("[fetch_ticker] %s/%s yearly: need_rows met (%d >= %d), stop yearly fetch",
+                              source, ticker, yearly_row_count, need_rows)
                 break
 
-        logger.debug("[fetch_ticker] %s/%s yearly: %d rows from %d years (%.3fs)", source, ticker, yearly_row_count, len(yearly_frames), _time.monotonic() - _t0)
+        logger.debug("[fetch_ticker] %s/%s yearly: %d rows from %d years, range %s ~ %s, covered=%s (%.3fs)",
+                      source, ticker, yearly_row_count, len(yearly_frames),
+                      yearly_min_date, yearly_max_date, yearly_years_covered, _time.monotonic() - _t0)
 
         # If yearly files already have enough rows, skip per-day fallback
         if need_rows is not None and yearly_row_count >= need_rows:
+            logger.debug("[fetch_ticker] %s/%s skip fallback: yearly has %d rows >= need_rows %d",
+                          source, ticker, yearly_row_count, need_rows)
             result = (
                 pd.concat(yearly_frames, ignore_index=True)
                 if yearly_frames
@@ -759,28 +783,45 @@ class AIPriceAction:
         # Compute remaining days: only dates NOT within a fully-covered year,
         # and only dates at the tail end (after yearly_max_date) in case
         # today's data hasn't been aggregated into the yearly file yet.
+        # Dates before yearly_min_date are skipped (ticker has no data there).
         if yearly_max_date:
+            total_days = len(days)
             remaining_days = [
                 d
                 for d in days
-                if d.year not in yearly_years_covered or d > yearly_max_date
+                if d > yearly_max_date
+                or (d.year not in yearly_years_covered
+                    and yearly_min_date is not None
+                    and d >= yearly_min_date)
             ]
+            skipped = total_days - len(remaining_days)
+            skipped_reason = f"before yearly_min={yearly_min_date}" if yearly_min_date else "before yearly_max"
+            logger.debug("[fetch_ticker] %s/%s remaining_days: %d/%d (skipped %d %s)",
+                          source, ticker, len(remaining_days), total_days, skipped, skipped_reason)
         else:
             # No yearly files fetched, fall back to all days
             remaining_days = days
+            logger.debug("[fetch_ticker] %s/%s remaining_days: %d (no yearly data, all days)",
+                          source, ticker, len(remaining_days))
 
-        # Fetch remaining days with early-stop on consecutive misses and row quota.
-        # Without these guards, newer tickers (e.g. listed mid-2024) whose yearly
-        # files have < need_rows rows will iterate hundreds of pre-listing dates,
-        # each producing a 403 from S3.
+        if not remaining_days:
+            logger.debug("[fetch_ticker] %s/%s fallback: skipped (0 remaining days)",
+                          source, ticker)
+            return pd.DataFrame(columns=_OHLCV_COLUMNS)
+
+        logger.debug("[fetch_ticker] %s/%s fallback: starting per-day fetch for %d days",
+                      source, ticker, len(remaining_days))
         fallback_frames: list[pd.DataFrame] = []
         fallback_row_count = yearly_row_count
         consecutive_misses = 0
         max_consecutive_misses = 7 if source == "vn" else 14
         for day in remaining_days:
             if need_rows is not None and fallback_row_count >= need_rows:
+                logger.debug("[fetch_ticker] %s/%s fallback: need_rows met (%d >= %d)", source, ticker, fallback_row_count, need_rows)
                 break
             if consecutive_misses >= max_consecutive_misses:
+                logger.debug("[fetch_ticker] %s/%s fallback: %d consecutive misses, stopping",
+                              source, ticker, consecutive_misses)
                 break
             df = self._fetch_csv(source, ticker, interval, day, use_cache=use_cache)
             if df is not None and not df.empty:
@@ -789,6 +830,14 @@ class AIPriceAction:
                 consecutive_misses = 0
             else:
                 consecutive_misses += 1
+                logger.debug("[fetch_ticker] %s/%s fallback miss: %s (%d consecutive)",
+                              source, ticker, day, consecutive_misses)
+
+        if fallback_frames:
+            logger.debug("[fetch_ticker] %s/%s fallback: %d hits from %d attempts (%.3fs)",
+                          source, ticker, len(fallback_frames), len(remaining_days), _time.monotonic() - _t0)
+        elif remaining_days:
+            logger.debug("[fetch_ticker] %s/%s fallback: 0 hits from %d days (all miss)", source, ticker, len(remaining_days))
 
         # Merge all frames
         all_frames = yearly_frames + fallback_frames
