@@ -357,6 +357,93 @@ Interactive first-run configuration. Prompts for language, reference ticker, API
 aipa setup
 ```
 
+### `aipa fundamentals`
+
+Fundamental data: company info, financial ratios, ranking, and screening. No API key needed — reads from cached `vn.zip`.
+
+#### `aipa fundamentals info TICKER`
+
+Show company profile, shareholders, and officers.
+
+```
+aipa fundamentals info ACB
+aipa fundamentals info FPT --source vn
+```
+
+#### `aipa fundamentals ratios TICKER`
+
+Show financial ratios organized by category.
+
+```
+aipa fundamentals ratios VCB                    # All yearly reports
+aipa fundamentals ratios VCB --latest            # Only latest yearly
+aipa fundamentals ratios VCB --year 2024         # Specific year
+aipa fundamentals ratios VCB --no-yearly         # Include quarterly
+aipa fundamentals ratios VCB --category bank     # Bank-specific fields only
+aipa fundamentals ratios VCB --json              # Raw JSON output
+```
+
+| Flag | Description |
+|---|---|
+| `--latest` | Show only latest yearly report |
+| `--year YEAR` | Show specific year |
+| `--no-yearly` | Include quarterly reports (default: yearly only) |
+| `--category` | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
+| `--json` | Raw JSON output |
+
+#### `aipa fundamentals rank`
+
+Rank tickers by any of 50+ fundamental fields.
+
+```
+aipa fundamentals rank                                           # Top 10 VN by ROE
+aipa fundamentals rank --sort-by pe --direction asc --limit 20   # Cheapest by PE
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by car         # Banks by CAR
+aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15 # VN30 by ROE
+aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
+aipa fundamentals rank --sort-by dividend_yield                   # Highest dividend
+aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by cap
+```
+
+| Flag | Description |
+|---|---|
+| `--sort-by` | Field to rank by: `pe`, `pb`, `roe`, `roa`, `npl`, `car`, `dividend_yield`, `market_cap`, etc. (50+ fields) |
+| `--direction` | `desc` (default) or `asc` |
+| `--limit N` | Max results (default: 10) |
+| `tickers` | Positional ticker symbols (default: all VN) |
+| `--watchlist` | Use watchlist as ticker source (VN30, VINGROUP, TM, MASAN, custom) |
+
+#### `aipa fundamentals screen`
+
+Filter tickers by fundamental criteria, then rank.
+
+```
+aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe                   # Value stocks
+aipa fundamentals screen --industry "ngân hàng" --sort-by roe                        # Banking sector
+aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --direction asc # Safe banks
+aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield           # Dividend stocks
+aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10                  # Screen VN30
+aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc  # Specific tickers
+```
+
+| Flag | Description |
+|---|---|
+| `--pe-min/max` | PE range filter |
+| `--pb-min/max` | PB range filter |
+| `--roe-min/max` | ROE range filter |
+| `--roa-min/max` | ROA range filter |
+| `--dividend-yield-min/max` | Dividend yield range |
+| `--debt-to-equity-max` | Max Debt/Equity |
+| `--npl-max` | Max NPL (banks) |
+| `--car-min` | Min CAR (banks) |
+| `--cir-max` | Max CIR (banks) |
+| `--market-cap-min/max` | Market cap range |
+| `--industry` | Industry filter (substring, case-insensitive) |
+| `--watchlist` | Use watchlist as ticker source |
+| `--sort-by` | Field to rank by |
+| `--direction` | Sort direction (default: `desc`) |
+| `--limit N` | Max results (default: 50) |
+
 ### `aipa resume`
 
 List saved chat sessions or open the TUI with a resumed one. Sessions are auto-saved under `~/.aipriceaction/sessions/`.
@@ -387,6 +474,10 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa ticker-list` | No setup needed |
 | `aipa performers` | No setup needed |
 | `aipa volume-profile VCB` | No setup needed |
+| `aipa fundamentals info ACB` | No setup needed |
+| `aipa fundamentals ratios VCB` | No setup needed |
+| `aipa fundamentals rank` | No setup needed |
+| `aipa fundamentals screen` | No setup needed |
 | `aipa analyze VCB --context-only` | No setup needed |
 | `aipa analyze VCB --questions` | No setup needed |
 | `aipa resume` | No setup needed |
