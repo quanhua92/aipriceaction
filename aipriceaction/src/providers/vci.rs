@@ -186,6 +186,7 @@ pub struct VciProvider {
     rate_limiters: Vec<RateLimiter>,
     base_url: String,
     direct_connection: bool,
+    handshake_cookies: tokio::sync::Mutex<Option<String>>,
 }
 
 impl VciProvider {
@@ -269,6 +270,7 @@ impl VciProvider {
             rate_limiters,
             base_url: "https://trading.vietcap.com.vn/api/".to_string(),
             direct_connection,
+            handshake_cookies: tokio::sync::Mutex::new(None),
         })
     }
 
@@ -438,8 +440,245 @@ impl VciProvider {
     }
 
     // -----------------------------------------------------------------------
-    // Interval mapping
+    // GET request for REST API endpoints (iq.vietcap.com.vn)
     // -----------------------------------------------------------------------
+
+    async fn make_get_request(&self, url: &str, label_prefix: &str) -> Result<Value, VciError> {
+        const MAX_TOTAL_ATTEMPTS: usize = 5;
+        const REQUEST_TIMEOUT_SECS: u64 = 15;
+
+        tracing::info!("[{}] → GET {}", label_prefix, &url[..url.len().min(120)]);
+
+        let result = tokio::time::timeout(
+            StdDuration::from_secs(REQUEST_TIMEOUT_SECS * MAX_TOTAL_ATTEMPTS as u64),
+            self.make_get_request_inner(url, label_prefix),
+        )
+        .await;
+
+        match result {
+            Ok(r) => r,
+            Err(_) => {
+                tracing::error!("[{}] timed out after {}s", label_prefix, REQUEST_TIMEOUT_SECS * MAX_TOTAL_ATTEMPTS as u64);
+                Err(VciError::InvalidResponse("request timed out".to_string()))
+            }
+        }
+    }
+
+    async fn make_get_request_inner(&self, url: &str, label_prefix: &str) -> Result<Value, VciError> {
+        const MAX_TOTAL_ATTEMPTS: usize = 5;
+
+        let mut indices: Vec<usize> = (0..self.clients.len()).collect();
+        use rand::seq::SliceRandom;
+        indices.shuffle(&mut rand::thread_rng());
+
+        let user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+        ];
+
+        let mut last_error: Option<String> = None;
+        let cookies = self.handshake_cookies.lock().await.clone();
+
+        for attempt_idx in 0..MAX_TOTAL_ATTEMPTS {
+            let client_index = indices[attempt_idx % indices.len()];
+            let client = &self.clients[client_index];
+            let user_agent = user_agents.choose(&mut rand::thread_rng()).unwrap_or(&"Mozilla/5.0");
+
+            let label = if client_index == 0 && self.direct_connection {
+                "direct".to_string()
+            } else if client_index == 0 && !self.direct_connection {
+                "proxy-1".to_string()
+            } else {
+                format!("proxy-{}", client_index)
+            };
+
+            self.rate_limiters[client_index].acquire().await;
+
+            let mut builder = isahc::Request::builder()
+                .uri(url)
+                .method("GET")
+                .header("Accept", "application/json, text/plain, */*")
+                .header("Accept-Language", "en-US,en;q=0.9,vi-VN;q=0.8,vi;q=0.7")
+                .header("Accept-Encoding", "gzip, deflate, br")
+                .header("Connection", "keep-alive")
+                .header("Cache-Control", "no-cache")
+                .header("Pragma", "no-cache")
+                .header("DNT", "1")
+                .header("Sec-Fetch-Dest", "empty")
+                .header("Sec-Fetch-Mode", "cors")
+                .header("Sec-Fetch-Site", "same-site")
+                .header("sec-ch-ua", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")
+                .header("sec-ch-ua-mobile", "?0")
+                .header("sec-ch-ua-platform", "\"Windows\"")
+                .header("User-Agent", *user_agent)
+                .header("Referer", "https://trading.vietcap.com.vn/")
+                .header("Origin", "https://trading.vietcap.com.vn");
+
+            if let Some(ref ck) = cookies {
+                if !ck.is_empty() {
+                    builder = builder.header("Cookie", ck.as_str());
+                }
+            }
+
+            let request = builder
+                .body(())
+                .map_err(|e| VciError::InvalidResponse(format!("Request build error: {}", e)))?;
+
+            match client.send_async(request).await {
+                Ok(mut resp) => {
+                    let status = resp.status();
+                    if status.is_success() {
+                        match resp.text().await {
+                            Ok(text) => match serde_json::from_str::<Value>(&text) {
+                                Ok(data) => {
+                                    tracing::info!(
+                                        via = %label,
+                                        attempt = attempt_idx + 1,
+                                        "✅ [{}] GET succeeded via {} (attempt {}/{})",
+                                        label_prefix, label, attempt_idx + 1, MAX_TOTAL_ATTEMPTS,
+                                    );
+                                    return Ok(data);
+                                }
+                                Err(e) => {
+                                    last_error = Some(format!("JSON parse error: {}", e));
+                                    continue;
+                                }
+                            },
+                            Err(e) => {
+                                last_error = Some(format!("Response body error: {}", e));
+                                continue;
+                            }
+                        }
+                    } else {
+                        let status_text = status.canonical_reason().unwrap_or("Unknown");
+                        if status == 403 || status == 429 {
+                            last_error = Some(format!("HTTP {} - rate limit or auth issue", status.as_u16()));
+                            sleep(Duration::from_secs(vci_worker::RATE_LIMIT_CLIENT_BACKOFF_SECS)).await;
+                            continue;
+                        } else if status.is_server_error() {
+                            last_error = Some(format!("Server error ({}) - {}", status.as_u16(), status_text));
+                            continue;
+                        } else if status.is_client_error() {
+                            return Err(VciError::InvalidResponse(format!(
+                                "Client error ({}) - {} - not retryable",
+                                status.as_u16(), status_text,
+                            )));
+                        } else {
+                            last_error = Some(format!("HTTP error ({}) - {}", status.as_u16(), status_text));
+                            continue;
+                        }
+                    }
+                }
+                Err(e) => {
+                    last_error = Some(format!("Network error: {}", e));
+                    continue;
+                }
+            }
+        }
+
+        let error_msg = last_error.unwrap_or_else(|| "all clients failed".to_string());
+        if error_msg.contains("429") {
+            tracing::warn!("[{}] all clients rate limited, sleeping 60s", label_prefix);
+            sleep(Duration::from_secs(60)).await;
+            return Err(VciError::RateLimit);
+        }
+        Err(VciError::InvalidResponse(format!(
+            "Max attempts exceeded ({}): {}",
+            MAX_TOTAL_ATTEMPTS, error_msg,
+        )))
+    }
+
+    // -----------------------------------------------------------------------
+    // Handshake — fetch session cookies from priceboard (tries all clients)
+    // -----------------------------------------------------------------------
+
+    async fn ensure_handshake(&self) {
+        let mut guard = self.handshake_cookies.lock().await;
+        if guard.is_some() {
+            return;
+        }
+
+        tracing::info!("[VCI-REST] handshake starting...");
+
+        let url = "https://trading.vietcap.com.vn/priceboard";
+        let user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ];
+
+        let mut indices: Vec<usize> = (0..self.clients.len()).collect();
+        use rand::seq::SliceRandom;
+        indices.shuffle(&mut rand::thread_rng());
+
+        for &client_index in &indices {
+            let client = &self.clients[client_index];
+            let user_agent = user_agents.choose(&mut rand::thread_rng()).unwrap_or(&"Mozilla/5.0");
+
+            let label = if client_index == 0 && self.direct_connection {
+                "direct".to_string()
+            } else if client_index == 0 && !self.direct_connection {
+                "proxy-1".to_string()
+            } else {
+                format!("proxy-{}", client_index)
+            };
+
+            self.rate_limiters[client_index].acquire().await;
+
+            let request = isahc::Request::builder()
+                .uri(url)
+                .method("GET")
+                .header("User-Agent", *user_agent)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Connection", "keep-alive")
+                .body(())
+                .unwrap();
+
+            match tokio::time::timeout(
+                StdDuration::from_secs(10),
+                client.send_async(request),
+            )
+            .await
+            {
+                Ok(Ok(resp)) => {
+                    let cookie_header: Vec<String> = resp
+                        .headers()
+                        .get_all("set-cookie")
+                        .iter()
+                        .filter_map(|v| v.to_str().ok())
+                        .map(|s| {
+                            if let Some(idx) = s.find(';') {
+                                s[..idx].to_string()
+                            } else {
+                                s.to_string()
+                            }
+                        })
+                        .collect();
+
+                    if !cookie_header.is_empty() {
+                        let combined = cookie_header.join("; ");
+                        tracing::info!("[VCI-REST] handshake got {} cookies via {}", cookie_header.len(), label);
+                        *guard = Some(combined);
+                        return;
+                    } else {
+                        tracing::debug!("[VCI-REST] handshake via {} returned no cookies, trying next client", label);
+                    }
+                }
+                Ok(Err(e)) => {
+                    tracing::warn!("[VCI-REST] handshake via {} failed: {e}", label);
+                }
+                Err(_) => {
+                    tracing::warn!("[VCI-REST] handshake via {} timed out (10s)", label);
+                }
+            }
+        }
+
+        tracing::debug!("[VCI-REST] all handshake attempts returned no cookies (may still work)");
+        *guard = Some(String::new());
+    }
 
     fn get_interval_value(interval: &str) -> Result<String, VciError> {
         let interval_map: HashMap<&str, &str> = [
@@ -586,113 +825,25 @@ impl VciProvider {
     }
 
     // -----------------------------------------------------------------------
-    // company_info — Company data via GraphQL
+    // company_info — Company data via REST API (iq.vietcap.com.vn)
     // -----------------------------------------------------------------------
 
     pub async fn company_info(&self, symbol: &str) -> Result<CompanyInfo, VciError> {
-        let url = self.base_url.replace("/api/", "/data-mt/") + "graphql";
+        let symbol = symbol.to_uppercase();
+        let vciq_base = "https://iq.vietcap.com.vn/api/iq-insight-service/v1/company";
 
-        let graphql_query = r#"query Query($ticker: String!, $lang: String!) {
-            AnalysisReportFiles(ticker: $ticker, langCode: $lang) {
-                date
-                description
-                link
-                name
-                __typename
-            }
-            News(ticker: $ticker, langCode: $lang) {
-                id
-                organCode
-                ticker
-                newsTitle
-                newsSubTitle
-                friendlySubTitle
-                newsImageUrl
-                newsSourceLink
-                createdAt
-                publicDate
-                updatedAt
-                langCode
-                newsId
-                newsShortContent
-                newsFullContent
-                closePrice
-                referencePrice
-                floorPrice
-                ceilingPrice
-                percentPriceChange
-                __typename
-            }
-            CompanyListingInfo(ticker: $ticker) {
-                id
-                issueShare
-                history
-                companyProfile
-                icbName3
-                icbName2
-                icbName4
-                financialRatio {
-                    id
-                    ticker
-                    issueShare
-                    charterCapital
-                    __typename
-                }
-                __typename
-            }
-            TickerPriceInfo(ticker: $ticker) {
-                ticker
-                exchange
-                matchPrice
-                priceChange
-                percentPriceChange
-                totalVolume
-                highestPrice1Year
-                lowestPrice1Year
-                financialRatio {
-                    pe
-                    pb
-                    roe
-                    roa
-                    eps
-                    revenue
-                    netProfit
-                    dividend
-                    __typename
-                }
-                __typename
-            }
-            OrganizationShareHolders(ticker: $ticker) {
-                id
-                ticker
-                ownerFullName
-                percentage
-                updateDate
-                __typename
-            }
-            OrganizationManagers(ticker: $ticker) {
-                id
-                ticker
-                fullName
-                positionName
-                percentage
-                __typename
-            }
-        }"#;
+        let details_url = format!("{}/details?ticker={}", vciq_base, symbol);
+        let details_resp = self.make_get_request(&details_url, "company-details").await?;
+        let details_data = details_resp.get("data").ok_or(VciError::NoData)?;
 
-        let payload = serde_json::json!({
-            "query": graphql_query,
-            "variables": {
-                "ticker": symbol.to_uppercase(),
-                "lang": "vi"
-            }
-        });
-
-        let response_data = self.make_request(&url, &payload).await?;
-        let data = response_data.get("data").ok_or(VciError::NoData)?;
+        tracing::info!(
+            "[FUNDAMENTAL] [company-details] {} keys: {:?}",
+            symbol,
+            details_data.as_object().map(|o| o.keys().take(20).collect::<Vec<_>>()).unwrap_or_default()
+        );
 
         let mut company_info = CompanyInfo {
-            symbol: symbol.to_uppercase(),
+            symbol: symbol.clone(),
             exchange: None,
             industry: None,
             company_type: None,
@@ -707,209 +858,149 @@ impl VciProvider {
             officers: Vec::new(),
         };
 
-        // CompanyListingInfo
-        if let Some(listing) = data.get("CompanyListingInfo") {
-            if let Some(profile) = listing.get("companyProfile").and_then(|v| v.as_str()) {
-                company_info.company_profile = Some(profile.to_string());
-            }
-            if let Some(industry) = listing.get("icbName3").and_then(|v| v.as_str()) {
-                company_info.industry = Some(industry.to_string());
-            }
-            if let Some(shares) = listing.get("issueShare").and_then(|v| v.as_u64()) {
-                company_info.outstanding_shares = Some(shares);
-            }
+        if let Some(ticker) = details_data.get("ticker").and_then(|v| v.as_str()) {
+            company_info.symbol = ticker.to_string();
+        }
+        if let Some(industry) = details_data.get("sectorVn").and_then(|v| v.as_str()) {
+            company_info.industry = Some(industry.to_string());
+        } else if let Some(industry) = details_data.get("icbName3").and_then(|v| v.as_str()) {
+            company_info.industry = Some(industry.to_string());
+        }
+        if let Some(profile) = details_data.get("profile").and_then(|v| v.as_str()) {
+            let cleaned = profile
+                .replace("<br>", " ")
+                .replace("<br/>", " ")
+                .replace("<p>", " ")
+                .replace("</p>", " ");
+            company_info.company_profile = Some(cleaned);
+        }
+        if let Some(shares) = details_data.get("numberOfSharesMktCap").and_then(|v| v.as_f64()) {
+            company_info.outstanding_shares = Some(shares as u64);
+        } else if let Some(shares) = details_data.get("issueShare").and_then(|v| v.as_f64()) {
+            company_info.outstanding_shares = Some(shares as u64);
+        }
+        if let Some(exchange) = details_data.get("exchange").and_then(|v| v.as_str()) {
+            company_info.exchange = Some(exchange.to_string());
+        }
+        if let Some(price) = details_data.get("matchPrice").and_then(|v| v.as_f64()) {
+            company_info.current_price = Some(price);
+        }
+        if let (Some(price), Some(shares)) =
+            (company_info.current_price, company_info.outstanding_shares)
+        {
+            company_info.market_cap = Some(price * shares as f64);
         }
 
-        // TickerPriceInfo
-        if let Some(ticker_info) = data.get("TickerPriceInfo") {
-            if let Some(exchange) = ticker_info.get("exchange").and_then(|v| v.as_str()) {
-                company_info.exchange = Some(exchange.to_string());
-            }
-            if let Some(price) = ticker_info.get("matchPrice").and_then(|v| v.as_f64()) {
-                company_info.current_price = Some(price);
-            }
-            if let (Some(price), Some(shares)) =
-                (company_info.current_price, company_info.outstanding_shares)
-            {
-                company_info.market_cap = Some(price * shares as f64);
-            }
-        }
+        let shareholder_url = format!("{}/{}/shareholder", vciq_base, symbol);
+        match self.make_get_request(&shareholder_url, "company-shareholder").await {
+            Ok(sh_resp) => {
+                if let Some(arr) = sh_resp.get("data").and_then(|v| v.as_array()) {
+                    for sh in arr {
+                        let owner_type = sh.get("ownerType").and_then(|v| v.as_str()).unwrap_or("");
+                        let name = sh
+                            .get("ownerName")
+                            .or_else(|| sh.get("ownerFullName"))
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("");
+                        let pct = sh.get("percentage").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let position = sh.get("positionName").and_then(|v| v.as_str());
 
-        // Shareholders
-        if let Some(arr) = data.get("OrganizationShareHolders").and_then(|v| v.as_array()) {
-            for sh in arr {
-                if let (Some(name), Some(pct)) = (
-                    sh.get("ownerFullName").and_then(|v| v.as_str()),
-                    sh.get("percentage").and_then(|v| v.as_f64()),
-                ) {
-                    company_info.shareholders.push(ShareholderInfo {
-                        name: name.to_string(),
-                        percentage: pct,
-                    });
+                        if owner_type == "INDIVIDUAL" && position.is_some() {
+                            company_info.officers.push(OfficerInfo {
+                                name: name.to_string(),
+                                position: position.unwrap().to_string(),
+                                percentage: if pct > 0.0 { Some(pct) } else { None },
+                            });
+                        } else if !name.is_empty() && pct > 0.0 {
+                            company_info.shareholders.push(ShareholderInfo {
+                                name: name.to_string(),
+                                percentage: pct,
+                            });
+                        }
+                    }
                 }
             }
-        }
-
-        // Officers
-        if let Some(arr) = data.get("OrganizationManagers").and_then(|v| v.as_array()) {
-            for mgr in arr {
-                if let (Some(name), Some(pos)) = (
-                    mgr.get("fullName").and_then(|v| v.as_str()),
-                    mgr.get("positionName").and_then(|v| v.as_str()),
-                ) {
-                    let pct = mgr.get("percentage").and_then(|v| v.as_f64());
-                    company_info.officers.push(OfficerInfo {
-                        name: name.to_string(),
-                        position: pos.to_string(),
-                        percentage: pct,
-                    });
-                }
+            Err(e) => {
+                tracing::debug!("[VCI-REST] shareholder fetch failed for {}: {e}", symbol);
             }
         }
+
+        tracing::info!(
+            "[FUNDAMENTAL] [company-details] {} parsed: exchange={:?} industry={:?} shares={:?} price={:?} profile={} shareholders={} officers={}",
+            symbol,
+            company_info.exchange,
+            company_info.industry,
+            company_info.outstanding_shares,
+            company_info.current_price,
+            company_info.company_profile.as_ref().map(|p| if p.len() > 30 { &p[..30] } else { p }).unwrap_or("none"),
+            company_info.shareholders.len(),
+            company_info.officers.len(),
+        );
 
         Ok(company_info)
     }
 
     // -----------------------------------------------------------------------
-    // financial_ratios — Financial data via GraphQL
+    // financial_ratios — Financial data via REST API (iq.vietcap.com.vn)
     // -----------------------------------------------------------------------
 
     pub async fn financial_ratios(
         &self,
         symbol: &str,
-        period: &str,
+        _period: &str,
     ) -> Result<Vec<HashMap<String, Value>>, VciError> {
-        let url = self.base_url.replace("/api/", "/data-mt/") + "graphql";
+        self.ensure_handshake().await;
 
-        let vci_period = match period {
-            "quarter" => "Q",
-            "year" => "Y",
-            _ => "Q",
+        let symbol = symbol.to_uppercase();
+        let url = format!(
+            "https://iq.vietcap.com.vn/api/iq-insight-service/v1/company/{}/statistics-financial",
+            symbol
+        );
+
+        let resp = self.make_get_request(&url, "financial-ratios").await?;
+        let data = resp.get("data").ok_or(VciError::NoData)?;
+
+        let items = if data.is_array() {
+            data.as_array().unwrap()
+        } else {
+            tracing::info!("[FUNDAMENTAL] [financial-ratios] {} data is not array: {:?}", symbol, data);
+            return Err(VciError::NoData);
         };
 
-        let graphql_query = r#"fragment Ratios on CompanyFinancialRatio {
-  ticker
-  yearReport
-  lengthReport
-  updateDate
-  revenue
-  revenueGrowth
-  netProfit
-  netProfitGrowth
-  ebitMargin
-  roe
-  roic
-  roa
-  pe
-  pb
-  eps
-  currentRatio
-  cashRatio
-  quickRatio
-  interestCoverage
-  ae
-  netProfitMargin
-  grossMargin
-  ev
-  issueShare
-  ps
-  pcf
-  bvps
-  evPerEbitda
-  BSA1
-  BSA2
-  BSA5
-  BSA8
-  BSA10
-  BSA159
-  BSA16
-  BSA22
-  BSA23
-  BSA24
-  BSA162
-  BSA27
-  BSA29
-  BSA43
-  BSA46
-  BSA50
-  BSA209
-  BSA53
-  BSA54
-  BSA55
-  BSA56
-  BSA58
-  BSA67
-  BSA71
-  BSA173
-  BSA78
-  BSA79
-  BSA80
-  BSA175
-  BSA86
-  BSA90
-  BSA96
-  CFA21
-  CFA22
-  at
-  fat
-  acp
-  dso
-  dpo
-  ccc
-  de
-  le
-  ebitda
-  ebit
-  dividend
-  RTQ10
-  charterCapitalRatio
-  RTQ4
-  epsTTM
-  charterCapital
-  __typename
-}
+        if items.is_empty() {
+            tracing::info!("[FUNDAMENTAL] [financial-ratios] {} returned 0 items", symbol);
+            return Err(VciError::NoData);
+        }
 
-query Query($ticker: String!, $period: String!) {
-  CompanyFinancialRatio(ticker: $ticker, period: $period) {
-    ratio {
-      ...Ratios
-      __typename
-    }
-    period
-    __typename
-  }
-}"#;
+        tracing::info!(
+            "[FUNDAMENTAL] [financial-ratios] {} returned {} items, first keys: {:?}",
+            symbol,
+            items.len(),
+            items[0].as_object().map(|o| o.keys().take(15).collect::<Vec<_>>()).unwrap_or_default()
+        );
 
-        let payload = serde_json::json!({
-            "query": graphql_query,
-            "variables": {
-                "ticker": symbol.to_uppercase(),
-                "period": vci_period
-            }
-        });
+        let mut result = Vec::with_capacity(items.len());
+        for item in items {
+            if let Some(obj) = item.as_object() {
+                let mut map: HashMap<String, Value> = HashMap::new();
 
-        let response_data = self.make_request(&url, &payload).await?;
+                map.insert("ticker".to_string(), Value::String(symbol.clone()));
 
-        let data = response_data.get("data").ok_or(VciError::NoData)?;
-        let financial_ratio = data.get("CompanyFinancialRatio").ok_or(VciError::NoData)?;
-        let ratios = financial_ratio
-            .get("ratio")
-            .and_then(|v| v.as_array())
-            .ok_or(VciError::NoData)?;
-
-        let mut result = Vec::with_capacity(ratios.len());
-        for ratio in ratios {
-            if let Some(obj) = ratio.as_object() {
-                let map: HashMap<String, Value> = obj
-                    .iter()
-                    .filter_map(|(k, v)| {
-                        if k == "__typename" {
-                            None
-                        } else {
-                            Some((k.clone(), v.clone()))
+                for (k, v) in obj {
+                    match k.as_str() {
+                        "__typename" => continue,
+                        "year" => {
+                            map.insert("yearReport".to_string(), v.clone());
                         }
-                    })
-                    .collect();
+                        "quarter" => {
+                            map.insert("lengthReport".to_string(), v.clone());
+                        }
+                        _ => {
+                            map.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+
                 result.push(map);
             }
         }

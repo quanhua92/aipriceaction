@@ -185,12 +185,13 @@ pub async fn run(ticker_filter: Option<String>, rate_limit: u32, save: bool) {
                     tracing::info!("    lengthReport: {length}");
                 }
                 for key in &[
-                    "revenue", "revenueGrowth", "netProfit", "netProfitGrowth",
-                    "roe", "roa", "roic", "pe", "pb", "eps", "epsTTM",
-                    "netProfitMargin", "grossMargin", "ebitMargin",
-                    "currentRatio", "de", "le",
-                    "ev", "bvps", "ps", "pcf",
-                    "dividend", "charterCapital",
+                    "pe", "pb", "ps", "roe", "roa", "roic",
+                    "grossMargin", "ebitMargin", "afterTaxProfitMargin", "preTaxProfitMargin",
+                    "currentRatio", "quickRatio", "cashRatio", "debtToEquity",
+                    "dividendYield", "evToEbitda", "priceToCashFlow",
+                    "numberOfSharesMktCap", "marketCap", "ebit", "ebitda",
+                    "daySaleOutstanding", "daysInventoryOutstanding", "daysPayableOutstanding",
+                    "assetTurnover", "fixedAssetTurnover", "financialLeverage",
                 ] {
                     if let Some(val) = latest.get(*key) {
                         tracing::info!("    {key}: {val}");

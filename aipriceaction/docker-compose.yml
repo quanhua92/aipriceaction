@@ -22,6 +22,7 @@ services:
       - OTEL_ENDPOINT=http://openobserve:5080
       - OTEL_SERVICE_NAME=aipriceaction
       - OTEL_AUTH_HEADER=${OTEL_AUTH_HEADER:-}
+      - FUNDAMENTAL_SKIP_S3_HYDRATE=${FUNDAMENTAL_SKIP_S3_HYDRATE:-false}
     volumes:
       - aipriceaction_data:/app/data
     depends_on:

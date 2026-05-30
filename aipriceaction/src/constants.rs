@@ -395,4 +395,17 @@ pub mod s3_archive {
 
     /// Content-Type for JSON uploads.
     pub const JSON_CONTENT_TYPE: &str = "application/json";
+
+    /// VCI rate limit for fundamental data fetches (requests per minute per client).
+    pub const FUNDAMENTAL_RATE_LIMIT: u32 = 30;
+
+    /// Delay between fundamental data fetches (ms) to be gentle on VCI API.
+    pub const FUNDAMENTAL_DELAY_MS: u64 = 2000;
+
+    /// Abort fundamental cycle after this many consecutive rate-limited requests.
+    pub const FUNDAMENTAL_MAX_CONSECUTIVE_RATE_LIMIT: u32 = 3;
+
+    /// If first N tickers all return NoData from VCI, assume VCI is blocked
+    /// and skip VCI calls for the rest (use local fallback only).
+    pub const FUNDAMENTAL_VCI_DEAD_THRESHOLD: u32 = 5;
 }

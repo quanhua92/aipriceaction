@@ -2,17 +2,21 @@ use chrono::{Datelike, Duration, NaiveDate, Utc};
 use futures::StreamExt;
 use http::HeaderMap;
 use sqlx::PgPool;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::sync::Arc;
 use std::time::Duration as StdDuration;
 
 use awscreds::Credentials;
 use s3::{Bucket, BucketConfiguration, Region};
 
 use crate::constants::s3_archive::{
-    CSV_CONTENT_TYPE, JSON_CONTENT_TYPE, LOOKBACK_DAYS, LOOP_SECS, STARTUP_CONSECUTIVE_SKIP_LIMIT,
-    STARTUP_SCAN_INTERVAL_SECS,
+    CSV_CONTENT_TYPE, FUNDAMENTAL_DELAY_MS, FUNDAMENTAL_MAX_CONSECUTIVE_RATE_LIMIT,
+    FUNDAMENTAL_RATE_LIMIT, FUNDAMENTAL_VCI_DEAD_THRESHOLD, JSON_CONTENT_TYPE,
+    LOOKBACK_DAYS, LOOP_SECS, STARTUP_CONSECUTIVE_SKIP_LIMIT, STARTUP_SCAN_INTERVAL_SECS,
     UPLOAD_CONCURRENCY,
 };
+use crate::constants::vci_worker::INDEX_TICKERS;
+use crate::providers::vci::VciProvider;
 use crate::queries::ohlcv::Ticker;
 use crate::queries::s3_archive::{
     day_range, get_data_ranges, get_ohlcv_day_fingerprint, get_ohlcv_for_day,
@@ -108,7 +112,6 @@ impl EnrichmentData {
     }
 }
 
-use std::collections::BTreeMap;
 
 /// Load a specific field index from vn.csv.
 fn load_vn_csv_field(field_index: usize) -> HashMap<String, String> {
@@ -283,6 +286,664 @@ fn rows_to_csv(rows: &[crate::models::ohlcv::OhlcvRow]) -> Vec<u8> {
     wtr.into_inner().unwrap_or_default()
 }
 
+// ── Fundamental data (company_info + financial_ratios) ──────────────────────
+
+/// Build S3 key for fundamental company info.
+fn s3_key_company_info(source: &str, ticker: &str) -> String {
+    format!("fundamental/{}/{}/company_info.json", source, ticker)
+}
+
+/// Build S3 key for fundamental financial ratios.
+fn s3_key_financial_ratios(source: &str, ticker: &str) -> String {
+    format!("fundamental/{}/{}/financial_ratios.json", source, ticker)
+}
+
+/// Build S3 key for fundamental per-ticker metadata checkpoint.
+fn s3_key_meta(source: &str, ticker: &str) -> String {
+    format!("fundamental/{}/{}/_meta.json", source, ticker)
+}
+
+/// Per-ticker metadata stored in S3 as `_meta.json`. Persists across restarts.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct FundamentalMeta {
+    ticker: String,
+    last_fetch: String,
+    company_info_uploaded: bool,
+    financial_ratios_uploaded: bool,
+}
+
+/// In-memory state tracking last successful fundamental fetch date per ticker.
+/// Hydrated from S3 `_meta.json` on startup to avoid redundant VCI calls after restart.
+#[derive(Default)]
+struct FundamentalState {
+    last_fetch: HashMap<String, NaiveDate>,
+}
+
+impl FundamentalState {
+    fn is_due(&self, ticker: &str, today: NaiveDate) -> bool {
+        self.last_fetch.get(ticker).map_or(true, |d| *d < today)
+    }
+
+    fn mark_done(&mut self, ticker: &str, date: NaiveDate) {
+        self.last_fetch.insert(ticker.to_string(), date);
+    }
+}
+
+/// Lazy-loaded fallback from local company_info.json (37MB).
+/// Loaded once per fundamental cycle when the first rate-limited ticker needs it.
+/// Avoids loading into memory unless VCI is unreachable.
+/// If file is missing or corrupt, `tried` prevents re-reading on every ticker.
+struct CompanyInfoFallback {
+    data: Option<HashMap<String, FallbackEntry>>,
+    tried: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct FallbackEntry {
+    #[serde(default)]
+    company_info: Option<crate::providers::vci::CompanyInfo>,
+    #[serde(default)]
+    financial_ratios: Option<Vec<std::collections::HashMap<String, serde_json::Value>>>,
+}
+
+impl CompanyInfoFallback {
+    fn new() -> Self {
+        Self {
+            data: None,
+            tried: false,
+        }
+    }
+
+    fn company_info(&mut self, ticker: &str) -> Option<crate::providers::vci::CompanyInfo> {
+        self.ensure_loaded();
+        self.data
+            .as_ref()?
+            .get(ticker)
+            .and_then(|e| e.company_info.clone())
+    }
+
+    fn financial_ratios(
+        &mut self,
+        ticker: &str,
+    ) -> Option<Vec<std::collections::HashMap<String, serde_json::Value>>> {
+        self.ensure_loaded();
+        self.data
+            .as_ref()?
+            .get(ticker)
+            .and_then(|e| e.financial_ratios.clone())
+    }
+
+    fn ensure_loaded(&mut self) {
+        if self.tried {
+            return;
+        }
+        self.tried = true;
+        let start = std::time::Instant::now();
+        match Self::load_from_file() {
+            Ok(map) => {
+                tracing::info!(
+                    "[FUNDAMENTAL] loaded company_info.json fallback ({} tickers, {:.1}s)",
+                    map.len(),
+                    start.elapsed().as_secs_f64(),
+                );
+                self.data = Some(map);
+            }
+            Err(e) => {
+                tracing::warn!("[FUNDAMENTAL] company_info.json fallback unavailable: {e}");
+            }
+        }
+    }
+
+    fn load_from_file() -> Result<HashMap<String, FallbackEntry>, Box<dyn std::error::Error + Send + Sync>> {
+        let path = std::path::Path::new("company_info.json");
+        if !path.exists() {
+            return Err("company_info.json not found".into());
+        }
+        let file = std::fs::File::open(path)?;
+        let reader = std::io::BufReader::with_capacity(8 * 1024 * 1024, file);
+        let entries: Vec<FallbackEntryRaw> = serde_json::from_reader(reader)?;
+        let mut map = HashMap::new();
+        for entry in entries {
+            if let Some(ref ci) = entry.company_info {
+                if !ci.symbol.is_empty() {
+                    map.insert(ci.symbol.clone(), FallbackEntry {
+                        company_info: entry.company_info,
+                        financial_ratios: entry.financial_ratios,
+                    });
+                    continue;
+                }
+            }
+            if !entry.ticker.is_empty() {
+                map.insert(entry.ticker.clone(), FallbackEntry {
+                    company_info: entry.company_info,
+                    financial_ratios: entry.financial_ratios,
+                });
+            }
+        }
+        Ok(map)
+    }
+}
+
+#[derive(serde::Deserialize)]
+struct FallbackEntryRaw {
+    ticker: String,
+    #[serde(default)]
+    company_info: Option<crate::providers::vci::CompanyInfo>,
+    #[serde(default)]
+    financial_ratios: Option<Vec<std::collections::HashMap<String, serde_json::Value>>>,
+}
+
+/// Fetch existing JSON from S3, deserialize into T. Returns None if not found or parse error.
+async fn fetch_existing_json<T: serde::de::DeserializeOwned>(
+    bucket: &Bucket,
+    key: &str,
+) -> Option<T> {
+    match bucket.get_object(key).await {
+        Ok(response_data) => serde_json::from_slice::<T>(response_data.as_slice()).ok(),
+        Err(_) => None,
+    }
+}
+
+/// Merge new CompanyInfo into old. Prefers new data; falls back to old when new is None/empty.
+fn merge_company_info(
+    new: crate::providers::vci::CompanyInfo,
+    old: Option<crate::providers::vci::CompanyInfo>,
+) -> crate::providers::vci::CompanyInfo {
+    let Some(old) = old else { return new };
+
+    crate::providers::vci::CompanyInfo {
+        symbol: new.symbol,
+        exchange: new.exchange.or(old.exchange),
+        industry: new.industry.or(old.industry),
+        company_type: new.company_type.or(old.company_type),
+        established_year: new.established_year.or(old.established_year),
+        employees: new.employees.or(old.employees),
+        market_cap: new.market_cap.or(old.market_cap),
+        current_price: new.current_price.or(old.current_price),
+        outstanding_shares: new.outstanding_shares.or(old.outstanding_shares),
+        company_profile: new.company_profile.or(old.company_profile),
+        website: new.website.or(old.website),
+        shareholders: if new.shareholders.is_empty() {
+            old.shareholders
+        } else {
+            new.shareholders
+        },
+        officers: if new.officers.is_empty() {
+            old.officers
+        } else {
+            new.officers
+        },
+    }
+}
+
+/// Merge new financial ratios with old. Match entries by (yearReport, lengthReport).
+/// Prefers new entries; keeps old entries that have no new counterpart.
+/// For overlapping entries, keeps new (it's fresher data).
+fn merge_financial_ratios(
+    new: &[std::collections::HashMap<String, serde_json::Value>],
+    old: &[std::collections::HashMap<String, serde_json::Value>],
+) -> Vec<std::collections::HashMap<String, serde_json::Value>> {
+    if old.is_empty() {
+        return new.to_vec();
+    }
+    if new.is_empty() {
+        return old.to_vec();
+    }
+
+    fn period_key(r: &std::collections::HashMap<String, serde_json::Value>) -> (i64, i64) {
+        let year = r.get("yearReport").and_then(|v| v.as_i64()).unwrap_or(0);
+        let length = r.get("lengthReport").and_then(|v| v.as_i64()).unwrap_or(0);
+        (year, length)
+    }
+
+    let new_keys: std::collections::HashSet<(i64, i64)> =
+        new.iter().map(period_key).collect();
+
+    let mut result: Vec<std::collections::HashMap<String, serde_json::Value>> = new.to_vec();
+
+    for old_entry in old {
+        if !new_keys.contains(&period_key(old_entry)) {
+            result.push(old_entry.clone());
+        }
+    }
+
+    result.sort_by(|a, b| {
+        let ka = period_key(a);
+        let kb = period_key(b);
+        kb.1.cmp(&ka.1).then(kb.0.cmp(&ka.0))
+    });
+
+    result
+}
+
+/// Check if company_info has meaningful data (not an empty shell).
+/// A valid entry must have at least exchange OR industry, plus some identifying data.
+fn is_valid_company_info(info: &crate::providers::vci::CompanyInfo) -> bool {
+    let has_exchange = info.exchange.is_some();
+    let has_industry = info.industry.is_some();
+    let has_shares = info.outstanding_shares.is_some();
+    let has_shareholders = !info.shareholders.is_empty();
+    let has_price = info.current_price.is_some();
+    let has_profile = info.company_profile.is_some();
+    let has_any = has_exchange || has_industry || has_shareholders || has_profile;
+    if !has_any {
+        return false;
+    }
+    if has_price && has_shares {
+        let shares = info.outstanding_shares.unwrap();
+        let price = info.current_price.unwrap();
+        if shares > 0 && price > 0.0 && info.market_cap.unwrap_or(0.0) <= 0.0 {
+            return false;
+        }
+    }
+    true
+}
+
+/// Check if financial ratios have at least one entry with key fields.
+fn is_valid_financial_ratios(
+    ratios: &[std::collections::HashMap<String, serde_json::Value>],
+) -> bool {
+    ratios.iter().any(|r| {
+        r.contains_key("yearReport")
+            && r.contains_key("ticker")
+            && (r.contains_key("revenue") || r.contains_key("netProfit") || r.contains_key("pe"))
+    })
+}
+
+/// Fetch fundamental data for VN tickers and upload to S3.
+/// Each ticker is fetched at most once per day (in-memory tracking).
+/// Failed tickers are not marked as done, so they retry on the next cycle.
+async fn fundamental_cycle(
+    pool: &PgPool,
+    bucket: &Bucket,
+    provider: &VciProvider,
+    state: &mut FundamentalState,
+    index_set: &HashSet<String>,
+) {
+    let today = Utc::now().date_naive();
+
+    let all_tickers = match sqlx::query_as::<_, Ticker>(
+        "SELECT id, source, ticker, name, status, next_1d FROM tickers WHERE source = 'vn' ORDER BY ticker",
+    )
+    .fetch_all(pool)
+    .await
+    {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!("[FUNDAMENTAL] failed to load VN tickers: {e}");
+            return;
+        }
+    };
+
+    if std::env::var("FUNDAMENTAL_SKIP_S3_HYDRATE").as_deref() == Ok("true") {
+        tracing::info!("[FUNDAMENTAL] per-ticker hydration disabled (FUNDAMENTAL_SKIP_S3_HYDRATE=true)");
+    }
+
+    let due: Vec<&Ticker> = all_tickers
+        .iter()
+        .filter(|t| !index_set.contains(t.ticker.as_str()))
+        .filter(|t| state.is_due(&t.ticker, today))
+        .collect();
+
+    if due.is_empty() {
+        tracing::debug!("[FUNDAMENTAL] no due tickers");
+        return;
+    }
+
+    tracing::info!("[FUNDAMENTAL] fetching {} tickers", due.len());
+
+    let mut ok: u32 = 0;
+    let mut err: u32 = 0;
+    let mut consecutive_rate_limits: u32 = 0;
+    let mut vci_dead = false;
+    let mut vci_healthy_requests: u32 = 0;
+    let mut fallback = CompanyInfoFallback::new();
+
+    for (i, ticker) in due.iter().enumerate() {
+        if consecutive_rate_limits >= FUNDAMENTAL_MAX_CONSECUTIVE_RATE_LIMIT {
+            tracing::warn!(
+                "[FUNDAMENTAL] aborting after {consecutive_rate_limits} consecutive rate limits — {}/{} remaining tickers skipped",
+                due.len() - i,
+                due.len(),
+            );
+            break;
+        }
+
+        let ticker_start = std::time::Instant::now();
+        tracing::info!("[FUNDAMENTAL] [{}/{}] {} — start", i + 1, due.len(), ticker.ticker);
+
+        // Inline hydration: check _meta.json for this ticker (acts as cooldown)
+        if std::env::var("FUNDAMENTAL_SKIP_S3_HYDRATE").as_deref() != Ok("true") {
+            let meta_key = s3_key_meta("vn", &ticker.ticker);
+            if let Some(meta) = fetch_existing_json::<FundamentalMeta>(bucket, &meta_key).await {
+                if let Ok(date) = NaiveDate::parse_from_str(&meta.last_fetch, "%Y-%m-%d") {
+                    if date >= today {
+                        tracing::info!(
+                            "[FUNDAMENTAL] [{}/{}] {} — already fetched {} (via _meta.json), skipping",
+                            i + 1, due.len(), ticker.ticker, date
+                        );
+                        state.mark_done(&ticker.ticker, date);
+                        ok += 1;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        let mut company_ok = false;
+        let mut ratios_ok = false;
+        let mut ticker_rate_limited = false;
+        let mut ticker_vci_ok = false;
+
+        if vci_dead {
+            let key_ci = s3_key_company_info("vn", &ticker.ticker);
+            let has_s3 = fetch_existing_json::<crate::providers::vci::CompanyInfo>(bucket, &key_ci).await;
+            if has_s3.is_none() {
+                if let Some(info) = fallback.company_info(&ticker.ticker) {
+                    if is_valid_company_info(&info) {
+                        let _ = upload_json(bucket, &key_ci, &info).await;
+                        company_ok = true;
+                    }
+                }
+            } else {
+                company_ok = true;
+            }
+
+            let key_fr = s3_key_financial_ratios("vn", &ticker.ticker);
+            let has_s3 = fetch_existing_json::<std::collections::HashMap<String, serde_json::Value>>(bucket, &key_fr).await;
+            if has_s3.is_none() {
+                if let Some(ratios) = fallback.financial_ratios(&ticker.ticker) {
+                    if !ratios.is_empty() && is_valid_financial_ratios(&ratios) {
+                        let wrapper = serde_json::json!({
+                            "ticker": ticker.ticker,
+                            "updated_at": Utc::now().to_rfc3339(),
+                            "count": ratios.len(),
+                            "ratios": ratios,
+                        });
+                        let _ = upload_json(bucket, &key_fr, &wrapper).await;
+                        ratios_ok = true;
+                    }
+                }
+            } else {
+                ratios_ok = true;
+            }
+        } else {
+        tracing::debug!(
+            "[FUNDAMENTAL] [{}/{}] {}",
+            i + 1,
+            due.len(),
+            ticker.ticker
+        );
+
+        match provider.company_info(&ticker.ticker).await {
+            Ok(info) => {
+                ticker_vci_ok = true;
+                let key_ci = s3_key_company_info("vn", &ticker.ticker);
+                let existing: Option<crate::providers::vci::CompanyInfo> =
+                    fetch_existing_json(bucket, &key_ci).await;
+                let merged = merge_company_info(info, existing);
+                if is_valid_company_info(&merged) {
+                    match upload_json(bucket, &key_ci, &merged).await {
+                        Ok(true) => tracing::info!("[FUNDAMENTAL] uploaded {key_ci}"),
+                        Ok(false) => tracing::info!("[FUNDAMENTAL] skipped {key_ci} (unchanged)"),
+                        Err(e) => tracing::warn!("[FUNDAMENTAL] upload failed for {key_ci}: {e}"),
+                    }
+                    company_ok = true;
+                } else {
+                    tracing::warn!(
+                        "[FUNDAMENTAL] {} company_info still empty after merge (exchange={:?}, industry={:?}, shareholders={}), skipping",
+                        ticker.ticker,
+                        merged.exchange,
+                        merged.industry,
+                        merged.shareholders.len(),
+                    );
+                }
+            }
+            Err(e) => {
+                let use_fallback = matches!(
+                    e,
+                    crate::providers::vci::VciError::RateLimit
+                        | crate::providers::vci::VciError::NoData
+                );
+                if matches!(e, crate::providers::vci::VciError::RateLimit) {
+                    ticker_rate_limited = true;
+                }
+                tracing::warn!("[FUNDAMENTAL] company_info {} failed: {e}", ticker.ticker);
+
+                if use_fallback {
+                    let key_ci = s3_key_company_info("vn", &ticker.ticker);
+                    let has_s3 =
+                        fetch_existing_json::<crate::providers::vci::CompanyInfo>(bucket, &key_ci)
+                            .await;
+                    if has_s3.is_none() {
+                        if let Some(info) = fallback.company_info(&ticker.ticker) {
+                            tracing::info!(
+                                "[FUNDAMENTAL] {} using local fallback for company_info",
+                                ticker.ticker
+                            );
+                            if is_valid_company_info(&info) {
+                                let _ = upload_json(bucket, &key_ci, &info).await;
+                                company_ok = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        tokio::time::sleep(StdDuration::from_millis(FUNDAMENTAL_DELAY_MS)).await;
+
+        match provider.financial_ratios(&ticker.ticker, "quarter").await {
+            Ok(ratios) => {
+                ticker_vci_ok = true;
+                let key_fr = s3_key_financial_ratios("vn", &ticker.ticker);
+                let existing: Option<std::collections::HashMap<String, serde_json::Value>> =
+                    fetch_existing_json(bucket, &key_fr).await;
+                let old_ratios = existing.map(|m: std::collections::HashMap<String, serde_json::Value>| {
+                    m.get("ratios")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_object().map(|obj| {
+                                    obj.iter()
+                                        .filter_map(|(k, v)| if k == "ratios" { None } else { Some((k.clone(), v.clone())) })
+                                        .collect::<std::collections::HashMap<String, serde_json::Value>>()
+                                }))
+                                .collect::<Vec<_>>()
+                        })
+                        .unwrap_or_default()
+                }).unwrap_or_default();
+                let merged = merge_financial_ratios(&ratios, &old_ratios);
+                if !merged.is_empty() && is_valid_financial_ratios(&merged) {
+                    let wrapper = serde_json::json!({
+                        "ticker": ticker.ticker,
+                        "updated_at": Utc::now().to_rfc3339(),
+                        "count": merged.len(),
+                        "ratios": merged,
+                    });
+                    match upload_json(bucket, &key_fr, &wrapper).await {
+                        Ok(true) => tracing::info!("[FUNDAMENTAL] uploaded {key_fr}"),
+                        Ok(false) => tracing::info!("[FUNDAMENTAL] skipped {key_fr} (unchanged)"),
+                        Err(e) => tracing::warn!("[FUNDAMENTAL] upload failed for {key_fr}: {e}"),
+                    }
+                    ratios_ok = true;
+                } else {
+                    tracing::warn!(
+                        "[FUNDAMENTAL] {} financial_ratios empty after merge, skipping",
+                        ticker.ticker,
+                    );
+                }
+            }
+            Err(e) => {
+                let use_fallback = matches!(
+                    e,
+                    crate::providers::vci::VciError::RateLimit
+                        | crate::providers::vci::VciError::NoData
+                );
+                if matches!(e, crate::providers::vci::VciError::RateLimit) {
+                    ticker_rate_limited = true;
+                }
+                tracing::warn!("[FUNDAMENTAL] financial_ratios {} failed: {e}", ticker.ticker);
+
+                if use_fallback {
+                    let key_fr = s3_key_financial_ratios("vn", &ticker.ticker);
+                    let has_s3 = fetch_existing_json::<std::collections::HashMap<String, serde_json::Value>>(bucket, &key_fr).await;
+                    if has_s3.is_none() {
+                        if let Some(ratios) = fallback.financial_ratios(&ticker.ticker) {
+                            if !ratios.is_empty() && is_valid_financial_ratios(&ratios) {
+                                tracing::info!("[FUNDAMENTAL] {} using local fallback for financial_ratios", ticker.ticker);
+                                let wrapper = serde_json::json!({
+                                    "ticker": ticker.ticker,
+                                    "updated_at": Utc::now().to_rfc3339(),
+                                    "count": ratios.len(),
+                                    "ratios": ratios,
+                                });
+                                let _ = upload_json(bucket, &key_fr, &wrapper).await;
+                                ratios_ok = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        } // end else (vci not dead)
+
+        if !vci_dead
+            && !company_ok
+            && !ratios_ok
+            && !ticker_vci_ok
+            && vci_healthy_requests == 0
+            && i + 1 >= FUNDAMENTAL_VCI_DEAD_THRESHOLD as usize
+        {
+            tracing::warn!(
+                "[FUNDAMENTAL] VCI appears dead (0 healthy requests after {} tickers), switching to fallback-only for remaining {} tickers",
+                i + 1,
+                due.len() - i - 1,
+            );
+            vci_dead = true;
+        }
+
+        if ticker_rate_limited {
+            consecutive_rate_limits += 1;
+        } else {
+            consecutive_rate_limits = 0;
+        }
+
+        if ticker_vci_ok {
+            vci_healthy_requests += 1;
+        }
+
+        if company_ok && ratios_ok {
+            state.mark_done(&ticker.ticker, today);
+            let meta = FundamentalMeta {
+                ticker: ticker.ticker.clone(),
+                last_fetch: today.to_string(),
+                company_info_uploaded: true,
+                financial_ratios_uploaded: true,
+            };
+            let meta_key = s3_key_meta("vn", &ticker.ticker);
+            if let Err(e) = upload_json(bucket, &meta_key, &meta).await {
+                tracing::warn!("[FUNDAMENTAL] failed to save _meta.json for {}: {e}", ticker.ticker);
+            }
+            ok += 1;
+            tracing::info!(
+                "[FUNDAMENTAL] [{}/{}] {} — done (ci={}, fr={}, {:.1}s)",
+                i + 1, due.len(), ticker.ticker,
+                if company_ok { "ok" } else { "skip" },
+                if ratios_ok { "ok" } else { "skip" },
+                ticker_start.elapsed().as_secs_f64(),
+            );
+        } else {
+            err += 1;
+            tracing::info!(
+                "[FUNDAMENTAL] [{}/{}] {} — failed (ci={}, fr={}, vci={}, {:.1}s)",
+                i + 1, due.len(), ticker.ticker,
+                if company_ok { "ok" } else { "no" },
+                if ratios_ok { "ok" } else { "no" },
+                if ticker_vci_ok { "ok" } else { "no" },
+                ticker_start.elapsed().as_secs_f64(),
+            );
+        }
+
+        if i + 1 < due.len() && !vci_dead {
+            tokio::time::sleep(StdDuration::from_millis(FUNDAMENTAL_DELAY_MS)).await;
+        }
+    }
+
+    tracing::info!("[FUNDAMENTAL] cycle done — {ok} ok, {err} failed");
+
+    let _ = upload_fundamental_index(bucket, &all_tickers, state, &today, index_set).await;
+}
+
+/// Upload a manifest of all VN tickers and their fundamental data status.
+async fn upload_fundamental_index(
+    bucket: &Bucket,
+    all_tickers: &[Ticker],
+    state: &FundamentalState,
+    today: &NaiveDate,
+    index_set: &HashSet<String>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let entries: Vec<serde_json::Value> = all_tickers
+        .iter()
+        .filter(|t| !index_set.contains(t.ticker.as_str()))
+        .map(|t| {
+            let fetched = state.last_fetch.contains_key(&t.ticker);
+            serde_json::json!({
+                "ticker": t.ticker,
+                "name": t.name,
+                "fetched_today": fetched,
+                "date": if fetched { state.last_fetch.get(&t.ticker).map(|d| d.to_string()).unwrap_or_default() } else { String::new() },
+            })
+        })
+        .collect();
+
+    let index = serde_json::json!({
+        "updated_at": Utc::now().to_rfc3339(),
+        "date": today.to_string(),
+        "count": entries.len(),
+        "fetched_today": entries.iter().filter(|e| e["fetched_today"].as_bool().unwrap_or(false)).count(),
+        "tickers": entries,
+    });
+
+    let key = "fundamental/vn/_index.json";
+    upload_json(bucket, key, &index).await?;
+
+    tracing::info!("[FUNDAMENTAL] uploaded {key}");
+    Ok(())
+}
+
+/// Upload JSON to S3 with hash-based dedup via x-amz-meta-content-hash.
+/// Returns Ok(true) if uploaded, Ok(false) if skipped (unchanged).
+async fn upload_json(
+    bucket: &Bucket,
+    key: &str,
+    data: &impl serde::Serialize,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    let json_bytes = serde_json::to_vec(data)?;
+    let hash = {
+        use sha2::{Digest, Sha256};
+        let h = Sha256::digest(&json_bytes);
+        hex::encode(h)
+    };
+
+    if let Ok((head, _status)) = bucket.head_object(key).await {
+        if let Some(existing) = head.metadata.as_ref().and_then(|m| m.get("content-hash")) {
+            if existing == &hash {
+                return Ok(false);
+            }
+        }
+    }
+
+    let mut headers = HeaderMap::new();
+    headers.insert("x-amz-meta-content-hash", hash.parse().unwrap());
+
+    bucket
+        .put_object_with_content_type_and_headers(key, &json_bytes, JSON_CONTENT_TYPE, Some(headers))
+        .await?;
+
+    Ok(true)
+}
+
 // ── Worker entry point ──
 
 pub async fn run(pool: PgPool, _redis: Option<crate::redis::RedisClient>) {
@@ -300,11 +961,29 @@ pub async fn run(pool: PgPool, _redis: Option<crate::redis::RedisClient>) {
         .and_then(|v| v.parse::<u64>().ok())
         .unwrap_or(LOOP_SECS);
 
+    let vci_provider = match VciProvider::new(FUNDAMENTAL_RATE_LIMIT) {
+        Ok(p) => {
+            tracing::info!(
+                "s3_archive: VCI provider ready ({} clients, {FUNDAMENTAL_RATE_LIMIT}/min) for fundamental data",
+                p.client_count(),
+            );
+            Some(Arc::new(p))
+        }
+        Err(e) => {
+            tracing::warn!("s3_archive: VCI provider unavailable, fundamental data disabled: {e}");
+            None
+        }
+    };
+
+    let index_set: HashSet<String> = INDEX_TICKERS.iter().map(|s| s.to_string()).collect();
+    let mut fundamental_state = FundamentalState::default();
+
     tracing::info!(
-        "s3_archive: worker started (interval={}s, lookback_days={}, bucket={})",
+        "s3_archive: worker started (interval={}s, lookback_days={}, bucket={}, fundamental={})",
         interval_secs,
         LOOKBACK_DAYS,
         std::env::var("S3_BUCKET").unwrap_or_default(),
+        vci_provider.is_some(),
     );
 
     // Ensure bucket exists (auto-create if not)
@@ -335,8 +1014,14 @@ pub async fn run(pool: PgPool, _redis: Option<crate::redis::RedisClient>) {
         if let Err(e) = incremental_cycle(&pool, &bucket, &enrichment).await {
             tracing::error!("s3_archive: incremental cycle failed: {e}");
         }
+
+        // ── Fundamental data cycle (once per day per ticker, in-memory tracking) ──
+        if let Some(ref provider) = vci_provider {
+            fundamental_cycle(&pool, &bucket, provider, &mut fundamental_state, &index_set).await;
+        }
+
         tracing::info!(
-            "s3_archive: incremental cycle complete, sleeping {}s",
+            "s3_archive: cycle complete, sleeping {}s",
             interval_secs
         );
         tokio::time::sleep(StdDuration::from_secs(interval_secs)).await;
