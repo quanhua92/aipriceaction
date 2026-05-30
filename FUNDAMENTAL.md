@@ -16,12 +16,243 @@ fundamental/
 
 ### Files
 
-| File | Description |
-|---|---|
-| `company_info.json` | Industry, market cap, shareholders, officers, profile (exchange not available from REST API) |
-| `financial_ratios.json` | Envelope `{ticker, updated_at, count, ratios: [...]}` with ~40 fields per quarterly entry |
-| `_meta.json` | `{ticker, last_fetch, company_info_uploaded, financial_ratios_uploaded}` — persistent checkpoint |
-| `_index.json` | `{updated_at, date, count, fetched_today, tickers: [...]}` — manifest of all tickers |
+| File | Description | Sample |
+|---|---|---|
+| `company_info.json` | Merged company profile | [ACB](https://s3.aipriceaction.com/fundamental/vn/ACB/company_info.json) |
+| `financial_ratios.json` | Envelope with quarterly ratios (60 fields per entry) | [ACB](https://s3.aipriceaction.com/fundamental/vn/ACB/financial_ratios.json) |
+| `_meta.json` | Per-ticker persistent checkpoint | |
+| `_index.json` | Manifest of all tickers + fetch status | |
+
+### JSON Schemas
+
+#### `company_info.json`
+
+> Sample: https://s3.aipriceaction.com/fundamental/vn/ACB/company_info.json
+
+```json
+{
+  "symbol": "ACB",
+  "exchange": null,
+  "industry": "Ngân hàng",
+  "company_type": null,
+  "established_year": null,
+  "employees": null,
+  "market_cap": 122252427056200.0,
+  "current_price": 23500.0,
+  "outstanding_shares": 5136656599,
+  "company_profile": "<div style=\"FONT-FAMILY: Arial...",
+  "website": null,
+  "shareholders": [
+    { "name": "Sather Gate Investments Limited", "percentage": 0.0499 },
+    { "name": "Dragon Financial Holdings Limited", "percentage": 0.036243 }
+  ],
+  "officers": [
+    { "name": "Trần Hùng Huy", "position": "Chủ tịch HĐQT", "percentage": null },
+    { "name": "Mai Thị Hằng", "position": "Tổng Giám đốc", "percentage": null }
+  ]
+}
+```
+
+| Field | Type | Source | Notes |
+|---|---|---|---|
+| `symbol` | `string` | Always set | Ticker symbol |
+| `exchange` | `string?` | Not from REST | Always `null` from REST API; may exist from legacy data merge |
+| `industry` | `string?` | `sectorVn` | Vietnamese sector name from `/details` |
+| `company_type` | `string?` | — | Not populated by REST |
+| `established_year` | `u32?` | — | Not populated by REST |
+| `employees` | `u32?` | — | Not populated by REST |
+| `market_cap` | `f64?` | `currentPrice × numberOfSharesMktCap` | From `/details` |
+| `current_price` | `f64?` | `currentPrice` | From `/details` |
+| `outstanding_shares` | `u64?` | `numberOfSharesMktCap` | From `/details` (f64 → u64) |
+| `company_profile` | `string?` | `profile` | HTML string from `/details` |
+| `website` | `string?` | — | Not populated by REST |
+| `shareholders` | `ShareholderInfo[]` | `/shareholder` | Filtered: non-INDIVIDUAL or percentage > 0 |
+| `officers` | `OfficerInfo[]` | `/shareholder` | Filtered: ownerType=INDIVIDUAL with positionName |
+
+#### `financial_ratios.json`
+
+> Sample: https://s3.aipriceaction.com/fundamental/vn/ACB/financial_ratios.json
+>
+> **60 fields per entry** — all fields from REST `/statistics-financial` are stored as-is (passthrough `HashMap<String, Value>`).
+
+```json
+{
+  "ticker": "ACB",
+  "updated_at": "2026-05-30T12:06:57",
+  "count": 62,
+  "ratios": [
+    {
+      "yearReport": 2025,
+      "lengthReport": 5,
+      "ticker": "ACB",
+      "pe": 8.2386621048,
+      "pb": 1.3531858822,
+      "ps": 3.7843420353,
+      "roe": 0.1755767655,
+      "roa": 0.0165353343,
+      "roic": 0.0,
+      "grossMargin": 0.6767738678,
+      "afterTaxProfitMargin": 0.4622981564,
+      "preTaxProfitMargin": 0.5781065045,
+      "ebitMargin": 0.0,
+      "netInterestMargin": 0.0292074524,
+      "assetTurnover": 0.0,
+      "debtToEquity": 0.0,
+      "debtPerEquity": 0.0,
+      "financialLeverage": 0.0,
+      "currentRatio": 0.0,
+      "quickRatio": 0.0,
+      "cashRatio": 0.0,
+      "equityToLiabilities": 0.1014889219,
+      "equityToLoans": 0.1376278917,
+      "totalEquityTotalAsset": 0.0921379415,
+      "ownersEquity": 0.0,
+      "dividendYield": 0.0,
+      "evToEbitda": 0.0,
+      "priceToCashFlow": 4.5419891063,
+      "ebit": 0.0,
+      "ebitda": 0.0,
+      "marketCap": 122252427056200.0,
+      "numberOfSharesMktCap": 5136656599,
+      "fixedAssetTurnover": 0.0,
+      "cashCycle": 0.0,
+      "daySaleOutstanding": 0.0,
+      "daysInventoryOutstanding": 0.0,
+      "daysPayableOutstanding": 0.0,
+      "nonAndInterestIncome": 0.2517315758,
+      "cir": -0.3232261322,
+      "costToIncome": -0.3232261322,
+      "npl": 0.0097140463,
+      "ldrLoanDepositRatio": 1.1736169155,
+      "car": 0.1245,
+      "casaRatio": 0.2181753594,
+      "averageCostOfFinancing": -0.0382595263,
+      "averageYieldOnEarningAssets": 0.063782336,
+      "depositGrowth": 0.0891032739,
+      "loansGrowth": 0.182699529,
+      "loansLossReserveToLoans": 0.0111021847,
+      "loansLossReservesToNPLs": -1.1429001196,
+      "provisionToOutstandingLoans": -0.0052620809,
+      "bsb113": 585180175000000.0,
+      "nob66": 124538983000000.0,
+      "nob69": 2805219000000.0,
+      "nob70": 327693000000.0,
+      "organCode": "ACB",
+      "ratioTTMId": 12283575,
+      "ratioType": "RATIO_YEAR",
+      "ratioYearId": 12283575
+    }
+  ]
+}
+```
+
+| Envelope field | Type | Description |
+|---|---|---|
+| `ticker` | `string` | Ticker symbol |
+| `updated_at` | `string` | ISO 8601 timestamp of upload |
+| `count` | `number` | Number of ratio entries |
+| `ratios` | `array` | Array of period objects |
+
+| Ratio field | Type | Category | Notes |
+|---|---|---|---|
+| `yearReport` | `number` | Key | Year (mapped from REST `year`) — merge key |
+| `lengthReport` | `number` | Key | Period: 1-4 = quarter, 5 = year — merge key |
+| `ticker` | `string` | Key | Ticker symbol |
+| `organCode` | `string` | Key | Same as ticker |
+| `ratioType` | `string` | Key | "RATIO_QUARTER" or "RATIO_YEAR" |
+| `ratioTTMId` | `number?` | Key | VCI internal ID |
+| `ratioYearId` | `number?` | Key | VCI internal ID |
+| `pe` | `f64?` | Valuation | Price-to-Earnings |
+| `pb` | `f64?` | Valuation | Price-to-Book |
+| `ps` | `f64?` | Valuation | Price-to-Sales |
+| `evToEbitda` | `f64?` | Valuation | EV/EBITDA |
+| `priceToCashFlow` | `f64?` | Valuation | Price/Cash Flow |
+| `dividendYield` | `f64?` | Valuation | Dividend yield |
+| `marketCap` | `f64?` | Valuation | Market capitalization |
+| `numberOfSharesMktCap` | `f64?` | Valuation | Outstanding shares |
+| `roe` | `f64?` | Profitability | Return on Equity |
+| `roa` | `f64?` | Profitability | Return on Assets |
+| `roic` | `f64?` | Profitability | Return on Invested Capital |
+| `grossMargin` | `f64?` | Profitability | Gross margin |
+| `afterTaxProfitMargin` | `f64?` | Profitability | Net profit margin |
+| `preTaxProfitMargin` | `f64?` | Profitability | Pre-tax profit margin |
+| `ebitMargin` | `f64?` | Profitability | EBIT margin |
+| `netInterestMargin` | `f64?` | Profitability | Net interest margin (banks) |
+| `ebit` | `f64?` | Profitability | EBIT |
+| `ebitda` | `f64?` | Profitability | EBITDA |
+| `assetTurnover` | `f64?` | Efficiency | Asset turnover ratio |
+| `fixedAssetTurnover` | `f64?` | Efficiency | Fixed asset turnover |
+| `debtToEquity` | `f64?` | Leverage | Debt/Equity |
+| `debtPerEquity` | `f64?` | Leverage | Debt per Equity |
+| `financialLeverage` | `f64?` | Leverage | Financial leverage |
+| `equityToLiabilities` | `f64?` | Leverage | Equity/Liabilities |
+| `equityToLoans` | `f64?` | Leverage | Equity/Loans (banks) |
+| `totalEquityTotalAsset` | `f64?` | Leverage | Total equity/Total assets |
+| `ownersEquity` | `f64?` | Leverage | Owner's equity |
+| `currentRatio` | `f64?` | Liquidity | Current ratio |
+| `quickRatio` | `f64?` | Liquidity | Quick ratio |
+| `cashRatio` | `f64?` | Liquidity | Cash ratio |
+| `cashCycle` | `f64?` | Cash cycle | Cash conversion cycle |
+| `daySaleOutstanding` | `f64?` | Cash cycle | Days sales outstanding |
+| `daysInventoryOutstanding` | `f64?` | Cash cycle | Days inventory outstanding |
+| `daysPayableOutstanding` | `f64?` | Cash cycle | Days payable outstanding |
+| `nonAndInterestIncome` | `f64?` | Bank | Non-interest income ratio |
+| `cir` / `costToIncome` | `f64?` | Bank | Cost-to-Income ratio |
+| `npl` | `f64?` | Bank | Non-performing loan ratio |
+| `ldrLoanDepositRatio` | `f64?` | Bank | Loan-to-Deposit ratio |
+| `car` | `f64?` | Bank | Capital Adequacy Ratio |
+| `casaRatio` | `f64?` | Bank | CASA ratio |
+| `averageCostOfFinancing` | `f64?` | Bank | Average cost of funding |
+| `averageYieldOnEarningAssets` | `f64?` | Bank | Average yield on earning assets |
+| `depositGrowth` | `f64?` | Bank | Deposit growth rate |
+| `loansGrowth` | `f64?` | Bank | Loan growth rate |
+| `loansLossReserveToLoans` | `f64?` | Bank | Loan loss reserve/Loans |
+| `loansLossReservesToNPLs` | `f64?` | Bank | Loan loss reserves/NPLs |
+| `provisionToOutstandingLoans` | `f64?` | Bank | Provision/Outstanding loans |
+| `bsb113` | `f64?` | Bank | Total assets (raw) |
+| `nob66` | `f64?` | Bank | Customer deposits (raw) |
+| `nob69` | `f64?` | Bank | Outstanding loans (raw) |
+| `nob70` | `f64?` | Bank | Other balance sheet (raw) |
+
+Non-bank tickers have fewer fields populated — bank-specific fields (NPL, CAR, CASA, LDR, etc.) are `0.0` or `null`.
+
+~9-62 items per ticker. `lengthReport` values: 1-4 = quarterly, 5 = yearly.
+
+#### `_meta.json`
+
+```json
+{
+  "ticker": "ACB",
+  "last_fetch": "2026-05-30",
+  "company_info_uploaded": true,
+  "financial_ratios_uploaded": true
+}
+```
+
+#### `_index.json`
+
+```json
+{
+  "updated_at": "2026-05-30T12:20:00.000000+00:00",
+  "date": "2026-05-30",
+  "count": 381,
+  "fetched_today": 326,
+  "tickers": [
+    {
+      "ticker": "AAA",
+      "name": "Công ty Cổ phần Nhựa An Phát Xanh",
+      "fetched_today": true,
+      "date": "2026-05-30"
+    },
+    {
+      "ticker": "ZZZ",
+      "name": "...",
+      "fetched_today": false,
+      "date": ""
+    }
+  ]
+}
+```
 
 ## Data Flow
 
