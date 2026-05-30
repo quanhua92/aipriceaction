@@ -35,4 +35,4 @@ __all__ = [
     "build_fundamental_ranking",
     "screen_fundamentals",
 ]
-__version__ = "0.1.20"
+__version__ = "0.1.21"

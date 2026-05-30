@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.21] - 2026-05-30
+
+### Added
+- `get_company_info(ticker)` — fetch company profile, shareholders, officers from vn.zip
+- `get_financial_ratios(ticker)` — fetch all financial ratio periods (quarterly + yearly)
+- `get_fundamental(ticker)` — fetch both company info and financial ratios in one call
+- `build_fundamental_ranking(client, tickers, *, sort_by, direction, limit)` — rank tickers by 50+ fundamental fields (PE, PB, ROE, NPL, CAR, etc.)
+- `screen_fundamentals(client, tickers, *, filters..., sort_by, direction, limit)` — multi-criteria screening with range filters and industry filter
+- `FundamentalRankEntry` dataclass for ranking/screening results
+- `CompanyInfo`, `FinancialRatios`, `FinancialRatioEntry`, `ShareholderInfo`, `OfficerInfo` dataclasses
+- vn.zip-based caching: single download (~15-20 MB), all subsequent reads from local disk
+- `_ensure_fundamental_zip()` and `_read_fundamental_json()` internal methods
+- 25 tests for fundamental ranking/screening including `_latest_yearly` edge cases
+
+### Changed
+- `FinancialRatios.__post_init__` sorts ratios by `(year_report, length_report)` desc once at construction
+- `_latest_yearly()` uses `ratio_type == "RATIO_YEAR"` as primary selector with fallback chain
+
 ## [0.1.20] - 2026-05-29
 
 ### Fixed
