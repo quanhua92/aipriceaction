@@ -1,4 +1,7 @@
+import io
+import json
 import re
+import zipfile
 
 import pytest
 import responses
@@ -218,7 +221,7 @@ def mock_s3_yearly_only():
 
 @pytest.fixture
 def mock_s3_fundamental():
-    """Mock S3 with fundamental data for ACB (bank) and FPT (non-bank)."""
+    """Mock S3 with fundamental vn.zip containing ACB (bank) and FPT (non-bank)."""
     responses.start()
 
     tickers = [
@@ -253,11 +256,6 @@ def mock_s3_fundamental():
             {"name": "Mai Thị Hằng", "position": "Tổng Giám đốc", "percentage": None},
         ],
     }
-    responses.get(f"{_BASE}/fundamental/vn/ACB/company_info.json", json=acb_ci)
-    responses.head(
-        f"{_BASE}/fundamental/vn/ACB/company_info.json",
-        headers={"x-amz-meta-content-hash": "acb-ci-hash-001"},
-    )
 
     acb_fr = {
         "ticker": "ACB",
@@ -287,11 +285,6 @@ def mock_s3_fundamental():
             },
         ],
     }
-    responses.get(f"{_BASE}/fundamental/vn/ACB/financial_ratios.json", json=acb_fr)
-    responses.head(
-        f"{_BASE}/fundamental/vn/ACB/financial_ratios.json",
-        headers={"x-amz-meta-content-hash": "acb-fr-hash-001"},
-    )
 
     fpt_ci = {
         "symbol": "FPT",
@@ -312,11 +305,6 @@ def mock_s3_fundamental():
             {"name": "Trương Gia Bình", "position": "Chủ tịch HĐQT", "percentage": 0.0689},
         ],
     }
-    responses.get(f"{_BASE}/fundamental/vn/FPT/company_info.json", json=fpt_ci)
-    responses.head(
-        f"{_BASE}/fundamental/vn/FPT/company_info.json",
-        headers={"x-amz-meta-content-hash": "fpt-ci-hash-001"},
-    )
 
     fpt_fr = {
         "ticker": "FPT",
@@ -334,19 +322,21 @@ def mock_s3_fundamental():
             },
         ],
     }
-    responses.get(f"{_BASE}/fundamental/vn/FPT/financial_ratios.json", json=fpt_fr)
-    responses.head(
-        f"{_BASE}/fundamental/vn/FPT/financial_ratios.json",
-        headers={"x-amz-meta-content-hash": "fpt-fr-hash-001"},
-    )
 
-    responses.get(
-        re.compile(rf"^{re.escape(_BASE)}/fundamental/vn/VNINDEX/.*$"),
-        status=404,
-    )
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("ACB/company_info.json", json.dumps(acb_ci))
+        zf.writestr("ACB/financial_ratios.json", json.dumps(acb_fr))
+        zf.writestr("FPT/company_info.json", json.dumps(fpt_ci))
+        zf.writestr("FPT/financial_ratios.json", json.dumps(fpt_fr))
+        zf.writestr("VNINDEX/company_info.json", "{}")
+        zf.writestr("VNINDEX/financial_ratios.json", "{}")
+    zip_bytes = buf.getvalue()
+
+    responses.get(f"{_BASE}/fundamental/vn.zip", body=zip_bytes)
     responses.head(
-        re.compile(rf"^{re.escape(_BASE)}/fundamental/vn/VNINDEX/.*$"),
-        status=404,
+        f"{_BASE}/fundamental/vn.zip",
+        headers={"x-amz-meta-content-hash": "vn-zip-hash-001"},
     )
 
     yield

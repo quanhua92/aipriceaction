@@ -4,20 +4,20 @@ Run:
     uv run python examples/fundamental_demo.py
 
 Covers every scenario:
-  1. Basic: fetch company info for a single ticker
-  2. Basic: fetch financial ratios for a single ticker
-  3. Combined: get_fundamental() returns both at once
-  4. Missing data: tickers with no fundamental data (indices, etc.)
-  5. Company info deep dive: shareholders, officers, profile
-  6. Financial ratios deep dive: all typed fields + extra legacy fields
-  7. Year-over-year trend analysis for a single metric
-  8. Bank-specific ratios: NPL, CIR, CAR, CASA, LDR
-  9. Multi-ticker PE/PB/ROE screening & ranking
- 10. Sector-wide fundamental comparison
- 11. Dividend yield ranking
- 12. Valuation scatter: PE vs ROE to find undervalued stocks
- 13. Serialization roundtrip: to_dict / from_dict
- 14. Caching behavior: second call is instant (no network)
+   1. Basic: fetch company info for a single ticker
+   2. Basic: fetch financial ratios for a single ticker
+   3. Combined: get_fundamental() returns both at once
+   4. Missing data: tickers with no fundamental data (indices, etc.)
+   5. Company info deep dive: shareholders, officers, profile
+   6. Financial ratios deep dive: all typed fields + extra legacy fields
+   7. Year-over-year trend analysis for a single metric
+   8. Bank-specific ratios: NPL, CIR, CAR, CASA, LDR
+   9. Multi-ticker ranking: build_fundamental_ranking()
+  10. Sector screening: screen_fundamentals() with filters
+  11. Dividend yield ranking via build_fundamental_ranking()
+  12. Valuation scatter: PE vs ROE to find undervalued stocks
+  13. Serialization roundtrip: to_dict / from_dict
+  14. Caching behavior: second call is instant (no network)
 """
 
 from aipriceaction import (
@@ -27,13 +27,15 @@ from aipriceaction import (
     FinancialRatios,
     OfficerInfo,
     ShareholderInfo,
+    build_fundamental_ranking,
+    screen_fundamentals,
 )
 
 SEPARATOR = "=" * 72
 THIN = "-" * 72
 
 BANK_TICKERS = ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "HDB", "SHB", "TPB"]
-TECH_TICKERS = ["FPT", "CMG", "ELC", "ITD", "VGI"]
+TECH_TICKERS = ["FPT", "CMG", "ELC", "VGI"]
 BLUECHIP_TICKERS = ["VCB", "FPT", "HPG", "VIC", "VNM", "GAS", "MWG", "MSN", "PLX", "SAB"]
 
 
@@ -333,138 +335,120 @@ def demo_8_bank_ratios(client: AIPriceAction) -> None:
 
 
 def demo_9_screening(client: AIPriceAction) -> None:
-    section(9, "Multi-Ticker Screening: Top PE, PB, ROE")
+    section(9, "Multi-Ticker Screening: build_fundamental_ranking()")
 
     tickers = BANK_TICKERS + TECH_TICKERS + ["HPG", "VIC", "VNM", "GAS", "MWG"]
-    print(f"  Scanning {len(tickers)} tickers...")
-    rows = []
-    for i, ticker in enumerate(tickers):
-        ci, fr = client.get_fundamental(ticker, source="vn")
-        if ci is None or fr is None:
-            print(f"    [{i + 1}/{len(tickers)}] {ticker} — no data")
-            continue
-        latest = _latest_yearly(fr)
-        if latest is None:
-            print(f"    [{i + 1}/{len(tickers)}] {ticker} — no ratios")
-            continue
-        print(f"    [{i + 1}/{len(tickers)}] {ticker} — PE={_fmt(latest.pe)}")
-        rows.append({
-            "ticker": ticker,
-            "industry": ci.industry or "",
-            "pe": latest.pe,
-            "pb": latest.pb,
-            "roe": latest.roe,
-            "roa": latest.roa,
-            "dividend_yield": latest.dividend_yield,
-            "debt_to_equity": latest.debt_to_equity,
-            "market_cap": ci.market_cap,
-        })
+    print(f"  Scanning {len(tickers)} tickers with build_fundamental_ranking()...\n")
 
-    def table(title: str, key: str, asc: bool = True, limit: int = 10) -> None:
-        sorted_rows = sorted(rows, key=lambda r: r.get(key) or float("inf"), reverse=not asc)
-        print(f"\n  {title} (top {limit}):")
-        print(f"  {'Ticker':>6s}  {'Industry':>20s}  {key:>15s}")
+    def table(title: str, entries: list) -> None:
+        print(f"  {title}:")
+        print(f"  {'#':>3s}  {'Ticker':>6s}  {'Industry':>25s}  {'Value':>12s}")
         print(THIN)
-        for r in sorted_rows[:limit]:
-            val = r[key]
-            print(f"  {r['ticker']:>6s}  {r['industry']:>20s}  {_fmt(val):>15s}")
+        for e in entries:
+            val = e.rank_value
+            val_str = f"{val:,.2f}" if val is not None else "N/A"
+            ind = (e.industry or "")[:25]
+            print(f"  {e.rank:>3d}  {e.ticker:>6s}  {ind:>25s}  {val_str:>12s}")
 
-    table("Lowest PE (cheapest by earnings)", "pe", asc=True)
-    table("Highest PE (expensive by earnings)", "pe", asc=False)
-    table("Lowest PB (cheapest by book value)", "pb", asc=True)
-    table("Highest ROE (most profitable)", "roe", asc=False)
-    table("Highest Dividend Yield", "dividend_yield", asc=False)
+    top_roe = build_fundamental_ranking(client, tickers, sort_by="roe", direction="desc", limit=10)
+    table("Highest ROE (most profitable)", top_roe)
+
+    lowest_pe = build_fundamental_ranking(client, tickers, sort_by="pe", direction="asc", limit=10)
+    print()
+    table("Lowest PE (cheapest by earnings)", lowest_pe)
+
+    lowest_pb = build_fundamental_ranking(client, tickers, sort_by="pb", direction="asc", limit=10)
+    print()
+    table("Lowest PB (cheapest by book value)", lowest_pb)
+
+    highest_div = build_fundamental_ranking(client, tickers, sort_by="dividend_yield", direction="desc", limit=10)
+    print()
+    table("Highest Dividend Yield", highest_div)
+
+    lowest_npl = build_fundamental_ranking(client, BANK_TICKERS, sort_by="npl", direction="asc", limit=5)
+    print()
+    table("Lowest NPL (best asset quality)", lowest_npl)
 
 
 # ── 10. Sector-Wide Comparison ──────────────────────────────────────────────
 
 
 def demo_10_sector_comparison(client: AIPriceAction) -> None:
-    section(10, "Sector-Wide Fundamental Comparison")
+    section(10, "Sector-Wide Comparison: screen_fundamentals()")
 
-    sectors = {
-        "Banking": BANK_TICKERS,
-        "Tech": TECH_TICKERS,
-        "Blue-chip": BLUECHIP_TICKERS,
-    }
+    all_vn = [t.ticker for t in client.get_tickers(source="vn")]
+    all_blue = list(dict.fromkeys(BANK_TICKERS + TECH_TICKERS + BLUECHIP_TICKERS))
 
-    for sector_name, tickers in sectors.items():
-        print(f"\n  {sector_name} sector:")
-        print(f"  {'Ticker':>6s}  {'PE':>7s}  {'PB':>7s}  {'ROE':>7s}  {'D/E':>7s}  {'Margin':>7s}  {'DivY':>7s}")
-        print(THIN)
+    print("  Using screen_fundamentals() for sector + criteria filtering\n")
 
-        sector_rows = []
-        for ticker in tickers:
-            ci, fr = client.get_fundamental(ticker, source="vn")
-            if fr is None:
-                continue
-            latest = _latest_yearly(fr)
-            if latest is None:
-                continue
-            margin = latest.gross_margin or latest.after_tax_profit_margin or latest.net_interest_margin
-            sector_rows.append({
-                "ticker": ticker,
-                "pe": latest.pe,
-                "pb": latest.pb,
-                "roe": latest.roe,
-                "de": latest.debt_to_equity,
-                "margin": margin,
-                "div": latest.dividend_yield,
-            })
+    print("  Banking sector (industry filter):")
+    banking = screen_fundamentals(
+        client, all_vn, industry="ngân hàng", sort_by="roe", direction="desc", limit=10,
+    )
+    print(f"  {'#':>3s}  {'Ticker':>6s}  {'PE':>7s}  {'PB':>7s}  {'ROE':>7s}  {'NPL':>7s}  {'CAR':>7s}")
+    print(THIN)
+    for e in banking:
+        r = e.latest_ratio
+        if r is None:
+            continue
+        print(
+            f"  {e.rank:>3d}  {e.ticker:>6s}  {_fmt(r.pe):>7s}  {_fmt(r.pb):>7s}  "
+            f"{_fmt_pct(r.roe):>7s}  {_fmt_pct(r.npl):>7s}  {_fmt_pct(r.car):>7s}"
+        )
 
-        for r in sorted(sector_rows, key=lambda x: x.get("roe") or 0, reverse=True):
-            print(
-                f"  {r['ticker']:>6s}  {_fmt(r['pe']):>7s}  {_fmt(r['pb']):>7s}  "
-                f"{_fmt_pct(r['roe']):>7s}  {_fmt(r['de']):>7s}  {_fmt_pct(r['margin']):>7s}  "
-                f"{_fmt_pct(r['div']):>7s}"
-            )
+    print("\n  Blue-chips: Low PE + High ROE (value screen):")
+    value = screen_fundamentals(
+        client, all_blue, pe_max=15.0, roe_min=0.15, sort_by="roe", direction="desc",
+    )
+    print(f"  {'#':>3s}  {'Ticker':>6s}  {'PE':>7s}  {'ROE':>7s}  {'Industry':>25s}")
+    print(THIN)
+    for e in value:
+        r = e.latest_ratio
+        if r is None:
+            continue
+        print(
+            f"  {e.rank:>3d}  {e.ticker:>6s}  {_fmt(r.pe):>7s}  "
+            f"{_fmt_pct(r.roe):>7s}  {(e.industry or '')[:25]:>25s}"
+        )
 
-        valid_roe = [r["roe"] for r in sector_rows if r["roe"] is not None]
-        valid_pe = [r["pe"] for r in sector_rows if r["pe"] is not None]
-        if valid_roe:
-            print(f"  Avg ROE: {sum(valid_roe) / len(valid_roe) * 100:.1f}%  |  Avg PE: {sum(valid_pe) / len(valid_pe):.1f}" if valid_pe else "")
+    print("\n  Safe banks: NPL < 1.5%, CAR > 10%:")
+    safe = screen_fundamentals(
+        client, BANK_TICKERS, npl_max=0.015, car_min=0.10, sort_by="npl", direction="asc",
+    )
+    for e in safe:
+        r = e.latest_ratio
+        if r:
+            print(f"  {e.ticker:>6s}  NPL={_fmt_pct(r.npl):>7s}  CAR={_fmt_pct(r.car):>7s}")
 
 
 # ── 11. Dividend Yield Ranking ──────────────────────────────────────────────
 
 
 def demo_11_dividend_ranking(client: AIPriceAction) -> None:
-    section(11, "Dividend Yield Ranking")
+    section(11, "Dividend Yield Ranking: build_fundamental_ranking()")
 
-    all_tickers = client.get_tickers(source="vn")
+    all_tickers = [t.ticker for t in client.get_tickers(source="vn")]
     scan_count = 30
-    vn_tickers = [t.ticker for t in all_tickers[:scan_count]]
-    print(f"  Scanning first {scan_count} VN tickers...")
+    tickers = all_tickers[:scan_count]
+    print(f"  Ranking first {scan_count} VN tickers by dividend_yield...\n")
 
-    dividend_data = []
-    for i, ticker in enumerate(vn_tickers):
-        fr = client.get_financial_ratios(ticker, source="vn")
-        if fr is None:
-            print(f"    [{i + 1}/{scan_count}] {ticker} — no data")
-            continue
-        latest = _latest_yearly(fr)
-        if latest is None or latest.dividend_yield is None:
-            print(f"    [{i + 1}/{scan_count}] {ticker} — no dividend data")
-            continue
-        print(f"    [{i + 1}/{scan_count}] {ticker} — div={latest.dividend_yield * 100:.1f}%")
-        dividend_data.append({
-            "ticker": ticker,
-            "div_yield": latest.dividend_yield,
-            "pe": latest.pe,
-            "pb": latest.pb,
-            "roe": latest.roe,
-        })
+    ranked = build_fundamental_ranking(
+        client, tickers, sort_by="dividend_yield", direction="desc", limit=15,
+    )
 
-    dividend_data.sort(key=lambda x: x["div_yield"], reverse=True)
+    with_div = [e for e in ranked if e.rank_value is not None and e.rank_value > 0]
+    print(f"  {len(with_div)} tickers have dividend_yield > 0")
 
-    print(f"  Scanned {len(vn_tickers)} tickers, {len(dividend_data)} have dividend data")
     print("\n  Top 15 by Dividend Yield:")
-    print(f"  {'Ticker':>6s}  {'Div Yield':>10s}  {'PE':>7s}  {'PB':>7s}  {'ROE':>7s}")
+    print(f"  {'#':>3s}  {'Ticker':>6s}  {'Div Yield':>10s}  {'PE':>7s}  {'PB':>7s}  {'ROE':>7s}")
     print(THIN)
-    for r in dividend_data[:15]:
+    for e in ranked:
+        r = e.latest_ratio
+        if r is None:
+            continue
         print(
-            f"  {r['ticker']:>6s}  {_fmt_pct(r['div_yield']):>10s}  "
-            f"{_fmt(r['pe']):>7s}  {_fmt(r['pb']):>7s}  {_fmt_pct(r['roe']):>7s}"
+            f"  {e.rank:>3d}  {e.ticker:>6s}  {_fmt_pct(e.rank_value):>10s}  "
+            f"{_fmt(r.pe):>7s}  {_fmt(r.pb):>7s}  {_fmt_pct(r.roe):>7s}"
         )
 
 

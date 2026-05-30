@@ -528,3 +528,260 @@ All fundamental-related logs use `[FUNDAMENTAL]` prefix for easy filtering:
 | `src/constants.rs` | `FUNDAMENTAL_RATE_LIMIT`, `FUNDAMENTAL_DELAY_MS`, `FUNDAMENTAL_VCI_DEAD_THRESHOLD` |
 | `src/generate_company_info.rs` | CLI tool to bulk-generate company_info.json |
 | `scripts/analyze_company_info.py` | Analysis script for bulk company_info.json data |
+
+## Python SDK
+
+The `aipriceaction` Python package provides typed access to all fundamental data. All methods download a single `vn.zip` bundle on first call, then read from local disk cache.
+
+### Installation
+
+```bash
+pip install aipriceaction
+# or
+uv add aipriceaction
+```
+
+### Data Classes
+
+```python
+from aipriceaction import (
+    CompanyInfo,
+    FinancialRatios,
+    FinancialRatioEntry,
+    ShareholderInfo,
+    OfficerInfo,
+    FundamentalRankEntry,
+)
+```
+
+| Class | Key Fields | Description |
+|---|---|---|
+| `CompanyInfo` | `symbol`, `industry`, `market_cap`, `current_price`, `outstanding_shares`, `shareholders`, `officers`, `company_profile` | Full company profile with shareholders & officers |
+| `FinancialRatios` | `ticker`, `updated_at`, `count`, `ratios` | Envelope containing list of `FinancialRatioEntry` |
+| `FinancialRatioEntry` | `pe`, `pb`, `roe`, `roa`, `npl`, `cir`, `car`, `dividend_yield`, `debt_to_equity`, ... (50+ fields) | Single period's financial metrics |
+| `ShareholderInfo` | `name`, `percentage` | Shareholder name and ownership % |
+| `OfficerInfo` | `name`, `position`, `percentage` | Officer name, title, and ownership % |
+| `FundamentalRankEntry` | `ticker`, `industry`, `rank`, `rank_value`, `rank_field`, `company_info`, `latest_ratio` | Ranked result from screening/ranking |
+
+All data classes have `to_dict()` and `from_dict()` methods for serialization.
+
+### Client Methods
+
+```python
+from aipriceaction import AIPriceAction
+
+client = AIPriceAction()
+```
+
+#### `get_company_info(ticker, *, source=None) → CompanyInfo | None`
+
+Fetch company profile for a single ticker.
+
+```python
+ci = client.get_company_info("ACB", source="vn")
+if ci:
+    print(ci.symbol)          # "ACB"
+    print(ci.industry)        # "Ngân hàng"
+    print(ci.market_cap)      # 120711430076500.0
+    print(ci.current_price)   # 23500.0
+    print(len(ci.shareholders))  # 48
+    print(len(ci.officers))      # 18
+```
+
+Returns `None` for indices (VNINDEX, VN30) and unknown tickers.
+
+#### `get_financial_ratios(ticker, *, source=None) → FinancialRatios | None`
+
+Fetch all financial ratio periods for a ticker.
+
+```python
+fr = client.get_financial_ratios("VCB", source="vn")
+if fr:
+    print(fr.ticker)  # "VCB"
+    print(fr.count)   # 40
+    latest = fr.ratios[-1]
+    print(latest.pe)  # 14.73
+    print(latest.roe) # 0.1673 (16.73%)
+    print(latest.npl) # 0.0058 (0.58%)
+```
+
+#### `get_fundamental(ticker, *, source=None) → tuple[CompanyInfo | None, FinancialRatios | None]`
+
+Fetch both company info and financial ratios in one call.
+
+```python
+ci, fr = client.get_fundamental("FPT", source="vn")
+```
+
+### Ranking & Screening
+
+#### `build_fundamental_ranking(client, tickers, *, sort_by, direction, limit, source, yearly_only) → list[FundamentalRankEntry]`
+
+Rank tickers by any fundamental field. Downloads `vn.zip` once, then reads all tickers from cache.
+
+```python
+from aipriceaction import AIPriceAction, build_fundamental_ranking
+
+client = AIPriceAction()
+
+# Top 10 by ROE (most profitable)
+top_roe = build_fundamental_ranking(
+    client,
+    ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "HDB", "SHB", "TPB"],
+    sort_by="roe",
+    direction="desc",
+    limit=10,
+)
+for entry in top_roe:
+    print(f"  #{entry.rank} {entry.ticker:6s} ROE={entry.rank_value * 100:.1f}%  industry={entry.industry}")
+
+# Cheapest by PE (ascending)
+cheapest = build_fundamental_ranking(
+    client,
+    ["VCB", "FPT", "HPG", "VIC", "VNM", "GAS", "MWG"],
+    sort_by="pe",
+    direction="asc",
+    limit=5,
+)
+
+# Best bank assets (CAR)
+best_capitalized = build_fundamental_ranking(
+    client,
+    ["VCB", "BID", "CTG", "TCB", "MBB", "ACB"],
+    sort_by="car",
+    direction="desc",
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `client` | `AIPriceAction` | required | SDK client instance |
+| `tickers` | `list[str]` | required | Ticker symbols to rank |
+| `sort_by` | `str` | `"roe"` | Field name to rank by (see sortable fields below) |
+| `direction` | `str` | `"desc"` | `"desc"` (highest first) or `"asc"` (lowest first) |
+| `limit` | `int` | `10` | Max results (1–200) |
+| `source` | `str | None` | `None` | Data source override |
+| `yearly_only` | `bool` | `True` | Use latest annual report only (`length_report=12`) |
+
+**Sortable fields** (50+): `pe`, `pb`, `ps`, `ev_to_ebitda`, `price_to_cash_flow`, `dividend_yield`, `market_cap`, `roe`, `roa`, `roic`, `gross_margin`, `after_tax_profit_margin`, `pre_tax_profit_margin`, `ebit_margin`, `net_interest_margin`, `ebit`, `ebitda`, `asset_turnover`, `fixed_asset_turnover`, `debt_to_equity`, `debt_per_equity`, `financial_leverage`, `equity_to_liabilities`, `equity_to_loans`, `total_equity_total_asset`, `owners_equity`, `equity`, `current_ratio`, `quick_ratio`, `cash_ratio`, `cash_cycle`, `day_sale_outstanding`, `days_inventory_outstanding`, `days_payable_outstanding`, `npl`, `ldr_loan_deposit_ratio`, `car`, `casa_ratio`, `cir`, `cost_to_income`, `non_and_interest_income`, `deposit_growth`, `loans_growth`, `loans_loss_reserve_to_loans`, `loans_loss_reserves_to_npl`, `provision_to_outstanding_loans`, `average_cost_of_financing`, `average_yield_on_earning_assets`, `outstanding_shares`, `employees`, `current_price`.
+
+#### `screen_fundamentals(client, tickers, *, filters..., sort_by, direction, limit, ...) → list[FundamentalRankEntry]`
+
+Filter tickers by fundamental criteria, then rank by a field. Same return type as `build_fundamental_ranking`.
+
+```python
+from aipriceaction import AIPriceAction, screen_fundamentals
+
+client = AIPriceAction()
+bank_tickers = ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "HDB", "SHB", "TPB"]
+
+# Low PE, high ROE banks
+value_banks = screen_fundamentals(
+    client,
+    bank_tickers,
+    pe_max=10.0,
+    roe_min=0.15,
+    sort_by="roe",
+    direction="desc",
+)
+
+# Dividend stocks with low debt
+dividend_stocks = screen_fundamentals(
+    client,
+    ["VCB", "FPT", "HPG", "VNM", "GAS", "MWG", "SAB", "PLX", "MSN"],
+    dividend_yield_min=0.02,
+    debt_to_equity_max=1.5,
+    sort_by="dividend_yield",
+    direction="desc",
+)
+
+# Banks with good asset quality
+safe_banks = screen_fundamentals(
+    client,
+    bank_tickers,
+    npl_max=0.02,
+    car_min=0.10,
+    sort_by="npl",
+    direction="asc",
+)
+
+# Filter by industry (case-insensitive, supports list)
+banking_only = screen_fundamentals(
+    client,
+    all_vn_tickers,
+    industry="ngân hàng",
+    sort_by="roe",
+    direction="desc",
+)
+
+# Multiple industries
+finance_tech = screen_fundamentals(
+    client,
+    all_vn_tickers,
+    industry=["ngân hàng", "công nghệ thông tin"],
+    pe_max=20.0,
+    sort_by="roe",
+    direction="desc",
+)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `pe_min` / `pe_max` | `float | None` | `None` | PE range filter |
+| `pb_min` / `pb_max` | `float | None` | `None` | PB range filter |
+| `roe_min` / `roe_max` | `float | None` | `None` | ROE range filter |
+| `roa_min` / `roa_max` | `float | None` | `None` | ROA range filter |
+| `dividend_yield_min` / `dividend_yield_max` | `float | None` | `None` | Dividend yield range |
+| `debt_to_equity_min` / `debt_to_equity_max` | `float | None` | `None` | D/E range |
+| `current_ratio_min` / `current_ratio_max` | `float | None` | `None` | Current ratio range |
+| `gross_margin_min` / `gross_margin_max` | `float | None` | `None` | Gross margin range |
+| `npl_min` / `npl_max` | `float | None` | `None` | NPL range (banks) |
+| `cir_min` / `cir_max` | `float | None` | `None` | CIR range (banks) |
+| `car_min` / `car_max` | `float | None` | `None` | CAR range (banks) |
+| `market_cap_min` / `market_cap_max` | `float | None` | `None` | Market cap range |
+| `industry` | `str | list[str] | None` | `None` | Industry filter (case-insensitive) |
+| `require_data` | `bool` | `True` | Exclude tickers with no fundamental data |
+| `sort_by` | `str` | `"roe"` | Field to rank by (same fields as `build_fundamental_ranking`) |
+| `direction` | `str` | `"desc"` | Sort direction |
+| `limit` | `int` | `50` | Max results (1–500) |
+| `yearly_only` | `bool` | `True` | Use latest annual report only |
+| `source` | `str | None` | `None` | Data source override |
+
+**Filter behavior:**
+- All filters are optional — pass only what you need
+- `None` values (missing data) fail the filter — tickers without that field are excluded
+- Range filters are inclusive: `roe_min=0.15` matches `roe >= 0.15`
+- `industry` is case-insensitive substring match against `CompanyInfo.industry`
+- `require_data=False` keeps tickers with no data (rank_value will be `None`)
+
+### Caching
+
+All fundamental methods use the same caching strategy as OHLCV data:
+
+1. **First call**: downloads `vn.zip` (~6–20 MB) from S3, extracts to `~/.aipriceaction/s3-cache/`
+2. **Subsequent calls**: reads from local disk — no network request
+3. **Hash-based validation**: SHA256 check ensures cache freshness
+4. **TTL**: respects the same cache TTL as other S3 data
+
+```python
+client = AIPriceAction()  # uses default cache dir
+
+# First call downloads vn.zip (~1-2 seconds)
+ci1 = client.get_company_info("VCB", source="vn")
+
+# Second call is instant (reads from disk)
+ci2 = client.get_company_info("FPT", source="vn")
+
+# Ranking 30 tickers: still only 1 download
+ranking = build_fundamental_ranking(client, ["VCB", "FPT", "HPG", ...], sort_by="roe")
+```
+
+### Key Files (Python SDK)
+
+| File | Role |
+|---|---|
+| `sdk/aipriceaction-python/src/aipriceaction/client.py` | `get_company_info()`, `get_financial_ratios()`, `get_fundamental()`, `_ensure_fundamental_zip()`, `_read_fundamental_json()` |
+| `sdk/aipriceaction-python/src/aipriceaction/fundamental.py` | `CompanyInfo`, `FinancialRatios`, `FinancialRatioEntry`, `ShareholderInfo`, `OfficerInfo` dataclasses |
+| `sdk/aipriceaction-python/src/aipriceaction/fundamental_ranking.py` | `build_fundamental_ranking()`, `screen_fundamentals()`, `FundamentalRankEntry` |
+| `sdk/aipriceaction-python/examples/fundamental_demo.py` | 14-section demo covering all features |
+| `sdk/aipriceaction-python/examples/full_client_demo.py` | Full SDK demo with fundamental section |

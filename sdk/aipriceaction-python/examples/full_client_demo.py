@@ -10,8 +10,10 @@ from aipriceaction import (
     AIPriceAction,
     CompanyInfo,
     FinancialRatios,
+    build_fundamental_ranking,
     build_performers,
     compute_volume_profile,
+    screen_fundamentals,
 )
 from aipriceaction.aggregator import aggregate_ohlcv
 
@@ -401,6 +403,25 @@ def demo_fundamental(client: AIPriceAction) -> None:
     ci3, fr3 = client.get_fundamental("VNINDEX", source="vn")
     _print_company_info(ci3)
     _print_financial_ratios(fr3)
+
+    print("\n# Ranking: build_fundamental_ranking() — top 5 banks by ROE")
+    top_roe = build_fundamental_ranking(
+        client, ["VCB", "BID", "CTG", "TCB", "MBB", "ACB", "VPB", "HDB", "SHB", "TPB"],
+        sort_by="roe", direction="desc", limit=5,
+    )
+    for e in top_roe:
+        roe_str = f"{e.rank_value * 100:.1f}%" if e.rank_value else "N/A"
+        print(f"  #{e.rank} {e.ticker:6s}  ROE={roe_str}  industry={e.industry}")
+
+    print("\n# Screening: screen_fundamentals() — low PE + high ROE value stocks")
+    value = screen_fundamentals(
+        client, ["VCB", "FPT", "HPG", "VIC", "VNM", "GAS", "MWG", "MSN", "PLX", "SAB"],
+        pe_max=15.0, roe_min=0.15, sort_by="roe", direction="desc",
+    )
+    for e in value:
+        r = e.latest_ratio
+        if r:
+            print(f"  {e.ticker:6s}  PE={r.pe:.1f}  ROE={r.roe * 100:.1f}%  ({e.industry})")
 
     print("\n# Serialization roundtrip:")
     if ci:

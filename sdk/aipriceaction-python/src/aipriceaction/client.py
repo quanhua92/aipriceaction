@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import tempfile
+import zipfile
 
 import time as _time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -16,6 +17,7 @@ import requests
 import pandas as pd
 
 from .exceptions import AIPriceActionError
+from .fundamental import CompanyInfo, FinancialRatios
 from .models import TickerInfo
 
 logger = logging.getLogger("aipriceaction.sdk")
@@ -688,8 +690,6 @@ class AIPriceAction:
                 # Phase 2: remaining days
                 phase2 = sorted_days[probe_count:]
                 if phase2 and self._fresh_cache_hits >= match_threshold:
-                    # Enough confirmations — read from disk, fetch missing from S3
-                    disk_days = []
                     missing_days = []
                     for day in phase2:
                         cache_path = self._cache_key(source, ticker, interval, day)
@@ -1495,19 +1495,96 @@ class AIPriceAction:
 
         return data
 
+    # ── Fundamental data via vn.zip bundle ──
+
+    def _ensure_fundamental_zip(self, source: str) -> None:
+        """Download and extract fundamental vn.zip if not already cached.
+
+        Downloads ``fundamental/{source}.zip`` from S3, saves to cache,
+        and extracts all ``{TICKER}/company_info.json`` and
+        ``{TICKER}/financial_ratios.json`` entries under
+        ``cache_dir/fundamental/{source}/``.
+
+        Uses the same hash-based dedup as OHLCV files:
+        HEAD check ``x-amz-meta-content-hash`` → skip if unchanged.
+        """
+        if source != "vn":
+            return
+
+        zip_cache_path = str(self._cache_dir / "fundamental" / f"{source}.zip")
+        url = f"{self.base_url}/fundamental/{source}.zip"
+
+        if self._is_fresh(zip_cache_path, url):
+            logger.debug("[fundamental] vn.zip cache fresh, skipping")
+            return
+        logger.debug("[fundamental] downloading %s", url)
+        resp = self._session.get(url, timeout=(5, 60))
+        if resp.status_code in (404, 403):
+            logger.debug("[fundamental] %s.zip not found", source)
+            return
+        resp.raise_for_status()
+
+        zip_bytes = resp.content
+        extract_dir = self._cache_dir / "fundamental" / source
+        extract_dir.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
+                if not info.filename.endswith(".json"):
+                    continue
+                parts = info.filename.split("/")
+                if len(parts) != 2:
+                    continue
+                ticker_name, filename = parts
+                if filename not in ("company_info.json", "financial_ratios.json"):
+                    continue
+                target = extract_dir / ticker_name / filename
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(zf.read(info))
+
+        Path(zip_cache_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(zip_cache_path).write_bytes(zip_bytes)
+        content_hash = self._head_content_hash(url)
+        if content_hash:
+            self._save_hash(zip_cache_path, content_hash)
+        self._freshness[zip_cache_path] = {
+            "hash": content_hash or "",
+            "checked_at": _time.monotonic(),
+        }
+        self._flush_freshness()
+        logger.debug("[fundamental] extracted vn.zip (%d bytes)", len(zip_bytes))
+
+    def _read_fundamental_json(self, source: str, ticker: str, filename: str) -> Optional[dict]:
+        """Read a fundamental JSON file from the extracted zip cache.
+
+        Returns None if the file doesn't exist or contains ``{}``.
+        """
+        path = self._cache_dir / "fundamental" / source / ticker / filename
+        if not path.exists():
+            return None
+        try:
+            text = path.read_text()
+        except OSError:
+            return None
+        if not text.strip() or text.strip() == "{}":
+            return None
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return None
+
     def get_company_info(
         self,
         ticker: str,
         *,
         source: Optional[str] = None,
-    ) -> "CompanyInfo | None":
-        """Fetch company_info.json from S3 with hash-based caching."""
-        from .fundamental import CompanyInfo
-
+    ) -> CompanyInfo | None:
+        """Fetch company_info from extracted vn.zip cache (single download for all tickers)."""
         source, ticker = self._find_source(ticker, source)
-        url = f"{self.base_url}/fundamental/{source}/{ticker}/company_info.json"
-        cache_path = str(self._cache_dir / "fundamental" / source / ticker / "company_info.json")
-        data = self._fetch_json_from_url(url, cache_path)
+        self._ensure_fundamental_zip(source)
+        data = self._read_fundamental_json(source, ticker, "company_info.json")
         if data is None:
             return None
         return CompanyInfo.from_dict(data)
@@ -1517,14 +1594,11 @@ class AIPriceAction:
         ticker: str,
         *,
         source: Optional[str] = None,
-    ) -> "FinancialRatios | None":
-        """Fetch financial_ratios.json from S3 with hash-based caching."""
-        from .fundamental import FinancialRatios
-
+    ) -> FinancialRatios | None:
+        """Fetch financial_ratios from extracted vn.zip cache (single download for all tickers)."""
         source, ticker = self._find_source(ticker, source)
-        url = f"{self.base_url}/fundamental/{source}/{ticker}/financial_ratios.json"
-        cache_path = str(self._cache_dir / "fundamental" / source / ticker / "financial_ratios.json")
-        data = self._fetch_json_from_url(url, cache_path)
+        self._ensure_fundamental_zip(source)
+        data = self._read_fundamental_json(source, ticker, "financial_ratios.json")
         if data is None:
             return None
         return FinancialRatios.from_dict(data)
@@ -1534,7 +1608,7 @@ class AIPriceAction:
         ticker: str,
         *,
         source: Optional[str] = None,
-    ) -> "tuple[CompanyInfo | None, FinancialRatios | None]":
+    ) -> tuple[CompanyInfo | None, FinancialRatios | None]:
         """Fetch both company_info and financial_ratios."""
         ci = self.get_company_info(ticker, source=source)
         fr = self.get_financial_ratios(ticker, source=source)

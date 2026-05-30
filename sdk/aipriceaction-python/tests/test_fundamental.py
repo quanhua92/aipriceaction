@@ -1,4 +1,3 @@
-import json
 
 import pytest
 import responses
@@ -7,9 +6,6 @@ from aipriceaction import (
     AIPriceAction,
     CompanyInfo,
     FinancialRatios,
-    FinancialRatioEntry,
-    ShareholderInfo,
-    OfficerInfo,
 )
 
 
@@ -101,7 +97,7 @@ class TestFundamentalHashDedup:
 
         get_calls_after_first = sum(
             1 for c in responses.mock.calls
-            if c.request.method == "GET" and "company_info" in c.request.url
+            if c.request.method == "GET" and "vn.zip" in c.request.url
         )
 
         ci2 = client.get_company_info("ACB", source="vn")
@@ -110,13 +106,13 @@ class TestFundamentalHashDedup:
 
         get_calls_after_second = sum(
             1 for c in responses.mock.calls
-            if c.request.method == "GET" and "company_info" in c.request.url
+            if c.request.method == "GET" and "vn.zip" in c.request.url
         )
         assert get_calls_after_second == get_calls_after_first
 
 
 class TestFundamental404Cache:
-    def test_cached_404(self, mock_s3_fundamental, tmp_path):
+    def test_cached_empty(self, mock_s3_fundamental, tmp_path):
         client = _make_client(tmp_path)
         assert client.get_company_info("VNINDEX", source="vn") is None
 
