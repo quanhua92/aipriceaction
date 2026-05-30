@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 
 const AIPA = process.env.AIPA || "uv run aipa-cli";
+const AIPA_ARGS = AIPA.split(" ");
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const RESET = "\x1b[0m";
@@ -32,6 +33,15 @@ function run(...args) {
   } catch (e) {
     return { exit: e.status ?? 1, out: e.stdout ?? "" };
   }
+}
+
+function runArgs(...args) {
+  const result = spawnSync(AIPA_ARGS[0], [...AIPA_ARGS.slice(1), ...args], {
+    encoding: "utf-8",
+    timeout: 60_000,
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  return { exit: result.status ?? 1, out: result.stdout ?? "" };
 }
 
 function lines(out) {
@@ -436,6 +446,104 @@ console.log("=========================================\n");
   const r = run("deep-research", "--source", "crypto");
   r.exit === 0 ? ok("deep-research crypto snapshot (exit=0)") : bad(`deep-research crypto snapshot (exit=${r.exit})`);
   lines(r.out) >= 5 ? ok(`deep-research crypto snapshot returns >=5 lines (${lines(r.out)})`) : bad(`deep-research crypto snapshot returns >=5 lines (${lines(r.out)})`);
+}
+
+// ===========================
+// fundamentals
+// ===========================
+
+// fundamentals info
+{
+  const r = run("fundamentals", "info", "ACB");
+  r.exit === 0 ? ok("fundamentals info ACB (exit=0)") : bad(`fundamentals info ACB (exit=${r.exit})`);
+  contains(r.out, "Ngân hàng") ? ok("fundamentals info ACB has industry") : bad("fundamentals info ACB has industry");
+  contains(r.out, "Shareholders") ? ok("fundamentals info ACB has shareholders") : bad("fundamentals info ACB has shareholders");
+  contains(r.out, "Officers") ? ok("fundamentals info ACB has officers") : bad("fundamentals info ACB has officers");
+}
+
+// fundamentals info — no-data ticker
+{
+  const r = run("fundamentals", "info", "VNINDEX");
+  r.exit !== 0 ? ok("fundamentals info VNINDEX exits non-zero") : bad(`fundamentals info VNINDEX should fail (exit=${r.exit})`);
+}
+
+// fundamentals ratios --latest
+{
+  const r = run("fundamentals", "ratios", "VCB", "--latest");
+  r.exit === 0 ? ok("fundamentals ratios VCB --latest (exit=0)") : bad(`fundamentals ratios VCB --latest (exit=${r.exit})`);
+  contains(r.out, "Valuation") ? ok("fundamentals ratios has Valuation section") : bad("fundamentals ratios has Valuation section");
+  contains(r.out, "PE") ? ok("fundamentals ratios has PE field") : bad("fundamentals ratios has PE field");
+  contains(r.out, "yearly") ? ok("fundamentals ratios shows yearly period") : bad("fundamentals ratios shows yearly period");
+}
+
+// fundamentals ratios --category bank
+{
+  const r = run("fundamentals", "ratios", "VCB", "--latest", "--category", "bank");
+  r.exit === 0 ? ok("fundamentals ratios VCB --category bank (exit=0)") : bad(`fundamentals ratios VCB --category bank (exit=${r.exit})`);
+  contains(r.out, "NPL") ? ok("fundamentals ratios bank has NPL") : bad("fundamentals ratios bank has NPL");
+  contains(r.out, "CAR") ? ok("fundamentals ratios bank has CAR") : bad("fundamentals ratios bank has CAR");
+  !contains(r.out, "Valuation") ? ok("fundamentals ratios bank omits Valuation") : bad("fundamentals ratios bank omits Valuation");
+}
+
+// fundamentals ratios --year
+{
+  const r = run("fundamentals", "ratios", "VCB", "--year", "2024");
+  r.exit === 0 ? ok("fundamentals ratios VCB --year 2024 (exit=0)") : bad(`fundamentals ratios VCB --year 2024 (exit=${r.exit})`);
+  contains(r.out, "2024") ? ok("fundamentals ratios shows year 2024") : bad("fundamentals ratios shows year 2024");
+}
+
+// fundamentals ratios --json
+{
+  const r = run("fundamentals", "ratios", "VCB", "--latest", "--json");
+  r.exit === 0 ? ok("fundamentals ratios VCB --json (exit=0)") : bad(`fundamentals ratios VCB --json (exit=${r.exit})`);
+  try {
+    const parsed = JSON.parse(r.out);
+    parsed.ticker === "VCB" ? ok("fundamentals ratios --json parses with ticker=VCB") : bad("fundamentals ratios --json ticker mismatch");
+    Array.isArray(parsed.ratios) ? ok("fundamentals ratios --json has ratios array") : bad("fundamentals ratios --json has ratios array");
+  } catch {
+    bad("fundamentals ratios --json is valid JSON");
+  }
+}
+
+// fundamentals rank
+{
+  const r = run("fundamentals", "rank", "VCB", "BID", "CTG", "TCB", "MBB", "--sort-by", "roe", "--limit", "3");
+  r.exit === 0 ? ok("fundamentals rank 5 banks by roe (exit=0)") : bad(`fundamentals rank 5 banks by roe (exit=${r.exit})`);
+  lines(r.out) >= 4 ? ok(`fundamentals rank returns >=4 lines (${lines(r.out)})`) : bad(`fundamentals rank returns >=4 lines (${lines(r.out)})`);
+  contains(r.out, "roe") ? ok("fundamentals rank has roe column") : bad("fundamentals rank has roe column");
+}
+
+// fundamentals rank --watchlist
+{
+  const r = run("fundamentals", "rank", "--watchlist", "VN30", "--sort-by", "pe", "--direction", "asc", "--limit", "5");
+  r.exit === 0 ? ok("fundamentals rank VN30 by pe asc (exit=0)") : bad(`fundamentals rank VN30 by pe asc (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`fundamentals rank VN30 returns >=3 lines (${lines(r.out)})`) : bad(`fundamentals rank VN30 returns >=3 lines (${lines(r.out)})`);
+}
+
+// fundamentals screen — value stocks
+{
+  const r = run("fundamentals", "screen", "--pe-max", "10", "--roe-min", "0.15", "--sort-by", "roe", "--limit", "5");
+  r.exit === 0 ? ok("fundamentals screen value stocks (exit=0)") : bad(`fundamentals screen value stocks (exit=${r.exit})`);
+  lines(r.out) >= 3 ? ok(`fundamentals screen returns >=3 lines (${lines(r.out)})`) : bad(`fundamentals screen returns >=3 lines (${lines(r.out)})`);
+}
+
+// fundamentals screen — industry filter (spawnSync for Unicode args)
+{
+  const r = runArgs("fundamentals", "screen", "--industry", "ngân hàng", "--roe-min", "0.15", "--sort-by", "roe", "--limit", "5");
+  r.exit === 0 ? ok("fundamentals screen banking industry (exit=0)") : bad(`fundamentals screen banking industry (exit=${r.exit})`);
+  contains(r.out, "Ngân hàng") ? ok("fundamentals screen has banking entries") : bad("fundamentals screen has banking entries");
+}
+
+// fundamentals screen — with watchlist
+{
+  const r = run("fundamentals", "screen", "--watchlist", "VN30", "--pe-max", "20", "--roe-min", "0.10", "--sort-by", "roe", "--limit", "5");
+  r.exit === 0 ? ok("fundamentals screen VN30 (exit=0)") : bad(`fundamentals screen VN30 (exit=${r.exit})`);
+}
+
+// fundamentals no subcommand — usage
+{
+  const r = run("fundamentals");
+  r.exit !== 0 ? ok("fundamentals (no subcommand) exits non-zero") : bad(`fundamentals (no subcommand) should fail (exit=${r.exit})`);
 }
 
 // ===========================

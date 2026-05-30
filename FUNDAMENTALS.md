@@ -661,7 +661,7 @@ best_capitalized = build_fundamental_ranking(
 | `direction` | `str` | `"desc"` | `"desc"` (highest first) or `"asc"` (lowest first) |
 | `limit` | `int` | `10` | Max results (1–200) |
 | `source` | `str | None` | `None` | Data source override |
-| `yearly_only` | `bool` | `True` | Use latest annual report only (`length_report=12`) |
+| `yearly_only` | `bool` | `True` | Use latest annual report only (`ratio_type == "RATIO_YEAR"`) |
 
 **Sortable fields** (50+): `pe`, `pb`, `ps`, `ev_to_ebitda`, `price_to_cash_flow`, `dividend_yield`, `market_cap`, `roe`, `roa`, `roic`, `gross_margin`, `after_tax_profit_margin`, `pre_tax_profit_margin`, `ebit_margin`, `net_interest_margin`, `ebit`, `ebitda`, `asset_turnover`, `fixed_asset_turnover`, `debt_to_equity`, `debt_per_equity`, `financial_leverage`, `equity_to_liabilities`, `equity_to_loans`, `total_equity_total_asset`, `owners_equity`, `equity`, `current_ratio`, `quick_ratio`, `cash_ratio`, `cash_cycle`, `day_sale_outstanding`, `days_inventory_outstanding`, `days_payable_outstanding`, `npl`, `ldr_loan_deposit_ratio`, `car`, `casa_ratio`, `cir`, `cost_to_income`, `non_and_interest_income`, `deposit_growth`, `loans_growth`, `loans_loss_reserve_to_loans`, `loans_loss_reserves_to_npl`, `provision_to_outstanding_loans`, `average_cost_of_financing`, `average_yield_on_earning_assets`, `outstanding_shares`, `employees`, `current_price`.
 
