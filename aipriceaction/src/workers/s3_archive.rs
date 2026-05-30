@@ -444,6 +444,14 @@ async fn fetch_existing_json<T: serde::de::DeserializeOwned>(
     }
 }
 
+/// Fetch raw bytes from S3. Returns None if not found.
+async fn fetch_existing_bytes(bucket: &Bucket, key: &str) -> Option<Vec<u8>> {
+    match bucket.get_object(key).await {
+        Ok(response_data) => Some(response_data.to_vec()),
+        Err(_) => None,
+    }
+}
+
 /// Merge new CompanyInfo into old. Prefers new data; falls back to old when new is None/empty.
 fn merge_company_info(
     new: crate::providers::vci::CompanyInfo,
@@ -598,6 +606,7 @@ async fn fundamental_cycle(
     let mut vci_dead = false;
     let mut vci_healthy_requests: u32 = 0;
     let mut fallback = CompanyInfoFallback::new();
+    let mut cycle_cache: HashMap<String, (Option<Vec<u8>>, Option<Vec<u8>>)> = HashMap::new();
 
     for (i, ticker) in due.iter().enumerate() {
         if consecutive_rate_limits >= FUNDAMENTAL_MAX_CONSECUTIVE_RATE_LIMIT {
@@ -641,8 +650,13 @@ async fn fundamental_cycle(
             if has_s3.is_none() {
                 if let Some(info) = fallback.company_info(&ticker.ticker) {
                     if is_valid_company_info(&info) {
+                        let ci_bytes = serde_json::to_vec(&info).ok();
                         let _ = upload_json(bucket, &key_ci, &info).await;
                         company_ok = true;
+                        cycle_cache
+                            .entry(ticker.ticker.clone())
+                            .or_insert((None, None))
+                            .0 = ci_bytes;
                     }
                 }
             } else {
@@ -660,8 +674,13 @@ async fn fundamental_cycle(
                             "count": ratios.len(),
                             "ratios": ratios,
                         });
+                        let fr_bytes = serde_json::to_vec(&wrapper).ok();
                         let _ = upload_json(bucket, &key_fr, &wrapper).await;
                         ratios_ok = true;
+                        cycle_cache
+                            .entry(ticker.ticker.clone())
+                            .or_insert((None, None))
+                            .1 = fr_bytes;
                     }
                 }
             } else {
@@ -683,12 +702,17 @@ async fn fundamental_cycle(
                     fetch_existing_json(bucket, &key_ci).await;
                 let merged = merge_company_info(info, existing);
                 if is_valid_company_info(&merged) {
+                    let ci_bytes = serde_json::to_vec(&merged).ok();
                     match upload_json(bucket, &key_ci, &merged).await {
                         Ok(true) => tracing::info!("[FUNDAMENTAL] uploaded {key_ci}"),
                         Ok(false) => tracing::info!("[FUNDAMENTAL] skipped {key_ci} (unchanged)"),
                         Err(e) => tracing::warn!("[FUNDAMENTAL] upload failed for {key_ci}: {e}"),
                     }
                     company_ok = true;
+                    cycle_cache
+                        .entry(ticker.ticker.clone())
+                        .or_insert((None, None))
+                        .0 = ci_bytes;
                 } else {
                     tracing::warn!(
                         "[FUNDAMENTAL] {} company_info still empty after merge (exchange={:?}, industry={:?}, shareholders={}), skipping",
@@ -722,8 +746,13 @@ async fn fundamental_cycle(
                                 ticker.ticker
                             );
                             if is_valid_company_info(&info) {
+                                let ci_bytes = serde_json::to_vec(&info).ok();
                                 let _ = upload_json(bucket, &key_ci, &info).await;
                                 company_ok = true;
+                                cycle_cache
+                                    .entry(ticker.ticker.clone())
+                                    .or_insert((None, None))
+                                    .0 = ci_bytes;
                             }
                         }
                     }
@@ -761,12 +790,17 @@ async fn fundamental_cycle(
                         "count": merged.len(),
                         "ratios": merged,
                     });
+                    let fr_bytes = serde_json::to_vec(&wrapper).ok();
                     match upload_json(bucket, &key_fr, &wrapper).await {
                         Ok(true) => tracing::info!("[FUNDAMENTAL] uploaded {key_fr}"),
                         Ok(false) => tracing::info!("[FUNDAMENTAL] skipped {key_fr} (unchanged)"),
                         Err(e) => tracing::warn!("[FUNDAMENTAL] upload failed for {key_fr}: {e}"),
                     }
                     ratios_ok = true;
+                    cycle_cache
+                        .entry(ticker.ticker.clone())
+                        .or_insert((None, None))
+                        .1 = fr_bytes;
                 } else {
                     tracing::warn!(
                         "[FUNDAMENTAL] {} financial_ratios empty after merge, skipping",
@@ -798,8 +832,13 @@ async fn fundamental_cycle(
                                     "count": ratios.len(),
                                     "ratios": ratios,
                                 });
+                                let fr_bytes = serde_json::to_vec(&wrapper).ok();
                                 let _ = upload_json(bucket, &key_fr, &wrapper).await;
                                 ratios_ok = true;
+                                cycle_cache
+                                    .entry(ticker.ticker.clone())
+                                    .or_insert((None, None))
+                                    .1 = fr_bytes;
                             }
                         }
                     }
@@ -873,6 +912,10 @@ async fn fundamental_cycle(
     tracing::info!("[FUNDAMENTAL] cycle done — {ok} ok, {err} failed");
 
     let _ = upload_fundamental_index(bucket, &all_tickers, state, &today, index_set).await;
+
+    if let Err(e) = build_and_upload_fundamental_zip(bucket, &all_tickers, &cycle_cache).await {
+        tracing::warn!("[FUNDAMENTAL] failed to upload vn.zip: {e}");
+    }
 }
 
 /// Upload a manifest of all VN tickers and their fundamental data status.
@@ -909,6 +952,148 @@ async fn upload_fundamental_index(
     upload_json(bucket, key, &index).await?;
 
     tracing::info!("[FUNDAMENTAL] uploaded {key}");
+    Ok(())
+}
+
+/// Build a ZIP containing ALL VN tickers' fundamental data and upload to S3.
+/// Tickers with no data get `{}` (empty JSON object), never empty files.
+/// `cycle_cache` contains bytes from tickers processed this cycle; remaining fetched from S3.
+async fn build_and_upload_fundamental_zip(
+    bucket: &Bucket,
+    all_tickers: &[Ticker],
+    cycle_cache: &HashMap<String, (Option<Vec<u8>>, Option<Vec<u8>>)>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    use std::io::Write;
+    use zip::write::SimpleFileOptions;
+    use zip::CompressionMethod;
+
+    let zip_start = std::time::Instant::now();
+    let empty_json = b"{}";
+
+    // Collect bytes for all tickers. Use cycle_cache for processed tickers,
+    // fetch from S3 for the rest.
+    let mut ticker_bytes: Vec<(String, Option<Vec<u8>>, Option<Vec<u8>>)> =
+        Vec::with_capacity(all_tickers.len());
+
+    // Separate cached vs uncached tickers
+    let mut uncached: Vec<(usize, String)> = Vec::new();
+    for (i, t) in all_tickers.iter().enumerate() {
+        if let Some((ci, fr)) = cycle_cache.get(&t.ticker) {
+            ticker_bytes.push((t.ticker.clone(), ci.clone(), fr.clone()));
+        } else {
+            ticker_bytes.push((t.ticker.clone(), None, None));
+            uncached.push((i, t.ticker.clone()));
+        }
+    }
+
+    tracing::info!(
+        "[FUNDAMENTAL] building vn.zip: {} tickers ({} cached, {} fetching from S3)",
+        all_tickers.len(),
+        all_tickers.len() - uncached.len(),
+        uncached.len(),
+    );
+
+    // Fetch uncached tickers from S3 in parallel
+    const ZIP_FETCH_CONCURRENCY: usize = 16;
+    let sem = std::sync::Arc::new(tokio::sync::Semaphore::new(ZIP_FETCH_CONCURRENCY));
+    let fetch_results: Vec<(usize, Option<Vec<u8>>, Option<Vec<u8>>)> =
+        futures::stream::iter(uncached.into_iter().map(|(idx, ticker)| {
+            let bucket = bucket.clone();
+            let sem = sem.clone();
+            async move {
+                let _permit = sem.acquire().await.unwrap();
+                let key_ci = s3_key_company_info("vn", &ticker);
+                let key_fr = s3_key_financial_ratios("vn", &ticker);
+                let (ci, fr) = tokio::join!(
+                    fetch_existing_bytes(&bucket, &key_ci),
+                    fetch_existing_bytes(&bucket, &key_fr),
+                );
+                (idx, ci, fr)
+            }
+        }))
+        .buffer_unordered(ZIP_FETCH_CONCURRENCY)
+        .collect()
+        .await;
+
+    // Merge fetched results into ticker_bytes
+    for (idx, ci, fr) in fetch_results {
+        ticker_bytes[idx].1 = ci;
+        ticker_bytes[idx].2 = fr;
+    }
+
+    // Build ZIP in memory
+    let buf = std::io::Cursor::new(Vec::new());
+    let mut zip = zip::ZipWriter::new(buf);
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    let mut data_tickers: u32 = 0;
+    let mut empty_tickers: u32 = 0;
+
+    for (ticker, ci_bytes, fr_bytes) in &ticker_bytes {
+        let ci_data = ci_bytes.as_deref().unwrap_or(empty_json);
+        let fr_data = fr_bytes.as_deref().unwrap_or(empty_json);
+
+        let has_data = ci_data.len() > 2 || fr_data.len() > 2;
+        if has_data {
+            data_tickers += 1;
+        } else {
+            empty_tickers += 1;
+        }
+
+        zip.start_file(format!("{ticker}/company_info.json"), options)?;
+        zip.write_all(ci_data)?;
+
+        zip.start_file(format!("{ticker}/financial_ratios.json"), options)?;
+        zip.write_all(fr_data)?;
+    }
+
+    let zip_buf = zip.finish()?.into_inner();
+    let zip_size = zip_buf.len();
+
+    // Hash-based dedup
+    let hash = {
+        use sha2::{Digest, Sha256};
+        let h = Sha256::digest(&zip_buf);
+        hex::encode(h)
+    };
+
+    let zip_key = "fundamental/vn.zip";
+    if let Ok((head, _status)) = bucket.head_object(zip_key).await {
+        if let Some(existing) = head.metadata.as_ref().and_then(|m| m.get("content-hash")) {
+            if existing == &hash {
+                tracing::info!(
+                    "[FUNDAMENTAL] vn.zip unchanged ({:.1} MB, {} data + {} empty tickers), skipping upload",
+                    zip_size as f64 / 1_048_576.0,
+                    data_tickers,
+                    empty_tickers,
+                );
+                return Ok(());
+            }
+        }
+    }
+
+    let mut headers = HeaderMap::new();
+    headers.insert("x-amz-meta-content-hash", hash.parse().unwrap());
+
+    bucket
+        .put_object_with_content_type_and_headers(
+            zip_key,
+            &zip_buf,
+            "application/zip",
+            Some(headers),
+        )
+        .await?;
+
+    tracing::info!(
+        "[FUNDAMENTAL] uploaded {zip_key} ({:.1} MB, {} data + {} empty tickers, {:.1}s)",
+        zip_size as f64 / 1_048_576.0,
+        data_tickers,
+        empty_tickers,
+        zip_start.elapsed().as_secs_f64(),
+    );
+
     Ok(())
 }
 

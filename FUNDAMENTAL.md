@@ -7,6 +7,7 @@ Fetches company profile and financial ratios from VCI REST API (`iq.vietcap.com.
 ```
 fundamental/
   vn/
+    vn.zip                              # ZIP bundle of ALL tickers (single download)
     _index.json                          # manifest of all tickers + fetch status
     {TICKER}/
       _meta.json                         # persistent checkpoint (survives restarts)
@@ -18,6 +19,7 @@ fundamental/
 
 | File | Description | Sample |
 |---|---|---|
+| `vn.zip` | ZIP bundle of ALL VN tickers' fundamental data | [download](https://s3.aipriceaction.com/fundamental/vn.zip) |
 | `company_info.json` | Merged company profile | [ACB](https://s3.aipriceaction.com/fundamental/vn/ACB/company_info.json) |
 | `financial_ratios.json` | Envelope with quarterly ratios (60 fields per entry) | [ACB](https://s3.aipriceaction.com/fundamental/vn/ACB/financial_ratios.json) |
 | `_meta.json` | Per-ticker persistent checkpoint | |
@@ -254,6 +256,54 @@ Non-bank tickers have fewer fields populated — bank-specific fields (NPL, CAR,
 }
 ```
 
+## ZIP Bundle (`vn.zip`)
+
+After each fundamental cycle, a single ZIP file is built containing **ALL** VN tickers (including indices like VNINDEX, VN30). This allows clients to download **one file** instead of 800+ individual HTTP requests.
+
+### Structure
+
+```
+vn.zip  (~15-20 MB, deflated)
+├── ACB/
+│   ├── company_info.json          (full data)
+│   └── financial_ratios.json      (full data)
+├── FPT/
+│   ├── company_info.json
+│   └── financial_ratios.json
+├── VCB/
+│   ├── company_info.json          {}
+│   └── financial_ratios.json      {}
+├── VNINDEX/
+│   ├── company_info.json          {}
+│   └── financial_ratios.json      {}
+└── ... (~400 tickers)
+```
+
+### Design
+
+- **No-data tickers get `{}`** — empty JSON object, never empty files or missing entries
+- **Includes ALL VN tickers** — no filtering, indices included
+- **Hash dedup** — SHA256 stored as `x-amz-meta-content-hash`, upload skipped if unchanged
+- **Content-Type**: `application/zip`
+- **Updated once per cycle** — after per-ticker uploads + `_index.json`
+
+### Build process
+
+1. During the per-ticker loop, JSON bytes are cached as they are uploaded
+2. After the loop, tickers not processed this cycle are fetched from S3 in parallel (concurrency=16)
+3. All bytes are written to an in-memory ZIP with `Deflated` compression
+4. Single PUT to `fundamental/vn.zip` with hash-based dedup
+
+### Performance
+
+| Step | Time |
+|---|---|
+| Cache bytes during loop | 0 (already serializing for upload) |
+| S3 GETs for non-cached tickers | <2s (parallel, concurrency=16) |
+| Build ZIP in memory | <1s |
+| Upload ZIP to S3 (~15-20 MB) | <5s |
+| **Total added to cycle** | **<10s** |
+
 ## Data Flow
 
 ```
@@ -287,12 +337,18 @@ s3_archive worker (hourly loop)
     │   │   │   └─ upload_json() with SHA256 hash-dedup, wrapped in envelope
     │   │   │
     │   │   ├─ On RateLimit/NoData + no S3 data → fallback to local company_info.json
+    │   │   ├─ Cache uploaded JSON bytes for ZIP bundle
     │   │   ├─ If both OK → mark_done() + save _meta.json to S3
     │   │   └─ If either failed → skip marking (retries next cycle)
     │   │
     │   ├─ VCI-dead detection: 0 healthy HTTP responses after 5+ tickers → fallback-only
     │   ├─ Circuit breaker: 3 consecutive rate limits → abort cycle
-    │   └─ upload_fundamental_index() → _index.json manifest
+    │   ├─ upload_fundamental_index() → _index.json manifest
+    │   └─ build_and_upload_fundamental_zip() → vn.zip (ALL tickers, empty = {})
+    │       ├─ Use cached bytes from this cycle
+    │       ├─ Fetch remaining tickers from S3 in parallel (concurrency=16)
+    │       ├─ No-data tickers → {} (empty JSON object)
+    │       └─ Single PUT with hash dedup (~15-20 MB)
     │
     └─ Continue with OHLCV archival (unchanged)
 ```
