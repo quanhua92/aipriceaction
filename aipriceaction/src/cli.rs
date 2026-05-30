@@ -222,7 +222,12 @@ pub fn run() {
 
     match cli.command {
         Commands::Serve { host, port } => {
-            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(4)
+                .max_blocking_threads(16)
+                .enable_all()
+                .build()
+                .expect("Failed to create Tokio runtime");
             rt.block_on(async {
                 let tracer_provider = crate::tracing_otel::init();
 

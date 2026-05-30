@@ -397,7 +397,8 @@ pub mod s3_archive {
     pub const JSON_CONTENT_TYPE: &str = "application/json";
 
     /// VCI rate limit for fundamental data fetches (requests per minute per client).
-    pub const FUNDAMENTAL_RATE_LIMIT: u32 = 30;
+    /// Set high — the inter-ticker delay (FUNDAMENTAL_DELAY_MS) is the real throttle.
+    pub const FUNDAMENTAL_RATE_LIMIT: u32 = 500;
 
     /// Delay between fundamental data fetches (ms) to be gentle on VCI API.
     pub const FUNDAMENTAL_DELAY_MS: u64 = 2000;

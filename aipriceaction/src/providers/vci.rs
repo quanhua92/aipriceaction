@@ -125,6 +125,10 @@ impl RateLimiter {
         }
     }
 
+    pub fn available_permits(&self) -> usize {
+        self.semaphore.available_permits()
+    }
+
     /// Acquire a permit (blocks until one is available, then consumes it).
     pub async fn acquire(&self) {
         match self.semaphore.acquire().await {
@@ -207,7 +211,8 @@ impl VciProvider {
         // 1. Direct client
         if direct_connection {
             let direct_client = HttpClient::builder()
-                .timeout(StdDuration::from_secs(30))
+                .timeout(StdDuration::from_secs(15))
+                .connect_timeout(StdDuration::from_secs(10))
                 .build()?;
             rate_limiters.push(RateLimiter::new(requests_per_minute));
             clients.push(direct_client);
@@ -227,7 +232,8 @@ impl VciProvider {
                     Ok(proxy_uri) => {
                         match HttpClient::builder()
                             .proxy(Some(proxy_uri))
-                            .timeout(StdDuration::from_secs(30))
+                            .timeout(StdDuration::from_secs(15))
+                            .connect_timeout(StdDuration::from_secs(10))
                             .build()
                         {
                             Ok(client) => {
@@ -340,8 +346,28 @@ impl VciProvider {
                 format!("proxy-{}", client_index)
             };
 
-            // Per-client rate limit
-            self.rate_limiters[client_index].acquire().await;
+            tracing::info!(
+                "[{}] acquiring rate limit permit for attempt {}/{} (available: {})",
+                label,
+                attempt_idx + 1,
+                MAX_TOTAL_ATTEMPTS,
+                self.rate_limiters[client_index].available_permits(),
+            );
+            if tokio::time::timeout(
+                StdDuration::from_secs(30),
+                self.rate_limiters[client_index].acquire(),
+            )
+            .await
+            .is_err()
+            {
+                tracing::warn!(
+                    "[{}] rate limiter timeout (30s), proceeding without permit for attempt {}",
+                    label,
+                    attempt_idx + 1
+                );
+            } else {
+                tracing::info!("[{}] rate limit permit acquired for attempt {}", label, attempt_idx + 1);
+            }
 
             // Build request with full browser headers
             let request = isahc::Request::builder()
@@ -367,7 +393,24 @@ impl VciProvider {
                 .body(body.clone())
                 .map_err(|e| VciError::InvalidResponse(format!("Request build error: {}", e)))?;
 
-            match client.send_async(request).await {
+            let send_result = match tokio::time::timeout(
+                StdDuration::from_secs(20),
+                client.send_async(request),
+            ).await {
+                Ok(result) => result,
+                Err(_) => {
+                    last_error = Some(format!("HTTP send_async timed out after 20s (attempt {})", attempt_idx + 1));
+                    tracing::warn!(
+                        "[{}] send_async timed out after 20s for attempt {}/{}",
+                        label,
+                        attempt_idx + 1,
+                        MAX_TOTAL_ATTEMPTS,
+                    );
+                    continue;
+                }
+            };
+
+            match send_result {
                 Ok(mut resp) => {
                     let status = resp.status();
                     if status.is_success() {
@@ -495,7 +538,28 @@ impl VciProvider {
                 format!("proxy-{}", client_index)
             };
 
-            self.rate_limiters[client_index].acquire().await;
+            tracing::info!(
+                "[{}] acquiring rate limit permit for attempt {}/{} (available: {})",
+                label_prefix,
+                attempt_idx + 1,
+                MAX_TOTAL_ATTEMPTS,
+                self.rate_limiters[client_index].available_permits(),
+            );
+            if tokio::time::timeout(
+                StdDuration::from_secs(30),
+                self.rate_limiters[client_index].acquire(),
+            )
+            .await
+            .is_err()
+            {
+                tracing::warn!(
+                    "[{}] rate limiter timeout (30s), proceeding without permit for attempt {}",
+                    label_prefix,
+                    attempt_idx + 1
+                );
+            } else {
+                tracing::info!("[{}] rate limit permit acquired for attempt {}", label_prefix, attempt_idx + 1);
+            }
 
             let mut builder = isahc::Request::builder()
                 .uri(url)
@@ -527,7 +591,24 @@ impl VciProvider {
                 .body(())
                 .map_err(|e| VciError::InvalidResponse(format!("Request build error: {}", e)))?;
 
-            match client.send_async(request).await {
+            let send_result = match tokio::time::timeout(
+                StdDuration::from_secs(20),
+                client.send_async(request),
+            ).await {
+                Ok(result) => result,
+                Err(_) => {
+                    last_error = Some(format!("HTTP send_async timed out after 20s (attempt {})", attempt_idx + 1));
+                    tracing::warn!(
+                        "[{}] send_async timed out after 20s for attempt {}/{}",
+                        label_prefix,
+                        attempt_idx + 1,
+                        MAX_TOTAL_ATTEMPTS,
+                    );
+                    continue;
+                }
+            };
+
+            match send_result {
                 Ok(mut resp) => {
                     let status = resp.status();
                     if status.is_success() {
@@ -625,7 +706,22 @@ impl VciProvider {
                 format!("proxy-{}", client_index)
             };
 
-            self.rate_limiters[client_index].acquire().await;
+            tracing::info!(
+                "[VCI-REST] acquiring rate limit permit for handshake via {} (available: {})",
+                label,
+                self.rate_limiters[client_index].available_permits(),
+            );
+            if tokio::time::timeout(
+                StdDuration::from_secs(30),
+                self.rate_limiters[client_index].acquire(),
+            )
+            .await
+            .is_err()
+            {
+                tracing::warn!("[VCI-REST] rate limiter timeout (30s), proceeding without permit");
+            } else {
+                tracing::info!("[VCI-REST] rate limit permit acquired for handshake via {}", label);
+            }
 
             let request = isahc::Request::builder()
                 .uri(url)
@@ -932,7 +1028,7 @@ impl VciProvider {
             company_info.industry,
             company_info.outstanding_shares,
             company_info.current_price,
-            company_info.company_profile.as_ref().map(|p| if p.len() > 30 { &p[..30] } else { p }).unwrap_or("none"),
+            company_info.company_profile.as_ref().map(|p| p.chars().take(30).collect::<String>()).unwrap_or_else(|| "none".to_string()),
             company_info.shareholders.len(),
             company_info.officers.len(),
         );
