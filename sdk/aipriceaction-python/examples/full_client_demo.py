@@ -8,6 +8,8 @@ Each section is a standalone function you can copy into your own project.
 
 from aipriceaction import (
     AIPriceAction,
+    CompanyInfo,
+    FinancialRatios,
     build_performers,
     compute_volume_profile,
 )
@@ -324,6 +326,98 @@ def demo_timezone(client: AIPriceAction) -> None:
         print(f"    {row['time']}")
 
 
+# ── 13. Fundamental Data ─────────────────────────────────────────────────────
+
+
+def _print_company_info(ci: CompanyInfo | None) -> None:
+    if ci is None:
+        print("  CompanyInfo: None (not found)")
+        return
+    print(f"  symbol={ci.symbol}")
+    print(f"  exchange={ci.exchange}  industry={ci.industry}")
+    print(f"  type={ci.company_type}  established={ci.established_year}")
+    print(f"  employees={ci.employees}")
+    print(f"  market_cap={ci.market_cap:,.0f}" if ci.market_cap else "  market_cap=N/A")
+    print(f"  current_price={ci.current_price:,.2f}" if ci.current_price else "  current_price=N/A")
+    print(f"  outstanding_shares={ci.outstanding_shares:,}" if ci.outstanding_shares else "  outstanding_shares=N/A")
+    print(f"  website={ci.website}")
+    if ci.company_profile:
+        snippet = ci.company_profile[:120].replace("\n", " ")
+        print(f"  profile={snippet}...")
+    if ci.shareholders:
+        print(f"  shareholders ({len(ci.shareholders)}):")
+        for s in ci.shareholders[:5]:
+            pct = f"{s.percentage:.1f}%" if s.percentage is not None else "N/A"
+            print(f"    {s.name:40s}  {pct}")
+    if ci.officers:
+        print(f"  officers ({len(ci.officers)}):")
+        for o in ci.officers[:5]:
+            pct = f" ({o.percentage:.1f}%)" if o.percentage is not None else ""
+            print(f"    {o.name:30s}  {o.position}{pct}")
+
+
+def _print_financial_ratios(fr: FinancialRatios | None) -> None:
+    if fr is None:
+        print("  FinancialRatios: None (not found)")
+        return
+    print(f"  ticker={fr.ticker}  updated_at={fr.updated_at}  count={fr.count}")
+    if fr.ratios:
+        latest = fr.ratios[-1]
+        print(f"\n  Latest ratio entry (year={latest.year_report}, length={latest.length_report}):")
+        print(f"    PE={latest.pe:,.1f}" if latest.pe else "    PE=N/A")
+        print(f"    PB={latest.pb:,.1f}" if latest.pb else "    PB=N/A")
+        print(f"    ROE={latest.roe:,.2f}" if latest.roe else "    ROE=N/A")
+        print(f"    ROA={latest.roa:,.2f}" if latest.roa else "    ROA=N/A")
+        print(f"    gross_margin={latest.gross_margin:,.2f}" if latest.gross_margin else "    gross_margin=N/A")
+        print(f"    debt_to_equity={latest.debt_to_equity:,.2f}" if latest.debt_to_equity else "    debt_to_equity=N/A")
+        print(f"    current_ratio={latest.current_ratio:,.2f}" if latest.current_ratio else "    current_ratio=N/A")
+        print(f"    dividend_yield={latest.dividend_yield:,.2f}" if latest.dividend_yield else "    dividend_yield=N/A")
+        if latest.npl is not None:
+            print(f"    NPL={latest.npl:,.2f} (bank-specific)")
+        if latest.cir is not None:
+            print(f"    CIR={latest.cir:,.2f} (bank-specific)")
+        if latest.extra:
+            print(f"    extra fields: {list(latest.extra.keys())}")
+
+
+def demo_fundamental(client: AIPriceAction) -> None:
+    section(13, "Fundamental Data")
+
+    print("# client.get_company_info('ACB')")
+    ci = client.get_company_info("ACB", source="vn")
+    _print_company_info(ci)
+
+    print("\n# client.get_financial_ratios('ACB')")
+    fr = client.get_financial_ratios("ACB", source="vn")
+    _print_financial_ratios(fr)
+
+    print("\n# client.get_fundamental('FPT')  — non-bank stock")
+    ci2, fr2 = client.get_fundamental("FPT", source="vn")
+    _print_company_info(ci2)
+    print()
+    _print_financial_ratios(fr2)
+
+    print("\n# client.get_fundamental('VNINDEX')  — index (no fundamental data)")
+    ci3, fr3 = client.get_fundamental("VNINDEX", source="vn")
+    _print_company_info(ci3)
+    _print_financial_ratios(fr3)
+
+    print("\n# Serialization roundtrip:")
+    if ci:
+        d = ci.to_dict()
+        print(f"  CompanyInfo.to_dict() keys: {sorted(d.keys())}")
+        ci_back = CompanyInfo.from_dict(d)
+        assert ci_back.symbol == ci.symbol
+        assert len(ci_back.shareholders) == len(ci.shareholders)
+        print(f"  Roundtrip OK: symbol={ci_back.symbol}, shareholders={len(ci_back.shareholders)}, officers={len(ci_back.officers)}")
+    if fr:
+        d = fr.to_dict()
+        print(f"  FinancialRatios.to_dict() keys: {sorted(d.keys())}")
+        assert d["ticker"] == fr.ticker
+        assert d["count"] == fr.count
+        print(f"  Roundtrip OK: ticker={fr.ticker}, count={fr.count}, ratio entries={len(fr.ratios)}")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 
@@ -345,6 +439,7 @@ def main() -> None:
         lambda: demo_aggregation(client),
         lambda: demo_csv_download(client),
         lambda: demo_timezone(client),
+        lambda: demo_fundamental(client),
     ]
 
     for demo in demos:
