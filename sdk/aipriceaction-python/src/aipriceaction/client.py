@@ -1439,6 +1439,107 @@ class AIPriceAction:
 
         return paths
 
+    # ── Fundamental data ──
+
+    def _fetch_json_from_url(
+        self,
+        url: str,
+        cache_path: str,
+        *,
+        use_cache: bool = True,
+    ) -> Optional[dict]:
+        """Fetch a JSON file from S3 with disk caching and hash sidecar.
+
+        Mirrors _fetch_csv_from_url but returns dict instead of DataFrame.
+        """
+        _t0 = _time.monotonic()
+
+        if use_cache and self._is_fresh(cache_path, url):
+            try:
+                text = Path(cache_path).read_text()
+                logger.debug("[fetch_json] cache hit: %s (%.3fs)", url, _time.monotonic() - _t0)
+                return json.loads(text)
+            except (OSError, json.JSONDecodeError):
+                pass
+
+        if use_cache and not os.path.exists(cache_path):
+            entry = self._freshness.get(cache_path)
+            if entry and entry.get("hash") == "":
+                return None
+
+        logger.debug("[fetch_json] GET: %s", url)
+        resp = self._session.get(url, timeout=(5, 30))
+        if resp.status_code in (404, 403):
+            if use_cache:
+                self._freshness[cache_path] = {
+                    "hash": "",
+                    "checked_at": _time.monotonic(),
+                }
+                self._flush_freshness()
+            return None
+        resp.raise_for_status()
+
+        data = resp.json()
+
+        if use_cache:
+            Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(cache_path).write_text(json.dumps(data))
+            content_hash = self._head_content_hash(url)
+            if content_hash:
+                self._save_hash(cache_path, content_hash)
+            self._freshness[cache_path] = {
+                "hash": content_hash or "",
+                "checked_at": _time.monotonic(),
+            }
+            self._flush_freshness()
+
+        return data
+
+    def get_company_info(
+        self,
+        ticker: str,
+        *,
+        source: Optional[str] = None,
+    ) -> "CompanyInfo | None":
+        """Fetch company_info.json from S3 with hash-based caching."""
+        from .fundamental import CompanyInfo
+
+        source, ticker = self._find_source(ticker, source)
+        url = f"{self.base_url}/fundamental/{source}/{ticker}/company_info.json"
+        cache_path = str(self._cache_dir / "fundamental" / source / ticker / "company_info.json")
+        data = self._fetch_json_from_url(url, cache_path)
+        if data is None:
+            return None
+        return CompanyInfo.from_dict(data)
+
+    def get_financial_ratios(
+        self,
+        ticker: str,
+        *,
+        source: Optional[str] = None,
+    ) -> "FinancialRatios | None":
+        """Fetch financial_ratios.json from S3 with hash-based caching."""
+        from .fundamental import FinancialRatios
+
+        source, ticker = self._find_source(ticker, source)
+        url = f"{self.base_url}/fundamental/{source}/{ticker}/financial_ratios.json"
+        cache_path = str(self._cache_dir / "fundamental" / source / ticker / "financial_ratios.json")
+        data = self._fetch_json_from_url(url, cache_path)
+        if data is None:
+            return None
+        return FinancialRatios.from_dict(data)
+
+    def get_fundamental(
+        self,
+        ticker: str,
+        *,
+        source: Optional[str] = None,
+    ) -> "tuple[CompanyInfo | None, FinancialRatios | None]":
+        """Fetch both company_info and financial_ratios."""
+        ci = self.get_company_info(ticker, source=source)
+        fr = self.get_financial_ratios(ticker, source=source)
+        return ci, fr
+
     # ── Interval normalization ──
 
     @staticmethod

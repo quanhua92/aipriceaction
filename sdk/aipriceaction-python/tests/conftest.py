@@ -4,6 +4,9 @@ import pytest
 import responses
 
 
+_BASE = "http://localhost:9000/aipriceaction-archive"
+
+
 @pytest.fixture
 def mock_s3():
     """Mock S3 archive with responses library."""
@@ -175,11 +178,11 @@ def mock_s3_yearly_only():
     responses.start()
 
     responses.get(
-        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        f"{_BASE}/meta/tickers.json",
         json=[{"source": "vn", "ticker": "TCX", "name": "TCX", "group": "REALESTATE"}],
     )
     responses.head(
-        "http://localhost:9000/aipriceaction-archive/meta/tickers.json",
+        f"{_BASE}/meta/tickers.json",
         headers={"x-amz-meta-content-hash": "tickers-yearly-hash"},
     )
 
@@ -192,18 +195,157 @@ def mock_s3_yearly_only():
         for i, d in enumerate(["2026-01-05", "2026-01-06"])
     )
 
-    base = "http://localhost:9000/aipriceaction-archive/ohlcv/vn/TCX/yearly"
+    base = f"{_BASE}/ohlcv/vn/TCX/yearly"
     responses.get(f"{base}/TCX-1D-2025.csv", body=yearly_2025)
     responses.head(f"{base}/TCX-1D-2025.csv", headers={"x-amz-meta-content-hash": "tcx-2025-hash"})
     responses.get(f"{base}/TCX-1D-2026.csv", body=yearly_2026)
     responses.head(f"{base}/TCX-1D-2026.csv", headers={"x-amz-meta-content-hash": "tcx-2026-hash"})
 
     responses.get(
-        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+        re.compile(rf"^{re.escape(_BASE)}/ohlcv/.*\.csv"),
         status=404,
     )
     responses.head(
-        re.compile(r"http://localhost:9000/aipriceaction-archive/ohlcv/.*\.csv"),
+        re.compile(rf"^{re.escape(_BASE)}/ohlcv/.*\.csv"),
+        status=404,
+    )
+
+    yield
+
+    responses.stop()
+    responses.reset()
+
+
+@pytest.fixture
+def mock_s3_fundamental():
+    """Mock S3 with fundamental data for ACB (bank) and FPT (non-bank)."""
+    responses.start()
+
+    tickers = [
+        {"source": "vn", "ticker": "ACB", "name": "Asia Commercial Bank", "group": "BANK"},
+        {"source": "vn", "ticker": "FPT", "name": "FPT Corp", "group": "TECH"},
+        {"source": "vn", "ticker": "VNINDEX", "name": "VN Index", "group": "INDEX"},
+    ]
+    responses.get(f"{_BASE}/meta/tickers.json", json=tickers)
+    responses.head(
+        f"{_BASE}/meta/tickers.json",
+        headers={"x-amz-meta-content-hash": "tickers-fund-hash"},
+    )
+
+    acb_ci = {
+        "symbol": "ACB",
+        "exchange": "HOSE",
+        "industry": "Ngân hàng",
+        "company_type": None,
+        "established_year": None,
+        "employees": None,
+        "market_cap": 122252427056200.0,
+        "current_price": 23500.0,
+        "outstanding_shares": 5136656599,
+        "company_profile": "<div>ACB profile</div>",
+        "website": None,
+        "shareholders": [
+            {"name": "Sather Gate Investments Limited", "percentage": 0.0499},
+            {"name": "Dragon Financial Holdings Limited", "percentage": 0.036243},
+        ],
+        "officers": [
+            {"name": "Trần Hùng Huy", "position": "Chủ tịch HĐQT", "percentage": 0.0343},
+            {"name": "Mai Thị Hằng", "position": "Tổng Giám đốc", "percentage": None},
+        ],
+    }
+    responses.get(f"{_BASE}/fundamental/vn/ACB/company_info.json", json=acb_ci)
+    responses.head(
+        f"{_BASE}/fundamental/vn/ACB/company_info.json",
+        headers={"x-amz-meta-content-hash": "acb-ci-hash-001"},
+    )
+
+    acb_fr = {
+        "ticker": "ACB",
+        "updated_at": "2026-05-30T12:06:57.696061244+00:00",
+        "count": 3,
+        "ratios": [
+            {
+                "yearReport": 2025, "lengthReport": 5, "ticker": "ACB",
+                "pe": 8.2386621048, "pb": 1.3531858822, "ps": 3.7843420353,
+                "roe": 0.1755767655, "roa": 0.0165353343, "roic": 0.0,
+                "grossMargin": 0.6767738678, "afterTaxProfitMargin": 0.4622981564,
+                "npl": 0.0097140463, "car": 0.1245, "casaRatio": 0.2181753594,
+                "cir": -0.3232261322, "marketCap": 122252427056200.0,
+                "equityToLiabilities": 0.1014889219,
+                "currentRatio": 0.0, "quickRatio": 0.0, "cashRatio": 0.0,
+                "assetTurnover": 0.0, "debtToEquity": 0.0,
+            },
+            {
+                "yearReport": 2013, "lengthReport": 1, "ticker": "ACB",
+                "BSA1": 0, "BSA2": 5806521000000, "eps": 333.179,
+                "revenue": 4183337000000, "netProfit": 307030000000,
+                "pe": 36.81, "pb": 1.1337, "roe": 0.030586, "roa": 0.001935,
+            },
+            {
+                "yearReport": 2025, "lengthReport": 3, "ticker": "ACB",
+                "pe": 8.5, "pb": 1.4, "roe": 0.18,
+            },
+        ],
+    }
+    responses.get(f"{_BASE}/fundamental/vn/ACB/financial_ratios.json", json=acb_fr)
+    responses.head(
+        f"{_BASE}/fundamental/vn/ACB/financial_ratios.json",
+        headers={"x-amz-meta-content-hash": "acb-fr-hash-001"},
+    )
+
+    fpt_ci = {
+        "symbol": "FPT",
+        "exchange": "HOSE",
+        "industry": "Công nghệ Thông tin",
+        "company_type": None,
+        "established_year": None,
+        "employees": None,
+        "market_cap": 126059526954000.0,
+        "current_price": 74000.0,
+        "outstanding_shares": 1703507121,
+        "company_profile": "<div>FPT profile</div>",
+        "website": None,
+        "shareholders": [
+            {"name": "SCIC", "percentage": 0.0567},
+        ],
+        "officers": [
+            {"name": "Trương Gia Bình", "position": "Chủ tịch HĐQT", "percentage": 0.0689},
+        ],
+    }
+    responses.get(f"{_BASE}/fundamental/vn/FPT/company_info.json", json=fpt_ci)
+    responses.head(
+        f"{_BASE}/fundamental/vn/FPT/company_info.json",
+        headers={"x-amz-meta-content-hash": "fpt-ci-hash-001"},
+    )
+
+    fpt_fr = {
+        "ticker": "FPT",
+        "updated_at": "2026-05-30T12:10:00.000000+00:00",
+        "count": 1,
+        "ratios": [
+            {
+                "yearReport": 2025, "lengthReport": 5, "ticker": "FPT",
+                "pe": 13.0086870277, "pb": 3.3434885255, "ps": 1.7396404964,
+                "roe": 0.2829368545, "roa": 0.1170976805, "roic": 0.1695199693,
+                "grossMargin": 0.369240998, "afterTaxProfitMargin": 0.1602037778,
+                "currentRatio": 1.400061121, "debtToEquity": 1.0147643215,
+                "cashCycle": 117.9190455063,
+                "npl": 0.0, "car": 0.0, "casaRatio": 0.0,
+            },
+        ],
+    }
+    responses.get(f"{_BASE}/fundamental/vn/FPT/financial_ratios.json", json=fpt_fr)
+    responses.head(
+        f"{_BASE}/fundamental/vn/FPT/financial_ratios.json",
+        headers={"x-amz-meta-content-hash": "fpt-fr-hash-001"},
+    )
+
+    responses.get(
+        re.compile(rf"^{re.escape(_BASE)}/fundamental/vn/VNINDEX/.*$"),
+        status=404,
+    )
+    responses.head(
+        re.compile(rf"^{re.escape(_BASE)}/fundamental/vn/VNINDEX/.*$"),
         status=404,
     )
 

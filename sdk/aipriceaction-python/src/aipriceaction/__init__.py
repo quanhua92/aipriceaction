@@ -7,6 +7,7 @@ from .llm_models import Model, OpenRouter
 from .checkpoint import PersistentCheckpointSaver, PostPutCallback, load_session
 from .performers import PerformerInfo, build_performers
 from .volume_profile import VolumeProfileResult, compute_volume_profile
+from .fundamental import CompanyInfo, FinancialRatios, FinancialRatioEntry, ShareholderInfo, OfficerInfo
 
 __all__ = [
     "AIPriceAction",
@@ -24,5 +25,10 @@ __all__ = [
     "build_performers",
     "VolumeProfileResult",
     "compute_volume_profile",
+    "CompanyInfo",
+    "FinancialRatios",
+    "FinancialRatioEntry",
+    "ShareholderInfo",
+    "OfficerInfo",
 ]
 __version__ = "0.1.20"
