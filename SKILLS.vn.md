@@ -52,7 +52,7 @@ CLI luôn tự cập nhật khi dùng `uvx aipa-cli` — luôn là bản mới n
 
 ### aipa-data — Dữ liệu thị trường thời gian thực
 
-Dữ liệu thô, không cần AI, không cần API Key. OHLCV candles, volume profile, top performers, live data, watchlists.
+Dữ liệu thô, không cần AI, không cần API Key. OHLCV candles, volume profile, top performers, live data, watchlists, **dữ liệu cơ bản (thông tin công ty, tỷ số tài chính, PE, ROE, NPL, CAR, screening/ranking)**.
 
 - `Giá VCB hôm nay là bao nhiêu?`
 - `Top 10 cổ phiếu có giá trị giao dịch cao nhất`
@@ -60,10 +60,15 @@ Dữ liệu thô, không cần AI, không cần API Key. OHLCV candles, volume p
 - `Volume profile cho BTCUSDT — POC ở đâu?`
 - `Liệt kê các cổ phiếu ngành ngân hàng`
 - `Thị trường hôm nay thế nào? Cổ phiếu nào tăng mạnh nhất?`
+- `PE của VCB là bao nhiêu?` *(fundamentals)*
+- `Ranking ngân hàng theo ROE` *(fundamentals)*
+- `Screen cổ phiếu PE thấp + ROE cao` *(fundamentals)*
+- `Thông tin công ty và cổ đông của ACB` *(fundamentals)*
+- `So sánh NPL và CAR các ngân hàng` *(fundamentals)*
 
 ### aipa-analyze — Phân tích kỹ thuật bằng AI
 
-Phân tích đơn hoặc nhiều cổ phiếu cùng lúc với Wyckoff, VPA, Smart Money, MA Momentum. Khi dùng với AI agent (Claude Code, Gemini CLI...), agent tự đọc dữ liệu và phân tích — không cần API Key.
+Phân tích đơn hoặc nhiều cổ phiếu cùng lúc với Wyckoff, VPA, Smart Money, MA Momentum. Có thể kết hợp **dữ liệu cơ bản** (PE, PB, ROE, NPL, CAR) để làm phong phú phân tích kỹ thuật khi bạn yêu cầu. Khi dùng với AI agent (Claude Code, Gemini CLI...), agent tự đọc dữ liệu và phân tích — không cần API Key.
 
 - `Phân tích VCB, TCB, MBB — ngân hàng nào có xu hướng mạnh nhất?`
 - `Wyckoff analysis cho HPG`
@@ -160,6 +165,7 @@ Dữ liệu từ sjc.com.vn. Giá vàng SJC hàng ngày.
 | Thị trường quốc tế | Yes (Yahoo Finance) | Hạn chế hoặc không |
 | Vàng SJC | Yes | Không |
 | Phân tích kỹ thuật | Wyckoff, VPA, Smart Money, Bob Volman | Tóm tắt thị trường |
+| Dữ liệu cơ bản | Yes (PE, PB, ROE, NPL, CAR, screening) | Không |
 | Volume Profile | Yes (POC, Value Area, multi-day) | Không |
 | Deep Research | Yes (multi-agent pipeline) | Không |
 | AI Agents hỗ trợ | Claude Code, Gemini CLI, Codex, Cursor, openCode | Hạn chế hơn |
@@ -179,9 +185,9 @@ Dữ liệu OHLCV được cung cấp qua S3 archive công khai — truy cập b
 `aipa-cli` cần Python 3.10+, nhưng bạn không cần cài thủ công. AI agent tự cài đặt qua `uvx` khi chạy lệnh lần đầu. `uvx` quản lý môi trường ảo riêng, không ảnh hưởng đến hệ thống.
 
 **Sự khác biệt giữa 3 skills là gì?**
-- **aipa-data:** Dữ liệu thô — candles, volume profile, performers, live data. Không cần AI, không cần API Key.
-- **aipa-analyze:** Phân tích kỹ thuật — Wyckoff, VPA, Smart Money, MA Momentum. AI agent tự đọc và phân tích, không cần API Key.
-- **aipa-research:** Nghiên cứu chuyên sâu — pipeline multi-agent phân tích toàn ngành. Agent-driven mode không cần API Key.
+- **aipa-data:** Dữ liệu thô — candles, volume profile, performers, live data, dữ liệu cơ bản (PE, ROE, NPL, CAR, thông tin công ty). Không cần AI, không cần API Key.
+- **aipa-analyze:** Phân tích kỹ thuật — Wyckoff, VPA, Smart Money, MA Momentum + dữ liệu cơ bản khi yêu cầu. AI agent tự đọc và phân tích, không cần API Key.
+- **aipa-research:** Nghiên cứu chuyên sâu — pipeline multi-agent phân tích toàn ngành, có thể kết hợp screening cơ bản. Agent-driven mode không cần API Key.
 
 **Dữ liệu có chính xác không?**
 Dữ liệu tổng hợp từ nhiều nguồn uy tín (VCI, Vietstock, VNDirect, Binance, Yahoo Finance, sjc.com.vn). Phân tích do AI tạo ra nên có thể chứa sai sót — luôn kiểm chứng trước khi ra quyết định giao dịch.

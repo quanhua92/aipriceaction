@@ -321,6 +321,116 @@ Mandatory sectors by source:
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
+### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.41)
+
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use: `aipa --version`. If < 0.1.41, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+
+**IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
+- "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"
+- Valuation metrics: "PE", "PB", "PS", "EV/EBITDA"
+- Profitability: "ROE", "ROA", "margin"
+- Bank health: "NPL", "CAR", "CASA", "CIR", "LDR"
+- Financial screening or ranking by fundamental fields
+
+#### Subcommands
+
+| Command | Description |
+|---|---|
+| `aipa fundamentals info TICKER` | Company profile, shareholders, officers |
+| `aipa fundamentals ratios TICKER` | Financial ratios by period |
+| `aipa fundamentals rank` | Rank tickers by a fundamental field (50+ fields) |
+| `aipa fundamentals screen` | Multi-criteria screening with range filters |
+
+#### `aipa fundamentals info`
+
+```bash
+aipa fundamentals info ACB              # company profile, shareholders, officers
+aipa fundamentals info FPT --source vn  # with explicit source
+```
+
+#### `aipa fundamentals ratios`
+
+```bash
+aipa fundamentals ratios VCB                    # All yearly reports
+aipa fundamentals ratios VCB --latest            # Only latest yearly
+aipa fundamentals ratios VCB --year 2024         # Specific year
+aipa fundamentals ratios VCB --no-yearly         # Include quarterly
+aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
+aipa fundamentals ratios VCB --json              # Raw JSON output
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--latest` | off | Show only latest yearly report |
+| `--year YEAR` | — | Show specific year |
+| `--no-yearly` | off | Include quarterly reports (default: yearly only) |
+| `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
+| `--json` | off | Raw JSON output |
+
+**Categories:** Valuation (PE, PB, PS, EV/EBITDA), Profitability (ROE, ROA, margins), Efficiency (turnover, cash cycle), Leverage (debt ratios), Liquidity (current/quick/cash ratio), Bank (NPL, CAR, CASA, CIR, LDR).
+
+#### `aipa fundamentals rank`
+
+```bash
+aipa fundamentals rank                                           # Top 10 VN by ROE
+aipa fundamentals rank --sort-by pe --direction asc --limit 20   # Cheapest 20 by PE
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by car         # Banks by CAR
+aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15 # VN30 by ROE
+aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
+aipa fundamentals rank --sort-by dividend_yield                   # Highest dividend
+aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by cap
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--sort-by` | `roe` | 50+ fields: pe, pb, roe, roa, npl, car, dividend_yield, market_cap, etc. |
+| `--direction` | `desc` | `desc` or `asc` |
+| `--limit` | `10` | Max results |
+| `tickers` | all VN | Positional ticker symbols |
+| `--watchlist` | — | Use watchlist (VN30, VINGROUP, TM, MASAN, custom) |
+
+#### `aipa fundamentals screen`
+
+```bash
+aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe                   # Value stocks
+aipa fundamentals screen --industry "ngân hàng" --sort-by roe                        # Banking sector
+aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --direction asc # Safe banks
+aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield           # Dividend stocks
+aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10                  # Screen VN30
+aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc  # Specific tickers
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--pe-min/max` | — | PE range |
+| `--pb-min/max` | — | PB range |
+| `--roe-min/max` | — | ROE range |
+| `--roa-min/max` | — | ROA range |
+| `--dividend-yield-min/max` | — | Dividend yield range |
+| `--debt-to-equity-max` | — | Max D/E |
+| `--npl-max` | — | Max NPL (banks) |
+| `--car-min` | — | Min CAR (banks) |
+| `--cir-max` | — | Max CIR (banks) |
+| `--market-cap-min/max` | — | Market cap range |
+| `--industry` | — | Industry filter (substring, case-insensitive) |
+| `--watchlist` | — | Ticker source |
+| `--limit` | `50` | Max results |
+
+**Filter behavior:** All optional, inclusive ranges, missing data excluded, `--industry` is case-insensitive substring.
+
+#### When to Use Fundamentals
+
+| Request | Use |
+|---|---|
+| "What is VCB's PE ratio?" | `aipa fundamentals ratios VCB --latest` |
+| "Compare bank NPLs" | `aipa fundamentals rank --sort-by npl --direction asc` |
+| "Find cheap stocks" | `aipa fundamentals screen --pe-max 10 --roe-min 0.15` |
+| "Company profile for FPT" | `aipa fundamentals info FPT` |
+| "Best banks by CAR" | `aipa fundamentals rank --sort-by car --direction desc` |
+| "Screen banks by asset quality" | `aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02` |
+
+**Rule:** technical analysis → `analyze` / `get-ohlcv-data`, fundamental data → `fundamentals info/ratios/rank/screen`, combined view → `analyze` + `fundamentals` together.
+
 ### When to Use Which Command
 
 | Request | Use |
@@ -334,8 +444,12 @@ Mandatory sectors by source:
 | Volume profile / POC | `aipa volume-profile VCB` |
 | List banking stocks | `aipa ticker-list --source vn --group NGAN_HANG` |
 | Comprehensive research | `aipa deep-research` + agent pipeline |
+| PE ratio for VCB | `aipa fundamentals ratios VCB --latest` |
+| Screen for low PE banks | `aipa fundamentals screen --industry "ngân hàng" --pe-max 10` |
+| Company profile | `aipa fundamentals info TICKER` |
+| Rank by ROE / NPL / CAR | `aipa fundamentals rank --sort-by roe` |
 
-**Rule:** raw numbers → `get-ohlcv-data` / `performers` / `live-data`, AI insights → `analyze`, comprehensive report → `deep-research`.
+**Rule:** raw numbers → `get-ohlcv-data` / `performers` / `live-data` / `fundamentals`, AI insights → `analyze`, comprehensive report → `deep-research`.
 
 ## 3. Workflow
 

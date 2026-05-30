@@ -8,7 +8,9 @@ description: >
   aggregator → reviewer pipeline that takes longer but produces more thorough
   results than a simple analyze. Trigger for requests like "research banking
   sector", "deep dive into real estate stocks", or "comprehensive market
-  overview".
+  overview". Can also incorporate fundamental analysis (PE, ROE, NPL, CAR,
+  financial ratios) via `aipa fundamentals` when the user asks for fundamental
+  context alongside technical research.
 ---
 
 # aipa-research
@@ -316,6 +318,31 @@ Using the market snapshot and performers results, decompose the research questio
 - **SJC**: Gold / Precious Metals
 
 Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers.
+
+### Step 3.5 — Fundamental Context (optional, VN only)
+
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify with `aipa --version` before use.
+
+For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research.
+
+When relevant, add fundamental screening to the supervisor step:
+
+```bash
+# Screen banking sector by asset quality
+aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02 --car-min 0.10 --sort-by roe --limit 15
+
+# Top stocks by ROE across all VN
+aipa fundamentals rank --sort-by roe --limit 20
+
+# Value screen: low PE + high ROE
+aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe --limit 20
+
+# Bank-specific metrics for comparison
+aipa fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB --sort-by npl --direction asc
+aipa fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB --sort-by car --direction desc
+```
+
+Pass the fundamental ranking data to workers so they can cross-reference technical signals with fundamental strength/weakness.
 
 ### Step 4 — Spawn worker subagents (in parallel)
 For each sector subtask, spawn a separate subagent (use the Task tool) that:

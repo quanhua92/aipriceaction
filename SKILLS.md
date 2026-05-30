@@ -52,7 +52,7 @@ The CLI auto-updates when using `uvx aipa-cli` — always the latest version.
 
 ### aipa-data — Real-time market data
 
-Raw data, no AI, no API key needed. OHLCV candles, volume profile, top performers, live data, watchlists.
+Raw data, no AI, no API key needed. OHLCV candles, volume profile, top performers, live data, watchlists, **fundamental data (company info, financial ratios, PE, ROE, NPL, CAR, screening/ranking)**.
 
 - `What is the current price of VCB?`
 - `Top 10 stocks by trading value`
@@ -60,10 +60,15 @@ Raw data, no AI, no API key needed. OHLCV candles, volume profile, top performer
 - `Volume profile for BTCUSDT — where is the POC?`
 - `List all banking sector stocks`
 - `How is the market doing today? Which stocks are up the most?`
+- `What is VCB's PE ratio?` *(fundamentals)*
+- `Rank all banks by ROE` *(fundamentals)*
+- `Screen for low PE stocks with high ROE` *(fundamentals)*
+- `Company profile and shareholders for ACB` *(fundamentals)*
+- `Compare bank NPL and CAR` *(fundamentals)*
 
 ### aipa-analyze — AI-powered technical analysis
 
-Analyze single or multiple stocks with Wyckoff, VPA, Smart Money, MA Momentum. When used with an AI agent (Claude Code, Gemini CLI...), the agent reads data and analyzes it — no API key needed.
+Analyze single or multiple stocks with Wyckoff, VPA, Smart Money, MA Momentum. Can also incorporate **fundamental data** (PE, PB, ROE, NPL, CAR) to enrich technical analysis when you ask for it. When used with an AI agent (Claude Code, Gemini CLI...), the agent reads data and analyzes it — no API key needed.
 
 - `Compare VCB, TCB, MBB — which bank has the strongest trend?`
 - `Wyckoff analysis for HPG`
@@ -160,6 +165,7 @@ Data from sjc.com.vn. Daily SJC gold prices.
 | Global stocks | Yes (Yahoo Finance) | Limited or none |
 | SJC Gold | Yes | No |
 | Technical analysis | Wyckoff, VPA, Smart Money, Bob Volman | Market summary only |
+| Fundamental data | Yes (PE, PB, ROE, NPL, CAR, screening) | No |
 | Volume Profile | Yes (POC, Value Area, multi-day) | No |
 | Deep Research | Yes (multi-agent pipeline) | No |
 | AI Agent support | Claude Code, Gemini CLI, Codex, Cursor, openCode | More limited |
@@ -179,9 +185,9 @@ OHLCV data is served from a public S3 archive — plain HTTP access, no authenti
 `aipa-cli` requires Python 3.10+, but you don't need to install it manually. The AI agent auto-installs it via `uvx` on first run. `uvx` manages its own virtual environment — no impact on your system.
 
 **What's the difference between the 3 skills?**
-- **aipa-data:** Raw data — candles, volume profile, performers, live data. No AI, no API key.
-- **aipa-analyze:** Technical analysis — Wyckoff, VPA, Smart Money, MA Momentum. AI agent reads and analyzes, no API key.
-- **aipa-research:** Deep research — multi-agent pipeline for sector-wide analysis. Agent-driven mode needs no API key.
+- **aipa-data:** Raw data — candles, volume profile, performers, live data, fundamental data (PE, ROE, NPL, CAR, company info). No AI, no API key.
+- **aipa-analyze:** Technical analysis — Wyckoff, VPA, Smart Money, MA Momentum + optional fundamental context. AI agent reads and analyzes, no API key.
+- **aipa-research:** Deep research — multi-agent pipeline for sector-wide analysis with optional fundamental screening. Agent-driven mode needs no API key.
 
 **Is the data accurate?**
 Data is aggregated from reputable sources (VCI, Vietstock, VNDirect, Binance, Yahoo Finance, sjc.com.vn). Analysis is AI-generated and may contain errors — always verify before trading.

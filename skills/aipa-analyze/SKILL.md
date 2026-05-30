@@ -7,6 +7,10 @@ description: >
   (VIC, VCB, FPT...), cryptocurrencies (BTC, ETH...), or global assets.
   Also use for price action analysis, moving average analysis, support/resistance
   questions, sector comparison, Wyckoff analysis, or trading insights.
+  Also handles fundamental analysis when the user explicitly asks for
+  fundamentals, PE, ROE, NPL, CAR, valuation, or "phân tích cơ bản" —
+  use `aipa fundamentals` commands to enrich technical analysis with
+  financial ratios, company info, and fundamental screening/ranking.
   For raw price data without AI, use the aipa-data skill instead.
 ---
 
@@ -347,6 +351,53 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 
 ---
 
+## Fundamentals: Ask Before Running
+
+**Do NOT automatically run `aipa fundamentals` commands unless the user explicitly asks for fundamental data or fundamental analysis (phân tích cơ bản).** Technical analysis (VPA, Wyckoff, MA) is the default. Only fetch fundamentals when:
+
+- The user explicitly says "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản", "PE", "ROE", "NPL", "CAR", etc.
+- The user asks about valuation, profitability, or financial health
+- The user asks to compare stocks by financial metrics (not price action)
+
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use:
+> ```bash
+> aipa --version
+> ```
+> If < 0.1.41, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+
+When fundamentals are relevant, use these commands to enrich your technical analysis:
+
+```bash
+# Quick company snapshot
+aipa fundamentals info VCB
+
+# Latest financial ratios
+aipa fundamentals ratios VCB --latest
+
+# Bank-specific metrics (NPL, CAR, CASA, CIR)
+aipa fundamentals ratios VCB --category bank --latest
+
+# Compare ROE across peers
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by roe
+
+# Screen for value stocks
+aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe
+
+# Screen banking sector for asset quality
+aipa fundamentals screen --industry "ngân hàng" --npl-max 0.015 --sort-by npl --direction asc
+```
+
+### How Fundamentals Enhance Technical Analysis
+
+When the user asks for fundamentals, combine technical and fundamental views:
+
+1. **Valuation context**: Is the stock expensive (high PE/PB) or cheap? A breakout at PE=8 is different from PE=30.
+2. **Bank health (VN banks)**: NPL, CAR, CASA, CIR provide critical risk context. High NPL + bearish technicals = strong sell signal.
+3. **Profitability confirmation**: High ROE/ROA supports bullish thesis. Declining margins = fundamental weakness beneath technical strength.
+4. **Screening for candidates**: Use `rank` and `screen` to find fundamentally strong stocks, then apply technical analysis to time entries.
+
+---
+
 ## Analysis Framework
 
 When performing analysis (either via the CLI or as agent fallback), follow these priorities:
@@ -358,7 +409,8 @@ When performing analysis (either via the CLI or as agent fallback), follow these
 5. **Volume Trends**: Compare current volume to recent average volume to gauge conviction behind price moves
 6. **Extreme Price Changes**: Detect moves exceeding ±6.7%/day (VN market limit) and search recent news/events to find causes
 7. **Risk Management**: Every analysis must include both positive (opportunities, strengths, bullish signals) and negative (risks, weaknesses, bearish signals) insights. Quantify downside risk with specific price levels, identify what would invalidate the current thesis, and never present a one-sided view
-8. **Nhóm Chủ Lực (Core Market Sectors - VN Market Only)**: When analyzing the Vietnamese market, always contextualize tickers within their respective "Nhóm Chủ Lực" (Core Sectors) to assess systemic flow. The key groups are:
+8. **Fundamental Context (when requested)**: When the user asks for fundamentals, enrich the technical analysis with PE, PB, ROE, NPL, CAR, and other financial metrics. Fundamentals do NOT replace technical analysis — they add context.
+9. **Nhóm Chủ Lực (Core Market Sectors - VN Market Only)**: When analyzing the Vietnamese market, always contextualize tickers within their respective "Nhóm Chủ Lực" (Core Sectors) to assess systemic flow. The key groups are:
     *   **Nhóm Ngân hàng (Banking):** VCB, BID, CTG, TCB, MBB, ACB, VPB, HDB, SHB, TPB, VIB, SSB, MSB, STB, LPB, EIB.
     *   **Nhóm Bất động sản (Real Estate):** VIC, VHM, VRE, VPL, DIG, CEO, L14, TCH, HHS, VGC, IDC.
     *   **Nhóm Chứng khoán (Securities):** SSI, VND, HCM, VCI, SHS, VIX, VDS.
