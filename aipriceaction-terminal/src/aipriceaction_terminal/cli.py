@@ -118,6 +118,74 @@ def run():
     p_wl_rm = wl_sub.add_parser("rm", help="Delete a custom watchlist")
     p_wl_rm.add_argument("name", help="Custom watchlist name")
 
+    # aipa fundamentals [info|ratios|rank|screen]
+    _fund_sort_choices = [
+        "pe", "pb", "ps", "ev_to_ebitda", "price_to_cash_flow", "dividend_yield",
+        "market_cap", "roe", "roa", "roic", "gross_margin", "after_tax_profit_margin",
+        "pre_tax_profit_margin", "ebit_margin", "net_interest_margin", "ebit", "ebitda",
+        "asset_turnover", "fixed_asset_turnover", "debt_to_equity", "debt_per_equity",
+        "financial_leverage", "equity_to_liabilities", "equity_to_loans",
+        "total_equity_total_asset", "owners_equity", "equity", "current_ratio",
+        "quick_ratio", "cash_ratio", "cash_cycle", "day_sale_outstanding",
+        "days_inventory_outstanding", "days_payable_outstanding", "npl",
+        "ldr_loan_deposit_ratio", "car", "casa_ratio", "cir", "cost_to_income",
+        "non_and_interest_income", "deposit_growth", "loans_growth",
+        "loans_loss_reserve_to_loans", "loans_loss_reserves_to_npl",
+        "provision_to_outstanding_loans", "average_cost_of_financing",
+        "average_yield_on_earning_assets", "outstanding_shares", "employees",
+        "current_price",
+    ]
+    p_fund = sub.add_parser("fundamentals", help="Fundamental data: company info, financial ratios, ranking, screening")
+    fund_sub = p_fund.add_subparsers(dest="fundamentals_command")
+
+    p_fund_info = fund_sub.add_parser("info", help="Company profile, shareholders, officers")
+    p_fund_info.add_argument("ticker", help="Ticker symbol")
+    p_fund_info.add_argument("--source", default=None)
+
+    p_fund_ratios = fund_sub.add_parser("ratios", help="Financial ratios by period")
+    p_fund_ratios.add_argument("ticker", help="Ticker symbol")
+    p_fund_ratios.add_argument("--source", default=None)
+    p_fund_ratios.add_argument("--latest", action="store_true", help="Show only latest yearly report")
+    p_fund_ratios.add_argument("--year", type=int, default=None, help="Show specific year")
+    p_fund_ratios.add_argument("--no-yearly", action="store_true", help="Include quarterly reports (default: yearly only)")
+    p_fund_ratios.add_argument("--category", default=None,
+        choices=["valuation", "profitability", "leverage", "liquidity", "bank", "efficiency"],
+        help="Show only one category of fields")
+    p_fund_ratios.add_argument("--json", action="store_true", help="Raw JSON output")
+
+    p_fund_rank = fund_sub.add_parser("rank", help="Rank tickers by a fundamental field")
+    p_fund_rank.add_argument("--sort-by", default="roe", choices=_fund_sort_choices)
+    p_fund_rank.add_argument("--direction", default="desc", choices=["desc", "asc"])
+    p_fund_rank.add_argument("--limit", type=int, default=10)
+    p_fund_rank.add_argument("tickers", nargs="*", default=[], help="Ticker symbols (default: all VN)")
+    p_fund_rank.add_argument("--watchlist", default=None, help="Use watchlist as ticker source")
+    p_fund_rank.add_argument("--source", default=None)
+
+    p_fund_screen = fund_sub.add_parser("screen", help="Screen tickers by fundamental criteria")
+    p_fund_screen.add_argument("tickers", nargs="*", default=[], help="Ticker symbols (default: all VN)")
+    p_fund_screen.add_argument("--watchlist", default=None, help="Use watchlist as ticker source")
+    p_fund_screen.add_argument("--source", default=None)
+    p_fund_screen.add_argument("--sort-by", default="roe", choices=_fund_sort_choices)
+    p_fund_screen.add_argument("--direction", default="desc", choices=["desc", "asc"])
+    p_fund_screen.add_argument("--limit", type=int, default=50)
+    p_fund_screen.add_argument("--pe-min", type=float, default=None)
+    p_fund_screen.add_argument("--pe-max", type=float, default=None)
+    p_fund_screen.add_argument("--pb-min", type=float, default=None)
+    p_fund_screen.add_argument("--pb-max", type=float, default=None)
+    p_fund_screen.add_argument("--roe-min", type=float, default=None)
+    p_fund_screen.add_argument("--roe-max", type=float, default=None)
+    p_fund_screen.add_argument("--roa-min", type=float, default=None)
+    p_fund_screen.add_argument("--roa-max", type=float, default=None)
+    p_fund_screen.add_argument("--dividend-yield-min", type=float, default=None)
+    p_fund_screen.add_argument("--dividend-yield-max", type=float, default=None)
+    p_fund_screen.add_argument("--debt-to-equity-max", type=float, default=None)
+    p_fund_screen.add_argument("--npl-max", type=float, default=None)
+    p_fund_screen.add_argument("--car-min", type=float, default=None)
+    p_fund_screen.add_argument("--cir-max", type=float, default=None)
+    p_fund_screen.add_argument("--market-cap-min", type=float, default=None)
+    p_fund_screen.add_argument("--market-cap-max", type=float, default=None)
+    p_fund_screen.add_argument("--industry", default=None, help="Industry filter (substring, case-insensitive)")
+
     # aipa resume [session_id|index]
     p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session")
     p_resume.add_argument("session", nargs="?", default=None, help="Session ID prefix or list index (default: most recent)")
@@ -176,6 +244,9 @@ def run():
     elif args.command == "watchlist":
         from .cli_commands import cmd_watchlist
         cmd_watchlist(args)
+    elif args.command == "fundamentals":
+        from .cli_commands import cmd_fundamentals
+        cmd_fundamentals(args)
     else:
         _ensure_setup()
         from .app import main

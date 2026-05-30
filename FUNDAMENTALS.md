@@ -785,3 +785,143 @@ ranking = build_fundamental_ranking(client, ["VCB", "FPT", "HPG", ...], sort_by=
 | `sdk/aipriceaction-python/src/aipriceaction/fundamental_ranking.py` | `build_fundamental_ranking()`, `screen_fundamentals()`, `FundamentalRankEntry` |
 | `sdk/aipriceaction-python/examples/fundamental_demo.py` | 14-section demo covering all features |
 | `sdk/aipriceaction-python/examples/full_client_demo.py` | Full SDK demo with fundamental section |
+
+## aipa-cli fundamentals
+
+CLI access to fundamental data via `aipa fundamentals` subcommand. No API key needed — reads from cached `vn.zip`.
+
+### Subcommands
+
+| Command | Description |
+|---|---|
+| `aipa fundamentals info TICKER` | Company profile, shareholders, officers |
+| `aipa fundamentals ratios TICKER` | Financial ratios by period |
+| `aipa fundamentals rank` | Rank tickers by a fundamental field |
+| `aipa fundamentals screen` | Multi-criteria screening |
+
+### `aipa fundamentals info`
+
+Show company profile for a ticker.
+
+```bash
+aipa fundamentals info ACB
+aipa fundamentals info FPT --source vn
+```
+
+Displays: industry, market cap, current price, outstanding shares, top shareholders with ownership %, officers with positions.
+
+### `aipa fundamentals ratios`
+
+Show financial ratios for a ticker, organized by category.
+
+```bash
+aipa fundamentals ratios VCB                    # All yearly reports
+aipa fundamentals ratios VCB --latest            # Only latest yearly
+aipa fundamentals ratios VCB --year 2024         # Specific year
+aipa fundamentals ratios VCB --no-yearly         # Include quarterly
+aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
+aipa fundamentals ratios VCB --json              # Raw JSON output
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--latest` | off | Show only latest yearly report |
+| `--year YEAR` | — | Show specific year |
+| `--no-yearly` | off | Include quarterly reports (default: yearly only) |
+| `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
+| `--json` | off | Dump raw JSON to stdout |
+| `--source` | auto | Data source |
+
+**Categories:**
+
+| Category | Fields |
+|---|---|
+| Valuation | PE, PB, PS, EV/EBITDA, Price/CashFlow, Dividend Yield, Market Cap |
+| Profitability | ROE, ROA, ROIC, Gross Margin, After-Tax Margin, Pre-Tax Margin, EBIT Margin, Net Interest Margin |
+| Efficiency | Asset Turnover, Fixed Asset Turnover, Cash Cycle, DSO, DIO, DPO |
+| Leverage | Debt/Equity, Financial Leverage, Equity/Liabilities, Equity/Loans, Equity/Total Asset |
+| Liquidity | Current Ratio, Quick Ratio, Cash Ratio |
+| Bank | NPL, LDR, CAR, CASA, CIR, Non-Interest Income, Deposit/Loans Growth, LLR ratios |
+
+### `aipa fundamentals rank`
+
+Rank tickers by any of 50+ fundamental fields.
+
+```bash
+aipa fundamentals rank                                           # Top 10 VN by ROE
+aipa fundamentals rank --sort-by pe --direction asc --limit 20   # Cheapest 20 by PE
+aipa fundamentals rank --tickers VCB BID CTG TCB MBB --sort-by car --direction desc
+aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15
+aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
+aipa fundamentals rank --sort-by dividend_yield --direction desc  # Highest dividend
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--sort-by` | `roe` | Field to rank by (50+ fields: pe, pb, roe, roa, npl, car, dividend_yield, market_cap, ...) |
+| `--direction` | `desc` | `desc` (highest first) or `asc` (lowest first) |
+| `--limit` | `10` | Max results |
+| `tickers` | all VN | Positional ticker symbols |
+| `--watchlist` | — | Use watchlist as ticker source (VN30, VINGROUP, TM, MASAN, custom, ...) |
+| `--source` | auto | Data source |
+
+**Ticker source resolution** (same for `rank` and `screen`):
+1. `--watchlist NAME` — resolve from predefined (VN30, VINGROUP...) or custom watchlists
+2. Positional `tickers` — explicit list
+3. Default — all VN tickers from ticker metadata
+
+### `aipa fundamentals screen`
+
+Filter tickers by fundamental criteria, then rank by a field.
+
+```bash
+# Value stocks: low PE + high ROE
+aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe
+
+# Banking sector only
+aipa fundamentals screen --industry "ngân hàng" --sort-by roe
+
+# Safe banks: low NPL + high CAR
+aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --direction asc
+
+# Dividend stocks
+aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield
+
+# Screen VN30 watchlist
+aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10
+
+# Specific tickers
+aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--sort-by` | `roe` | Field to rank by |
+| `--direction` | `desc` | Sort direction |
+| `--limit` | `50` | Max results (1–500) |
+| `--pe-min` / `--pe-max` | — | PE range filter |
+| `--pb-min` / `--pb-max` | — | PB range filter |
+| `--roe-min` / `--roe-max` | — | ROE range filter |
+| `--roa-min` / `--roa-max` | — | ROA range filter |
+| `--dividend-yield-min` / `--dividend-yield-max` | — | Dividend yield range |
+| `--debt-to-equity-max` | — | Max Debt/Equity |
+| `--npl-max` | — | Max NPL (banks) |
+| `--car-min` | — | Min CAR (banks) |
+| `--cir-max` | — | Max CIR (banks) |
+| `--market-cap-min` / `--market-cap-max` | — | Market cap range |
+| `--industry` | — | Industry filter (substring, case-insensitive) |
+| `--watchlist` | — | Use watchlist as ticker source |
+| `--source` | auto | Data source |
+
+**Filter behavior:**
+- All filters are optional — pass only what you need
+- Tickers with missing data for a filtered field are excluded
+- Range filters are inclusive: `--roe-min 0.15` matches `roe >= 0.15`
+- `--industry` is case-insensitive substring match
+
+### Key Files (CLI)
+
+| File | Role |
+|---|---|
+| `aipriceaction-terminal/src/aipriceaction_terminal/cli.py` | `fundamentals` subparser registration + dispatch |
+| `aipriceaction-terminal/src/aipriceaction_terminal/cli_commands.py` | `cmd_fundamentals()`, `_fund_info()`, `_fund_ratios()`, `_fund_rank()`, `_fund_screen()` |

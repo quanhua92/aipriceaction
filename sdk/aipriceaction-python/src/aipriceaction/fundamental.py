@@ -287,6 +287,9 @@ class FinancialRatios:
     count: int
     ratios: list[FinancialRatioEntry] = field(default_factory=list)
 
+    def __post_init__(self) -> None:
+        self.ratios.sort(key=lambda r: (r.year_report, r.length_report), reverse=True)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "ticker": self.ticker,

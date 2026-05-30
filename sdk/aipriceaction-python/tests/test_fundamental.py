@@ -127,8 +127,7 @@ class TestExtraFields:
         fr = client.get_financial_ratios("ACB", source="vn")
         assert fr is not None
 
-        legacy = fr.ratios[1]
-        assert legacy.year_report == 2013
+        legacy = [r for r in fr.ratios if r.year_report == 2013 and r.length_report == 1][0]
         assert legacy.pe == pytest.approx(36.81)
         assert "BSA1" in legacy.extra
         assert "BSA2" in legacy.extra
@@ -191,7 +190,7 @@ class TestRoundtrip:
         client = _make_client(tmp_path)
         fr = client.get_financial_ratios("ACB", source="vn")
         assert fr is not None
-        legacy = fr.ratios[1]
+        legacy = [r for r in fr.ratios if r.year_report == 2013 and r.length_report == 1][0]
         d = legacy.to_dict()
         assert "BSA1" in d
         assert "BSA2" in d

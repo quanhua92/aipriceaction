@@ -74,14 +74,14 @@ class TestLatestYearly:
         assert result is not None
         assert result.length_report == 12
 
-    def test_fallback_to_last(self) -> None:
+    def test_fallback_to_sorted_latest_year(self) -> None:
         fr = FinancialRatios(ticker="X", updated_at="", count=2, ratios=[
             FinancialRatioEntry(year_report=2025, length_report=3, ticker="X", pe=10.0),
-            FinancialRatioEntry(year_report=2025, length_report=6, ticker="X", pe=20.0),
+            FinancialRatioEntry(year_report=2026, length_report=6, ticker="X", pe=20.0),
         ])
         result = _latest_yearly(fr)
         assert result is not None
-        assert result.pe == 20.0  # fallback uses ratios[-1]
+        assert result.pe == 20.0  # sorts by year_report desc, 2026 > 2025
 
     def test_empty_ratios(self) -> None:
         fr = FinancialRatios(ticker="X", updated_at="", count=0, ratios=[])

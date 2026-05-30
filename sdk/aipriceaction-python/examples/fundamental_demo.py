@@ -58,10 +58,14 @@ def _fmt_pct(v: float | None) -> str:
 
 
 def _latest_yearly(fr: FinancialRatios) -> FinancialRatioEntry | None:
-    yearly = [r for r in fr.ratios if r.length_report == 12]
+    if not fr.ratios:
+        return None
+    yearly = [r for r in fr.ratios if r.ratio_type == "RATIO_YEAR"]
     if not yearly:
-        return fr.ratios[0] if fr.ratios else None
-    return max(yearly, key=lambda r: r.year_report)
+        yearly = [r for r in fr.ratios if r.length_report in (5, 12)]
+    if not yearly:
+        yearly = list(fr.ratios)
+    return yearly[0]
 
 
 # ── 1. Basic: Company Info ──────────────────────────────────────────────────
@@ -280,7 +284,7 @@ def demo_7_yoy_trend(client: AIPriceAction) -> None:
         return
 
     yearly = sorted(
-        [r for r in fr.ratios if r.length_report == 12 and r.roe is not None],
+        [r for r in fr.ratios if r.length_report in (5, 12) and r.roe is not None],
         key=lambda r: r.year_report,
     )
     if not yearly:

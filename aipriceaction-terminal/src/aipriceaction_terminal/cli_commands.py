@@ -657,3 +657,320 @@ def cmd_volume_profile(args) -> None:
             bar = "\u2588" * bar_len
             print(f"{level.price:>12.2f}  {level.volume:>12,.0f}  {level.percentage:>5.1f}%  "
                   f"{level.cumulative_percentage:>5.1f}%  {bar}")
+
+
+# ── Fundamentals ──────────────────────────────────────────────────────────────
+
+_PCT_FIELDS: frozenset[str] = frozenset({
+    "roe", "roa", "roic", "gross_margin", "after_tax_profit_margin",
+    "pre_tax_profit_margin", "ebit_margin", "net_interest_margin",
+    "dividend_yield", "npl", "cir", "cost_to_income", "car", "casa_ratio",
+    "deposit_growth", "loans_growth", "total_equity_total_asset",
+    "equity_to_liabilities", "equity_to_loans",
+    "non_and_interest_income", "loans_loss_reserve_to_loans",
+    "loans_loss_reserves_to_npl", "provision_to_outstanding_loans",
+    "average_cost_of_financing", "average_yield_on_earning_assets",
+})
+
+_CATEGORY_FIELDS: dict[str, list[tuple[str, str]]] = {
+    "valuation": [
+        ("PE", "pe"), ("PB", "pb"), ("PS", "ps"),
+        ("EV/EBITDA", "ev_to_ebitda"), ("Price/CashFlow", "price_to_cash_flow"),
+        ("Dividend Yield", "dividend_yield"), ("Market Cap", "market_cap"),
+    ],
+    "profitability": [
+        ("ROE", "roe"), ("ROA", "roa"), ("ROIC", "roic"),
+        ("Gross Margin", "gross_margin"), ("After-Tax Margin", "after_tax_profit_margin"),
+        ("Pre-Tax Margin", "pre_tax_profit_margin"), ("EBIT Margin", "ebit_margin"),
+        ("Net Interest Margin", "net_interest_margin"), ("EBIT", "ebit"), ("EBITDA", "ebitda"),
+    ],
+    "efficiency": [
+        ("Asset Turnover", "asset_turnover"), ("Fixed Asset Turnover", "fixed_asset_turnover"),
+        ("Cash Cycle", "cash_cycle"), ("DSO", "day_sale_outstanding"),
+        ("DIO", "days_inventory_outstanding"), ("DPO", "days_payable_outstanding"),
+    ],
+    "leverage": [
+        ("Debt/Equity", "debt_to_equity"), ("Debt per Equity", "debt_per_equity"),
+        ("Financial Leverage", "financial_leverage"),
+        ("Equity/Liabilities", "equity_to_liabilities"), ("Equity/Loans", "equity_to_loans"),
+        ("Equity/Total Asset", "total_equity_total_asset"), ("Owners Equity", "owners_equity"),
+        ("Equity", "equity"),
+    ],
+    "liquidity": [
+        ("Current Ratio", "current_ratio"), ("Quick Ratio", "quick_ratio"), ("Cash Ratio", "cash_ratio"),
+    ],
+    "bank": [
+        ("NPL", "npl"), ("LDR", "ldr_loan_deposit_ratio"), ("CAR", "car"),
+        ("CASA Ratio", "casa_ratio"), ("CIR", "cir"), ("Cost/Income", "cost_to_income"),
+        ("Non-Interest Income", "non_and_interest_income"),
+        ("Deposit Growth", "deposit_growth"), ("Loans Growth", "loans_growth"),
+        ("LLR/Loans", "loans_loss_reserve_to_loans"), ("LLR/NPL", "loans_loss_reserves_to_npl"),
+        ("Provision/Loans", "provision_to_outstanding_loans"),
+        ("Avg Cost of Financing", "average_cost_of_financing"),
+        ("Avg Yield Earning Assets", "average_yield_on_earning_assets"),
+    ],
+}
+
+
+def _fmt_fund(v: float | int | None, field_name: str) -> str:
+    if v is None:
+        return "N/A"
+    if field_name in _PCT_FIELDS:
+        return f"{v * 100:.2f}%"
+    if field_name in ("market_cap", "outstanding_shares", "employees", "current_price"):
+        return f"{v:,.0f}"
+    return f"{v:.2f}"
+
+
+def _resolve_ticker_source(args) -> list[str]:
+    if getattr(args, "watchlist", None):
+        from .user_watchlist import get_watchlist
+        name = args.watchlist.upper()
+        tickers = get_watchlist(name)
+        if tickers is None:
+            print(f"Watchlist '{name}' not found.", file=sys.stderr)
+            sys.exit(1)
+        return tickers
+    if args.tickers:
+        return _resolve_tickers(args.tickers)
+    from aipriceaction import AIPriceAction
+    client = AIPriceAction()
+    return [t.ticker for t in client.get_tickers(source="vn")]
+
+
+def _fund_info(args) -> None:
+    from aipriceaction import AIPriceAction
+
+    client = AIPriceAction()
+    ticker = args.ticker.upper()
+    verbose_log(f"fundamentals info: {ticker}")
+
+    ci = client.get_company_info(ticker, source=_resolve_source(args.source))
+    if ci is None:
+        print(f"No company info found for {ticker}.", file=sys.stderr)
+        sys.exit(1)
+
+    industry = ci.industry or "N/A"
+    print(f"\n=== {ci.symbol} — {industry} ===\n")
+    print(f"  Industry:           {industry}")
+    print(f"  Market Cap:         {_fmt_fund(ci.market_cap, 'market_cap')} VND")
+    print(f"  Current Price:      {_fmt_fund(ci.current_price, 'current_price')} VND")
+    print(f"  Outstanding Shares: {_fmt_fund(ci.outstanding_shares, 'outstanding_shares')}")
+    print(f"  Employees:          {_fmt_fund(ci.employees, 'employees')}")
+    print(f"  Established:        {ci.established_year or 'N/A'}")
+    print(f"  Website:            {ci.website or 'N/A'}")
+
+    if ci.shareholders:
+        sorted_sh = sorted(ci.shareholders, key=lambda s: s.percentage or 0, reverse=True)
+        print(f"\n  Top Shareholders ({len(ci.shareholders)} total):")
+        for s in sorted_sh[:15]:
+            pct = f"{s.percentage * 100:.2f}%" if s.percentage is not None else "N/A"
+            print(f"    {s.name:45s} {pct:>8s}")
+
+    if ci.officers:
+        print(f"\n  Officers ({len(ci.officers)} total):")
+        for o in ci.officers:
+            pct = f" ({o.percentage * 100:.2f}% ownership)" if o.percentage else ""
+            print(f"    {o.name:35s}  {o.position}{pct}")
+
+
+def _fund_ratios(args) -> None:
+    import json
+
+    from aipriceaction import AIPriceAction
+
+    client = AIPriceAction()
+    ticker = args.ticker.upper()
+    verbose_log(f"fundamentals ratios: {ticker}")
+
+    fr = client.get_financial_ratios(ticker, source=_resolve_source(args.source))
+    if fr is None:
+        print(f"No financial ratios found for {ticker}.", file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(fr.to_dict(), indent=2))
+        return
+
+    entries = fr.ratios
+    if args.year is not None:
+        entries = [r for r in entries if r.year_report == args.year]
+    elif args.latest:
+        yearly = [r for r in entries if r.ratio_type == "RATIO_YEAR"]
+        if not yearly:
+            yearly = [r for r in entries if r.length_report in (5, 12)]
+        if not yearly:
+            yearly = list(entries)
+        entries = [yearly[0]] if yearly else []
+    elif not args.no_yearly:
+        yearly = [r for r in entries if r.ratio_type == "RATIO_YEAR"]
+        if not yearly:
+            yearly = [r for r in entries if r.length_report in (5, 12)]
+        if yearly:
+            entries = yearly
+
+    if not entries:
+        print(f"No matching ratio entries for {ticker}.", file=sys.stderr)
+        sys.exit(1)
+
+    categories = [args.category] if args.category else list(_CATEGORY_FIELDS.keys())
+
+    for entry in entries:
+        period_type = "yearly" if entry.length_report in (5, 12) else f"Q{entry.length_report}"
+        print(f"\n=== {ticker} Financial Ratios (year={entry.year_report}, {period_type}) ===")
+
+        for cat_name in categories:
+            fields = _CATEGORY_FIELDS[cat_name]
+            has_data = any(getattr(entry, attr, None) is not None for _, attr in fields)
+            if not has_data:
+                continue
+            print(f"\n  {cat_name.title()}:")
+            for label, attr in fields:
+                val = getattr(entry, attr, None)
+                print(f"    {label:25s} {_fmt_fund(val, attr)}")
+
+    print(f"\n  Total entries: {fr.count}  |  Showing: {len(entries)}")
+
+
+def _fund_rank(args) -> None:
+    import pandas as pd
+
+    from aipriceaction import AIPriceAction, build_fundamental_ranking
+
+    client = AIPriceAction()
+    tickers = _resolve_ticker_source(args)
+    verbose_log(f"fundamentals rank: {len(tickers)} tickers, sort_by={args.sort_by}")
+
+    if not tickers:
+        print("No tickers to rank.", file=sys.stderr)
+        sys.exit(1)
+
+    entries = build_fundamental_ranking(
+        client, tickers,
+        sort_by=args.sort_by,
+        direction=args.direction,
+        limit=args.limit,
+        source=_resolve_source(args.source),
+    )
+
+    if not entries:
+        print("No results.", file=sys.stderr)
+        return
+
+    sort_field = args.sort_by
+    rows = []
+    for e in entries:
+        r = e.latest_ratio
+        val = e.rank_value
+        if val is not None and sort_field in _PCT_FIELDS:
+            val_str = f"{val * 100:.2f}%"
+        elif val is not None:
+            val_str = f"{val:,.2f}"
+        else:
+            val_str = "N/A"
+        rows.append({
+            "#": e.rank,
+            "ticker": e.ticker,
+            sort_field: val_str,
+            "pe": f"{r.pe:.1f}" if r and r.pe is not None else "N/A",
+            "pb": f"{r.pb:.2f}" if r and r.pb is not None else "N/A",
+            "roe": f"{r.roe * 100:.1f}%" if r and r.roe is not None else "N/A",
+            "industry": (e.industry or "")[:25],
+        })
+
+    df = pd.DataFrame(rows)
+    print(f"\n=== Top {len(entries)} by {sort_field} ({args.direction}) ===")
+    print(df.to_string(index=False))
+
+
+def _fund_screen(args) -> None:
+    import pandas as pd
+
+    from aipriceaction import AIPriceAction, screen_fundamentals
+
+    client = AIPriceAction()
+    tickers = _resolve_ticker_source(args)
+    verbose_log(f"fundamentals screen: {len(tickers)} tickers")
+
+    if not tickers:
+        print("No tickers to screen.", file=sys.stderr)
+        sys.exit(1)
+
+    entries = screen_fundamentals(
+        client, tickers,
+        sort_by=args.sort_by,
+        direction=args.direction,
+        limit=args.limit,
+        source=_resolve_source(args.source),
+        pe_min=args.pe_min, pe_max=args.pe_max,
+        pb_min=args.pb_min, pb_max=args.pb_max,
+        roe_min=args.roe_min, roe_max=args.roe_max,
+        roa_min=args.roa_min, roa_max=args.roa_max,
+        dividend_yield_min=args.dividend_yield_min, dividend_yield_max=args.dividend_yield_max,
+        debt_to_equity_max=args.debt_to_equity_max,
+        npl_max=args.npl_max,
+        car_min=args.car_min,
+        cir_max=args.cir_max,
+        market_cap_min=args.market_cap_min, market_cap_max=args.market_cap_max,
+        industry=args.industry,
+    )
+
+    if not entries:
+        print("No tickers match the screening criteria.", file=sys.stderr)
+        return
+
+    sort_field = args.sort_by
+    rows = []
+    for e in entries:
+        r = e.latest_ratio
+        val = e.rank_value
+        if val is not None and sort_field in _PCT_FIELDS:
+            val_str = f"{val * 100:.2f}%"
+        elif val is not None:
+            val_str = f"{val:,.2f}"
+        else:
+            val_str = "N/A"
+        rows.append({
+            "#": e.rank,
+            "ticker": e.ticker,
+            sort_field: val_str,
+            "pe": f"{r.pe:.1f}" if r and r.pe is not None else "N/A",
+            "roe": f"{r.roe * 100:.1f}%" if r and r.roe is not None else "N/A",
+            "npl": f"{r.npl * 100:.2f}%" if r and r.npl is not None else "N/A",
+            "car": f"{r.car * 100:.2f}%" if r and r.car is not None else "N/A",
+            "industry": (e.industry or "")[:25],
+        })
+
+    filters = []
+    for attr_name in ("pe_min", "pe_max", "pb_min", "pb_max", "roe_min", "roe_max",
+                       "roa_min", "roa_max", "npl_max", "car_min", "cir_max",
+                       "dividend_yield_min", "dividend_yield_max",
+                       "debt_to_equity_max", "market_cap_min", "market_cap_max",
+                       "industry"):
+        v = getattr(args, attr_name, None)
+        if v is not None:
+            filters.append(f"{attr_name}={v}")
+    filter_desc = ", ".join(filters) if filters else "no filters"
+
+    df = pd.DataFrame(rows)
+    print(f"\n=== Screened: {filter_desc} ({len(entries)} match, by {sort_field} {args.direction}) ===")
+    print(df.to_string(index=False))
+
+
+def cmd_fundamentals(args) -> None:
+    subcmd = getattr(args, "fundamentals_command", None)
+    if subcmd == "info":
+        _fund_info(args)
+    elif subcmd == "ratios":
+        _fund_ratios(args)
+    elif subcmd == "rank":
+        _fund_rank(args)
+    elif subcmd == "screen":
+        _fund_screen(args)
+    else:
+        print("Usage: aipa fundamentals [info|ratios|rank|screen]", file=sys.stderr)
+        print("  info TICKER         Company profile, shareholders, officers", file=sys.stderr)
+        print("  ratios TICKER       Financial ratios by period", file=sys.stderr)
+        print("  rank                Rank tickers by a fundamental field", file=sys.stderr)
+        print("  screen              Screen tickers by fundamental criteria", file=sys.stderr)
+        sys.exit(1)

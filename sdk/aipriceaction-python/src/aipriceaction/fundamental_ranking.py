@@ -91,10 +91,14 @@ class FundamentalRankEntry:
 
 
 def _latest_yearly(fr: FinancialRatios) -> FinancialRatioEntry | None:
-    yearly = [r for r in fr.ratios if r.length_report == 12]
+    if not fr.ratios:
+        return None
+    yearly = [r for r in fr.ratios if r.ratio_type == "RATIO_YEAR"]
     if not yearly:
-        return fr.ratios[-1] if fr.ratios else None
-    return max(yearly, key=lambda r: r.year_report)
+        yearly = [r for r in fr.ratios if r.length_report in (5, 12)]
+    if not yearly:
+        yearly = list(fr.ratios)
+    return yearly[0]
 
 
 def _get_field_value(
