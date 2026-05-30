@@ -186,6 +186,9 @@ def run():
     p_fund_screen.add_argument("--market-cap-max", type=float, default=None)
     p_fund_screen.add_argument("--industry", default=None, help="Industry filter (substring, case-insensitive)")
 
+    # aipa ui — open TUI
+    p_ui = sub.add_parser("ui", help="Open interactive TUI")
+
     # aipa resume [session_id|index]
     p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session")
     p_resume.add_argument("session", nargs="?", default=None, help="Session ID prefix or list index (default: most recent)")
@@ -238,6 +241,10 @@ def run():
             source=args.source,
             verbose=args.verbose,
         )
+    elif args.command == "ui":
+        _ensure_setup()
+        from .app import main
+        main()
     elif args.command == "resume":
         from .cli_commands import cmd_resume
         cmd_resume(args)
@@ -248,9 +255,7 @@ def run():
         from .cli_commands import cmd_fundamentals
         cmd_fundamentals(args)
     else:
-        _ensure_setup()
-        from .app import main
-        main()
+        parser.print_help()
 
 
 if __name__ == "__main__":

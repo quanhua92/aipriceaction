@@ -8,14 +8,14 @@ Textual-based terminal interface for AI-powered ticker analysis. Features stream
 
 ```bash
 # Run directly (no install)
-uvx aipa-cli
+uvx aipa-cli ui
 
 # Or install as a standalone tool
 uv tool install aipa-cli
 
-# Use either command
-aipa
-aipa-cli
+# Use
+aipa ui
+aipa-cli ui
 ```
 
 ## Requirements
@@ -28,7 +28,7 @@ aipa-cli
 
 ```bash
 # Launch the TUI — first run auto-starts interactive setup
-aipa
+aipa ui
 
 # Or run setup manually at any time
 aipa setup
@@ -391,14 +391,15 @@ Commands that require an API key will auto-run `aipa setup` on first use if not 
 | `aipa analyze VCB --questions` | No setup needed |
 | `aipa resume` | No setup needed |
 | `aipa setup` | Runs setup |
-| `aipa` | Auto-runs setup first |
+| `aipa` | Shows help (lists all commands) |
+| `aipa ui` | Auto-runs setup first |
 | `aipa analyze VCB` | Auto-runs setup first |
 | `aipa deep-research` | No setup needed (market snapshot only) |
 | `aipa deep-research --run` | Auto-runs setup first |
 
 ## TUI
 
-Launch the TUI with `aipa`. The interface has six tabs:
+Launch the TUI with `aipa ui`. The interface has six tabs:
 
 - **Chat** — AI-powered chat with streaming responses, thinking/reasoning display, slash commands, and arrow-key history navigation
 - **Workflows** — Structured analysis forms with question bank dropdown for ticker analysis and deep research
