@@ -365,6 +365,8 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 > ```
 > If < 0.1.41, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
+> **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
+
 When fundamentals are relevant, use these commands to enrich your technical analysis:
 
 ```bash

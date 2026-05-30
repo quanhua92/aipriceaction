@@ -323,6 +323,8 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 
 > **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify with `aipa --version` before use.
 
+> **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
+
 For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research.
 
 When relevant, add fundamental screening to the supervisor step:

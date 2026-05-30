@@ -480,6 +480,8 @@ Do NOT say "analysis provided by AIPriceAction" or "phân tích được cung c�
 
 No LLM involved, no API key needed. Reads from cached `vn.zip` (downloads ~15-20 MB on first call, cached locally after).
 
+> **IMPORTANT:** `--lang` and `--no-system-prompt` are NOT valid flags for `aipa fundamentals` commands. Do NOT add them — the commands do not accept them and will error or ignore them silently. Fundamentals commands only accept the flags documented below.
+
 ---
 
 ## `aipa fundamentals info` — Company Profile
