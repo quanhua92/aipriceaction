@@ -687,6 +687,59 @@ aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction
 
 ---
 
+### Fundamental Comparison Workflow
+
+When comparing fundamentals across multiple tickers (e.g., "compare VCB TCB MBB fundamentals", "which bank is healthiest", "rank banks by NPL"), follow this workflow. **Do NOT just call `aipa fundamentals ratios TICKER --latest` for each ticker individually** — that produces N separate outputs that are hard to compare. Use `rank` and `screen` first.
+
+**Step 1: Side-by-side ranking (mandatory)**
+
+Use `aipa fundamentals rank` with the specific tickers to get a comparative table in a single call. Run at least 2 perspectives relevant to the sector:
+
+```bash
+# Profitability comparison
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by roe
+
+# Valuation comparison
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by pe --direction asc
+
+# Bank health: asset quality + capital adequacy
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by npl --direction asc
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by car --direction desc
+
+# General stocks: dividend + valuation
+aipa fundamentals rank FPT VNM HPG MWG --sort-by dividend_yield --direction desc
+aipa fundamentals rank FPT VNM HPG MWG --sort-by pe --direction asc
+```
+
+**Step 2: Screen for quality (optional but recommended)**
+
+Use `aipa fundamentals screen` with the tickers to filter by quality criteria. This eliminates weak candidates immediately:
+
+```bash
+# Only banks with acceptable asset quality AND profitability
+aipa fundamentals screen VCB BID CTG TCB MBB --npl-max 0.015 --roe-min 0.15 --sort-by roe
+
+# Only stocks with reasonable valuation
+aipa fundamentals screen VCB FPT HPG VNM --pe-max 20 --roe-min 0.10 --sort-by pe --direction asc
+
+# Entire sector with quality filter
+aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02 --car-min 0.09 --sort-by roe
+```
+
+**Step 3: Individual deep dive (only for shortlisted tickers)**
+
+Only after Steps 1-2, use `ratios --latest` for individual tickers that ranked at the top or need further investigation. Use `info` for company context:
+
+```bash
+aipa fundamentals ratios VCB --latest                # full ratios for top candidate
+aipa fundamentals ratios VCB --category bank --latest # bank-specific deep dive
+aipa fundamentals info VCB                            # company profile context
+```
+
+**Why this matters:** `rank` and `screen` return all tickers in a single comparative table — far more efficient than calling `ratios` N times for N tickers and trying to manually compare across outputs. The ranking shows relative position immediately, and the screen eliminates unsuitable candidates before wasting tokens on deep dives.
+
+---
+
 ## When to Use This Skill vs Others
 
 | User Request | Use |

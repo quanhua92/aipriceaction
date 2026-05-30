@@ -327,22 +327,53 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 
 For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research.
 
-When relevant, add fundamental screening to the supervisor step:
+When relevant, add fundamental screening to the supervisor step. **Follow this 3-step workflow — do NOT just call `aipa fundamentals ratios TICKER --latest` for each ticker individually.** That produces N separate outputs that are hard to compare. Use `rank` and `screen` first.
+
+**Step 1: Side-by-side ranking (mandatory)**
+
+Use `aipa fundamentals rank` with the specific tickers to get a comparative table in a single call. Run at least 2 perspectives relevant to the sector:
 
 ```bash
-# Screen banking sector by asset quality
-aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02 --car-min 0.10 --sort-by roe --limit 15
+# Profitability comparison
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by roe
+
+# Valuation comparison
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by pe --direction asc
+
+# Bank health: asset quality + capital adequacy
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by npl --direction asc
+aipa fundamentals rank VCB BID CTG TCB MBB --sort-by car --direction desc
 
 # Top stocks by ROE across all VN
 aipa fundamentals rank --sort-by roe --limit 20
+```
+
+**Step 2: Screen for quality (optional but recommended)**
+
+Use `aipa fundamentals screen` to filter by quality criteria. This eliminates weak candidates immediately:
+
+```bash
+# Only banks with acceptable asset quality AND profitability
+aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02 --car-min 0.10 --sort-by roe --limit 15
 
 # Value screen: low PE + high ROE
 aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe --limit 20
 
-# Bank-specific metrics for comparison
-aipa fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB --sort-by npl --direction asc
-aipa fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB --sort-by car --direction desc
+# Screen specific tickers by quality
+aipa fundamentals screen VCB BID CTG TCB MBB --npl-max 0.015 --roe-min 0.15 --sort-by roe
 ```
+
+**Step 3: Individual deep dive (only for shortlisted tickers)**
+
+Only after Steps 1-2, use `ratios --latest` for tickers that ranked at the top or need further investigation. Use `info` for company context:
+
+```bash
+aipa fundamentals ratios VCB --latest                # full ratios for top candidate
+aipa fundamentals ratios VCB --category bank --latest # bank-specific deep dive
+aipa fundamentals info VCB                            # company profile context
+```
+
+**Why this matters:** `rank` and `screen` return all tickers in a single comparative table — far more efficient than calling `ratios` N times for N tickers. The ranking shows relative position immediately, and the screen eliminates unsuitable candidates before wasting tokens on deep dives.
 
 Pass the fundamental ranking data to workers so they can cross-reference technical signals with fundamental strength/weakness.
 
