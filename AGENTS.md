@@ -321,9 +321,9 @@ Mandatory sectors by source:
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
-### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.43)
+### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.44)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.43**. Verify before use: `aipa --version`. If < 0.1.43, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.44**. Verify before use: `aipa --version`. If < 0.1.44, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 **IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
 - "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"
@@ -381,6 +381,8 @@ aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15 # VN30 by ROE
 aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
 aipa fundamentals rank --sort-by dividend_yield                   # Highest dividend
 aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by cap
+aipa fundamentals rank --year 2023 --sort-by roe                  # Historical year
+aipa fundamentals rank --period "2016 Q4" --sort-by roe           # Specific quarter
 ```
 
 | Flag | Default | Description |
@@ -390,6 +392,8 @@ aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by c
 | `--limit` | `10` | Max results |
 | `--latest` | off | Show latest period only (quarterly or yearly) |
 | `--yearly` | off | Yearly reports only |
+| `--year YEAR` | — | Specific year (e.g. `2024`) |
+| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
 | `tickers` | all VN | Positional ticker symbols |
 | `--watchlist` | — | Use watchlist (VN30, VINGROUP, TM, MASAN, custom) |
 
@@ -403,6 +407,8 @@ aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --directio
 aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield           # Dividend stocks
 aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10                  # Screen VN30
 aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc  # Specific tickers
+aipa fundamentals screen --year 2024 --sort-by roe                                    # Historical year
+aipa fundamentals screen --period "2024 Q3" --sort-by roe                             # Specific quarter
 ```
 
 | Flag | Default | Description |
@@ -419,6 +425,8 @@ aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction
 | `--market-cap-min/max` | — | Market cap range |
 | `--latest` | off | Show latest period only (quarterly or yearly) |
 | `--yearly` | off | Yearly reports only |
+| `--year YEAR` | — | Specific year (e.g. `2024`) |
+| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
 | `--industry` | — | Industry filter (substring, case-insensitive) |
 | `--watchlist` | — | Ticker source |
 | `--limit` | `50` | Max results |
