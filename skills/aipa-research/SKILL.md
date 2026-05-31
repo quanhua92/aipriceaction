@@ -325,7 +325,7 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 
 > **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
 
-For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research.
+For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research. When the user says "report" or "báo cáo", they may want fundamentals — if unclear, ask to confirm.
 
 When relevant, add fundamental screening to the supervisor step. **Follow this 3-step workflow — do NOT just call `aipa fundamentals ratios TICKER --latest` for each ticker individually.** That produces N separate outputs that are hard to compare. Use `rank` and `screen` first.
 
@@ -336,6 +336,12 @@ Use `aipa fundamentals rank` with the specific tickers to get a comparative tabl
 ```bash
 # Profitability comparison
 aipa fundamentals rank VCB BID CTG TCB MBB --sort-by roe
+
+# Historical year
+aipa fundamentals rank --year 2023 --sort-by roe
+
+# Specific quarter
+aipa fundamentals rank --period "2016 Q4" --sort-by roe
 
 # Valuation comparison
 aipa fundamentals rank VCB BID CTG TCB MBB --sort-by pe --direction asc

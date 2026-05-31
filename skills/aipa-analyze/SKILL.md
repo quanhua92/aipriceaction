@@ -358,6 +358,7 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 - The user explicitly says "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản", "PE", "ROE", "NPL", "CAR", etc.
 - The user asks about valuation, profitability, or financial health
 - The user asks to compare stocks by financial metrics (not price action)
+- The user says "report" or "báo cáo" — these may imply financial reports. If unclear, ask to confirm.
 
 > **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.44**. Verify before use:
 > ```bash
@@ -382,8 +383,14 @@ aipa fundamentals ratios VCB --category bank --latest
 # Compare ROE across peers
 aipa fundamentals rank VCB BID CTG TCB MBB --sort-by roe
 
+# Rank by historical year
+aipa fundamentals rank --year 2023 --sort-by roe
+
 # Screen for value stocks
 aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe
+
+# Screen specific quarter
+aipa fundamentals screen --period "2024 Q3" --sort-by roe
 
 # Screen banking sector for asset quality
 aipa fundamentals screen --industry "ngân hàng" --npl-max 0.015 --sort-by npl --direction asc
