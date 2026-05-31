@@ -811,8 +811,7 @@ def _fund_ratios(args) -> None:
     categories = [args.category] if args.category else list(_CATEGORY_FIELDS.keys())
 
     for entry in entries:
-        period_type = "yearly" if entry.length_report in (5, 12) else f"Q{entry.length_report}"
-        print(f"\n=== {ticker} Financial Ratios (year={entry.year_report}, {period_type}) ===")
+        print(f"\n=== {ticker} Financial Ratios (period={_period_str(entry)}) ===")
 
         for cat_name in categories:
             fields = _CATEGORY_FIELDS[cat_name]
@@ -825,6 +824,16 @@ def _fund_ratios(args) -> None:
                 print(f"    {label:25s} {_fmt_fund(val, attr)}")
 
     print(f"\n  Total entries: {fr.count}  |  Showing: {len(entries)}")
+
+
+def _period_str(entry) -> str:
+    if entry is None:
+        return "N/A"
+    length = entry.length_report
+    year = entry.year_report
+    if length in (5, 12) or entry.ratio_type == "RATIO_YEAR":
+        return str(year)
+    return f"{year} Q{length}"
 
 
 def _fund_rank(args) -> None:
@@ -874,8 +883,9 @@ def _fund_rank(args) -> None:
             "industry": (e.industry or "")[:25],
         })
 
+    period = _period_str(entries[0].latest_ratio) if entries else ("latest" if args.latest else "yearly")
     df = pd.DataFrame(rows)
-    print(f"\n=== Top {len(entries)} by {sort_field} ({args.direction}) ===")
+    print(f"\n=== Top {len(entries)} by {sort_field} ({args.direction}, period={period}) ===")
     print(df.to_string(index=False))
 
 
@@ -949,8 +959,9 @@ def _fund_screen(args) -> None:
             filters.append(f"{attr_name}={v}")
     filter_desc = ", ".join(filters) if filters else "no filters"
 
+    period = _period_str(entries[0].latest_ratio) if entries else ("latest" if args.latest else "yearly")
     df = pd.DataFrame(rows)
-    print(f"\n=== Screened: {filter_desc} ({len(entries)} match, by {sort_field} {args.direction}) ===")
+    print(f"\n=== Screened: {filter_desc} ({len(entries)} match, by {sort_field} {args.direction}, period={period}) ===")
     print(df.to_string(index=False))
 
 

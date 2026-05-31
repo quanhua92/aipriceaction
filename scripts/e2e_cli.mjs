@@ -473,14 +473,14 @@ console.log("=========================================\n");
   r.exit === 0 ? ok("fundamentals ratios VCB --latest (exit=0)") : bad(`fundamentals ratios VCB --latest (exit=${r.exit})`);
   contains(r.out, "Valuation") ? ok("fundamentals ratios has Valuation section") : bad("fundamentals ratios has Valuation section");
   contains(r.out, "PE") ? ok("fundamentals ratios has PE field") : bad("fundamentals ratios has PE field");
-  contains(r.out, "Q1") || contains(r.out, "yearly") ? ok("fundamentals ratios shows period label") : bad("fundamentals ratios shows period label");
+  contains(r.out, "period=") ? ok("fundamentals ratios --latest shows period=") : bad("fundamentals ratios --latest shows period=");
 }
 
 // fundamentals ratios --yearly (new flag)
 {
   const r = run("fundamentals", "ratios", "VCB", "--yearly");
   r.exit === 0 ? ok("fundamentals ratios VCB --yearly (exit=0)") : bad(`fundamentals ratios VCB --yearly (exit=${r.exit})`);
-  contains(r.out, "yearly") ? ok("fundamentals ratios --yearly shows yearly") : bad("fundamentals ratios --yearly shows yearly");
+  contains(r.out, "period=") ? ok("fundamentals ratios --yearly shows period=") : bad("fundamentals ratios --yearly shows period=");
 }
 
 // fundamentals ratios — default shows all periods (quarterly + yearly)
@@ -527,6 +527,7 @@ console.log("=========================================\n");
   r.exit === 0 ? ok("fundamentals rank 5 banks by roe (exit=0)") : bad(`fundamentals rank 5 banks by roe (exit=${r.exit})`);
   lines(r.out) >= 4 ? ok(`fundamentals rank returns >=4 lines (${lines(r.out)})`) : bad(`fundamentals rank returns >=4 lines (${lines(r.out)})`);
   contains(r.out, "roe") ? ok("fundamentals rank has roe column") : bad("fundamentals rank has roe column");
+  contains(r.out, "period=") ? ok("fundamentals rank shows period=") : bad("fundamentals rank shows period=");
 }
 
 // fundamentals rank --watchlist
@@ -548,6 +549,7 @@ console.log("=========================================\n");
   const r = runArgs("fundamentals", "screen", "--industry", "ngân hàng", "--roe-min", "0.15", "--sort-by", "roe", "--limit", "5");
   r.exit === 0 ? ok("fundamentals screen banking industry (exit=0)") : bad(`fundamentals screen banking industry (exit=${r.exit})`);
   contains(r.out, "Ngân hàng") ? ok("fundamentals screen has banking entries") : bad("fundamentals screen has banking entries");
+  contains(r.out, "period=") ? ok("fundamentals screen shows period=") : bad("fundamentals screen shows period=");
 }
 
 // fundamentals screen — with watchlist
