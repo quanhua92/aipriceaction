@@ -360,11 +360,11 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 - The user asks to compare stocks by financial metrics (not price action)
 - The user says "report" or "báo cáo" — these may imply financial reports. If unclear, ask to confirm.
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.44**. Verify before use:
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify before use:
 > ```bash
 > aipa --version
 > ```
-> If < 0.1.44, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> If < 0.1.45, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 > **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
 

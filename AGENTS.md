@@ -321,9 +321,9 @@ Mandatory sectors by source:
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
-### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.44)
+### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.45)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.44**. Verify before use: `aipa --version`. If < 0.1.44, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify before use: `aipa --version`. If < 0.1.45, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 **IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
 - "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"

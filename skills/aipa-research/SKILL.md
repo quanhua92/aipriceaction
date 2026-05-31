@@ -321,7 +321,7 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 
 ### Step 3.5 — Fundamental Context (optional, VN only)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.44**. Verify with `aipa --version` before use.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify with `aipa --version` before use.
 
 > **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
 
