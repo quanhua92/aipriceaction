@@ -321,9 +321,9 @@ Mandatory sectors by source:
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
-### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.41)
+### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.43)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use: `aipa --version`. If < 0.1.41, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.43**. Verify before use: `aipa --version`. If < 0.1.43, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 **IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
 - "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"
@@ -351,10 +351,10 @@ aipa fundamentals info FPT --source vn  # with explicit source
 #### `aipa fundamentals ratios`
 
 ```bash
-aipa fundamentals ratios VCB                    # All periods (yearly + quarterly) — default
-aipa fundamentals ratios VCB --latest            # Latest period only (quarterly or yearly) — quickest, single result
-aipa fundamentals ratios VCB --no-yearly         # All periods (explicit, same as default)
-aipa fundamentals ratios VCB --yearly            # Only yearly reports
+aipa fundamentals ratios VCB                            # All periods (yearly + quarterly) — default
+aipa fundamentals ratios VCB --latest                    # Latest period only (quarterly or yearly) — quickest, single result
+aipa fundamentals ratios VCB --no-yearly                 # All periods (explicit, same as default)
+aipa fundamentals ratios VCB --yearly                    # Yearly reports only
 aipa fundamentals ratios VCB --year 2024         # Specific year
 aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
 aipa fundamentals ratios VCB --json              # Raw JSON output
@@ -363,9 +363,9 @@ aipa fundamentals ratios VCB --json              # Raw JSON output
 | Flag | Default | Description |
 |---|---|---|
 | `--latest` | off | Show only latest period (quarterly or yearly) — fastest, single result |
-| `--yearly` | off | Show only yearly reports |
+| `--no-yearly` | off | Include quarterly reports |
+| `--yearly` | off | Yearly reports only |
 | `--year YEAR` | — | Show specific year |
-| `--no-yearly` | off | Include quarterly reports (same as default) |
 | `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
 | `--json` | off | Raw JSON output |
 
@@ -384,12 +384,15 @@ aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by c
 ```
 
 | Flag | Default | Description |
-|---|---|---|
+|---|---|---|---|
 | `--sort-by` | `roe` | 50+ fields: pe, pb, roe, roa, npl, car, dividend_yield, market_cap, etc. |
 | `--direction` | `desc` | `desc` or `asc` |
 | `--limit` | `10` | Max results |
+| `--latest` | off | Show latest period only (quarterly or yearly) |
+| `--yearly` | off | Yearly reports only |
 | `tickers` | all VN | Positional ticker symbols |
 | `--watchlist` | — | Use watchlist (VN30, VINGROUP, TM, MASAN, custom) |
+
 
 #### `aipa fundamentals screen`
 
@@ -414,6 +417,8 @@ aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction
 | `--car-min` | — | Min CAR (banks) |
 | `--cir-max` | — | Max CIR (banks) |
 | `--market-cap-min/max` | — | Market cap range |
+| `--latest` | off | Show latest period only (quarterly or yearly) |
+| `--yearly` | off | Yearly reports only |
 | `--industry` | — | Industry filter (substring, case-insensitive) |
 | `--watchlist` | — | Ticker source |
 | `--limit` | `50` | Max results |

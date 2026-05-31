@@ -359,11 +359,11 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 - The user asks about valuation, profitability, or financial health
 - The user asks to compare stocks by financial metrics (not price action)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use:
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.43**. Verify before use:
 > ```bash
 > aipa --version
 > ```
-> If < 0.1.41, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> If < 0.1.43, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 > **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
 
