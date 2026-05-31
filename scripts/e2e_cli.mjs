@@ -508,6 +508,13 @@ console.log("=========================================\n");
   contains(r.out, "2024") ? ok("fundamentals ratios shows year 2024") : bad("fundamentals ratios shows year 2024");
 }
 
+// fundamentals ratios --period
+{
+  const r = runArgs("fundamentals", "ratios", "HPG", "--period", "2016 Q2");
+  r.exit === 0 ? ok("fundamentals ratios HPG --period 2016 Q2 (exit=0)") : bad(`fundamentals ratios HPG --period 2016 Q2 (exit=${r.exit})`);
+  contains(r.out, "period=2016 Q2") ? ok("fundamentals ratios --period shows period=2016 Q2") : bad("fundamentals ratios --period shows period=2016 Q2");
+}
+
 // fundamentals ratios --json
 {
   const r = run("fundamentals", "ratios", "VCB", "--latest", "--json");

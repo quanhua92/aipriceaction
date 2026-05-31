@@ -793,7 +793,14 @@ def _fund_ratios(args) -> None:
         return
 
     entries = fr.ratios
-    if args.year is not None:
+    if args.period is not None:
+        from aipriceaction.fundamental_ranking import _parse_period
+        p_year, p_q = _parse_period(args.period)
+        if p_q is not None:
+            entries = [r for r in entries if r.year_report == p_year and r.length_report == p_q]
+        else:
+            entries = [r for r in entries if r.year_report == p_year]
+    elif args.year is not None:
         entries = [r for r in entries if r.year_report == args.year]
     elif args.latest:
         entries = entries[:1]

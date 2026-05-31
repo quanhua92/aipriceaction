@@ -356,6 +356,7 @@ aipa fundamentals ratios VCB --latest                    # Latest period only (q
 aipa fundamentals ratios VCB --no-yearly                 # All periods (explicit, same as default)
 aipa fundamentals ratios VCB --yearly                    # Yearly reports only
 aipa fundamentals ratios VCB --year 2024         # Specific year
+aipa fundamentals ratios VCB --period "2024 Q2"  # Specific quarter
 aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
 aipa fundamentals ratios VCB --json              # Raw JSON output
 ```
@@ -366,6 +367,7 @@ aipa fundamentals ratios VCB --json              # Raw JSON output
 | `--no-yearly` | off | Include quarterly reports |
 | `--yearly` | off | Yearly reports only |
 | `--year YEAR` | — | Show specific year |
+| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
 | `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
 | `--json` | off | Raw JSON output |
 

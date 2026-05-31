@@ -148,6 +148,7 @@ def run():
     p_fund_ratios.add_argument("--latest", action="store_true", help="Show only latest period (quarterly or yearly)")
     p_fund_ratios.add_argument("--yearly", action="store_true", help="Show only yearly reports")
     p_fund_ratios.add_argument("--year", type=int, default=None, help="Show specific year")
+    p_fund_ratios.add_argument("--period", type=str, default=None, help="Specific period like '2024' or '2024 Q2'")
     p_fund_ratios.add_argument("--no-yearly", action="store_true", help="Include quarterly reports (default, same as omitting the flag)")
     p_fund_ratios.add_argument("--category", default=None,
         choices=["valuation", "profitability", "leverage", "liquidity", "bank", "efficiency"],
