@@ -351,19 +351,21 @@ aipa fundamentals info FPT --source vn  # with explicit source
 #### `aipa fundamentals ratios`
 
 ```bash
-aipa fundamentals ratios VCB                    # All yearly reports
-aipa fundamentals ratios VCB --no-yearly         # Include quarterly (preferred)
+aipa fundamentals ratios VCB                    # All periods (yearly + quarterly) — default
+aipa fundamentals ratios VCB --latest            # Latest period only (quarterly or yearly) — quickest, single result
+aipa fundamentals ratios VCB --no-yearly         # All periods (explicit, same as default)
+aipa fundamentals ratios VCB --yearly            # Only yearly reports
 aipa fundamentals ratios VCB --year 2024         # Specific year
-aipa fundamentals ratios VCB --latest            # Only latest yearly
 aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
 aipa fundamentals ratios VCB --json              # Raw JSON output
 ```
 
 | Flag | Default | Description |
 |---|---|---|
-| `--latest` | off | Show only latest yearly report (use `--no-yearly` instead — includes more recent quarterly data) |
+| `--latest` | off | Show only latest period (quarterly or yearly) — fastest, single result |
+| `--yearly` | off | Show only yearly reports |
 | `--year YEAR` | — | Show specific year |
-| `--no-yearly` | off | Include quarterly reports — **preferred over `--latest`** |
+| `--no-yearly` | off | Include quarterly reports (same as default) |
 | `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
 | `--json` | off | Raw JSON output |
 
@@ -422,7 +424,7 @@ aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction
 
 | Request | Use |
 |---|---|
-| "What is VCB's PE ratio?" | `aipa fundamentals ratios VCB --no-yearly` |
+| "What is VCB's PE ratio?" | `aipa fundamentals ratios VCB --latest` |
 | "Compare bank NPLs" | `aipa fundamentals rank --sort-by npl --direction asc` |
 | "Find cheap stocks" | `aipa fundamentals screen --pe-max 10 --roe-min 0.15` |
 | "Company profile for FPT" | `aipa fundamentals info FPT` |
@@ -495,7 +497,7 @@ aipa fundamentals info VCB                            # company profile context
 | Volume profile / POC | `aipa volume-profile VCB` |
 | List banking stocks | `aipa ticker-list --source vn --group NGAN_HANG` |
 | Comprehensive research | `aipa deep-research` + agent pipeline |
-| PE ratio for VCB | `aipa fundamentals ratios VCB --no-yearly` |
+| PE ratio for VCB | `aipa fundamentals ratios VCB --latest` |
 | Screen for low PE banks | `aipa fundamentals screen --industry "ngân hàng" --pe-max 10` |
 | Company profile | `aipa fundamentals info TICKER` |
 | Rank by ROE / NPL / CAR | `aipa fundamentals rank --sort-by roe` |

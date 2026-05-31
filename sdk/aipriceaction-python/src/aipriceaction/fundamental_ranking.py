@@ -145,7 +145,7 @@ def build_fundamental_ranking(
             if yearly_only:
                 latest = _latest_yearly(fr)
             else:
-                latest = fr.ratios[-1]
+                latest = fr.ratios[0]
 
         entry = FundamentalRankEntry(
             ticker=ticker,
@@ -241,7 +241,7 @@ def screen_fundamentals(
             if yearly_only:
                 latest = _latest_yearly(fr)
             else:
-                latest = fr.ratios[-1]
+                latest = fr.ratios[0]
 
         entry = FundamentalRankEntry(
             ticker=ticker,

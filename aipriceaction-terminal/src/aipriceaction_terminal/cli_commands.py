@@ -796,13 +796,8 @@ def _fund_ratios(args) -> None:
     if args.year is not None:
         entries = [r for r in entries if r.year_report == args.year]
     elif args.latest:
-        yearly = [r for r in entries if r.ratio_type == "RATIO_YEAR"]
-        if not yearly:
-            yearly = [r for r in entries if r.length_report in (5, 12)]
-        if not yearly:
-            yearly = list(entries)
-        entries = [yearly[0]] if yearly else []
-    elif not args.no_yearly:
+        entries = entries[:1]
+    elif args.yearly:
         yearly = [r for r in entries if r.ratio_type == "RATIO_YEAR"]
         if not yearly:
             yearly = [r for r in entries if r.length_report in (5, 12)]
