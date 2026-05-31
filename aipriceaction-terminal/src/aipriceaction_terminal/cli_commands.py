@@ -856,6 +856,7 @@ def _fund_rank(args) -> None:
         limit=args.limit,
         source=_resolve_source(args.source),
         yearly_only=not args.latest,
+        year=args.year,
     )
 
     if not entries:
@@ -909,6 +910,7 @@ def _fund_screen(args) -> None:
         limit=args.limit,
         source=_resolve_source(args.source),
         yearly_only=not args.latest,
+        year=args.year,
         pe_min=args.pe_min, pe_max=args.pe_max,
         pb_min=args.pb_min, pb_max=args.pb_max,
         roe_min=args.roe_min, roe_max=args.roe_max,

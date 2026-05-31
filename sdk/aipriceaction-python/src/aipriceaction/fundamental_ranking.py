@@ -122,6 +122,22 @@ def _get_field_value(
         return None
 
 
+def _find_entry_for_year(
+    fr: FinancialRatios,
+    year: int,
+) -> FinancialRatioEntry | None:
+    """Find the yearly entry for a specific year, or None."""
+    for r in fr.ratios:
+        if r.year_report == year:
+            if r.ratio_type == "RATIO_YEAR" or r.length_report in (5, 12):
+                return r
+    # fallback — any entry matching that year
+    for r in fr.ratios:
+        if r.year_report == year:
+            return r
+    return None
+
+
 def build_fundamental_ranking(
     client: AIPriceAction,
     tickers: list[str],
@@ -131,6 +147,7 @@ def build_fundamental_ranking(
     limit: int = 10,
     source: str | None = None,
     yearly_only: bool = True,
+    year: int | None = None,
 ) -> list[FundamentalRankEntry]:
     limit = max(1, min(limit, 200))
 
@@ -142,7 +159,9 @@ def build_fundamental_ranking(
 
         latest = None
         if fr is not None and fr.ratios:
-            if yearly_only:
+            if year is not None:
+                latest = _find_entry_for_year(fr, year)
+            elif yearly_only:
                 latest = _latest_yearly(fr)
             else:
                 latest = fr.ratios[0]
@@ -202,6 +221,7 @@ def screen_fundamentals(
     market_cap_max: float | None = None,
     industry: str | list[str] | None = None,
     require_data: bool = True,
+    year: int | None = None,
 ) -> list[FundamentalRankEntry]:
     limit = max(1, min(limit, 500))
 
@@ -238,7 +258,9 @@ def screen_fundamentals(
 
         latest = None
         if fr is not None and fr.ratios:
-            if yearly_only:
+            if year is not None:
+                latest = _find_entry_for_year(fr, year)
+            elif yearly_only:
                 latest = _latest_yearly(fr)
             else:
                 latest = fr.ratios[0]

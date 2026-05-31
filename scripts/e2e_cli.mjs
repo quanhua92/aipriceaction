@@ -530,6 +530,20 @@ console.log("=========================================\n");
   contains(r.out, "period=") ? ok("fundamentals rank shows period=") : bad("fundamentals rank shows period=");
 }
 
+// fundamentals rank --year
+{
+  const r = run("fundamentals", "rank", "VCB", "BID", "CTG", "--year", "2023", "--sort-by", "roe", "--limit", "3");
+  r.exit === 0 ? ok("fundamentals rank --year 2023 (exit=0)") : bad(`fundamentals rank --year 2023 (exit=${r.exit})`);
+  contains(r.out, "period=2023") ? ok("fundamentals rank --year shows period=2023") : bad("fundamentals rank --year shows period=2023");
+}
+
+// fundamentals screen --year
+{
+  const r = runArgs("fundamentals", "screen", "--industry", "ngân hàng", "--year", "2024", "--sort-by", "roe", "--limit", "3");
+  r.exit === 0 ? ok("fundamentals screen --year 2024 (exit=0)") : bad(`fundamentals screen --year 2024 (exit=${r.exit})`);
+  contains(r.out, "period=2024") ? ok("fundamentals screen --year shows period=2024") : bad("fundamentals screen --year shows period=2024");
+}
+
 // fundamentals rank --watchlist
 {
   const r = run("fundamentals", "rank", "--watchlist", "VN30", "--sort-by", "pe", "--direction", "asc", "--limit", "5");
