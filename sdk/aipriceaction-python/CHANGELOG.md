@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.22] - 2026-05-31
+
+### Fixed
+- `build_fundamental_ranking` and `screen_fundamentals` with `yearly_only=False` used `ratios[-1]` (oldest) instead of `ratios[0]` (newest) — the sorted list is descending, so index 0 is the most recent period
+
 ## [0.1.21] - 2026-05-30
 
 ### Added
