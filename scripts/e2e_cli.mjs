@@ -473,7 +473,23 @@ console.log("=========================================\n");
   r.exit === 0 ? ok("fundamentals ratios VCB --latest (exit=0)") : bad(`fundamentals ratios VCB --latest (exit=${r.exit})`);
   contains(r.out, "Valuation") ? ok("fundamentals ratios has Valuation section") : bad("fundamentals ratios has Valuation section");
   contains(r.out, "PE") ? ok("fundamentals ratios has PE field") : bad("fundamentals ratios has PE field");
-  contains(r.out, "yearly") ? ok("fundamentals ratios shows yearly period") : bad("fundamentals ratios shows yearly period");
+  contains(r.out, "Q1") || contains(r.out, "yearly") ? ok("fundamentals ratios shows period label") : bad("fundamentals ratios shows period label");
+}
+
+// fundamentals ratios --yearly (new flag)
+{
+  const r = run("fundamentals", "ratios", "VCB", "--yearly");
+  r.exit === 0 ? ok("fundamentals ratios VCB --yearly (exit=0)") : bad(`fundamentals ratios VCB --yearly (exit=${r.exit})`);
+  contains(r.out, "yearly") ? ok("fundamentals ratios --yearly shows yearly") : bad("fundamentals ratios --yearly shows yearly");
+}
+
+// fundamentals ratios — default shows all periods (quarterly + yearly)
+{
+  const r = run("fundamentals", "ratios", "VCB");
+  r.exit === 0 ? ok("fundamentals ratios VCB default (exit=0)") : bad(`fundamentals ratios VCB default (exit=${r.exit})`);
+  const q1 = /Q1/g;
+  const matches = (r.out.match(q1) || []).length;
+  matches >= 1 ? ok(`fundamentals ratios default includes quarterly data (${matches} Q1 entries)`) : bad(`fundamentals ratios default includes quarterly data (${matches} Q1 entries)`);
 }
 
 // fundamentals ratios --category bank
