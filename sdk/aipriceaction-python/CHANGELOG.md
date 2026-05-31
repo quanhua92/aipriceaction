@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.23] - 2026-05-31
+
+### Added
+- `year` parameter to `build_fundamental_ranking()` and `screen_fundamentals()` — filter by specific year (e.g. `year=2023`)
+- `period` parameter to `build_fundamental_ranking()` and `screen_fundamentals()` — filter by specific period like `"2024"` or `"2024 Q2"`
+- `_parse_period()` and `_find_entry_for_period()` helper functions
+
 ## [0.1.22] - 2026-05-31
 
 ### Fixed
