@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -122,6 +123,18 @@ def _get_field_value(
         return None
 
 
+def _parse_period(period: str) -> tuple[int, int | None]:
+    """Parse '2016' or '2016 Q2' into (year, quarter_or_None)."""
+    period = period.strip().upper()
+    m = re.match(r"^(\d{4})\s+Q(\d)$", period)
+    if m:
+        return int(m.group(1)), int(m.group(2))
+    m = re.match(r"^(\d{4})$", period)
+    if m:
+        return int(m.group(1)), None
+    raise ValueError(f"Invalid period format: {period!r}. Use 'YYYY' or 'YYYY Q#'")
+
+
 def _find_entry_for_year(
     fr: FinancialRatios,
     year: int,
@@ -138,6 +151,20 @@ def _find_entry_for_year(
     return None
 
 
+def _find_entry_for_period(
+    fr: FinancialRatios,
+    year: int,
+    quarter: int | None,
+) -> FinancialRatioEntry | None:
+    """Find entry by year and optional quarter."""
+    if quarter is not None:
+        for r in fr.ratios:
+            if r.year_report == year and r.length_report == quarter:
+                return r
+        return None
+    return _find_entry_for_year(fr, year)
+
+
 def build_fundamental_ranking(
     client: AIPriceAction,
     tickers: list[str],
@@ -148,6 +175,7 @@ def build_fundamental_ranking(
     source: str | None = None,
     yearly_only: bool = True,
     year: int | None = None,
+    period: str | None = None,
 ) -> list[FundamentalRankEntry]:
     limit = max(1, min(limit, 200))
 
@@ -159,7 +187,10 @@ def build_fundamental_ranking(
 
         latest = None
         if fr is not None and fr.ratios:
-            if year is not None:
+            if period is not None:
+                p_year, p_q = _parse_period(period)
+                latest = _find_entry_for_period(fr, p_year, p_q)
+            elif year is not None:
                 latest = _find_entry_for_year(fr, year)
             elif yearly_only:
                 latest = _latest_yearly(fr)
@@ -222,6 +253,7 @@ def screen_fundamentals(
     industry: str | list[str] | None = None,
     require_data: bool = True,
     year: int | None = None,
+    period: str | None = None,
 ) -> list[FundamentalRankEntry]:
     limit = max(1, min(limit, 500))
 
@@ -258,7 +290,10 @@ def screen_fundamentals(
 
         latest = None
         if fr is not None and fr.ratios:
-            if year is not None:
+            if period is not None:
+                p_year, p_q = _parse_period(period)
+                latest = _find_entry_for_period(fr, p_year, p_q)
+            elif year is not None:
                 latest = _find_entry_for_year(fr, year)
             elif yearly_only:
                 latest = _latest_yearly(fr)

@@ -857,6 +857,7 @@ def _fund_rank(args) -> None:
         source=_resolve_source(args.source),
         yearly_only=not args.latest,
         year=args.year,
+        period=args.period,
     )
 
     if not entries:
@@ -884,7 +885,12 @@ def _fund_rank(args) -> None:
             "industry": (e.industry or "")[:25],
         })
 
-    period = _period_str(entries[0].latest_ratio) if entries else ("latest" if args.latest else "yearly")
+    if args.period:
+        period = args.period
+    elif entries:
+        period = _period_str(entries[0].latest_ratio)
+    else:
+        period = "latest" if args.latest else "yearly"
     df = pd.DataFrame(rows)
     print(f"\n=== Top {len(entries)} by {sort_field} ({args.direction}, period={period}) ===")
     print(df.to_string(index=False))
@@ -911,6 +917,7 @@ def _fund_screen(args) -> None:
         source=_resolve_source(args.source),
         yearly_only=not args.latest,
         year=args.year,
+        period=args.period,
         pe_min=args.pe_min, pe_max=args.pe_max,
         pb_min=args.pb_min, pb_max=args.pb_max,
         roe_min=args.roe_min, roe_max=args.roe_max,
@@ -961,7 +968,12 @@ def _fund_screen(args) -> None:
             filters.append(f"{attr_name}={v}")
     filter_desc = ", ".join(filters) if filters else "no filters"
 
-    period = _period_str(entries[0].latest_ratio) if entries else ("latest" if args.latest else "yearly")
+    if args.period:
+        period = args.period
+    elif entries:
+        period = _period_str(entries[0].latest_ratio)
+    else:
+        period = "latest" if args.latest else "yearly"
     df = pd.DataFrame(rows)
     print(f"\n=== Screened: {filter_desc} ({len(entries)} match, by {sort_field} {args.direction}, period={period}) ===")
     print(df.to_string(index=False))

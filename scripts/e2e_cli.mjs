@@ -537,6 +537,20 @@ console.log("=========================================\n");
   contains(r.out, "period=2023") ? ok("fundamentals rank --year shows period=2023") : bad("fundamentals rank --year shows period=2023");
 }
 
+// fundamentals rank --period
+{
+  const r = runArgs("fundamentals", "rank", "HPG", "FPT", "--period", "2016 Q2", "--sort-by", "roe", "--limit", "3");
+  r.exit === 0 ? ok("fundamentals rank --period 2016 Q2 (exit=0)") : bad(`fundamentals rank --period 2016 Q2 (exit=${r.exit})`);
+  contains(r.out, "period=2016 Q2") ? ok("fundamentals rank --period shows period=2016 Q2") : bad("fundamentals rank --period shows period=2016 Q2");
+}
+
+// fundamentals screen --period
+{
+  const r = run("fundamentals", "screen", "--period", "2024", "--sort-by", "roe", "--limit", "3");
+  r.exit === 0 ? ok("fundamentals screen --period 2024 (exit=0)") : bad(`fundamentals screen --period 2024 (exit=${r.exit})`);
+  contains(r.out, "period=2024") ? ok("fundamentals screen --period shows period=2024") : bad("fundamentals screen --period shows period=2024");
+}
+
 // fundamentals screen --year
 {
   const r = runArgs("fundamentals", "screen", "--industry", "ngân hàng", "--year", "2024", "--sort-by", "roe", "--limit", "3");
