@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.46] - 2026-06-01
+
+### Added
+- Ticker metadata (from `get_tickers()`) now printed at top of `fundamentals info` output
+
 ## [0.1.45] - 2026-05-31
 
 ### Added
