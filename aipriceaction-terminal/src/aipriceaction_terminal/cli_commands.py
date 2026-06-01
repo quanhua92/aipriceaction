@@ -745,13 +745,27 @@ def _fund_info(args) -> None:
     ticker = args.ticker.upper()
     verbose_log(f"fundamentals info: {ticker}")
 
+    tickers = client.get_tickers(source=_resolve_source(args.source) or "vn")
+    match = next((t for t in tickers if t.ticker == ticker), None)
+    if match:
+        print()
+        for label, val in [
+            ("Ticker:", match.ticker),
+            ("Name:", match.name or "N/A"),
+            ("Group:", match.group or "N/A"),
+            ("Exchange:", match.exchange or "N/A"),
+            ("Source:", match.source),
+        ]:
+            print(f"  {label:<20s} {val}")
+
     ci = client.get_company_info(ticker, source=_resolve_source(args.source))
+
     if ci is None:
         print(f"No company info found for {ticker}.", file=sys.stderr)
         sys.exit(1)
 
     industry = ci.industry or "N/A"
-    print(f"\n=== {ci.symbol} — {industry} ===\n")
+    print(f"=== {ci.symbol} — {industry} ===\n")
     print(f"  Industry:           {industry}")
     print(f"  Market Cap:         {_fmt_fund(ci.market_cap, 'market_cap')} VND")
     print(f"  Current Price:      {_fmt_fund(ci.current_price, 'current_price')} VND")
