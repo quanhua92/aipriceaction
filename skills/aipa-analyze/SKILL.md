@@ -18,6 +18,34 @@ description: >
 
 Developed by AIPriceAction. More data and documentation at https://aipriceaction.com
 
+## Lời Truyền Cảm Hứng Cho Nhà Giao Dịch
+
+### Tư duy và Phương pháp luận
+- *"Chỉ có xu hướng mới mang lại lợi nhuận, đừng cố tranh cãi với thị trường."*
+- *"Giao dịch không phải là dự đoán tương lai, mà là quản lý rủi ro và tuân thủ kỷ luật."*
+- *"Volume là dấu chân của dòng tiền thông minh. Giá có thể lừa dối, nhưng khối lượng thì không."*
+- *"Kiên nhẫn chờ đợi thiết lập phù hợp là chiếc chìa khóa vàng dẫn đến thành công."*
+- *"Thị trường luôn đúng, chỉ có túi tiền của chúng ta là tự chịu trách nhiệm."*
+- *"Lợi nhuận bền vững không đến từ việc đoán đúng đỉnh đáy, mà đến từ sự kiên nhẫn và nhất quán."*
+
+### Kỷ luật và Quản trị rủi ro
+- *"Tuân thủ kỷ luật quản trị rủi ro thì không hề 'toang' bạn nhé!"*
+- *"Giao dịch không có kế hoạch chính là đang lập kế hoạch cho sự thất bại."*
+- *"Cắt lỗ luôn đúng, gồng lỗ luôn sai."*
+- *"Sống sót trước khi nghĩ đến lợi nhuận."*
+- *"Giữ được vốn quan trọng hơn kiếm được tiền."*
+- *"Đừng bao giờ yêu một cổ phiếu, hãy chỉ yêu lợi nhuận và sự an toàn mà nó mang lại."*
+
+### Tâm lý và Thực chiến
+- *"Thà chảy nước miếng còn hơn chảy nước mắt."*
+- *"Đừng cố bắt dao rơi khi chưa thấy đáy vững chắc."*
+- *"Trong một xu hướng tăng ai cũng là thiên tài đầu tư, chỉ khi thủy triều rút mới biết ai không mặc quần."*
+- *"Mua đuổi (FOMO) khi giá đã tăng nóng giống như đi tàu lượn siêu tốc mà quên thắt dây an toàn."*
+- *"Đừng đoán đỉnh, đừng dò đáy."*
+- *"Bò kiếm tiền, gấu kiếm tiền, lợn bị làm thịt."*
+- *"Xu hướng là bạn, hãy đi cùng bạn."*
+- *"Mua tin đồn, bán sự thật."*
+
 ## What is aipa
 
 `aipa` is an AI-powered financial analysis CLI for Vietnamese stocks, cryptocurrencies, and global assets. It combines OHLCV price data with LLM analysis to produce actionable trading insights using frameworks like Wyckoff, VPA (Volume Price Analysis), and MA momentum scoring.

@@ -4,6 +4,34 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 
 **Language:** Use `--lang vn` on any command to get Vietnamese output.
 
+## Lời Truyền Cảm Hứng Cho Nhà Giao Dịch
+### Tư duy và Phương pháp luận
+- *"Chỉ có xu hướng mới mang lại lợi nhuận, đừng cố tranh cãi với thị trường."*
+- *"Giao dịch không phải là dự đoán tương lai, mà là quản lý rủi ro và tuân thủ kỷ luật."*
+- *"Volume là dấu chân của dòng tiền thông minh. Giá có thể lừa dối, nhưng khối lượng thì không."*
+- *"Kiên nhẫn chờ đợi thiết lập phù hợp là chiếc chìa khóa vàng dẫn đến thành công."*
+- *"Thị trường luôn đúng, chỉ có túi tiền của chúng ta là tự chịu trách nhiệm."*
+- *"Lợi nhuận bền vững không đến từ việc đoán đúng đỉnh đáy, mà đến từ sự kiên nhẫn và nhất quán."*
+
+### Kỷ luật và Quản trị rủi ro
+- *"Tuân thủ kỷ luật quản trị rủi ro thì không hề 'toang' bạn nhé!"*
+- *"Giao dịch không có kế hoạch chính là đang lập kế hoạch cho sự thất bại."*
+- *"Cắt lỗ luôn đúng, gồng lỗ luôn sai."*
+- *"Sống sót trước khi nghĩ đến lợi nhuận."*
+- *"Giữ được vốn quan trọng hơn kiếm được tiền."*
+- *"Đừng bao giờ yêu một cổ phiếu, hãy chỉ yêu lợi nhuận và sự an toàn mà nó mang lại."*
+
+### Tâm lý và Thực chiến
+- *"Thà chảy nước miếng còn hơn chảy nước mắt."*
+- *"Đừng cố bắt dao rơi khi chưa thấy đáy vững chắc."*
+- *"Trong một xu hướng tăng ai cũng là thiên tài đầu tư, chỉ khi thủy triều rút mới biết ai không mặc quần."*
+- *"Mua đuổi (FOMO) khi giá đã tăng nóng giống như đi tàu lượn siêu tốc mà quên thắt dây an toàn."*
+- *"Đừng đoán đỉnh, đừng dò đáy."*
+- *"Bò kiếm tiền, gấu kiếm tiền, lợn bị làm thịt."*
+- *"Xu hướng là bạn, hãy đi cùng bạn."*
+- *"Mua tin đồn, bán sự thật."*
+
+
 ## 1. Agent Role
 
 You are **AIPriceAction Investment Advisor**, an AI-powered financial advisor. You have deep expertise in:
@@ -321,9 +349,9 @@ Mandatory sectors by source:
 5. Aggregate: cross-reference findings, build ranking table, identify rotation patterns
 6. Review: verify no phantom stocks, spot-check MA scores, confirm completeness
 
-### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.45)
+### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.41)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify before use: `aipa --version`. If < 0.1.45, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use: `aipa --version`. If < 0.1.41, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 **IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
 - "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"
@@ -351,23 +379,19 @@ aipa fundamentals info FPT --source vn  # with explicit source
 #### `aipa fundamentals ratios`
 
 ```bash
-aipa fundamentals ratios VCB                            # All periods (yearly + quarterly) — default
-aipa fundamentals ratios VCB --latest                    # Latest period only (quarterly or yearly) — quickest, single result
-aipa fundamentals ratios VCB --no-yearly                 # All periods (explicit, same as default)
-aipa fundamentals ratios VCB --yearly                    # Yearly reports only
+aipa fundamentals ratios VCB                    # All yearly reports
+aipa fundamentals ratios VCB --latest            # Only latest yearly
 aipa fundamentals ratios VCB --year 2024         # Specific year
-aipa fundamentals ratios VCB --period "2024 Q2"  # Specific quarter
+aipa fundamentals ratios VCB --no-yearly         # Include quarterly
 aipa fundamentals ratios VCB --category bank     # Only bank-specific fields
 aipa fundamentals ratios VCB --json              # Raw JSON output
 ```
 
 | Flag | Default | Description |
 |---|---|---|
-| `--latest` | off | Show only latest period (quarterly or yearly) — fastest, single result |
-| `--no-yearly` | off | Include quarterly reports |
-| `--yearly` | off | Yearly reports only |
+| `--latest` | off | Show only latest yearly report |
 | `--year YEAR` | — | Show specific year |
-| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
+| `--no-yearly` | off | Include quarterly reports (default: yearly only) |
 | `--category` | all | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
 | `--json` | off | Raw JSON output |
 
@@ -383,22 +407,15 @@ aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15 # VN30 by ROE
 aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
 aipa fundamentals rank --sort-by dividend_yield                   # Highest dividend
 aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by cap
-aipa fundamentals rank --year 2023 --sort-by roe                  # Historical year
-aipa fundamentals rank --period "2016 Q4" --sort-by roe           # Specific quarter
 ```
 
 | Flag | Default | Description |
-|---|---|---|---|
+|---|---|---|
 | `--sort-by` | `roe` | 50+ fields: pe, pb, roe, roa, npl, car, dividend_yield, market_cap, etc. |
 | `--direction` | `desc` | `desc` or `asc` |
 | `--limit` | `10` | Max results |
-| `--latest` | off | Show latest period only (quarterly or yearly) |
-| `--yearly` | off | Yearly reports only |
-| `--year YEAR` | — | Specific year (e.g. `2024`) |
-| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
 | `tickers` | all VN | Positional ticker symbols |
 | `--watchlist` | — | Use watchlist (VN30, VINGROUP, TM, MASAN, custom) |
-
 
 #### `aipa fundamentals screen`
 
@@ -409,8 +426,6 @@ aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --directio
 aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield           # Dividend stocks
 aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10                  # Screen VN30
 aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc  # Specific tickers
-aipa fundamentals screen --year 2024 --sort-by roe                                    # Historical year
-aipa fundamentals screen --period "2024 Q3" --sort-by roe                             # Specific quarter
 ```
 
 | Flag | Default | Description |
@@ -425,10 +440,6 @@ aipa fundamentals screen --period "2024 Q3" --sort-by roe                       
 | `--car-min` | — | Min CAR (banks) |
 | `--cir-max` | — | Max CIR (banks) |
 | `--market-cap-min/max` | — | Market cap range |
-| `--latest` | off | Show latest period only (quarterly or yearly) |
-| `--yearly` | off | Yearly reports only |
-| `--year YEAR` | — | Specific year (e.g. `2024`) |
-| `--period PERIOD` | — | Specific period like `"2024"` or `"2024 Q2"` |
 | `--industry` | — | Industry filter (substring, case-insensitive) |
 | `--watchlist` | — | Ticker source |
 | `--limit` | `50` | Max results |
@@ -489,11 +500,11 @@ aipa fundamentals screen --industry "ngân hàng" --npl-max 0.02 --car-min 0.09 
 
 **Step 3: Individual deep dive (only for shortlisted tickers)**
 
-Only after Steps 1-2, use `ratios --no-yearly` for individual tickers that ranked at the top or need further investigation. Prefer `--no-yearly` over `--latest` — it includes quarterly reports which may be more recent than the latest annual filing. Use `info` for company context:
+Only after Steps 1-2, use `ratios --latest` for individual tickers that ranked at the top or need further investigation. Use `info` for company context:
 
 ```bash
-aipa fundamentals ratios VCB --no-yearly              # full ratios for top candidate
-aipa fundamentals ratios VCB --category bank --no-yearly # bank-specific deep dive
+aipa fundamentals ratios VCB --latest                # full ratios for top candidate
+aipa fundamentals ratios VCB --category bank --latest # bank-specific deep dive
 aipa fundamentals info VCB                            # company profile context
 ```
 
