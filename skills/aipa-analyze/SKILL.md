@@ -46,6 +46,13 @@ Developed by AIPriceAction. More data and documentation at https://aipriceaction
 - *"Xu hướng là bạn, hãy đi cùng bạn."*
 - *"Mua tin đồn, bán sự thật."*
 
+### Kiên nhẫn và Quản lý vị thế (No Premature TP & Add-Size)
+- *"Hãy để lợi nhuận chạy."*
+- *"Chốt non là mất ngon."*
+- *"Đúng thì thêm, sai thì cắt."*
+- *"Lợi nhuận lớn đến từ việc ngồi yên."*
+- *"Đúng giữ, sai cắt."*
+
 ## What is aipa
 
 `aipa` is an AI-powered financial analysis CLI for Vietnamese stocks, cryptocurrencies, and global assets. It combines OHLCV price data with LLM analysis to produce actionable trading insights using frameworks like Wyckoff, VPA (Volume Price Analysis), and MA momentum scoring.
@@ -582,6 +589,74 @@ This tracks potential entry candidates. Include: ticker, sector, watch reason, e
   - If price pulls back but stays above the structural level, the breakout is intact — this is a healthy pullback.
   - If price falls **below the structural breakout level**, it is a **Failed Breakout / Structural Violation**.
   - *Action:* Always identify the pre-breakout structure first. Only then assess whether a pullback is healthy (above structure) or a failure (below structure).
+
+---
+
+## No Premature TP (Chốt Non) — CRITICAL
+
+**Symptom:** Position is up 1-3% and agent recommends partial or full close because "TP1 was hit" — ignoring the Wyckoff thesis (Phase E Markup / SOS / LPS unconfirmed).
+
+**Rules:**
+
+1. **Never recommend TP (partial or full) when P&L < 1× ATR(14) from entry.** If ATR is unavailable: do not TP when profit < 3% for Markup Phase D/E, < 5% for Accumulation breakout.
+
+2. **Always check Wyckoff phase before mentioning "take profit":**
+   - **Phase E Markup / SOS breakout:** DO NOT TP — the trend is just starting. This is a trend trade, not a scalp.
+   - **Re-accumulation / Spring test:** DO NOT TP — position just formed.
+   - **Only consider TP when distribution signs appear** (volume climax, weekly bearish engulfing, Upthrust after extended markup).
+
+3. **Check momentum before suggesting TP:**
+   - Is price at a **swing high with volume > 20-day average**?
+   - Are there **distribution candles** (shooting star, bearish engulfing, volume spike)?
+   - Is there **weekly resistance** above?
+   - If all 3 are NO → **TP is forbidden.** Let it run.
+
+4. **Premature TP checklist** (run before every sell/reduce recommendation):
+
+   | Question | Pass/Fail |
+   |---|---|
+   | P&L > 3%? | |
+   | Is Wyckoff phase Distribution / Upthrust? | |
+   | Are there distribution signs (volume climax, bearish weekly)? | |
+   | Does the weekly chart show strong resistance above? | |
+
+   If **all 4 are NO** → **TP is BLOCKED.** Document the reason in the report.
+
+5. **Controlled exception:** Premature TP is only allowed when the user **explicitly requests it** or needs urgent liquidity. The agent must NEVER autonomously propose premature TP in any form (including "protect profits", "reduce risk", etc.).
+
+---
+
+## Add-Size Rules — Propose Add Instead of Premature TP
+
+**Symptom:** Position is up 2-3% and agent recommends partial TP. Instead, the agent should be looking for **add-size opportunities** — a position proving itself is a candidate for more, not for reducing.
+
+**Shift in mindset:** When a position is working (up 2-5% with Volume Price Action confirmation), the correct response is:
+- **Don't:** "Chốt lời 50% tại đây"
+- **Do:** "Here's where you can add on pullback / breakout confirmation"
+
+**Rules:**
+
+1. **When a position is in profit and thesis is intact, always check for add-size setups before considering any TP.** The add-size plan must be defined at entry (not invented after the position moves).
+
+2. **Two valid add scenarios (must pick one at entry):**
+   - **Pullback add (Zone B):** Price pulls back to a lower value zone with declining volume (No Supply). Example: GAS bought at 84,800 → add at 82,500-83,500 on low volume test.
+   - **Breakout add:** Price breaks a clear structural level (range ceiling, swing high) with volume > 1.5× 20-day average. Example: ACB > 25,500 with vol > 40M.
+
+3. **Never add at market price without a structural reason.** "Momentum is strong" is not a reason — waiting for a pullback to a predefined zone is.
+
+4. **Add-size check before every suggestion:**
+
+   | Question | Pass/Fail |
+   |---|---|
+   | Is the original Wyckoff thesis still intact? | |
+   | Is price at a predefined add zone (not no-man's land)? | |
+   | Does volume confirm? (pullback = low/declining, breakout = high/surge) | |
+   | Is the position NOT testing its SL? | |
+   | Would this add lot have R:R ≥ 1:1 as an independent trade? | |
+
+   If all pass → propose the add. If any fail → hold only, no add.
+
+5. **Max 2 adds per position.** After reaching max size, just hold and let the trend run. No further pyramiding.
 
 ---
 
