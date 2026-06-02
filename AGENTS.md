@@ -87,24 +87,17 @@ When analyzing market data, follow these priorities in order:
 ### Install & Caching
 
 ```bash
-# Preferred: uvx (no install needed, always up-to-date)
-uvx aipa-cli <command>
+# First call of session — refresh cache (use @latest once)
+uvx aipa-cli@latest get-ohlcv-data VCB
+
+# All subsequent calls — fast cached execution (NO @latest)
+uvx aipa-cli get-ohlcv-data TCB
 
 # Fallback: pip (if uv is not available)
-pip install aipa-cli
-aipa <command>
-
-# Last fallback: system pip (if pip fails due to PEP 668)
-python3 -m pip install aipa-cli --break-system-packages
-aipa <command>
+pip install aipa-cli && aipa get-ohlcv-data VCB
 ```
 
-**Always prefer `uvx aipa-cli` over `aipa`.** When using `uvx`:
-
-1. **Use plain `uvx` for fast cached execution:**
-   `uvx aipa-cli <command>`
-2. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
-   `uvx aipa-cli@latest <command>`
+**Only use `@latest` on the first CLI call of a session.** All subsequent calls use plain `uvx aipa-cli` for cached speed. If a command fails with a schema or missing argument error, retry with `@latest`.
 
 For global installs, update before each session: `pip install --upgrade aipa-cli`
 

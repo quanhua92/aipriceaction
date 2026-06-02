@@ -27,19 +27,26 @@ Developed by AIPriceAction. More data and documentation at https://aipriceaction
 
 ## Installation
 
-**Use `uvx` — it always pulls the latest version from PyPI automatically. No install step needed.**
+Use `uvx` — no install needed. On the **first call of each session**, use `uvx aipa-cli@latest` to refresh the cache. For all subsequent calls, use plain `uvx aipa-cli` (fast, cached).
 
 ```bash
-# Preferred: uvx (always up-to-date, no install needed)
-uvx aipa-cli get-ohlcv-data VCB
+# First call of the session — refresh cache
+uvx aipa-cli@latest get-ohlcv-data VCB
+
+# All subsequent calls — fast cached execution
+uvx aipa-cli get-ohlcv-data TCB
 
 # Fallback: pip (if uv is not available)
 pip install aipa-cli
 aipa get-ohlcv-data VCB
 
-# Last fallback: system pip (if pip fails due to PEP 668)
+# Fallback: system pip (if pip fails due to PEP 668)
 python3 -m pip install aipa-cli --break-system-packages
 aipa get-ohlcv-data VCB
+
+# If neither uv nor pip are installed, install uv first:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# If the install script fails, see: https://docs.astral.sh/uv/getting-started/installation/
 ```
 
 All command examples in this skill use `aipa` for brevity. Replace `aipa` with `uvx aipa-cli` if not installed globally.
