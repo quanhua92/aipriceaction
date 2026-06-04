@@ -707,11 +707,12 @@ These rules were derived from real analysis errors. Treat each one as a **mandat
 - **Weekly timeframe is mandatory for TP setting.** A resistance level that looks like an all-time high on a 60-day daily chart may be just the ceiling of a consolidation range on the weekly. Always check weekly before finalizing TP.
 
 | Situation | Minimum Data Required |
-|---|---|
+|---|---|---|
 | Assigning Markdown / Distribution | `--limit 60` daily + `--interval 1W` |
 | Setting Take Profit targets | `--interval 1W --limit 100` |
 | Confirming SOS / Breakout | `--limit 40` daily to see full base structure |
 | Watchlist entry zone | `--limit 60` daily to map recent swing highs/lows |
+| **⚠️ Proposing ANY entry / trade decision** | **Precheck Mandatory: daily 60 + weekly 52 + VP 30ng** (see 7.9) |
 
 ---
 
@@ -893,6 +894,47 @@ Before finalizing any report or file update, run through this checklist:
    If all pass → propose the add. If any fail → hold only, no add.
 
 5. **Max 2 adds per position.** After reaching max size, just hold and let the trend run. No further pyramiding.
+
+---
+
+### 7.9 Precheck Mandatory — Safety Gate Before Every Entry Decision
+
+**Symptom:** Analyzing entry on low timeframe (15m/1h) without checking higher timeframe structure — missing historical supply zones (Buying Climax, UTAD) that invalidate the thesis.
+
+**Rule:** Before proposing ANY entry, trade decision, or price target, you MUST run:
+
+```bash
+# 1. Daily 60 — detect BC/UTAD/historical structure
+aipa get-ohlcv-data TICKER --limit 60 --no-ma
+
+# 2. Weekly 52 — confirm overall trend direction
+aipa get-ohlcv-data TICKER --interval 1W --limit 52 --no-ma
+
+# 3. Volume Profile 30+ days — identify key price levels
+aipa volume-profile TICKER --start-date [30+ days ago] --end-date [today]
+```
+
+This is a **safety gate**, not analysis. The purpose is to detect structural red flags before spending tokens on deeper analysis:
+
+| Detection | Meaning | Action |
+|---|---|---|
+| **Buying Climax (BC)** at current price zone | Historical volume peak = large supply | DO NOT enter here. Lower entry zone or cancel. |
+| **Upthrust After Distribution (UTAD)** | False breakout, bull trap | Cancel entry. Wait for return to range. |
+| **Weekly trend bearish** (price below MA20/50 weekly) | Overall trend is down | DO NOT go long. Wait for weekly reversal. |
+| **SOS confirmed + weekly up** | Genuine breakout | ✅ Proceed with entry analysis. |
+| **Spring at POC + weekly support** | Successful bottom test | ✅ Entry is valid. |
+
+**Preflight checklist before every entry:**
+
+```
+□ Daily 60 — no BC/UTAD at current price zone
+□ Weekly 52 — trend aligned with entry direction
+□ VP 30d — TP anchored to swing high/VAH (not round number)
+□ SL below POC/VAH/MA20
+□ R:R ≥ 1:2 after precheck
+```
+
+> **Root cause of the FPT error on June 4, 2026:** Skipped daily 60 + weekly 52, went straight to 15m intraday. Saw pullback from 77,700 to 76,300 with declining volume → incorrectly assumed LPS (Last Point of Support) in a healthy markup. Missed the May 20 Buying Climax (high 77,432, close 76,643, volume 26M — 2.2× average) which was the exact same supply zone price was retesting at 76,300-76,500 on June 4. Precheck (daily 60 + weekly 52 + VP 30d) would have caught the BC immediately and blocked any buy recommendation at that level.
 
 ---
 
