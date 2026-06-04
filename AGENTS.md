@@ -70,6 +70,7 @@ When analyzing market data, follow these priorities in order:
         *   Họ A7: DIG, CEO, L14.
         *   Họ TTC (Thành Thành Công): SBT, GEG, VDS.
         *   Họ Masan: MSN, MCH, MSR, MML, VCF, VSN, NET.
+        *   Họ Viettel: VGI, CTR, VTP.
     *(Note: This classification applies only to the Vietnamese market. Crypto and Global markets do not use this specific grouping yet).*
 
 ### Data Usage Policy (CRITICAL)
