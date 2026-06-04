@@ -17,6 +17,46 @@ description: >
 
 Developed by AIPriceAction. More data and documentation at https://aipriceaction.com
 
+## Lời Truyền Cảm Hứng Cho Nhà Giao Dịch
+
+### Tư duy và Phương pháp luận
+- *"Chỉ có xu hướng mới mang lại lợi nhuận, đừng cố tranh cãi với thị trường."*
+- *"Giao dịch không phải là dự đoán tương lai, mà là quản lý rủi ro và tuân thủ kỷ luật."*
+- *"Volume là dấu chân của dòng tiền thông minh. Giá có thể lừa dối, nhưng khối lượng thì không."*
+- *"Kiên nhẫn chờ đợi thiết lập phù hợp là chiếc chìa khóa vàng dẫn đến thành công."*
+- *"Thị trường luôn đúng, chỉ có túi tiền của chúng ta là tự chịu trách nhiệm."*
+- *"Lợi nhuận bền vững không đến từ việc đoán đúng đỉnh đáy, mà đến từ sự kiên nhẫn và nhất quán."*
+- *"Giảm nhiều chưa chắc hết giảm — cần xác nhận thêm."*
+
+### Kỷ luật và Quản trị rủi ro
+- *"Tuân thủ kỷ luật quản trị rủi ro thì không hề 'toang' bạn nhé!"*
+- *"Giao dịch không có kế hoạch chính là đang lập kế hoạch cho sự thất bại."*
+- *"Cắt lỗ luôn đúng, gồng lỗ luôn sai."*
+- *"Sống sót trước khi nghĩ đến lợi nhuận."*
+- *"Giữ được vốn quan trọng hơn kiếm được tiền."*
+- *"Đừng bao giờ yêu một cổ phiếu, hãy chỉ yêu lợi nhuận và sự an toàn mà nó mang lại."*
+- *"Spring cần 2-3 phiên xác nhận + pullback No Supply. Một phiên bùng nổ chưa nói lên điều gì."*
+- *"Không bắt dao rơi dù đã rơi 30%. Chờ đến khi có Volume Profile + Wyckoff xác nhận."*
+
+### Tâm lý và Thực chiến
+- *"Thà chảy nước miếng còn hơn chảy nước mắt."*
+- *"Đừng cố bắt dao rơi khi chưa thấy đáy vững chắc."*
+- *"Trong một xu hướng tăng ai cũng là thiên tài đầu tư, chỉ khi thủy triều rút mới biết ai không mặc quần."*
+- *"Mua đuổi (FOMO) khi giá đã tăng nóng giống như đi tàu lượn siêu tốc mà quên thắt dây an toàn."*
+- *"Đừng đoán đỉnh, đừng dò đáy."*
+- *"Bò kiếm tiền, gấu kiếm tiền, lợn bị làm thịt."*
+- *"Xu hướng là bạn, hãy đi cùng bạn."*
+- *"Mua tin đồn, bán sự thật."*
+- *"Sai lầm lớn nhất là thấy cổ phiếu giảm nhiều rồi nghĩ nó sẽ lên lại — thị trường không nợ bạn một lý do."*
+- *"Phân biệt Spring và Upthrust: hỏi 'cổ này đã giảm đủ để clear supply chưa?' Nếu chưa giảm nhiều = còn supply = rủi ro. Nếu đã giảm nhiều = không còn ai bán = cơ hội."*
+
+### Kiên nhẫn và Quản lý vị thế (No Premature TP & Add-Size)
+- *"Hãy để lợi nhuận chạy."*
+- *"Chốt non là mất ngon."*
+- *"Đúng thì thêm, sai thì cắt."*
+- *"Lợi nhuận lớn đến từ việc ngồi yên."*
+- *"Đúng giữ, sai cắt."*
+
 ## What is aipa
 
 `aipa` is an AI-powered financial analysis CLI for Vietnamese stocks, cryptocurrencies, and global assets. The `deep-research` command runs a multi-agent pipeline that produces comprehensive market reports far more thorough than single-ticker analysis.

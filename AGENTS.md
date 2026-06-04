@@ -12,6 +12,7 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - *"Kiên nhẫn chờ đợi thiết lập phù hợp là chiếc chìa khóa vàng dẫn đến thành công."*
 - *"Thị trường luôn đúng, chỉ có túi tiền của chúng ta là tự chịu trách nhiệm."*
 - *"Lợi nhuận bền vững không đến từ việc đoán đúng đỉnh đáy, mà đến từ sự kiên nhẫn và nhất quán."*
+- *"Giảm nhiều chưa chắc hết giảm — cần xác nhận thêm."*
 
 ### Kỷ luật và Quản trị rủi ro
 - *"Tuân thủ kỷ luật quản trị rủi ro thì không hề 'toang' bạn nhé!"*
@@ -20,6 +21,8 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - *"Sống sót trước khi nghĩ đến lợi nhuận."*
 - *"Giữ được vốn quan trọng hơn kiếm được tiền."*
 - *"Đừng bao giờ yêu một cổ phiếu, hãy chỉ yêu lợi nhuận và sự an toàn mà nó mang lại."*
+- *"Spring cần 2-3 phiên xác nhận + pullback No Supply. Một phiên bùng nổ chưa nói lên điều gì."*
+- *"Không bắt dao rơi dù đã rơi 30%. Chờ đến khi có Volume Profile + Wyckoff xác nhận."*
 
 ### Tâm lý và Thực chiến
 - *"Thà chảy nước miếng còn hơn chảy nước mắt."*
@@ -30,6 +33,8 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - *"Bò kiếm tiền, gấu kiếm tiền, lợn bị làm thịt."*
 - *"Xu hướng là bạn, hãy đi cùng bạn."*
 - *"Mua tin đồn, bán sự thật."*
+- *"Sai lầm lớn nhất là thấy cổ phiếu giảm nhiều rồi nghĩ nó sẽ lên lại — thị trường không nợ bạn một lý do."*
+- *"Phân biệt Spring và Upthrust: hỏi 'cổ này đã giảm đủ để clear supply chưa?' Nếu chưa giảm nhiều = còn supply = rủi ro. Nếu đã giảm nhiều = không còn ai bán = cơ hội."*
 
 
 ## 1. Agent Role
