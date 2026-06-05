@@ -6,7 +6,7 @@ pub use crate::models::ohlcv::{OhlcvJoined, OhlcvRow, Ticker};
 
 /// Maximum SMA period — fetch this many extra rows before the requested range
 /// to ensure all moving averages are accurate.
-use crate::constants::api::SMA_MAX_PERIOD;
+use crate::constants::api::{EMA_LOOKBACK, SMA_MAX_PERIOD};
 
 /// Insert ticker if not exists, return the id.
 pub async fn upsert_ticker(
@@ -695,8 +695,9 @@ pub async fn get_ohlcv_joined_batch_with_extra(
 ) -> sqlx::Result<std::collections::HashMap<String, Vec<OhlcvJoined>>> {
     use std::collections::HashMap;
 
-    let per_ticker = limit.map(|l| if with_ma { (l + SMA_MAX_PERIOD) as i64 } else { l + 1 });
-    let lookback = if with_ma { limit.map(|_| interval_duration(interval) * SMA_MAX_PERIOD) } else { None };
+    let ma_buffer: i64 = if use_ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD };
+    let per_ticker = limit.map(|l| if with_ma { (l + ma_buffer) as i64 } else { l + 1 });
+    let lookback = if with_ma { limit.map(|_| interval_duration(interval) * ma_buffer) } else { None };
 
     let raw = fetch_ohlcv_batch_raw(
         pool, source, symbols, extra_sources, interval,

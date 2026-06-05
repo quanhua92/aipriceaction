@@ -293,8 +293,11 @@ pub mod api {
     pub const AGGREGATED_LOOKBACK: i64 = 5000;
     /// Divisor for VN stock prices in legacy mode.
     pub const LEGACY_DIVISOR: f64 = 1000.0;
-    /// Max SMA period — DB lookback buffer.
+    /// Max SMA period — DB lookback buffer for SMA.
     pub const SMA_MAX_PERIOD: i64 = 200;
+    /// DB lookback buffer for EMA. EMA is recursive — the seed (SMA of first N bars)
+    /// needs ~3× the period to decay below 1% error (α=2/201, 0.99^600 ≈ 0.25%).
+    pub const EMA_LOOKBACK: i64 = 600;
     /// Compute the lookback buffer size for a given max MA period.
     pub const fn sma_buffer_for(max_period: usize) -> i64 {
         max_period as i64

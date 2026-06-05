@@ -303,7 +303,7 @@ pub(crate) async fn fetch_native_tickers(
             // so a small limit + SMA_MAX_PERIOD suffices.
             let need_full_scan = start_time.is_some();
             let max_score = if need_full_scan { None } else { end_time.map(|t| t.timestamp_millis()) };
-            let buffer = if with_ma { crate::constants::api::SMA_MAX_PERIOD } else { 1 };
+            let buffer = if with_ma { if use_ema { crate::constants::api::EMA_LOOKBACK } else { crate::constants::api::SMA_MAX_PERIOD } } else { 1 };
             let total_limit = if need_full_scan {
                 (crate::workers::redis_worker::max_size(interval) as i64) + buffer
             } else {

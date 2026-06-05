@@ -14,7 +14,7 @@ use crate::models::ohlcv::{OhlcvJoined, OhlcvRow};
 use crate::queries::ohlcv;
 use crate::server::types::Mode;
 use crate::server::AppState;
-use crate::constants::api::SMA_MAX_PERIOD;
+use crate::constants::api::{EMA_LOOKBACK, SMA_MAX_PERIOD};
 
 use super::{
     get_all_sources, get_ticker_sector, is_index_ticker, load_crypto_groups, load_ticker_groups,
@@ -773,7 +773,7 @@ async fn handle_jdk(
         fetch_symbols.dedup();
 
         // Try Redis first
-        let jdk_limit = 250 + SMA_MAX_PERIOD;
+        let jdk_limit = 250 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD };
         if let Some(map) = try_redis_batch(
             &state.redis_client, source, &fetch_symbols, "1D", jdk_limit, "rrg/jdk",
         ).await {

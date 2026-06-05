@@ -9,7 +9,7 @@ use std::sync::Arc;
 use crate::queries::ohlcv;
 use crate::server::types::{is_vn_ticker, Mode};
 use crate::server::AppState;
-use crate::constants::api::SMA_MAX_PERIOD;
+use crate::constants::api::{EMA_LOOKBACK, SMA_MAX_PERIOD};
 
 use super::{get_all_sources, get_ticker_sector, is_index_ticker, load_crypto_groups, load_yahoo_groups, parse_analysis_date, validate_limit, AnalysisResponse};
 
@@ -161,7 +161,7 @@ pub async fn top_performers_handler(
     // Fetch latest daily data with snapshot optimization
     let rows: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = if is_all {
         let sources = get_all_sources();
-        let redis_limit = 1 + SMA_MAX_PERIOD;
+        let redis_limit = 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD };
         let syms: Vec<Vec<String>> = sources.iter()
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
@@ -181,7 +181,7 @@ pub async fn top_performers_handler(
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + SMA_MAX_PERIOD, "performers/single", params.ema, !params.snap).await;
+        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }, "performers/single", params.ema, !params.snap).await;
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (_ticker, bars) in map {
             merged.extend(bars.into_iter().map(|row| (row, "")));
