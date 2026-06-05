@@ -768,7 +768,6 @@ def _fund_info(args) -> None:
     print(f"=== {ci.symbol} — {industry} ===\n")
     print(f"  Industry:           {industry}")
     print(f"  Market Cap:         {_fmt_fund(ci.market_cap, 'market_cap')} VND")
-    print(f"  Current Price:      {_fmt_fund(ci.current_price, 'current_price')} VND")
     print(f"  Outstanding Shares: {_fmt_fund(ci.outstanding_shares, 'outstanding_shares')}")
     print(f"  Employees:          {_fmt_fund(ci.employees, 'employees')}")
     print(f"  Established:        {ci.established_year or 'N/A'}")
