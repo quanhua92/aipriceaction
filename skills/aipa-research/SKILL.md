@@ -198,6 +198,8 @@ The default behavior (`aipa deep-research` without flags) fetches and prints a m
 aipa deep-research [QUESTION] [options]
 ```
 
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
+
 ### Flags
 
 | Flag | Default | Description |

@@ -162,6 +162,8 @@ aipa get-ohlcv-data VCB --ema                         # use EMA instead of SMA
 
 #### `aipa live-data`
 
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
+
 ```bash
 aipa live-data                        # top 50 by trading value
 aipa live-data --top 10               # top 10
@@ -173,6 +175,8 @@ aipa live-data --interval 1h --top 20  # hourly
 #### `aipa performers`
 
 Rank tickers by any metric. **Always run at least 2 perspectives**: price change + value.
+
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
 
 ```bash
 aipa performers                                          # top gainers / losers
@@ -198,6 +202,8 @@ aipa performers --source crypto --sort-by value          # crypto
 
 **Prefer multi-day ranges** (`--start-date` + `--end-date`, at least 30 trading days) over single day — produces more reliable support/resistance levels.
 
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
+
 ```bash
 # 1 month (recommended default)
 aipa volume-profile VCB --start-date 2026-04-14 --end-date 2026-05-09
@@ -218,6 +224,8 @@ aipa volume-profile BTCUSDT --source crypto --bins 30 --start-date 2026-05-05 --
 | `--value-area-pct` | `70` | Value area % (60–90) |
 
 #### `aipa ticker-list`
+
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
 
 ```bash
 aipa ticker-list                            # all tickers
@@ -288,6 +296,8 @@ Vietnamese translations exist for all templates (use `--lang vn`).
 
 ### aipa-research — Multi-Agent Deep Research
 
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for `aipa deep-research`. Do NOT add it.
+
 ```bash
 aipa deep-research                          # market snapshot (fast, no API key)
 aipa deep-research --source crypto          # crypto snapshot
@@ -351,6 +361,8 @@ Mandatory sectors by source:
 ### aipa-fundamentals — Fundamental Data (requires aipa-cli >= 0.1.41)
 
 > **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.41**. Verify before use: `aipa --version`. If < 0.1.41, upgrade with `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+
+> **NOTE:** `--no-system-prompt` is NOT a valid flag for any `aipa fundamentals` subcommand. Do NOT add it.
 
 **IMPORTANT: Do NOT automatically run `aipa fundamentals` commands.** Technical analysis (VPA, Wyckoff, MA) is the default workflow. Only fetch fundamentals when the user **explicitly** asks for:
 - "fundamentals", "fundamental analysis", "cơ bản", "phân tích cơ bản"

@@ -731,6 +731,8 @@ This is a **safety gate**, not analysis. The purpose is to detect structural red
 
 11. **Use `aipa performers` to find tickers to analyze — run multiple perspectives**: When the user asks "what should I analyze?" or "what's moving today?", run `aipa performers` with multiple `--sort-by` values to get a multi-perspective view. **Always run at least these two**: default (price change) and value (trading value). Add MA scores when the user cares about trends. Cross-referencing the lists reveals more significant tickers. Then analyze the interesting ones with `aipa analyze`.
 
+    > **NOTE:** `--no-system-prompt` is NOT valid for `aipa performers`, `aipa live-data`, `aipa volume-profile`, or `aipa watchlist`. Do NOT add it to these commands.
+
     ```bash
     aipa performers                                          # price change — top gainers / worst losers
     aipa performers --sort-by value                          # trading value — where the money flows
