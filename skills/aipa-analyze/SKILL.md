@@ -413,8 +413,6 @@ The context output is identical to `aipa analyze --context-only`, so treat it as
 > ```
 > If < 0.1.45, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
-> **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
-
 When fundamentals are relevant, use these commands to enrich your technical analysis:
 
 ```bash
@@ -831,8 +829,6 @@ if rows:
 10. **Reference ticker**: Auto-detected based on the ticker's source — `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global stocks. Use `--reference-ticker` to override.
 
 11. **Use `aipa performers` to find tickers to analyze — run multiple perspectives**: When the user asks "what should I analyze?" or "what's moving today?", run `aipa performers` with multiple `--sort-by` values to get a multi-perspective view. **Always run at least these two**: default (price change) and value (trading value). Add MA scores when the user cares about trends. Cross-referencing the lists reveals more significant tickers. Then analyze the interesting ones with `aipa analyze`.
-
-    > **NOTE:** `--no-system-prompt` is NOT valid for `aipa performers`, `aipa live-data`, `aipa volume-profile`, or `aipa watchlist`. Do NOT add it to these commands.
 
     ```bash
     aipa performers                                          # price change — top gainers / worst losers

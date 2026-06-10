@@ -198,8 +198,6 @@ The default behavior (`aipa deep-research` without flags) fetches and prints a m
 aipa deep-research [QUESTION] [options]
 ```
 
-> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
-
 ### Flags
 
 | Flag | Default | Description |
@@ -371,8 +369,6 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 ### Step 3.5 — Fundamental Context (optional, VN only)
 
 > **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify with `aipa --version` before use.
-
-> **NOTE:** `--lang` and `--no-system-prompt` are NOT valid for `aipa fundamentals` commands. Do NOT add them.
 
 For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research. When the user says "report" or "báo cáo", they may want fundamentals — if unclear, ask to confirm.
 

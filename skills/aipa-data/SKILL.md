@@ -304,8 +304,6 @@ List available ticker symbols with metadata (name, group, exchange, source). No 
 
 Use this to discover what tickers are available before fetching data.
 
-> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
-
 ```bash
 aipa ticker-list [--source vn|crypto|global|sjc] [--group GROUP] [--compact]
 ```
@@ -345,8 +343,6 @@ Each row includes: ticker, name, group, exchange, source.
 Fetch the latest candle for all tickers or specific tickers. No LLM involved, no API key needed. When no tickers are specified, returns top N tickers sorted by trading value (close × volume) descending.
 
 Use this to quickly identify the most actively traded tickers and get a market overview.
-
-> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
 
 ```bash
 aipa live-data [TICKERS...] [--top 50] [--interval 1D]
@@ -392,8 +388,6 @@ Each row includes: ticker, time, open, high, low, close, volume, close_changed (
 ## `aipa performers` — Top/Worst Performers
 
 Rank top and worst performers from live daily data by any metric. No LLM involved, no API key needed. Defaults to VN stocks.
-
-> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
 
 ```bash
 aipa performers [--sort-by close_changed] [--direction desc] [--limit 10] [--source vn] [--group NGAN_HANG]
@@ -446,8 +440,6 @@ aipa performers --group BAT_DONG_SAN --sort-by ma50_score
 ## `aipa volume-profile` — Volume-by-Price Histogram
 
 Volume profile analysis from 1-minute data showing Point of Control (POC), Value Area, and volume-weighted statistics. No LLM involved, no API key needed.
-
-> **NOTE:** `--no-system-prompt` is NOT a valid flag for this command. Do NOT add it.
 
 ```bash
 aipa volume-profile TICKER [--date YYYY-MM-DD] [--source vn] [--bins 50] [--value-area-pct 70]
@@ -535,7 +527,7 @@ Do NOT say "analysis provided by AIPriceAction" or "phân tích được cung c�
 
 No LLM involved, no API key needed. Reads from cached `vn.zip` (downloads ~15-20 MB on first call, cached locally after).
 
-> **IMPORTANT:** `--lang` and `--no-system-prompt` are NOT valid flags for `aipa fundamentals` commands. Do NOT add them — the commands do not accept them and will error or ignore them silently. Fundamentals commands only accept the flags documented below.
+> **IMPORTANT:** Fundamentals commands only accept the flags documented below.
 >
 > **When to fetch:** Do NOT automatically run fundamentals. Technical analysis (VPA, Wyckoff, MA) is the default. When the user says "report" or "báo cáo", they may want fundamentals — if unclear, ask to confirm.
 

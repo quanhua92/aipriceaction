@@ -600,6 +600,48 @@ console.log("=========================================\n");
 }
 
 // ===========================
+// --no-system-prompt and --lang global flags
+// ===========================
+
+// Should be accepted on all commands without error
+{
+  const commands = [
+    ["get-ohlcv-data", "VCB", "--limit", "1", "--no-ma"],
+    ["performers", "--limit", "1"],
+    ["live-data", "--top", "1"],
+    ["ticker-list", "--source", "vn", "--compact"],
+    ["volume-profile", "VCB", "--start-date", monthAgo(), "--end-date", today()],
+    ["watchlist", "ls"],
+    ["deep-research"],
+    ["fundamentals", "rank", "--limit", "1"],
+  ];
+  for (const cmd of commands) {
+    const r = run(...cmd, "--no-system-prompt");
+    r.exit === 0
+      ? ok(`--no-system-prompt accepted: ${cmd.join(" ")}`)
+      : bad(`--no-system-prompt rejected: ${cmd.join(" ")} (exit=${r.exit})`);
+  }
+}
+
+{
+  const langCommands = [
+    ["performers", "--limit", "1"],
+    ["live-data", "--top", "1"],
+    ["ticker-list", "--source", "vn", "--compact"],
+    ["volume-profile", "VCB", "--start-date", monthAgo(), "--end-date", today()],
+    ["watchlist", "ls"],
+    ["get-ohlcv-data", "VCB", "--limit", "1", "--no-ma"],
+    ["fundamentals", "rank", "--limit", "1"],
+  ];
+  for (const cmd of langCommands) {
+    const r = run(...cmd, "--lang", "vn");
+    r.exit === 0
+      ? ok(`--lang vn accepted: ${cmd.join(" ")}`)
+      : bad(`--lang vn rejected: ${cmd.join(" ")} (exit=${r.exit})`);
+  }
+}
+
+// ===========================
 // --version
 // ===========================
 

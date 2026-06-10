@@ -79,8 +79,6 @@ The agent should prefer `uvx aipa-cli` for all commands. Only fall back to `aipa
 
 None required. `aipa fundamentals` reads from cached `vn.zip` (downloads ~15-20 MB on first call, cached locally after).
 
-> **IMPORTANT:** `--lang` and `--no-system-prompt` are NOT valid flags for `aipa fundamentals` commands. Do NOT add them — the commands will error or ignore silently.
-
 ## Available Data Sources
 
 - **Vietnamese stocks** (`source: vn`): VIC, VCB, FPT, HPG, VNM, MBB, TCB, CTG, VPB, HDB, etc. — **this is the primary source for fundamental data**
@@ -267,8 +265,6 @@ aipa fundamentals screen [TICKERS...] [options]
 ```bash
 aipa ticker-list [--source vn] [--group GROUP] [--compact]
 ```
-
-> `--no-system-prompt` is NOT valid for this command.
 
 Use this to discover available tickers before analysis:
 ```bash
