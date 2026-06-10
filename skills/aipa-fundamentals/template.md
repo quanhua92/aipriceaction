@@ -75,26 +75,24 @@
 
 - EV/EBITDA: XX.X → [Rẻ / TB / Đắt] so với ngành
 
-### 8. Tăng trưởng doanh thu & EPS — công ty đang lớn hay nhỏ lại?
+### 8. ROIC + Vòng quay tài sản — ban lãnh đạo dùng vốn hiệu quả không?
 
-> Doanh thu và lợi nhuận có tăng qua các năm không? Tốc độ tăng trưởng (CAGR) là bao nhiêu? Một công ty P/E thấp nhưng tăng trưởng âm = value trap.
+> ROIC đo lường lợi nhuận trên toàn bộ vốn đầu tư (vốn chủ sở hữu + nợ). Vòng quay tài sản cho biết 1đ tài sản tạo ra bao nhiêu đồng doanh thu. ROIC > WACC = công ty tạo giá trị thực sự.
 
-**Trả lời:** [1-3 câu: xu hướng tăng trưởng, so với ngành, có phải value trap không]
+**Trả lời:** [1-3 câu: hiệu quả phân bổ vốn, so với ngành]
 
-- Revenue growth: XX.X% (YoY) | 3 năm CAGR: XX.X% → [Tăng mạnh / TB / Suy giảm]
-- EPS growth: XX.X% (YoY) → [Tăng mạnh / TB / Suy giảm]
-- [Nếu không có dữ liệu] Ghi rõ "(không có dữ liệu tăng trưởng)"
+- ROIC: XX.X% → [Tốt / TB / Kém] cho ngành [ngành]
+- Asset Turnover: X.XX lần → [Hiệu quả / TB / Kém]
 
-### 9. Dòng tiền tự do — lợi nhuận có chuyển thành tiền thật không?
+### 9. EBITDA — chất lượng lợi nhuận và dòng tiền proxy
 
-> Lợi nhuận trên báo cáo có thể không tương đương tiền thực tế do công nợ, tồn kho, capex. FCF > 0 = công ty thực sự sinh tiền sau đầu tư.
+> EBITDA loại bỏ tác động của cấu trúc vốn, thuế, khấu hao — phản ánh lợi nhuận hoạt động cốt lõi. Kết hợp với P/CF (có sẵn) để đánh giá khả năng sinh tiền.
 
-**Trả lời:** [1-3 câu: chất lượng dòng tiền, FCF dương/âm, so với lợi nhuận]
+**Trả lời:** [1-3 câu: quy mô EBITDA, chất lượng lợi nhuận, so với ngành]
 
-- Operating Cash Flow: XX,XXX tỷ VND
-- Free Cash Flow: XX,XXX tỷ VND → [Dương — sinh tiền / Âm — đốt tiền]
-- FCF Yield: X.X% → [Tốt / TB / Kém]
-- [Nếu không có dữ liệu] Ghi rõ "(không có dữ liệu dòng tiền)"
+- EBITDA: XX,XXX tỷ VND → [Lớn / TB / Nhỏ] so với ngành
+- Price/CashFlow: X.XX → [Rẻ / TB / Đắt]
+- [Nếu không có dữ liệu] Ghi rõ "(không có dữ liệu EBITDA)"
 
 ### 10. Quy mô + CASA — Blue-chip hay Mid-cap? (CASA: chỉ ngân hàng)
 

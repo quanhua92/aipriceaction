@@ -157,8 +157,8 @@ The supervisor decomposes the request into sector-based batches and spawns paral
 | 5 | Financial safety — debt, liquidity; Banks: NPL, CAR, LDR, CIR | Balance sheet health |
 | 6 | Margins — gross, net, is the business model profitable? | Gross Margin, Net Margin |
 | 7 | EV/EBITDA — total enterprise valuation vs sector | Enterprise-level valuation comparison |
-| 8 | Revenue & EPS growth — is the company growing or shrinking? | Revenue growth rate, EPS growth, CAGR |
-| 9 | Free cash flow — does profit convert to real cash? | Operating CF, FCF, FCF yield |
+| 8 | ROIC + Asset Turnover — how well does management allocate capital? | ROIC, Asset Turnover, operational efficiency |
+| 9 | EBITDA — earnings quality & cash generation proxy | EBITDA absolute, EBITDA vs sector, P/CF context |
 | 10 | Market cap + CASA (banks) — scale and funding advantage | Company size, liquidity; CASA for banks |
 | 11 | Summary — strengths, weaknesses, long-term hold? | Overall assessment, conclusion |
 
@@ -298,7 +298,11 @@ aipa fundamentals rank TICKERS --sort-by roe --direction desc
 # Q7: EV/EBITDA vs sector
 aipa fundamentals rank TICKERS --sort-by ev_to_ebitda --direction asc
 
-# Q9: FCF / Operating Cash Flow (if available — use ebitda as proxy)
+# Q8: ROIC + Asset Turnover
+aipa fundamentals rank TICKERS --sort-by roic --direction desc
+aipa fundamentals rank TICKERS --sort-by asset_turnover --direction desc
+
+# Q9: EBITDA (earnings quality proxy)
 aipa fundamentals rank TICKERS --sort-by ebitda --direction desc
 
 # Q10: Market Cap
@@ -326,8 +330,12 @@ aipa fundamentals ratios TICKER --category bank --latest
 # Q4 + Q6: Efficiency & profit margins
 aipa fundamentals ratios TICKER --category profitability --latest
 
-# Q9: Cash flow / efficiency
+# Q8: ROIC + Asset Turnover
+aipa fundamentals ratios TICKER --category profitability --latest
 aipa fundamentals ratios TICKER --category efficiency --latest
+
+# Q9: EBITDA
+aipa fundamentals ratios TICKER --category profitability --latest
 
 # Company info (Tier 1 only)
 aipa fundamentals info TICKER
@@ -505,13 +513,18 @@ web search: "AAPL P/E ratio 2025" "tech sector average P/E ratio 2025"
 web search: "AAPL return on equity ROE 2025" "AAPL return on assets ROA"
 # Q5: Debt, liquidity
 web search: "AAPL Apple balance sheet current ratio 2025"
-# Q9: Market cap
+# Q8: ROIC, Asset Turnover
+web search: "AAPL Apple ROIC 2025" "AAPL asset turnover ratio"
+# Q9: EBITDA
+web search: "AAPL Apple EBITDA 2025"
+# Q10: Market cap
 web search: "AAPL Apple market cap 2025"
 
 # For crypto like BTCUSDT
 # Q1: No dividend/EPS — skip or note "N/A for crypto"
 # Q3: P/E does not apply to crypto — skip
-# Q9: Market cap
+# Q9: EBITDA — N/A for crypto
+# Q10: Market cap
 web search: "Bitcoin BTC market cap 2025"
 # Q11: Summary only — based on available on-chain/market metrics
 ```
@@ -527,8 +540,8 @@ web search: "Bitcoin BTC market cap 2025"
 | Q5 (Debt safety) | N/A — no debt | Search for balance sheet, current ratio |
 | Q6 (Margins) | N/A | Search for gross/net margin |
 | Q7 (EV/EBITDA) | N/A | Search for EV/EBITDA |
-| Q8 (Revenue/EPS growth) | Search for network metrics, adoption trends | Search for revenue growth rate, EPS growth |
-| Q9 (Free cash flow) | N/A | Search for operating CF, FCF, FCF yield |
+| Q8 (ROIC/Asset Turnover) | N/A — no equity | Search for ROIC, asset turnover |
+| Q9 (EBITDA) | N/A | Search for EBITDA, EBITDA margin |
 | Q10 (Market cap, CASA) | Search for market cap | Search for market cap; CASA = banks only |
 | Q11 (Summary) | Based on market position, network metrics | Based on all available data |
 
