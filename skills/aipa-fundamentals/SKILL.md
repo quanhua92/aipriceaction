@@ -547,6 +547,135 @@ web search: "Bitcoin BTC market cap 2025"
 
 ---
 
+## Calculate Metrics with Python — No Hallucinated Numbers
+
+**Symptom:** AI writes "P/E sector average is ~10" or "ROE is top 20%" based on visual scanning of `rank` output instead of computing actual values.
+
+**Rule:** Before writing ANY numerical claim in fundamental analysis (sector average, percentile rank, book value, DuPont decomposition), you MUST compute it using `aipa fundamentals | python3` pipe. NEVER estimate or guess.
+
+### Sector Average from `rank` Output
+
+Useful for Q3 (P/E vs sector), Q7 (EV/EBITDA vs sector), Q10 (market cap comparison).
+
+```bash
+uvx aipa-cli fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB --sort-by pe 2>/dev/null | python3 -c "
+import sys
+values = []
+for line in sys.stdin:
+    parts = line.split()
+    if parts and parts[0].isdigit() and len(parts) >= 3:
+        try:
+            val = float(parts[2].replace('%', ''))
+            values.append(val)
+        except ValueError:
+            pass
+if values:
+    avg = sum(values) / len(values)
+    s = sorted(values)
+    print(f'n={len(values)} | avg={avg:.1f} | min={s[0]:.1f} | median={s[len(s)//2]:.1f} | max={s[-1]:.1f}')
+"
+```
+
+> **Tip:** Use **median** (not average) when the data contains outliers (e.g., P/E of 296,613 for a company with near-zero earnings). Median is more robust for sector comparison.
+
+### Ticker Percentile in Sector
+
+Useful for Q3, Q4, Q7 — "VCB ROE is in the top X% of the banking sector".
+
+```bash
+uvx aipa-cli fundamentals rank VCB BID CTG TCB MBB ACB VPB HDB SHB TPB VIB SSB MSB STB --sort-by roe 2>/dev/null | python3 -c "
+import sys
+ticker = 'VCB'
+rank = None
+total = 0
+for line in sys.stdin:
+    parts = line.split()
+    if parts and parts[0].isdigit():
+        total += 1
+        if len(parts) >= 3 and parts[1] == ticker:
+            rank = int(parts[0])
+if rank and total:
+    pct = (total - rank) / (total - 1) * 100
+    print(f'{ticker}: rank {rank}/{total} (top {100-pct:.0f}%)')
+"
+```
+
+### Book Value per Share (from P/B + Market Cap)
+
+Useful for Q2 — "if the company liquidates, shareholders get X per share".
+
+```bash
+uvx aipa-cli fundamentals ratios VCB --category valuation --latest 2>/dev/null | python3 -c "
+import sys
+data = {}
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) >= 2 and not line.strip().startswith('===') and not line.strip().startswith('Total') and parts[0] not in ('Valuation:',):
+        raw = parts[-1].replace('%', '').replace(',', '')
+        try:
+            data[parts[0]] = float(raw)
+        except ValueError:
+            pass
+pb = data.get('PB')
+market_cap = data.get('Market')
+if pb and pb > 0 and market_cap:
+    bv = market_cap / pb
+    print(f'P/B: {pb:.2f} | Market Cap: {market_cap/1e12:.1f}T VND | Book Value (total equity): {bv/1e12:.1f}T VND')
+else:
+    print(f'Missing data: PB={pb} Market Cap={market_cap}')
+"
+```
+
+### DuPont ROE Decomposition
+
+Useful for Q4 — break down ROE into its three drivers: profitability, efficiency, and leverage.
+
+```bash
+uvx aipa-cli fundamentals ratios FPT --latest 2>/dev/null | python3 -c "
+import sys
+data = {}
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) >= 2 and not line.strip().startswith('===') and not line.strip().startswith('Total') and parts[0] not in ('Valuation:', 'Profitability:', 'Efficiency:', 'Leverage:', 'Liquidity:', 'Bank:'):
+        raw = parts[-1].replace('%', '').replace(',', '')
+        try:
+            data[parts[0]] = float(raw) / 100 if '%' in parts[-1] else float(raw)
+        except ValueError:
+            pass
+nm = data.get('After-Tax')
+at = data.get('Asset')
+de = data.get('Financial')
+roe_reported = data.get('ROE')
+if nm is not None and at is not None and de is not None:
+    em = 1 + de
+    dupont = nm * at * em
+    print(f'Net Margin: {nm*100:.1f}% | Asset Turnover: {at:.2f}x | Equity Multiplier: {em:.2f}x (1 + D/E {de:.2f})')
+    if roe_reported:
+        gap = abs(dupont - roe_reported)
+        print(f'DuPont ROE: {dupont*100:.1f}% | Reported ROE: {roe_reported*100:.1f}% | Gap: {gap*100:.1f}pp')
+    else:
+        print(f'DuPont ROE: {dupont*100:.1f}%')
+    print(f'Decomposition: {nm*100:.1f}% x {at:.2f} x {em:.2f} = {dupont*100:.1f}%')
+    if nm > 0.15: print(f'  -> Profitability driver: STRONG (NM > 15%)')
+    elif nm > 0.05: print(f'  -> Profitability driver: MODERATE')
+    else: print(f'  -> Profitability driver: WEAK')
+    if at > 1.0: print(f'  -> Efficiency driver: STRONG (AT > 1.0)')
+    elif at > 0.5: print(f'  -> Efficiency driver: MODERATE')
+    else: print(f'  -> Efficiency driver: WEAK')
+    if em > 2.0: print(f'  -> Leverage driver: HIGH (EM > 2.0)')
+    elif em > 1.0: print(f'  -> Leverage driver: MODERATE')
+    else: print(f'  -> Leverage driver: LOW')
+else:
+    print(f'Incomplete data: NM={nm} AT={at} D/E={de}')
+"
+```
+
+> **Note:** DuPont ROE may differ from reported ROE by a few percentage points due to quarterly data, minority interest, or different data source definitions. A gap of < 5pp is normal. The value is in understanding the *relative strength* of each driver, not exact reproduction.
+
+**Mandatory rule:** If you cannot verify a number with a pipe command, do NOT write it in any file. Use the actual computed value, rounded to 1 decimal place for ratios and 0.1% for percentages.
+
+---
+
 ## Answering Principles
 
 1. **Read data → answer in prose**, not just show tables of numbers

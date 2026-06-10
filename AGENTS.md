@@ -956,5 +956,106 @@ This is a **safety gate**, not analysis. The purpose is to detect structural red
 
 ---
 
+### 7.10 Calculate Metrics with Python — No Hallucinated Numbers
+
+**Symptom:** AI writes "vol 5x TB" or "volume gấp 20x trung bình" based on day-over-day % change (`+557% vs yesterday`) instead of computing the actual volume-vs-average multiplier. The day-over-day % change and the vs-20d-average multiplier are **completely different metrics** — confusing them produces wrong claims.
+
+**Rule:** Before writing ANY numerical claim in analysis (volume multiplier, R:R ratio, average cost, MA distance), you MUST compute it using `aipa-cli | python3` pipe. NEVER estimate or guess.
+
+#### Volume vs 20-day Average (the most common mistake)
+
+```bash
+uvx aipa-cli get-ohlcv-data TICKER --limit 50 --no-ma --no-system-prompt 2>/dev/null | python3 -c "
+import sys
+from collections import defaultdict
+data = defaultdict(list)
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) >= 7 and parts[0] != 'time':
+        data[parts[-1]].append((parts[0], int(float(parts[5]))))
+for sym, rows in data.items():
+    if len(rows) >= 21:
+        avg20 = sum(r[1] for r in rows[-21:-1]) / 20
+        last_vol = rows[-1][1]
+        print(f'{sym} {rows[-1][0]}: vol={last_vol/1e6:.1f}M | avg20d={avg20/1e6:.1f}M | ratio={last_vol/avg20:.1f}x')
+"
+```
+
+**Anti-pattern:** NEVER do this:
+- `volume_changed` is +557% → write "vol 5x TB" ❌ (557% ≠ 5x, and it's vs yesterday, not vs 20d avg)
+- `volume_changed` is +216% → write "vol 2x TB" ❌ (same mistake)
+
+**Correct pattern:**
+- `volume_changed` +557% means today's volume is 6.57× yesterday's volume (1 + 5.57)
+- To get vs-20d-average multiplier, you MUST compute: `today_vol / average(last_20_days_vol)`
+
+#### Batch Volume Verification (multiple tickers + specific dates)
+
+```bash
+uvx aipa-cli get-ohlcv-data VCB TCB MBB --limit 50 --no-ma --no-system-prompt 2>/dev/null | python3 -c "
+import sys
+from collections import defaultdict
+data = defaultdict(list)
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) >= 7 and parts[0] != 'time':
+        data[parts[-1]].append((parts[0], int(float(parts[5]))))
+checks = [
+    ('VCB', '2026-06-10', 20),
+    ('TCB', '2026-06-10', 20),
+    ('MBB', '2026-06-10', 20),
+]
+for sym, date, ndays in checks:
+    for i, (d, v) in enumerate(data.get(sym, [])):
+        if d == date:
+            start = max(0, i - ndays)
+            avg = sum(r[1] for r in data[sym][start:i]) / len(data[sym][start:i])
+            print(f'{sym} {date}: vol={v/1e6:.1f}M avg{ndays}d={avg/1e6:.1f}M ratio={v/avg:.1f}x')
+            break
+"
+```
+
+#### R:R Calculation
+
+```bash
+python3 -c "
+entry, sl, tp = 8400, 7700, 9500
+risk = entry - sl
+reward = tp - entry
+rr = reward / risk
+print(f'Risk={risk} Reward={reward} R:R={rr:.1f}:1 {\"OK\" if rr >= 2 else \"BLOCKED - R:R < 1:2\"}')"
+```
+
+#### Average Cost (multi-lot)
+
+```bash
+python3 -c "
+lots = [(8400, 1000), (8600, 500)]
+total_qty = sum(q for _, q in lots)
+avg = sum(p * q for p, q in lots) / total_qty
+print(f'Avg cost: {avg:.0f} | Qty: {total_qty}')"
+```
+
+#### MA Distance %
+
+```bash
+uvx aipa-cli get-ohlcv-data TICKER --limit 50 --no-ma --no-system-prompt 2>/dev/null | python3 -c "
+import sys
+rows = []
+for line in sys.stdin:
+    parts = line.split()
+    if len(parts) >= 7 and parts[0] != 'time':
+        rows.append({'date': parts[0], 'close': float(parts[4]), 'ticker': parts[-1]})
+if rows:
+    closes = [r['close'] for r in rows]
+    ma20 = sum(closes[-21:-1]) / 20
+    pct = (rows[-1]['close'] - ma20) / ma20 * 100
+    print(f\"{rows[-1]['ticker']} close={rows[-1]['close']:.0f} MA20={ma20:.0f} dist={pct:+.1f}%\")"
+```
+
+**Mandatory rule:** If you cannot verify a number with a pipe command, do NOT write it in any file. Use the actual computed value, rounded to 1 decimal place for multipliers and 0.1% for percentages.
+
+---
+
 _Developed by [AIPriceAction](https://aipriceaction.com/). More data and documentation at https://aipriceaction.com_
 
