@@ -21,11 +21,13 @@ git clone --depth 1 https://github.com/quanhua92/aipriceaction.git /tmp/aipricea
 cp -r /tmp/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
 cp -r /tmp/aipriceaction/skills/aipa-data .claude/skills/aipa-data
 cp -r /tmp/aipriceaction/skills/aipa-research .claude/skills/aipa-research
+cp -r /tmp/aipriceaction/skills/aipa-fundamentals .claude/skills/aipa-fundamentals
 
 # Or personal (all projects)
 cp -r /tmp/aipriceaction/skills/aipa-analyze ~/.claude/skills/aipa-analyze
 cp -r /tmp/aipriceaction/skills/aipa-data ~/.claude/skills/aipa-data
 cp -r /tmp/aipriceaction/skills/aipa-research ~/.claude/skills/aipa-research
+cp -r /tmp/aipriceaction/skills/aipa-fundamentals ~/.claude/skills/aipa-fundamentals
 
 rm -rf /tmp/aipriceaction
 ```
@@ -39,6 +41,7 @@ If you already have the repo cloned, copy the skill folders:
 cp -r /path/to/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
 cp -r /path/to/aipriceaction/skills/aipa-data .claude/skills/aipa-data
 cp -r /path/to/aipriceaction/skills/aipa-research .claude/skills/aipa-research
+cp -r /path/to/aipriceaction/skills/aipa-fundamentals .claude/skills/aipa-fundamentals
 git add .claude/skills/
 git commit -m "add aipa CLI skills for financial analysis"
 ```
@@ -57,6 +60,7 @@ For Claude Code, add `@import "AGENTS.md"` to your `CLAUDE.md`. Gemini CLI auto-
 |---|---|
 | **aipa-analyze** | AI-powered stock/crypto analysis — single or multi-ticker analysis, technical analysis, trading insights |
 | **aipa-data** | Raw OHLCV price data fetch — candle data, moving averages, historical prices, no AI needed |
+| **aipa-fundamentals** | Fundamental analysis — financial ratios (PE, ROE, NPL, CAR), company profiles, multi-criteria screening and ranking |
 | **aipa-research** | Multi-agent deep research — sector-wide investigation, comprehensive market reports with supervisor/worker/reviewer pipeline |
 
 ## Example Prompts
@@ -87,6 +91,14 @@ For Claude Code, add `@import "AGENTS.md"` to your `CLAUDE.md`. Gemini CLI auto-
 - "Comprehensive analysis of real estate stocks"
 - "Deep dive into the current market rotation patterns"
 - "Research which sectors are leading and lagging right now"
+
+### Fundamentals (aipa-fundamentals)
+
+- "What is VCB's PE ratio?"
+- "Compare bank fundamentals: VCB, TCB, MBB, CTG"
+- "Rank VN30 stocks by ROE"
+- "Screen for cheap banks with NPL below 2%"
+- "Company profile for FPT"
 
 ## Prerequisites
 

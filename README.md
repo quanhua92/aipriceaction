@@ -33,7 +33,7 @@ Then ask any AI agent:
 
 > "Deep research: which sectors are leading the VN market right now?"
 
-Three skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), and **aipa-research** (multi-agent deep research). Works with Claude Code, Gemini CLI, and Codex.
+Four skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), **aipa-research** (multi-agent deep research), and **aipa-fundamentals** (fundamental analysis with PE, ROE, NPL, CAR, screening). Works with Claude Code, Gemini CLI, and Codex.
 
 ### No install — one file
 
@@ -132,7 +132,7 @@ flowchart LR
     subgraph Consumers ["👥 Consumers"]
         SDK["Python SDK<br/>pip install aipriceaction"]
         CLI["AIPA CLI<br/>uv tool install aipa-cli"]
-        SKILLS["AI Agent Skills<br/>aipa-data · aipa-analyze · aipa-research"]
+        SKILLS["AI Agent Skills<br/>aipa-data · aipa-analyze · aipa-research · aipa-fundamentals"]
         WEB["aipriceaction.com<br/>Web Frontend"]
     end
 
@@ -163,7 +163,7 @@ Aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M) are computed on-demand from 
 
 ### AI Agent Skills
 
-Three skills for Claude Code, Gemini CLI, and Codex: **aipa-data** fetches raw OHLCV data, **aipa-analyze** runs AI-powered single/multi-ticker analysis with Wyckoff and VPA patterns, **aipa-research** runs a multi-agent supervisor/worker/reviewer pipeline for sector-wide deep research. See [skills/README.md](skills/README.md).
+Four skills for Claude Code, Gemini CLI, and Codex: **aipa-data** fetches raw OHLCV data, **aipa-analyze** runs AI-powered single/multi-ticker analysis with Wyckoff and VPA patterns, **aipa-research** runs a multi-agent supervisor/worker/reviewer pipeline for sector-wide deep research, and **aipa-fundamentals** provides fundamental analysis with financial ratios, company profiles, and multi-criteria screening. See [skills/README.md](skills/README.md).
 
 ### AIPA Terminal
 
