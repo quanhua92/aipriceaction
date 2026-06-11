@@ -5,7 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.23] - 2026-05-31
+## [0.1.24] - 2026-06-11
+
+### Added
+- `ema` parameter to `fetch_live_data()` — pass `ema=True` to request EMA indicators from the live API endpoint (default: `False` = SMA)
+
+### Fixed
+- `AIContextBuilder.build()` with `ma_type="sma"` now correctly includes MA columns in context output. Previously, `ma=False` was passed to `get_ohlcv()` when SMA was selected, stripping all MA indicators from the data.
 
 ### Added
 - `year` parameter to `build_fundamental_ranking()` and `screen_fundamentals()` — filter by specific year (e.g. `year=2023`)
