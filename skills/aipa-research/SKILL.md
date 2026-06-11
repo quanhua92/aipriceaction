@@ -113,6 +113,25 @@ The agent should prefer `uvx aipa-cli` for all commands. Only fall back to `aipa
 
 Run `aipa setup` for interactive first-run configuration. Settings are saved to `~/.aipriceaction/settings.json`.
 
+### aipa-config — Settings Management
+
+```bash
+aipa config get                    # show all settings (JSON, api_key redacted)
+aipa config get use_sma            # show single value: true or false
+aipa config get language           # show language: en or vn
+aipa config set use_sma false      # switch all commands to EMA
+aipa config set use_sma true       # switch back to SMA (default)
+aipa config set language vn        # change language
+aipa config path                   # show path to settings file
+```
+
+| Setting | Default | Values | Description |
+|---|---|---|---|
+| `use_sma` | `true` | `true` / `false` | `true` = SMA, `false` = EMA. Controls MA type for all commands. CLI flags (`--sma`, `--ema`) override per-invocation. |
+| `language` | `vn` | `en` / `vn` | Output language for analyze and deep-research |
+
+**MA Type Priority:** CLI flag (`--sma`/`--ema`) > `settings.json` (`use_sma`) > default (`sma`).
+
 ---
 
 ## Pre-Execution: Ask the User
@@ -369,7 +388,7 @@ Add 0-2 more sectors based on market activity. For each sector, pick ~10 tickers
 
 ### Step 3.5 — Fundamental Context (optional, VN only)
 
-> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify with `aipa --version` before use.
+> **Version gate:** `aipa fundamentals` requires **aipa-cli >= 0.1.48**. Verify with `aipa --version` before use.
 
 For VN stock research, fundamentals add critical context. **Only include if the user asked for fundamental analysis or if valuation/financial health is relevant to the research question.** Do NOT automatically run fundamentals for purely technical research. When the user says "report" or "báo cáo", they may want fundamentals — if unclear, ask to confirm.
 

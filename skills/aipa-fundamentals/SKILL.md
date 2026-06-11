@@ -68,15 +68,34 @@ The agent should prefer `uvx aipa-cli` for all commands. Only fall back to `aipa
 
 ## Version Gate
 
-> `aipa fundamentals` requires **aipa-cli >= 0.1.45**. Verify before use:
+> `aipa fundamentals` requires **aipa-cli >= 0.1.48**. Verify before use:
 > ```bash
 > uvx aipa-cli --version
 > ```
-> If < 0.1.45, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
+> If < 0.1.48, upgrade: `uvx aipa-cli@latest` or `pip install --upgrade aipa-cli`.
 
 ## Environment Variables
 
 None required. `aipa fundamentals` reads from cached `vn.zip` (downloads ~15-20 MB on first call, cached locally after).
+
+### aipa-config — Settings Management
+
+```bash
+aipa config get                    # show all settings (JSON, api_key redacted)
+aipa config get use_sma            # show single value: true or false
+aipa config get language           # show language: en or vn
+aipa config set use_sma false      # switch all commands to EMA
+aipa config set use_sma true       # switch back to SMA (default)
+aipa config set language vn        # change language
+aipa config path                   # show path to settings file
+```
+
+| Setting | Default | Values | Description |
+|---|---|---|---|
+| `use_sma` | `true` | `true` / `false` | `true` = SMA, `false` = EMA. Controls MA type for all commands. CLI flags (`--sma`, `--ema`) override per-invocation. |
+| `language` | `vn` | `en` / `vn` | Output language for analyze and deep-research |
+
+**MA Type Priority:** CLI flag (`--sma`/`--ema`) > `settings.json` (`use_sma`) > default (`sma`).
 
 ## Available Data Sources
 

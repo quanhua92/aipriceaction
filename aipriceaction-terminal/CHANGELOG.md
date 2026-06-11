@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.48] - 2026-06-11
+
+### Added
+- `aipa config` subcommand: `config get [KEY]`, `config set KEY VALUE`, `config path` — read/write `~/.aipriceaction/settings.json` programmatically
+- `use_sma` setting (default: `true`) — controls MA type (SMA or EMA) for all commands: analyze, get-ohlcv-data, live-data, performers, deep-research, TUI
+- `resolve_ma_type()` helper in `user_settings.py` — resolves MA type via 3-tier priority: CLI flag (`--sma`/`--ema`/`--ma-type`) > `settings.json` (`use_sma`) > default (SMA)
+- `--sma` and `--ema` mutual-exclusion flags on `analyze`, `get-ohlcv-data`, `live-data`, `performers` to force MA type per invocation
+- MA Type dropdown in TUI Settings tab (SMA/EMA)
+- 35 new e2e tests for config subcommand and MA column verification
+
+### Changed
+- `analyze --ma-type` default changed from hardcoded `"ema"` to `None` (reads from `use_sma` setting)
+- All `AIContextBuilder()` call sites now pass `ma_type` explicitly (app.py, settings_tab.py, agents/tools.py, deep_research.py)
+- `cmd_live_data`, `cmd_performers` now pass `ema` parameter to `fetch_live_data()` based on setting
+- `cmd_get_ohlcv` resolves `ema` from setting when `--sma`/`--ema` flags not given
+- `cmd_setup` preserves `use_sma` from existing settings
+- Backward compatible: `.get("use_sma", True)` ensures old settings.json files default to SMA
+
 ## [0.1.47] - 2026-06-11
 
 ### Changed
