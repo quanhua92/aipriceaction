@@ -144,7 +144,7 @@ aipa config get                    # show all settings (JSON, api_key redacted)
 aipa config get use_sma            # show single value: true or false
 aipa config get language           # show language: en or vn
 aipa config set use_sma false      # switch all commands to EMA
-aipa config set use_sma true       # switch back to SMA (default)
+aipa config set use_sma true       # switch to SMA
 aipa config set language vn        # change language
 aipa config path                   # show path to settings file
 ```
@@ -158,14 +158,14 @@ aipa config path                   # show path to settings file
 
 **MA Type Priority:** CLI flag (`--sma`/`--ema`/`--ma-type`) > `settings.json` (`use_sma`) > default (`sma`).
 
-Backward compatible: `.get("use_sma", True)` ensures old settings files without this key default to SMA.
+> **IMPORTANT:** Before any analysis session, run `aipa config get use_sma` to check the current MA type setting. Do NOT assume SMA — the user may have switched to EMA. All MA references in your analysis must match the active setting (SMA or EMA).
 
 ### aipa-data — Raw OHLCV Data (no API key needed)
 
 #### `aipa get-ohlcv-data`
 
 ```bash
-aipa get-ohlcv-data VCB                               # last 20 candles with MA (SMA by default)
+aipa get-ohlcv-data VCB                               # last 20 candles with MA (type from use_sma setting)
 aipa get-ohlcv-data VCB --limit 50                    # 50 candles
 aipa get-ohlcv-data VCB TCB MBB --limit 30            # multi-ticker
 aipa get-ohlcv-data BTCUSDT --interval 1h --limit 50  # crypto hourly

@@ -120,7 +120,7 @@ aipa config get                    # show all settings (JSON, api_key redacted)
 aipa config get use_sma            # show single value: true or false
 aipa config get language           # show language: en or vn
 aipa config set use_sma false      # switch all commands to EMA
-aipa config set use_sma true       # switch back to SMA (default)
+aipa config set use_sma true       # switch to SMA
 aipa config set language vn        # change language
 aipa config path                   # show path to settings file
 ```
@@ -131,6 +131,8 @@ aipa config path                   # show path to settings file
 | `language` | `vn` | `en` / `vn` | Output language for analyze and deep-research |
 
 **MA Type Priority:** CLI flag (`--sma`/`--ema`) > `settings.json` (`use_sma`) > default (`sma`).
+
+> **IMPORTANT:** Before any analysis session, run `aipa config get use_sma` to check the current MA type setting. Do NOT assume SMA — the user may have switched to EMA. All MA references in your analysis must match the active setting (SMA or EMA).
 
 ---
 
@@ -227,7 +229,7 @@ aipa deep-research [QUESTION] [options]
 | `--output FILE` | — | Save final report to file |
 | `--lang` | saved setting | Language: `en` or `vn` |
 
-**MA Type:** All MA indicators follow the `use_sma` setting (`~/.aipriceaction/settings.json`, default: `true` = SMA). Use `aipa config set use_sma false` for EMA, or pass `--sma`/`--ema` flags on individual `aipa analyze` calls.
+**MA Type:** All MA indicators follow the `use_sma` setting (`~/.aipriceaction/settings.json`). Run `aipa config get use_sma` to check the active type before analysis. Use `aipa config set use_sma false` for EMA, or pass `--sma`/`--ema` flags on individual `aipa analyze` calls.
 
 ### Usage Examples
 

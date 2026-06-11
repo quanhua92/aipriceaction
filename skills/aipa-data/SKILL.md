@@ -196,7 +196,7 @@ aipa config get                    # show all settings (JSON, api_key redacted)
 aipa config get use_sma            # show single value: true or false
 aipa config get language           # show language: en or vn
 aipa config set use_sma false      # switch all commands to EMA
-aipa config set use_sma true       # switch back to SMA (default)
+aipa config set use_sma true       # switch to SMA
 aipa config set language vn        # change language
 aipa config path                   # show path to settings file
 ```
@@ -208,6 +208,8 @@ aipa config path                   # show path to settings file
 
 **MA Type Priority:** CLI flag (`--sma`/`--ema`) > `settings.json` (`use_sma`) > default (`sma`).
 
+> **IMPORTANT:** Before any analysis session, run `aipa config get use_sma` to check the current MA type setting. Do NOT assume SMA — the user may have switched to EMA. All MA references in your analysis must match the active setting (SMA or EMA).
+
 ---
 
 ## Useful Presets
@@ -217,7 +219,7 @@ These presets cover the most common data-fetching scenarios. Use them as-is or a
 ### Quick Look
 
 ```bash
-# Last 20 daily candles with MA indicators (SMA by default)
+# Last 20 daily candles with MA indicators (type from use_sma setting)
 aipa get-ohlcv-data VCB
 
 # Last 20 daily candles, raw OHLCV only
@@ -227,7 +229,7 @@ aipa get-ohlcv-data VCB --no-ma
 ### Trend Analysis (Swing Trading)
 
 ```bash
-# 50 daily bars with MA indicators (SMA by default) — good for trend identification
+# 50 daily bars with MA indicators (type from use_sma setting) — good for trend identification
 aipa get-ohlcv-data VCB --limit 50
 
 # 100 daily bars for long-term trend
@@ -1075,7 +1077,7 @@ if rows:
 
 6. **Date range vs limit**: Use `--start-date`/`--end-date` for specific periods. Use `--limit` for "last N bars". Don't combine both — the CLI handles conflicts gracefully but the intent is clearer with one approach.
 
-7. **MA type controlled by setting**: By default, SMA is shown (`use_sma: true` in `~/.aipriceaction/settings.json`). Use `--sma` to force SMA or `--ema` to force EMA. Change the default with `aipa config set use_sma false`.
+7. **MA type controlled by setting**: The active MA type (SMA or EMA) is controlled by `use_sma` in `~/.aipriceaction/settings.json`. Run `aipa config get use_sma` to check before analysis. Use `--sma` to force SMA or `--ema` to force EMA. Change the default with `aipa config set use_sma false`.
 
 8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.
 
