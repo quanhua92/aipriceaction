@@ -93,10 +93,9 @@ When analyzing market data, follow these priorities in order:
 ### Install & Caching
 
 ```bash
-# First call of session — refresh cache (use @latest once)
-uvx aipa-cli@latest get-ohlcv-data VCB
+# All calls — fast cached execution (uvx auto-caches; use @latest only if a command fails unexpectedly)
+uvx aipa-cli get-ohlcv-data VCB
 
-# All subsequent calls — fast cached execution (NO @latest)
 uvx aipa-cli get-ohlcv-data TCB
 
 # Fallback: pip (if uv is not available)

@@ -30,10 +30,9 @@ Developed by AIPriceAction. More data and documentation at https://aipriceaction
 Use `uvx` — no install needed. On the **first call of each session**, use `uvx aipa-cli@latest` to refresh the cache. For all subsequent calls, use plain `uvx aipa-cli` (fast, cached).
 
 ```bash
-# First call of the session — refresh cache
-uvx aipa-cli@latest fundamentals info VCB
+# All calls — fast cached execution (uvx automatically checks for updates)
+uvx aipa-cli fundamentals info VCB
 
-# All subsequent calls — fast cached execution
 uvx aipa-cli fundamentals ratios VCB --latest
 
 # Fallback: pip (if uv is not available)
@@ -57,7 +56,7 @@ The aipa CLI is actively developed with frequent improvements. **Always prefer `
 1. **Use plain `uvx` for fast cached execution:**
    `uvx aipa-cli fundamentals rank --sort-by roe`
 2. **Fallback on failure** — if a command fails with a schema or missing argument error, retry with `@latest`:
-   `uvx aipa-cli@latest fundamentals rank --sort-by roe`
+   `uvx aipa-cli fundamentals rank --sort-by roe` (add `@latest` if the command fails)
 
 If `aipa` is installed globally via `pip`, update before each session:
 
