@@ -19,20 +19,92 @@ def _resolve_lang(arg_lang: str | None) -> str:
     return load_settings().get("language", "en")
 
 
+def cmd_config(args) -> None:
+    """CLI handler: aipa config get [KEY] [--show-secret] | config set KEY VALUE | config path."""
+    from .user_settings import load_settings, save_settings, _SETTINGS_FILE
+
+    action = getattr(args, "config_action", None)
+    if action is None:
+        print("Usage: aipa config {get [KEY] | set KEY VALUE | path}", file=sys.stderr)
+        sys.exit(1)
+
+    if action == "path":
+        print(str(_SETTINGS_FILE))
+        return
+
+    if action == "get":
+        settings = load_settings()
+        key = getattr(args, "config_key", None)
+        if key:
+            if key not in settings:
+                print(f"Key '{key}' not found in settings.", file=sys.stderr)
+                sys.exit(1)
+            if key == "api_key" and not getattr(args, "show_secret", False):
+                print("***" if settings[key] else "")
+            else:
+                val = settings[key]
+                print(json.dumps(val) if isinstance(val, (dict, list, bool)) else str(val))
+        else:
+            output = dict(settings)
+            if not getattr(args, "show_secret", False):
+                if output.get("api_key"):
+                    output["api_key"] = "***"
+            print(json.dumps(output, indent=2))
+        return
+
+    if action == "set":
+        key = getattr(args, "config_key", None)
+        value = getattr(args, "config_value", None)
+        if not key or value is None:
+            print("Usage: aipa config set KEY VALUE", file=sys.stderr)
+            sys.exit(1)
+
+        _VALID_BOOL = {"use_sma", "setup_done"}
+        _VALID_STR = {"ticker", "interval", "language", "api_key", "openai_base_url", "openai_model"}
+        _ALL_KEYS = _VALID_BOOL | _VALID_STR
+
+        if key not in _ALL_KEYS:
+            print(f"Unknown setting key: '{key}'. Valid keys: {', '.join(sorted(_ALL_KEYS))}", file=sys.stderr)
+            sys.exit(1)
+
+        if key in _VALID_BOOL:
+            if value.lower() in ("true", "1", "yes"):
+                value = True
+            elif value.lower() in ("false", "0", "no"):
+                value = False
+            else:
+                print(f"Invalid boolean value for '{key}': '{value}'. Use true/false.", file=sys.stderr)
+                sys.exit(1)
+        if key == "language" and value not in ("en", "vn"):
+            print("Invalid language. Use 'en' or 'vn'.", file=sys.stderr)
+            sys.exit(1)
+
+        settings = load_settings()
+        settings[key] = value
+        save_settings(settings)
+        print(f"Settings saved: {key} = {json.dumps(value) if isinstance(value, bool) else value}", file=sys.stderr)
+        return
+
+    print(f"Unknown config action: '{action}'. Use get, set, or path.", file=sys.stderr)
+    sys.exit(1)
+
+
 async def cmd_analyze(args) -> None:
     from aipriceaction import AIContextBuilder
+    from .user_settings import resolve_ma_type
 
     args.tickers = _resolve_tickers(args.tickers)
     if args.reference_ticker:
         args.reference_ticker = args.reference_ticker.upper()
 
     lang = _resolve_lang(args.lang)
-    verbose_log(f"analyze: resolved lang={lang}")
+    ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema, cli_ma_type=args.ma_type)
+    verbose_log(f"analyze: resolved lang={lang}, ma_type={ma_type}")
 
     if getattr(args, "verbose", False):
         logging.basicConfig(level=logging.DEBUG, format="[DEBUG] %(message)s", stream=sys.stderr, force=True)
 
-    builder = AIContextBuilder(lang=lang, ma_type=args.ma_type)
+    builder = AIContextBuilder(lang=lang, ma_type=ma_type)
 
     # Auto-detect reference ticker if user didn't explicitly override
     if args.reference_ticker is None and len(args.tickers) == 1:
@@ -196,11 +268,15 @@ async def cmd_analyze(args) -> None:
 
 def cmd_get_ohlcv(args) -> None:
     from aipriceaction import AIPriceAction
+    from .user_settings import resolve_ma_type
 
     raw_tickers = _resolve_tickers(args.tickers)
     client = AIPriceAction()
 
-    verbose_log(f"get-ohlcv: fetching tickers={raw_tickers}")
+    ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema)
+    use_ema = ma_type == "ema"
+
+    verbose_log(f"get-ohlcv: fetching tickers={raw_tickers}, ema={use_ema}")
 
     if not getattr(args, "no_system_prompt", False):
         from aipriceaction.system import get_system_prompt
@@ -232,7 +308,7 @@ def cmd_get_ohlcv(args) -> None:
             end_date=args.end_date,
             source=_resolve_source(args.source),
             ma=args.ma,
-            ema=args.ema,
+            ema=use_ema,
         )
         print(df.to_string(index=False))
     else:
@@ -244,7 +320,7 @@ def cmd_get_ohlcv(args) -> None:
             end_date=args.end_date,
             source=_resolve_source(args.source),
             ma=args.ma,
-            ema=args.ema,
+            ema=use_ema,
         )
         print(df.to_string(index=False))
 
@@ -268,13 +344,17 @@ def _resolve_source(source: str | None) -> str | None:
 
 def cmd_live_data(args) -> None:
     from aipriceaction import AIPriceAction
+    from .user_settings import resolve_ma_type
 
     client = AIPriceAction()
     tickers = _resolve_tickers(args.tickers) if args.tickers else None
     interval = args.interval
     top = args.top
     source = args.source
-    verbose_log(f"live-data: interval={interval}, tickers={tickers}, top={top}")
+
+    ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema)
+    use_ema = ma_type == "ema"
+    verbose_log(f"live-data: interval={interval}, tickers={tickers}, top={top}, ema={use_ema}")
 
     # Build source filter set from ticker metadata
     source_set: set[str] | None = None
@@ -285,7 +365,7 @@ def cmd_live_data(args) -> None:
     try:
         is_native = interval in {"1D", "1h", "1m"}
         verbose_log(f"live-data: fetching live data (native={is_native})")
-        data = client.fetch_live_data(interval, ma=is_native)
+        data = client.fetch_live_data(interval, ma=is_native, ema=use_ema)
     except Exception as e:
         print(f"Error fetching live data: {e}", file=sys.stderr)
         sys.exit(1)
@@ -448,14 +528,18 @@ def cmd_performers(args) -> None:
     """CLI handler: aipa performers."""
     from aipriceaction import AIPriceAction
     from aipriceaction.performers import build_performers
+    from .user_settings import resolve_ma_type
 
     client = AIPriceAction()
     source = _resolve_source(args.source)
-    verbose_log(f"performers: source={source}, sort_by={args.sort_by}")
+
+    ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema)
+    use_ema = ma_type == "ema"
+    verbose_log(f"performers: source={source}, sort_by={args.sort_by}, ema={use_ema}")
 
     # Fetch live 1D data with MA indicators
     verbose_log("performers: fetching live data")
-    data = client.fetch_live_data("1D", ma=True)
+    data = client.fetch_live_data("1D", ma=True, ema=use_ema)
     if not data:
         print("No live data available.", file=sys.stderr)
         sys.exit(1)

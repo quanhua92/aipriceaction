@@ -191,7 +191,7 @@ aipa analyze TICKER [TICKERS...] [options]
 | `--end-date` | — | End date (e.g. `2025-04-30`) |
 | `--reference-ticker` | auto-detect | Reference ticker: `VNINDEX` (VN stocks), `BTCUSDT` (crypto), `^GSPC` (global) |
 | `--lang` | saved setting | Language: `en` or `vn` |
-| `--ma-type` | `ema` | Moving average type: `ema` or `sma` |
+| `--ma-type` | settings | Moving average type: `ema` or `sma` (default: from `use_sma` setting, which defaults to `sma`) |
 | `--question TEXT` | template 0 | Custom analysis question (overrides templates) |
 | `--questions` | — | List available question templates and exit |
 | `--context-only` | — | Dump raw context without calling LLM (no API key needed) |

@@ -135,18 +135,43 @@ aipa watchlist set MYWATCH FPT VCB   # create custom
 aipa watchlist rm MYWATCH            # delete custom
 ```
 
+### aipa-config — Settings Management
+
+Read and write `~/.aipriceaction/settings.json`. Allows AI agents to change settings programmatically.
+
+```bash
+aipa config get                    # show all settings (JSON, api_key redacted)
+aipa config get use_sma            # show single value: true or false
+aipa config get language           # show language: en or vn
+aipa config set use_sma false      # switch all commands to EMA
+aipa config set use_sma true       # switch back to SMA (default)
+aipa config set language vn        # change language
+aipa config path                   # show path to settings file
+```
+
+| Setting | Default | Values | Description |
+|---|---|---|---|
+| `use_sma` | `true` | `true` / `false` | `true` = SMA, `false` = EMA. Controls MA type for analyze, get-ohlcv-data, live-data, performers, deep-research, TUI. CLI flags (`--sma`, `--ema`, `--ma-type`) override per-invocation. |
+| `language` | `vn` | `en` / `vn` | Output language for analyze and deep-research |
+| `ticker` | `VNINDEX` | any | Default reference ticker |
+| `interval` | `1D` | `1m`..`2W` | Default interval |
+
+**MA Type Priority:** CLI flag (`--sma`/`--ema`/`--ma-type`) > `settings.json` (`use_sma`) > default (`sma`).
+
+Backward compatible: `.get("use_sma", True)` ensures old settings files without this key default to SMA.
+
 ### aipa-data — Raw OHLCV Data (no API key needed)
 
 #### `aipa get-ohlcv-data`
 
 ```bash
-aipa get-ohlcv-data VCB                               # last 20 candles with SMA
+aipa get-ohlcv-data VCB                               # last 20 candles with MA (SMA by default)
 aipa get-ohlcv-data VCB --limit 50                    # 50 candles
 aipa get-ohlcv-data VCB TCB MBB --limit 30            # multi-ticker
 aipa get-ohlcv-data BTCUSDT --interval 1h --limit 50  # crypto hourly
 aipa get-ohlcv-data FPT --start-date 2025-01-01       # from date
 aipa get-ohlcv-data VCB --no-ma --no-system-prompt    # cleanest raw output
-aipa get-ohlcv-data VCB --ema                         # use EMA instead of SMA
+aipa get-ohlcv-data VCB --ema                         # force EMA (overrides setting)
 ```
 
 | Flag | Default | Description |
@@ -156,7 +181,7 @@ aipa get-ohlcv-data VCB --ema                         # use EMA instead of SMA
 | `--start-date` / `--end-date` | — | Date range |
 | `--source` | auto-detect | `vn`, `crypto`, `global` |
 | `--ma` / `--no-ma` | included | Include/exclude moving averages |
-| `--ema` | SMA | Switch from SMA to EMA calculation |
+| `--ema` | settings | Switch to EMA (overrides setting). Use `--sma` to force SMA. |
 | `--no-system-prompt` | — | Strip header for clean output |
 
 #### `aipa live-data`
@@ -168,6 +193,8 @@ aipa live-data VCB TCB MBB            # specific tickers
 aipa live-data --source crypto --top 10
 aipa live-data --interval 1h --top 20  # hourly
 ```
+
+| `--sma` / `--ema` | settings | Force MA type for indicators (overrides `use_sma` setting) |
 
 #### `aipa performers`
 
@@ -192,6 +219,7 @@ aipa performers --source crypto --sort-by value          # crypto
 | `--min-volume N` | `10000` | Minimum volume for VN tickers |
 | `--source` | `vn` | `vn`, `crypto`, `global`, `sjc` |
 | `--group` | — | `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`, `CONG_NGHE`, `DAU_KHI`... |
+| `--sma` / `--ema` | settings | Force MA type for MA score calculation (overrides `use_sma` setting) |
 
 #### `aipa volume-profile`
 
@@ -237,7 +265,7 @@ aipa analyze HPG --question "Wyckoff analysis with phases and price targets"
 aipa analyze VCB --context-only                       # dump context, no LLM call
 aipa analyze --questions                              # list all question templates
 aipa analyze VCB --reference-ticker VN30              # override reference ticker
-aipa analyze VCB --ma-type sma                        # use SMA instead of EMA
+aipa analyze VCB --sma                                  # force SMA (or use EMA from setting)
 aipa analyze VCB --no-system-prompt                   # strip persona header
 ```
 
@@ -249,7 +277,7 @@ aipa analyze VCB --no-system-prompt                   # strip persona header
 | `--start-date` / `--end-date` | — | Date range |
 | `--reference-ticker` | auto-detect | `VNINDEX` (VN), `BTCUSDT` (crypto), `^GSPC` (global) |
 | `--lang` | saved setting | `en` or `vn` |
-| `--ma-type` | `ema` | `ema` or `sma` |
+| `--ma-type` | settings | `ema` or `sma` (default: from `use_sma` setting) |
 | `--question TEXT` | template 0 | Custom analysis question |
 | `--questions` | — | List all available question templates |
 | `--context-only` | — | Dump raw context, no API key needed |
@@ -525,6 +553,7 @@ aipa fundamentals info VCB                            # company profile context
 | Screen for low PE banks | `aipa fundamentals screen --industry "ngân hàng" --pe-max 10` |
 | Company profile | `aipa fundamentals info TICKER` |
 | Rank by ROE / NPL / CAR | `aipa fundamentals rank --sort-by roe` |
+| Change MA type preference | `aipa config set use_sma false` |
 
 **Rule:** raw numbers → `get-ohlcv-data` / `performers` / `live-data` / `fundamentals`, AI insights → `analyze`, comprehensive report → `deep-research`.
 

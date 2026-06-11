@@ -208,6 +208,8 @@ aipa deep-research [QUESTION] [options]
 | `--output FILE` | — | Save final report to file |
 | `--lang` | saved setting | Language: `en` or `vn` |
 
+**MA Type:** All MA indicators follow the `use_sma` setting (`~/.aipriceaction/settings.json`, default: `true` = SMA). Use `aipa config set use_sma false` for EMA, or pass `--sma`/`--ema` flags on individual `aipa analyze` calls.
+
 ### Usage Examples
 
 ```bash

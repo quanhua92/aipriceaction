@@ -55,6 +55,7 @@ def cmd_setup() -> None:
         "openai_base_url": base_url,
         "openai_model": model,
         "setup_done": True,
+        "use_sma": current.get("use_sma", True),
     }
 
     save_settings(data)

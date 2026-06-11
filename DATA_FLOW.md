@@ -275,7 +275,7 @@ Daily data only needs 1 candle (today). Finer intervals need more to cover recen
 
 The live API accepts `ma=true` or `ma=false`:
 
-- **`ma=true`** (default): response includes MA scores, changes, and money flow — used by `context.py` for analysis
+- **`ma=true`** (default): response includes MA scores, changes, and money flow — used by `context.py` for analysis (MA type configurable via `use_sma` setting: SMA or EMA)
 - **`ma=false`**: response returns only OHLCV columns — used by `get_ohlcv()` during the merge step (extra fields would be stripped anyway)
 
 ### Response format

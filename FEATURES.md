@@ -257,7 +257,7 @@ Complete inventory of all features across every component. Organized by subsyste
 | Question templates | 6 single-ticker + 7 multi-ticker templates (Wyckoff, VPA, MA, etc.) |
 | Reference ticker | Auto-detected: VNINDEX (VN), BTCUSDT (crypto), ^GSPC (global) |
 | System prompt framework | Modular sections with EN/VN language support |
-| MA type selection | Choose SMA or EMA for context |
+| MA type selection | Choose SMA or EMA for context (default: SMA, configurable via `aipa config set use_sma`) |
 | `--context-only` mode | Dump raw context without calling LLM (no API key needed) |
 
 **Files**: `sdk/aipriceaction-python/src/aipriceaction/context.py`, `sdk/aipriceaction-python/src/aipriceaction/single.py`, `sdk/aipriceaction-python/src/aipriceaction/multi.py`, `sdk/aipriceaction-python/src/aipriceaction/system.py`
@@ -321,7 +321,7 @@ Complete inventory of all features across every component. Organized by subsyste
 | Source filtering | `--source vn/crypto/global` |
 | Reference ticker | `--reference-ticker VN30` (override auto-detection) |
 | Language | `--lang en/vn` |
-| MA type | `--ma-type ema/sma` |
+| MA type | `--sma` / `--ema` / `--ma-type ema/sma` |
 | Context-only mode | `--context-only` — dump context, no LLM call (no API key) |
 | Verbose mode | `--verbose` — show thinking/reasoning tokens |
 | Streaming | Real-time token streaming with status markers |
@@ -374,7 +374,7 @@ Complete inventory of all features across every component. Organized by subsyste
 | Multi-ticker | `aipa get-ohlcv-data VCB TCB MBB` |
 | Interval & limit | `--interval 1h --limit 50` |
 | Date range | `--start-date 2025-01-01 --end-date 2025-05-01` |
-| MA indicators | `--ma` / `--no-ma` / `--ema` |
+| MA indicators | `--ma` / `--no-ma` / `--sma` / `--ema` |
 | Source filter | `--source vn/crypto/global` |
 | Clean output | `--no-system-prompt` for raw data only |
 

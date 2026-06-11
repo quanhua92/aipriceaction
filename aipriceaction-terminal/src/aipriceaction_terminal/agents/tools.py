@@ -57,7 +57,8 @@ def _ensure_clients(lang: str = "en") -> tuple[AIPriceAction, AIContextBuilder]:
         _client = AIPriceAction()
     if _builder is None or _builder._lang != lang:
         from aipriceaction import AIContextBuilder
-        _builder = AIContextBuilder(lang=lang)
+        from ..user_settings import resolve_ma_type
+        _builder = AIContextBuilder(lang=lang, ma_type=resolve_ma_type())
     return _client, _builder
 
 
@@ -267,10 +268,12 @@ def create_performers_tool(lang: str = "en") -> ToolDef:
                 "BAT_DONG_SAN", "CONG_NGHE", "DAU_KHI". None = all sectors.
         """
         from aipriceaction.performers import build_performers
+        from ..user_settings import resolve_ma_type
 
         client, _ = _ensure_clients(lang)
+        ma_type = resolve_ma_type()
         try:
-            data = client.fetch_live_data("1D", ma=True)
+            data = client.fetch_live_data("1D", ma=True, ema=(ma_type == "ema"))
         except Exception as e:
             return f"Error fetching live data: {e}"
         if not data:

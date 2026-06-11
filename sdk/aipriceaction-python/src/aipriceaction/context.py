@@ -176,7 +176,8 @@ class AIContextBuilder:
         """
         self._interval = interval
         single_ticker: str | None = None
-        ma = self._ma_type == "ema"
+        ma = True
+        use_ema = self._ma_type == "ema"
         _t0 = _time.monotonic()
 
         if ticker and tickers:
@@ -197,7 +198,7 @@ class AIContextBuilder:
                 start_date=start_date,
                 end_date=end_date,
                 ma=ma,
-                ema=(self._ma_type == "ema"),
+                ema=use_ema,
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info([ticker])
@@ -211,7 +212,7 @@ class AIContextBuilder:
                 start_date=start_date,
                 end_date=end_date,
                 ma=ma,
-                ema=(self._ma_type == "ema"),
+                ema=use_ema,
             )
             self._market_data = self._df_to_records(df)
             self._tickers_info = self._build_tickers_info(tickers)
@@ -233,7 +234,7 @@ class AIContextBuilder:
                 start_date=start_date,
                 end_date=end_date,
                 ma=ma,
-                ema=(self._ma_type == "ema"),
+                ema=use_ema,
             )
             self._market_data = self._df_to_records(df)
             symbols = df["symbol"].unique().tolist() if not df.empty else []
@@ -252,7 +253,7 @@ class AIContextBuilder:
                 start_date=start_date,
                 end_date=end_date,
                 ma=ma,
-                ema=(self._ma_type == "ema"),
+                ema=use_ema,
             )
             ref_records = self._df_to_records(ref_df)
             self._ref_ticker = reference_ticker

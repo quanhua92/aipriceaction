@@ -186,7 +186,7 @@ aipa get-ohlcv-data TICKER [TICKERS...] [options]
 | `--end-date` | — | End date (e.g. `2025-05-01`) |
 | `--source` | auto-detect | Filter by source: `vn`, `crypto`, `global` |
 | `--ma` / `--no-ma` | included | Include/exclude moving averages |
-| `--ema` | — | Switch from default SMA to EMA |
+| `--sma` / `--ema` | settings | Force SMA or EMA (overrides `use_sma` setting). Default MA type controlled by `aipa config get use_sma`. |
 | `--no-system-prompt` | — | Exclude persona header from output |
 
 ---
@@ -198,7 +198,7 @@ These presets cover the most common data-fetching scenarios. Use them as-is or a
 ### Quick Look
 
 ```bash
-# Last 20 daily candles with SMA (default — fastest)
+# Last 20 daily candles with MA indicators (SMA by default)
 aipa get-ohlcv-data VCB
 
 # Last 20 daily candles, raw OHLCV only
@@ -208,7 +208,7 @@ aipa get-ohlcv-data VCB --no-ma
 ### Trend Analysis (Swing Trading)
 
 ```bash
-# 50 daily bars with SMA (default) — good for trend identification
+# 50 daily bars with MA indicators (SMA by default) — good for trend identification
 aipa get-ohlcv-data VCB --limit 50
 
 # 100 daily bars for long-term trend
@@ -1056,7 +1056,7 @@ if rows:
 
 6. **Date range vs limit**: Use `--start-date`/`--end-date` for specific periods. Use `--limit` for "last N bars". Don't combine both — the CLI handles conflicts gracefully but the intent is clearer with one approach.
 
-7. **`--ema` flag controls SMA vs EMA**: By default, SMA is shown. Add `--ema` to switch to EMA.
+7. **MA type controlled by setting**: By default, SMA is shown (`use_sma: true` in `~/.aipriceaction/settings.json`). Use `--sma` to force SMA or `--ema` to force EMA. Change the default with `aipa config set use_sma false`.
 
 8. **Multi-ticker support**: Pass multiple space-separated tickers to fetch them in one call (e.g. `aipa get-ohlcv-data VCB TCB MBB`). The output table includes a `symbol` column to distinguish rows.
 

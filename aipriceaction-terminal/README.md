@@ -52,7 +52,7 @@ aipa analyze VCB --context-only
 aipa analyze VCB --lang en
 
 # Use hourly interval with SMA instead of EMA
-aipa analyze BTCUSDT --interval 1h --ma-type sma
+aipa analyze BTCUSDT --interval 1h --sma
 
 # Analyze multiple tickers at once
 aipa analyze VCB FPT VIC --interval 1D
@@ -170,7 +170,7 @@ aipa analyze VCB --lang en
 | `--start-date` / `--end-date` | Date range (e.g. `2026-04-01`) |
 | `--reference-ticker` | Override auto-detected reference ticker (auto: `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global) |
 | `--lang` | Language: `en` or `vn` (default: saved setting) |
-| `--ma-type` | Moving average type: `ema` or `sma` (default: `ema`) |
+| `--ma-type` | Moving average type: `ema` or `sma` (default: from settings) |
 
 ### `aipa deep-research`
 
@@ -215,7 +215,7 @@ aipa deep-research --run --lang vn
 Fetch raw OHLCV data as a table (no LLM involved, works without setup).
 
 ```
-# Default: daily data with EMA indicators
+# Default: daily data with MA indicators
 aipa get-ohlcv-data VCB
 
 # Hourly data, last 10 bars
@@ -235,7 +235,7 @@ aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
 | `--start-date` / `--end-date` | Date range |
 | `--source` | Filter by source: `vn` or `crypto` |
 | `--ma` / `--no-ma` | Include/exclude moving averages (default: included) |
-| `--ema` | Use EMA instead of SMA |
+| `--sma` / `--ema` | Force SMA or EMA (overrides setting) |
 
 Note: Pass multiple space-separated ticker symbols (e.g. `VCB TCB MBB`) to fetch them in one call.
 

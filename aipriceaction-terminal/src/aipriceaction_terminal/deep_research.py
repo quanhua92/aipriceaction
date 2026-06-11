@@ -46,7 +46,9 @@ def _ensure_clients(lang: str = "en") -> tuple[AIPriceAction, AIContextBuilder]:
     if _client is None:
         _client = AIPriceAction()
     if _builder is None or _builder._lang != lang:
-        _builder = AIContextBuilder(lang=lang)
+        from aipriceaction import AIContextBuilder
+        from .user_settings import resolve_ma_type
+        _builder = AIContextBuilder(lang=lang, ma_type=resolve_ma_type())
     return _client, _builder
 
 

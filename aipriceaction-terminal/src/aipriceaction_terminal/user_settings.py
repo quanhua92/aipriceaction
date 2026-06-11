@@ -15,7 +15,24 @@ _DEFAULTS = {
     "openai_base_url": "",
     "openai_model": "",
     "setup_done": False,
+    "use_sma": True,
 }
+
+
+def resolve_ma_type(
+    force_sma: bool = False,
+    force_ema: bool = False,
+    cli_ma_type: str | None = None,
+) -> str:
+    """Resolve effective MA type: CLI force flag > cli_ma_type > saved setting > default (sma)."""
+    if force_sma:
+        return "sma"
+    if force_ema:
+        return "ema"
+    if cli_ma_type:
+        return cli_ma_type
+    use_sma = load_settings().get("use_sma", True)
+    return "sma" if use_sma else "ema"
 
 
 def load_settings() -> dict:

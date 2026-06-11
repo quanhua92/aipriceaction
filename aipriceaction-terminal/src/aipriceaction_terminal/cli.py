@@ -20,7 +20,6 @@ def run():
     parser.add_argument("--version", action="store_true", help="Print version and exit")
     sub = parser.add_subparsers(dest="command")
 
-    # Shared parent parser: --verbose, --no-system-prompt, --lang for agent compatibility
     _shared_parent = argparse.ArgumentParser(add_help=False)
     _shared_parent.add_argument("--verbose", action="store_true",
         help="Show detailed timing information for performance debugging")
@@ -29,9 +28,7 @@ def run():
     _shared_parent.add_argument("--lang", default=None, choices=["en", "vn"],
         help="Override language (only affects analyze and deep-research)")
 
-    # aipa analyze VCB [tickers...] [--interval 1D] [--limit N]
-    #   [--source vn] [--start-date] [--end-date] [--reference-ticker VNINDEX]
-    #   [--lang en] [--ma-type ema] [--question TEXT] [--questions] [--context-only]
+    # aipa analyze
     p_analyze = sub.add_parser("analyze", help="AI analysis for ticker(s)", parents=[_shared_parent])
     p_analyze.add_argument("tickers", nargs="+", help="Ticker symbol(s)")
     p_analyze.add_argument("--interval", default="1D")
@@ -40,13 +37,16 @@ def run():
     p_analyze.add_argument("--start-date", default=None)
     p_analyze.add_argument("--end-date", default=None)
     p_analyze.add_argument("--reference-ticker", default=None, help="Override auto-detected reference ticker (e.g. BTCUSDT, VNINDEX, ^GSPC)")
-    p_analyze.add_argument("--ma-type", default="ema", choices=["ema", "sma"])
+    _ma_group = p_analyze.add_mutually_exclusive_group()
+    _ma_group.add_argument("--ma-type", default=None, choices=["ema", "sma"],
+        help="Force MA type: ema or sma (default: from settings)")
+    _ma_group.add_argument("--sma", action="store_true", help="Force SMA (ignore settings)")
+    _ma_group.add_argument("--ema", action="store_true", help="Force EMA (ignore settings)")
     p_analyze.add_argument("--question", default=None, help="Custom analysis question")
     p_analyze.add_argument("--questions", action="store_true", help="List available question templates and exit")
     p_analyze.add_argument("--context-only", action="store_true", help="Dump raw context without calling LLM (no API key needed)")
 
-    # aipa get-ohlcv-data TICKER [--interval 1D] [--limit N]
-    #   [--start-date] [--end-date] [--source] [--ma] [--ema]
+    # aipa get-ohlcv-data
     p_ohlcv = sub.add_parser("get-ohlcv-data", help="Fetch raw OHLCV data", parents=[_shared_parent])
     p_ohlcv.add_argument("tickers", nargs="+", help="Ticker symbol(s)")
     p_ohlcv.add_argument("--interval", default="1D")
@@ -56,9 +56,11 @@ def run():
     p_ohlcv.add_argument("--source", default=None)
     p_ohlcv.add_argument("--ma", action="store_true", default=True)
     p_ohlcv.add_argument("--no-ma", dest="ma", action="store_false")
-    p_ohlcv.add_argument("--ema", action="store_true", default=False)
+    _ohlcv_ma = p_ohlcv.add_mutually_exclusive_group()
+    _ohlcv_ma.add_argument("--sma", action="store_true", help="Force SMA (ignore settings)")
+    _ohlcv_ma.add_argument("--ema", action="store_true", help="Force EMA (ignore settings)")
 
-    # aipa deep-research [question]
+    # aipa deep-research
     p_deep = sub.add_parser("deep-research", help="Multi-agent deep research", parents=[_shared_parent])
     p_deep.add_argument("question", nargs="*", help="Research question")
     p_deep.add_argument("--resume", default=None, help="Resume from checkpoint session ID")
@@ -66,21 +68,23 @@ def run():
     p_deep.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source (default: vn)")
     p_deep.add_argument("--run", action="store_true", help="Run the full multi-agent pipeline (5-10 min). Default is context-only (market snapshot).")
 
-    # aipa live-data [tickers...] [--interval 1D] [--top 50]
+    # aipa live-data
     p_live = sub.add_parser("live-data", help="Latest candle with top tickers by trading value", parents=[_shared_parent])
     p_live.add_argument("tickers", nargs="*", help="Ticker symbol(s) (omit for top N by trading value)")
     p_live.add_argument("--top", type=int, default=50, help="Number of top tickers when no tickers specified (default: 50)")
     p_live.add_argument("--interval", default="1D", choices=["1D", "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W"])
     p_live.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source")
+    _live_ma = p_live.add_mutually_exclusive_group()
+    _live_ma.add_argument("--sma", action="store_true", help="Force SMA for MA indicators (ignore settings)")
+    _live_ma.add_argument("--ema", action="store_true", help="Force EMA for MA indicators (ignore settings)")
 
-    # aipa ticker-list [--source vn] [--group NGAN_HANG]
+    # aipa ticker-list
     p_tlist = sub.add_parser("ticker-list", help="List available ticker symbols and metadata", parents=[_shared_parent])
     p_tlist.add_argument("--source", default=None, choices=["vn", "crypto", "global", "yahoo", "sjc"], help="Filter by data source")
     p_tlist.add_argument("--group", default=None, help="Filter by group (e.g. NGAN_HANG, CHUNG_KHOAN)")
     p_tlist.add_argument("--compact", action="store_true", help="Output symbols only, comma-separated")
 
-    # aipa performers [--sort-by close_changed] [--direction desc] [--limit 10]
-    #   [--min-volume 10000] [--source vn] [--group NGAN_HANG]
+    # aipa performers
     p_perf = sub.add_parser("performers", help="Top/worst performers ranked by a chosen metric", parents=[_shared_parent])
     p_perf.add_argument("--sort-by", default="close_changed",
         choices=["close_changed", "volume", "value", "volume_changed",
@@ -91,9 +95,11 @@ def run():
     p_perf.add_argument("--min-volume", type=int, default=10000)
     p_perf.add_argument("--source", default="vn", choices=["vn", "crypto", "global", "yahoo", "sjc"])
     p_perf.add_argument("--group", default=None, help="Filter by group/sector (e.g. NGAN_HANG, CHUNG_KHOAN, BAT_DONG_SAN)")
+    _perf_ma = p_perf.add_mutually_exclusive_group()
+    _perf_ma.add_argument("--sma", action="store_true", help="Force SMA for MA indicators (ignore settings)")
+    _perf_ma.add_argument("--ema", action="store_true", help="Force EMA for MA indicators (ignore settings)")
 
-    # aipa volume-profile TICKER [--date YYYY-MM-DD] [--start-date] [--end-date]
-    #   [--source vn] [--bins 50] [--value-area-pct 70]
+    # aipa volume-profile
     p_vp = sub.add_parser("volume-profile", help="Volume-by-price histogram analysis", parents=[_shared_parent])
     p_vp.add_argument("ticker", help="Ticker symbol")
     p_vp.add_argument("--date", default=None, help="Single date (YYYY-MM-DD)")
@@ -105,6 +111,13 @@ def run():
 
     # aipa setup
     sub.add_parser("setup", help="Interactive first-run setup", parents=[_shared_parent])
+
+    # aipa config get [KEY] [--show-secret] | config set KEY VALUE | config path
+    p_config = sub.add_parser("config", help="Read and write settings (~/.aipriceaction/settings.json)")
+    p_config.add_argument("config_action", nargs="?", default=None, help="Action: get, set, or path")
+    p_config.add_argument("config_key", nargs="?", default=None, help="Setting key (for get/set)")
+    p_config.add_argument("config_value", nargs="?", default=None, help="Setting value (for set)")
+    p_config.add_argument("--show-secret", action="store_true", help="Show api_key unredacted in get output")
 
     # aipa watchlist [ls|get|set]
     p_wl = sub.add_parser("watchlist", help="Manage watchlists (predefined + custom)", parents=[_shared_parent])
@@ -197,7 +210,7 @@ def run():
     p_fund_screen.add_argument("--industry", default=None, help="Industry filter (substring, case-insensitive)")
 
     # aipa ui — open TUI
-    p_ui = sub.add_parser("ui", help="Open interactive TUI", parents=[_shared_parent])
+    sub.add_parser("ui", help="Open interactive TUI", parents=[_shared_parent])
 
     # aipa resume [session_id|index]
     p_resume = sub.add_parser("resume", help="Open TUI with a resumed chat session", parents=[_shared_parent])
@@ -205,7 +218,6 @@ def run():
 
     args = parser.parse_args()
 
-    # Initialize verbose logging if flag is present
     if getattr(args, "verbose", False):
         from .verbose import set_verbose
         set_verbose(True)
@@ -218,6 +230,9 @@ def run():
     if args.command == "setup":
         from .cli_setup import cmd_setup
         cmd_setup()
+    elif args.command == "config":
+        from .cli_commands import cmd_config
+        cmd_config(args)
     elif args.command == "analyze":
         if not getattr(args, "context_only", False) and not getattr(args, "questions", False):
             _ensure_setup()

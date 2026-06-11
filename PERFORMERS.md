@@ -139,6 +139,8 @@ Visual — same stock, different MA periods:
 
 A stock with all positive MA scores (MA10 through MA200) is in a **strong uptrend** across all timeframes.
 
+> **MA Type**: The MA type (SMA vs EMA) used for MA scores follows the `use_sma` setting in `~/.aipriceaction/settings.json` (default: `true` = SMA). Use `aipa config set use_sma false` for EMA.
+
 ### total_money_changed — Net money flow
 
 ```

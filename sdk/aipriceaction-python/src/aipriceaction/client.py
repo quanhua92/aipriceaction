@@ -982,7 +982,7 @@ class AIPriceAction:
 
     # ── Live data overlay ──
 
-    def fetch_live_data(self, interval: str, *, ma: bool = True) -> Optional[dict]:
+    def fetch_live_data(self, interval: str, *, ma: bool = True, ema: bool = False) -> Optional[dict]:
         """Fetch live OHLCV data from the REST API with caching.
 
         Returns the parsed JSON dict (ticker -> list of candles), or None on failure.
@@ -997,7 +997,7 @@ class AIPriceAction:
         limit = _LIVE_LIMITS.get(interval, 1)
         url = (
             f"{self._live_url}/tickers"
-            f"?interval={interval}&mode=all&format=json&limit={limit}&ma={str(ma).lower()}"
+            f"?interval={interval}&mode=all&format=json&limit={limit}&ma={str(ma).lower()}&ema={str(ema).lower()}"
         )
 
         try:

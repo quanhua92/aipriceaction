@@ -652,6 +652,192 @@ console.log("=========================================\n");
 }
 
 // ===========================
+// config
+// ===========================
+
+// config get — should return valid JSON with use_sma key
+{
+  const r = run("config", "get");
+  r.exit === 0 ? ok("config get (exit=0)") : bad(`config get (exit=${r.exit})`);
+  try {
+    const parsed = JSON.parse(r.out);
+    typeof parsed === "object" && !Array.isArray(parsed)
+      ? ok("config get returns valid JSON object")
+      : bad("config get returns JSON object");
+    parsed.use_sma !== undefined
+      ? ok("config get has use_sma key")
+      : bad("config get missing use_sma key");
+    typeof parsed.use_sma === "boolean"
+      ? ok("config get use_sma is boolean")
+      : bad(`config get use_sma type=${typeof parsed.use_sma}`);
+  } catch {
+    bad("config get is valid JSON");
+  }
+}
+
+// config get use_sma — single key
+{
+  const r = run("config", "get", "use_sma");
+  r.exit === 0 ? ok("config get use_sma (exit=0)") : bad(`config get use_sma (exit=${r.exit})`);
+  (r.out.trim() === "true" || r.out.trim() === "false")
+    ? ok(`config get use_sma returns boolean (${r.out.trim()})`)
+    : bad(`config get use_sma unexpected: ${r.out.trim()}`);
+}
+
+// config get language — single key
+{
+  const r = run("config", "get", "language");
+  r.exit === 0 ? ok("config get language (exit=0)") : bad(`config get language (exit=${r.exit})`);
+  (r.out.trim() === "en" || r.out.trim() === "vn")
+    ? ok(`config get language returns valid (${r.out.trim()})`)
+    : bad(`config get language unexpected: ${r.out.trim()}`);
+}
+
+// config get unknown key
+{
+  const r = run("config", "get", "nonexistent_key");
+  r.exit !== 0 ? ok("config get unknown key exits non-zero") : bad("config get unknown key should fail");
+}
+
+// config path
+{
+  const r = run("config", "path");
+  r.exit === 0 ? ok("config path (exit=0)") : bad(`config path (exit=${r.exit})`);
+  r.out.trim().includes("settings.json")
+    ? ok("config path includes settings.json")
+    : bad(`config path unexpected: ${r.out.trim()}`);
+}
+
+// config get redacts api_key
+{
+  const r = run("config", "get");
+  try {
+    const parsed = JSON.parse(r.out);
+    (!parsed.api_key || parsed.api_key === "***")
+      ? ok("config get redacts api_key")
+      : bad("config get should redact api_key");
+  } catch { /* already tested above */ }
+}
+
+// config set use_sma false — switch to EMA
+{
+  const r = run("config", "set", "use_sma", "false");
+  r.exit === 0 ? ok("config set use_sma false (exit=0)") : bad(`config set use_sma false (exit=${r.exit})`);
+  const verify = run("config", "get", "use_sma");
+  verify.out.trim() === "false"
+    ? ok("config set use_sma false persisted")
+    : bad(`config set use_sma false not persisted: ${verify.out.trim()}`);
+}
+
+// config set use_sma true — restore SMA
+{
+  const r = run("config", "set", "use_sma", "true");
+  r.exit === 0 ? ok("config set use_sma true (exit=0)") : bad(`config set use_sma true (exit=${r.exit})`);
+  const verify = run("config", "get", "use_sma");
+  verify.out.trim() === "true"
+    ? ok("config set use_sma true persisted")
+    : bad(`config set use_sma true not persisted: ${verify.out.trim()}`);
+}
+
+// config set unknown key
+{
+  const r = run("config", "set", "nonexistent", "value");
+  r.exit !== 0 ? ok("config set unknown key exits non-zero") : bad("config set unknown key should fail");
+}
+
+// --sma / --ema flags accepted on analyze
+{
+  const r = run("analyze", "VCB", "--limit", "1", "--sma", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze --sma accepted (exit=0)") : bad(`analyze --sma (exit=${r.exit})`);
+}
+
+{
+  const r = run("analyze", "VCB", "--limit", "1", "--ema", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze --ema accepted (exit=0)") : bad(`analyze --ema (exit=${r.exit})`);
+}
+
+// --sma / --ema flags accepted on get-ohlcv-data
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "1", "--no-system-prompt", "--sma");
+  r.exit === 0 ? ok("get-ohlcv-data --sma accepted (exit=0)") : bad(`get-ohlcv-data --sma (exit=${r.exit})`);
+}
+
+{
+  const r = run("get-ohlcv-data", "VCB", "--limit", "1", "--no-system-prompt", "--ema");
+  r.exit === 0 ? ok("get-ohlcv-data --ema accepted (exit=0)") : bad(`get-ohlcv-data --ema (exit=${r.exit})`);
+}
+
+// --sma / --ema flags accepted on live-data
+{
+  const r = run("live-data", "--top", "1", "--sma");
+  r.exit === 0 ? ok("live-data --sma accepted (exit=0)") : bad(`live-data --sma (exit=${r.exit})`);
+}
+
+{
+  const r = run("live-data", "--top", "1", "--ema");
+  r.exit === 0 ? ok("live-data --ema accepted (exit=0)") : bad(`live-data --ema (exit=${r.exit})`);
+}
+
+// --sma / --ema flags accepted on performers
+{
+  const r = run("performers", "--limit", "1", "--sma");
+  r.exit === 0 ? ok("performers --sma accepted (exit=0)") : bad(`performers --sma (exit=${r.exit})`);
+}
+
+{
+  const r = run("performers", "--limit", "1", "--ema");
+  r.exit === 0 ? ok("performers --ema accepted (exit=0)") : bad(`performers --ema (exit=${r.exit})`);
+}
+
+// analyze context includes MA columns with --sma
+{
+  const r = run("analyze", "VCB", "--limit", "3", "--sma", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze --sma context (exit=0)") : bad(`analyze --sma context (exit=${r.exit})`);
+  const vcbLine = r.out.split("\n").find(l => l.includes("VCB") && l.includes("2026"));
+  vcbLine && vcbLine.includes("ma10")
+    ? ok("analyze --sma context has ma10 column")
+    : bad("analyze --sma context missing ma10 column");
+  vcbLine && vcbLine.includes("ma50_score")
+    ? ok("analyze --sma context has ma50_score column")
+    : bad("analyze --sma context missing ma50_score column");
+  contains(r.out, "SMA")
+    ? ok("analyze --sma context labels SMA")
+    : bad("analyze --sma context labels SMA");
+}
+
+// analyze context includes MA columns with --ema
+{
+  const r = run("analyze", "VCB", "--limit", "3", "--ema", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze --ema context (exit=0)") : bad(`analyze --ema context (exit=${r.exit})`);
+  const vcbLine = r.out.split("\n").find(l => l.includes("VCB") && l.includes("2026"));
+  vcbLine && vcbLine.includes("ma10")
+    ? ok("analyze --ema context has ma10 column")
+    : bad("analyze --ema context missing ma10 column");
+  vcbLine && vcbLine.includes("ma50_score")
+    ? ok("analyze --ema context has ma50_score column")
+    : bad("analyze --ema context missing ma50_score column");
+  contains(r.out, "EMA")
+    ? ok("analyze --ema context labels EMA")
+    : bad("analyze --ema context labels EMA");
+}
+
+// analyze --sma and --ema produce different MA values (not identical)
+{
+  const rSma = run("analyze", "VCB", "--limit", "3", "--sma", "--context-only", "--no-system-prompt");
+  const rEma = run("analyze", "VCB", "--limit", "3", "--ema", "--context-only", "--no-system-prompt");
+  rSma.exit === 0 && rEma.exit === 0
+    ? ok("analyze sma vs ema both exit=0")
+    : bad("analyze sma vs ema exit code issue");
+  const smaLine = rSma.out.split("\n").find(l => l.includes("VCB") && l.includes("2026"));
+  const emaLine = rEma.out.split("\n").find(l => l.includes("VCB") && l.includes("2026"));
+  const smaMa50 = smaLine ? smaLine.match(/ma50=(\d+[\.\d]*)/)?.[1] : null;
+  const emaMa50 = emaLine ? emaLine.match(/ma50=(\d+[\.\d]*)/)?.[1] : null;
+  smaMa50 && emaMa50 && smaMa50 !== emaMa50
+    ? ok(`analyze sma ma50=${smaMa50} != ema ma50=${emaMa50}`)
+    : bad(`analyze sma and ema ma50 should differ (sma=${smaMa50}, ema=${emaMa50})`);
+}
+
+// ===========================
 // Results
 // ===========================
 

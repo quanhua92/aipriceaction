@@ -31,7 +31,10 @@ Both commands use the same set of tools. The AI decides when to call them.
 
   ┌───────────────────┬─────────────────────────────────────────────────┐
   │ get_live_data     │ Latest candle for tickers (top 50 by value)     │
-  │ get_ohlcv_data    │ Historical OHLCV with MA indicators             │
+   │ get_ohlcv_data    │ Historical OHLCV with MA indicators (SMA/EMA)   │
+   │                    │ MA type follows the `use_sma` setting          │
+   │                    │ (default: SMA). Use `aipa config set           │
+   │                    │ use_sma false` for EMA.                         │
   │ get_ticker_list   │ List tickers with metadata (sector, source)     │
   │ get_performers    │ Top/worst performers ranked by metric           │
   │ get_volume_profile│ Volume-by-price histogram with POC & VA         │

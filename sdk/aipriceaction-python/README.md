@@ -325,7 +325,7 @@ prompt = get_system_prompt("en",
 | Parameter | Default | Description |
 |---|---|---|
 | `lang` | — | Language: `"en"` or `"vn"` |
-| `ma_type` | `"ema"` | Moving average type: `"ema"` or `"sma"` |
+| `ma_type` | `"ema"` | Moving average type (SDK default; aipa-cli defaults to SMA via setting): `"ema"` or `"sma"` |
 | `include_ma_score` | `True` | Include MA Score explanation section |
 | `include_disclaimer` | `True` | Include investment disclaimer section |
 | `include_data_policy` | `True` | Include strict data-usage rules (never hallucinate, ask user to paste data). Set `False` for agents working with text from other agents |

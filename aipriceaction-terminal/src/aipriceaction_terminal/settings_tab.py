@@ -100,6 +100,14 @@ class SettingsTab(Vertical):
                 allow_blank=False,
                 id="setting-language",
             )
+        with Horizontal(classes="setting-row"):
+            yield Static("MA Type:", classes="setting-label")
+            yield Select(
+                [("SMA (Simple)", "sma"), ("EMA (Exponential)", "ema")],
+                value="sma",
+                allow_blank=False,
+                id="setting-ma-type",
+            )
         yield Static("")
         yield Static("[dim]─ API Configuration ─[/dim]", classes="section-header")
         with Horizontal(classes="setting-row"):
@@ -122,6 +130,7 @@ class SettingsTab(Vertical):
         self.query_one("#setting-ticker", Input).value = saved.get("ticker", "VNINDEX")
         self.query_one("#setting-interval", Select).value = saved.get("interval", "1D")
         self.query_one("#setting-language", Select).value = saved.get("language", "en")
+        self.query_one("#setting-ma-type", Select).value = "sma" if saved.get("use_sma", True) else "ema"
         self.query_one("#setting-api-key", Input).value = saved.get("api_key", "")
         self.query_one("#setting-base-url", Input).value = saved.get("openai_base_url", "")
         self.query_one("#setting-model", Input).value = saved.get("openai_model", "")
@@ -146,6 +155,7 @@ class SettingsTab(Vertical):
             ticker = self.query_one("#setting-ticker", Input).value.strip().upper()
             interval = self.query_one("#setting-interval", Select).value
             language = self.query_one("#setting-language", Select).value
+            ma_type = self.query_one("#setting-ma-type", Select).value
             api_key = self.query_one("#setting-api-key", Input).value.strip()
             base_url = self.query_one("#setting-base-url", Input).value.strip()
             model = self.query_one("#setting-model", Input).value.strip()
@@ -157,7 +167,7 @@ class SettingsTab(Vertical):
             if language:
                 self.app.language = language
                 from aipriceaction import AIContextBuilder
-                self.app.builder = AIContextBuilder(lang=language)
+                self.app.builder = AIContextBuilder(lang=language, ma_type=ma_type)
                 try:
                     from .agents import AgentSession, AgentConfig
                     self.app.agent = AgentSession(AgentConfig(lang=language))
@@ -170,6 +180,7 @@ class SettingsTab(Vertical):
                 "ticker": ticker,
                 "interval": interval,
                 "language": language,
+                "use_sma": ma_type == "sma",
             }
             # Only persist API fields when .env/env is NOT providing the value,
             # so external config always takes priority.
