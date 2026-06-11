@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.47] - 2026-06-11
+
+### Changed
+- `--no-system-prompt` and `--lang` are now global flags accepted by all CLI commands (previously only on `analyze`/`get-ohlcv-data`/`deep-research`). AI agents can append these flags to any command without triggering unrecognized argument errors. Only `analyze` and `get-ohlcv-data` consume `--no-system-prompt`; only `analyze` and `deep-research` consume `--lang`.
+
 ## [0.1.46] - 2026-06-01
 
 ### Added
