@@ -122,7 +122,7 @@
     { "symbol": "AUGO", "name": "Aura Minerals Inc.", "category": "Stock" },
     { "symbol": "QQQ", "name": "Invesco QQQ Trust", "category": "ETF" },
     { "symbol": "SPY", "name": "SPDR S&P 500 ETF Trust", "category": "ETF" },
-    { "symbol": "SPAX.PVT", "name": "SpaceX", "category": "Private" },
+    { "symbol": "SPCX", "name": "SpaceX", "category": "Stock" },
     { "symbol": "OPAI.PVT", "name": "OpenAI", "category": "Private" },
     { "symbol": "ANTH.PVT", "name": "Anthropic", "category": "Private" },
     { "symbol": "STRI.PVT", "name": "Stripe", "category": "Private" },
