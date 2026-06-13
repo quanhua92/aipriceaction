@@ -202,7 +202,7 @@ class DeepResearchPane(Vertical):
         self._run_deep_research(question)
 
     @work(exclusive=True)
-    async def _run_deep_research(self, question: str) -> None:
+    async def _run_deep_research(self, question: str, source: str | None = None) -> None:
         """Run deep research pipeline and stream output to the SafeRichLog."""
         from .deep_research import run_deep_research
 
@@ -220,6 +220,7 @@ class DeepResearchPane(Vertical):
                 lang=getattr(self.app, "lang", None),
                 output=_output,
                 run_pipeline=True,
+                source=source,
             )
         except SystemExit:
             log.write("[bold red]OPENAI_API_KEY is not set.[/bold red]\n")

@@ -68,6 +68,7 @@ async def run_tui_analyze(
     ticker: str,
     interval: str,
     *,
+    source: str | None = None,
     cancel_event: asyncio.Event | None = None,
     question_index: int | None = None,
     custom_question: str | None = None,
@@ -86,6 +87,7 @@ async def run_tui_analyze(
     context = await asyncio.to_thread(
         builder.build, ticker=ticker, interval=interval,
         include_system_prompt=False,
+        source=source,
         reference_ticker=reference_ticker,
     )
 

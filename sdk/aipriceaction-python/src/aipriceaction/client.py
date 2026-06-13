@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 # Source auto-detection priority (matches Rust's resolve_ticker_sources)
 _SOURCE_PRIORITY = ["vn", "yahoo", "sjc", "crypto"]
+_SOURCE_ALIASES: dict[str, str] = {"global": "yahoo"}
 
 _OHLCV_COLUMNS = ["time", "open", "high", "low", "close", "volume"]
 
@@ -321,6 +322,18 @@ class AIPriceAction:
         self._fresh_cache_hits = 0
         return False
 
+    # ── Source normalization ──
+
+    @staticmethod
+    def normalize_source(source: Optional[str]) -> Optional[str]:
+        """Normalize user-facing source names to internal names.
+
+        "global" → "yahoo", others pass through.
+        """
+        if source is None:
+            return None
+        return _SOURCE_ALIASES.get(source, source)
+
     # ── Ticker metadata ──
 
     def get_tickers(
@@ -344,8 +357,9 @@ class AIPriceAction:
             tickers = self._fetch_tickers()
             self._tickers_cache = tickers
 
-        if source:
-            tickers = [t for t in tickers if t.source == source]
+        effective = self.normalize_source(source)
+        if effective:
+            tickers = [t for t in tickers if t.source == effective]
 
         return tickers
 
@@ -401,11 +415,13 @@ class AIPriceAction:
     def _find_source(self, ticker: str, source: Optional[str]) -> tuple[str, str]:
         """Resolve (source, ticker) for a given ticker symbol.
 
-        If source is provided, use it directly. Otherwise auto-detect
-        from tickers.json using priority: vn > yahoo > sjc > crypto.
+        If source is provided, normalize and use it directly.
+        Otherwise auto-detect from tickers.json using priority:
+        vn > yahoo > sjc > crypto.
         """
-        if source:
-            return source, ticker
+        effective = self.normalize_source(source)
+        if effective:
+            return effective, ticker
 
         tickers = self.get_tickers()
         for src in _SOURCE_PRIORITY:
@@ -424,16 +440,17 @@ class AIPriceAction:
 
         If tickers is None, returns all tickers for the given source.
         """
+        effective = self.normalize_source(source)
         all_tickers = self.get_tickers()
 
-        if source:
-            all_tickers = [t for t in all_tickers if t.source == source]
+        if effective:
+            all_tickers = [t for t in all_tickers if t.source == effective]
 
         if tickers is not None:
             resolved: list[tuple[str, str]] = []
             for sym in tickers:
-                if source:
-                    resolved.append((source, sym))
+                if effective:
+                    resolved.append((effective, sym))
                 else:
                     resolved.append(self._find_source(sym, None))
             return resolved

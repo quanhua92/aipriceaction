@@ -396,6 +396,14 @@ console.log("=========================================\n");
 // analyze context-only
 // ===========================
 
+// SPCX (SpaceX) global ticker — regression: source param not forwarded to get_ohlcv
+{
+  const r = run("analyze", "SPCX", "--source", "global", "--limit", "5", "--context-only", "--no-system-prompt");
+  r.exit === 0 ? ok("analyze SPCX global source (exit=0)") : bad(`analyze SPCX global source (exit=${r.exit})`);
+  contains(r.out, "SPCX") ? ok("analyze SPCX context has SPCX ticker") : bad("analyze SPCX context missing SPCX ticker");
+  lines(r.out) >= 5 ? ok(`analyze SPCX returns >=5 lines (${lines(r.out)})`) : bad(`analyze SPCX returns >=5 lines (${lines(r.out)})`);
+}
+
 {
   const r = run("analyze", "VCB", "--limit", "20", "--context-only", "--no-system-prompt");
   r.exit === 0 ? ok("analyze VCB context-only (exit=0)") : bad(`analyze VCB context-only (exit=${r.exit})`);

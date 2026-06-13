@@ -503,7 +503,7 @@ class ChatTab(Vertical):
 
     @work(exclusive=True)
     async def _run_export(
-        self, tickers: list[str], interval: str, export_dir: Path
+        self, tickers: list[str], interval: str, export_dir: Path, source: str | None = None
     ) -> None:
         """Build AI context and export to markdown file."""
         try:
@@ -511,11 +511,11 @@ class ChatTab(Vertical):
 
             if len(tickers) == 1:
                 context = await asyncio.to_thread(
-                    builder.build, ticker=tickers[0], interval=interval
+                    builder.build, ticker=tickers[0], interval=interval, source=source,
                 )
             else:
                 context = await asyncio.to_thread(
-                    builder.build, tickers=tickers, interval=interval
+                    builder.build, tickers=tickers, interval=interval, source=source,
                 )
 
             export_dir.mkdir(parents=True, exist_ok=True)
@@ -572,7 +572,7 @@ class ChatTab(Vertical):
         log.write(f"[dim]Thought for {len(text)} chars (Ctrl+O to view)[/dim]")
 
     @work(exclusive=True)
-    async def _run_deep_research(self, question: str) -> None:
+    async def _run_deep_research(self, question: str, source: str | None = None) -> None:
         """Run deep research pipeline and stream output to chat log."""
         from .deep_research import run_deep_research
 
@@ -593,6 +593,7 @@ class ChatTab(Vertical):
                 lang=getattr(self.app, "lang", None),
                 output=_output,
                 run_pipeline=True,
+                source=source,
             )
             # Persist assistant message
             self._session.append_message(

@@ -75,7 +75,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
     """Factory: creates the get_ohlcv_data tool."""
 
     @tool
-    def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 5) -> str:
+    def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 5, source: str | None = None) -> str:
         """Fetch historical OHLCV data with MA indicators and scores.
 
         Accepts a single ticker or multiple comma-separated tickers.
@@ -84,6 +84,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
             ticker: Ticker symbol(s), comma-separated for multiple (e.g. "VCB" or "VHM,VIC,GEX,BID,VRE").
             interval: Time interval — "1D" (default), "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W".
             limit: Number of bars to return (default 5).
+            source: Data source — "vn" (default), "yahoo"/"global", "crypto", "sjc". None = auto-detect.
         """
         _, builder = _ensure_clients(lang)
         symbols = [t.strip() for t in ticker.split(",") if t.strip()]
@@ -93,6 +94,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
                     ticker=symbols[0],
                     interval=interval,
                     limit=limit,
+                    source=source,
                     reference_ticker=None,
                     include_system_prompt=False,
                 )
@@ -101,6 +103,7 @@ def create_ohlcv_tool(lang: str = "en") -> ToolDef:
                     tickers=symbols,
                     interval=interval,
                     limit=limit,
+                    source=source,
                     reference_ticker=None,
                     include_system_prompt=False,
                 )
@@ -161,7 +164,7 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
     """Factory: creates the get_live_data tool."""
 
     @tool
-    def get_live_data(tickers: str = "", interval: str = "1D", top: int = 50) -> str:
+    def get_live_data(tickers: str = "", interval: str = "1D", top: int = 50, source: str | None = None) -> str:
         """Fetch the latest live candle for one or more tickers at once.
 
         Prefer calling this FIRST with tickers="" (all tickers) to get
@@ -180,6 +183,7 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
             tickers: Comma-separated ticker symbols. Leave empty ("") to get top tickers by trading value.
             interval: Time interval — "1D" (default), "1h", "1m", "5m", "15m", "30m", "4h", "1W", "2W".
             top: Maximum number of tickers to return when tickers="" (default 50). Increase this value if you need more tickers (e.g. top=200).
+            source: Data source — "vn" (default), "yahoo"/"global", "crypto". None = vn.
         """
         client, _ = _ensure_clients(lang)
         try:
@@ -189,6 +193,12 @@ def create_live_data_tool(lang: str = "en") -> ToolDef:
             return f"Error fetching live data: {e}"
         if data is None:
             return "Failed to fetch live data."
+
+        # Filter by source if specified
+        if source:
+            tickers_meta = client.get_tickers(source=source)
+            source_symbols = {t.ticker for t in tickers_meta}
+            data = {k: v for k, v in data.items() if k in source_symbols}
 
         filter_set = {t.strip() for t in tickers.split(",") if t.strip()} if tickers else None
 
@@ -332,6 +342,7 @@ def create_volume_profile_tool(lang: str = "en") -> ToolDef:
         end_date: str | None = None,
         bins: int = 50,
         value_area_pct: float = 70.0,
+        source: str | None = None,
     ) -> str:
         """Compute volume-by-price histogram for a ticker using 1-minute data.
 
@@ -365,18 +376,19 @@ def create_volume_profile_tool(lang: str = "en") -> ToolDef:
             sd = ed = today
 
         # Resolve source for tick size
-        source = "vn"
-        try:
-            tickers_meta = client.get_tickers()
-            for t in tickers_meta:
-                if t.ticker == ticker:
-                    source = t.source or "vn"
-                    break
-        except Exception:
-            pass
+        if source is None:
+            source = "vn"
+            try:
+                tickers_meta = client.get_tickers()
+                for t in tickers_meta:
+                    if t.ticker == ticker:
+                        source = t.source or "vn"
+                        break
+            except Exception:
+                pass
 
         try:
-            df = client.get_ohlcv(ticker, interval="1m", start_date=sd, end_date=ed, ma=False)
+            df = client.get_ohlcv(ticker, interval="1m", start_date=sd, end_date=ed, ma=False, source=source)
         except Exception as e:
             return f"Error fetching 1m data for {ticker}: {e}"
 

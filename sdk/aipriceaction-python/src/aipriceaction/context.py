@@ -197,6 +197,7 @@ class AIContextBuilder:
                 limit=effective_limit,
                 start_date=start_date,
                 end_date=end_date,
+                source=source,
                 ma=ma,
                 ema=use_ema,
             )
@@ -211,6 +212,7 @@ class AIContextBuilder:
                 limit=effective_limit,
                 start_date=start_date,
                 end_date=end_date,
+                source=source,
                 ma=ma,
                 ema=use_ema,
             )
@@ -252,6 +254,7 @@ class AIContextBuilder:
                 limit=effective_limit,
                 start_date=start_date,
                 end_date=end_date,
+                source=source,
                 ma=ma,
                 ema=use_ema,
             )

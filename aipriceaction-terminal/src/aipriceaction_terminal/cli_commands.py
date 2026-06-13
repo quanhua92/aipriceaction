@@ -699,6 +699,7 @@ def cmd_volume_profile(args) -> None:
         interval="1m",
         start_date=start_date,
         end_date=end_date,
+        source=source,
         ma=False,
     )
 
