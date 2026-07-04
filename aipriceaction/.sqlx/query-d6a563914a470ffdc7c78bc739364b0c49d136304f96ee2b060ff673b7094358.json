@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ohlcv (ticker_id, interval, time, open, high, low, close, volume, updated_at)\n         SELECT $2, interval, time, open, high, low, close, volume, NOW()\n         FROM ohlcv WHERE ticker_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d6a563914a470ffdc7c78bc739364b0c49d136304f96ee2b060ff673b7094358"
+}

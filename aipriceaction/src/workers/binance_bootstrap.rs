@@ -74,6 +74,92 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                 tracing::warn!(ticker, ticker_id, "delete ohlcv failed: {e}");
             }
 
+            // ── copy_from: refresh source, then seed this ticker ──
+            // When a ticker is renamed on Binance (e.g. TONUSDT → GRAMUSDT), the
+            // new ticker is seeded with the old ticker's history. The source is
+            // first refreshed (delta since its last row) so stale data doesn't
+            // leak into the new ticker.
+            let copy_source = binance_shared::load_binance_tickers_with_meta()
+                .ok()
+                .and_then(|v| {
+                    v.into_iter()
+                        .find(|(s, _, _)| s == ticker)
+                        .and_then(|(_, _, cf)| cf)
+                });
+
+            if let Some(src_ticker) = copy_source {
+                match ohlcv::get_ticker_id(&pool, "crypto", &src_ticker).await {
+                    Ok(Some(src_id)) => {
+                        // 1. Refresh source across all intervals (delta since its last row)
+                        for (binance_interval, db_interval) in
+                            &[("1d", "1D"), ("1h", "1h"), ("1m", "1m")]
+                        {
+                            let start = ohlcv::get_latest_time(&pool, src_id, db_interval)
+                                .await
+                                .ok()
+                                .flatten()
+                                .map(|t| t + chrono::Duration::seconds(1));
+                            match provider
+                                .get_history_since(&src_ticker, binance_interval, 1000, start)
+                                .await
+                            {
+                                Ok(data) if !data.is_empty() => {
+                                    let n = data.len();
+                                    binance_shared::enhance_and_save(
+                                        &pool,
+                                        src_id,
+                                        &data,
+                                        db_interval,
+                                        "crypto",
+                                        &src_ticker,
+                                        &redis_client,
+                                    )
+                                    .await;
+                                    tracing::warn!(
+                                        "[BINANCE-BOOTSTRAP] refreshed source {} {}: +{} rows",
+                                        src_ticker,
+                                        db_interval,
+                                        n
+                                    );
+                                }
+                                Ok(_) => tracing::info!(
+                                    "[BINANCE-BOOTSTRAP] source {} {} already current",
+                                    src_ticker,
+                                    db_interval
+                                ),
+                                Err(e) => tracing::warn!(
+                                    "[BINANCE-BOOTSTRAP] refresh {} {} failed: {}",
+                                    src_ticker,
+                                    db_interval,
+                                    e
+                                ),
+                            }
+                        }
+
+                        // 2. Copy refreshed source → this ticker (all intervals)
+                        match ohlcv::copy_ohlcv(&pool, src_id, ticker_id).await {
+                            Ok(n) => tracing::warn!(
+                                "[BINANCE-BOOTSTRAP] {} ← seeded {} rows from {} (id={})",
+                                ticker,
+                                n,
+                                src_ticker,
+                                src_id
+                            ),
+                            Err(e) => tracing::error!(
+                                "[BINANCE-BOOTSTRAP] copy {} → {} FAILED: {}",
+                                src_ticker,
+                                ticker,
+                                e
+                            ),
+                        }
+                    }
+                    _ => tracing::warn!(
+                        "[BINANCE-BOOTSTRAP] copy_from='{}' not in DB; skipping seed, will fetch own data only",
+                        src_ticker
+                    ),
+                }
+            }
+
             // ── 1d + 1h + 1m: Vision monthly ZIPs, fill current-month gap with daily ZIPs ──
             let now = chrono::Utc::now();
             let today = now.date_naive();

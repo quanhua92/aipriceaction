@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tickers SET status = 'delisted'\n         WHERE source = 'crypto'\n           AND status IS DISTINCT FROM 'delisted'\n           AND ticker <> ALL($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "803359473cb02ce40911c86a1262b2b27fb25f41cb40a8db5055e5943eaf437c"
+}

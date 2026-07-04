@@ -1,7 +1,7 @@
 {
   "source": "binance",
   "fetched_at": "2025-11-17T02:28:50.587Z",
-  "count": 61,
+  "count": 62,
   "data": [
     { "rank": 1, "symbol": "BTCUSDT", "name": "Bitcoin" },
     { "rank": 2, "symbol": "ETHUSDT", "name": "Ethereum" },
@@ -22,7 +22,8 @@
     { "rank": 24, "symbol": "SHIBUSDT", "name": "Shiba Inu" },
     { "rank": 25, "symbol": "DOTUSDT", "name": "Polkadot" },
     { "rank": 26, "symbol": "UNIUSDT", "name": "Uniswap" },
-    { "rank": 27, "symbol": "TONUSDT", "name": "Toncoin" },
+    { "rank": 27, "symbol": "TONUSDT", "name": "Toncoin", "status": "delisted" },
+    { "rank": 28, "symbol": "GRAMUSDT", "name": "Toncoin", "copy_from": "TONUSDT" },
     { "rank": 33, "symbol": "TAOUSDT", "name": "Bittensor" },
     { "rank": 34, "symbol": "NEARUSDT", "name": "NEAR Protocol" },
     { "rank": 36, "symbol": "ICPUSDT", "name": "Internet Computer" },

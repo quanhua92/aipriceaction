@@ -960,6 +960,39 @@ pub async fn delete_ohlcv_for_ticker(pool: &PgPool, ticker_id: i32) -> sqlx::Res
     Ok(result.rows_affected())
 }
 
+/// Look up a ticker's id by `(source, ticker)`. Returns `None` if not present.
+pub async fn get_ticker_id(pool: &PgPool, source: &str, ticker: &str) -> sqlx::Result<Option<i32>> {
+    sqlx::query_scalar!(
+        "SELECT id FROM tickers WHERE source = $1 AND ticker = $2",
+        source,
+        ticker
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+/// Copy all OHLCV rows from one ticker_id to another across all intervals.
+///
+/// Used by the bootstrap worker's `copy_from` flow: when a ticker is renamed
+/// (e.g. TONUSDT → GRAMUSDT), the new ticker is seeded with the old ticker's
+/// history. The caller must ensure the destination ticker's OHLCV is empty
+/// (`delete_ohlcv_for_ticker` first); the primary key `(ticker_id, interval, time)`
+/// guarantees no duplicate-timestamp conflicts because `from_id != to_id`.
+///
+/// Returns the number of rows inserted.
+pub async fn copy_ohlcv(pool: &PgPool, from_id: i32, to_id: i32) -> sqlx::Result<u64> {
+    let result = sqlx::query!(
+        "INSERT INTO ohlcv (ticker_id, interval, time, open, high, low, close, volume, updated_at)
+         SELECT $2, interval, time, open, high, low, close, volume, NOW()
+         FROM ohlcv WHERE ticker_id = $1",
+        from_id,
+        to_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected())
+}
+
 /// Set a new ticker's status to 'full-download-requested' so the dividend worker
 /// picks it up for a full historical download. Only applies to source='vn' tickers.
 /// Returns the number of rows updated (0 or 1).
