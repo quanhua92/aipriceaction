@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::time::Duration;
 
+use chrono::{Duration as ChronoDuration, Utc};
 use tokio::time::timeout;
 
 use super::ohlcv::OhlcvData;
@@ -139,7 +140,7 @@ impl VnHistoryProvider {
             }
         };
         let bars = response.map_err(|reason| VnHistoryError::SourceFailed { source, reason })?;
-        normalize_page(bars, count_back, before_timestamp).map_err(|reason| {
+        normalize_page(bars, count_back, before_timestamp, source).map_err(|reason| {
             if reason == "no data" {
                 VnHistoryError::NoData
             } else {
@@ -199,8 +200,11 @@ fn normalize_page(
     bars: Vec<OhlcvData>,
     count_back: u32,
     before_timestamp: Option<i64>,
+    source: &'static str,
 ) -> Result<Vec<OhlcvData>, String> {
     let mut by_time = BTreeMap::new();
+    let old_bar_cutoff = Utc::now() - ChronoDuration::days(30);
+    let mut invalid_old_bars = 0usize;
     for bar in bars {
         if before_timestamp.is_some_and(|before| bar.time.timestamp() >= before) {
             continue;
@@ -212,12 +216,26 @@ fn normalize_page(
             || bar.high < bar.open.max(bar.close)
             || bar.low > bar.open.min(bar.close)
         {
+            // Some historical adjusted series contain isolated impossible
+            // candles. Preserve every valid price; leave a dated gap rather
+            // than fabricate OHLC values or discard the whole rebuild.
+            if bar.time < old_bar_cutoff {
+                tracing::warn!(source, symbol = ?bar.symbol, time = %bar.time,
+                    open = bar.open, high = bar.high, low = bar.low, close = bar.close,
+                    "skipping invalid old VN history candle");
+                invalid_old_bars += 1;
+                continue;
+            }
             return Err(format!("invalid OHLC at {}", bar.time));
         }
         by_time.insert(bar.time, bar);
     }
     if by_time.is_empty() {
-        return Err("no data".to_string());
+        return Err(if invalid_old_bars > 0 {
+            "all returned bars have invalid OHLC".to_string()
+        } else {
+            "no data".to_string()
+        });
     }
     let limit = count_back as usize;
     Ok(by_time
