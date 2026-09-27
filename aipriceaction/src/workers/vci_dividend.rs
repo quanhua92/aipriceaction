@@ -154,8 +154,18 @@ async fn recover_daily(
 }
 
 async fn fail_daily(pool: &PgPool, ticker_id: i32, symbol: &str, reason: &str) {
-    tracing::warn!(%symbol, %reason, "daily recovery deferred");
-    if let Err(e) = vci_recovery::defer_daily(pool, ticker_id).await {
+    // A failed full rebuild must yield to the rest of the queue. Repeatedly
+    // retrying the oldest bad ticker every minute can prevent newer stale
+    // tickers from ever getting their first attempt.
+    let retry_delay_secs = if reason.contains("invalid page") {
+        2 * 60 * 60
+    } else if reason.contains("VPS failed (") {
+        15 * 60
+    } else {
+        60
+    };
+    tracing::warn!(%symbol, %reason, retry_delay_secs, "daily recovery deferred");
+    if let Err(e) = vci_recovery::defer_daily(pool, ticker_id, retry_delay_secs).await {
         tracing::error!(%symbol, "failed to defer daily recovery: {e}");
     }
 }

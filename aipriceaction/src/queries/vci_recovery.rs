@@ -125,9 +125,10 @@ pub async fn mark_daily_ready(pool: &PgPool, ticker_id: i32) -> sqlx::Result<()>
     Ok(())
 }
 
-pub async fn defer_daily(pool: &PgPool, ticker_id: i32) -> sqlx::Result<()> {
-    sqlx::query("UPDATE tickers SET next_1d = NOW() + INTERVAL '60 seconds' WHERE id = $1")
+pub async fn defer_daily(pool: &PgPool, ticker_id: i32, retry_delay_secs: i64) -> sqlx::Result<()> {
+    sqlx::query("UPDATE tickers SET next_1d = NOW() + $2 * INTERVAL '1 second' WHERE id = $1")
         .bind(ticker_id)
+        .bind(retry_delay_secs)
         .execute(pool)
         .await?;
     Ok(())
