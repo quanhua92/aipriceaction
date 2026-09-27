@@ -5,6 +5,7 @@ use crate::models::interval::Interval;
 use crate::providers::binance::BinanceProvider;
 use crate::providers::udf::UdfProvider;
 use crate::providers::vci::VciProvider;
+use crate::providers::vn_history::VnHistoryProvider;
 use crate::providers::yahoo::YahooProvider;
 use crate::services::checkpoint;
 use crate::services::ohlcv;
@@ -88,6 +89,30 @@ pub enum Commands {
         /// Number of data points to request (default: 10)
         #[arg(long, default_value = "10")]
         count_back: u32,
+    },
+    /// Probe VPS-first, VCI-fallback Vietnam OHLCV history without writing data
+    TestVnHistoryProvider {
+        /// Ticker symbol (default: FPT)
+        #[arg(long, default_value = "FPT")]
+        ticker: String,
+        /// Interval: 1D, 1H, or 1m (default: 1D)
+        #[arg(long, default_value = "1D")]
+        interval: String,
+        /// Maximum number of bars returned (default: 20)
+        #[arg(long, default_value = "20")]
+        count_back: u32,
+        /// Exclusive cursor: YYYY-MM-DD, RFC3339, or Unix seconds
+        #[arg(long)]
+        before: Option<String>,
+        /// Requests per minute per proxy client (default: 30)
+        #[arg(long, default_value = "30")]
+        rate_limit: u32,
+        /// Also create a direct HTTP client; default uses HTTP_PROXIES only
+        #[arg(long)]
+        allow_direct: bool,
+        /// Exercise the VCI fallback branch without contacting VPS
+        #[arg(long)]
+        simulate_vps_failure: bool,
     },
     /// Benchmark critical API query paths directly against the database
     TestPerf,
@@ -212,6 +237,22 @@ fn init_fmt_subscriber() {
         )
         .with_target(false)
         .init();
+}
+
+fn parse_history_before(value: &str) -> Result<i64, String> {
+    if let Ok(timestamp) = value.parse::<i64>() {
+        return Ok(timestamp);
+    }
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        return Ok(date
+            .and_hms_opt(0, 0, 0)
+            .expect("valid midnight")
+            .and_utc()
+            .timestamp());
+    }
+    chrono::DateTime::parse_from_rfc3339(value)
+        .map(|time| time.timestamp())
+        .map_err(|_| "--before must be Unix seconds, YYYY-MM-DD, or RFC3339".to_string())
 }
 
 pub fn run() {
@@ -1018,6 +1059,65 @@ pub fn run() {
                 tracing::info!("{}", "─".repeat(60));
                 tracing::info!("Test complete — ticker={}, clients={}, rate_limit={}/min", ticker, provider.client_count(), rate_limit);
             });
+        }
+        Commands::TestVnHistoryProvider {
+            ticker,
+            interval,
+            count_back,
+            before,
+            rate_limit,
+            allow_direct,
+            simulate_vps_failure,
+        } => {
+            init_fmt_subscriber();
+            let result = (|| -> Result<(), String> {
+                if !matches!(interval.as_str(), "1D" | "1H" | "1m") {
+                    return Err("--interval must be 1D, 1H, or 1m".to_string());
+                }
+                let before_timestamp = before
+                    .as_deref()
+                    .map(parse_history_before)
+                    .transpose()?;
+                let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?;
+                rt.block_on(async {
+                    let mut provider = VnHistoryProvider::new(rate_limit, allow_direct)?;
+                    if simulate_vps_failure {
+                        provider = provider.simulate_vps_failure();
+                    }
+                    let started = std::time::Instant::now();
+                    let page = provider
+                        .get_history(&ticker.to_uppercase(), &interval, count_back, before_timestamp)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    println!(
+                        "ticker={} interval={} source={} bars={} elapsed_ms={} route={}",
+                        ticker.to_uppercase(),
+                        interval,
+                        page.source,
+                        page.bars.len(),
+                        started.elapsed().as_millis(),
+                        if allow_direct { "direct-allowed" } else { "proxy-only" }
+                    );
+                    if let Some(reason) = page.fallback_reason {
+                        println!("fallback_reason={reason}");
+                    }
+                    if let (Some(first), Some(last)) = (page.bars.first(), page.bars.last()) {
+                        println!("first={} last={}", first.time, last.time);
+                        println!("next_before={}", first.time.timestamp());
+                    }
+                    for bar in page.bars.iter().rev().take(5).rev() {
+                        println!(
+                            "{} O={:.2} H={:.2} L={:.2} C={:.2} V={}",
+                            bar.time, bar.open, bar.high, bar.low, bar.close, bar.volume
+                        );
+                    }
+                    Ok(())
+                })
+            })();
+            if let Err(e) = result {
+                eprintln!("test-vn-history-provider failed: {e}");
+                std::process::exit(1);
+            }
         }
         Commands::TestPerf => {
             init_fmt_subscriber();

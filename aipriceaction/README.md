@@ -35,6 +35,28 @@ Edit `.env` to configure `DATABASE_URL` (required by the API server) and enable 
 
 After changing `.env`, restart: `docker compose up -d`.
 
+### Probe Vietnam OHLCV providers locally
+
+`test-vn-history-provider` fetches one page without a database or Redis write. It
+tries VPS first and falls back to VCI when VPS fails. By default both providers
+use only the SOCKS5/HTTP routes in `HTTP_PROXIES`; the command fails clearly if
+no proxy is configured. Run it from this directory so `.env` is loaded:
+
+```bash
+cargo run --release -- test-vn-history-provider --ticker FPT --interval 1D --count-back 20
+cargo run --release -- test-vn-history-provider --ticker VPB --interval 1m --count-back 20
+cargo run --release -- test-vn-history-provider --ticker FPT --interval 1D --before 2026-09-25
+cargo run --release -- test-vn-history-provider --ticker FPT --simulate-vps-failure
+```
+
+The output includes the source used, fallback reason, newest bars, and a
+`next_before` cursor for checking the next historical page. `--allow-direct`
+opts into the existing direct client when local proxy access is unavailable.
+The daily, hourly, minute, and dividend recovery workers use the same
+VPS-first, VCI-fallback provider after the new worker image is deployed. They
+require `HTTP_PROXIES` and use proxy-only connections. `test-vci` and
+`test-udf` remain standalone source diagnostics.
+
 ### Production (HAProxy + rolling updates)
 
 For zero-downtime deployments with multiple API replicas:
@@ -50,7 +72,7 @@ docker compose -f docker-compose.prod.yml up -d
 This starts five services:
 - **haproxy** -- Load balancer on port 3000, routes traffic across API replicas
 - **aipriceaction-api** (x3) -- API servers with workers disabled, health-checked by HAProxy
-- **aipriceaction-worker** (x1) -- Background sync workers (VCI, Binance, Yahoo, SJC)
+- **aipriceaction-worker** (x1) -- Background sync workers (VN history, Binance, Yahoo, SJC)
 - **aipriceaction-postgres** -- PostgreSQL 18 with pgvector on port 5432
 - **aipriceaction-redis** -- Redis 8 with AOF persistence on port 6379
 
@@ -282,9 +304,9 @@ See [REDIS.md](REDIS.md) for detailed documentation.
 
 When enabled via environment variables, the server runs background sync workers:
 
-- **VCI daily worker** -- Syncs daily VN stock data every 15s during trading hours (9:00-15:00 ICT)
-- **VCI hourly/minute worker** -- Syncs hourly and minute data every minute during trading hours
-- **VCI dividend worker** -- Repairs adjusted daily history first, then rebuilds hourly and minute history in background
+- **VN daily worker** -- Syncs daily VN stock data every 15s during trading hours (9:00-15:00 ICT)
+- **VN hourly/minute workers** -- Sync hourly and minute data every minute during trading hours
+- **VN dividend worker** -- Repairs adjusted daily history from one source, then rebuilds hourly and minute history in background
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
 - **Yahoo Finance workers** -- Syncs US/international stock data for daily, hourly, and minute intervals
 - **SJC gold workers** -- Syncs SJC gold bar prices (HCM branch) via sjc.com.vn API; bootstrap imports historical CSV, then live syncs every 5min during trading hours. SJC-GOLD appears under `mode=yahoo` as a commodity alongside GC=F, CL=F, etc.

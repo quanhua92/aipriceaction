@@ -7,33 +7,34 @@ use tokio::time::{Duration, sleep};
 use crate::constants::vci_worker;
 use crate::models::ohlcv::{OhlcvRow, Ticker};
 use crate::providers::ohlcv::OhlcvData;
-use crate::providers::vci::{VciError, VciProvider};
+use crate::providers::vn_history::{VnHistoryError, VnHistoryProvider};
 use crate::queries::{ohlcv, vci_recovery};
 use crate::redis::RedisClient;
 use crate::workers::{redis_worker, vci_shared};
 
 pub async fn run(pool: PgPool, redis_client: Option<RedisClient>) {
-    tracing::info!("VCI dividend recovery worker started");
+    tracing::info!("VN dividend recovery worker started (VPS first, VCI fallback)");
 
-    let provider = match VciProvider::new(60) {
+    let provider = match VnHistoryProvider::new(60, false) {
         Ok(provider) => provider,
         Err(e) => {
-            tracing::error!("VCI dividend recovery worker: failed to create provider: {e}");
+            tracing::error!("VN dividend recovery worker: failed to create VPS/VCI provider: {e}");
             return;
         }
     };
 
     loop {
-        // One intraday page per pass lets newly flagged daily tickers take
-        // priority even while a long historical job is in progress.
+        // Give daily repair priority, then process one intraday page so a
+        // persistent daily failure cannot starve every backfill job.
+        let mut did_daily = false;
         match vci_recovery::next_daily_recovery(&pool).await {
             Ok(Some(ticker)) => {
                 recover_daily(&pool, &redis_client, &provider, &ticker).await;
-                continue;
+                did_daily = true;
             }
             Ok(None) => {}
             Err(e) => {
-                tracing::warn!("failed to load VCI daily recovery queue: {e}");
+                tracing::warn!("failed to load VN daily recovery queue: {e}");
                 sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
                 continue;
             }
@@ -44,9 +45,12 @@ pub async fn run(pool: PgPool, redis_client: Option<RedisClient>) {
                 backfill_one_page(&pool, &redis_client, &provider, &job).await;
                 sleep(Duration::from_secs(vci_worker::DIVIDEND_CHUNK_SLEEP_SECS)).await;
             }
+            Ok(None) if did_daily => {
+                sleep(Duration::from_secs(vci_worker::DIVIDEND_CHUNK_SLEEP_SECS)).await
+            }
             Ok(None) => sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await,
             Err(e) => {
-                tracing::warn!("failed to load VCI intraday backfill queue: {e}");
+                tracing::warn!("failed to load VN intraday backfill queue: {e}");
                 sleep(Duration::from_secs(vci_worker::DIVIDEND_LOOP_SECS)).await;
             }
         }
@@ -56,7 +60,7 @@ pub async fn run(pool: PgPool, redis_client: Option<RedisClient>) {
 async fn recover_daily(
     pool: &PgPool,
     redis_client: &Option<RedisClient>,
-    provider: &VciProvider,
+    provider: &VnHistoryProvider,
     ticker: &Ticker,
 ) {
     let ticker_id = ticker.id;
@@ -86,8 +90,8 @@ async fn recover_daily(
             }
         };
 
-        let rows = match fetch_daily_history(provider, symbol, ticker_id).await {
-            Ok(rows) => rows,
+        let (rows, source) = match fetch_daily_history(provider, symbol, ticker_id).await {
+            Ok(result) => result,
             Err(e) => {
                 fail_daily(pool, ticker_id, symbol, &e).await;
                 return;
@@ -100,7 +104,7 @@ async fn recover_daily(
                 pool,
                 ticker_id,
                 symbol,
-                "VCI daily history ends before existing data",
+                "VN provider daily history ends before existing data",
             )
             .await;
             return;
@@ -108,7 +112,7 @@ async fn recover_daily(
 
         match vci_recovery::replace_daily_and_queue(pool, ticker_id, &rows).await {
             Ok(removed) => {
-                tracing::info!(%symbol, daily_rows = rows.len(), old_rows_removed = removed,
+                tracing::info!(%symbol, provider = source, daily_rows = rows.len(), old_rows_removed = removed,
                     latest = ?latest, "daily history replaced; intraday backfill queued");
             }
             Err(e) => {
@@ -125,7 +129,7 @@ async fn recover_daily(
     }
 
     // Daily replacement leaves the ticker blocked until every old Redis key
-    // is cleared. A restart here resumes cache clearing without fetching VCI.
+    // is cleared. A restart here resumes cache clearing without refetching history.
     for interval in ["1D", "1h", "1m"] {
         if !redis_worker::clear_ohlcv_cache(redis_client, "vn", symbol, interval).await {
             fail_daily(pool, ticker_id, symbol, "Redis cache invalidation failed").await;
@@ -156,10 +160,28 @@ async fn fail_daily(pool: &PgPool, ticker_id: i32, symbol: &str, reason: &str) {
     }
 }
 
-/// VCI's countBack is a bar count before `to`, so page backward from the
-/// present. This avoids the old forward walk's empty and overlapping windows.
+/// Keep a complete daily rebuild on one provider. If VPS fails partway
+/// through, restart the whole rebuild from VCI rather than mix adjustments.
 async fn fetch_daily_history(
-    provider: &VciProvider,
+    provider: &VnHistoryProvider,
+    symbol: &str,
+    ticker_id: i32,
+) -> Result<(Vec<OhlcvRow>, &'static str), String> {
+    match fetch_daily_history_from(provider, "vps", symbol, ticker_id).await {
+        Ok(rows) => Ok((rows, "vps")),
+        Err(vps_error) => {
+            tracing::warn!(%symbol, %vps_error, "VPS full daily recovery failed; retrying whole history from VCI");
+            fetch_daily_history_from(provider, "vci", symbol, ticker_id)
+                .await
+                .map(|rows| (rows, "vci"))
+                .map_err(|vci_error| format!("VPS failed ({vps_error}); VCI failed ({vci_error})"))
+        }
+    }
+}
+
+async fn fetch_daily_history_from(
+    provider: &VnHistoryProvider,
+    source: &'static str,
     symbol: &str,
     ticker_id: i32,
 ) -> Result<Vec<OhlcvRow>, String> {
@@ -174,7 +196,8 @@ async fn fetch_daily_history(
 
     for _ in 0..64 {
         let page = match provider
-            .get_history(
+            .get_history_from(
+                source,
                 symbol,
                 "1D",
                 vci_worker::DIVIDEND_CHUNK_SIZE_DAILY,
@@ -183,22 +206,22 @@ async fn fetch_daily_history(
             .await
         {
             Ok(page) => page,
-            Err(VciError::NoData) if !bars.is_empty() => {
+            Err(VnHistoryError::NoData) if !bars.is_empty() => {
                 reached_end = true;
                 break;
             }
-            Err(e) => return Err(format!("VCI daily fetch failed at {to_ts}: {e}")),
+            Err(e) => return Err(format!("{source} daily fetch failed at {to_ts}: {e}")),
         };
         let Some(oldest) = page.first().map(|bar| bar.time) else {
-            return Err("VCI returned an empty daily page".to_string());
+            return Err(format!("{source} returned an empty daily page"));
         };
         if oldest.timestamp() >= to_ts {
-            return Err(format!("VCI daily cursor did not move before {to_ts}"));
+            return Err(format!("{source} daily cursor did not move before {to_ts}"));
         }
 
         for bar in page {
             if !valid_bar(&bar) {
-                return Err(format!("VCI returned an invalid daily bar at {}", bar.time));
+                return Err(format!("{source} returned an invalid daily bar at {}", bar.time));
             }
             bars.insert(bar.time.date_naive(), bar);
         }
@@ -212,7 +235,7 @@ async fn fetch_daily_history(
     }
 
     if !reached_end || bars.is_empty() {
-        return Err("VCI daily history did not reach its available beginning".to_string());
+        return Err(format!("{source} daily history did not reach its available beginning"));
     }
 
     bars.into_values()
@@ -224,7 +247,7 @@ async fn fetch_daily_history(
                 .expect("valid midnight")
                 .and_utc();
             let volume = i64::try_from(bar.volume)
-                .map_err(|_| format!("VCI daily volume exceeds i64 at {time}"))?;
+                .map_err(|_| format!("{source} daily volume exceeds i64 at {time}"))?;
             Ok(OhlcvRow {
                 ticker_id,
                 interval: "1D".to_string(),
@@ -248,7 +271,7 @@ fn valid_bar(bar: &OhlcvData) -> bool {
 async fn backfill_one_page(
     pool: &PgPool,
     redis_client: &Option<RedisClient>,
-    provider: &VciProvider,
+    provider: &VnHistoryProvider,
     job: &vci_recovery::BackfillJob,
 ) {
     let cutoff = chrono::NaiveDate::from_ymd_opt(
@@ -272,30 +295,31 @@ async fn backfill_one_page(
         vci_worker::DIVIDEND_CHUNK_SIZE_HOURLY
     };
     let api_interval = if job.interval == "1h" { "1H" } else { "1m" };
-    let page = match provider
+    let result = match provider
         .get_history(&job.ticker, api_interval, count, Some(to_time.timestamp()))
         .await
     {
         Ok(page) => page,
-        Err(VciError::NoData) => {
+        Err(VnHistoryError::NoData) => {
             finish_backfill(pool, job).await;
             return;
         }
         Err(e) => {
-            defer_backfill(pool, job, &format!("VCI fetch failed: {e}")).await;
+            defer_backfill(pool, job, &format!("VN history fetch failed: {e}")).await;
             return;
         }
     };
+    let page = result.bars;
 
     let Some(oldest) = page.first().map(|bar| bar.time) else {
-        defer_backfill(pool, job, "VCI returned an empty intraday page").await;
+        defer_backfill(pool, job, "VN provider returned an empty intraday page").await;
         return;
     };
     if oldest >= to_time || page.iter().any(|bar| !valid_bar(bar)) {
         defer_backfill(
             pool,
             job,
-            "VCI returned invalid bars or a non-advancing cursor",
+            "VN provider returned invalid bars or a non-advancing cursor",
         )
         .await;
         return;
@@ -315,7 +339,7 @@ async fn backfill_one_page(
         return;
     }
 
-    tracing::info!(ticker = %job.ticker, interval = %job.interval, count = page.len(),
+    tracing::info!(ticker = %job.ticker, interval = %job.interval, provider = result.source, count = page.len(),
         oldest = %oldest, "saved intraday backfill page");
 
     if oldest <= cutoff {

@@ -679,20 +679,30 @@ impl UdfProvider {
                 })
             }
             "vps" => {
-                let client = UdfClient::new(
-                    requests_per_minute,
-                    "https://histdatafeed.vps.com.vn/tradingview",
-                    "/history",
-                    "https://www.vps.com.vn/",
-                    1000.0, // VPS returns face-value prices, multiply by 1000
-                )?;
-                Ok(UdfProvider::Vps(client))
+                Self::vps_with_options(requests_per_minute, true)
             }
             _ => Err(UdfError::InvalidResponse(format!(
                 "Unknown UDF source: {}. Available: {:?}",
                 source, ALL_SOURCES
             ))),
         }
+    }
+
+    /// Build VPS using the existing HTTP_PROXIES routes without adding a
+    /// direct client when `direct_connection` is false.
+    pub fn vps_with_options(
+        requests_per_minute: u32,
+        direct_connection: bool,
+    ) -> Result<Self, UdfError> {
+        let client = UdfClient::with_options(
+            requests_per_minute,
+            direct_connection,
+            "https://histdatafeed.vps.com.vn/tradingview",
+            "/history",
+            "https://www.vps.com.vn/",
+            1000.0, // VPS returns face-value prices, multiply by 1000
+        )?;
+        Ok(UdfProvider::Vps(client))
     }
 
     /// Return the source name string

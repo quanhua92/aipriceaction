@@ -224,7 +224,7 @@ pub enum VciError {
 
 ## Workers
 
-Four independent VCI workers run as background tokio tasks: daily, hourly, minute, and dividend recovery.
+Four independent VN history workers run as background tokio tasks: daily, hourly, minute, and dividend recovery. Each uses `VnHistoryProvider` (`src/providers/vn_history.rs`): VPS first, then VCI if VPS returns no data or fails. Both sources use the SOCKS5/HTTP routes configured in `HTTP_PROXIES`; these workers do not create a direct HTTP client. The standalone `test-vci` command still calls VCI directly for diagnostics.
 
 ### Priority Scheduling
 
@@ -293,10 +293,12 @@ CREATE INDEX ix_tickers_next_1m ON tickers (next_1m) WHERE source = 'vn' AND sta
 
 The dividend worker handles `dividend-detected`, `full-download-processing`, and `full-download-requested` tickers. Daily freshness has priority over historical intraday recovery:
 
-1. Fetch adjusted daily history from VCI, paging backward by actual bar timestamps. A network failure defers that ticker without discarding a date range.
+1. Fetch adjusted daily history from VPS, paging backward by actual bar timestamps. If VPS fails partway through, restart the entire daily fetch from VCI so the replacement uses one source's adjustment series. A failure of both sources defers that ticker without discarding a date range.
 2. In one PostgreSQL transaction, replace its daily bars, remove its old hourly/minute bars, and create `vci_backfill_jobs` for `1h` and `1m`. The ticker enters `daily-recovered-pending-cache` so normal sync remains paused.
 3. Delete the ticker's daily/hourly/minute Redis ZSETs and snapshots. If Redis deletion fails, retry it without fetching daily history again. Then set the ticker to `ready` and reset its schedules.
-4. Normal workers fetch recent hourly/minute bars immediately. Historical jobs page backward from the latest available bars, persist their cursor after each successful page, and retry timeouts at the same cursor. The recovery worker checks for newly flagged daily tickers between pages.
+4. Normal workers fetch recent hourly/minute bars immediately. Historical jobs page backward from the latest available bars, persist their cursor after each successful page, and retry timeouts at the same cursor. The recovery worker checks for newly flagged daily tickers between pages and processes one backfill page per pass.
+
+VPS intraday retention is shorter than its daily history. A read-only FPT probe on 2026-09-27 returned recent minute and hourly bars, but no minute page before the first returned week. Older intraday recovery therefore still needs VCI to respond; when it does not, the durable backfill job stays queued and retries later. Recent daily and intraday sync can continue through VPS.
 
 The job table is created by `migrations/20260927160000_add_vci_backfill_jobs.sql`. Until recent intraday bars arrive, `1h`, `1m`, `4h`, `5m`, `15m`, and `30m` may have no rows for the affected ticker. Weekly and monthly data continue to use the repaired daily series.
 

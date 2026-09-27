@@ -4,20 +4,20 @@ use tokio::time::{sleep, Duration};
 
 use crate::constants::{MAJOR_SCHEDULE_SECS, MAJOR_VN, vci_worker};
 use crate::constants::vci_worker::priority;
-use crate::providers::vci::VciProvider;
+use crate::providers::vn_history::VnHistoryProvider;
 use crate::queries::ohlcv;
 use crate::workers::{binance_shared, vci_shared};
 
 pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) {
-    let provider = match VciProvider::new(60) {
+    let provider = match VnHistoryProvider::new(60, false) {
         Ok(p) => Arc::new(p),
         Err(e) => {
-            tracing::error!("VCI daily worker: failed to create provider: {e}");
+            tracing::error!("VN daily worker: failed to create VPS/VCI provider: {e}");
             return;
         }
     };
 
-    tracing::info!("VCI daily worker started (clients={}, concurrency={})", provider.client_count(), vci_worker::concurrent_batches(provider.client_count()));
+    tracing::info!("VN daily worker started (proxy_clients={}, concurrency={})", provider.client_count(), vci_worker::concurrent_batches(provider.client_count()));
 
     loop {
         let trading = vci_shared::is_trading_hours();
@@ -83,12 +83,14 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                         }
 
                         match provider.get_history(&ticker, "1D", vci_worker::DAILY_COUNTBACK, None).await {
-                            Ok(data) => {
-                                if vci_shared::detect_dividend(&pool, ticker_id, &ticker, &data).await {
+                            Ok(page) => {
+                                let data = &page.bars;
+                                tracing::info!(ticker, provider = page.source, interval = "1D", bars = data.len(), "VN history fetched");
+                                if vci_shared::detect_dividend(&pool, ticker_id, &ticker, data).await {
                                     tracing::warn!("[DIVIDEND] ticker={}, daily sync SKIPPED — awaiting dividend worker to re-download full history", ticker);
                                     return false;
                                 }
-                                if vci_shared::enhance_and_save(&pool, ticker_id, &data, "1D", "vn", &ticker, &redis_client).await {
+                                if vci_shared::enhance_and_save(&pool, ticker_id, data, "1D", "vn", &ticker, &redis_client).await {
                                     // Major VN tickers get fixed 60s schedule; others use money-flow tier
                                     if MAJOR_VN.contains(&ticker.as_str()) {
                                         match binance_shared::schedule_fixed_interval(
@@ -112,7 +114,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                                 false
                             }
                             Err(e) => {
-                                let rate_limited = e.to_string().contains("429");
+                                let rate_limited = e.is_rate_limited();
                                 tracing::warn!(ticker, "daily fetch failed: {e}");
                                 rate_limited
                             }

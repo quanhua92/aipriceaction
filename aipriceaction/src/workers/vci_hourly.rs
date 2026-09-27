@@ -5,7 +5,7 @@ use tokio::time::{sleep, Duration};
 
 use crate::constants::{MAJOR_SCHEDULE_SECS, MAJOR_VN, vci_worker};
 use crate::constants::vci_worker::priority;
-use crate::providers::vci::VciProvider;
+use crate::providers::vn_history::VnHistoryProvider;
 use crate::queries::ohlcv;
 use crate::workers::{binance_shared, vci_shared};
 
@@ -14,15 +14,15 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
     tracing::info!("VCI hourly worker: waiting {} seconds before first sync...", vci_worker::HOURLY_INITIAL_DELAY_SECS);
     sleep(Duration::from_secs(vci_worker::HOURLY_INITIAL_DELAY_SECS)).await;
 
-    let provider = match VciProvider::new(30) {
+    let provider = match VnHistoryProvider::new(30, false) {
         Ok(p) => Arc::new(p),
         Err(e) => {
-            tracing::error!("VCI hourly worker: failed to create provider: {e}");
+            tracing::error!("VN hourly worker: failed to create VPS/VCI provider: {e}");
             return;
         }
     };
 
-    tracing::info!("VCI hourly worker started (clients={}, concurrency={})", provider.client_count(), vci_worker::concurrent_batches(provider.client_count()));
+    tracing::info!("VN hourly worker started (proxy_clients={}, concurrency={})", provider.client_count(), vci_worker::concurrent_batches(provider.client_count()));
 
     loop {
         let trading = vci_shared::is_trading_hours();
@@ -75,8 +75,10 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                         };
 
                         match provider.get_history(&ticker, "1H", count_back, None).await {
-                            Ok(data) => {
-                                if vci_shared::enhance_and_save(&pool, ticker_id, &data, "1h", "vn", &ticker, &redis_client).await {
+                            Ok(page) => {
+                                let data = &page.bars;
+                                tracing::info!(ticker, provider = page.source, interval = "1h", bars = data.len(), "VN history fetched");
+                                if vci_shared::enhance_and_save(&pool, ticker_id, data, "1h", "vn", &ticker, &redis_client).await {
                                     // Major VN tickers get fixed 60s schedule; others use money-flow tier
                                     if MAJOR_VN.contains(&ticker.as_str()) {
                                         match binance_shared::schedule_fixed_interval(
@@ -100,7 +102,7 @@ pub async fn run(pool: PgPool, redis_client: Option<crate::redis::RedisClient>) 
                                 false
                             }
                             Err(e) => {
-                                let rate_limited = e.to_string().contains("429");
+                                let rate_limited = e.is_rate_limited();
                                 tracing::warn!(ticker, "hourly fetch failed: {e}");
                                 rate_limited
                             }

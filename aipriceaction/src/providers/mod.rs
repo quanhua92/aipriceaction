@@ -3,5 +3,6 @@ pub mod ohlcv;
 pub mod sjc;
 pub mod udf;
 pub mod vci;
+pub mod vn_history;
 pub mod yahoo;
 pub mod yahoo_raw;
