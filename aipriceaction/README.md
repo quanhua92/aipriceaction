@@ -284,7 +284,7 @@ When enabled via environment variables, the server runs background sync workers:
 
 - **VCI daily worker** -- Syncs daily VN stock data every 15s during trading hours (9:00-15:00 ICT)
 - **VCI hourly/minute worker** -- Syncs hourly and minute data every minute during trading hours
-- **VCI dividend worker** -- Detects dividend-adjusted prices and re-downloads full history
+- **VCI dividend worker** -- Repairs adjusted daily history first, then rebuilds hourly and minute history in background
 - **Binance workers** -- Syncs cryptocurrency data for all intervals (24/7)
 - **Yahoo Finance workers** -- Syncs US/international stock data for daily, hourly, and minute intervals
 - **SJC gold workers** -- Syncs SJC gold bar prices (HCM branch) via sjc.com.vn API; bootstrap imports historical CSV, then live syncs every 5min during trading hours. SJC-GOLD appears under `mode=yahoo` as a commodity alongside GC=F, CL=F, etc.

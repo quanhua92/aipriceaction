@@ -272,7 +272,7 @@ pub async fn detect_dividend(
             divergence_count, vci_worker::DIVIDEND_MIN_DIVERGING_BARS, vci_worker::DIVIDEND_RATIO_THRESHOLD, compare_data.len(), existing.len()
         );
         tracing::warn!(
-            "[DIVIDEND] ticker={}, action=set status 'dividend-detected' → dividend worker will delete ALL data and re-download full history (1D from 2015, 1h/1m from 2023)",
+            "[DIVIDEND] ticker={}, action=set status 'dividend-detected' → recover daily first, then rebuild intraday history in background",
             ticker
         );
         if let Err(e) = queries::ohlcv::update_ticker_status(pool, ticker_id, "dividend-detected").await {

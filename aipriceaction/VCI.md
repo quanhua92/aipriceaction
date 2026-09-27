@@ -243,7 +243,7 @@ Workers do **not** fetch all 383 tickers every loop. Instead, each ticker is ass
 
 **Per-loop batching**: All due tickers are fetched from the DB, shuffled randomly, and truncated to `DUE_TICKER_BATCH_SIZE` (50). This prevents multiple containers from competing for the same tickers — each container gets a random 50 from the due pool.
 
-**Schedule reset on recovery**: When the dividend worker finishes re-downloading a ticker's full history, all three `next_*` columns are reset to `NOW()` so the ticker is immediately picked up by all three workers.
+**Schedule reset on recovery**: Once adjusted daily history is ready and Redis has been cleared, all three `next_*` columns are reset to `NOW()`. Normal hourly and minute workers then fetch recent bars while older intraday history rebuilds in the background.
 
 ### Loop Flow (Daily / Hourly / Minute)
 
@@ -291,12 +291,14 @@ CREATE INDEX ix_tickers_next_1m ON tickers (next_1m) WHERE source = 'vn' AND sta
 
 ### Dividend Worker
 
-The dividend worker handles tickers flagged with `dividend-detected` or `full-download-requested` status:
+The dividend worker handles `dividend-detected`, `full-download-processing`, and `full-download-requested` tickers. Daily freshness has priority over historical intraday recovery:
 
-1. Delete all OHLCV + indicator data for the ticker
-2. Re-download full history for all intervals (1D, 1h, 1m) in backward chunks
-3. Enhance with technical indicators
-4. Set status back to `ready` and reset all `next_*` to `NOW()`
+1. Fetch adjusted daily history from VCI, paging backward by actual bar timestamps. A network failure defers that ticker without discarding a date range.
+2. In one PostgreSQL transaction, replace its daily bars, remove its old hourly/minute bars, and create `vci_backfill_jobs` for `1h` and `1m`. The ticker enters `daily-recovered-pending-cache` so normal sync remains paused.
+3. Delete the ticker's daily/hourly/minute Redis ZSETs and snapshots. If Redis deletion fails, retry it without fetching daily history again. Then set the ticker to `ready` and reset its schedules.
+4. Normal workers fetch recent hourly/minute bars immediately. Historical jobs page backward from the latest available bars, persist their cursor after each successful page, and retry timeouts at the same cursor. The recovery worker checks for newly flagged daily tickers between pages.
+
+The job table is created by `migrations/20260927160000_add_vci_backfill_jobs.sql`. Until recent intraday bars arrive, `1h`, `1m`, `4h`, `5m`, `15m`, and `30m` may have no rows for the affected ticker. Weekly and monthly data continue to use the repaired daily series.
 
 ### Multi-Container Deployment
 

@@ -62,8 +62,6 @@ pub mod vci_worker {
     pub const DIVIDEND_CHUNK_SIZE_MINUTE: u32 = 5000;
     /// Sleep between dividend chunk fetches
     pub const DIVIDEND_CHUNK_SLEEP_SECS: u64 = 1;
-    /// Percentage increase per consecutive stall (gap/holiday skip)
-    pub const DIVIDEND_STALL_INCREASE_PCT: u32 = 50;
     /// Earliest date for hourly/minute re-download (VCI has no minute data before this)
     pub const DIVIDEND_HM_FLOOR_YEAR: i32 = 2023;
     pub const DIVIDEND_HM_FLOOR_MONTH: u32 = 8;

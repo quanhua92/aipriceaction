@@ -350,6 +350,46 @@ pub async fn invalidate_snapshot(client: &Option<RedisClient>, source: &str, tic
     }
 }
 
+/// Remove both raw bars and every snapshot variant before an adjusted series
+/// becomes visible. A failed deletion keeps the ticker in recovery so the
+/// worker can retry after Redis is available again.
+pub async fn clear_ohlcv_cache(
+    client: &Option<RedisClient>,
+    source: &str,
+    ticker: &str,
+    interval: &str,
+) -> bool {
+    let Some(client) = client else {
+        // A configured but unavailable Redis may still contain old bars.
+        // Keep recovery pending until a later restart can clear those keys.
+        let configured = std::env::var("REDIS_URL").is_ok_and(|url| !url.is_empty());
+        if configured {
+            tracing::warn!(source, ticker, interval, "Redis configured but unavailable during adjustment recovery");
+        }
+        return !configured;
+    };
+
+    for key in [zset_key(source, ticker, interval), snap_key(source, ticker, interval)] {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(c::op_timeout_secs()),
+            client.del::<Value, _>(&key),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {}
+            Ok(Err(e)) => {
+                tracing::warn!(%key, "adjustment cache delete failed: {e}");
+                return false;
+            }
+            Err(_) => {
+                tracing::warn!(%key, "adjustment cache delete timed out");
+                return false;
+            }
+        }
+    }
+    true
+}
+
 /// Write the full ticker list to Redis as a JSON string with TTL.
 /// Called at the end of each backfill_full() cycle.
 pub async fn write_ticker_list(client: &RedisClient, tickers: &[TickerInfo]) {
@@ -534,6 +574,11 @@ pub async fn backfill_full(pool: &PgPool, client: &RedisClient) {
 
     let mut groups: Vec<(String, String, String, i64)> = Vec::new();
     for ticker in &tickers {
+        // VN recovery replaces price history and explicitly clears Redis.
+        // Do not repopulate its old rows while the ticker is blocked.
+        if ticker.source == "vn" && ticker.status.as_deref() != Some("ready") {
+            continue;
+        }
         for &interval in &["1D", "1h", "1m"] {
             let limit: i64 = match interval {
                 "1D" => c::daily_backfill_limit(),
@@ -674,6 +719,18 @@ async fn backfill_ticker(
     if rows.is_empty() {
         tracing::info!(source, ticker, interval, "Redis ZSET backfill skipped: no data in PG");
         return Ok(false);
+    }
+
+    // A ticker may have entered adjustment recovery after the full cycle
+    // enumerated it. Recheck immediately before writing Redis.
+    if source == "vn" {
+        let status: Option<String> = sqlx::query_scalar("SELECT status FROM tickers WHERE id = $1")
+            .bind(ticker_id)
+            .fetch_one(pool)
+            .await?;
+        if status.as_deref() != Some("ready") {
+            return Ok(false);
+        }
     }
 
     let key = zset_key(source, ticker, interval);
