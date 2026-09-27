@@ -204,35 +204,47 @@ fn normalize_page(
 ) -> Result<Vec<OhlcvData>, String> {
     let mut by_time = BTreeMap::new();
     let old_bar_cutoff = Utc::now() - ChronoDuration::days(30);
-    let mut invalid_old_bars = 0usize;
+    let mut inconsistent_old_bars = 0usize;
+    let mut first_inconsistent_time = None;
+    let mut omitted_old_bars = 0usize;
     for bar in bars {
         if before_timestamp.is_some_and(|before| bar.time.timestamp() >= before) {
             continue;
         }
-        if ![bar.open, bar.high, bar.low, bar.close]
+        let positive_prices = [bar.open, bar.high, bar.low, bar.close]
             .iter()
-            .all(|price| price.is_finite() && *price > 0.0)
-            || bar.high < bar.low
-            || bar.high < bar.open.max(bar.close)
-            || bar.low > bar.open.min(bar.close)
-        {
-            // Some historical adjusted series contain isolated impossible
-            // candles. Preserve every valid price; leave a dated gap rather
-            // than fabricate OHLC values or discard the whole rebuild.
-            if bar.time < old_bar_cutoff {
+            .all(|price| price.is_finite() && *price > 0.0);
+        let consistent_range = bar.high >= bar.low
+            && bar.high >= bar.open.max(bar.close)
+            && bar.low <= bar.open.min(bar.close);
+        if !positive_prices || !consistent_range {
+            if bar.time >= old_bar_cutoff {
+                return Err(format!("invalid OHLC at {}", bar.time));
+            }
+            if !positive_prices {
+                // A zero/non-finite price is unusable by the rest of the
+                // pipeline. Leave a dated gap rather than invent a price.
                 tracing::warn!(source, symbol = ?bar.symbol, time = %bar.time,
-                    open = bar.open, high = bar.high, low = bar.low, close = bar.close,
-                    "skipping invalid old VN history candle");
-                invalid_old_bars += 1;
+                    "omitting old VN history candle with non-positive or non-finite price");
+                omitted_old_bars += 1;
                 continue;
             }
-            return Err(format!("invalid OHLC at {}", bar.time));
+            // Brokers sometimes publish old adjusted bars whose reported
+            // open/close fall outside the reported high/low. Keep the exact
+            // source values, as the previous VCI ingestion did.
+            inconsistent_old_bars += 1;
+            first_inconsistent_time.get_or_insert(bar.time);
         }
         by_time.insert(bar.time, bar);
     }
+    if inconsistent_old_bars > 0 {
+        tracing::warn!(source, count = inconsistent_old_bars,
+            first_time = ?first_inconsistent_time,
+            "retained provider-reported old VN history candles with inconsistent OHLC");
+    }
     if by_time.is_empty() {
-        return Err(if invalid_old_bars > 0 {
-            "all returned bars have invalid OHLC".to_string()
+        return Err(if omitted_old_bars > 0 {
+            "all returned bars have unusable prices".to_string()
         } else {
             "no data".to_string()
         });

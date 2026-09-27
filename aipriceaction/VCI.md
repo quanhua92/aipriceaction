@@ -300,7 +300,7 @@ The dividend worker handles `dividend-detected`, `full-download-processing`, and
 
 VPS intraday retention is shorter than its daily history. A read-only FPT probe on 2026-09-27 returned recent minute and hourly bars, but no minute page before the first returned week. Older intraday recovery therefore still needs VCI to respond; when it does not, the durable backfill job stays queued and retries later. Recent daily and intraday sync can continue through VPS.
 
-Both broker histories can contain isolated old candles with impossible OHLC values (for example, an open above the reported high). The VN history adapter logs and omits such candles only when they are more than 30 days old. It rejects invalid recent candles and falls back to VCI; if a page contains no valid bars, recovery is deferred. Omitted old candles leave gaps instead of invented prices.
+Both broker histories can contain old candles with impossible OHLC ranges (for example, an open above the reported high). The VN history adapter logs and preserves the exact broker values for candles more than 30 days old, matching the earlier VCI ingestion behavior. It omits old candles with zero or non-finite prices because those are unusable, leaving a dated gap instead of inventing a price. Invalid recent candles still trigger fallback; if a page contains no usable bars, recovery is deferred.
 
 The job table is created by `migrations/20260927160000_add_vci_backfill_jobs.sql`. Until recent intraday bars arrive, `1h`, `1m`, `4h`, `5m`, `15m`, and `30m` may have no rows for the affected ticker. Weekly and monthly data continue to use the repaired daily series.
 
