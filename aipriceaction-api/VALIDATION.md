@@ -6,6 +6,54 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## VN hourly snapshot safeguard and isolated client review — 2026-10-04 ICT
+
+Worker refresh now protects imported **VN hourly** snapshots for all three
+legacy provider aliases (`legacy-api`, `legacy-s3`, `legacy`), as it already did
+for Yahoo. It records `handoff_required` before querying native sources, keeps
+the original candles and series state, does not queue a fallback repair, and
+releases its series lease. Six parameterized VN/Yahoo tests exercise this
+behavior; the full suite passes **392 tests**. Lint/format checks pass for
+**68 Python files** and offline wheel/source builds pass. The wheel's worker
+module exactly matches the tested source. Implementation commit: `02a9fd1`.
+
+Timestamp reconciliation confirms that each public index candidate omits
+**45 current native timestamps**, comprising **eight at 02:00 UTC** and
+**37 at 08:00 UTC**. Every affected date appears in the public candidate;
+this proves observed-date preservation, not equivalence of the bars or an
+auction-policy explanation. Original records remain complete in the existing
+immutable before-images. Evidence:
+`data/vn-index-hourly-public-candidates-20261004/timestamp-reconciliation.json`.
+
+The proposed canonical replacement was rejected by automatic approval review
+because it changes shared values and removes timestamps from the primary view
+without explicit authorization for that exact mutation, despite backups.
+The publication command did **not** execute. Explicit approval is pending;
+no indirect canonical replacement has been made.
+
+Independent work uses a **separate review SQLite copy**, never copied back to
+the main database. A temporary loopback API on port 3002 serves both candidates
+alongside copied reference data. Full HTTP checks match every one of the
+**3,448 hourly records per index**. The installed SDK passes **eight hourly /
+four-hour SMA/EMA cases**, plus four explicit June 2024 requests with **240
+returned bars**. Both actual public-web daily/hourly charts pass through
+October 2 with no page/network errors or browser writes. These checks validate
+the isolated candidates; they do not imply main publication. Reports are under
+`data/vn-index-hourly-review-20261004/`.
+
+The real operational CLI refreshes the two isolated hourly series and returns
+`handoff_required` for both, retaining all **3,448 rows per series**. Complete
+main index records still match their native before-images and remain on
+VNDirect; main candle count remains **6,033,566**. The review server is stopped
+after verification. The main loopback API restarts with the tested guard.
+All **14 supplementary reports/screenshots** have immutable RustFS readbacks
+in `data/vn-index-hourly-review-20261004/evidence-receipt.json`.
+
+Native VN hourly snapshot adoption remains unsupported by the current hourly
+adoption command; its implementation and source/session proof remain open.
+The guard prevents an unverified fallback from silently replacing snapshots
+while that work is pending. No production routing or deployment changes occur.
+
 ## VN index hourly source gaps and isolated candidates — 2026-10-04 ICT
 
 Both VNINDEX and VN30 currently serve **766 native VNDirect hourly records

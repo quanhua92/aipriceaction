@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 389 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 392 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -89,6 +89,21 @@ history through `eb814ab`; they are not additional current open tasks.
   timestamps and changes many shared fields; it is not an append candidate.
   Existing source/session findings remain open; traversal alone cannot certify
   complete recent history.
+- [x] Prevent native refresh/fallback from replacing imported VN hourly
+  snapshots without a verified handoff. All three legacy provider aliases
+  are covered; six VN/Yahoo guard cases pass without upstream calls or repair
+  jobs, and the real CLI preserves both isolated index candidates.
+- [x] Rehearse both index candidates through an isolated loopback API: existing
+  web daily/hourly controls, eight SDK SMA/EMA cases, four older SDK ranges,
+  and every captured hourly record pass. Main data stays unchanged.
+- [ ] Obtain explicit approval required by automatic review for the proposed
+  canonical index snapshot replacement. It changes shared values and omits
+  45 current native timestamps per index from the primary view, while retaining
+  all original records in immutable before-images and backups. The rejected
+  publication command has not run; isolated rehearsal is separate.
+- [ ] Implement and independently verify a supported native VN hourly handoff
+  path for frozen compatibility snapshots; current hourly adoption supports
+  Yahoo only. Preserve timestamp/session differences rather than splicing them.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   are 58 series with pending work; readiness alone does not prove coverage.
