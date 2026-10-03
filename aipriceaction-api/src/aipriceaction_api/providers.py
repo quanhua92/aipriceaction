@@ -330,6 +330,10 @@ class Providers:
         quotes = indicators.get("quote", [{}])[0]
         adjusted = indicators.get("adjclose", [{}])[0].get("adjclose") or []
         rows = []
+        # Match the legacy worker's native interval boundaries. Yahoo's
+        # US hourly bars start at :30; their values describe that source
+        # bar even though the public API labels it at the whole hour.
+        step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
         for i, stamp in enumerate(stamps):
             values = [
                 quotes.get(k, [])[i] if i < len(quotes.get(k, [])) else None
@@ -343,7 +347,7 @@ class Providers:
                 if iv == "1D" and i < len(adjusted) and adjusted[i] is not None and c
                 else 1
             )
-            timestamp = int(stamp) // 86400 * 86400 if iv == "1D" else int(stamp) // 60 * 60
+            timestamp = int(stamp) // step * step
             rows.append(
                 Candle(
                     "yahoo",

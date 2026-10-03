@@ -63,6 +63,86 @@ class Pages:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("iv,step", [("1D", 86400), ("1h", 3600), ("1m", 60)])
+async def test_yahoo_native_interval_labels_preserve_source_values(system, iv, step):
+    _, _, settings = system
+    stamp = parse_time("2026-09-29T13:30:17Z")
+    expected = stamp // step * step
+
+    def response(request):
+        return httpx.Response(
+            200,
+            json={
+                "chart": {
+                    "result": [
+                        {
+                            "timestamp": [stamp],
+                            "indicators": {
+                                "quote": [
+                                    {
+                                        "open": [100],
+                                        "high": [102],
+                                        "low": [99],
+                                        "close": [101],
+                                        "volume": [1234],
+                                    }
+                                ]
+                            },
+                        }
+                    ]
+                }
+            },
+        )
+
+    providers = Providers(settings, transport=httpx.MockTransport(response))
+    try:
+        page = await providers.page("yahoo", "AAPL", iv, stamp + step, count=10, start=expected)
+        assert [(r.time, r.open, r.high, r.low, r.close, r.volume) for r in page.rows] == [
+            (expected, 100, 102, 99, 101, 1234)
+        ]
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
+async def test_yahoo_hourly_boundary_collision_rejects_conflicting_bars(system):
+    _, _, settings = system
+    stamp = parse_time("2026-09-29T13:00:00Z")
+
+    def response(request):
+        return httpx.Response(
+            200,
+            json={
+                "chart": {
+                    "result": [
+                        {
+                            "timestamp": [stamp, stamp + 1800],
+                            "indicators": {
+                                "quote": [
+                                    {
+                                        "open": [100, 101],
+                                        "high": [102, 102],
+                                        "low": [99, 99],
+                                        "close": [101, 101],
+                                        "volume": [1000, 1234],
+                                    }
+                                ]
+                            },
+                        }
+                    ]
+                }
+            },
+        )
+
+    providers = Providers(settings, transport=httpx.MockTransport(response))
+    try:
+        with pytest.raises(DataError, match="conflicting candles"):
+            await providers.page("yahoo", "AAPL", "1h", stamp + 3600, count=10)
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_inside", (False, True))
 async def test_yahoo_requested_floor_filters_only_unrequested_invalid_rows(system, invalid_inside):
     _, _, settings = system
