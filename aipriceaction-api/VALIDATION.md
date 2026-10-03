@@ -6,6 +6,35 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Remaining global disagreements and current roadmap — 2026-10-04 ICT
+
+A numerical audit separates strict Python equality differences from material
+changes in the saved Yahoo/public-API captures. Most MSFT/NVDA field mismatches
+are tiny decimal serialization differences below the existing absolute `1e-8`
+price comparison threshold. MSFT still has one candle with materially different
+open/high/low; NVDA has six materially different price or volume candles; gold
+has two material candles. The native handoff failures are therefore not resolved
+by normal float tolerance, and no threshold is weakened.
+
+Eight read-only Yahoo window checks use a day-end bound and a nearby intraday
+bound for each affected UTC date. All 18 target comparisons are present, match
+the earlier native capture within the existing price tolerance and exact volume,
+and retain material differences from the public snapshot. These responses rule
+out a request-window difference in these observed cases; they do not independently
+certify which source values are correct. Main daily/operational hashes and
+production remain unchanged. Full native replies and comparison rows are
+preserved at `data/global-native-window-consistency-20261003T195748Z/report.json`.
+
+`TODO.md` is reconciled into the current roadmap rather than carrying superseded
+staging narratives as additional open tasks. Original architecture, contract,
+retention, provenance, provider, worker/recovery, migration, authentication,
+restoration and acceptance requirements remain. Resolved EIB/HHS sessions and
+recovered historical partitions are no longer presented as current blockers.
+Unverified history, native handoffs, provider/calendar semantics, wider client/
+performance acceptance and private inventory remain explicitly open. Historical
+milestones and their evidence remain in this report and Git history through
+`eb814ab`. This documentation change does not complete or shrink the goal.
+
 ## Yahoo outage overlap and close-time rows — 2026-10-04 ICT
 
 Yahoo updates previously used only the recent 40-candle page, without the
