@@ -193,6 +193,32 @@ async def test_daily_adjustment_after_handoff_queues_repair_without_erasing_snap
     assert repo.read("vn", "FPT", "1D") == before
 
 
+@pytest.mark.parametrize("field", ["open", "high", "low"])
+@pytest.mark.asyncio
+async def test_nonclose_correction_after_handoff_preserves_snapshot_and_queues_repair(
+    system, field
+):
+    repo, archive, _, settings = system
+    await adopt_daily_snapshot(repo, Provider(repo), "FPT", "vps", True)
+    before = repo.read("vn", "FPT", "1D")
+    objects = repo.archives("vn", "FPT", "1D")
+    originals = [archive.read(obj) for obj in objects]
+    provider = Provider(repo)
+    provider.rows[:3] = [
+        replace(row, **{field: getattr(row, field) + (-0.5 if field == "low" else 0.5)})
+        for row in provider.rows[:3]
+    ]
+    assert (
+        await Worker(repo, settings, provider, archive).sync(
+            {"source": "vn", "symbol": "FPT"}, "1D"
+        )
+        == 0
+    )
+    assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
+    assert repo.read("vn", "FPT", "1D") == before
+    assert [archive.read(obj) for obj in objects] == originals
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["foreign", "pending"])
 async def test_daily_snapshot_cannot_license_an_unverified_archive_basis(system, kind):

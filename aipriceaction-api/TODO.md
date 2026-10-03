@@ -61,6 +61,9 @@ direct legacy PostgreSQL access.
   window and 1,000-candle budget; queue recovery when it cannot bridge the tail.
   Verify eight daily regressions and restore 100 actual FPT observed sessions in
   isolation with exact values/provenance and unchanged main data.
+- [x] Detect corroborated completed open/high/low corrections even when closes
+  are unchanged. Preserve noise/finality/provider guards, frozen snapshots, and
+  staged recovery; verify nine new regressions and five native daily rehearsals.
 
 The observations below describe the earlier isolated staging checkpoints.
 

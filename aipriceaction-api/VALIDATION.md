@@ -6,6 +6,35 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Complete OHLC revision detection — 2026-10-04 ICT
+
+The historical revision detector previously compared only closes. Three or
+more completed open/high/low corrections could therefore pass through a live
+update or historical sample without queuing coherent recovery. The detector
+now compares all four OHLC fields, recording the largest observed relative field
+change per candle. These ratios remain diagnostics; workers never multiply
+other candles by an inferred factor. Existing provider/snapshot identity,
+completed-candle cutoff, representation-noise tolerance, and three-candle
+corroboration remain unchanged.
+
+Nine added regression cases reproduce previously missed opens, highs, and lows
+in the detector, older historical samples, and live updates after daily snapshot
+adoption. The tests verify incomplete/insufficient/unverified-provider/noise
+replies do not license recovery, while corroborated corrections queue repair
+without overwriting retained or immutable historical originals. The full suite
+passes **324 tests in 22.79 seconds**, with the existing Starlette/httpx warning.
+Ruff lint and formatting pass for **58 Python files**, and distributions build
+offline.
+
+Fresh isolated native VPS updates for EIB/HHS/GEX/HAG/SHS each verify **40 rows**
+and remain ready. All **747 retained rows per ticker** preserve their dates,
+OHLCV, provider and revision identities; only verified native update timestamps
+can advance. Main daily/operational hashes remain unchanged, and no production
+routing or archive publication occurs. Evidence:
+`data/ohlc-revision-native-rehearsal-20261003T192016Z/report.json` and its isolated
+database. This fixes missed price-field corrections, while wider provider policy
+and VND/VNINDEX historical acceptance remain open.
+
 ## Daily restart coverage — 2026-10-04 ICT
 
 VN hourly/minute updates required observed overlap after a prolonged outage,

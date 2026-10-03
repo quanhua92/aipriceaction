@@ -245,6 +245,11 @@ cannot, the worker preserves existing data and queues staged recovery rather
 than guessing which dates should have traded. Expanded reads also check stored
 price overlap beyond the usual comparison window for historical revisions.
 
+Revision detection compares opens, highs, lows, and closes on completed candles.
+It requires at least three corroborating candles on the pinned provider or its
+verified snapshot and ignores representation noise. Detected changes queue
+staged recovery; diagnostic price ratios are never applied to other history.
+
 For a bounded local read-only HTTP rehearsal, stop ingestion so payloads stay
 stable and run:
 

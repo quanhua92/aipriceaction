@@ -433,7 +433,9 @@ def adjustment_changes(
     Match one pinned upstream, or its explicitly verified imported snapshot.
     A later switch needs staged recovery rather than price-ratio inference.
     The default tolerates Float32 representation noise but detects small,
-    corroborated corrections rather than only large dividend-sized changes.
+    corroborated OHLC corrections rather than only large close-price changes.
+    Returned ratios describe observed field changes, never an adjustment factor
+    to apply to other candles.
     """
     old = {r.time: r for r in existing if r.time < completed_before}
     changed = []
@@ -448,7 +450,14 @@ def adjustment_changes(
             )
             and row.time < completed_before
         ):
-            ratio = row.close / previous.close
+            ratio = max(
+                (
+                    getattr(row, field) / getattr(previous, field)
+                    for field in ("close", "open", "high", "low")
+                    if getattr(previous, field) != 0
+                ),
+                key=lambda value: abs(value - 1),
+            )
             if abs(ratio - 1) > tolerance:
                 changed.append((row.time, ratio))
     return changed if len(changed) >= min_matches else []

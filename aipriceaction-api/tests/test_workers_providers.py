@@ -130,8 +130,11 @@ async def test_historical_probe_timeout_does_not_exhaust_live_update_budget(syst
     assert not any(row["kind"] == "provider_failure" for row in repo.findings())
 
 
+@pytest.mark.parametrize("field", ["close", "open", "high", "low"])
 @pytest.mark.asyncio
-async def test_historical_revision_outside_live_overlap_still_queues_repair(system, monkeypatch):
+async def test_historical_revision_outside_live_overlap_still_queues_repair(
+    system, monkeypatch, field
+):
     repo, archive, settings = system
     now = parse_time("2026-07-01")
     monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: now)
@@ -142,14 +145,16 @@ async def test_historical_revision_outside_live_overlap_still_queues_repair(syst
     repo.put(old + recent)
     before = repo.read("vn", "FPT", "1D")
     changed = sorted(
-        [replace(r, open=90, high=91, low=89, close=90) for r in old], key=lambda r: r.time
+        [replace(r, **{field: getattr(r, field) + (-0.5 if field == "low" else 0.5)}) for r in old],
+        key=lambda r: r.time,
     )
     provider = Pages(Page(sorted(recent, key=lambda r: r.time), "vps"), Page(changed, "vps"))
     worker = Worker(repo, settings, provider, archive)
     assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 40
     assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
-    assert [(r.time, r.close) for r in repo.read("vn", "FPT", "1D")] == [
-        (r.time, r.close) for r in before
+    fields = ("time", "open", "high", "low", "close", "volume", "provider", "revision")
+    assert [tuple(getattr(r, k) for k in fields) for r in repo.read("vn", "FPT", "1D")] == [
+        tuple(getattr(r, k) for k in fields) for r in before
     ]
     assert any(row["kind"] == "historical_revision" for row in repo.findings())
 
@@ -653,6 +658,27 @@ def test_adjustment_detection_is_bidirectional_and_ignores_unfinished(ratio):
     assert adjustment_changes(old, new, candle(3).time) == []
     assert adjustment_changes(old, [candle(1, 101)], candle(6).time) == []
     assert adjustment_changes(old, [replace(r, provider="dnse") for r in new], candle(6).time) == []
+
+
+@pytest.mark.parametrize("field", ["open", "high", "low"])
+def test_historical_detection_corroborates_nonclose_price_corrections(field):
+    old = [candle(day) for day in range(1, 4)]
+    corrected = [
+        replace(row, **{field: getattr(row, field) + (-0.5 if field == "low" else 0.5)})
+        for row in old
+    ]
+    assert all(a.close == b.close for a, b in zip(old, corrected, strict=True))
+    assert len(adjustment_changes(old, corrected, candle(4).time)) == 3
+    assert adjustment_changes(old, corrected[:2], candle(4).time) == []
+    assert adjustment_changes(old, corrected, candle(3).time) == []
+    assert (
+        adjustment_changes(
+            old, [replace(row, provider="dnse") for row in corrected], candle(4).time
+        )
+        == []
+    )
+    noise = [replace(row, **{field: getattr(row, field) * (1 + 1e-7)}) for row in old]
+    assert adjustment_changes(old, noise, candle(4).time) == []
 
 
 @pytest.mark.parametrize("ratio", [0.999, 1.001, 1.0000001])
