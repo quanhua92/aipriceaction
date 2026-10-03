@@ -84,19 +84,13 @@ def check(api_url, symbol, report, market="vn", intervals=None):
                 timeout=30_000,
             )
             page.wait_for_timeout(1500)
-            populated = any(
-                r["path"] == "/tickers"
-                and r["query"].get("symbol") == [symbol]
-                and r["query"].get("interval") == ["1D"]
-                and (r["csv_rows"] or 0) >= 20
-                for r in calls
-            )
-            if not populated:
-                page.get_by_placeholder("Search by symbol...").fill(symbol)
-                with page.expect_response(lambda r: matches(r.url, "1D"), timeout=30_000):
-                    page.locator("button").filter(
-                        has_text=re.compile("^" + re.escape(symbol))
-                    ).first.click()
+            # An initial watchlist request does not select that ticker's chart.
+            # Always open the requested ticker before exercising its controls.
+            page.get_by_placeholder("Search by symbol...").fill(symbol)
+            with page.expect_response(lambda r: matches(r.url, "1D"), timeout=30_000):
+                page.locator("button").filter(
+                    has_text=re.compile("^" + re.escape(symbol))
+                ).first.click()
             page.wait_for_timeout(1500)
             page.screenshot(path=str(report.with_suffix(".daily.png")), full_page=True)
             dialog = page.get_by_role("dialog")
