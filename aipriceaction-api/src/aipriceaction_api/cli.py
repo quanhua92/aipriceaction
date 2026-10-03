@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .adoption import adopt_snapshot
 from .archive import Archive
+from .bootstrap_progress import publish_bootstrap_progress
 from .catalog import Catalog
 from .config import Settings
 from .daily_adoption import adopt_daily_snapshot
@@ -125,6 +126,12 @@ def parser():
         help="HEAD explicit source objects and report availability without importing",
     )
     commands.add_parser("quality")
+    progress = commands.add_parser(
+        "publish-bootstrap-progress",
+        help="Append verified older VN hourly bootstrap rows; leave completion and repair work pending",
+    )
+    progress.add_argument("--symbol", required=True)
+    progress.add_argument("--execute", action="store_true")
     adopt = commands.add_parser(
         "adopt-snapshot",
         help="Verify exact completed candle overlap before enabling a provider on a legacy API snapshot",
@@ -373,6 +380,16 @@ async def execute(args, settings):
                 api_read_backend=args.api_read_backend,
             )
         )
+    elif args.command == "publish-bootstrap-progress":
+        providers = Providers(settings)
+        try:
+            emit(
+                await publish_bootstrap_progress(
+                    repo, providers, archive, args.symbol.upper(), args.execute
+                )
+            )
+        finally:
+            await providers.close()
     elif args.command == "adopt-snapshot":
         if args.interval == "1D" and (
             args.source != "vn" or args.complete_sessions or args.corroborate_provider
