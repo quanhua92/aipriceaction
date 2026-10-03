@@ -6,6 +6,58 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## VN daily/minute session and corporate-action basis audit — 2026-10-04 ICT
+
+A read-only inventory compares **14,632 observed minute sessions** across all
+**59 selected VN tickers** with daily observations inside the retained minute
+window, October 3, 2025 through the completed October 2, 2026 session. Every
+observed daily date has minute data and every observed minute date has daily
+data. This proves observed-date agreement, not an independent exchange calendar,
+complete minute slots or matching price/volume conventions.
+
+Using the existing **1%** material-price review threshold, **1,537 session
+comparisons** differ across **12 tickers**: BSR, CTG, GAS, GEE, MWG, SHB, TCB,
+TPB, VHM, VN30, VND and VNINDEX. Six findings lie within the last 20 VNINDEX
+reference sessions beginning September 7: four TPB dates (September 28–October
+1) and two VNINDEX dates. Full session aggregates, missing-date checks, prices,
+volumes and native series identities are retained in
+`data/vn-session-basis-inventory-20261004/`. No correction factor is inferred.
+
+Dated three-provider/public API probes isolate TPB on September 30 and October
+2. Its local daily and minute candles match VPS and database-backed public JSON
+exactly on both dates, including all **217/224 minute records**. On September
+30, VPS daily OHLC is **12,255 / 12,255 / 12,087 / 12,129** while minute-session
+OHLC is **14,600 / 14,600 / 14,400 / 14,450**. This is present in the upstream
+and legacy API as well as the replacement. VNDirect and DNSE provide all 217
+minute timestamps with different adjusted prices; they are incompatible splices.
+VNDirect's daily prices match VPS but its volume differs; DNSE rounds prices
+differently. On October 2 all daily replies match; VPS/DNSE minute records match
+the local series exactly, while VNDirect changes four records, including one
+price record. Envelope agreement alone does not establish minute parity.
+
+The [official VSDC notice](https://vsdc.vn/vi/ad/200697), published September 25,
+documents TPB's October 5 record date for cash and stock dividends. Its HTML and
+checksum are preserved as corporate-action context. That notice does not prove
+each provider's historical adjustment formula or license scaling minute data.
+The runtime continues to preserve the captured interval-specific values and
+report the basis issue. Broader historical provider consistency remains open.
+
+`tests/fixtures/tpb_interval_basis.json.gz` freezes **443 native VPS records**
+from the two dates. The new regression verifies that auditing reports September
+30's actual basis difference, excludes the matching October 2 session, preserves
+all candles and series state, and creates no repair job. Commit: `3971e4c`.
+The full suite passes **410 tests**; lint/format checks pass for **71 Python
+files**, and offline wheel/source builds pass. The source distribution includes
+the captured fixture and regression test.
+
+The first probe attempt failed in the diagnostic request wrapper; the second
+preserved public matches but lacked an explicitly permitted direct VN route.
+Both are retained as incomplete witnesses. The completed third attempt enables
+direct requests only in its read-only probe settings; persisted worker routing
+is unchanged. All **58 inventory/probe artifacts** have content-hashed RustFS
+readbacks in `data/vn-session-basis-evidence-20261004.json`. Main data, metadata
+and the publication epoch remain unchanged.
+
 ## Native crypto freshness and continuous retained timestamps — 2026-10-04 ICT
 
 The existing bounded worker refresh succeeds for all four configured Binance

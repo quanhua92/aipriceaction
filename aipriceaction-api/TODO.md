@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 409 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 410 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -132,6 +132,14 @@ history through `eb814ab`; they are not additional current open tasks.
 - [ ] Finish provider adjustment/session/calendar and independent minute/daily
   quality checks. Preserve wider historical availability across the selected
   universe; the available global minute histories do not prove a full year.
+- [x] Audit all 59 selected VN tickers' observed daily/minute session pairs in
+  the retained minute window: 14,632 sessions and no unmatched observed dates.
+  Preserve 1,537 price-basis review findings across 12 tickers, including six in
+  the latest 20 reference sessions. Dated TPB responses prove its recent daily
+  and minute price bases differ even on VPS and the public legacy API; alternate
+  providers use different minute adjustments. The real 443-record regression
+  reports the difference without changing candles or creating inferred repairs.
+  This does not prove an independent exchange calendar or resolve all bases.
 - [ ] Complete wider web/CLI/SDK and cross-market historical/performance acceptance;
   preserve documented numeric/source/latency differences instead of hiding them.
   The installed SDK now passes 68 dated SMA/EMA cases for all 12 selected
