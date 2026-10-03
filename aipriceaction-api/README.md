@@ -417,6 +417,20 @@ Private sync records are a separate migration concern because `/tickers` does
 not expose them. Imported snapshots and new-provider data need compatible
 adjustment bases before they can be joined.
 
+For the selected cryptocurrencies, `scripts/check_crypto_daily_history.py`
+captures checksummed public JSON and original Binance responses, verifies the
+entire retained daily overlap, and reports older date/value differences:
+
+```sh
+uv run python scripts/check_crypto_daily_history.py --end-date 2026-10-02 --output data/crypto-history-check
+```
+
+Choose a completed UTC end date and a new output directory. This command is
+read-only and exits nonzero on any legacy/native discrepancy. Its separate
+`native_basis_verified` result records exact retained overlap, continuous native
+dates and identical public/native prices; older volume differences remain in
+the report. That result does not certify legacy volume parity or publish data.
+
 ```sh
 uv run aipa-api import-csv /path/FPT-1D.csv --source vn --symbol FPT --interval 1D --split-retention
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --dry-run
