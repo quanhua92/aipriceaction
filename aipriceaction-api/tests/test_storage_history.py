@@ -1,3 +1,4 @@
+import math
 import time
 import uuid
 from dataclasses import replace
@@ -10,6 +11,35 @@ from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError, cutoff, parse_time
 from aipriceaction_api.history import History
 from aipriceaction_api.storage import Repository
+
+
+@pytest.mark.parametrize(
+    "provider,revision",
+    (("", ""), ('provider,"日本\r\n', "\\N"), ("NULL", 'revision,"Việt Nam"')),
+)
+def test_bulk_archive_preserves_precision_bigints_and_quoted_metadata(system, provider, revision):
+    repo, archive, _ = system
+    close = math.nextafter(100.0, math.inf)
+    row = Candle(
+        "vn",
+        'TEST,"/Việt',
+        "1D",
+        parse_time("2020-01-01"),
+        close,
+        101.0,
+        99.0,
+        close,
+        2**63 - 1,
+        provider,
+        revision,
+        2**63 - 1,
+    )
+    repo.put([row])
+    original = repo.read("vn", row.symbol, "1D")
+    obj = archive.publish(original, prune=True)
+    assert archive.read(obj, refresh=True) == original
+    assert not repo.read("vn", row.symbol, "1D")
+    assert not list(archive.settings.cache_dir.rglob("*.csv"))
 
 
 @pytest.fixture

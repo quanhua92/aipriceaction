@@ -4,6 +4,7 @@ Use boto3 for explicit object transfers and DuckDB for local Parquet queries.
 No runtime extension download or bucket-wide query glob is required.
 """
 
+import csv
 import hashlib
 import json
 import os
@@ -215,13 +216,26 @@ class Archive:
             return result
 
     def _write(self, candles, path):
-        with duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as con:
+        # Bulk-load through a local typed CSV rather than executing one INSERT
+        # per candle. QUOTE_NOTNULL preserves empty strings separately from
+        # SQL NULL; repr-based float serialization round-trips IEEE doubles.
+        with (
+            tempfile.TemporaryDirectory(dir=Path(path).parent) as tmp,
+            duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as con,
+        ):
+            source = Path(tmp) / "bars.csv"
+            with source.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.writer(handle, quoting=csv.QUOTE_NOTNULL)
+                writer.writerow(COLUMNS)
+                for candle in candles:
+                    record = candle.record()
+                    writer.writerow(tuple(record[key] for key in COLUMNS))
             con.execute(
                 "CREATE TABLE bars(source VARCHAR,symbol VARCHAR,interval VARCHAR,time BIGINT,open DOUBLE,high DOUBLE,low DOUBLE,close DOUBLE,volume BIGINT,provider VARCHAR,revision VARCHAR,updated_at BIGINT)"
             )
-            con.executemany(
-                "INSERT INTO bars VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                [tuple(c.record()[k] for k in COLUMNS) for c in candles],
+            con.execute(
+                "COPY bars FROM ? (FORMAT CSV, HEADER true, ALLOW_QUOTED_NULLS false)",
+                [str(source)],
             )
             con.execute(
                 "COPY (SELECT * FROM bars ORDER BY time) TO ? (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 16384)",
