@@ -6,6 +6,74 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Main public-API daily publication — 2026-10-04 ICT
+
+Complete coherent public `/tickers` snapshots for EIB/HHS/GEX/HAG/SHS are now
+published into the main local replacement. Every earlier served date is retained,
+including SHS's 2018 history; the four missing EIB/HHS sessions are recovered.
+The snapshots contain **9,915 candles**, split into **3,735 hot rows** and
+**6,180 older rows in 26 immutable Parquet objects**. Each passes a fresh exact
+40-completed-candle VPS check immediately before atomic publication. Snapshot
+provenance and revision identities remain explicit; no inferred scaling or
+lifetime corporate-action policy is claimed.
+
+Original hot rows are backed up and stored as verified immutable before-images;
+old archive files remain preserved behind superseded index entries. Frozen API
+exports and checksummed per-ticker publication receipts are retained in S3.
+The local transaction commits candles, state, archive identities, adoption
+certificates, source checks, receipts, and only the verified resolved findings.
+The temporary publication helper then tried to reacquire its own archive-writer
+lease. This stopped metadata publication after the SQLite commit. Its `finally`
+block released the leases; a metadata-only retry published and read-back verified
+the current manifest without repeating candle replacement.
+
+**Forty-one full-year HTTP queries** match the frozen candidates exactly.
+**Sixty SDK cases** match equivalent API OHLCV and indicator scopes exactly:
+30 recent daily/weekly/two-week cases and 30 historical/boundary SMA/EMA cases.
+Forward and backward EMA requests can have different warmup seeds; comparisons
+use the SDK's actual request scope. The SDK does not expose monthly intervals,
+and the public web chart has no monthly control; initial rehearsals requesting
+those unsupported controls are preserved separately from supported checks.
+
+All five unchanged public-web rehearsals load their selected daily and weekly
+charts and volume profiles from the local API, with no browser exceptions,
+blocked writes, or network errors. Each still records failed VNINDEX benchmark
+calls caused by its pending historical archive. Selected chart success does not
+certify the entire page or benchmark acceptance.
+
+SQL comparison against the pre-publication backup proves **5,680,552 unrelated
+candles** retain all values, provenance, revisions, and update timestamps.
+Unrelated operational records also remain exact. The main database now contains
+**5,684,287 candles / 43,636 VN daily rows**. Its daily SHA-256 is
+`7cb2e73876d943760cf50f08bb320bf1f7e55bfc36ff7fc6fcfb4de973e3bff2`;
+its operational metadata SHA-256 is
+`f83ce662bb3195f5e6efd638c17e21fbea836308e3e4c990cb8552d757176e72`.
+
+A fresh S3 index reconstructs **445 active objects / 346,571 indexed rows**,
+**63 handoff certificates**, **34 recoveries**, and **one unavailable-history
+record**, with exact metadata. A new populated backup restores to a fresh
+destination with identical SHA-256
+`49c4bfbd8264bccc1af24cae55d613ff119871e3a59a5e456e04e84299c0fbfe`,
+exact quality/archive/evidence records, and `quick_check=ok`.
+
+The configured matrix now passes **2,091 of 2,103 requests**, improving from
+2,059 passes. The remaining **12 HTTP 503 responses** are VND and VNINDEX weekly,
+two-week, and monthly SMA/EMA requests: VND has an invalid 2020 candle and
+VNINDEX has one pending 2020 archive. Matrix reads leave the current main
+snapshot exact. These remaining failures and independent provider/calendar and
+minute/daily basis findings prevent claiming full replacement acceptance.
+The unchanged implementation's latest suite passes 302 tests; this publication
+adds no runtime or schema change. Production routing is unchanged.
+
+Evidence: `data/api-daily-publication-20261003T185405Z/report.json`, its original
+pointer, per-ticker receipts, restored index and `backup-restore.json`;
+`data/sdk-api-daily-publication-{EIB,HHS,GEX,HAG,SHS}-20261004.json`;
+`data/sdk-api-daily-history-publication-20261003.json`;
+`data/web-api-daily-weekly-publication-{EIB,HHS,GEX,HAG,SHS}-20261004.json`
+and screenshots;
+`data/web-query-matrix-api-daily-publication-20261004.json` and response captures.
+Before/after populated backups are in `backups/` with the publication identifier.
+
 ## Daily public-snapshot handoffs — 2026-10-04 ICT
 
 `adopt-snapshot --interval 1D` now supports frozen VN daily API snapshots. It

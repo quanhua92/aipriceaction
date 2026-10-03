@@ -24,6 +24,34 @@ evidence are ignored. Data coverage and production cutover gates remain open.
 
 ## Live API migration takes priority — 2026-10-04 ICT
 
+The main local replacement now serves the five complete public-API daily
+snapshots for EIB/HHS/GEX/HAG/SHS: **9,915 candles**, including SHS's existing
+2018 dates, with **3,735 hot rows and 26 cold objects / 6,180 older rows**.
+All previously served dates are preserved; the four EIB/HHS sessions are
+recovered. Fresh exact 40-candle VPS checks license each bounded daily append
+handoff. Original objects, raw exports, publication receipts, and populated
+before/after backups remain preserved. Public candle migration does not require
+direct legacy PostgreSQL access.
+
+- [x] Publish these coherent snapshots atomically into main local SQLite and
+  publish the S3 manifest under the shared writer lease.
+- [x] Verify 41 full-year HTTP reads, 60 exact SDK indicator/history comparisons,
+  5,680,552 unchanged unrelated candles, and unchanged unrelated operational rows.
+- [x] Restore the current archive index: 445 active objects, 63 handoffs,
+  34 recoveries, and one remaining unavailable-history record.
+- [x] Restore a populated backup with identical checksum and `quick_check=ok`.
+- [x] Repeat the 2,103-request query matrix: 2,091 pass; the 12 explicit failures
+  concern only VND/VNINDEX weekly, two-week, and monthly indicator history.
+- [x] Exercise all five selected daily/weekly charts and volume profiles in the
+  unchanged public web UI with local API routing; preserve the separate failed
+  VNINDEX benchmark calls as an outstanding acceptance gap.
+- [ ] Recover VND's invalid 2020 candle and reconcile VNINDEX's pending 2020
+  object using complete coherent history and verified native-provider overlap.
+- [ ] Complete provider/session semantics and independent minute/daily basis
+  checks; handle private sync inventory separately; finish production acceptance.
+
+The observations below describe the earlier isolated staging checkpoints.
+
 Complete 2019-through-current API snapshots for EIB/HHS/GEX/HAG/SHS now stage
 9,665 exact daily candles, with three-calendar-year hot retention and 25 older
 Parquet objects. Independent wide exports match every candle. The new
@@ -39,8 +67,8 @@ correction, and restore checks. Five live isolated VPS handoffs preserve every
 snapshot OHLCV/date; current daily SMA/EMA, historical, and weekly FastAPI reads
 pass. A separate extended SHS snapshot includes its existing 2018 history and
 preserves all 2,183 previously stored unique dates. The five intended candidates
-now total 9,915 candles / 26 older objects. Main publication and wider
-API/SDK/browser acceptance remain outstanding; these are still isolated proofs.
+now total 9,915 candles / 26 older objects. At that checkpoint main publication
+and wider client acceptance remained outstanding; the publication above follows it.
 
 The user explicitly selected the live `/tickers` API when legacy PostgreSQL is
 unavailable. Database access is not a prerequisite for migrating public candles.
