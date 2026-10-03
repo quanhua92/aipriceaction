@@ -6,7 +6,42 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
-## Completion blockers revalidated — 2026-10-04 ICT
+## Live API candle migration — 2026-10-04 ICT
+
+The user directed migration through the live public `/tickers` endpoint instead
+of requiring PostgreSQL. That is sufficient to export public candle data;
+private sync inventory is a separate concern. Seven fresh JSON requests all
+return HTTP 200. Six ranges pass strict OHLCV validation: EIB/HHS each return
+15 candles spanning May 22 through June 11, 2025, including all four missing
+sessions; GEX 2019 and HAG 2019 each return 250 candles, SHS 2022 returns 249,
+and VNINDEX 2020 returns 252. VND 2020 retains one invalid February 19 candle:
+close 2,760.51 exceeds high 2,711.91. HTTP success alone does not validate that row.
+
+The existing `LegacyImporter` then performs six actual full-year JSON imports
+from the public API into a fresh isolated database and local RustFS prefix:
+EIB/HHS 2025 each import 249 recent candles into SQLite; GEX/HAG 2019, SHS 2022,
+and VNINDEX 2020 archive **1,001 candles in four Parquet objects**. The combined
+**1,499 imported candles** are returned by the real FastAPI app with HTTP 200
+and exact OHLCV for every row. Receipts and checksummed originals are preserved,
+and the isolated archive manifest is published. No PostgreSQL connection or
+query is used. Main daily/operational hashes remain exact throughout.
+
+This proves an actionable migration path without PostgreSQL. It does not yet
+license inserting the four EIB/HHS sessions into the main provider revision:
+all 13 surrounding overlapping rows for each ticker differ from the main
+snapshot in at least one OHLCV field. A complete coherent snapshot and verified
+provider transition are needed before replacing that series. Likewise, the
+isolated older exports retain explicit `legacy-api` provenance rather than
+being relabeled as independently verified native-provider candles.
+
+Evidence: `data/live-api-recovery-20261004/report-181600.json`, its checksummed
+raw JSON captures and `basis-comparison.json`, plus
+`data/live-api-migration-20261003T181830Z/report.json` and download receipts.
+Isolated S3 prefix: `validation-live-api-20261003T181830Z`. The next migration
+steps use the public API as the primary candle source; private sync-record
+migration must not be confused with public price-history availability.
+
+## Previous completion blocker checkpoint — 2026-10-04 ICT
 
 The committed implementation has a clean worktree and the local API remains
 reachable (`/health` returns HTTP 200). A fresh read-only audit at **18:09 UTC on

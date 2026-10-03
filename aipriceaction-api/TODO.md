@@ -22,7 +22,25 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
-## Completion blockers revalidated — 2026-10-04 ICT
+## Live API migration takes priority — 2026-10-04 ICT
+
+The user explicitly selected the live `/tickers` API when legacy PostgreSQL is
+unavailable. Database access is not a prerequisite for migrating public candles.
+New checks capture all four missing EIB/HHS sessions plus valid GEX 2019, HAG
+2019, SHS 2022, and VNINDEX 2020 history. Six full-year API imports publish
+1,499 candles into isolated SQLite/RustFS storage and pass exact FastAPI reads.
+Main published data remains unchanged. VND 2020 still has one invalid API candle.
+
+Next, capture complete coherent legacy snapshots for affected tickers, including
+retained data and required historical indicator lookback. Verify transitions to
+selected native providers before main publication; do not splice EIB/HHS rows
+into a different existing adjustment basis. Continue to archive older API-exported
+candles as Parquet. Handle private sync records separately from price migration.
+The earlier blocker audit below describes native-provider/main-data state before
+this newly verified API migration path; it does not show that public API history
+is unavailable.
+
+## Previous completion blocker checkpoint — 2026-10-04 ICT
 
 After the Git checkpoints, read-only API and native-provider checks reproduce
 all nine unavailable ranges across EIB/HHS/VND/GEX/HAG/SHS/VNINDEX. VPS still

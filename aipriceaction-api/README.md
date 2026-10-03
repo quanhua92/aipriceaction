@@ -346,17 +346,22 @@ Archive files are partitioned yearly for daily data and monthly for intraday
 data. Exact object keys, bounds, checksums, providers, and revisions are indexed
 in SQLite. Immutable manifests allow archive-index recovery.
 
-Migration commands read explicit local files, the existing public yearly/daily
-CSV archive, or bounded CSV exports from the legacy HTTP API. Public API exports
-can capture PostgreSQL-only history that has not reached the old S3 archive. Preserve its CSV URLs, metadata, hashes, and fundamental files: the SDK
-reads them directly. Parquet uses a separate prefix. Imported legacy data and
-new-provider data require compatible adjustment bases before they can be joined.
+Use bounded JSON exports from `https://api.aipriceaction.com/tickers` as the
+primary legacy candle migration source. PostgreSQL access is not required for
+candles exposed by that endpoint, including history absent from the old CSV
+archive. Migration also supports explicit local files and public yearly/daily
+CSV objects. Keep the old CSV URLs, metadata, hashes, and fundamental files
+available for existing SDK consumers; new Parquet uses a separate prefix.
+Private sync records are a separate migration concern because `/tickers` does
+not expose them. Imported snapshots and new-provider data need compatible
+adjustment bases before they can be joined.
 
 ```sh
 uv run aipa-api import-csv /path/FPT-1D.csv --source vn --symbol FPT --interval 1D --split-retention
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --dry-run
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --split-retention --older-only
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1m --start-date 2025-01-02 --end-date 2025-01-03 --split-retention
+uv run aipa-api --database ./data/api-daily-migration.sqlite3 import-legacy --from-api --api-format json --source vn --symbol GEX --interval 1D --years 2019 --split-retention --revision legacy-api-daily-20261004
 uv run aipa-api --database ./data/migration.sqlite3 import-legacy --from-api --source vn --symbol FPT --interval 1m --start-date 2025-10-03 --end-date 2026-10-02
 uv run aipa-api --database ./data/migration.sqlite3 import-legacy --from-api --source vn --symbol VCB --interval 1m --start-date 2025-10-03 --end-date 2026-10-02 --api-batch-days 31
 uv run aipa-api --database ./data/json-migration.sqlite3 import-legacy --from-api --api-format json --source yahoo --symbol SPY --interval 1m --start-date 2026-09-28 --end-date 2026-10-02 --api-batch-days 7 --revision legacy-api-json-global-minute-20261003
