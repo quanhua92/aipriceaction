@@ -904,6 +904,15 @@ earliest. The checker verifies exact SDK/HTTP parity and independently compares
 the SDK candles with the complete dated range's tail. It records differences
 between full-range and tail-query moving averages separately because their
 indicator context can differ.
+`check_indicator_context.py` compares daily tail/full-range SMA/EMA responses
+with the live legacy endpoint, preserves raw responses, and separates candle
+differences from EMA seed decay. It does not alter the finite-lookback policy:
+the legacy API also produces history-dependent EMA values.
+
+```sh
+uv run python scripts/check_indicator_context.py --source crypto --symbol BTCUSDT --start-date 2022-01-01 --end-date 2022-12-31 --report data/btc-indicator-context.json
+```
+
 `check_web_client.py` uses optional Playwright/Chromium in an isolated browser;
 it routes only public API reads to the loopback replacement and exercises actual
 daily/15-minute chart controls and volume profiles. Reports/screenshots belong

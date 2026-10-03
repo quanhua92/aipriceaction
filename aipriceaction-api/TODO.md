@@ -131,9 +131,15 @@ history through `eb814ab`; they are not additional current open tasks.
   non-VN tickers' 2022 history, with independent complete-range OHLCV tail checks.
   Local S3 cold/warm reads pass for those tickers; actual BTC, VCB and NVDA web
   daily/15-minute/hourly controls pass. These checks leave wider dates, freshness
-  and capacity open. EMA history-length consistency remains a measured issue:
+  and capacity open. EMA history-length dependence remains measured:
   full-range versus tail-query EMA200 differs by up to 32.20380231006493 in the
   captured BTC daily case; no candle disagreement is hidden by this result.
+- [x] Compare indicator context with the live legacy API in all four markets.
+  Both APIs exhibit SMA-seeded finite-lookback EMA differences that follow seed
+  decay. BTC/Dow/SJC tail OHLCV and all five EMAs match exactly across APIs;
+  full-range warmup differences and VCB's native/legacy candle disagreements
+  remain recorded. Preserve inherited EMA behavior; reconcile those actual
+  warmup/provider differences under the wider numerical acceptance gate.
 - [x] Measure current selected VN local cold/warm reads, actual archive downloads,
   memory/database size and bounded HTTP load across all 59 configured tickers.
   Keep cloud costs/production capacity and missing cross-market ranges separate.

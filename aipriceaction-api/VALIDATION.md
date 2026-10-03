@@ -6,6 +6,48 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Live legacy indicator context diagnosis — 2026-10-04 ICT
+
+Fresh daily requests compare the replacement and live public legacy API for
+BTC, Dow, SJC gold and VCB: SMA/EMA, a 20-row tail ending December 31, 2022,
+and the complete 2022 range. Legacy requests explicitly disable Redis/snapshot
+reads through HTTP; no direct PostgreSQL connection is used. All 32 final
+responses and their raw checksums are preserved in
+`data/indicator-context-v2-20261004/`.
+
+Both APIs exhibit history-dependent EMA seeding. Within each origin, the
+20 shared tail candles are identical between query shapes, and all five EMA
+discrepancies follow `(1 - 2/(period+1))` decay across those dates within the
+recorded numerical tolerance. The legacy/local EMA200 context differences are
+respectively 32.53590324943434/32.20380231006493 for BTC,
+9.68325184557034/9.661306931382569 for Dow,
+4.337447099387646/26.26838631182909 for SJC and
+13.783961000146519/13.597970688024361 for VCB.
+Making every request history-invariant would alter existing behavior; this
+diagnosis leaves runtime calculation and the finite lookback policy unchanged.
+Rust's `constants.rs`, `queries/ohlcv.rs` and `models/indicators.rs` also show
+the finite 600-observation EMA budget and SMA-seeded recurrence.
+
+Across origins, all 20 tail candles and every tail EMA match exactly for BTC,
+Dow and SJC. Their complete-range candles also match, but maximum full-range
+EMA200 differences remain 10.461610647820635, 0.22108664059487637 and
+683.9788919389248 respectively. The differences follow seed decay; the exact
+older warmup inputs are not yet compared, so their cause is not certified as
+equivalent history selection. VCB has 20 tail/249 full-range candle differences
+between native and legacy adjustment bases; no indicator-only parity claim
+is made for it. This evidence narrows the open gate to actual full-range
+warmup/provider compatibility rather than imposing EMA history invariance.
+
+The reusable read-only tool is `scripts/check_indicator_context.py`, commit
+`75a87d5`. It preserves both query shapes, separately reports missing dates,
+OHLCV differences, undefined indicator disagreements and seed-decay residuals,
+and verifies the local publication epoch remains unchanged. All 72 initial and
+final artifacts have immutable RustFS readbacks in
+`data/indicator-context-evidence-20261004.json`; main data/metadata remain
+unchanged during preservation. Lint/format checks pass for 71 Python files.
+This is a diagnostic change, not a claim that full numerical cutover acceptance
+has passed.
+
 ## Cross-market clients and archived reads — 2026-10-04 ICT
 
 The actual public web app passes daily, 15-minute and hourly controls for BTC,
