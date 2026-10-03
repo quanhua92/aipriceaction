@@ -337,6 +337,19 @@ Each series publishes atomically; a refusal leaves that series unchanged,
 while earlier successful series remain readable. This runner does not mark
 bootstrap jobs complete or certify missing sessions.
 
+Inspect dated index-hourly availability before choosing a repair source:
+
+```bash
+uv run python scripts/check_vn_index_hourly_windows.py --allow-direct --before 2026-04-01 --output data/index-hourly-probes
+uv run python scripts/check_vn_index_hourly_windows.py --allow-direct --before 2026-10-03 --walk-dnse-start 2023-10-03 --output data/index-hourly-walk
+```
+
+This diagnostic captures VPS/VNDirect/DNSE responses, records observed date
+coverage and local discrepancies, and verifies the main index records and
+database epoch stay unchanged. The optional DNSE walk has a 12-page limit and
+keeps invalid-page evidence; it never clamps candles or publishes a candidate.
+Reaching an older cursor proves traversal only, not complete trading sessions.
+
 Crypto minute bootstrap uses Binance's checksummed monthly spot CSV files when
 available; normal updates and unpublished months use the live API. Downloads
 have an 8 MiB compressed/32 MiB uncompressed object budget and a 128 MiB local

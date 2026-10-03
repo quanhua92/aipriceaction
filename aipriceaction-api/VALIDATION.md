@@ -6,6 +6,65 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## VN index hourly source gaps and isolated candidates — 2026-10-04 ICT
+
+Both VNINDEX and VN30 currently serve **766 native VNDirect hourly records
+across 138 observed dates**. Their repair jobs are marked complete, but their
+date distributions show internal gaps: before April 2026 they contain isolated
+dates, rather than a full continuous history. The existing unresolved
+`audit_observed_sessions` findings each identify **609 daily reference dates**
+without hourly records. These are observed-date review findings, not invented
+trades or a verified exchange calendar.
+
+The read-only dated diagnostic requests three historical boundaries from all
+three permitted providers. Before April 1, 2026, VNDirect returns **30 bars on
+six dates**, while DNSE returns **500 bars on 100 dates**. Before December 1,
+2024, their respective results are **70 bars on 14 dates** and **500 bars on
+101 dates**. Before October 31, 2023, VNDirect returns **65 bars on 13 dates**;
+DNSE returns **500 bars on 101 dates**. VPS returns no records in those historical
+samples. Current-window probes return **372 VPS / 500 VNDirect / 500 DNSE bars**
+per index. These observations demonstrate provider differences; they do not
+prove that a shorter response is an ingestion pagination bug.
+
+Strict DNSE walks validate the first **500 recent rows** per index, then reject
+the next page. Raw selected-page witnesses identify **seven invalid VNINDEX
+bars** and **five invalid VN30 bars**, all at 07:00 UTC in April 2026. Their
+closes lie outside their reported high/low ranges. Each timestamp has a valid
+public record with a different range and volume. No candle is clamped, omitted
+to bypass validation, or combined with another provider. Reports and raw
+captures: `data/vn-index-hourly-windows-20261004/`,
+`data/vn-index-hourly-current-window-20261004/` and
+`data/vn-index-hourly-native-walk-20261004/`, including
+`invalid-candle-witnesses.json` in the last directory.
+
+Full public exports for October 3, 2023 through October 2, 2026 contain **3,448
+valid hourly records across 747 observed dates per index**. Each public window
+has **2,727 timestamps absent locally**, while **45 local timestamps are absent
+from the public window**. Shared fields differ at **721 VNINDEX / 708 VN30
+timestamps**. These are complete captured comparisons, not permission to infer
+price factors or splice providers. Evidence:
+`data/vn-index-public-hourly-window-20261004/report.json` and its two complete
+comparison files and original JSON bodies.
+
+Both captured public windows are staged in **isolated SQLite** with exact
+timestamp/OHLCV preservation. Four complete local Parquet images preserve both
+native before-images and both public candidates, with exact readback including
+capture versions. Candidate FastAPI checks match all **3,448 hourly / 1,494
+derived four-hour records per index**. These use the in-process ASGI interface;
+they are not claims of a browser or serving-database publication. The candidate
+backup passes integrity/count checks with **6,896 rows**. Evidence:
+`data/vn-index-hourly-public-candidates-20261004/report.json` and
+`asgi-checks.json` in that directory. All **50 captured evidence artifacts**,
+including Parquet images and the candidate backup, have immutable RustFS
+readbacks in `data/vn-index-hourly-evidence-20261004.json`.
+
+The serving database epoch and both original index series remain unchanged.
+The candidates are explicitly marked unsuitable for an append; coherent
+replacement, local/public timestamp reconciliation and session/source policy
+remain open. Lint/format checks pass for **68 Python files**. Application code
+retains its existing **389-test checkpoint**; this change adds a read-only
+diagnostic without changing API interfaces or deploying anything.
+
 ## Selected VN hourly progress publication — 2026-10-04 ICT
 
 The bounded local batch runner applies the existing guarded progress command

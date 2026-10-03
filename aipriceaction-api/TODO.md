@@ -79,6 +79,16 @@ history through `eb814ab`; they are not additional current open tasks.
   not certify complete coverage or close the quality findings. All 53 stock
   hourly prefixes now reach their applicable retention/listing date; VNINDEX
   and VN30 still begin after that date. Session completeness remains unproven.
+- [x] Diagnose index hourly internal gaps independently of prefix bounds:
+  VNDirect returns sparse older windows; the next DNSE backfill pages contain
+  seven invalid VNINDEX bars and five invalid VN30 bars. Preserve raw witnesses
+  and stage complete public candidates (3,448 rows each) in isolated SQLite and
+  Parquet, with full FastAPI checks and immutable local before-images.
+- [ ] Reconcile and publish coherent VNINDEX/VN30 hourly replacements. Each
+  public candidate has 2,727 timestamps absent locally, but omits 45 local
+  timestamps and changes many shared fields; it is not an append candidate.
+  Existing source/session findings remain open; traversal alone cannot certify
+  complete recent history.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   are 58 series with pending work; readiness alone does not prove coverage.
