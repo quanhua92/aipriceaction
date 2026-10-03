@@ -6,8 +6,11 @@ are untouched. Other requests retain the public website's normal destinations.
 """
 
 import argparse
+import csv
+import io
 import json
 import re
+from datetime import date
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
@@ -15,7 +18,7 @@ from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import sync_playwright
 
 
-def check(api_url, symbol, report, market="vn", intervals=None):
+def check(api_url, symbol, report, market="vn", intervals=None, minimum_dates=None):
     if urlsplit(api_url).hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("Use a loopback replacement API for this rehearsal")
     report.parent.mkdir(parents=True, exist_ok=True)
@@ -24,6 +27,11 @@ def check(api_url, symbol, report, market="vn", intervals=None):
     path = {"vn": "chart", "crypto": "crypto", "global": "global"}[market]
     intervals = ("1D", *(intervals or (("1W",) if market == "global" else ("15m",))))
     intervals = tuple(dict.fromkeys(intervals))
+    minimum_dates = minimum_dates or {}
+    if set(minimum_dates) - set(intervals):
+        raise ValueError("Freshness bounds must refer to requested chart intervals")
+    for value in minimum_dates.values():
+        date.fromisoformat(value)
 
     def matches(url, interval):
         parts = urlsplit(url)
@@ -62,6 +70,12 @@ def check(api_url, symbol, report, market="vn", intervals=None):
                 if key in {"symbol", "interval", "mode", "date", "start_date", "end_date", "limit"}
             }
             body = response.body()
+            candles = (
+                list(csv.DictReader(io.StringIO(body.decode("utf-8-sig"))))
+                if params.get("format") == ["csv"]
+                else []
+            )
+            times = [row["time"] for row in candles if row.get("time")]
             calls.append(
                 {
                     "path": parts.path,
@@ -71,6 +85,8 @@ def check(api_url, symbol, report, market="vn", intervals=None):
                     "csv_rows": max(0, len(body.splitlines()) - 1)
                     if params.get("format") == ["csv"]
                     else None,
+                    "first_time": min(times) if times else None,
+                    "last_time": max(times) if times else None,
                 }
             )
             route.fulfill(response=response)
@@ -119,16 +135,34 @@ def check(api_url, symbol, report, market="vn", intervals=None):
                     and (r["csv_rows"] or 0) >= 20
                 ]
                 assert found, ("No populated chart response", symbol, interval)
+                if interval in minimum_dates:
+                    assert all(
+                        r["last_time"] and r["last_time"][:10] >= minimum_dates[interval]
+                        for r in found
+                    ), ("Stale chart response", symbol, interval, minimum_dates[interval])
                 if market == "global":
                     for benchmark in ("^GSPC", "^DJI"):
-                        assert any(
-                            r["path"] == "/tickers"
-                            and r["query"].get("symbol") == [benchmark]
-                            and r["query"].get("interval") == [interval]
-                            and r["status"] == 200
-                            and (r["csv_rows"] or 0) >= 20
+                        benchmarks = [
+                            r
                             for r in calls
-                        ), ("No populated global benchmark chart", benchmark, interval)
+                            if (
+                                r["path"] == "/tickers"
+                                and r["query"].get("symbol") == [benchmark]
+                                and r["query"].get("interval") == [interval]
+                                and r["status"] == 200
+                                and (r["csv_rows"] or 0) >= 20
+                            )
+                        ]
+                        assert benchmarks, (
+                            "No populated global benchmark chart",
+                            benchmark,
+                            interval,
+                        )
+                        if interval in minimum_dates:
+                            assert all(
+                                r["last_time"] and r["last_time"][:10] >= minimum_dates[interval]
+                                for r in benchmarks
+                            ), ("Stale benchmark chart", benchmark, interval)
             if market != "global":
                 profile_loaded = any(
                     r["path"] == "/analysis/volume-profile"
@@ -171,6 +205,7 @@ def check(api_url, symbol, report, market="vn", intervals=None):
                 "symbol": symbol,
                 "market": market,
                 "requested_intervals": intervals,
+                "minimum_chart_dates": minimum_dates,
                 "passed": passed,
                 "calls": calls,
                 "page_errors": errors,
@@ -188,6 +223,19 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", default="FPT")
     parser.add_argument("--market", choices=("vn", "crypto", "global"), default="vn")
     parser.add_argument("--interval", action="append", choices=("15m", "1h", "4h", "1W", "1M"))
+    parser.add_argument(
+        "--minimum-chart-date",
+        action="append",
+        default=[],
+        metavar="INTERVAL=YYYY-MM-DD",
+        help="Require selected and benchmark chart tails to reach this date; may repeat",
+    )
     parser.add_argument("--report", type=Path, default=Path("data/web-rehearsal.json"))
     args = parser.parse_args()
-    check(args.api_url, args.symbol.upper(), args.report, args.market, args.interval)
+    minimum_dates = {}
+    for bound in args.minimum_chart_date:
+        interval, separator, value = bound.partition("=")
+        if not separator or interval in minimum_dates:
+            parser.error("Use each INTERVAL=YYYY-MM-DD freshness bound once")
+        minimum_dates[interval] = value
+    check(args.api_url, args.symbol.upper(), args.report, args.market, args.interval, minimum_dates)
