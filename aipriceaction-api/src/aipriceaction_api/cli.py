@@ -131,7 +131,7 @@ def parser():
     )
     adopt.add_argument("--symbol", required=True)
     adopt.add_argument("--source", choices=("vn", "yahoo"), default="vn")
-    adopt.add_argument("--interval", choices=("1m", "1D"), default="1m")
+    adopt.add_argument("--interval", choices=("1m", "1h", "1D"), default="1m")
     adopt.add_argument("--provider", choices=("vps", "vndirect", "dnse", "yahoo"), required=True)
     adopt.add_argument(
         "--complete-sessions",
@@ -399,6 +399,7 @@ async def execute(args, settings):
                     complete_sessions=args.complete_sessions,
                     corroborate=args.corroborate_provider,
                     source=args.source,
+                    iv=args.interval,
                 )
             )
         finally:

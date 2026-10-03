@@ -251,7 +251,12 @@ class Repository:
                         and evidence["kind"] == "exact_snapshot_overlap"
                     )
                 )
-                and record["interval"] == "1m"
+                and (
+                    record["interval"] == "1m"
+                    or record["interval"] == "1h"
+                    and record["source"] == "yahoo"
+                    and evidence["kind"] == "exact_snapshot_overlap"
+                )
                 and record["snapshot_provider"] == "legacy-api"
                 and bool(record["symbol"])
                 and bool(record["revision"])
@@ -263,7 +268,11 @@ class Repository:
                 }
                 and type(evidence["matched_rows"]) is int
                 and evidence["matched_rows"]
-                >= (1000 if evidence["kind"] == "exact_snapshot_overlap" else 5)
+                >= (
+                    (100 if record["interval"] == "1h" else 1000)
+                    if evidence["kind"] == "exact_snapshot_overlap"
+                    else 5
+                )
                 and type(evidence["completed_sessions"]) is int
                 and evidence["completed_sessions"] >= 5
                 and evidence["snapshot_rows"] >= evidence["matched_rows"]
@@ -282,13 +291,18 @@ class Repository:
                 )
             )
             if valid and record["source"] == "yahoo":
+                step = 3600 if record["interval"] == "1h" else 60
                 valid = (
                     type(evidence["completed_before"]) is int
-                    and evidence["completed_before"] % 60 == 0
+                    and evidence["completed_before"] % step == 0
                     and evidence["overlap_end"]
                     < evidence["completed_before"]
-                    <= evidence["verified_at_ns"] // 60_000_000_000 * 60
+                    <= evidence["verified_at_ns"] // (step * 1_000_000_000) * step
                 )
+                if record["interval"] == "1h":
+                    valid = valid and all(
+                        evidence[key] % step == 0 for key in ("overlap_start", "overlap_end")
+                    )
             if valid and evidence["kind"] in {
                 "exact_complete_sessions",
                 "corroborated_complete_sessions",

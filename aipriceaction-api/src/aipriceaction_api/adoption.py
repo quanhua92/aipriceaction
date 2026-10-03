@@ -205,7 +205,12 @@ async def adopt_snapshot(
     complete_sessions=False,
     corroborate=None,
     source="vn",
+    iv="1m",
 ):
+    if iv not in {"1m", "1h"} or iv == "1h" and source != "yahoo":
+        raise DataError("Intraday adoption supports minutes and Yahoo hourly snapshots", 400)
+    if iv != "1m" and (complete_sessions or corroborate is not None):
+        raise DataError("Complete-session and correction proofs require minute snapshots", 400)
     allowed = (
         providers.settings.vn_providers
         if source == "vn"
@@ -226,18 +231,20 @@ async def adopt_snapshot(
             "Corrections require complete sessions and a distinct configured corroborating provider",
             400,
         )
-    state = repo.state(source, symbol, "1m")
+    state = repo.state(source, symbol, iv)
     if not state or state["status"] != "ready" or state["provider"] != "legacy-api":
-        raise DataError("Adoption requires a ready legacy-api minute snapshot", 400)
-    rows = repo.read(source, symbol, "1m")
+        raise DataError("Adoption requires a ready legacy-api intraday snapshot", 400)
+    rows = repo.read(source, symbol, iv)
     if not rows or {(r.provider, r.revision) for r in rows} != {("legacy-api", state["revision"])}:
         raise DataError("Adoption requires one coherent imported snapshot")
-    completed = completed_vn_sessions() if source == "vn" else int(time.time()) // 60 * 60
+    step = 3600 if iv == "1h" else 60
+    completed = completed_vn_sessions() if source == "vn" else int(time.time()) // step * step
+    minimum = 100 if iv == "1h" else 1000
     page = await asyncio.wait_for(
-        providers.page(source, symbol, "1m", count=2000, provider=provider), timeout=90
+        providers.page(source, symbol, iv, count=minimum * 2, provider=provider), timeout=90
     )
     if page.provider != provider or any(
-        (r.source, r.symbol, r.interval, r.provider) != (source, symbol, "1m", provider)
+        (r.source, r.symbol, r.interval, r.provider) != (source, symbol, iv, provider)
         for r in page.rows
     ):
         raise DataError("Provider identity changed during snapshot verification")
@@ -246,6 +253,8 @@ async def adopt_snapshot(
     corrections = []
     for row in incoming:
         row.validate()
+        if iv == "1h" and row.time % 3600:
+            raise DataError("Native hourly overlap must use whole-hour timestamps")
         previous = by_time.get(row.time)
         if previous is None:
             raise DataError("Provider timestamp is absent from the imported snapshot")
@@ -264,14 +273,14 @@ async def adopt_snapshot(
     sessions = {r.time // 86400 for r in incoming}
     published_completed = [r.time for r in rows if r.time < completed]
     if (
-        (len(incoming) < 1000 and not complete_sessions)
+        (len(incoming) < minimum and not complete_sessions)
         or len(sessions) < 5
         or not incoming
         or not published_completed
         or incoming[-1].time < max(published_completed)
     ):
         raise DataError(
-            "Adoption requires at least 1000 exact candles across five completed sessions through the published tail"
+            f"Adoption requires at least {minimum} exact candles across five completed sessions through the published tail"
         )
     evidence = {
         "kind": "exact_snapshot_overlap",
@@ -360,7 +369,7 @@ async def adopt_snapshot(
     record = {
         "source": source,
         "symbol": symbol,
-        "interval": "1m",
+        "interval": iv,
         "revision": state["revision"],
         "snapshot_provider": state["provider"],
         "provider": provider,
@@ -371,12 +380,12 @@ async def adopt_snapshot(
         with repo.connect() as con:
             con.execute("BEGIN IMMEDIATE")
             current = con.execute(
-                "SELECT * FROM series WHERE source=? AND symbol=? AND interval='1m'",
-                (source, symbol),
+                "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, iv),
             ).fetchone()
             published = con.execute(
-                "SELECT * FROM candles WHERE source=? AND symbol=? AND interval='1m' ORDER BY time",
-                (source, symbol),
+                "SELECT * FROM candles WHERE source=? AND symbol=? AND interval=? ORDER BY time",
+                (source, symbol, iv),
             ).fetchall()
             from .domain import Candle
 
@@ -405,8 +414,8 @@ async def adopt_snapshot(
                 ):
                     raise DataError("Daily snapshot changed during adoption verification")
             if con.execute(
-                "SELECT 1 FROM jobs WHERE source=? AND symbol=? AND interval='1m' AND status IN ('pending','running') AND lease_until>?",
-                (source, symbol, int(time.time())),
+                "SELECT 1 FROM jobs WHERE source=? AND symbol=? AND interval=? AND status IN ('pending','running') AND lease_until>?",
+                (source, symbol, iv, int(time.time())),
             ).fetchone():
                 raise DataError(
                     "A retained-window job is active; finish its bounded page before adoption"
@@ -437,12 +446,12 @@ async def adopt_snapshot(
             # Unchanged snapshot prices/provenance stay intact. Corrections have
             # independent witnesses; future updates use the verified provider.
             con.execute(
-                "UPDATE series SET provider=? WHERE source=? AND symbol=? AND interval='1m'",
-                (provider, source, symbol),
+                "UPDATE series SET provider=? WHERE source=? AND symbol=? AND interval=?",
+                (provider, source, symbol, iv),
             )
             jobs = con.execute(
-                "SELECT id FROM jobs WHERE source=? AND symbol=? AND interval='1m' AND kind IN ('bootstrap','repair') AND status NOT IN ('complete','cancelled')",
-                (source, symbol),
+                "SELECT id FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind IN ('bootstrap','repair') AND status NOT IN ('complete','cancelled')",
+                (source, symbol, iv),
             ).fetchall()
             for job in jobs:
                 con.execute("DELETE FROM staging WHERE job_id=?", (job["id"],))
@@ -450,8 +459,9 @@ async def adopt_snapshot(
                     "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0 WHERE id=?",
                     (job["id"],),
                 )
+            schedule = "next_1h" if iv == "1h" else "next_1m"
             con.execute(
-                "UPDATE tickers SET next_1m=0 WHERE source=? AND symbol=?", (source, symbol)
+                f"UPDATE tickers SET {schedule}=0 WHERE source=? AND symbol=?", (source, symbol)
             )
             repo.bump(con)
     return {
