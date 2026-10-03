@@ -72,6 +72,10 @@ history through `eb814ab`; they are not additional current open tasks.
   proof without expanding its six-day upstream range or relaxing OHLCV checks.
   Gold's real wider capture has 6,881 rows, ten conflicting records and 21 native
   timestamps absent from the public snapshot; its handoff remains rejected.
+- [x] Trace gold minute discrepancies through legacy extraction and captured
+  query variants. The current one-day response matches 1,020 retained records;
+  dated/wider queries differ, including their first-row volume. Preserve raw
+  response evidence and leave request-policy reconciliation open.
 - [ ] Finish provider adjustment/session/calendar and independent minute/daily
   quality checks. Preserve wider historical availability across the selected
   universe; the available global minute histories do not prove a full year.

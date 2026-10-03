@@ -6,6 +6,45 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Gold minute query-shape diagnosis — 2026-10-04 ICT
+
+The repository's legacy minute worker requests `range=1d` and saves extracted
+quotes with minute timestamp normalization. Its pinned `yahoo_finance_api` 4.1.0
+extractor omits null closes and defaults other null fields, including volume,
+to zero. Sources inspected: `../aipriceaction/src/workers/yahoo_minute.rs`,
+`../aipriceaction/src/constants.rs`, `../aipriceaction/src/workers/vci_shared.rs`,
+`../aipriceaction/Cargo.lock` and the locally installed crate's `quotes.rs`.
+This describes the repository implementation, not every deployed historical
+worker version. The new diagnostic replays these defaults only for comparison;
+the native adapter's null-data policy remains unchanged.
+
+Repeated captured gold queries reproduce the difference. The current legacy
+one-day range contains **1,020 extracted rows**, all exactly matching retained
+timestamps/OHLCV, with **419 null-close rows** omitted. The explicitly dated
+October 2 response contains **1,259 extracted rows**, **180 null-close rows**,
+**ten additional timestamps** and **three changed records**. The bounded six-day
+response contains **6,881 extracted rows**, **663 null-close rows**, **21
+additional timestamps** and **ten changed records**, reproducing the previous
+native preflight. These are response counts, not calendar coverage proofs.
+
+The dated response's first October 2 midnight row has volume **0**, versus
+**50** in the retained snapshot and wider capture. This is evidence of a
+request-boundary difference; it does not establish a correct trade volume or
+authorize rewriting the original. The legacy range's first 04:00 row also
+matches the retained zero volume, while the wider response reports **74**.
+Query profiles differ in bounds and event parameters, so further controlled
+comparison is needed before assigning the cause to one parameter. No dividend
+factor, volume correction, timestamp insertion or handoff is published.
+
+The reusable diagnostic's complete evidence is in
+`data/gold-minute-query-shapes-v2-20261004/report.json` and checksummed raw and
+normalized bodies. It verifies the selected retained records and database epoch
+remain unchanged. Failed captures retain a partial report and original bodies.
+Lint/format checks pass for **63 Python files**, and offline source/wheel builds
+pass. Application code is unchanged from the **378-test** checkpoint.
+All seven response/report artifacts are also readback-verified in RustFS;
+object keys and checksums are in the same directory's `rustfs-evidence.json`.
+
 ## Futures minute handoff window and unresolved native differences — 2026-10-04 ICT
 
 Yahoo futures minute adoption now retains up to **10,000** rows from the

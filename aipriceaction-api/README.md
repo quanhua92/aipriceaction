@@ -541,6 +541,22 @@ The legacy API's zero-volume, flat-OHLC Yahoo futures observations retain their
 original seconds in minute and hourly snapshots, with visible quality findings.
 Native candles retain strict minute alignment.
 
+For minute handoff disagreements, compare Yahoo request shapes separately:
+
+```sh
+uv run python scripts/check_yahoo_minute_query_shapes.py --symbol 'GC=F' --date 2026-10-02 --output data/gold-minute-query-shapes
+```
+
+This read-only diagnostic captures the current one-day range used by the legacy
+worker, an explicitly dated day and the replacement's bounded six-day response.
+The current range need not cover the explicit day. Raw bodies, requested URLs,
+null-close counts, original timestamp labels and exact differences are retained.
+Rust extraction null defaults are replayed for diagnosis only; this never
+licenses a handoff or writes inferred prices/volumes to the application database.
+Gold's observed range response matches retained data while the dated/wider
+responses differ, including a first-row volume difference. Resolve that request
+policy before interpreting every disagreement as a historical adjustment.
+
 Verify the complete staged minute history through the local HTTP API:
 
 ```sh
