@@ -347,6 +347,14 @@ after verifying its handoff. The included AAPL, SPY, S&P and Dow entries enable
 daily and minute updates after verified local snapshot handoffs. MSFT, NVDA and
 gold futures still ingest daily data only; their minute discrepancies remain open.
 
+After an outage, Yahoo updates expand the recent request once, up to 1,000
+candles within the retained window, using the current provider. Daily replies
+must overlap the exact stored tail. Intraday replies may instead match its
+adjacent stored bar within one interval, because later Yahoo replies can omit
+an earlier close-time row; that original row remains stored. A disjoint reply
+queues staged recovery and preserves published data. Unavailable close-time
+rows are not inferred during catch-up.
+
 For a sparse ticker with fewer available minute candles, use the explicit
 complete-session verification path:
 

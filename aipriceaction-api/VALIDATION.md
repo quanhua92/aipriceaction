@@ -6,6 +6,58 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Yahoo outage overlap and close-time rows — 2026-10-04 ICT
+
+Yahoo updates previously used only the recent 40-candle page, without the
+observed-tail guard already applied to VN updates. After an outage they could
+append newer candles across an unverified hole and record success. Yahoo
+now also expands at most once within the current provider/retained window,
+up to 1,000 candles. A still-disjoint reply queues durable staged recovery,
+records the coverage finding/repair outcome, and preserves the published data.
+The whole expanded stored overlap is checked for corroborated price changes
+before publication, including records outside the usual last 50.
+
+Daily Yahoo replies must include the exact stored tail. Actual five-session
+captures show later intraday replies omit four earlier close-time timestamps
+retained by the public API. Requiring only that exact last timestamp would queue
+repair despite a matching adjacent regular bar. Yahoo hourly/minute therefore
+accept only a stored overlap within one interval of the published tail. They
+preserve the original close-time row; an older, nonadjacent overlap still cannot
+license appends. VN/crypto behavior remains covered by existing regressions.
+
+Eleven added Yahoo cases cover bounded daily/hourly/minute expansion, capped
+replies and source-check/job outcomes, preserved omitted close-time originals,
+strict daily and nonadjacent minute rejection, and older expanded price revisions.
+The complete suite passes **335 tests in 22.69 seconds**, with the existing
+Starlette/httpx deprecation warning. Ruff lint and formatting pass for **58 Python
+files**, and offline wheel/sdist builds pass.
+
+Fresh isolated native rehearsals:
+
+- AAPL daily starts with **653 of 753 reference candles**, omitting the latest
+  100 observed dates. Requests expand **40 to 185**, pinned to Yahoo with the
+  retention start; all 753 dates/OHLCV return exactly, with no findings or repair
+  jobs. Its optional ten-row historical sample is recorded separately from the
+  expanded recent request.
+- SPY minute starts with **55,893 of 56,675 reference candles**, through the
+  observed **2026-09-30 20:00 UTC** close-time row. Requests expand **40 to 1,000**.
+  The expanded page lacks that close-time row but matches its adjacent stored
+  **19:59 UTC** bar. Every seeded timestamp/original remains present; all
+  observed native values match exactly. The result contains **56,674 rows**.
+  Yahoo does not provide the later **2026-10-01 20:00 UTC** public close-time
+  record during catch-up; it is not invented. This is verified native observed
+  continuity, not exact equality with every later public snapshot timestamp.
+
+Both isolated series remain ready, without findings/jobs; main daily/operational
+hashes and production remain unchanged. Evidence:
+`data/yahoo-outage-native-rehearsal-20261003T195349Z/report.json` and hashed
+provider captures/databases. The earlier isolated daily run at
+`data/yahoo-outage-native-rehearsal-20261003T195255Z/` remains preserved; its
+checker incorrectly counted the optional historical sample as a recent request.
+The corrected checker records those requests separately and verifies both
+markets without changing main data. Provider/calendar and unresolved historical
+acceptance gates remain open.
+
 ## AAPL/SPY full-precision minute publication — 2026-10-04 ICT
 
 A fresh read-only five-series Yahoo/public-API probe shows AAPL and SPY now

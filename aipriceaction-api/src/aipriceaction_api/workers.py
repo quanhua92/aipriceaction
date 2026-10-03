@@ -242,8 +242,13 @@ class Worker:
             latest = self.repo.read(source, symbol, iv, limit=50)
             overlap = latest
             count = 40
+            step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
+            tail_times = {latest[-1].time} if latest else set()
+            if source == "yahoo" and iv in ("1h", "1m") and latest:
+                # Yahoo can omit an earlier closing quote from later replies.
+                # Require its adjacent stored bar; retain the original quote.
+                tail_times.update(r.time for r in latest if latest[-1].time - r.time <= step)
             if source == "crypto" and latest:
-                step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
                 count = min(1000, max(count, (int(time.time()) - latest[-1].time) // step + 40))
             # Pin incremental reads to the current upstream. A failure cannot
             # silently stitch a different provider's adjustment basis into it.
@@ -272,17 +277,16 @@ class Worker:
             if not page.rows:
                 raise DataError("No recent provider data")
             if (
-                source == "vn"
+                source in ("vn", "yahoo")
                 and iv in ("1D", "1h", "1m")
                 and latest
                 and page.provider == state["provider"]
                 and page.rows[-1].time > latest[-1].time
-                and not any(r.time == latest[-1].time for r in page.rows)
+                and not any(r.time in tail_times for r in page.rows)
             ):
                 # Keep ordinary/closed-market checks cheap. Expand only when
                 # newer data has outrun the small overlap page; pin the retry
                 # to the existing provider's adjustment basis.
-                step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
                 count = min(1000, max(40, (int(time.time()) - latest[-1].time) // step + 40))
                 if count > 40:
                     page = await self.providers.page(
@@ -294,7 +298,8 @@ class Worker:
                         start=self.floor(entry, iv),
                     )
                     if not page.rows:
-                        raise DataError("No provider data for expanded VN overlap")
+                        market = "VN" if source == "vn" else "Yahoo"
+                        raise DataError(f"No provider data for expanded {market} overlap")
                     # An expanded page can reach beyond the normal 50-bar
                     # comparison. Check all stored overlap before publishing
                     # older candles on a potentially changed adjustment basis.
@@ -305,19 +310,18 @@ class Worker:
             if source == "crypto" and latest and page.rows[0].time > latest[-1].time + step:
                 gap = f"Continuous-market gap from {latest[-1].time} to {page.rows[0].time}; recovery queued"
             elif (
-                source == "vn"
+                source in ("vn", "yahoo")
                 and iv in ("1D", "1h", "1m")
                 and latest
                 and page.provider == state["provider"]
                 and page.rows[-1].time > latest[-1].time
-                and not any(r.time == latest[-1].time for r in page.rows)
+                and not any(r.time in tail_times for r in page.rows)
             ):
                 # Trading breaks, holidays, and sparse stocks do not imply
                 # missing candles. Require an observed overlap instead of
                 # guessing which intervening candles should have traded.
-                gap = (
-                    "Bounded VN provider page does not overlap the published tail; recovery queued"
-                )
+                market = "VN" if source == "vn" else "Yahoo"
+                gap = f"Bounded {market} provider page does not overlap the published tail; recovery queued"
             if gap:
                 # A long outage can exceed one bounded live page. Preserve the
                 # published series and resume its durable recovery rather than

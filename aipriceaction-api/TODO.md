@@ -22,6 +22,26 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
+## Yahoo restart continuity — 2026-10-04 ICT
+
+- [x] Extend bounded observed-overlap checks to Yahoo daily/hourly/minute
+  updates. Expand once within the retained window/current provider and
+  1,000-candle limit; preserve originals and queue recovery for disjoint replies.
+- [x] Require exact daily-tail overlap. For Yahoo intraday, permit only an
+  adjacent stored bar within one interval when a later reply omits the earlier
+  close-time record; preserve that original and reject older-only overlaps.
+- [x] Check the entire expanded stored overlap for price revisions before
+  publication. Verify 11 Yahoo regressions; all 335 API tests pass, lint/format
+  pass, and offline distributions build.
+- [x] Rehearse actual AAPL daily catch-up from 653 to all 753 reference rows and
+  adopted SPY minute catch-up preserving every seed timestamp and exact native
+  values. Preserve the separately unavailable later close-time timestamp rather
+  than fabricating it; main data and production remain unchanged.
+
+These checks improve restart safety. They do not establish missing calendar
+sessions, resolve provider semantics or certify complete lifetime coverage.
+Evidence and the explicit SPY catch-up limitation are in `VALIDATION.md`.
+
 ## AAPL/SPY minute handoffs — 2026-10-04 ICT
 
 - [x] Recheck current native Yahoo versus both public API paths. AAPL and SPY

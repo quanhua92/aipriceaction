@@ -1321,3 +1321,132 @@ async def test_ancient_page_cannot_complete_an_empty_recent_window(system):
     assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
     assert repo.state("vn", "FPT", "1D") is None
     assert any("precedes configured retained" in f["detail"] for f in repo.findings())
+
+
+class YahooOverlapPages(Pages):
+    def __init__(self, *pages):
+        super().__init__(*pages)
+        self.requests = []
+
+    async def page(self, source, symbol, iv, **kwargs):
+        self.requests.append({"source": source, "symbol": symbol, "interval": iv, **kwargs})
+        return await super().page(source, symbol, iv, **kwargs)
+
+
+def yahoo_overlap_rows(iv, count=200):
+    step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
+    base = parse_time("2026-01-01" if iv == "1D" else "2026-09-01")
+    return [
+        Candle("yahoo", "AAPL", iv, base + i * step, 100, 101, 99, 100, 1000, "yahoo")
+        for i in range(count)
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("iv", ["1D", "1h", "1m"])
+async def test_yahoo_outage_expands_once_within_retention_and_current_provider(
+    system, monkeypatch, iv
+):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows(iv)
+    repo.put(rows[:100])
+    step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 300 * step)
+    providers = YahooOverlapPages(Page(rows[-40:], "yahoo"), Page(rows, "yahoo"))
+    worker = Worker(repo, settings, providers, archive)
+    entry = {"source": "yahoo", "symbol": "AAPL"}
+    assert await worker.sync(entry, iv) == 200
+    assert [(r.time, r.close) for r in repo.read("yahoo", "AAPL", iv)] == [
+        (r.time, r.close) for r in rows
+    ]
+    assert len(providers.requests) == 2
+    first, expanded = providers.requests
+    assert first["count"] == 40 and 40 < expanded["count"] <= 1000
+    assert expanded["provider"] == "yahoo" and expanded["start"] == worker.floor(entry, iv)
+    assert not repo.status()["jobs"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("iv", ["1D", "1h", "1m"])
+async def test_yahoo_capped_outage_queues_recovery_without_publishing_disjoint_tail(
+    system, monkeypatch, iv
+):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows(iv)
+    repo.put(rows[:100])
+    before = repo.read("yahoo", "AAPL", iv)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 86400)
+    providers = YahooOverlapPages(Page(rows[-40:], "yahoo"), Page(rows[-40:], "yahoo"))
+    worker = Worker(repo, settings, providers, archive)
+    assert await worker.sync({"source": "yahoo", "symbol": "AAPL"}, iv) == 0
+    assert repo.read("yahoo", "AAPL", iv) == before
+    assert len(providers.requests) == 2
+    job = repo.status()["jobs"][0]
+    assert job["kind"] == "repair"
+    with repo.connect() as con:
+        assert con.execute("SELECT provider FROM jobs").fetchone()[0] == "yahoo"
+    assert any(f["kind"] == "coverage_pending" for f in repo.findings())
+    with repo.connect() as con:
+        assert con.execute("SELECT outcome FROM source_checks").fetchone()[0] == "repair_queued"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("iv", ["1h", "1m"])
+async def test_yahoo_omitted_closing_quote_keeps_original_and_requires_adjacent_overlap(system, iv):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows(iv, 14)
+    repo.put(rows[:10])
+    closing = repo.read("yahoo", "AAPL", iv)[-1]
+    providers = YahooOverlapPages(Page(rows[7:9] + rows[10:], "yahoo"))
+    assert (
+        await Worker(repo, settings, providers, archive).sync(
+            {"source": "yahoo", "symbol": "AAPL"}, iv
+        )
+        == 6
+    )
+    assert repo.read("yahoo", "AAPL", iv)[9] == closing
+    assert [r.time for r in repo.read("yahoo", "AAPL", iv)] == [r.time for r in rows]
+    assert len(providers.requests) == 1 and not repo.status()["jobs"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("iv", ["1D", "1m"])
+async def test_yahoo_old_overlap_cannot_license_a_missing_tail(system, monkeypatch, iv):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows(iv, 200)
+    repo.put(rows[:100])
+    before = repo.read("yahoo", "AAPL", iv)
+    # Daily requires the exact tail; minute requires at least its adjacent bar.
+    disjoint = (rows[98:99] if iv == "1D" else rows[80:90]) + rows[110:]
+    providers = YahooOverlapPages(Page(disjoint, "yahoo"), Page(disjoint, "yahoo"))
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 86400)
+    assert (
+        await Worker(repo, settings, providers, archive).sync(
+            {"source": "yahoo", "symbol": "AAPL"}, iv
+        )
+        == 0
+    )
+    assert repo.read("yahoo", "AAPL", iv) == before
+    assert repo.status()["jobs"][0]["kind"] == "repair"
+
+
+@pytest.mark.asyncio
+async def test_yahoo_expansion_checks_older_price_revisions_before_publishing(system, monkeypatch):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows("1D")
+    repo.put(rows[:100])
+    before = repo.read("yahoo", "AAPL", "1D")
+    corrected = [
+        replace(r, open=90, high=91, low=89, close=90) if i < 3 else r for i, r in enumerate(rows)
+    ]
+    providers = YahooOverlapPages(Page(rows[-40:], "yahoo"), Page(corrected, "yahoo"))
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 300 * 86400)
+    assert (
+        await Worker(repo, settings, providers, archive).sync(
+            {"source": "yahoo", "symbol": "AAPL"}, "1D"
+        )
+        == 0
+    )
+    assert repo.read("yahoo", "AAPL", "1D") == before
+    assert repo.status()["jobs"][0]["kind"] == "repair"
+    assert any(f["kind"] == "historical_revision" for f in repo.findings())
