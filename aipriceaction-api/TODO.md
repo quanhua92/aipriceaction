@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,033,566 candle/quote records. The current S3 index has 701
+- The main local database has 6,037,525 candle/quote records. The current S3 index has 701
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -29,6 +29,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Refresh all four configured crypto tickers on the pinned Binance basis:
+  3,895 new minute and 64 new hourly candles through October 3 at 23:33 UTC.
+  All 12 native series have continuous retained timestamps; previously completed
+  crypto OHLCV and all other markets stay unchanged. Full populated backups,
+  24 HTTP checks, 40 SDK SMA/EMA cases and the actual BTC web controls pass.
+  Current daily/hourly/minute bars remain provisional; this bounded refresh
+  does not certify unattended future ingestion or unrelated markets.
 - [x] Restore selected crypto daily history: 7,777 older Binance candles in
   25 yearly objects; exact retained overlap, full-range HTTP and cold/warm checks.
   Preserve and document 30 older legacy/native volume differences.

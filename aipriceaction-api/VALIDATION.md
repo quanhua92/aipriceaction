@@ -6,6 +6,58 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native crypto freshness and continuous retained timestamps — 2026-10-04 ICT
+
+The existing bounded worker refresh succeeds for all four configured Binance
+tickers on daily, hourly and minute intervals. It adds **3,895 minute candles**
+and **64 hourly candles**, bringing the main database to **6,037,525 rows**.
+All four minute tails reach October 3 at **23:33 UTC** and hourly tails **23:00**;
+the current October 3 daily candles are rechecked. Every previously completed
+crypto OHLCV record, provider and revision remains unchanged; the previously
+provisional daily/hourly/minute observations may update as they complete.
+Every noncrypto candle, including its version, is preserved exactly.
+
+The populated after-backup verifies every retained crypto timestamp. Each ticker
+has **1,097 daily**, **26,328 hourly** and **527,014 minute** observations.
+Counts equal the entire first-to-last fixed-step ranges, timestamps are aligned,
+and uniqueness follows the database key. Daily/hourly windows start October 3,
+2023; minute windows October 3, 2025. This proves continuous stored timestamps
+through the captured tail, separately from independent OHLCV/provider quality
+or future freshness. Evidence: `continuous-timestamps-proof.json` under
+`data/crypto-recent-refresh-v2-20261004/`.
+
+All 12 source checks succeed without new repair jobs. Existing archive objects,
+handoff certificates and import receipts stay unchanged, as do noncrypto series,
+checks, jobs, quality records and ticker schedules. HTTP health reports **700
+published archives plus one pending repair**; the index has **701 active objects**
+and the existing **58 pending jobs** remain. CLI status and the running API agree
+on **54,394 daily / 331,516 hourly / 5,651,615 minute** records.
+
+Checks against the captured Binance pages verify **4,832 records/buckets across
+24 HTTP requests**, covering every native response and complete 15-minute,
+30-minute and four-hour buckets. The installed SDK passes **40 cases / 800 rows**
+with exact OHLCV and MA10/20/50/100/200 SMA/EMA parity. The actual BTC web page
+passes daily, 15-minute and hourly controls and volume profile without page,
+forwarding or write errors. Its intraday tails reach **23:30 / 23:00 UTC**.
+These checks use the existing runtime implementation; no calculation or storage
+policy changes were required. The API runs independently; a bounded refresh
+does not prove unattended future worker operation.
+
+The first diagnostic wrapper incorrectly omitted a positional request argument,
+so it failed before fetching data. Its backups prove zero candle changes and
+preserve the failed checks. After correcting the wrapper, the successful retry
+and its twelve native responses are recorded separately; it clears the failed
+provider findings through ordinary successful verification.
+
+The complete after-backup passes SQLite integrity/count checks. It has
+**911,589,376 bytes**, SHA-256
+`fa9a5cbcf447ec27cdbf00e3593db08ed6c7639965759ec723156144afbc9b54`,
+at `data/crypto-recent-refresh-v2-20261004/after.sqlite3`. Both attempts retain
+their complete before/after backups. The final evidence receipt
+`data/crypto-recent-refresh-evidence-v2-20261004.json` preserves **51 artifacts**
+with content-hashed RustFS readbacks; the earlier 50-artifact receipt remains
+unchanged. Main data/metadata stay unchanged during evidence preservation.
+
 ## Live legacy indicator context diagnosis — 2026-10-04 ICT
 
 Fresh daily requests compare the replacement and live public legacy API for
