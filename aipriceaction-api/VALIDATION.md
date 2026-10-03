@@ -6,6 +6,41 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Daily restart coverage — 2026-10-04 ICT
+
+VN hourly/minute updates required observed overlap after a prolonged outage,
+but daily updates could append a disjoint recent 40-candle page without bridging
+the published tail. The worker now applies the same guard to daily data. It
+makes at most one larger request, pinned to the current provider and bounded by
+the configured retained window and **1,000 candles**. An unavailable or capped
+reply cannot publish an unverified tail; the original data stays intact and
+missing overlap queues the existing durable staged recovery. Sparse/weekend
+replies with observed overlap need no expansion or inferred exchange calendar.
+The entire stored overlap within an expanded page is checked for corroborated
+price revisions, including candles outside the usual 50-candle comparison.
+
+Eight added daily cases cover successful outage bridging, exhausted page budget,
+capped replies, sparse weekend observations, expanded provider failures,
+fallback providers, and material versus representation-sized old-price changes.
+Existing hourly/minute cases continue to pass. The full suite passes **315 tests
+in 22.46 seconds**, with the existing Starlette/httpx deprecation warning. Ruff
+lint and formatting pass for **58 Python files**, and distributions build offline.
+
+An isolated FPT database starts with **647 actual rows**, omitting the last
+**100 observed sessions** from its complete 747-row reference. Real VNDirect
+requests expand from **40 to 184 candles**, carrying the configured retention
+start. The worker restores every missing observed date; all **747 OHLCV/provider/
+revision records** match the complete main reference exactly. Its source check
+succeeds, its historical probe completes, and it records no quality findings.
+Main daily/operational hashes and production remain unchanged.
+
+Evidence: `data/daily-outage-native-rehearsal-20261003T191634Z/report.json` and
+checksummed native captures. The earlier pre-retention-bound rehearsal at
+`data/daily-outage-native-rehearsal-20261003T191442Z/` remains preserved.
+The preceding outage/failure report's provider label is corrected to VNDirect
+from its recorded request and candle provenance; neither rehearsal used VPS.
+VND/VNINDEX history and wider provider-policy acceptance remain unresolved.
+
 ## Daily observation and historical probe failures — 2026-10-04 ICT
 
 A daily update previously committed its recent candles and successful source
@@ -24,7 +59,7 @@ queues staged repair and preserves observed prices. This changes failure
 accounting and timing; it does not establish new adjustment policies or change
 the existing comparison/provenance rules.
 
-An isolated FPT rehearsal fetches **40 actual recent VPS candles**, then injects
+An isolated FPT rehearsal fetches **40 actual recent VNDirect candles**, then injects
 an explicit historical-probe outage. The worker returns 40, its recent source
 check remains successful with 40 completed rows, and only the historical failure
 is recorded. All **747 retained OHLCV/provider/revision records** remain exact;

@@ -215,22 +215,28 @@ async def test_sparse_replacement_preserves_completed_published_coverage(system,
     assert any("drops completed observed coverage" in r["detail"] for r in repo.findings())
 
 
-@pytest.mark.parametrize("iv", ["1m", "1h"])
+@pytest.mark.parametrize("iv", ["1m", "1h", "1D"])
 @pytest.mark.parametrize("elapsed,reply_cap", [(100, None), (1200, None), (100, 40)])
 @pytest.mark.asyncio
 async def test_vn_restart_requires_observed_tail_overlap(
     system, monkeypatch, iv, elapsed, reply_cap
 ):
     repo, archive, settings = system
-    first, step = parse_time("2026-01-05T02:00:00"), 60 if iv == "1m" else 3600
+    step = {"1m": 60, "1h": 3600, "1D": 86400}[iv]
+    first = (
+        parse_time("2026-07-01") - elapsed * step
+        if iv == "1D"
+        else parse_time("2026-01-05T02:00:00")
+    )
     original = Candle("vn", "FPT", iv, first, 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
     original_rows = repo.read("vn", "FPT", iv)
     calls = []
 
     class Live:
-        async def page(self, source, symbol, interval, count=40, provider=None):
+        async def page(self, source, symbol, interval, count=40, provider=None, start=None):
             calls.append((count, provider))
+            assert start == (first if count > 40 else None)
             size = min(count, reply_cap) if reply_cap else count
             return Page(
                 [
@@ -241,6 +247,11 @@ async def test_vn_restart_requires_observed_tail_overlap(
             )
 
     worker = Worker(repo, settings, providers=Live(), archive=archive)
+
+    async def skip_sentinel(*args):
+        pass
+
+    monkeypatch.setattr(worker, "sentinel", skip_sentinel)
     monkeypatch.setattr(worker, "floor", lambda entry, interval: first)
     monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + elapsed * step)
     processed = await worker.sync({"source": "vn", "symbol": "FPT"}, iv)
@@ -263,11 +274,13 @@ async def test_vn_restart_requires_observed_tail_overlap(
     assert repo.live_claim("vn", "FPT", iv, "another-worker")
 
 
-@pytest.mark.parametrize("iv", ["1m", "1h"])
+@pytest.mark.parametrize("iv", ["1m", "1h", "1D"])
 @pytest.mark.asyncio
 async def test_vn_sparse_weekend_page_needs_no_calendar_guess_or_expansion(system, monkeypatch, iv):
     repo, archive, settings = system
     dates = ["2026-01-02T07:00:00", "2026-01-05T02:00:00", "2026-01-05T03:00:00"]
+    if iv == "1D":
+        dates = ["2026-01-02", "2026-01-05", "2026-01-06"]
     rows = [
         Candle("vn", "FPT", iv, parse_time(day), 100, 101, 99, 100, 1000, "vps") for day in dates
     ]
@@ -286,58 +299,62 @@ async def test_vn_sparse_weekend_page_needs_no_calendar_guess_or_expansion(syste
     assert [r.time for r in repo.read("vn", "FPT", iv)] == [r.time for r in rows]
 
 
+@pytest.mark.parametrize("iv", ["1m", "1D"])
 @pytest.mark.asyncio
-async def test_vn_expanded_overlap_failure_preserves_published_candles(system, monkeypatch):
+async def test_vn_expanded_overlap_failure_preserves_published_candles(system, monkeypatch, iv):
     repo, archive, settings = system
-    first = parse_time("2026-01-05T02:00:00")
-    original = Candle("vn", "FPT", "1m", first, 100, 101, 99, 100, 1000, "vps")
+    step = 86400 if iv == "1D" else 60
+    first = parse_time("2026-06-01") if iv == "1D" else parse_time("2026-01-05T02:00:00")
+    original = Candle("vn", "FPT", iv, first, 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
-    original_rows = repo.read("vn", "FPT", "1m")
+    original_rows = repo.read("vn", "FPT", iv)
     calls = []
 
     class Live:
-        async def page(self, *args, count=40, provider=None):
+        async def page(self, *args, count=40, provider=None, start=None):
             calls.append((count, provider))
             if count > 40:
                 raise DataError("Expanded native history unavailable")
-            return Page([replace(original, time=first + i * 60) for i in range(61, 101)], "vps")
+            return Page([replace(original, time=first + i * step) for i in range(61, 101)], "vps")
 
     worker = Worker(repo, settings, providers=Live(), archive=archive)
-    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + 100 * 60)
-    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1m") == 0
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + 100 * step)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, iv) == 0
     assert calls == [(40, "vps"), (140, "vps")]
-    assert repo.read("vn", "FPT", "1m") == original_rows
+    assert repo.read("vn", "FPT", iv) == original_rows
     assert repo.status()["series"][0]["error"] == "Expanded native history unavailable"
-    assert repo.live_claim("vn", "FPT", "1m", "another-worker")
+    assert repo.live_claim("vn", "FPT", iv, "another-worker")
 
 
+@pytest.mark.parametrize("iv", ["1m", "1D"])
 @pytest.mark.asyncio
-async def test_vn_outage_fallback_queues_basis_recovery_without_expanding_alternate(system):
+async def test_vn_outage_fallback_queues_basis_recovery_without_expanding_alternate(system, iv):
     repo, archive, settings = system
-    original = Candle(
-        "vn", "FPT", "1m", parse_time("2026-01-05T02:00:00"), 100, 101, 99, 100, 1000, "vps"
-    )
+    original = Candle("vn", "FPT", iv, parse_time("2026-01-05"), 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
-    original_rows = repo.read("vn", "FPT", "1m")
-    incoming = replace(original, provider="vndirect", time=original.time + 100 * 60)
+    original_rows = repo.read("vn", "FPT", iv)
+    incoming = replace(
+        original, provider="vndirect", time=original.time + 100 * (86400 if iv == "1D" else 60)
+    )
     providers = Pages(DataError("VPS unavailable"), Page([incoming], "vndirect"))
     worker = Worker(repo, settings, providers=providers, archive=archive)
-    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1m") == 0
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, iv) == 0
     assert providers.calls == ["vps", "vndirect"]
-    assert repo.read("vn", "FPT", "1m") == original_rows
+    assert repo.read("vn", "FPT", iv) == original_rows
     jobs = repo.status()["jobs"]
     assert len(jobs) == 1 and repo.claim_job(worker.owner)["provider"] == "vndirect"
     assert repo.status()["series"][0]["outcome"] == "repair_queued"
 
 
-@pytest.mark.parametrize("iv", ["1m", "1h"])
+@pytest.mark.parametrize("iv", ["1m", "1h", "1D"])
 @pytest.mark.parametrize("ratio", [1.001, 1.0000001])
 @pytest.mark.asyncio
 async def test_vn_expanded_page_checks_revisions_outside_normal_overlap(
     system, monkeypatch, iv, ratio
 ):
     repo, archive, settings = system
-    first, step = parse_time("2026-01-05T02:00:00"), 60 if iv == "1m" else 3600
+    step = {"1m": 60, "1h": 3600, "1D": 86400}[iv]
+    first = parse_time("2024-01-01") if iv == "1D" else parse_time("2026-01-05T02:00:00")
     old = [
         Candle("vn", "FPT", iv, first + i * step, 100, 101, 99, 100, 1000, "vps")
         for i in range(200)
@@ -352,11 +369,14 @@ async def test_vn_expanded_page_checks_revisions_outside_normal_overlap(
         if i in changed
         else r
         for i, r in enumerate(old)
-    ] + [replace(old[-1], time=old[-1].time + 86400 + i * step) for i in range(150)]
+    ] + [
+        replace(old[-1], time=old[-1].time + (200 * 86400 if iv == "1D" else 86400) + i * step)
+        for i in range(150)
+    ]
     calls = []
 
     class Live:
-        async def page(self, *args, count=40, provider=None):
+        async def page(self, *args, count=40, provider=None, start=None):
             calls.append(count)
             return Page(incoming[-count:], "vps")
 

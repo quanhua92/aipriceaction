@@ -238,6 +238,13 @@ appear as `historical_probe_failure` findings while the successful recent check
 remains successful. Actual corroborated historical revisions still queue staged
 repair. Cancellation after the commit preserves the completed recent observation.
 
+VN daily/hourly/minute updates that have outrun their 40-candle page make one
+larger request, pinned to the current provider and bounded by retention and
+1,000 candles. The reply must overlap the published tail before appending. If it
+cannot, the worker preserves existing data and queues staged recovery rather
+than guessing which dates should have traded. Expanded reads also check stored
+price overlap beyond the usual comparison window for historical revisions.
+
 For a bounded local read-only HTTP rehearsal, stop ingestion so payloads stay
 stable and run:
 

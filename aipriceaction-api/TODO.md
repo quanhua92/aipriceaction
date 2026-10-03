@@ -56,6 +56,11 @@ direct legacy PostgreSQL access.
   historical probe fails, times out, or is cancelled. Record probe failures
   separately, bound their time budget, and keep historical revision repair active.
   Verify with five regressions and an isolated actual FPT recent-provider read.
+- [x] Require observed tail overlap after prolonged VN daily outages, matching
+  hourly/minute behavior. Expand once within the current provider, retained
+  window and 1,000-candle budget; queue recovery when it cannot bridge the tail.
+  Verify eight daily regressions and restore 100 actual FPT observed sessions in
+  isolation with exact values/provenance and unchanged main data.
 
 The observations below describe the earlier isolated staging checkpoints.
 

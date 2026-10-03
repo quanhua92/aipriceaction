@@ -273,7 +273,7 @@ class Worker:
                 raise DataError("No recent provider data")
             if (
                 source == "vn"
-                and iv in ("1h", "1m")
+                and iv in ("1D", "1h", "1m")
                 and latest
                 and page.provider == state["provider"]
                 and page.rows[-1].time > latest[-1].time
@@ -282,11 +282,16 @@ class Worker:
                 # Keep ordinary/closed-market checks cheap. Expand only when
                 # newer data has outrun the small overlap page; pin the retry
                 # to the existing provider's adjustment basis.
-                step = 3600 if iv == "1h" else 60
+                step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
                 count = min(1000, max(40, (int(time.time()) - latest[-1].time) // step + 40))
                 if count > 40:
                     page = await self.providers.page(
-                        source, symbol, iv, count=count, provider=state["provider"]
+                        source,
+                        symbol,
+                        iv,
+                        count=count,
+                        provider=state["provider"],
+                        start=self.floor(entry, iv),
                     )
                     if not page.rows:
                         raise DataError("No provider data for expanded VN overlap")
@@ -301,7 +306,7 @@ class Worker:
                 gap = f"Continuous-market gap from {latest[-1].time} to {page.rows[0].time}; recovery queued"
             elif (
                 source == "vn"
-                and iv in ("1h", "1m")
+                and iv in ("1D", "1h", "1m")
                 and latest
                 and page.provider == state["provider"]
                 and page.rows[-1].time > latest[-1].time
@@ -309,7 +314,7 @@ class Worker:
             ):
                 # Trading breaks, holidays, and sparse stocks do not imply
                 # missing candles. Require an observed overlap instead of
-                # guessing which intervening minutes should have traded.
+                # guessing which intervening candles should have traded.
                 gap = (
                     "Bounded VN provider page does not overlap the published tail; recovery queued"
                 )
