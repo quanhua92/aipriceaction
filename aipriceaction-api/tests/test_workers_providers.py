@@ -1476,30 +1476,32 @@ def yahoo_overlap_rows(iv, count=200):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("provider", ("legacy-api", "legacy-s3", "legacy"))
-async def test_imported_yahoo_hourly_series_waits_for_handoff_without_upstream_calls(
-    system, provider
+@pytest.mark.parametrize("source,symbol", (("yahoo", "AAPL"), ("vn", "VNINDEX")))
+async def test_imported_hourly_series_waits_for_handoff_without_upstream_calls(
+    system, provider, source, symbol
 ):
     repo, archive, settings = system
     rows = [
-        replace(row, provider=provider, revision="snapshot") for row in yahoo_overlap_rows("1h")
+        replace(row, source=source, symbol=symbol, provider=provider, revision="snapshot")
+        for row in yahoo_overlap_rows("1h")
     ]
     repo.put(rows)
-    original = repo.read("yahoo", "AAPL", "1h")
-    state = repo.state("yahoo", "AAPL", "1h")
+    original = repo.read(source, symbol, "1h")
+    state = repo.state(source, symbol, "1h")
     providers = YahooOverlapPages()
     worker = Worker(repo, settings, providers, archive)
-    assert await worker.sync({"source": "yahoo", "symbol": "AAPL"}, "1h") == 0
+    assert await worker.sync({"source": source, "symbol": symbol}, "1h") == 0
     assert providers.requests == []
-    assert repo.read("yahoo", "AAPL", "1h") == original
-    assert repo.state("yahoo", "AAPL", "1h") == state
+    assert repo.read(source, symbol, "1h") == original
+    assert repo.state(source, symbol, "1h") == state
     assert repo.status()["jobs"] == []
     with repo.connect() as con:
         check = dict(con.execute("SELECT * FROM source_checks").fetchone())
         assert check["outcome"] == "handoff_required"
         assert "hourly snapshot" in check["error"]
     # The guard must release its series lease rather than starving future work.
-    assert repo.live_claim("yahoo", "AAPL", "1h", "other")
-    repo.live_release("yahoo", "AAPL", "1h", "other")
+    assert repo.live_claim(source, symbol, "1h", "other")
+    repo.live_release(source, symbol, "1h", "other")
 
 
 @pytest.mark.asyncio

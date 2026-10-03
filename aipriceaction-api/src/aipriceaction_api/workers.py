@@ -236,7 +236,7 @@ class Worker:
                 (source in ("vn", "yahoo") and iv == "1m" or source == "vn" and iv == "1D")
                 and state["provider"] == "legacy-api"
             ) or (
-                source == "yahoo"
+                source in ("vn", "yahoo")
                 and iv == "1h"
                 and state["provider"] in {"legacy-api", "legacy-s3", "legacy"}
             )
