@@ -9,14 +9,16 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,689,533 candle/quote records. The current S3 index has 701
+- The main local database has 5,864,824 candle/quote records. The current S3 index has 701
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
   SPY also has a verified native hourly handoff; five other current stock/index
   hourly snapshots remain frozen. Gold hourly history is now current as a
   complete public snapshot, with 279 legacy quote events preserved explicitly.
-- The latest complete API suite passes 371 tests; lint/format/offline builds pass.
+  Gold minute history is also current as a public snapshot, with all 241 legacy
+  quote-event seconds preserved; native gold minute ingestion remains frozen.
+- The latest complete API suite passes 374 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -54,9 +56,14 @@ history through `eb814ab`; they are not additional current open tasks.
   all 6,290 original dates/values, add 3,998 newer observations and retain all
   279 quote-event timestamps without rounding. Verify SQLite/Parquet, full
   yearly HTTP, SDK, actual web freshness and populated backup evidence.
-- [ ] Restore current gold minute data and independently verify remaining hourly
-  handoffs. Legacy quote events and native/public value disagreements remain
-  visible; minute aggregation does not reproduce existing native hourly bars.
+- [x] Restore current gold minute data from complete bounded public JSON exports:
+  198,752 observations, all original timestamps/volumes retained, 241 quote events
+  preserved, full minute/15-minute/30-minute HTTP parity, existing SDK, actual
+  browser freshness and populated backup verified. Full one-year coverage is
+  still unproven; native gold minute updates remain frozen.
+- [ ] Independently verify remaining hourly handoffs. Legacy quote events and
+  native/public value disagreements remain visible; minute aggregation does not
+  reproduce existing native hourly bars.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
@@ -436,8 +443,8 @@ charts and indicators never silently join incompatible adjustment revisions.
   Direct PostgreSQL is not a prerequisite for public market-data migration.
 - [x] Stage frozen minute snapshots directly from public `/tickers` JSON in an
   isolated SQLite/filesystem archive, retaining original responses and timestamps.
-  Gold's candidate contains 198,752 observations through October 2; publication
-  and full one-year coverage remain separate acceptance gates.
+  Gold's 198,752 observations through October 2 are now published and verified
+  locally; full one-year coverage remains a separate acceptance gate.
 - [x] Implement recent-window SQLite imports and older Parquet publication under
   a separate prefix, preserving legacy CSV URLs/metadata for direct SDK consumers.
 - [ ] Complete remaining selected historical coverage and continuous-basis gates;

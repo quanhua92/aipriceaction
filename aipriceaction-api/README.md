@@ -538,6 +538,20 @@ The legacy API's zero-volume, flat-OHLC Yahoo futures observations retain their
 original seconds in minute and hourly snapshots, with visible quality findings.
 Native candles retain strict minute alignment.
 
+Verify the complete staged minute history through the local HTTP API:
+
+```sh
+uv run python scripts/check_public_minute_snapshot.py --candidate data/gold-minute-current-candidate-20261004 --source yahoo --symbol 'GC=F' --report data/gold-minute-http-verification.json
+```
+
+This compares every timestamp and OHLCV field in bounded exports for minute,
+15-minute and 30-minute intervals. Gold's published public snapshot contains
+198,752 observations through October 2, 2026; the full HTTP checks, installed SDK
+and actual web chart pass. Every original timestamp and volume is retained, and
+recovered JSON prices round exactly to the original two-decimal values. Native
+gold minute updates remain frozen pending provider reconciliation. Available
+history begins March 9; empty earlier exports do not prove a full year of data.
+
 Use `--api-read-backend database` for a consistent database-backed public export.
 This sends `redis=false&snap=false&cache=false` to the existing HTTP API; it does
 not open a PostgreSQL connection. The legacy API can otherwise serve recent

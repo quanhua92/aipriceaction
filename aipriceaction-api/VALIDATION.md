@@ -25,10 +25,48 @@ candles retain strict timestamp checks.
 Candidate evidence is in `data/gold-minute-current-candidate-20261004/report.json`
 and `retained-value-audit.json`. The candidate spans March 9 through October 2,
 2026. **28 empty requested ranges** leave full one-year coverage unproven.
-This staging operation has not published the candidate to the main database or
-enabled native gold minute updates. Main published counts below remain current.
-Targeted quote/import checks pass **47 tests**; lint and formatting pass for
-**60 Python files**.
+Publication now replaces only the selected gold minute series atomically after
+state, original-snapshot, archive/series lease and active-job checks. Immutable
+original/replacement Parquet images, source bodies including empty responses,
+receipts and populated before/after backups are preserved. All **5,666,072
+unrelated candle records** and prior operational records remain exact; one
+selected minute quote-event finding is added. The **43,636 VN daily records**
+retain checksum
+`7cb2e73876d943760cf50f08bb320bf1f7e55bfc36ff7fc6fcfb4de973e3bff2`.
+Evidence: `data/gold-minute-publication-20261003T215136Z/report.json`, also
+readback-verified as an immutable RustFS receipt.
+
+The loopback HTTP rehearsal compares every timestamp/OHLCV field in **198,752
+minute / 13,317 fifteen-minute / 6,660 thirty-minute** records across **105**
+bounded requests, including all 241 quote observations. The existing installed
+SDK passes **ten** gold SMA/EMA checks across daily, minute, fifteen-minute,
+hourly and four-hour intervals, including MA10 through MA200. The actual public
+gold daily/fifteen-minute/hourly chart and both global benchmarks render through
+October 2 with explicit freshness assertions, no page/network errors and no
+writes. Reports: `data/gold-minute-publication-20261003T215136Z/http-full-history.json`,
+`data/sdk-gold-minute-current-20261004.json` and
+`data/web-gold-minute-current-20261004.json`, with screenshots.
+All six client reports/screenshots are also preserved and readback-verified in
+RustFS; checksums and object keys are recorded in
+`data/gold-minute-publication-20261003T215136Z/client-verification-receipt.json`.
+
+Main SQLite now contains **5,864,824 candle/quote records**; active archive
+metadata remains **701 objects / 68 adoptions / 34 recoveries / one unavailable
+range**, and the remote manifest matches the current local index. The populated
+after-backup contains **890,884,096 bytes**, matches all selected candidate
+records including capture versions, retains the exact minute quote finding and
+passes its own `quick_check`. SHA-256:
+`e3b93a63335a615ccd751b9ac08057687114a6fdac7e51a71ab32cdfce39bcb1`.
+The final backup verifier initially selected the wrong finding by list position;
+it was corrected to match source/symbol/interval/kind and rechecked without
+republishing candles. Both populated backups remain available.
+
+The complete application suite passes **374 tests**; targeted quote/import
+checks pass **47 tests**, lint/format checks pass for **61 Python files**, and
+offline wheel/source builds pass. Native gold minute updates remain frozen
+pending provider reconciliation. This public snapshot proves observed history
+parity and current chart freshness, not full calendar coverage or production
+cutover readiness. Production routing remains unchanged.
 
 ## Gold hourly snapshot restored with exact legacy quote timestamps — 2026-10-04 ICT
 
@@ -67,7 +105,7 @@ freshness assertions, no page/network errors and no writes. Reports:
 `data/sdk-gold-hourly-current-20261004.json` and
 `data/web-gold-hourly-current-20261004.json` with screenshots.
 
-Main SQLite contains **5,689,533 candle/quote records**; active archive metadata
+At hourly publication, SQLite contained **5,689,533 candle/quote records**; active archive metadata
 remains **701 objects / 68 adoptions / 34 recoveries / one unavailable range**.
 The populated after-backup has **865,873,920 bytes**, matches all 10,288 candidate
 records including capture versions, retains the quote finding and passes its
@@ -85,8 +123,9 @@ native/four-hour responses, and reject eleven out-of-policy quote shapes.
 The existing Starlette/httpx warning remains unchanged.
 
 Gold's hourly snapshot remains frozen: the new real native-handoff dry run
-still fails on completed OHLCV disagreement. Its stale minute history and
-native source-policy reconciliation remain open. This current public snapshot
+still fails on completed OHLCV disagreement. Its minute history was stale at
+that checkpoint and is now restored above; native source-policy reconciliation
+remains open. This current public snapshot
 does not certify continuous native ingestion, full calendar coverage or the
 recent daily/native discrepancies. Production routing remains unchanged.
 
