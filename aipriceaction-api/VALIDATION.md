@@ -6,6 +6,66 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Daily futures quote validation and bounded Yahoo reads — 2026-10-04 ICT
+
+CME distinguishes traded highs/lows from calculated settlement prices and
+documents gold settlement methods using trades, spreads, bids/asks or previous
+settlements ([CME gold rules](https://cmegroupclientsite.atlassian.net/wiki/spaces/EPICSANDBOX/pages/457088147/Gold)).
+This means close outside the traded range alone is insufficient to declare
+a daily futures quote corrupt. It does not certify every Yahoo historical
+close as an exchange settlement. Yahoo metadata labels GC=F as `FUTURE`.
+Original quote values must remain observable rather than clamped or inferred.
+
+`Candle.validate` now accepts a finite daily Yahoo futures close independently
+of the trade range. Open remains within high/low, high cannot be below low,
+volume must be nonnegative, and all non-futures/intraday range checks remain
+unchanged. The existing SJC quote representation is unchanged. New tests prove
+the daily exception cannot license bad opens, reversed ranges, negative volume,
+nonfinite closes, stocks, crypto, SJC, or hourly/minute futures. A captured
+2010-11-01 gold row passes SQLite-to-Parquet-to-weekly-response readback with
+all prices and volume preserved exactly. VND/VNINDEX invalid-stock tests still
+reject their original bad rows.
+
+Yahoo requests now honor the caller's explicit lower bound and validate only
+the requested page. A server returning an unrelated older invalid open cannot
+block the desired window; an invalid open inside the window still fails.
+The isolated candidate tool passes its requested floor, supports explicit GC=F,
+and writes partial captures/discrepancies on failure. Code/test/documentation
+commit: `09bdbb9`. **340 tests pass in 23.18 seconds**, with the existing single
+Starlette/httpx deprecation warning; all 56 Python files pass Ruff formatting,
+lint passes, and offline wheel/sdist builds pass.
+
+An unbounded alternate Yahoo reply contains **6,548 observed rows**, **441**
+rejected by the original range rule and **56** with opens outside high/low.
+Every such bad open predates 2010; the rule remains strict and these rows are
+not imported. Its old values also differ from the public API after 2020, so
+the response is not treated as a validated legacy contract frame. Original
+response/metadata and computed diagnostics remain at
+`data/gold-daily-semantics-20261003T204023Z/`.
+
+The real bounded primary Yahoo request starts **2010-01-01** and ends after
+**2026-10-02**, excluding unrelated earlier data. Parsing now succeeds and
+matches every timestamp/OHLCV of all **757 existing hot/cold rows** exactly;
+the existing adjustment detector finds no signal. The full public snapshot
+contains **4,242 dates**, with **30 recent dates absent in native history** and
+**1,551 differing rows**. All absent dates are in 2026; the bounded native
+response includes all older public dates. The full-history candidate correctly
+fails before writing candidate candles/objects or changing the main index,
+instead of dropping dates or guessing a conversion. Preserved report:
+`data/gold-daily-bounded-candidate-20261004/report.json`.
+Source/diagnostic files also have content-hashed RustFS copies and readback
+checks listed in that directory's `evidence-receipt.json`.
+
+The local API restarts with the tested code. Populated FPT/VCB and AAPL/GC=F
+daily payloads remain byte-for-byte identical before/after restart; production
+routing is unchanged. Evidence:
+`data/api-futures-validation-before-restart-20261004.json` and
+`data/api-futures-validation-after-restart-20261004.json`.
+Main candle/archive counts remain **5,684,287 / 687**. Next, archive the older
+native gold dates on the verified existing basis, preserving originals and
+current data; keep the wider public/native calendar and price discrepancies
+separate rather than declaring complete cross-source parity.
+
 ## Four coherent Yahoo stock/ETF daily histories published — 2026-10-04 ICT
 
 `scripts/stage_yahoo_daily_history.py` builds isolated full daily candidates for

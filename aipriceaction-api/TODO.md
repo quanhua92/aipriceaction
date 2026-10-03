@@ -13,7 +13,7 @@ history through `eb814ab`; they are not additional current open tasks.
   active objects, 67 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
-- The latest complete API suite passes 335 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 340 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -33,10 +33,15 @@ history through `eb814ab`; they are not additional current open tasks.
   37,206 dates including 34,194 cold candles in 138 objects. Preserve every
   original/public date and before-image; worker, HTTP, SDK, AAPL web and complete
   manifest recovery checks pass. Existing adjustment thresholds remain unchanged.
+- [x] Preserve daily Yahoo futures settlement-style closes independently of the
+  traded range, while keeping open/high/low and all intraday checks strict.
+  Honor explicit Yahoo floors and preserve failed candidate diagnostics.
 - [ ] Backfill remaining selected GC=F daily history, including its absent 2022
-  range. Investigate 26 old public rows rejected by the current OHLC validator,
-  including futures settlement semantics, before treating them as corrupt or
-  changing validation. Capture/verify a complete coherent source before publication.
+  range. The bounded native response matches all 757 current hot/cold rows exactly
+  and covers all older public dates; full public/native staging still rejects 30
+  recent public dates absent natively. Use the verified current native basis for
+  older archival without splicing legacy contract frames, and keep recent
+  public/native calendar/price differences as a separate unresolved quality gate.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
