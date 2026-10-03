@@ -6,6 +6,73 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## SSI minute public-API publication — 2026-10-04 ICT
+
+A read-only audit of **111 ready native VN intraday series** (55 hourly and
+56 minute; 61 DNSE, two VNDirect and 48 VPS) verifies **4,440 overlapping candles**
+with exact OHLCV and observed published tails. This audit precedes SSI's new
+handoff. All main data/metadata hashes remained unchanged during the audit.
+Evidence: `data/intraday-native-overlap-20261003T192248Z/report.json` and hashed
+provider captures.
+
+A fresh five-session public `/tickers` comparison exposed changes in the served
+SSI snapshot: both default and explicitly database-backed paths now agree on
+six corrected opens and 14 volumes. PLX and VNINDEX read paths still differ;
+their findings remain preserved. Evidence:
+`data/frozen-minute-api-paths-20261003T192557Z/report.json`.
+
+SSI's complete database-backed minute history was recaptured in 15 frozen,
+checksummed monthly export batches. Its **61,005 unique timestamps** exactly
+retain the old served date set: **56,033 hot rows** and **4,972 cold rows in two
+objects**. Only the same six opens and 14 volumes change; high/low/close and
+all other values remain exact. The first isolated candidate verified a 1,130-row
+exact overlap. A second candidate reused the same frozen exports and proved
+**five complete sessions**, all **1,130 minute OHLCV candles**, and their native
+VPS/retained daily aggregates exactly. The replayable certificate records
+`exact_complete_sessions`; it licenses native appends to this snapshot without
+inferring historical adjustment factors. Both candidates and originals remain
+preserved:
+`data/ssi-complete-api-minute-20261003T192800Z/report.json` and
+`data/ssi-complete-session-api-minute-20261003T192959Z/report.json`.
+
+The stronger candidate passed a native 40-row worker update and another fresh
+40-row check immediately before publication. A populated SQLite backup,
+original hot-row Parquet before-image, old cold objects, content-addressed raw
+exports, certificate and publication receipt were preserved. One SQLite
+transaction replaced only SSI minute rows/state/check/certificate and cold
+references. The main S3 manifest was published under the existing shared writer
+lease, and the old objects remain available as superseded originals.
+
+Publication evidence:
+`data/api-ssi-minute-publication-20261003T193245Z/`.
+
+- Fourteen monthly HTTP reads verify all 61,005 published OHLCV rows.
+- All **5,628,254 unrelated candle records** match the before-backup exactly,
+  including provider, revision and update timestamp. Unrelated operational rows
+  and the main daily checksum also remain exact.
+- All six installed-SDK daily/minute/15-minute SMA/EMA comparisons match time,
+  OHLCV and five moving averages exactly, using the replacement API.
+- The unchanged public web UI loads SSI daily and 15-minute charts and its
+  volume profile with populated successful responses and no page/network errors.
+  The first rehearsal mis-selected another chart after seeing SSI's initial
+  watchlist request. The helper now explicitly selects SSI before exercising its
+  controls; the rerun passes. Its lint/format checks pass. This is a selected
+  ticker check; it does not certify every unpopulated catalog series.
+- An isolated archive-index restore exactly recovers **445 active objects**,
+  **64 handoffs**, **34 recoveries**, and **one unavailable-history record**;
+  its 4,972 SSI cold rows match full records exactly.
+- The populated after-backup restores with identical bytes/checksum and
+  `quick_check=ok`: **862,093,312 bytes**, SHA-256
+  `c5b710cf3670a1e7df784f188177668e1362515ecc9263bc2e76bce8208e7f42`.
+
+Main still holds **5,684,287 candles**. SSI adds one licensed minute handoff;
+57 VN minute series now have native handoffs, while PLX/VNINDEX remain frozen.
+VND's unavailable 2020 daily history, VNINDEX's pending 2020 object, independent
+minute/daily discrepancies, wider provider/calendar policy, private sync
+inventory and production acceptance remain open. Production routing is unchanged.
+The previous complete implementation suite remains **324 passing tests**;
+this checkpoint changes data, documentation and the browser rehearsal helper.
+
 ## Complete OHLC revision detection — 2026-10-04 ICT
 
 The historical revision detector previously compared only closes. Three or

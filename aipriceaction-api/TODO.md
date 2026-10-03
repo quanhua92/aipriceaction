@@ -22,6 +22,38 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
+## Public API minute migration checkpoint — 2026-10-04 ICT
+
+SSI now uses its complete refreshed public `/tickers` minute history locally:
+**61,005 timestamps preserved**, **56,033 SQLite rows**, and **4,972 older rows
+in two Parquet objects**. Five complete VPS sessions match all 1,130 minute
+candles and both fresh/retained daily aggregates. This licenses a bounded native
+append handoff; it does not prove every older provider adjustment policy.
+
+- [x] Recapture the full served SSI minute range through the pinned database
+  API read path; preserve originals and raw checksummed exports. Only six opens
+  and 14 volumes differ from the earlier capture; every timestamp is retained.
+- [x] Verify complete-session adoption and two native 40-row worker rehearsals;
+  atomically publish only SSI minute data, state, evidence and archive references.
+- [x] Verify 14 monthly HTTP ranges, six exact SDK SMA/EMA comparisons, selected
+  SSI daily/15-minute web charts and volume profile, and all 5,628,254 unrelated
+  candle records including provenance and update timestamps.
+- [x] Restore 445 active archive objects, 64 handoffs, 34 recoveries and one
+  unavailable-history record exactly; restore the populated backup with an
+  identical checksum and `quick_check=ok`.
+- [x] Audit 111 existing native VN hourly/minute series before SSI publication:
+  4,440 provider-overlap candles match all OHLCV fields and retain observed tails.
+- [x] Correct the browser rehearsal to explicitly select its requested ticker:
+  an initial watchlist response alone does not select that chart's controls.
+- [ ] Reconcile PLX and VNINDEX minute snapshots and verify native handoffs.
+  Their public API read paths differ; preserve the independently captured
+  responses and unresolved minute/daily findings until coherent proof exists.
+
+After SSI publication, 57 VN minute series have native handoffs and two remain
+frozen public snapshots. The VND/VNINDEX historical daily gates below remain
+open. Public candle migration continues independently of private PostgreSQL.
+Evidence and current acceptance limits are recorded in `VALIDATION.md`.
+
 ## Live API migration takes priority — 2026-10-04 ICT
 
 The main local replacement now serves the five complete public-API daily
