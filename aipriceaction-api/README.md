@@ -320,6 +320,23 @@ the database snapshot again before inserting only older rows inside retention.
 Existing rows, bootstrap staging and unresolved coverage findings are preserved.
 This command currently supports VN hourly series only.
 
+For a bounded pass over configured VN tickers with older staging, the local
+batch runner applies the same checks independently and records refusals:
+
+```bash
+uv run python scripts/publish_vn_hourly_progress.py --allow-direct --output data/hourly-preview
+uv run python scripts/publish_vn_hourly_progress.py --allow-direct --execute --output data/hourly-publication
+```
+
+Choose a new output directory for each run; repeated `--symbol` arguments limit
+the selection. Execution requires local RustFS, makes complete before/after
+SQLite backups, verifies every original candle and operational record stayed
+unchanged, and checks the published images and backup records. Raw provider
+captures and the final receipt are uploaded with exact readback verification.
+Each series publishes atomically; a refusal leaves that series unchanged,
+while earlier successful series remain readable. This runner does not mark
+bootstrap jobs complete or certify missing sessions.
+
 Crypto minute bootstrap uses Binance's checksummed monthly spot CSV files when
 available; normal updates and unpublished months use the live API. Downloads
 have an 8 MiB compressed/32 MiB uncompressed object budget and a 128 MiB local
