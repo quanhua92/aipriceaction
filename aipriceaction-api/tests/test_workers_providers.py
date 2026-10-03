@@ -63,6 +63,58 @@ class Pages:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_inside", (False, True))
+async def test_yahoo_requested_floor_filters_only_unrequested_invalid_rows(system, invalid_inside):
+    _, _, settings = system
+    floor = parse_time("2010-11-01")
+
+    def response(request):
+        assert int(request.url.params["period1"]) == floor
+        assert int(request.url.params["period2"]) == floor + 86400
+        # A server ignoring period1 must not let an unrelated older bad open
+        # block the requested range; an invalid open inside it still fails.
+        return httpx.Response(
+            200,
+            json={
+                "chart": {
+                    "result": [
+                        {
+                            "timestamp": [floor - 86400, floor],
+                            "indicators": {
+                                "quote": [
+                                    {
+                                        "open": [120, 120 if invalid_inside else 100],
+                                        "high": [101, 101],
+                                        "low": [99, 99],
+                                        "close": [100, 98],
+                                        "volume": [10, 40],
+                                    }
+                                ],
+                                "adjclose": [{"adjclose": [100, 98]}],
+                            },
+                        }
+                    ]
+                }
+            },
+        )
+
+    providers = Providers(settings, transport=httpx.MockTransport(response))
+    try:
+        if invalid_inside:
+            with pytest.raises(DataError, match="Invalid OHLC"):
+                await providers.page("yahoo", "GC=F", "1D", floor + 86400, count=100, start=floor)
+        else:
+            page = await providers.page(
+                "yahoo", "GC=F", "1D", floor + 86400, count=100, start=floor
+            )
+            assert [(r.time, r.open, r.high, r.low, r.close, r.volume) for r in page.rows] == [
+                (floor, 100, 101, 99, 98, 40)
+            ]
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "probe_error", [DataError("Historical provider unavailable"), RuntimeError("private detail")]
 )

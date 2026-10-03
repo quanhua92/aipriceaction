@@ -8,6 +8,7 @@ from aipriceaction_api.archive import Archive
 from aipriceaction_api.cli import main
 from aipriceaction_api.config import ROOT, Settings
 from aipriceaction_api.domain import Candle, DataError, parse_time
+from aipriceaction_api.history import History
 from aipriceaction_api.importing import import_csv
 from aipriceaction_api.storage import Repository
 
@@ -182,3 +183,59 @@ def test_sjc_quote_and_negative_futures_have_explicit_validation_rules():
     assert future.validate() is future
     with pytest.raises(DataError):
         replace(future, source="vn", symbol="TEST").validate()
+
+
+@pytest.mark.parametrize("close", (98, 102))
+def test_daily_futures_close_can_be_independent_of_traded_range(close):
+    bar = Candle("yahoo", "GC=F", "1D", parse_time("2010-11-01"), 100, 101, 99, close, 40)
+    assert bar.validate() is bar
+    for changes in (
+        {"interval": "1m"},
+        {"interval": "1h"},
+        {"symbol": "AAPL"},
+        {"source": "vn"},
+        {"source": "crypto"},
+        {"source": "sjc", "symbol": "SJC-GOLD"},
+        {"open": 102},
+        {"high": 98},
+        {"volume": -1},
+        {"close": float("nan")},
+    ):
+        with pytest.raises(DataError):
+            replace(bar, **changes).validate()
+
+
+def test_futures_daily_archive_and_weekly_response_preserve_quote(tmp_path):
+    settings = Settings(
+        database=tmp_path / "db",
+        archive_backend="filesystem",
+        object_dir=tmp_path / "objects",
+        cache_dir=tmp_path / "cache",
+    )
+    repo = Repository(settings.database)
+    repo.initialize()
+    # Captured Yahoo/legacy fields for 2010-11-01: preserve close below low.
+    bar = Candle(
+        "yahoo",
+        "GC=F",
+        "1D",
+        parse_time("2010-11-01"),
+        1360.300048828125,
+        1360.300048828125,
+        1350.699951171875,
+        1350.199951171875,
+        40,
+        "yahoo",
+        "settlement-quote",
+    )
+    repo.put([bar])
+    stored = repo.read("yahoo", "GC=F", "1D")
+    archive = Archive(repo, settings)
+    obj = archive.publish(stored, prune=True)
+    assert not repo.read("yahoo", "GC=F", "1D")
+    assert archive.read(obj, refresh=True) == stored
+    result = History(repo, archive, settings).query("yahoo", "GC=F", "1W", limit=1, ma=False)
+    assert len(result) == 1
+    assert {field: result[0][field] for field in ("open", "high", "low", "close", "volume")} == {
+        field: getattr(bar, field) for field in ("open", "high", "low", "close", "volume")
+    }

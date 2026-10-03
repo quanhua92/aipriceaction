@@ -27,7 +27,7 @@ except ModuleNotFoundError as exc:
         raise
     from check_crypto_daily_history import compare
 
-SYMBOLS = ("AAPL", "MSFT", "NVDA", "SPY")
+SYMBOLS = ("AAPL", "MSFT", "NVDA", "SPY", "GC=F")
 
 
 def freeze(root, label, raw):
@@ -89,7 +89,7 @@ async def run(args):
     report_path = args.output / "report.json"
     try:
         async with httpx.AsyncClient(timeout=60) as client:
-            for symbol in args.symbol or SYMBOLS:
+            for symbol in args.symbol or SYMBOLS[:4]:
                 entry = {"symbol": symbol, "passed": False}
                 report["symbols"].append(entry)
                 report_path.write_text(json.dumps(report, indent=2) + "\n")
@@ -106,7 +106,7 @@ async def run(args):
                     json.dumps([r.record() for r in old], sort_keys=True).encode(),
                 )
                 transport.captures.clear()
-                page = await providers.yahoo_page(symbol, "1D", end + 1, 20000)
+                page = await providers.yahoo_page(symbol, "1D", end + 1, 20000, start=first)
                 rows = [r for r in page.rows if first <= r.time <= end]
                 if not rows or len(page.rows) >= 20000 or rows[-1].time != old[-1].time:
                     raise ValueError("Empty, truncated or stale native snapshot")
@@ -183,6 +183,12 @@ async def run(args):
         report["passed"] = all(entry["passed"] for entry in report["symbols"])
         report_path.write_text(json.dumps(report, indent=2) + "\n")
         print(report_path, flush=True)
+    except Exception as exc:
+        report["error_type"] = type(exc).__name__
+        if isinstance(exc, ValueError):
+            report["error"] = str(exc)
+        report_path.write_text(json.dumps(report, indent=2) + "\n")
+        raise
     finally:
         await providers.close()
 

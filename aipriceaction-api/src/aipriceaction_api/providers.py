@@ -304,7 +304,7 @@ class Providers:
         ]
         return self.normalize(rows, before, count, "binance")
 
-    async def yahoo_page(self, symbol, iv, before, count):
+    async def yahoo_page(self, symbol, iv, before, count, start=None):
         wire = symbol.removesuffix(":US")
         duration = {
             "1D": count * 3 * 86400,
@@ -315,7 +315,7 @@ class Providers:
             "yahoo",
             f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(wire, safe='')}",
             {
-                "period1": max(0, before - duration),
+                "period1": max(0, before - duration, start or 0),
                 "period2": before,
                 "interval": {"1D": "1d", "1h": "60m", "1m": "1m"}[iv],
                 "events": "div,splits",
@@ -358,7 +358,7 @@ class Providers:
                     "yahoo",
                 )
             )
-        return self.normalize(rows, before, count, "yahoo")
+        return self.normalize(rows, before, count, "yahoo", start=start)
 
     async def sjc_page(self, symbol, iv, before, count):
         if iv != "1D" or symbol != "SJC-GOLD":
@@ -421,7 +421,11 @@ class Providers:
         )
         if method is None:
             raise DataError("Unknown market source")
-        return await method(symbol, iv, before, count)
+        return (
+            await method(symbol, iv, before, count, start=start)
+            if source == "yahoo"
+            else await method(symbol, iv, before, count)
+        )
 
 
 def adjustment_changes(

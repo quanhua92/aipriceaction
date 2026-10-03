@@ -446,6 +446,22 @@ no inferred adjustment factor is applied. It leaves the main API untouched.
 Publication still requires worker checks, current before-image/revision checks,
 a backup, and an atomic replacement of the complete selected daily series.
 
+The same tool accepts `--symbol 'GC=F' --start-date 2010-01-01` for an isolated
+gold-futures check. Yahoo requests honor that lower bound, so unrelated earlier
+invalid data does not block the requested window. Failed candidates retain
+partial diagnostics and original captures, and never publish to the main index.
+The current gold candidate fails because native history omits dates returned by
+the public API; permissive date matching is not used to license publication.
+
+Daily Yahoo futures quotes preserve their supplied close even outside the traded
+high/low range. Futures settlements can be calculated independently of traded
+prices ([CME gold settlement rules](https://cmegroupclientsite.atlassian.net/wiki/spaces/EPICSANDBOX/pages/457088147/Gold)).
+This preserves a provider quote; it does not certify that every Yahoo historical
+close is an exchange settlement. Open must remain inside high/low, prices must
+be finite, and volumes must be nonnegative. Stocks, crypto, SJC and all futures
+intraday candles retain their existing range checks. Quotes are never clamped
+or rewritten to pass validation.
+
 ```sh
 uv run aipa-api import-csv /path/FPT-1D.csv --source vn --symbol FPT --interval 1D --split-retention
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --dry-run

@@ -161,9 +161,19 @@ class Candle:
         futures = self.source == "yahoo" and self.symbol.endswith("=F")
         if any(not math.isfinite(x) or (x <= 0 and not futures) for x in prices) or self.volume < 0:
             raise DataError("Non-positive/non-finite price or negative volume", 400)
-        range_values = (self.close,) if self.source == "sjc" else (self.open, self.close)
+        settlement_quote = futures and self.interval == "1D"
+        range_values = (
+            (self.close,)
+            if self.source == "sjc"
+            else (self.open,)
+            if settlement_quote
+            else (self.open, self.close)
+        )
         # Legacy SJC represents bid/ask quotes: open is the previous midpoint,
         # which can lie outside today's bid/ask range. It is not a traded candle.
+        # Daily Yahoo futures can carry a settlement-style close independently
+        # of the traded range. Preserve that quote; open/high/low and all
+        # intraday candles still have to describe a valid trading range.
         if self.high < max(*range_values, self.low) or self.low > min(range_values):
             raise DataError("Invalid OHLC range", 400)
         if self.interval == "1D" and self.time % 86400:
