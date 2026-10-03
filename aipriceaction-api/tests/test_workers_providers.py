@@ -539,8 +539,11 @@ def test_validation_uses_requested_page_but_rejects_invalid_selected_candles():
         candle(2),
         candle(3),
     ]
-    with pytest.raises(DataError, match="OHLC range"):
+    with pytest.raises(DataError, match="OHLC range") as failure:
         Providers.normalize([invalid, candle(2), candle(3)], candle(4).time, 3, "vps")
+    assert str(failure.value) == f"vps vn/FPT 1D at Unix {invalid.time}: Invalid OHLC range"
+    assert failure.value.status == 400
+    assert isinstance(failure.value.__cause__, DataError)
 
 
 def test_conflicting_duplicate_rejects_only_the_selected_page():

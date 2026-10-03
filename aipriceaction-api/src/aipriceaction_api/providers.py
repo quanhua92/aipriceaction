@@ -160,7 +160,13 @@ class Providers:
         # Validate the requested page, not unrelated older candles. Invalid
         # candles inside the page still reject it; never clamp or fabricate OHLC.
         for row in result:
-            row.validate()
+            try:
+                row.validate()
+            except DataError as exc:
+                raise DataError(
+                    f"{provider} {row.source}/{row.symbol} {row.interval} at Unix {row.time}: {exc}",
+                    exc.status,
+                ) from exc
             if row.time in conflicts:
                 raise DataError(f"{provider} has conflicting candles at {row.time}")
         if result and result[0].source == "crypto":
