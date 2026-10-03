@@ -25,7 +25,15 @@ from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import DataError, date_bounds
 from aipriceaction_api.history import History
 from aipriceaction_api.storage import Repository
-from scripts.check_retained_vn_daily import read_snapshot
+
+try:
+    from scripts.check_retained_vn_daily import read_snapshot
+except ModuleNotFoundError as exc:
+    if exc.name != "scripts":
+        raise
+    # Direct script execution puts this directory, rather than its parent, on
+    # sys.path. Module execution and importing the tool keep the package path.
+    from check_retained_vn_daily import read_snapshot
 
 
 class MeasuredStore(S3Store):

@@ -6,6 +6,62 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Current-universe local performance and missing cross-market archives — 2026-10-04 ICT
+
+A read-only HTTP rehearsal covers all **59 selected VN daily/15-minute series**,
+bulk daily, six older VN ranges, four crypto minute queries, global weekly and
+health. All **133 sequential baselines** and **296 concurrent requests** pass;
+every case appears in the concurrent run and all candle payload fingerprints
+remain stable. Four clients run for **30.50 seconds**, with response caching
+disabled and archive-file caches warmed by the baselines. Selected medians/P95:
+VN daily **50.70/107.09 ms**, VN 15-minute **746.21/883.77 ms**, bulk daily
+**1,842.82/2,000.33 ms**, older daily **364.64/455.54 ms**, and health
+**2,313.56/2,321.85 ms**. This is observed local workload evidence, not a
+production capacity assertion. Report: `data/http-current-universe-20261004.json`.
+
+Native-history runners use fresh temporary caches and compare full candle
+records/provenance on cold and warm reads, leaving main data/metadata unchanged:
+
+| Range | Successful series | Candles | Cold/warm median ms | Cold object bytes | Warm bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| VN daily, full 2022 | 58 | 14,401 | 42.405 / 23.94 | 407,078 | 0 |
+| VN minute, September 2025 | 59 | 244,702 | 152.91 / 121.11 | 1,832,421 | 0 |
+
+The daily range excludes only VPL, with its previously verified listing source.
+All other queries succeed; cold/warm full-record hashes match. Peak measured
+process RSS is **188,661,760 bytes** for daily and **189,726,720 bytes** for minute;
+SQLite is **865,026,048 bytes**. Reports:
+`data/history-current-daily-20261004.json` and
+`data/history-current-minute-20261004.json`. Downloaded bytes are measured on
+local RustFS, with validation and hashing included in query timings. They do not
+measure cloud billing or remote network latency.
+
+The first direct history-script invocation could not import its shared helper;
+module invocation already worked. The runner now supports both invocation paths,
+without masking unrelated missing dependencies. Both complete direct workloads
+pass, module `--help` passes, and the changed script passes Ruff lint/format.
+Application code is unchanged; the latest complete API suite remains 335 tests.
+
+Broader cross-market 2022 checks expose **12 absent local daily ranges**: all
+four selected crypto assets, all seven global assets and SJC. Both cold and warm
+runs correctly return nonzero with no successful requests/downloaded objects;
+these are missing archives, not fast data reads. Reports:
+`data/history-current-crypto-20261004.json`,
+`data/history-current-global-20261004.json` and
+`data/history-current-sjc-20261004.json`.
+
+The explicitly database-backed live `/tickers` API returns valid 2022 JSON for
+every affected series: **365 rows per cryptocurrency**, **251 per global ticker**,
+and **364 SJC rows**, totaling **3,581 observed validated candles**. Complete
+raw responses, checksums and date bounds remain preserved at
+`data/cross-market-history-availability-20261003T201301Z/report.json`. These
+prove an outstanding older-history migration gap; they are not yet published
+or proven compatible with each current native adjustment basis. Next, capture
+complete coherent snapshots or verify pinned native older history and retained
+boundaries, then archive with originals/backups preserved. No row or unavailable
+date is inferred. The current plan explicitly retains this gate alongside the
+VND/VNINDEX and native-minute provider issues; production remains unchanged.
+
 ## Remaining global disagreements and current roadmap — 2026-10-04 ICT
 
 A numerical audit separates strict Python equality differences from material

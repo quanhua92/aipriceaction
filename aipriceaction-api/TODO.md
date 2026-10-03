@@ -24,6 +24,9 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [ ] Backfill selected cross-market daily history: all four crypto, seven
+  global and SJC 2022 ranges are absent locally but served by the live API.
+  Capture complete snapshots/verified native bases before publishing old candles.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
@@ -31,8 +34,11 @@ history through `eb814ab`; they are not additional current open tasks.
 - [ ] Finish provider adjustment/session/calendar and independent minute/daily
   quality checks. Preserve wider historical availability across the selected
   universe; the available global minute histories do not prove a full year.
-- [ ] Complete wider web/CLI/SDK and chosen-universe performance acceptance;
+- [ ] Complete wider web/CLI/SDK and cross-market historical/performance acceptance;
   preserve documented numeric/source/latency differences instead of hiding them.
+- [x] Measure current selected VN local cold/warm reads, actual archive downloads,
+  memory/database size and bounded HTTP load across all 59 configured tickers.
+  Keep cloud costs/production capacity and missing cross-market ranges separate.
 - [ ] Inventory/export private sync records and other data absent from public
   endpoints; verify counts and authentication behavior before production cutover.
 - [ ] Finish production acceptance and review the prepared cutover/rollback
@@ -582,7 +588,7 @@ make recent checks pass.
 - [x] Record populated local recent, multi-ticker, cold/warm historical, and
   retention-boundary latency, memory, database size, and cached object bytes.
   Keep concurrent-load and full-universe S3 transfer-cost acceptance open.
-- [x] Run a bounded concurrent HTTP rehearsal covering all 55 selected VN
+- [x] Run a bounded concurrent HTTP rehearsal covering all 59 selected VN
   daily/15-minute series plus historical/crypto/global/health requests. Compare
   stable candle payload hashes, disable response caching, and record failures
   and observed per-request latency. Longer production-scale load and cold/cloud
@@ -593,8 +599,11 @@ make recent checks pass.
   Verify all 58 eligible 2022 daily histories and all 59 selected archived-minute
   series; verify the 2020 check fails only on VND/VNINDEX after documented
   SSB/GEE/VPL/OCB pre-listing exclusions. Keep cloud billing/production load open.
-- [ ] Record cold/warm latency, memory, SQLite size, and archive transfer costs for
-  the chosen ticker universe; distinguish compatibility from identical latency.
+- [x] Record current selected VN cold/warm latency, memory, SQLite size and
+  actual archive transfer bytes; verify the direct and module benchmark commands.
+- [ ] Restore missing selected cross-market archives and measure their cold reads;
+  do not count empty ranges as fast successful reads. Complete deployment/cloud
+  cost and capacity checks separately; local timings do not imply identical latency.
 - [x] Document startup, backups, archive-index restore, runtime flags, and rollback.
 - [x] Decide whether optional API/worker containers are useful; keep RustFS the
   only mandatory Compose dependency. Pin tested dependencies/images.
