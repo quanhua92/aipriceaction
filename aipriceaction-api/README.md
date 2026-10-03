@@ -599,6 +599,19 @@ uv run aipa-api --allow-direct archive-repair --source vn --symbol SHS --interva
 verified pruning. All selected series use one captured UTC retention cutoff;
 omitting the filters retains the all-market maintenance behavior.
 
+Rehearse a dated rollover on a populated copy before scheduling maintenance:
+
+```sh
+uv run python scripts/check_retention_rollover.py --source crypto --cutoff-date 2026-10-04 --output ./data/crypto-rollover-review
+```
+
+The output directory must be new. The checker creates consistent SQLite copies
+and a unique archive prefix, publishes and prunes only the copy, compares every
+surviving candle field/version with its before-image, verifies boundary history,
+and restores the manifest into fresh SQLite. The supplied date simulates the UTC
+retention cutoff; it does not change the main database's maintenance schedule.
+Its JSON report and checksummed before/after backups remain in the output directory.
+
 `import-legacy --dry-run` checks explicit source URLs with HEAD requests. Minute
 imports require an inclusive UTC date range of at most 366 days; daily/hourly
 imports use explicit years. The parser accepts the legacy headerless six-column

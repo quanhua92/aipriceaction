@@ -545,6 +545,10 @@ charts and indicators never silently join incompatible adjustment revisions.
 - [x] Implement archive publication: snapshot eligible rows, upload immutable
   objects, verify by reading back, publish manifest/index, then prune only rows
   whose versions still match the exported snapshot. Prevent reconciliation races.
+- [x] Add source/ticker/interval archive filters and rehearse a populated scoped
+  UTC rollover: 5,860 crypto candles in 12 partitions, exact boundary queries,
+  every surviving candle/version unchanged, and 713 objects restored from S3.
+  This isolated dated rehearsal does not establish unattended scheduled operation.
 - [x] Add bounded compaction of verified fragments within yearly daily/monthly
   intraday partitions. Preserve corrections/provenance, reject concurrent repair
   changes before manifest publication, retain original immutable objects, and

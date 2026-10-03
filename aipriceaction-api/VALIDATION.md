@@ -6,6 +6,34 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Populated scoped retention rollover rehearsal — 2026-10-04 ICT
+
+`scripts/check_retention_rollover.py` rehearses the October 4 UTC retention cutoff
+on consistent copies of the populated **6,037,525-candle** database. It publishes
+**12 crypto partitions / 5,860 expired rows** to a unique local RustFS prefix:
+four daily rows, 96 hourly rows and 5,760 minute rows across BTC, ETH, SOL and BNB.
+Only the candidate copy is pruned. Native record readback and queries spanning
+the archive/local boundary match the original records exactly, including
+provider, revision and update versions.
+
+An exhaustive keyed comparison with the before-image finds zero changed
+surviving records, zero unexpected new records, and exactly the selected 5,860
+missing local records. Candidate SQLite passes `quick_check`. A fresh database
+restores **713 archive objects** from the rehearsal manifest, and all expired
+selected records read back exactly with a separate cold cache. The canonical
+database epoch remains **3061**; its before-image checksum matches the preceding
+crypto refresh backup:
+`fa9a5cbcf447ec27cdbf00e3593db08ed6c7639965759ec723156144afbc9b54`.
+
+Report and populated before/after backups remain under
+`data/crypto-scoped-rollover-rehearsal-20261004/`. The report is preserved and
+readback-verified as immutable RustFS evidence; its receipt is
+`data/crypto-scoped-rollover-evidence-20261004.json`, report SHA-256
+`f0d382fa49ae164677c34fcdc2fc2ac797ab70823951d7bd0491b0dcd5531c08`.
+Lint, checker argument handling, and offline package builds pass. This proves a
+simulated isolated rollover and restoration, not an unattended scheduled run or
+canonical pruning; the broader coverage and provider-basis gates remain open.
+
 ## Public migration access and scoped archive controls — 2026-10-04 ICT
 
 A fresh bounded request to `https://api.aipriceaction.com/tickers` returned HTTP
