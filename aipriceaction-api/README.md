@@ -603,6 +603,20 @@ records unavailable or invalid inputs. Use `--symbol` or `--max-symbols` to
 bound a rehearsal. Imported snapshots remain frozen until an ongoing provider
 handoff is verified; their candle dates are visible in health coverage.
 
+Check current hourly source behavior before replacing those snapshots:
+
+```sh
+uv run python scripts/check_yahoo_hourly.py --symbol AAPL --symbol 'GC=F' --start-date 2026-09-28 --end-date 2026-10-02 --output data/hourly-source-check
+```
+
+This read-only check preserves original public/native responses and compares
+native hourly values, the stored hourly series, and minute aggregation. Yahoo
+hourly timestamps follow the legacy worker's whole-hour labels; source OHLCV
+values are preserved, rather than regrouped from minute candles. The command
+exits unsuccessfully when the captured native window differs from the public
+window. That result is diagnostic evidence, not permission to discard older
+timestamps or a certificate for an ongoing provider handoff.
+
 When using a separate database, keep its archive backend/prefix isolated from the
 main database. Two database indexes must not publish different manifests to the
 same S3 prefix. The API migration example above imports recent minute rows only;

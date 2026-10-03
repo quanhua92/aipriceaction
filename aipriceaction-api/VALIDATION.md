@@ -6,6 +6,54 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Hourly timestamp compatibility and public API candidates — 2026-10-04 ICT
+
+The Rust Yahoo worker calls `vci_shared::normalize_time`, which rounds native
+hourly timestamps down to the whole UTC hour. Python previously retained
+the source `:30` anchor. The provider now matches that existing API label while
+preserving the source bar's OHLCV. Daily and minute normalization retain their
+existing boundaries. Tests check all three intervals and reject conflicting
+source bars that would collide at an hourly boundary. Existing frozen hourly
+rows are not relabeled or replaced by this code change.
+
+`scripts/check_yahoo_hourly.py` records public JSON and original Yahoo bodies,
+compares the normalized native series, local hourly history and minute
+aggregation, checkpoints failures, and exits unsuccessfully on source
+differences. The captured September 28–October 2 window has four missing
+historical closing markers for each stock/index native response. AAPL, SPY,
+S&P and Dow otherwise match all shared values in the second captured check;
+MSFT and NVDA have five and 28 differing shared rows. Gold has two differing
+volume rows. Minute aggregation also differs, so it cannot silently replace
+native hourly history. Evidence and original bodies:
+`data/yahoo-hourly-source-check-normalized-20261003/`.
+An earlier AAPL response differed at the first bar as well; the independently
+captured responses are retained in `data/yahoo-hourly-source-check-20261003/`.
+The timestamp correction does not establish source immutability.
+
+Complete public JSON exports for 2023–2026 are staged in an isolated filesystem
+archive/SQLite database at `data/public-hourly-candidate-20261003/`. The six
+stock/index candidates contain **19,142 rows**, preserving all **17,894**
+currently stored timestamps and adding **1,248** newer dates through October 2.
+They expose 8/9/3/2/2/3 changed retained rows for AAPL/MSFT/NVDA/SPY/S&P/Dow,
+respectively. Original local snapshots, public receipts and comparisons remain
+available for publication review. This is a candidate capture, not a completed
+publication or native provider handoff.
+
+Gold's public 2026 hourly export contains **3,998 rows**, including **279**
+timestamps not aligned to a minute. The original response is preserved as
+`gold-public-2026-8039cb2d97f9b7d7dc1ab6b90a47adde06f1ddb460b85e84c0db0eb35ad95a3c.json`
+inside that candidate directory. Examples include April 2 `20:59:59` and
+April 5 `22:03:08`; both have zero volume and identical OHLC quote values.
+Strict import rejects that year. No candles are rounded, fabricated or removed
+to force acceptance. Gold hourly freshness remains unresolved.
+
+The full application suite passes **344 tests**; Ruff checks/formatting pass
+for **57 Python files**, and offline source/wheel builds succeed. One existing
+Starlette/httpx deprecation warning remains. Main hourly state and complete
+stored records are verified unchanged for all seven symbols; main SQLite
+still has **5,684,287 candles** and passes `quick_check`.
+Proof: `data/public-hourly-candidate-20261003/main-unchanged.json`.
+
 ## Native gold daily history restored and global hourly freshness gap — 2026-10-04 ICT
 
 The bounded primary Yahoo gold snapshot exactly matches every timestamp/OHLCV

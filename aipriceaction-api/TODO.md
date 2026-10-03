@@ -107,6 +107,14 @@ history through `eb814ab`; they are not additional current open tasks.
   intraday data. Define how affected S3 history becomes consistent after an
   adjustment: validated revision from that provider or a verified adjustment
   mapping. A guessed scaling factor is not an acceptable shortcut.
+- [x] Match legacy Yahoo hourly timestamp normalization and capture current
+  public/native/minute-aggregation differences with original response evidence.
+- [ ] Publish and verify current hourly replacements while preserving every
+  previously served historical timestamp. Six complete stock/index public
+  candidates preserve all 17,894 stored dates and add 1,248 newer dates; their
+  retained corrections are recorded. Gold's 2026 public export has 279
+  timestamps with nonzero seconds and is rejected by strict import. Current
+  hourly snapshots remain frozen until publication/handoff is verified.
 
 ## Phase 0 — Isolated plan and local infrastructure
 
