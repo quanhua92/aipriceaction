@@ -845,6 +845,24 @@ costs are recorded in `VALIDATION.md`.
 Run archival maintenance daily using your existing scheduler. The worker itself
 does not prune. Interrupted uploads retain local data. Older objects remain
 available while their replacements are being checked.
+
+To verify recurring crypto updates against the populated database:
+
+```sh
+uv run python scripts/check_crypto_worker.py --cycles 75 --output ./data/crypto-worker-review
+uv run python scripts/check_crypto_worker.py --verify-only --output ./data/crypto-worker-review
+```
+
+The first command runs the ordinary crypto worker and updates this database;
+use a new output directory. It captures Binance responses and consistent
+before/after backups. Checks require successful updates for initially due
+series, repeated minute updates, continuous stored timestamps, native completed
+candle parity, preserved completed history and other-market candles, and
+unchanged series, jobs, handoffs, import receipts and archive index. Daily series
+whose cooldown has not expired remain scheduled. The second command rechecks
+the saved evidence without running ingestion. A bounded run does not install a
+supervisor or perform retention pruning.
+
 If manifest publication fails, the verified local object/index and local candles
 remain available. A retry can finish publication and pruning. A candidate rejected
 by a concurrent series repair never advances the S3 manifest pointer.

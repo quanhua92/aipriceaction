@@ -6,6 +6,38 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Bounded recurring crypto scheduler — 2026-10-04 ICT
+
+The ordinary worker runs **75 cycles** from October 3 **23:54:26 to 23:55:55 UTC**.
+It completes **12 successful scheduled updates**: two minute updates and one
+hourly update for each of BTC, ETH, SOL and BNB. Daily updates are correctly not
+due during this run; their existing one-hour cooldowns remain in force.
+The worker adds **88 minute candles**, 22 per ticker, bringing the main database
+to **6,037,613 records**. Each minute tail reaches **23:55 UTC**, with **527,036
+rows** per ticker. All 12 stored crypto series retain continuous fixed-step
+timestamps and their pinned Binance revisions.
+
+Checks against consistent populated before/after backups preserve all noncrypto
+candle fields/versions and previously completed crypto OHLCV/provenance. Series,
+jobs, archive indexes, handoff certificates and legacy import receipts are exact.
+Separate comparisons also preserve all noncrypto ticker schedules, source checks
+and quality records. **12 captured native responses / 556 completed candle
+observations** match stored Binance values exactly, excluding potentially forming
+page tails. SQLite passes `quick_check`. The running FastAPI returns BTC minute
+records at 23:54 and 23:55 with exact SQLite OHLCV parity.
+
+The initial checker incorrectly required a daily refresh despite future due
+times. It rejected the completed worker run; its report and error are preserved.
+The corrected checker honors before-image schedules and rechecks the same
+responses/backups through `--verify-only`, without restarting ingestion. Saved
+evidence is under `data/crypto-scheduled-worker-20261004/`; **17 JSON artifacts**
+are preserved with immutable RustFS readback, receipt
+`data/crypto-scheduled-worker-evidence-20261004.json`. The after-backup SHA-256 is
+`d8e62714caa9be692f0c9aac2a4e38270a6b641f7611405e77a7fafd2868dc6c`.
+Checker lint, formatting, argument handling and offline package builds pass.
+The bounded worker has stopped; long-running supervision, future daily/hourly
+cycles and unattended canonical retention remain unproven.
+
 ## Populated scoped retention rollover rehearsal — 2026-10-04 ICT
 
 `scripts/check_retention_rollover.py` rehearses the October 4 UTC retention cutoff

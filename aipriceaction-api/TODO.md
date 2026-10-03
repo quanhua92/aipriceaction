@@ -549,6 +549,10 @@ charts and indicators never silently join incompatible adjustment revisions.
   UTC rollover: 5,860 crypto candles in 12 partitions, exact boundary queries,
   every surviving candle/version unchanged, and 713 objects restored from S3.
   This isolated dated rehearsal does not establish unattended scheduled operation.
+- [x] Verify the ordinary crypto scheduler over 75 cycles with captured responses
+  and populated backups: repeated minute updates, due hourly updates, honored
+  daily cooldowns, continuous stored timestamps and protected history/metadata.
+  Keep long-running supervised ingestion and scheduled canonical rollover open.
 - [x] Add bounded compaction of verified fragments within yearly daily/monthly
   intraday partitions. Preserve corrections/provenance, reject concurrent repair
   changes before manifest publication, retain original immutable objects, and
