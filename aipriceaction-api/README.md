@@ -33,6 +33,19 @@ resolve inside this project. The API process starts independently of ingestion.
 
 ## Maintain selected tickers
 
+Inspect actual retained windows and pending backfill work without changing data:
+
+```sh
+uv run python scripts/inventory_retained_windows.py --report data/selected-window-inventory.json
+```
+
+The report includes every selected published series, configured intervals,
+missing configured states, local/archive bounds, staged rows and pending jobs.
+`ready` means the series is readable; it does not establish complete retention
+coverage. A later first date or pending job is an observation requiring review,
+not proof of a missing trading session. Use a new report path to preserve prior
+inventories.
+
 `watchlist.json` selects 59 Vietnamese tickers/indexes, four cryptocurrencies,
 seven global daily series, and SJC daily quotes. Ticker `VCI` is a stock symbol;
 the VCI **data provider** is excluded. Exactly three VN adapters are implemented:
@@ -569,7 +582,8 @@ This compares every timestamp and OHLCV field in bounded exports for minute,
 and actual web chart pass. Every original timestamp and volume is retained, and
 recovered JSON prices round exactly to the original two-decimal values. Native
 gold minute updates remain frozen pending provider reconciliation. Available
-history begins March 9; empty earlier exports do not prove a full year of data.
+history begins March 8 at 22:10 UTC; empty earlier exports do not prove a full
+year of data.
 
 Use `--api-read-backend database` for a consistent database-backed public export.
 This sends `redis=false&snap=false&cache=false` to the existing HTTP API; it does

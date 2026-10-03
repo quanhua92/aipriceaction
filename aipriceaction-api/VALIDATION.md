@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Selected-window inventory and VN hourly backfill gap — 2026-10-04 ICT
+
+The new read-only SQLite inventory covers **71 selected tickers / 207 published
+series**, including all **198 configured ingestion states** with none missing.
+It records local/archive bounds, staged rows, configured retention/listing
+floors and pending work without initializing or updating SQLite. **58 series**
+have pending jobs: **53 VN hourly, three VN minute, one VN daily and one SJC
+daily**. These counts identify work, not proof that every job corresponds to
+missing candles. The database epoch remains unchanged. Evidence:
+`data/selected-window-inventory-v2-20261004.json`.
+
+All selected VN minute series have observations on the one-year retention
+boundary date; all selected daily series reach their applicable retention or
+listing date. This establishes observed span only, not internal session
+completeness. VN hourly local prefixes remain short, and all seven Yahoo minute
+series begin after the one-year boundary. Archived bounds are recorded separately.
+
+FPT currently serves **500 native DNSE hourly records**. The public legacy
+endpoint also returns **320 hourly records for 2023**, beginning September 11,
+and **920 for 2026** through October 2. Its overlapping 2026 fields change
+**450 of the 500 native rows**, so these sources cannot be joined as one exact
+revision. A read-only DNSE query before the current local first timestamp returns
+another **500 older records**: native history is available beyond the served
+window. The existing pending bootstrap job already contains **3,732 staged
+native rows**, all 500 currently served timestamps/OHLCV unchanged, but remains
+stalled on an empty/invalid page near an earlier retention floor.
+
+Complete public 2023–2026 exports contain **3,410 records** within the current
+three-year floor. Comparing that entire captured window with native staging
+finds **three public-only timestamps**, **325 native-only timestamps** and
+**3,357 shared rows with field differences**. The public-only dates are June 20,
+2024 at 05:00 UTC; August 1, 2024 at 04:00 UTC; and June 12, 2026 at 04:00 UTC.
+They remain explicit reconciliation requirements before any candidate is
+published. No staged rows are promoted and no price factor is inferred.
+Evidence: `data/vn-hourly-public-inventory-20261004/report.json`,
+`FPT-complete-staging-comparison.json` in the same directory, and
+`data/fpt-hourly-native-history-probe-20261004/report.json`, with raw captures.
+All **14 inventory/capture/comparison artifacts** are also readback-verified in
+RustFS; object keys and checksums are in `data/window-inventory-evidence-20261004.json`.
+
+Lint/format checks pass for **64 Python files**, and offline wheel/source builds
+pass. Application code remains at the **381-test** checkpoint. The gold minute
+first-date description below is corrected to **March 8 at 22:10 UTC**; March 9
+is its Vietnam date, not its UTC date.
+
 ## Bulk Parquet preparation with exact readback — 2026-10-04 ICT
 
 Archive writing now streams a local typed CSV into DuckDB with `COPY` instead
@@ -127,7 +172,7 @@ zero-volume, `legacy-api` Yahoo futures minute/hourly observations; native
 candles retain strict timestamp checks.
 
 Candidate evidence is in `data/gold-minute-current-candidate-20261004/report.json`
-and `retained-value-audit.json`. The candidate spans March 9 through October 2,
+and `retained-value-audit.json`. The candidate spans March 8 at 22:10 UTC through October 2,
 2026. **28 empty requested ranges** leave full one-year coverage unproven.
 Publication now replaces only the selected gold minute series atomically after
 state, original-snapshot, archive/series lease and active-job checks. Immutable

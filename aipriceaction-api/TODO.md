@@ -64,6 +64,13 @@ history through `eb814ab`; they are not additional current open tasks.
 - [ ] Independently verify remaining hourly handoffs. Legacy quote events and
   native/public value disagreements remain visible; minute aggregation does not
   reproduce existing native hourly bars.
+- [ ] Complete selected VN hourly backfills and reconcile public-only dates
+  before publishing. FPT serves 500 native rows while 3,732 coherent native rows
+  are staged at a stalled retention boundary. All 500 match exactly; three
+  public timestamps remain absent from the staged native window.
+- [x] Inventory all 71 selected tickers and 207 published series, including
+  all 198 configured ingestion states, archive bounds and pending jobs. There
+  are 58 series with pending work; readiness alone does not prove coverage.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
