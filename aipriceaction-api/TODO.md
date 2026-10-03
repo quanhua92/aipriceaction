@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,684,287 candles. The current S3 index has 445
+- The main local database has 5,684,287 candles. The current S3 index has 470
   active objects, 67 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -24,8 +24,11 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
-- [ ] Backfill selected cross-market daily history: all four crypto, seven
-  global and SJC 2022 ranges are absent locally but served by the live API.
+- [x] Restore selected crypto daily history: 7,777 older Binance candles in
+  25 yearly objects; exact retained overlap, full-range HTTP and cold/warm checks.
+  Preserve and document 30 older legacy/native volume differences.
+- [ ] Backfill remaining cross-market daily history: seven global and SJC
+  2022 ranges are absent locally but served by the live API.
   Capture complete snapshots/verified native bases before publishing old candles.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.

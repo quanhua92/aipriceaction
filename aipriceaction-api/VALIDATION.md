@@ -6,6 +6,67 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Selected crypto daily history restored — 2026-10-04 ICT
+
+Read-only captures preserve the full public database-backed API snapshot and
+original Binance kline responses through 2026-10-02. All **4,384 retained SQLite
+daily candles** match Binance exactly in timestamp/OHLCV. Public/native dates
+and all prices match across **12,165 candles**; **30 older volume differences**
+remain explicit (BTC 9, ETH 9, SOL 5, BNB 7). Strict legacy parity checks therefore
+exit nonzero. These differences do not constitute an adjustment-price mismatch:
+native archives use the existing Binance provider/revision, with both original
+sources preserved. No public volume is silently labeled identical to Binance.
+
+`scripts/check_crypto_daily_history.py` makes that distinction reviewable:
+`passed` requires strict parity, while `native_basis_verified` verifies exact
+retained overlap, continuous native daily timestamps and public price/date
+parity. All four native bases pass. Raw responses/checksums/full discrepancy
+reports: `data/crypto-daily-history-native-basis-20261004/report.json`.
+The script and its usage pass Ruff lint/format and were committed as `2d23042`.
+
+Local publication adds **7,777 candles in 25 yearly Parquet objects**:
+
+| Symbol | First observed native date | Last newly archived date | New cold rows | Objects |
+| --- | --- | --- | ---: | ---: |
+| BTCUSDT | 2017-08-17 | 2023-10-01 | 2,237 | 7 |
+| ETHUSDT | 2017-08-17 | 2023-10-01 | 2,237 | 7 |
+| SOLUSDT | 2020-08-11 | 2023-10-01 | 1,147 | 4 |
+| BNBUSDT | 2017-11-06 | 2023-10-01 | 2,156 | 7 |
+
+Four existing 2023-10-02 boundary objects remain unchanged and also match native
+OHLCV. New objects join continuously to that boundary; no pre-first-candle date
+is inferred. The publication holds archive/series leases, validates ready
+revisions and unchanged before-images, rejects active repair jobs, verifies
+each uploaded object's full readback, and commits all index entries atomically.
+Raw API/native evidence and a publication receipt are copied to RustFS with
+readback checks. SQL comparisons against the immutable before-backup prove all
+existing candles, tickers, series, jobs, staging, quality, sync, import receipts,
+adoptions and source checks unchanged. SQLite `quick_check` passes.
+Evidence: `data/crypto-daily-history-publication-20261003T202224Z/report.json`.
+
+All four full historical HTTP queries return **12,165 candles** with every
+timestamp/OHLCV exactly matching native captures. The previously missing 2022
+ranges now pass cold and warm checks for all four symbols: **38,983 actual cold
+download bytes**, zero warm downloads, matching full-record/provenance hashes;
+cold/warm medians **38.15/18.685 ms**. BTC SDK daily, weekly and 15-minute SMA/EMA
+checks all pass with exact timestamps/OHLCV/MA10 through MA200. Reports:
+`data/http-crypto-backfill-20261004.json`,
+`data/history-crypto-backfill-20261004.json`, and
+`data/sdk-crypto-backfill-20261004.json`.
+
+Main SQLite candle count remains **5,684,287**; active archive count rises to
+**470**, with the existing handoffs/recoveries/unavailable-history records
+preserved. A populated after-backup is **865,046,528 bytes**, SHA-256
+`3b64fe0d7a05cc921c21e93209e329ccca87ebde1322c469ba5405811f9170be`, and passes
+`quick_check`. Restoring the RustFS manifest into a separately initialized
+database verifies all 470 archive records, 67 adoptions, 34 recoveries and one
+unavailable-history record exactly. The first recovery attempt reached all
+object validation but lacked destination tables; initializing the isolated
+schema and rerunning completes it. Backup/recovery report:
+`data/crypto-daily-history-publication-20261003T202224Z/backup-and-index-restore.json`.
+Seven global and SJC older daily gaps remain open, alongside the
+earlier provider and production acceptance gates. Production routing is unchanged.
+
 ## Current-universe local performance and missing cross-market archives — 2026-10-04 ICT
 
 A read-only HTTP rehearsal covers all **59 selected VN daily/15-minute series**,
