@@ -513,9 +513,9 @@ class LegacyImporter:
                 }
                 quote_events = [row.time for row in rows if row.time % 60]
                 if quote_events:
-                    # Validation permits only the explicit legacy hourly
+                    # Validation permits only the explicit legacy intraday
                     # futures quote shape. Keep a visible finding and receipt;
-                    # acceptance does not certify these as hourly trades.
+                    # acceptance does not certify these as trades.
                     result["legacy_quote_events"] = {
                         "rows": len(quote_events),
                         "start": min(quote_events),
