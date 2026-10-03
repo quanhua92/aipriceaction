@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,684,287 candles. The current S3 index has 687
+- The main local database has 5,684,287 candles. The current S3 index has 701
   active objects, 67 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -36,12 +36,17 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] Preserve daily Yahoo futures settlement-style closes independently of the
   traded range, while keeping open/high/low and all intraday checks strict.
   Honor explicit Yahoo floors and preserve failed candidate diagnostics.
-- [ ] Backfill remaining selected GC=F daily history, including its absent 2022
-  range. The bounded native response matches all 757 current hot/cold rows exactly
-  and covers all older public dates; full public/native staging still rejects 30
-  recent public dates absent natively. Use the verified current native basis for
-  older archival without splicing legacy contract frames, and keep recent
-  public/native calendar/price differences as a separate unresolved quality gate.
+- [x] Backfill GC=F native daily history: 3,456 older candles in 14 objects,
+  with all 757 existing rows unchanged and every older public date covered.
+  Full HTTP, SDK, gold web, all seven global 2022 ranges and recovery checks pass.
+- [ ] Reconcile gold's recent public/native calendar and price differences:
+  30 recent public dates remain absent natively; originals and differences are
+  retained separately, without splicing contract frames or declaring parity.
+- [ ] Restore current global hourly controls: six selected assets return August
+  26 hourly tails despite current October 2 minute data; gold returns December
+  2025 hourly and March 2026 minute tails. The live API serves October 2 hourly
+  data. Verify hourly timestamp/bucket semantics and complete coherent snapshots
+  before replacing or deriving these histories; naive minute aggregation differs.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the

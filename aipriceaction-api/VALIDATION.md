@@ -6,6 +6,76 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native gold daily history restored and global hourly freshness gap — 2026-10-04 ICT
+
+The bounded primary Yahoo gold snapshot exactly matches every timestamp/OHLCV
+of all **757 existing hot/cold rows** and shares the current ready native
+provider/revision. It includes every older date served by the public API.
+Older native candles can therefore extend the existing basis without joining
+the conflicting legacy quote frame or changing recent data. The unresolved
+30 recent public dates and older public/native value differences remain
+preserved in the original response/diagnostics; no complete parity is claimed.
+
+Local publication adds **3,456 daily candles**, from **2010-01-04 through
+2023-09-29**, in **14 yearly Parquet objects**. The existing 2023-10-02 boundary
+object is unchanged. Every older public date is included, with additional
+actually observed native dates rather than inferred sessions. All quote fields
+pass the explicit daily futures policy and are retained without clamping.
+The publisher holds archive/series leases, rejects active repair leases,
+checks current state/hot/index before-images, preserves a populated backup and
+original sources, verifies object readback and commits all index entries
+atomically. SQL comparisons with the before-backup prove all existing candles,
+tickers, series, source checks, jobs, staging, quality, sync, imports and adoptions
+unchanged. Main SQLite `quick_check` passes. An initial local preparation had
+an unused reference to another migration receipt and exited before any index
+mutation; the corrected publisher and both preparation artifacts are preserved.
+Evidence: `data/gold-native-daily-history-publication-20261003T205136Z/report.json`.
+
+The full historical HTTP export verifies **4,213 native dates** with every
+timestamp/OHLCV exactly matching the captured response. The existing SDK passes
+gold daily/weekly SMA/EMA checks, including MA10 through MA200, and the real
+public web app passes gold daily/weekly and global benchmarks in an isolated
+browser routed to localhost. Reports:
+`data/http-gold-daily-backfill-20261004.json`,
+`data/sdk-gold-daily-backfill-20261004.json` and
+`data/web-gold-daily-backfill-20261004.json` with screenshots.
+
+The complete chosen global 2022 cold/warm check now succeeds for **all seven
+series**, with **251 candles each**, no failed requests and matching full-record/
+provenance hashes. Actual cold transfers total **67,164 bytes** in seven objects;
+warm transfers are zero. Cold/warm medians are **42.73/21.04 ms**, with peak RSS
+**160,055,296 bytes**. Main metadata remains unchanged during that benchmark.
+Report: `data/history-global-complete-backfill-20261004.json`.
+
+Main SQLite remains **5,684,287 candles**; active archives rise to **701**.
+The populated after-backup is **865,296,384 bytes**, SHA-256
+`b4d6fff0df74ad500aafd1714dbebbfebcaee725cd9a1a5d1ee926b6fe216ee6`, and passes
+`quick_check`. Isolated manifest recovery restores all 701 archive records,
+67 adoptions, 34 recoveries and one unavailable range exactly. Report:
+`data/gold-native-daily-history-publication-20261003T205136Z/backup-and-index-restore.json`.
+Application code is unchanged in this publication; the latest full suite remains
+340 tests. Production routing is unchanged.
+
+An actual local HTTP freshness check now identifies a separate web-data defect:
+AAPL/MSFT/NVDA/SPY/S&P/Dow minute tails reach **2026-10-02 20:00 UTC**, but
+their hourly controls return **2026-08-26 20:00 UTC**. Gold minute/hourly tails
+are **2026-03-31 23:59 UTC / 2025-12-31 21:00 UTC**, despite its current daily
+tail. Every HTTP request returns 200, so populated-response checks alone do
+not detect this stale interval selection. Evidence:
+`data/global-interval-freshness-20261004.json`.
+
+Live AAPL and gold hourly exports, with both default and explicitly database
+read paths, reach **2026-10-02 20:00 UTC** and use whole-hour timestamps. The
+two paths return identical captured payload hashes for each symbol. A naive
+UTC minute-to-hour derivation matches AAPL's 20 timestamps but differs on
+**17 candles**, including prices and volumes; gold's derived latest 20 rows
+are entirely older than those public rows. Thus blindly preferring minute
+aggregation cannot certify the inherited hourly contract. Complete original
+hourly responses, hashes, times and computed comparisons remain at
+`data/global-hourly-live-comparison-20261003T205530Z/`. Next, verify native-hour
+session/bucket semantics and capture coherent current hourly snapshots while
+preserving older availability, then recheck actual web control freshness.
+
 ## Daily futures quote validation and bounded Yahoo reads — 2026-10-04 ICT
 
 CME distinguishes traded highs/lows from calculated settlement prices and
