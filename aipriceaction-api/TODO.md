@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 374 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 378 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -68,6 +68,10 @@ history through `eb814ab`; they are not additional current open tasks.
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
   MSFT/NVDA/gold material minute disagreements before licensing native updates.
+- [x] Retain enough Yahoo futures minutes for the five-date-partition handoff
+  proof without expanding its six-day upstream range or relaxing OHLCV checks.
+  Gold's real wider capture has 6,881 rows, ten conflicting records and 21 native
+  timestamps absent from the public snapshot; its handoff remains rejected.
 - [ ] Finish provider adjustment/session/calendar and independent minute/daily
   quality checks. Preserve wider historical availability across the selected
   universe; the available global minute histories do not prove a full year.

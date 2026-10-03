@@ -340,7 +340,10 @@ uv run aipa-api refresh --source yahoo --symbol '^GSPC' --symbol '^DJI' --interv
 ```
 
 Yahoo minute verification uses completed UTC minute bounds and requires 1,000 exact
-candles across five observed date partitions through the published tail. The
+candles across five observed date partitions through the published tail. Futures
+symbols ending in `=F` retain up to 10,000 rows from the same bounded six-day
+Yahoo response; the normal 2,000-row selection can cover fewer than five long
+sessions. Stock/index minute and hourly request sizes remain unchanged. The
 VN complete-session/correction options remain restricted to VN data. Unverified
 global minute snapshots stay frozen; add `1m` to a global watchlist entry only
 after verifying its handoff. The included AAPL, SPY, S&P and Dow entries enable
@@ -678,9 +681,9 @@ Other imported hourly snapshots remain frozen until independently verified;
 the worker records `handoff_required` before making upstream requests. Gold's
 complete hourly public snapshot is also current through October 2. It preserves
 279 timestamped legacy quote-shaped observations with their original seconds:
-only `legacy-api` Yahoo futures hourly rows with zero volume and identical OHLC
+only `legacy-api` Yahoo futures minute/hourly rows with zero volume and identical OHLC
 receive this compatibility rule. They are recorded as `legacy_quote_events`
-quality findings rather than certified as hourly trades. Native, minute,
+quality findings rather than certified as trades. Native,
 non-flat and nonzero-volume timestamps retain their strict validation. Gold
 still requires a native handoff; the latest dry run disagrees with the snapshot.
 Current evidence is in `VALIDATION.md`.

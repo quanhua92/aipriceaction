@@ -6,6 +6,35 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Futures minute handoff window and unresolved native differences — 2026-10-04 ICT
+
+Yahoo futures minute adoption now retains up to **10,000** rows from the
+provider's existing bounded six-day response. Keeping only 2,000 rows could
+discard enough long-session dates to make the required five UTC date partitions
+unreachable even with exact data. This changes retained response selection only:
+the upstream date range, minimum **1,000** exact matches, five-date requirement,
+published-tail check, identity checks and conflict rejection remain unchanged.
+Stock/index minute and hourly request sizes are unchanged.
+
+The real gold capture contains **6,881 native records** across **six** UTC date
+partitions from September 27 at 22:10 through October 2 at 20:59 UTC. It exposes
+**ten OHLCV conflicts**, all with volume differences and two with price
+differences, plus **21 native timestamps absent from the public snapshot**.
+The actual adapter response is preserved and replayed through the widened
+dry-run handoff gate, which rejects adoption on completed OHLCV disagreement.
+The retained 198,752 records, series state and database epoch remain exact.
+No native handoff or correction is published. Evidence:
+`data/gold-minute-native-preflight-20261003T215843Z/report.json` and checksummed
+raw/normalized native responses in the same directory.
+
+Four new regression cases verify adoption and archive-index restoration for
+6,900 exact long-session observations, continued rejection with fewer than
+five date partitions, and price/volume conflict rejection outside the former
+2,000-row tail. The complete API suite passes **378 tests**; targeted intraday
+adoption tests pass **37 tests**. Lint/format checks pass for **62 Python files**,
+and offline source/wheel builds pass. Native gold minute ingestion remains
+frozen pending reconciliation; this change does not certify a complete calendar.
+
 ## Public minute migration without PostgreSQL — 2026-10-04 ICT
 
 A fresh bounded FPT daily request to `https://api.aipriceaction.com/tickers`
