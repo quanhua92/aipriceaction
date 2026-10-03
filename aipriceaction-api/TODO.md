@@ -22,6 +22,22 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
+## Completion blockers revalidated — 2026-10-04 ICT
+
+After the Git checkpoints, read-only API and native-provider checks reproduce
+all nine unavailable ranges across EIB/HHS/VND/GEX/HAG/SHS/VNINDEX. VPS still
+omits the four known EIB/HHS traded sessions; the five older candidates still
+contain invalid OHLC or conflicting daily records. Previously examined alternate
+provider revisions would lose readable archives or introduce unverified values.
+The configured legacy PostgreSQL endpoint still refuses connections, preventing
+private inventory and sync-record migration. Main candles and metadata stay exact.
+
+Full replacement remains blocked on complete verified historical data,
+established provider/session semantics, and read-only legacy inventory/export.
+These repeated external blockers prevent satisfying recent reliability and
+historical access; successful local tests and commits do not complete the goal.
+Detailed current evidence and remaining acceptance gates are in VALIDATION.md.
+
 ## Current status — 2026-10-03
 
 The API, SQLite/Parquet reader, selected-provider adapters, workers, and Python

@@ -6,6 +6,54 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Completion blockers revalidated — 2026-10-04 ICT
+
+The committed implementation has a clean worktree and the local API remains
+reachable (`/health` returns HTTP 200). A fresh read-only audit at **18:09 UTC on
+October 3** reproduces **nine HTTP 503 ranges** across seven Vietnamese tickers.
+SQLite quick-check returns **ok**; daily and operational metadata hashes remain
+unchanged before and after the probes. The active archive index still contains
+**442 published objects / 345,571 rows** and **four pending objects / 1,001 rows**,
+with **five typed unavailable findings**.
+
+Fresh native-provider probes return 59 valid VPS rows each for EIB/HHS from
+April through June 2025, still omitting both May 22 and June 11. GEX/VPS 2019,
+HAG/VNDirect 2019, VNINDEX/VNDirect 2020, and VND/VPS 2020 still fail strict OHLC
+validation. SHS/DNSE 2022 still contains conflicting records on December 27.
+Earlier captured alternate-provider checks remain preserved: those candidates
+do not resolve the failures while retaining a verified coherent history.
+Independent dated replies do not establish a safe DNSE duplicate-selection,
+timestamp-shift, or cumulative-volume policy. No correction is guessed.
+
+The actual legacy configuration is `aipriceaction/.env`. Its PostgreSQL endpoint
+at loopback port 5432 still returns `ConnectionRefusedError` on a TCP probe.
+The first audit examined the workspace-root configuration, where no database
+URL is set; the separate legacy probe uses the actual configuration. No database
+credentials, private sync payloads, PostgreSQL queries, or production writes
+are involved.
+
+| Required outcome | Current evidence | Acceptance |
+| --- | --- | --- |
+| FastAPI, workers, and Python operational CLI | Committed code; 278 API tests, 251 offline SDK tests, lint/format, source/wheel builds | Implemented locally |
+| Existing web API and CLI/SDK flows | Contract tests, frozen fixtures, selected actual browser/CLI checks, configured 2,103-query matrix | Partial: 44 history/lookback failures and wider private flows remain open |
+| Three daily years and one minute year in SQLite | Integrity and retention audits; observed-session comparisons | Storage bounds pass; four known daily sessions, intraday basis disagreements, global minute coverage, and provider/calendar semantics remain open |
+| Older accessible history in S3 | Verified published Parquet/index and restore rehearsals; current HTTP probes | Partial: four pending objects, unavailable years, and private legacy inventory remain open |
+| Simple infrastructure and selected Vietnam providers | RustFS-only Compose, embedded SQLite/DuckDB, VPS/VNDirect/DNSE adapters | Implemented locally; no VCI provider |
+| A complete replacement ready for cutover | Full inventory, coherent history, population-wide performance, private records, and reviewed routing/rollback execution | Unproven; production stays on the legacy backend |
+
+The same upstream-data and unavailable-inventory blockers have persisted across
+repeated recovery and verification turns. Further publication would require
+unverified candle corrections, loss of readable history, or assumptions about
+private production data. Completing the original goal requires verified source
+history/provider semantics and a read-only legacy inventory/export. No successful
+unit test or narrower local rehearsal substitutes for those requirements.
+
+Evidence: `data/goal-gate-audit-20261003T180930Z.json`,
+`data/legacy-inventory-gate-20261003T181010Z.json`, the preserved native responses
+in `data/completion-blocker-revalidation-20261003/`, and independent dated
+witnesses in `data/dnse-duplicate-date-context-20261003/`. The data/evidence files
+remain ignored; this report records their conclusions for review.
+
 ## Local Git checkpoints — 2026-10-04
 
 The user requested actual commits after implementation had accumulated. The
