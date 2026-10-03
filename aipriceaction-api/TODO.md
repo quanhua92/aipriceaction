@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 378 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 381 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -84,6 +84,10 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] Measure current selected VN local cold/warm reads, actual archive downloads,
   memory/database size and bounded HTTP load across all 59 configured tickers.
   Keep cloud costs/production capacity and missing cross-market ranges separate.
+- [x] Replace per-candle archive inserts with a typed local CSV bulk load.
+  Full 198,752-row Parquet output is byte-identical; local writing takes about
+  one second versus 137 seconds, with full RustFS preparation/readback verified.
+  Temporary-disk and observed process-memory costs remain explicit.
 - [ ] Inventory/export private sync records and other data absent from public
   endpoints; verify counts and authentication behavior before production cutover.
 - [ ] Finish production acceptance and review the prepared cutover/rollback

@@ -6,6 +6,42 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Bulk Parquet preparation with exact readback — 2026-10-04 ICT
+
+Archive writing now streams a local typed CSV into DuckDB with `COPY` instead
+of executing one insert per candle. The typed schema, sorted output, ZSTD
+compression, row-group setting, verification, publication and pruning rules
+remain unchanged. Python's `QUOTE_NOTNULL` and DuckDB's quoted-null handling
+preserve empty metadata separately from SQL null; temporary files are removed
+when the operation exits. No dependency or network service is added.
+
+The same complete **198,752-row** gold minute snapshot takes **136.886 seconds**
+with row inserts versus **0.972 seconds** with the bulk writer. Both full
+Parquet readbacks match every original field, including capture versions, and
+produce byte-identical **2,232,420-byte** files with SHA-256
+`aa060b52fb62b3bd4d0542531711a31ad9990aa695b4a2bec2e415f8cd2e5b7c`.
+These are local observations under concurrent work, not a production capacity
+guarantee. Whole-process peak RSS, including fixture loading and verification,
+is **429.516 MiB** before and **493.484 MiB** after. The bulk path temporarily
+writes **33,840,107 CSV bytes** for this fixture. Temporary disk and memory
+costs should therefore remain part of production capacity acceptance.
+
+Real local RustFS preparation, upload and verified readback takes **2.120
+seconds**; another refreshed read matches all 198,752 rows. The main database
+epoch and all **701 active archive records** remain unchanged: this prepares
+an immutable image without publishing another index entry or pruning candles.
+Evidence: `data/archive-write-before-20261004/report.json`,
+`data/archive-write-after-20261004/report.json`,
+`data/archive-write-comparison-20261004/report.json` and
+`data/archive-write-rustfs-20261004/report.json`.
+
+Three regression cases verify exact archive/publication/pruning readback for
+adjacent floating-point values, maximum signed 64-bit volume/version values,
+empty strings, literal null markers, quotes, commas, Unicode and multiline
+metadata. The full suite passes **381 tests**; lint/format checks pass for
+**63 Python files**, and offline source/wheel builds pass. The existing
+Starlette/httpx warning remains unchanged.
+
 ## Gold minute query-shape diagnosis — 2026-10-04 ICT
 
 The repository's legacy minute worker requests `range=1d` and saves extracted
