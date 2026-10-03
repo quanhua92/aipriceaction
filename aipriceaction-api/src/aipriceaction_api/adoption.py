@@ -240,8 +240,12 @@ async def adopt_snapshot(
     step = 3600 if iv == "1h" else 60
     completed = completed_vn_sessions() if source == "vn" else int(time.time()) // step * step
     minimum = 100 if iv == "1h" else 1000
+    # Futures trade across much longer UTC sessions than stocks. Trimming the
+    # same bounded six-day Yahoo response to 2,000 minutes can discard the
+    # five date partitions required below even when the full overlap is exact.
+    count = 10000 if source == "yahoo" and iv == "1m" and symbol.endswith("=F") else minimum * 2
     page = await asyncio.wait_for(
-        providers.page(source, symbol, iv, count=minimum * 2, provider=provider), timeout=90
+        providers.page(source, symbol, iv, count=count, provider=provider), timeout=90
     )
     if page.provider != provider or any(
         (r.source, r.symbol, r.interval, r.provider) != (source, symbol, iv, provider)
