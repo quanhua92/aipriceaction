@@ -6,6 +6,87 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## SJC and global index daily history restored — 2026-10-04 ICT
+
+Bounded database-backed public exports capture the selected global/SJC daily
+history before 2006 and from 2006 through 2026-10-02. Original Yahoo chart
+responses are also preserved and normalized using the existing provider logic.
+SJC's complete observed public snapshot matches all **1,371 retained hot/cold
+rows** exactly; both indexes match all **754 retained rows each** exactly.
+Dow's observed public/native history matches exactly. S&P has one older low
+serialization difference on 2010-07-06 (**1018.3499755859376** public versus
+**1018.3499755859375** native); this is recorded without claiming strict parity.
+Capture report: `data/cross-market-daily-full-preflight-20261003T202627Z/report.json`.
+
+Publication adds **21,582 older candles in 83 yearly Parquet objects**, retaining
+existing provider/revision identities and all existing archive objects:
+
+| Series | First newly archived observed date | Last newly archived date | New cold rows | Objects |
+| --- | --- | --- | ---: | ---: |
+| S&P 500 | 1980-01-02 | 2023-09-29 | 11,030 | 44 |
+| Dow | 1992-01-02 | 2023-09-29 | 7,996 | 32 |
+| SJC-GOLD | 2016-01-01 | 2022-12-31 | 2,556 | 7 |
+
+These first dates describe the captured source's availability, not a verified
+listing or lifetime coverage claim. SJC uses its existing frozen `legacy-api`
+snapshot basis; this does not enable its unavailable native endpoint. All
+observed dates remain preserved without inferred holidays or missing quotes.
+
+The first publisher prepared/verified all objects but rejected a queued SJC
+bootstrap job; its index transaction rolled back. Inspection confirms that
+job is pending with no active lease. The retry reuses the same verified uploaded
+objects, holds archive/series leases, rejects active job leases, checks unchanged
+series/hot/archive before-images and atomically inserts all 83 index records.
+The pending job remains unchanged. Raw source responses and the publication
+receipt have RustFS copies with hash/readback checks. Full SQL comparisons with
+the before-backup prove all existing candles, tickers, series, jobs, staging,
+quality, sync, import receipts, adoptions and source checks unchanged.
+Evidence: `data/cross-market-daily-history-publication-20261003T202846Z/report.json`;
+the earlier failed preparation receipt remains preserved separately.
+
+Six bounded HTTP requests verify **24,461 observed candles**, with every date
+and OHLCV field exactly matching the chosen snapshots (including one empty
+pre-history SJC range). S&P and SJC SDK daily/weekly SMA/EMA checks pass with
+exact timestamps/OHLCV/MA10 through MA200. Reports:
+`data/http-index-sjc-backfill-20261004.json`,
+`data/sdk-index-daily-backfill-20261004.json` and
+`data/sdk-sjc-daily-backfill-20261004.json`.
+
+The 2022 SJC cold/warm check succeeds, downloading **5,955 bytes** cold and zero
+warm; medians **16.31/8.63 ms**. The global runner succeeds for both indexes,
+downloading **15,446 bytes** cold and zero warm; successful medians
+**24.905/11.58 ms**. That global report still exits nonzero because all five
+other selected global ranges remain absent; empty ranges never count as fast
+successful reads. Full-record/provenance hashes match cold/warm and main
+metadata is unchanged during benchmarks. Reports:
+`data/history-sjc-backfill-20261004.json` and
+`data/history-global-partial-backfill-20261004.json`.
+
+Main SQLite remains **5,684,287 candles**, with **553 active archive objects**.
+The after-backup is **865,091,584 bytes**, SHA-256
+`f37b557e1ab46582d8ed06b9da9db55a8a56a197f7aa3527b3b942bdac77e55d`, and passes
+`quick_check`. Isolated manifest restoration validates all objects and restores
+all 553 archive records, 67 adoptions, 34 recoveries and one unavailable range
+exactly. Evidence:
+`data/cross-market-daily-history-publication-20261003T202846Z/backup-and-index-restore.json`.
+
+AAPL/MSFT/NVDA/SPY wide native captures preserve all retained dates/volumes but
+change adjusted prices on **366/337/324/364 retained rows**, respectively.
+Computed maximum relative differences are **4.1146692484844646e-7**,
+**2.4997264885773704e-7**, **3.385101311960505e-7** and
+**3.3265877526505293e-7**. These fail the strict absolute `1e-8` preflight;
+no tolerance is widened or old values scaled. Next, publish one coherent native
+daily snapshot per symbol, with all served dates and original before-images.
+GC=F's public snapshot has **26 older rows rejected by the existing OHLC range
+validator**, mostly with close outside high/low. These need separate semantics
+verification: CME documents traded high/low and settlement as separate fields
+([CME settlement definitions](https://www.cmegroup.com/trading/about-settlements.html)),
+which alone does not prove the Yahoo rows correct. Preserve them and investigate
+the actual provider representation before relaxing validation or excluding data.
+Detailed computed diagnostics:
+`data/cross-market-daily-full-preflight-20261003T202627Z/discrepancy-diagnostics.json`.
+Existing VN and minute disagreements remain open; production routing is unchanged.
+
 ## Selected crypto daily history restored — 2026-10-04 ICT
 
 Read-only captures preserve the full public database-backed API snapshot and
