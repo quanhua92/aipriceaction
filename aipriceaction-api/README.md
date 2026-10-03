@@ -642,7 +642,14 @@ Their `1h` and derived `4h` histories are verified through HTTP and the existing
 SDK. SPY now has a verified native hourly handoff and an ordinary worker update.
 Other imported hourly snapshots remain frozen until independently verified;
 the worker records `handoff_required` before making upstream requests. Gold's
-rejected hourly export remains isolated. Current evidence is in `VALIDATION.md`.
+complete hourly public snapshot is also current through October 2. It preserves
+279 timestamped legacy quote-shaped observations with their original seconds:
+only `legacy-api` Yahoo futures hourly rows with zero volume and identical OHLC
+receive this compatibility rule. They are recorded as `legacy_quote_events`
+quality findings rather than certified as hourly trades. Native, minute,
+non-flat and nonzero-volume timestamps retain their strict validation. Gold
+still requires a native handoff; the latest dry run disagrees with the snapshot.
+Current evidence is in `VALIDATION.md`.
 
 Browser rehearsals can enforce freshness as well as populated responses:
 

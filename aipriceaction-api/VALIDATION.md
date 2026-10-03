@@ -6,6 +6,65 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Gold hourly snapshot restored with exact legacy quote timestamps — 2026-10-04 ICT
+
+The rejected gold hourly timestamps are now inspected row by row: all **279**
+have zero volume and identical OHLC, and all occur in April 2026. They are
+preserved as quote-shaped legacy observations rather than rounded to minutes
+or removed. The explicit compatibility rule applies only to `legacy-api` Yahoo
+futures `1h` rows with finite valid prices, zero volume and identical OHLC.
+Native providers, minute/daily intervals, non-futures symbols, non-flat and
+nonzero-volume rows retain strict timestamp validation. This rule describes
+the observed legacy representation; it does not independently establish trade
+or session validity. Imports record `legacy_quote_events` counts, original
+bounds, source checksums and revisions as a visible quality finding.
+
+The complete public 2024–2026 snapshot contains **10,288 observations**, preserves
+all **6,290** original timestamps/OHLCV exactly and adds **3,998** newer records
+through **2026-10-02 20:00 UTC**. Every quote-event second and supplied field
+is retained. SQLite/Parquet readback verifies the complete replacement image;
+immutable originals, response bodies/receipts, original/replacement Parquet
+images and populated before/after backups are preserved. The gold series alone
+is replaced atomically after archive/series lease, current-state, row and active
+repair checks. All **5,679,245 unrelated candles** and prior operational records
+remain exact. One selected gold quote-event finding is added explicitly.
+Evidence: `data/gold-hourly-publication-20261003T212906Z/report.json` and
+`data/public-hourly-candidate-20261003/gold-complete-comparison.json`.
+
+Bounded yearly HTTP exports verify all **10,288 hourly / 2,707 four-hour**
+timestamps and OHLCV exactly against the captured candidate, including all
+279 quote events. These are separate yearly requests because the API retains
+its existing 10,000-row single-ticker limit. The existing SDK passes **eight**
+gold daily/weekly/hourly/four-hour SMA/EMA checks. The actual public gold hourly
+chart and both global benchmarks render through October 2 with explicit
+freshness assertions, no page/network errors and no writes. Reports:
+`data/gold-hourly-publication-20261003T212906Z/http-full-history.json`,
+`data/sdk-gold-hourly-current-20261004.json` and
+`data/web-gold-hourly-current-20261004.json` with screenshots.
+
+Main SQLite contains **5,689,533 candle/quote records**; active archive metadata
+remains **701 objects / 68 adoptions / 34 recoveries / one unavailable range**.
+The populated after-backup has **865,873,920 bytes**, matches all 10,288 candidate
+records including capture versions, retains the quote finding and passes its
+own `quick_check`. SHA-256:
+`818a7937749e06e3d702197ef9a10f827e48b081745794b43592d3616e6fe646`.
+Evidence: `data/gold-hourly-publication-20261003T212906Z/backup-check.json`.
+The quote-specific cold archive/manifest restoration path is covered by an
+end-to-end import/restore test; publication verifies the actual complete gold
+Parquet image without changing the 701 active archive records.
+
+The complete application suite passes **371 tests**; lint/format checks pass
+for **59 Python files**, and offline source/wheel builds pass. New tests verify
+lossless JSON import, visible evidence, SQLite/Parquet/archive restoration and
+native/four-hour responses, and reject eleven out-of-policy quote shapes.
+The existing Starlette/httpx warning remains unchanged.
+
+Gold's hourly snapshot remains frozen: the new real native-handoff dry run
+still fails on completed OHLCV disagreement. Its stale minute history and
+native source-policy reconciliation remain open. This current public snapshot
+does not certify continuous native ingestion, full calendar coverage or the
+recent daily/native discrepancies. Production routing remains unchanged.
+
 ## SPY native hourly handoff and ordinary updates — 2026-10-04 ICT
 
 Yahoo hourly adoption now uses the existing certificate workflow with explicit

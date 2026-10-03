@@ -9,13 +9,14 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,685,535 candles. The current S3 index has 701
+- The main local database has 5,689,533 candle/quote records. The current S3 index has 701
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
   SPY also has a verified native hourly handoff; five other current stock/index
-  hourly snapshots remain frozen, and gold hourly history remains stale.
-- The latest complete API suite passes 358 tests; lint/format/offline builds pass.
+  hourly snapshots remain frozen. Gold hourly history is now current as a
+  complete public snapshot, with 279 legacy quote events preserved explicitly.
+- The latest complete API suite passes 371 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -49,10 +50,13 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] License SPY native hourly updates with 200 exact bars across 29 completed
   UTC date partitions, preserving all existing dates/values and verifying an
   ordinary update, populated backup and complete S3 manifest restoration.
-- [ ] Restore current gold hourly/minute data and independently verify remaining
-  stock/index hourly handoffs. Gold's malformed public timestamps and observed
-  native/public value disagreements remain separate evidence. Minute aggregation
-  does not reproduce the existing native hourly bars.
+- [x] Restore current gold hourly history from complete public JSON, preserve
+  all 6,290 original dates/values, add 3,998 newer observations and retain all
+  279 quote-event timestamps without rounding. Verify SQLite/Parquet, full
+  yearly HTTP, SDK, actual web freshness and populated backup evidence.
+- [ ] Restore current gold minute data and independently verify remaining hourly
+  handoffs. Legacy quote events and native/public value disagreements remain
+  visible; minute aggregation does not reproduce existing native hourly bars.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
@@ -120,14 +124,16 @@ history through `eb814ab`; they are not additional current open tasks.
   existing SDK SMA/EMA behavior, and actual hourly web controls with explicit
   freshness bounds. The publication adds 1,248 newer dates and records every
   retained correction, original before-image and populated backup.
-- [ ] Restore current gold hourly data without silently rewriting the 279
-  timestamps with nonzero seconds in its 2026 public export.
+- [x] Restore current gold hourly data without silently rewriting the 279
+  quote-event timestamps in its 2026 public export. Permit only the observed
+  legacy futures/hourly/zero-volume/flat-price shape and record explicit findings.
 - [x] Extend exact-overlap certificates to Yahoo hourly snapshots with interval
   finality, race/job guards and restoration validation; enable and verify SPY.
 - [ ] Verify and enable remaining native Yahoo hourly handoffs. Imported hourly
   snapshots stop before upstream reads or repair scheduling until independently
   verified. AAPL/MSFT/NVDA/S&P/Dow retain observed disagreements in longer native
-  windows; gold's published tail remains too old for a current handoff.
+  windows. Gold now has a current published tail, but its native dry run still
+  disagrees with completed snapshot OHLCV.
 
 ## Phase 0 — Isolated plan and local infrastructure
 
