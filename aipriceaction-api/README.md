@@ -898,10 +898,19 @@ uv build
 Optional read-only provider and legacy-response probes live in `scripts/`.
 `check_sdk_client.py` runs in the existing SDK environment and checks sampled
 daily/minute/15-minute candles plus SMA/EMA against the local API.
+Use `--start-date` and `--end-date` for archived SDK ranges. The SDK selects
+the latest 20 rows inside the range; HTTP requests with a start date select the
+earliest. The checker verifies exact SDK/HTTP parity and independently compares
+the SDK candles with the complete dated range's tail. It records differences
+between full-range and tail-query moving averages separately because their
+indicator context can differ.
 `check_web_client.py` uses optional Playwright/Chromium in an isolated browser;
 it routes only public API reads to the loopback replacement and exercises actual
 daily/15-minute chart controls and volume profiles. Reports/screenshots belong
 under ignored `data/`. Neither script changes production routing or accounts.
+The browser checker selects watchlist rows explicitly; dialog triggers and
+benchmark selectors can carry the same ticker label. A displayed chart may
+reuse its initial response when the default ticker is selected again.
 `check_rustfs.py write --state /tmp/aipa-rustfs.json`, a RustFS restart, then
 `check_rustfs.py read --state /tmp/aipa-rustfs.json` test local persistence,
 range reads, Parquet boundary queries, and manifest recovery. It uses an

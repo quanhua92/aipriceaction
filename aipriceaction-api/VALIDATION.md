@@ -6,6 +6,55 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Cross-market clients and archived reads — 2026-10-04 ICT
+
+The actual public web app passes daily, 15-minute and hourly controls for BTC,
+VCB and NVDA with reads routed to the loopback replacement. NVDA's S&P/Dow
+benchmark charts also pass all three intervals. VCB and all global chart tails
+reach October 2; BTC's captured intraday tail is October 3 at 07:15 UTC for
+15-minute and 07:00 for hourly data. This is compatibility evidence, not proof
+that crypto ingestion is current continuously. All three successful rehearsals
+have no page errors, blocked writes or forwarding errors.
+
+The first BTC attempt timed out because the verification tool clicked the
+existing chart's dialog trigger instead of its watchlist row. DOM inspection
+preserves the three distinct BTC-labelled controls; the checker now excludes
+dialog/combobox triggers. It also permits the selected default chart to reuse
+its populated initial response. The corrected selector passes on all three
+markets. The failed attempt remains preserved separately.
+
+The installed Python SDK passes **68 historical cases / 1,360 returned rows**
+for all four selected cryptocurrencies, seven Yahoo assets and SJC gold in
+2022. Daily, weekly and two-week intervals cover both SMA/EMA; SJC uses daily
+only. Every timestamp, OHLCV and MA10/20/50/100/200 value exactly matches the
+corresponding tail HTTP query, and `data_source` is `api`. A complete bounded
+dated HTTP export independently proves latest-in-range OHLCV selection.
+The SDK's documented direction differs from HTTP start-date direction; the
+checker now accounts for that difference explicitly rather than comparing
+different candles. Implementation commit: `070f309`.
+
+Full-range indicator context differs from a tail request in **31 cases**.
+Maximum SMA absolute difference is **5.820766091346741e-11**; maximum EMA
+difference is **32.20380231006493**, BTC daily EMA200. EMA seeding with a
+different history length remains an open consistency limitation. Exact SDK
+parity with its corresponding HTTP query does not certify history-length
+invariance. Per-field changed counts and absolute deltas are preserved in
+`data/cross-market-sdk-history-v3-20261004/`.
+
+Fresh isolated-cache 2022 daily reads pass for every selected non-VN ticker,
+with identical cold/warm values and provenance. Crypto downloads four objects
+(38,983 bytes), Yahoo seven (67,164 bytes), SJC one (5,955 bytes); warm reads
+download zero objects. Cold wall times are respectively 56.20, 81.32 and
+16.74 milliseconds, warm times 28.27, 42.76 and 9.47 milliseconds at four-reader
+concurrency. These are local RustFS observations, not cloud billing or production
+capacity estimates. Each benchmark records unchanged main data/metadata.
+Reports live under `data/cross-market-history-20261004/`; browser reports and
+screenshots under `data/cross-market-web-20261004/`. The supplementary immutable
+readback receipt is `data/cross-market-client-evidence-20261004.json`.
+Lint and formatting pass for all 70 Python files. Only verification tools and
+documentation change; canonical candles, handoffs and archive manifests remain
+unchanged.
+
 ## Public migration and remaining daily archive gates — 2026-10-04 ICT
 
 A fresh bounded request to the live public `/tickers` endpoint returns HTTP

@@ -127,6 +127,13 @@ history through `eb814ab`; they are not additional current open tasks.
   universe; the available global minute histories do not prove a full year.
 - [ ] Complete wider web/CLI/SDK and cross-market historical/performance acceptance;
   preserve documented numeric/source/latency differences instead of hiding them.
+  The installed SDK now passes 68 dated SMA/EMA cases for all 12 selected
+  non-VN tickers' 2022 history, with independent complete-range OHLCV tail checks.
+  Local S3 cold/warm reads pass for those tickers; actual BTC, VCB and NVDA web
+  daily/15-minute/hourly controls pass. These checks leave wider dates, freshness
+  and capacity open. EMA history-length consistency remains a measured issue:
+  full-range versus tail-query EMA200 differs by up to 32.20380231006493 in the
+  captured BTC daily case; no candle disagreement is hidden by this result.
 - [x] Measure current selected VN local cold/warm reads, actual archive downloads,
   memory/database size and bounded HTTP load across all 59 configured tickers.
   Keep cloud costs/production capacity and missing cross-market ranges separate.
