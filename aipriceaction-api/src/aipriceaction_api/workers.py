@@ -219,6 +219,7 @@ class Worker:
             return 0
 
     async def _sync(self, entry, iv):
+        started = asyncio.get_running_loop().time()
         source, symbol = entry["source"], entry["symbol"]
         if not self.repo.live_claim(source, symbol, iv, self.owner):
             return 0
@@ -372,8 +373,23 @@ class Worker:
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")
             self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
+            # The recent observation and candles are committed together. A later
+            # optional historical probe must not rewrite that successful result,
+            # including when the worker is cancelled during the probe.
+            attempt = None
             if iv == "1D" and source not in ("sjc", "crypto"):
-                await self.sentinel(entry, state)
+                try:
+                    # Leave time for recording a failed probe and releasing the
+                    # live lease before the outer live-update deadline expires.
+                    remaining = self.deadline - (asyncio.get_running_loop().time() - started)
+                    if remaining <= 0:
+                        raise TimeoutError
+                    await asyncio.wait_for(
+                        self.sentinel(entry, state), timeout=min(30, remaining / 2)
+                    )
+                except Exception as exc:
+                    reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                    self.repo.finding(source, symbol, iv, "historical_probe_failure", reason)
             return len(rows)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__

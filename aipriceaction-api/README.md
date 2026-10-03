@@ -232,6 +232,12 @@ retained-window recovery. This verifies a bounded append transition, not the
 provider's lifetime dividend policy. Minute adoption remains the default interval;
 its complete-session/correction options apply only to minute snapshots.
 
+Daily live checks commit their recent observation with the candles. A later
+historical dividend/correction probe has its own bounded time budget; failures
+appear as `historical_probe_failure` findings while the successful recent check
+remains successful. Actual corroborated historical revisions still queue staged
+repair. Cancellation after the commit preserves the completed recent observation.
+
 For a bounded local read-only HTTP rehearsal, stop ingestion so payloads stay
 stable and run:
 

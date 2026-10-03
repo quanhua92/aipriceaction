@@ -62,6 +62,98 @@ class Pages:
         return value
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "probe_error", [DataError("Historical provider unavailable"), RuntimeError("private detail")]
+)
+async def test_failed_historical_probe_preserves_committed_daily_success(
+    system, monkeypatch, probe_error
+):
+    repo, archive, settings = system
+    now = parse_time("2026-07-01")
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: now)
+    age = 90 + (now // 86400 % 10) * 90
+    sample_end = now - age * 86400
+    original = [replace(candle(1), time=sample_end - i * 86400) for i in range(10)]
+    latest = [replace(candle(1), time=now - i * 86400) for i in range(1, 41)]
+    repo.put(original + latest)
+    published_history = repo.read("vn", "FPT", "1D", end=sample_end)
+    incoming = sorted(latest, key=lambda r: r.time)[1:] + [replace(latest[0], time=now)]
+    provider = Pages(Page(incoming, "vps"), probe_error)
+    worker = Worker(repo, settings, provider, archive)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 40
+    status = repo.status()["series"][0]
+    assert status["outcome"] == "succeeded" and status["completed_rows"] == 40
+    assert repo.read("vn", "FPT", "1D", limit=1)[0].time == now
+    findings = repo.findings()
+    assert not any(row["kind"] == "provider_failure" for row in findings)
+    failure = next(row for row in findings if row["kind"] == "historical_probe_failure")
+    assert failure["detail"] == (
+        str(probe_error) if isinstance(probe_error, DataError) else "RuntimeError"
+    )
+    assert repo.read("vn", "FPT", "1D", end=sample_end) == published_history
+
+
+@pytest.mark.asyncio
+async def test_cancelled_historical_probe_preserves_committed_daily_success(system, monkeypatch):
+    repo, archive, settings = system
+    recent = [replace(candle(1), time=parse_time("2026-06-01") + i * 86400) for i in range(40)]
+    repo.put(recent)
+    worker = Worker(repo, settings, Pages(Page(recent, "vps")), archive)
+
+    async def cancel(*args):
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(worker, "sentinel", cancel)
+    with pytest.raises(asyncio.CancelledError):
+        await worker.sync({"source": "vn", "symbol": "FPT"}, "1D")
+    status = repo.status()["series"][0]
+    assert status["outcome"] == "succeeded" and status["completed_rows"] == 40
+    assert not any(row["kind"] == "provider_failure" for row in repo.findings())
+
+
+@pytest.mark.asyncio
+async def test_historical_probe_timeout_does_not_exhaust_live_update_budget(system, monkeypatch):
+    repo, archive, settings = system
+    recent = [replace(candle(1), time=parse_time("2026-06-01") + i * 86400) for i in range(40)]
+    repo.put(recent)
+    worker = Worker(repo, settings, Pages(Page(recent, "vps")), archive)
+    worker.deadline = 0.2
+
+    async def stall(*args):
+        await asyncio.sleep(1)
+
+    monkeypatch.setattr(worker, "sentinel", stall)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 40
+    assert repo.status()["series"][0]["outcome"] == "succeeded"
+    assert any(row["kind"] == "historical_probe_failure" for row in repo.findings())
+    assert not any(row["kind"] == "provider_failure" for row in repo.findings())
+
+
+@pytest.mark.asyncio
+async def test_historical_revision_outside_live_overlap_still_queues_repair(system, monkeypatch):
+    repo, archive, settings = system
+    now = parse_time("2026-07-01")
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: now)
+    age = 90 + (now // 86400 % 10) * 90
+    sample_end = now - age * 86400
+    old = [replace(candle(1), time=sample_end - i * 86400) for i in range(10)]
+    recent = [replace(candle(1), time=now - i * 86400) for i in range(1, 41)]
+    repo.put(old + recent)
+    before = repo.read("vn", "FPT", "1D")
+    changed = sorted(
+        [replace(r, open=90, high=91, low=89, close=90) for r in old], key=lambda r: r.time
+    )
+    provider = Pages(Page(sorted(recent, key=lambda r: r.time), "vps"), Page(changed, "vps"))
+    worker = Worker(repo, settings, provider, archive)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 40
+    assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
+    assert [(r.time, r.close) for r in repo.read("vn", "FPT", "1D")] == [
+        (r.time, r.close) for r in before
+    ]
+    assert any(row["kind"] == "historical_revision" for row in repo.findings())
+
+
 @pytest.mark.parametrize("elapsed", [100, 1200])
 @pytest.mark.asyncio
 async def test_crypto_restart_fills_bounded_gap_or_queues_recovery(system, monkeypatch, elapsed):

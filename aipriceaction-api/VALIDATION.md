@@ -6,6 +6,37 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Daily observation and historical probe failures — 2026-10-04 ICT
+
+A daily update previously committed its recent candles and successful source
+observation, then could overwrite that observation as failed if its subsequent
+historical dividend/correction probe raised. It also returned zero updated rows
+despite the committed data. The worker now ends the recent attempt after the
+atomic commit, gives the historical probe at most 30 seconds and half the
+remaining live-update budget, and records probe failures separately as
+`historical_probe_failure`. Caller cancellation still propagates and live leases
+are released, while the committed recent observation remains successful.
+
+Five regressions cover an unavailable historical provider, sanitized unexpected
+exceptions, caller cancellation, a probe exceeding its own budget, and an actual
+corroborated historical revision outside the live overlap. The latter still
+queues staged repair and preserves observed prices. This changes failure
+accounting and timing; it does not establish new adjustment policies or change
+the existing comparison/provenance rules.
+
+An isolated FPT rehearsal fetches **40 actual recent VPS candles**, then injects
+an explicit historical-probe outage. The worker returns 40, its recent source
+check remains successful with 40 completed rows, and only the historical failure
+is recorded. All **747 retained OHLCV/provider/revision records** remain exact;
+main daily and operational hashes stay unchanged. Production data/routing is
+unchanged. Evidence: `data/daily-probe-failure-rehearsal-20261003T191105Z/report.json`
+and its checksummed native recent candle capture.
+
+The full suite passes **307 tests in 22.33 seconds** with the existing benign
+Starlette/httpx deprecation warning. Ruff lint and formatting pass for all
+**58 Python files**; source and wheel distributions build offline. Remaining
+VND/VNINDEX history and broader provider/calendar/adjustment acceptance are open.
+
 ## Native archive measurements and listing scope — 2026-10-04 ICT
 
 The new `scripts/benchmark_history.py` measures actual S3 download bytes using a

@@ -52,6 +52,10 @@ direct legacy PostgreSQL access.
 - [x] Measure actual cold/warm native history transfers across the selected VN
   universe, compare full candle provenance, and make failed/empty ranges return
   nonzero. Verify source-backed listing exclusions separately from missing data.
+- [x] Preserve a committed successful daily observation when the subsequent
+  historical probe fails, times out, or is cancelled. Record probe failures
+  separately, bound their time budget, and keep historical revision repair active.
+  Verify with five regressions and an isolated actual FPT recent-provider read.
 
 The observations below describe the earlier isolated staging checkpoints.
 
