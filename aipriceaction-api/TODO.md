@@ -550,6 +550,12 @@ charts and indicators never silently join incompatible adjustment revisions.
 - [ ] Recover the remaining VND 2020 unavailable range and VNINDEX 2020 pending
   partition through complete coherent validated history. Preserve invalid public
   originals and reject guessed corrections or partial incompatible splices.
+  Fresh public JSON checks reproduce VND's invalid February 19 candle; VNINDEX
+  public JSON exactly preserves the pending partition, while its pinned native
+  source fails September 29. Alternate sources provide valid 2020 records but
+  disagree with retained data; wider VND candidates remain incomplete. See the
+  October 4 daily archive evidence in `VALIDATION.md`; PostgreSQL is not blocking
+  these public imports.
 - [x] Provide dry-run plans for migration/pruning and test interruption at every
   publication stage. No production writes/deletion in development.
 

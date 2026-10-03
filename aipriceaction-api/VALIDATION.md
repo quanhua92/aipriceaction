@@ -6,6 +6,42 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Public migration and remaining daily archive gates — 2026-10-04 ICT
+
+A fresh bounded request to the live public `/tickers` endpoint returns HTTP
+200 and FPT daily data through October 2. Public candle migration already uses
+this endpoint; unavailable direct PostgreSQL access is not a blocker.
+
+Fresh complete 2020 exports contain 252 records for each of VND and VNINDEX.
+VND has an invalid February 19 candle in both default and database-backed public
+exports. VNINDEX's public export exactly matches its 252-row pending legacy
+partition, but its pinned VNDirect source still returns an invalid September 29
+candle. VPS returns all 252 valid VNINDEX dates with identical prices and 11
+volume changes; its recent 40-record overlap disagrees with the current native
+series on every record. That evidence does not license a provider splice.
+
+For VND, VNDirect and DNSE both return 252 valid 2020 records. VNDirect's
+`stock_prices` endpoint independently returns the same adjusted OHLCV records
+as its chart endpoint. A wider isolated VNDirect traversal stops at an invalid
+November 29, 2019 candle after 1,500 validated records; DNSE stops on conflicting
+December 27, 2022 records after 500. Their retained overlaps change 664 and 414
+records respectively. Neither candidate proves a complete coherent replacement.
+Single-day requests reproduce all three invalid native candles; smaller query
+windows do not resolve them. The two 2020 acceptance gates therefore remain open.
+
+Provider validation errors now identify provider, market, symbol, interval and
+exact Unix timestamp, preserving the original status and cause. Implementation
+commit: `4d5fea9`. The packaged provider module matches the tested source exactly.
+All 60 raw captures, normalized alternatives, isolated Parquet candidates and
+reports have content-hashed RustFS readbacks in
+`data/daily-archive-gates-evidence-20261004.json`. The first failed diagnostic
+attempt is retained as a failed witness, separately from the completed recheck.
+The main publication epoch remains unchanged. Detailed evidence lives under
+`data/daily-archive-gates-recheck-v2-20261004/`,
+`data/vnd-native-daily-candidates-20261004/`,
+`data/daily-archive-gate-head-proofs-20261004/` and
+`data/invalid-daily-dated-probes-20261004/`.
+
 ## Native VN hourly handoff and isolated restoration — 2026-10-04 ICT
 
 The existing explicit adoption command now supports **VN hourly snapshots**

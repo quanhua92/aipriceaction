@@ -523,6 +523,13 @@ Private sync records are a separate migration concern because `/tickers` does
 not expose them. Imported snapshots and new-provider data need compatible
 adjustment bases before they can be joined.
 
+If a native history page fails OHLC validation, the error includes its provider,
+market, symbol, interval and Unix timestamp. Use a bounded public JSON export
+and a dated native request to preserve and compare the actual records. An
+alternate provider's successful response alone does not establish a compatible
+adjustment basis; keep invalid originals and candidate data separate until the
+complete series is verified.
+
 For the selected cryptocurrencies, `scripts/check_crypto_daily_history.py`
 captures checksummed public JSON and original Binance responses, verifies the
 entire retained daily overlap, and reports older date/value differences:
