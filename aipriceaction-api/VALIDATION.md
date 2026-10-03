@@ -6,6 +6,21 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Public migration access and scoped archive controls — 2026-10-04 ICT
+
+A fresh bounded request to `https://api.aipriceaction.com/tickers` returned HTTP
+200 and two FPT daily records dated October 1 and October 2, 2026. Public candle
+migration already uses `import-legacy --from-api`; unavailable PostgreSQL access
+does not block this path. Private sync records still require a separate export.
+
+Archive maintenance now accepts market, repeated ticker, and native interval
+filters and captures one UTC cutoff for the whole plan. Regression checks cover
+both dry-run selection and publication/pruning, preserve other markets, intervals
+and recent rows, and restore the exact exported records through history queries.
+The full suite passes **412 tests**; lint, formatting and offline package builds
+pass. A canonical BTC minute dry run selected no expired partitions at the time
+of the check. No canonical retention pruning was performed in this check.
+
 ## VN daily/minute session and corporate-action basis audit — 2026-10-04 ICT
 
 A read-only inventory compares **14,632 observed minute sessions** across all

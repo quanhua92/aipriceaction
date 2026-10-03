@@ -586,11 +586,18 @@ uv run aipa-api --database ./data/migration.sqlite3 import-legacy --from-api --s
 uv run aipa-api --database ./data/json-migration.sqlite3 import-legacy --from-api --api-format json --source yahoo --symbol SPY --interval 1m --start-date 2026-09-28 --end-date 2026-10-02 --api-batch-days 7 --revision legacy-api-json-global-minute-20261003
 uv run aipa-api reconcile --source vn --symbol FPT --interval 1D --archives-only
 uv run aipa-api archive
+uv run aipa-api archive --source crypto --symbol BTCUSDT --interval 1m
+uv run aipa-api archive --source crypto --interval 1m --execute --prune
 uv run aipa-api archive --execute --prune
 uv run aipa-api --allow-direct archive-repair
 uv run aipa-api --allow-direct archive-repair --source vn --symbol VCB --interval 1D
 uv run aipa-api --allow-direct archive-repair --source vn --symbol SHS --interval 1D --restart
 ```
+
+`archive` defaults to a dry run. Optional `--source`, repeated `--symbol`, and
+`--interval` filters restrict the stored series selected for publication and
+verified pruning. All selected series use one captured UTC retention cutoff;
+omitting the filters retains the all-market maintenance behavior.
 
 `import-legacy --dry-run` checks explicit source URLs with HEAD requests. Minute
 imports require an inclusive UTC date range of at most 366 days; daily/hourly
