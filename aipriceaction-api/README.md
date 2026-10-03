@@ -518,6 +518,26 @@ the format of an existing period receipt requires a new revision and separate
 migration database. Verify the new snapshot before publishing it over old data;
 preserving precision does not resolve other provider or timestamp disagreements.
 
+Public market-data migration uses `https://api.aipriceaction.com/tickers`
+and the existing public archive. An unavailable legacy PostgreSQL connection
+does not block these imports. Private sync records still require a separate
+export before production cutover.
+
+For an existing frozen public minute series, stage a fresh snapshot separately:
+
+```sh
+uv run python scripts/stage_public_minute_history.py --source yahoo --symbol 'GC=F' --start-date 2025-10-03 --end-date 2026-10-02 --revision public-gold-minute-20261004 --output data/gold-minute-current-candidate-20261004
+```
+
+This script captures bounded six-day JSON exports, original responses and the
+previous snapshot in an isolated SQLite/filesystem archive. It never publishes
+to the main database. Its `passed` field verifies a nonempty candidate retaining
+all original timestamps; inspect value differences and empty ranges separately
+before publication. Empty responses do not establish complete calendar coverage.
+The legacy API's zero-volume, flat-OHLC Yahoo futures observations retain their
+original seconds in minute and hourly snapshots, with visible quality findings.
+Native candles retain strict minute alignment.
+
 Use `--api-read-backend database` for a consistent database-backed public export.
 This sends `redis=false&snap=false&cache=false` to the existing HTTP API; it does
 not open a PostgreSQL connection. The legacy API can otherwise serve recent

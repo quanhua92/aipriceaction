@@ -434,6 +434,10 @@ charts and indicators never silently join incompatible adjustment revisions.
 - [x] Inventory selected public API/S3 coverage per ticker/interval. Preserve
   original CSV/metadata and explicitly record unavailable or unverified ranges.
   Direct PostgreSQL is not a prerequisite for public market-data migration.
+- [x] Stage frozen minute snapshots directly from public `/tickers` JSON in an
+  isolated SQLite/filesystem archive, retaining original responses and timestamps.
+  Gold's candidate contains 198,752 observations through October 2; publication
+  and full one-year coverage remain separate acceptance gates.
 - [x] Implement recent-window SQLite imports and older Parquet publication under
   a separate prefix, preserving legacy CSV URLs/metadata for direct SDK consumers.
 - [ ] Complete remaining selected historical coverage and continuous-basis gates;

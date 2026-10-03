@@ -6,6 +6,30 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Public minute migration without PostgreSQL — 2026-10-04 ICT
+
+A fresh bounded FPT daily request to `https://api.aipriceaction.com/tickers`
+returns HTTP 200 and the requested two records. Public candle imports use HTTP
+exports and public archive objects without connecting to legacy PostgreSQL.
+
+The isolated gold minute candidate contains **198,752 observations**, adds
+**175,291 timestamps** and preserves every original timestamp and volume.
+Of the original records, **23,286** recover additional JSON price precision;
+every recovered price rounds exactly to its original two-decimal value.
+All **241** subminute quote observations retain their original seconds. A
+regression test preserves an ordinary bar and quote in the same minute as two
+distinct observations. The compatibility exception is restricted to flat-OHLC,
+zero-volume, `legacy-api` Yahoo futures minute/hourly observations; native
+candles retain strict timestamp checks.
+
+Candidate evidence is in `data/gold-minute-current-candidate-20261004/report.json`
+and `retained-value-audit.json`. The candidate spans March 9 through October 2,
+2026. **28 empty requested ranges** leave full one-year coverage unproven.
+This staging operation has not published the candidate to the main database or
+enabled native gold minute updates. Main published counts below remain current.
+Targeted quote/import checks pass **47 tests**; lint and formatting pass for
+**60 Python files**.
+
 ## Gold hourly snapshot restored with exact legacy quote timestamps — 2026-10-04 ICT
 
 The rejected gold hourly timestamps are now inspected row by row: all **279**
@@ -13,7 +37,8 @@ have zero volume and identical OHLC, and all occur in April 2026. They are
 preserved as quote-shaped legacy observations rather than rounded to minutes
 or removed. The explicit compatibility rule applies only to `legacy-api` Yahoo
 futures `1h` rows with finite valid prices, zero volume and identical OHLC.
-Native providers, minute/daily intervals, non-futures symbols, non-flat and
+The later minute migration extends this rule to `1m` as described above.
+Native providers, daily intervals, non-futures symbols, non-flat and
 nonzero-volume rows retain strict timestamp validation. This rule describes
 the observed legacy representation; it does not independently establish trade
 or session validity. Imports record `legacy_quote_events` counts, original
