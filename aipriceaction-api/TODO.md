@@ -9,11 +9,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,684,287 candles. The current S3 index has 701
-  active objects, 67 handoff certificates, 34 recoveries and one unavailable range.
+- The main local database has 5,685,535 candles. The current S3 index has 701
+  active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
-- The latest complete API suite passes 340 tests; lint/format/offline builds pass.
+  SPY also has a verified native hourly handoff; five other current stock/index
+  hourly snapshots remain frozen, and gold hourly history remains stale.
+- The latest complete API suite passes 358 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -42,11 +44,15 @@ history through `eb814ab`; they are not additional current open tasks.
 - [ ] Reconcile gold's recent public/native calendar and price differences:
   30 recent public dates remain absent natively; originals and differences are
   retained separately, without splicing contract frames or declaring parity.
-- [ ] Restore current global hourly controls: six selected assets return August
-  26 hourly tails despite current October 2 minute data; gold returns December
-  2025 hourly and March 2026 minute tails. The live API serves October 2 hourly
-  data. Verify hourly timestamp/bucket semantics and complete coherent snapshots
-  before replacing or deriving these histories; naive minute aggregation differs.
+- [x] Restore six current stock/index hourly controls from complete public JSON,
+  preserve all old dates, and verify HTTP, SDK and actual browser freshness.
+- [x] License SPY native hourly updates with 200 exact bars across 29 completed
+  UTC date partitions, preserving all existing dates/values and verifying an
+  ordinary update, populated backup and complete S3 manifest restoration.
+- [ ] Restore current gold hourly/minute data and independently verify remaining
+  stock/index hourly handoffs. Gold's malformed public timestamps and observed
+  native/public value disagreements remain separate evidence. Minute aggregation
+  does not reproduce the existing native hourly bars.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
@@ -116,9 +122,12 @@ history through `eb814ab`; they are not additional current open tasks.
   retained correction, original before-image and populated backup.
 - [ ] Restore current gold hourly data without silently rewriting the 279
   timestamps with nonzero seconds in its 2026 public export.
-- [ ] Verify and enable ongoing native Yahoo hourly handoffs. Imported hourly
-  snapshots now stop before upstream reads or repair scheduling until a
-  provider handoff is verified; current published captures remain frozen.
+- [x] Extend exact-overlap certificates to Yahoo hourly snapshots with interval
+  finality, race/job guards and restoration validation; enable and verify SPY.
+- [ ] Verify and enable remaining native Yahoo hourly handoffs. Imported hourly
+  snapshots stop before upstream reads or repair scheduling until independently
+  verified. AAPL/MSFT/NVDA/S&P/Dow retain observed disagreements in longer native
+  windows; gold's published tail remains too old for a current handoff.
 
 ## Phase 0 — Isolated plan and local infrastructure
 

@@ -6,6 +6,70 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## SPY native hourly handoff and ordinary updates — 2026-10-04 ICT
+
+Yahoo hourly adoption now uses the existing certificate workflow with explicit
+`--interval 1h`. It compares up to **200** native bars, requires **100** exact
+OHLCV matches across at least five observed UTC date partitions through the
+published tail, and uses completed whole-hour bounds. The minute requirement
+remains 1,000. The threshold counts hourly observations separately from minute
+observations; it does not assert complete sessions or a trading calendar.
+All provider rows must retain source/symbol/interval/provider identity and use
+whole-hour labels. Only Yahoo supports this hourly proof; VN hourly and minute
+correction flags are rejected. Publication retains the entire original snapshot,
+checks state/checksum races and active job leases, and cancels only the adopted
+interval's unpublished bootstrap/repair work. No inferred scaling or correction
+is allowed by this exact proof.
+
+SPY passes with **200 exact bars across 29 completed UTC date partitions**.
+Its **3,195** stored hourly records are unchanged during adoption, including
+historical `:30` labels. The first real pinned Yahoo update writes **40** bars
+with a successful source check and no pending hourly repair; all original dates
+and OHLCV remain exact afterward. Provider/version provenance changes only for
+those checked native observations. The source revision is unchanged. The
+watchlist and built wheel now enable SPY daily/hourly/minute ingestion.
+Evidence: `data/spy-hourly-native-publication-20261003T211936Z/report.json`.
+
+The publisher preserves original JSON, native source responses, populated
+before/after backups and immutable RustFS evidence. All **5,682,340 unrelated
+candles** and unrelated operational records match the before-backup exactly.
+SPY's selected ticker changes only its hourly schedule. Full HTTP exports still
+match all **3,195 hourly / 1,085 four-hour** original dates and OHLCV. The existing
+SDK passes **eight** daily/minute/hourly/four-hour SMA/EMA checks. The actual
+SPY hourly web chart and both global benchmarks pass explicit October 2
+freshness bounds, with no page/network errors or writes. Reports:
+`data/spy-hourly-native-publication-20261003T211936Z/http-full-history.json`,
+`data/sdk-spy-hourly-native-20261004.json` and
+`data/web-spy-hourly-native-20261004.json` with screenshots.
+The real `aipa-api refresh --source yahoo --symbol SPY --interval 1h` command
+also succeeds with 40 completed native bars and no provisional rows; all 3,195
+original dates/values remain exact afterward. Supplementary evidence:
+`data/spy-hourly-native-publication-20261003T211936Z/cli-refresh.json`.
+
+Complete isolated manifest recovery verifies every object and restores **701
+archives, 68 adoptions, 34 recoveries and one unavailable range**, exactly
+matching main metadata. The after-backup contains **5,685,535 candles**, is
+**865,353,728 bytes**, and passes its own `quick_check`. SHA-256:
+`be6f882d1b2488727ba14f66d56f4e5cae24f3ca5fc28a7be5110eabe4abe433`.
+Report: `data/spy-hourly-native-publication-20261003T211936Z/backup-and-manifest-restore.json`.
+
+Eleven new tests cover dry-run immutability, exact append and mixed-provenance
+archive restoration, historical label preservation, stale/small/value-conflicting
+overlaps, snapshot races, leased jobs, invalid interval/market/finality
+certificates and unsupported correction modes. The complete application suite
+passes **358 tests**; lint/format checks pass for **58 Python files**, and offline
+source/wheel builds pass. The known Starlette/httpx warning is unchanged.
+
+Longer primary captures for every chosen Yahoo symbol remain in
+`data/hourly-native-handoff-preflight-20261004/`. Replaying each complete raw
+response with its original URL/period bounds adds no network assumptions.
+Many direct timestamp mismatches reflect older public `:30` labels versus
+current whole-hour normalization, so they are not declared missing sessions.
+Value disagreements remain for the other stock/index series, and gold's current
+native tail has no overlap with its stale local tail. All remaining hourly
+snapshots stay frozen. A bounded SPY continuity proof does not resolve wider
+historical source corrections, adjustment policies or gold recovery.
+
 ## Six hourly snapshots published and freshness verified — 2026-10-04 ICT
 
 The complete public API hourly snapshots for AAPL, MSFT, NVDA, SPY, S&P and Dow

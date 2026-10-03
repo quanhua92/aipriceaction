@@ -339,13 +339,32 @@ uv run aipa-api adopt-snapshot --source yahoo --symbol '^GSPC' --provider yahoo 
 uv run aipa-api refresh --source yahoo --symbol '^GSPC' --symbol '^DJI' --interval 1m
 ```
 
-Yahoo verification uses completed UTC minute bounds and requires 1,000 exact
+Yahoo minute verification uses completed UTC minute bounds and requires 1,000 exact
 candles across five observed date partitions through the published tail. The
 VN complete-session/correction options remain restricted to VN data. Unverified
 global minute snapshots stay frozen; add `1m` to a global watchlist entry only
 after verifying its handoff. The included AAPL, SPY, S&P and Dow entries enable
 daily and minute updates after verified local snapshot handoffs. MSFT, NVDA and
 gold futures still ingest daily data only; their minute discrepancies remain open.
+
+Yahoo hourly snapshots can use the same explicit handoff workflow:
+
+```sh
+uv run aipa-api adopt-snapshot --source yahoo --symbol SPY --interval 1h --provider yahoo
+uv run aipa-api adopt-snapshot --source yahoo --symbol SPY --interval 1h --provider yahoo --execute
+uv run aipa-api refresh --source yahoo --symbol SPY --interval 1h
+```
+
+Hourly verification compares up to 200 native bars and requires at least 100
+exact OHLCV matches across five completed UTC date partitions through the
+published tail. The bounds are completed whole hours. It preserves the entire
+snapshot and earlier historical labels; no price or volume changes are allowed
+by this proof. The smaller hourly threshold measures hourly observations,
+while the minute threshold remains 1,000. VN hourly handoffs and minute
+correction options are unsupported on this path. SPY's verified 200-bar/29-date
+handoff enables `1h` in its watchlist entry and packaged default. Other global
+hourly snapshots still require independent verification. Certificates permit
+observed provider continuity, not lifetime calendar or adjustment guarantees.
 
 After an outage, Yahoo updates expand the recent request once, up to 1,000
 candles within the retained window, using the current provider. Daily replies
@@ -620,7 +639,8 @@ timestamps or a certificate for an ongoing provider handoff.
 The six chosen stock/index hourly series now use complete public JSON snapshots
 through October 2, 2026, with every previously stored timestamp preserved.
 Their `1h` and derived `4h` histories are verified through HTTP and the existing
-SDK. These remain imported snapshots until ongoing Yahoo handoffs are verified;
+SDK. SPY now has a verified native hourly handoff and an ordinary worker update.
+Other imported hourly snapshots remain frozen until independently verified;
 the worker records `handoff_required` before making upstream requests. Gold's
 rejected hourly export remains isolated. Current evidence is in `VALIDATION.md`.
 
