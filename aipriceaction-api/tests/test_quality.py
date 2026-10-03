@@ -1,5 +1,7 @@
+import gzip
 import json
 from dataclasses import replace
+from pathlib import Path
 
 from aipriceaction_api.domain import Candle, parse_time
 from aipriceaction_api.quality import audit
@@ -8,6 +10,28 @@ from aipriceaction_api.storage import Repository
 
 def bar(source, symbol, iv, stamp):
     return Candle(source, symbol, iv, stamp, 100, 101, 99, 100, 1000)
+
+
+def test_captured_tpb_native_dividend_interval_difference_is_review_only(tmp_path):
+    with gzip.open(Path(__file__).parent / "fixtures/tpb_interval_basis.json.gz", "rt") as handle:
+        fixture = json.load(handle)
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    repo.register("vn", "TPB", enabled=True)
+    repo.put([Candle(**row) for row in fixture["rows"]])
+    before = {iv: repo.read("vn", "TPB", iv) for iv in ("1D", "1m")}
+    states = {iv: repo.state("vn", "TPB", iv) for iv in before}
+
+    findings = audit(repo, now=parse_time("2026-10-03") + 9 * 3600)
+    basis = [row for row in findings if row["kind"] == "audit_interval_basis"]
+    assert len(basis) == 1
+    detail = json.loads(basis[0]["detail"])
+    assert [row["date"] for row in detail["sessions"]] == fixture["expected_material_dates"]
+    assert detail["sessions"][0]["minute_ohlc"] == [14600, 14600, 14400, 14450]
+    assert detail["sessions"][0]["daily_ohlc"] == [12255, 12255, 12087, 12129]
+    assert repo.status()["jobs"] == []
+    assert {iv: repo.read("vn", "TPB", iv) for iv in before} == before
+    assert {iv: repo.state("vn", "TPB", iv) for iv in before} == states
 
 
 def test_sql_audit_resolves_fixed_gaps_without_loading_price_series(tmp_path, monkeypatch):
