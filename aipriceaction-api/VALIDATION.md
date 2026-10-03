@@ -6,6 +6,63 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Six hourly snapshots published and freshness verified — 2026-10-04 ICT
+
+The complete public API hourly snapshots for AAPL, MSFT, NVDA, SPY, S&P and Dow
+are now published locally in one checked SQLite transaction. All **17,894**
+original timestamps remain available, including earlier half-hour labels; no
+historical timestamps are relabeled. The replacement contains **19,142 hourly
+rows**, adds **1,248 newer dates**, and reaches **2026-10-02 20:00 UTC** for
+each symbol. The 27 retained rows whose values differ from the old snapshots
+are recorded explicitly. Every original local snapshot, its Parquet before-image,
+and the checksummed public response/receipt are preserved locally and in RustFS.
+These are complete imported snapshots, not certified native handoffs.
+
+Publication holds the archive and six series leases, checks current state/rows
+against the captured originals, rejects active repair leases, preserves a
+populated before-backup and atomically replaces only those six hourly series.
+All **5,666,393 unrelated candles** match the populated before-backup exactly,
+including provenance and nanosecond versions. All unrelated series, tickers,
+jobs, staging, quality, sync, source checks, imports, adoptions and archive
+records are unchanged. The manifest is published and verified. Evidence:
+`data/public-hourly-publication-20261003T210713Z/report.json`.
+
+Full HTTP exports match every timestamp/OHLCV for all **19,142 hourly candles**
+and **6,484 derived four-hour candles**. The existing Python SDK passes **24**
+hourly/four-hour SMA/EMA checks across all six symbols, including MA10–MA200
+and API provenance. Reports: `data/http-public-hourly-20261004.json` and
+`data/sdk-public-hourly-20261004/`.
+
+The actual public web app, routed to localhost in isolated browsers, renders
+AAPL and NVDA hourly charts and both global benchmarks through October 2 with
+no page/network errors or writes. Browser verification now records response
+timestamp bounds and can require explicit minimum chart dates. A negative
+rehearsal requiring October 3 fails specifically on stale chart data despite
+populated HTTP 200 responses. It is an expected verifier failure. Reports and
+screenshots: `data/web-public-hourly-aapl-fresh-20261004.json`,
+`data/web-public-hourly-nvda-fresh-20261004.json` and
+`data/web-public-hourly-freshness-negative-20261004.json`.
+The first rehearsal also requested a four-hour control, which the current
+global page does not expose; it failed explicitly on the absent control.
+Four-hour verification therefore covers HTTP/SDK behavior, not an invented UI
+control (`data/web-public-hourly-aapl-20261004.json`).
+
+The worker now stops imported Yahoo hourly snapshots before upstream reads or
+repair scheduling, with `handoff_required`. Tests cover public API, S3 and local
+legacy providers, unchanged data/state, no jobs or upstream requests, and lease
+release. Ongoing native hourly ingestion and current gold hourly data remain
+open; a fresh snapshot alone does not establish continuous operation.
+The full application suite passes **347 tests**, Ruff lint/format checks pass,
+and offline source/wheel builds succeed. The existing Starlette/httpx warning
+remains unchanged.
+
+Main SQLite now contains **5,685,535 candles** with **701 active archives**.
+The after-backup is **865,353,728 bytes**, SHA-256
+`38ee2f6fcf27f3c444358f860e1df4d38004fa2b60e721749fdea6e654faa72c`,
+and its own `quick_check` and populated row count pass.
+Evidence: `data/public-hourly-publication-20261003T210713Z/backup-check.json`.
+Production routing remains unchanged.
+
 ## Hourly timestamp compatibility and public API candidates — 2026-10-04 ICT
 
 The Rust Yahoo worker calls `vci_shared::normalize_time`, which rounds native

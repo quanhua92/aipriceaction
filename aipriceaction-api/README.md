@@ -617,6 +617,24 @@ exits unsuccessfully when the captured native window differs from the public
 window. That result is diagnostic evidence, not permission to discard older
 timestamps or a certificate for an ongoing provider handoff.
 
+The six chosen stock/index hourly series now use complete public JSON snapshots
+through October 2, 2026, with every previously stored timestamp preserved.
+Their `1h` and derived `4h` histories are verified through HTTP and the existing
+SDK. These remain imported snapshots until ongoing Yahoo handoffs are verified;
+the worker records `handoff_required` before making upstream requests. Gold's
+rejected hourly export remains isolated. Current evidence is in `VALIDATION.md`.
+
+Browser rehearsals can enforce freshness as well as populated responses:
+
+```sh
+uv run python scripts/check_web_client.py --market global --symbol AAPL --interval 1h --minimum-chart-date 1D=2026-10-02 --minimum-chart-date 1h=2026-10-02 --report data/web-hourly-freshness.json
+```
+
+Bounds apply to the selected chart and both global benchmarks. Reports include
+the observed first/last timestamps; choose an explicit completed-session date
+for each requested interval rather than treating a successful HTTP status as
+evidence of current data. Playwright is an optional verification dependency.
+
 When using a separate database, keep its archive backend/prefix isolated from the
 main database. Two database indexes must not publish different manifests to the
 same S3 prefix. The API migration example above imports recent minute rows only;

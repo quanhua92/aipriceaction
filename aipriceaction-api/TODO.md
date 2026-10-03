@@ -109,12 +109,16 @@ history through `eb814ab`; they are not additional current open tasks.
   mapping. A guessed scaling factor is not an acceptable shortcut.
 - [x] Match legacy Yahoo hourly timestamp normalization and capture current
   public/native/minute-aggregation differences with original response evidence.
-- [ ] Publish and verify current hourly replacements while preserving every
-  previously served historical timestamp. Six complete stock/index public
-  candidates preserve all 17,894 stored dates and add 1,248 newer dates; their
-  retained corrections are recorded. Gold's 2026 public export has 279
-  timestamps with nonzero seconds and is rejected by strict import. Current
-  hourly snapshots remain frozen until publication/handoff is verified.
+- [x] Publish six current stock/index hourly snapshots, preserve all 17,894
+  previously stored dates, and verify complete hourly/four-hour HTTP exports,
+  existing SDK SMA/EMA behavior, and actual hourly web controls with explicit
+  freshness bounds. The publication adds 1,248 newer dates and records every
+  retained correction, original before-image and populated backup.
+- [ ] Restore current gold hourly data without silently rewriting the 279
+  timestamps with nonzero seconds in its 2026 public export.
+- [ ] Verify and enable ongoing native Yahoo hourly handoffs. Imported hourly
+  snapshots now stop before upstream reads or repair scheduling until a
+  provider handoff is verified; current published captures remain frozen.
 
 ## Phase 0 — Isolated plan and local infrastructure
 
