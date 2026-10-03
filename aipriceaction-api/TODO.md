@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,864,824 candle/quote records. The current S3 index has 701
+- The main local database has 5,868,056 candle/quote records. The current S3 index has 701
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 381 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 389 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -64,10 +64,14 @@ history through `eb814ab`; they are not additional current open tasks.
 - [ ] Independently verify remaining hourly handoffs. Legacy quote events and
   native/public value disagreements remain visible; minute aggregation does not
   reproduce existing native hourly bars.
-- [ ] Complete selected VN hourly backfills and reconcile public-only dates
-  before publishing. FPT serves 500 native rows while 3,732 coherent native rows
-  are staged at a stalled retention boundary. All 500 match exactly; three
-  public timestamps remain absent from the staged native window.
+- [x] Publish verified older FPT native hourly bootstrap progress with fresh
+  provider overlap, immutable before-images and populated SQLite backups.
+  FPT now serves 3,732 rows; all 500 original rows and unrelated records remain
+  unchanged. Full HTTP, SDK and visible daily/hourly web controls pass.
+- [ ] Complete selected VN hourly backfills and reconcile public-only dates.
+  FPT's bootstrap job remains pending at the retention boundary; three public
+  timestamps remain absent from its native window. Partial publication does
+  not certify complete coverage or close the quality findings.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   are 58 series with pending work; readiness alone does not prove coverage.

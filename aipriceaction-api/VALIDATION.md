@@ -6,6 +6,55 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Verified FPT hourly bootstrap progress — 2026-10-04 ICT
+
+The explicit `publish-bootstrap-progress` command now publishes older validated
+VN hourly staging without pretending the bootstrap has completed. A dry run
+is the default. Execution requires an idle job and series lease, the same pinned
+native provider/revision, exact staged overlap and fresh confirmation of at
+least 100 published bars across five observed dates through the completed tail.
+Immutable before/replacement Parquet images and an intent receipt are readback
+verified before a second transactional snapshot check and insert-only publication.
+Jobs, staging and unresolved quality findings remain unchanged.
+
+The actual FPT operation confirms **200 fresh DNSE bars across 40 observed UTC
+dates** and appends **3,232 older records**. It now serves **3,732 native hourly
+records**, starting October 3, 2023 at 02:00 UTC through October 2, 2026 at
+07:00 UTC. All **500 original records**, including their update versions, and
+all **5,864,324 unrelated candles** remain exactly unchanged. Prior operational
+records and the **701 active archive entries** also remain unchanged. Total
+local candles are now **5,868,056**. Evidence:
+`data/fpt-hourly-progress-publication-20261003T222757Z/report.json`.
+
+Full-range HTTP checks match all **3,732 hourly** and **1,494 derived four-hour**
+records. The existing SDK passes eight SMA/EMA cases. The actual public VN web
+passes its visible daily/hourly controls, both current through October 2, with
+no page/network errors or writes. An earlier browser attempt requesting `4h`
+fails because that control is not visible; four-hour verification is limited
+to HTTP/SDK. Reports: `data/fpt-hourly-progress-http-20261004.json`,
+`data/sdk-fpt-hourly-progress-20261004.json`,
+`data/web-fpt-hourly-progress-supported-20261004.json` and the preserved failed
+attempt `data/web-fpt-hourly-progress-20261004.json`.
+
+The after-publication SQLite backup passes its own integrity check and exact
+selected-record/count verification. It is **891,277,312 bytes**, SHA-256
+`98ecc50dff4627335b4f419ad7d11afa21c4e3f65fdc7497b2e3b7d81b62fe03`.
+All **43,636 VN daily records** retain their previous checksum. The full suite
+passes **389 tests**; lint/format checks pass for **66 Python files**, and offline
+wheel/source builds pass. Eight new cases cover dry-run behavior, preservation,
+conflicts, inadequate native evidence, active leases and staging races.
+
+This is partial progress: the FPT job remains pending and its three public-only
+timestamps remain unresolved. Dated probes of all three VN providers find one
+June 2026 timestamp at VNDirect but none of the three at DNSE; VPS returns empty
+samples. DNSE minute requests for the same dates return invalid/missing arrays.
+The public samples have nonzero volume and cannot be dismissed as quote events.
+No source splicing or invented candles are used. Raw witnesses are preserved
+under `data/fpt-hourly-missing-witnesses-20261004/` and
+`data/fpt-hourly-minute-witnesses-20261004/`. Supplementary reports/captures and
+screenshots have immutable RustFS readbacks recorded separately in
+`data/fpt-hourly-progress-client-evidence-20261004.json`.
+
 ## Selected-window inventory and VN hourly backfill gap — 2026-10-04 ICT
 
 The new read-only SQLite inventory covers **71 selected tickers / 207 published
@@ -23,7 +72,7 @@ listing date. This establishes observed span only, not internal session
 completeness. VN hourly local prefixes remain short, and all seven Yahoo minute
 series begin after the one-year boundary. Archived bounds are recorded separately.
 
-FPT currently serves **500 native DNSE hourly records**. The public legacy
+At this pre-publication inventory checkpoint, FPT serves **500 native DNSE hourly records**. The public legacy
 endpoint also returns **320 hourly records for 2023**, beginning September 11,
 and **920 for 2026** through October 2. Its overlapping 2026 fields change
 **450 of the 500 native rows**, so these sources cannot be joined as one exact
@@ -38,8 +87,8 @@ three-year floor. Comparing that entire captured window with native staging
 finds **three public-only timestamps**, **325 native-only timestamps** and
 **3,357 shared rows with field differences**. The public-only dates are June 20,
 2024 at 05:00 UTC; August 1, 2024 at 04:00 UTC; and June 12, 2026 at 04:00 UTC.
-They remain explicit reconciliation requirements before any candidate is
-published. No staged rows are promoted and no price factor is inferred.
+They remain explicit reconciliation requirements for complete legacy coverage.
+No staged rows are promoted at this inventory checkpoint and no price factor is inferred.
 Evidence: `data/vn-hourly-public-inventory-20261004/report.json`,
 `FPT-complete-staging-comparison.json` in the same directory, and
 `data/fpt-hourly-native-history-probe-20261004/report.json`, with raw captures.

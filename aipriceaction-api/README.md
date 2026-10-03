@@ -304,6 +304,22 @@ is supported by the [regulator’s listing announcement](https://ssc.gov.vn/webc
 After correcting a history-start setting for a pending series, `reconcile` uses
 that verified floor when rebuilding it.
 
+For a stalled VN hourly bootstrap, verified older staged rows can be made
+readable without marking the job complete:
+
+```bash
+uv run aipa-api --allow-direct publish-bootstrap-progress --symbol FPT
+uv run aipa-api --allow-direct publish-bootstrap-progress --symbol FPT --execute
+```
+
+The default is a dry run. Publication requires an idle job, a pinned native
+provider and revision, exact staged overlap, and fresh provider confirmation
+of at least 100 existing bars across five observed dates through the completed
+tail. It readback-verifies immutable before/replacement images, then checks
+the database snapshot again before inserting only older rows inside retention.
+Existing rows, bootstrap staging and unresolved coverage findings are preserved.
+This command currently supports VN hourly series only.
+
 Crypto minute bootstrap uses Binance's checksummed monthly spot CSV files when
 available; normal updates and unpublished months use the live API. Downloads
 have an 8 MiB compressed/32 MiB uncompressed object budget and a 128 MiB local
