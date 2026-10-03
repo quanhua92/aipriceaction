@@ -431,6 +431,21 @@ read-only and exits nonzero on any legacy/native discrepancy. Its separate
 dates and identical public/native prices; older volume differences remain in
 the report. That result does not certify legacy volume parity or publish data.
 
+For AAPL/MSFT/NVDA/SPY, build a complete native daily candidate when wide Yahoo
+responses change retained adjusted values and cannot be appended exactly:
+
+```sh
+uv run python scripts/stage_yahoo_daily_history.py --end-date 2026-10-02 --output data/yahoo-daily-candidate
+```
+
+This uses a separate SQLite file and RustFS prefix. It preserves original
+responses and the served before-image, requires every retained/public date,
+reports value changes and existing adjustment signals, and verifies complete
+candidate readback. Recent and older candles share one new native revision;
+no inferred adjustment factor is applied. It leaves the main API untouched.
+Publication still requires worker checks, current before-image/revision checks,
+a backup, and an atomic replacement of the complete selected daily series.
+
 ```sh
 uv run aipa-api import-csv /path/FPT-1D.csv --source vn --symbol FPT --interval 1D --split-retention
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --dry-run
