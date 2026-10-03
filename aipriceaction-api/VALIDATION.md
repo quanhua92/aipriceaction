@@ -6,6 +6,59 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native archive measurements and listing scope — 2026-10-04 ICT
+
+The new `scripts/benchmark_history.py` measures actual S3 download bytes using a
+fresh temporary cache and four readers. It compares every returned candle field,
+including provenance/revision/update timestamps, between cold and warm reads,
+checks the main daily/operational snapshot remains exact, preserves existing
+reports, and exits nonzero on any eligible empty/error result. Successful-query
+timings exclude failures and include validation and payload hashing. Configured
+history-start exclusions retain their evidence links; provider no-data alone
+never becomes a listing date.
+
+| Native history range | Successful requests | Candles | Cold / warm batch ms | Cold / warm median success ms | Downloaded cold / warm bytes |
+| --- | ---: | ---: | --- | --- | --- |
+| VN daily, 2022 | 58 / 58 eligible | 14,401 | 653.51 / 349.52 | 44.395 / 23.45 | 407,078 / 0 |
+| VN minute, October 2, 2025 | 59 / 59 selected | 11,866 | 704.88 / 369.60 | 43.25 / 22.90 | 338,101 / 0 |
+
+The daily run downloads 58 objects and peaks at **149,553,152 bytes RSS**;
+the minute run downloads 59 objects and peaks at **155,402,240 bytes RSS**.
+SQLite occupies **860,274,688 bytes**. VPL's configured listing is after 2022,
+so it is explicitly not applicable to that daily range. Both warm phases download
+zero object bytes and reproduce complete cold payload/provenance fingerprints.
+These local RustFS observations do not establish cloud costs or production SLAs.
+
+An initial 2020 daily run flags unexplained empty SSB/GEE ranges, in addition to
+the known VND/VNINDEX failures. Primary sources establish SSB's first exchange
+trading on **March 24, 2021** ([regulator](https://ssc.gov.vn/webcenter/portal/ubck/pages_r/l/chitit?dDocName=APPSSCGOVVN162138012))
+and GEE's first UPCoM trading on **March 8, 2022** ([exchange](https://www.hnx.vn/vi-vn/chi-tiet-tin-60014034-0.html)).
+The watchlist now records those dates and sources. GEE uses its earlier UPCoM
+start rather than its later HOSE transfer. The corrected 2020 run has
+55 eligible tickers: **53 successes and two failures**, with SSB/GEE/VPL/OCB
+reported separately as pre-listing. It returns exit status 1 despite equal
+cold/warm results. No main candle, state, archive, quality or receipt changes.
+Eight operational tests, Ruff lint/format checks, and offline distribution builds
+pass after the watchlist/tool changes.
+
+Fresh read-only public captures also reproduce three invalid VNINDEX opens in
+June 2019, its invalid August 23, 2021 candle, and VND's invalid February 19,
+2020 candle. Public VNINDEX 2020 is valid. Native 2020 probes return 252 valid
+VNINDEX/VPS rows, invalid VNINDEX/VNDirect OHLC, only 236 VNINDEX/DNSE rows,
+invalid VND/VPS OHLC, and 252 valid VND/VNDirect and VND/DNSE rows. These findings
+retain the complete-history/provider-basis repair gates; they do not license
+mixing isolated valid years with an incompatible retained revision. The newer
+official [DNSE SDK](https://github.com/dnse-tech/openapi-sdk/blob/main/python/README.md)
+documents authenticated market data; no unauthenticated alternate is assumed.
+
+Evidence: `data/native-daily-history-benchmark-eligible-vn-2022-20261004.json`,
+`data/native-daily-history-benchmark-listing-verified-vn-2020-20261004.json`,
+`data/native-minute-history-benchmark-all-vn-20251002-20261004.json`,
+`data/remaining-api-year-probe-20261003T190029Z/`, and
+`data/native-remaining-year-probe-20261003T190140Z/`. Earlier failed benchmark
+attempts remain preserved: the volume-profile runner uses minute history, so a
+2022 profile request is not a daily archive performance check.
+
 ## Main public-API daily publication — 2026-10-04 ICT
 
 Complete coherent public `/tickers` snapshots for EIB/HHS/GEX/HAG/SHS are now

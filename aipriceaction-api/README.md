@@ -244,6 +244,24 @@ sequential baselines, disables response caching, and writes timings/errors to
 `data/http-concurrency-benchmark.json`. Its baselines warm the archive file cache;
 it does not measure cloud transfer or change candle data.
 
+For native historical candles and actual cold/warm object downloads, use a new
+report path on each run:
+
+```sh
+uv run python -m scripts.benchmark_history --start-date 2022-01-01 --end-date 2022-12-31 --report data/daily-history-benchmark.json
+uv run python -m scripts.benchmark_history --interval 1m --start-date 2025-10-02 --end-date 2025-10-02 --report data/minute-history-benchmark.json
+```
+
+This requires loopback RustFS, uses a fresh temporary cache, compares complete
+candle values/provenance, and checks main metadata remains unchanged. It records
+downloaded object bytes and successful-query timings separately from failures.
+Only ranges wholly before a source-backed configured history start are marked
+not applicable; an unexplained empty range fails. A failed range returns a
+nonzero exit status even when its cold/warm errors match. Measurements include
+validation and payload hashing, and do not estimate cloud billing. The volume
+profile benchmark always reads minute candles, including for old date ranges;
+use this native-history runner for daily archives.
+
 The rolling targets are three calendar years of daily/hourly data and one
 calendar year of minute data, using UTC cutoffs with February 29 handled
 explicitly. Yahoo/SJC defaults are daily only. Upstream retention and newly

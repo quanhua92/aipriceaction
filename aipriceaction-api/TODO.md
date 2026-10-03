@@ -49,6 +49,9 @@ direct legacy PostgreSQL access.
   object using complete coherent history and verified native-provider overlap.
 - [ ] Complete provider/session semantics and independent minute/daily basis
   checks; handle private sync inventory separately; finish production acceptance.
+- [x] Measure actual cold/warm native history transfers across the selected VN
+  universe, compare full candle provenance, and make failed/empty ranges return
+  nonzero. Verify source-backed listing exclusions separately from missing data.
 
 The observations below describe the earlier isolated staging checkpoints.
 
@@ -1508,7 +1511,7 @@ published series with a dated recovery/error, without silently skipping its tail
   40 exact completed VPS candles per ticker. Keep main data exact.
 - [x] Implement replayable daily snapshot handoff evidence with completed-tail,
   provider identity, mutation/lease, append, correction, and restore checks.
-- [ ] Publish complete candidates only after fresh handoff, readable-date
+- [x] Publish complete candidates only after fresh handoff, readable-date
   preservation, immutable originals, backup, and API/SDK/browser verification.
 - [ ] Recover VNINDEX/VND invalid public history without guessed corrections;
   broader reliability and production cutover acceptance remain open.
@@ -1550,6 +1553,12 @@ snapshots can advance under a verified provider without erasing served history.
   stable candle payload hashes, disable response caching, and record failures
   and observed per-request latency. Longer production-scale load and cold/cloud
   transfer measurements remain open.
+- [x] Add a reproducible native-history benchmark with downloaded object-byte
+  measurements, full candle/provenance identity, successful timings separated
+  from errors, source-backed pre-listing exclusions, and unchanged-main checks.
+  Verify all 58 eligible 2022 daily histories and all 59 selected archived-minute
+  series; verify the 2020 check fails only on VND/VNINDEX after documented
+  SSB/GEE/VPL/OCB pre-listing exclusions. Keep cloud billing/production load open.
 - [ ] Record cold/warm latency, memory, SQLite size, and archive transfer costs for
   the chosen ticker universe; distinguish compatibility from identical latency.
 - [x] Document startup, backups, archive-index restore, runtime flags, and rollback.
