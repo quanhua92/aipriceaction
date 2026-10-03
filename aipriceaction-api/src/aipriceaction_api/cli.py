@@ -171,6 +171,9 @@ def parser():
     archive = commands.add_parser(
         "archive", help="Plan/publish old partitions; prune only after verification"
     )
+    archive.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
+    archive.add_argument("--symbol", action="append", help="Filter stored tickers; may repeat")
+    archive.add_argument("--interval", choices=("1D", "1h", "1m"))
     archive.add_argument("--execute", action="store_true", help="Default is a dry run")
     archive.add_argument(
         "--prune", action="store_true", help="Remove exactly verified exported row versions"
@@ -465,7 +468,11 @@ async def execute(args, settings):
             }
         )
     elif args.command == "archive":
-        groups = archive.eligible()
+        groups = archive.eligible(
+            args.source,
+            [symbol.upper() for symbol in args.symbol] if args.symbol else None,
+            args.interval,
+        )
         if not args.execute:
             emit(
                 {

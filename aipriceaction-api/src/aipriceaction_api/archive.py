@@ -451,15 +451,24 @@ class Archive:
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
-    def eligible(self):
+    def eligible(self, source=None, symbols=None, interval=None):
         groups = []
-        for ticker in self.repo.tickers():
+        symbols = set(symbols or ())
+        now = datetime.now(UTC)
+        floors = {
+            iv: cutoff(years, now)
             for iv, years in (
                 ("1D", self.settings.daily_years),
                 ("1h", self.settings.hourly_years),
                 ("1m", self.settings.minute_years),
-            ):
-                rows = self.repo.read(ticker["source"], ticker["symbol"], iv, end=cutoff(years) - 1)
+            )
+            if interval is None or iv == interval
+        }
+        for ticker in self.repo.tickers(sources=[source] if source else None):
+            if symbols and ticker["symbol"] not in symbols:
+                continue
+            for iv, floor in floors.items():
+                rows = self.repo.read(ticker["source"], ticker["symbol"], iv, end=floor - 1)
                 partitions = {}
                 for row in rows:
                     dt = datetime.fromtimestamp(row.time, UTC)

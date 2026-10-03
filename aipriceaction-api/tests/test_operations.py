@@ -13,6 +13,69 @@ from aipriceaction_api.importing import import_csv
 from aipriceaction_api.storage import Repository
 
 
+@pytest.mark.parametrize("execute", [False, True])
+def test_scoped_archive_cli_preserves_other_markets_intervals_and_recent_rows(
+    tmp_path, monkeypatch, capsys, execute
+):
+    settings = replace(
+        Settings(),
+        database=tmp_path / "db",
+        archive_backend="filesystem",
+        object_dir=tmp_path / "objects",
+        cache_dir=tmp_path / "cache",
+    )
+    monkeypatch.setattr(Settings, "from_env", classmethod(lambda cls: settings))
+    floor = parse_time("2021-01-01")
+    monkeypatch.setattr("aipriceaction_api.archive.cutoff", lambda years, now=None: floor)
+    repo = Repository(settings.database)
+    repo.initialize()
+    identities = [
+        ("crypto", "BTCUSDT", "1D"),
+        ("crypto", "BTCUSDT", "1h"),
+        ("crypto", "BTCUSDT", "1m"),
+        ("crypto", "ETHUSDT", "1m"),
+        ("vn", "FPT", "1m"),
+    ]
+    for source, symbol, iv in identities:
+        repo.put(
+            [
+                Candle(source, symbol, iv, stamp, 100, 101, 99, 100, 1000)
+                for stamp in (floor - 86400, floor)
+            ]
+        )
+    original = {ident: repo.read(*ident) for ident in identities}
+    archive = Archive(repo, settings)
+    assert len(archive.eligible()) == 5
+    args = [
+        "archive",
+        "--source",
+        "crypto",
+        "--symbol",
+        "btcusdt",
+        "--symbol",
+        "ethusdt",
+        "--interval",
+        "1m",
+    ]
+    if execute:
+        args += ["--execute", "--prune"]
+    assert main(args) == 0
+    result = json.loads(capsys.readouterr().out)
+    planned = result["published" if execute else "partitions"]
+    assert {(row["source"], row["symbol"], row["interval"]) for row in planned} == {
+        ("crypto", "BTCUSDT", "1m"),
+        ("crypto", "ETHUSDT", "1m"),
+    }
+    history = History(repo, archive, settings)
+    for ident in identities:
+        selected = ident[0] == "crypto" and ident[2] == "1m"
+        assert repo.read(*ident) == (
+            original[ident][1:] if execute and selected else original[ident]
+        )
+        assert history.read(*ident) == original[ident]
+        assert len(repo.archives(*ident)) == (1 if execute and selected else 0)
+
+
 def test_duplicate_imports_and_concurrent_updates_preserve_identity(tmp_path):
     repo = Repository(tmp_path / "db")
     repo.initialize()
