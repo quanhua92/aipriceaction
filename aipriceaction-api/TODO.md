@@ -22,6 +22,36 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
+## PLX minute publication and remaining index evidence — 2026-10-04 ICT
+
+- [x] Capture the complete served PLX minute history through one frozen public
+  API read path. Preserve all **57,473 timestamps**; only four previously observed
+  volume corrections differ from the original snapshot.
+- [x] Verify **1,099 exact minute candles across five complete VPS sessions**,
+  including fresh/retained daily aggregates and two native 40-row worker checks.
+  Publish **53,131 hot rows and 4,342 cold rows in two objects** atomically into
+  the local replacement with originals, raw exports and before-backup preserved.
+- [x] Verify 14 monthly HTTP ranges, six exact SDK SMA/EMA comparisons, PLX's
+  selected daily/15-minute charts and profile, and **5,631,156 unchanged unrelated
+  full candle records**. Restore 445 active archive objects, 65 handoffs,
+  34 recoveries and one unavailable-history record exactly. Restore the populated
+  backup with identical checksum and `quick_check=ok`.
+- [x] Capture complete refreshed VNINDEX minute history in isolation: 61,548
+  timestamps preserve all 61,539 originals and add nine observed 15:05 ICT bars.
+  Preserve the original and refreshed candidates; no native adoption is licensed.
+- [x] Diagnose all three VNINDEX native providers with captured five-session
+  replies. VPS matches the refreshed common OHLCV but omits two auction candles;
+  the other providers and daily aggregates disagree. Do not infer missing bars,
+  map timestamps or alter volume by a guessed factor.
+- [x] Recheck exact invalid old public daily candles through both default and
+  database paths: VND 2020-02-19 and VNINDEX 2019-06-24/25/26 and 2021-08-23
+  still violate OHLC bounds. Their complete coherent-history gates remain open.
+
+There are now **58 native VN minute handoffs** and one remaining frozen index
+snapshot. Public market-data migration uses the live API independently of
+private PostgreSQL; production routing remains unchanged. See `VALIDATION.md`
+for evidence paths and the retained data/acceptance limits.
+
 ## Public API minute migration checkpoint — 2026-10-04 ICT
 
 SSI now uses its complete refreshed public `/tickers` minute history locally:
@@ -45,9 +75,11 @@ append handoff; it does not prove every older provider adjustment policy.
   4,440 provider-overlap candles match all OHLCV fields and retain observed tails.
 - [x] Correct the browser rehearsal to explicitly select its requested ticker:
   an initial watchlist response alone does not select that chart's controls.
-- [ ] Reconcile PLX and VNINDEX minute snapshots and verify native handoffs.
-  Their public API read paths differ; preserve the independently captured
-  responses and unresolved minute/daily findings until coherent proof exists.
+- [x] Reconcile PLX with its complete refreshed public snapshot and verified
+  complete-session VPS handoff; see the later publication checkpoint above.
+- [ ] Reconcile VNINDEX minute data and verify a native handoff. Preserve the
+  independently captured responses and unresolved minute/daily findings until
+  coherent proof exists.
 
 After SSI publication, 57 VN minute series have native handoffs and two remain
 frozen public snapshots. The VND/VNINDEX historical daily gates below remain

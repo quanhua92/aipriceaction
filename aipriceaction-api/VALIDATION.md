@@ -6,6 +6,74 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## PLX minute publication and VNINDEX diagnostics — 2026-10-04 ICT
+
+PLX's complete frozen default-path public `/tickers` minute capture preserves
+all **57,473 existing timestamps**, with **53,131 hot rows and 4,342 older rows
+in two objects**. Four volumes change; all OHLC and other volumes remain exact.
+The capture's selected read path is recorded in every frozen receipt. Its
+**1,099 VPS minute candles across five complete sessions** match the snapshot
+and both fresh/retained daily OHLCV aggregates exactly. Its certificate records
+`exact_complete_sessions`. A native 40-row rehearsal and another fresh check
+immediately before publication preserve every snapshot value/date.
+
+One SQLite transaction publishes only PLX minute rows, state, source check,
+certificate, archive references and publication receipt. Original hot before-image,
+old cold objects, raw exports and before-backup remain preserved; the main S3
+manifest is published under the shared writer lease. Evidence:
+`data/remaining-complete-api-minutes-20261003T193635Z/PLX/report.json` and
+`data/api-plx-minute-publication-20261003T193718Z/`.
+
+Verification passes:
+
+- Fourteen monthly HTTP reads preserve the full published history.
+- All **5,631,156 unrelated candle records** match the before-backup exactly,
+  including provenance and update timestamps; unrelated operational rows and
+  the daily checksum remain exact.
+- Six installed-SDK daily/minute/15-minute SMA/EMA comparisons match timestamp,
+  OHLCV and five moving averages exactly, through the replacement API.
+- PLX's selected public-web daily/15-minute charts and volume profile load with
+  populated successful replies, no page/network errors and no blocked writes.
+- An isolated archive-index restore recovers **445 active objects**, **65
+  handoffs**, **34 recoveries** and **one unavailable-history record** exactly.
+  All 4,342 restored PLX cold rows match full records exactly.
+- A populated after-backup restores with identical bytes/checksum and
+  `quick_check=ok`: **864,010,240 bytes**, SHA-256
+  `5d1eb06dbf98cb23bc925e39584ef7a0d52548168aba671d7164efaae494becf`.
+
+The same capture run independently stages a complete database-backed VNINDEX
+minute snapshot, **61,548 timestamps**, preserving all **61,539 originals** and
+adding nine observed **15:05 ICT** bars. It changes three opens, one high, one
+low and six volumes; closes are unchanged. The snapshot remains isolated.
+Complete-session VPS adoption rejects mismatched coverage; VNDirect/DNSE reject
+OHLCV disagreement. Evidence:
+`data/remaining-complete-api-minutes-20261003T193635Z/VNINDEX/report.json`.
+
+A separate read-only five-session diagnostic captures each selected native
+provider. VPS supplies **1,138 candles** matching the refreshed snapshot's
+common OHLCV exactly, but omits two snapshot auction candles at **14:45 ICT on
+2026-09-28 and 2026-10-01**. VNDirect supplies 1,191 candles with 686 common
+volume disagreements, and DNSE supplies 1,140 with 1,057. Minute aggregates also
+disagree with their native and retained daily replies. These observed differences
+do not establish which exchange/session/volume semantics are correct. No
+missing candle or volume factor is inferred, and main VNINDEX remains unchanged.
+Evidence: `data/vnindex-native-session-diagnostics-20261003T193814Z/report.json`
+and hashed full provider replies.
+
+Fresh public daily probes on both default and explicitly database-backed paths
+still return invalid OHLC bounds for VND **2020-02-19** and VNINDEX
+**2019-06-24/25/26** and **2021-08-23**. Complete coherent daily replacements
+remain unverified. Raw responses and exact violating rows are preserved at
+`data/public-daily-invalid-recheck-20261003T193925Z/report.json`.
+
+Main still holds **5,684,287 candles**. There are now **58 native VN minute
+handoffs** and one remaining frozen index snapshot. The existing unavailable
+VND 2020 range and pending VNINDEX 2020 object remain open, along with independent
+minute/daily findings and wider provider/session and production acceptance.
+Private inventory access is separate from public candle migration. Production
+routing is unchanged. This checkpoint changes local data and documentation;
+the last complete implementation suite remains 324 passing tests.
+
 ## SSI minute public-API publication — 2026-10-04 ICT
 
 A read-only audit of **111 ready native VN intraday series** (55 hourly and
