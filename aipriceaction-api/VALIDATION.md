@@ -1,0 +1,2979 @@
+# Validation — 2026-10-03
+
+The replacement runs locally. This report separates implementation checks from
+full data coverage and production cutover acceptance.
+Earlier snapshot parity checks describe their recorded fixtures. The current
+provider comparisons below record remaining price/volume differences
+explicitly and do not claim exact numerical identity with the legacy API.
+
+## Local Git checkpoints — 2026-10-04
+
+The user requested actual commits after implementation had accumulated. The
+rewrite is now grouped into storage (`c037c53`), provider workers/operational CLI
+(`23fc706`), FastAPI/web compatibility (`b8d74b5`), and SDK compatibility
+(`0a3724f`), followed by a documentation and migration-tooling commit.
+Fresh scoped API runs pass **59 + 178 + 41 = 278 tests**. The SDK offline suite
+passes **251 tests**, with its four existing `TestRealS3` fundamental tests
+deselected. Ruff lint/format checks and the offline source/wheel build pass.
+The packaged VN catalog has normalized LF endings with identical parsed rows,
+its JSON grouping file has a normal data-file mode, and an empty HTML line has
+its trailing spaces removed. No candle values change in this checkpoint.
+
+Only source, packaged catalogs/static assets, the frozen regression fixture,
+tests, dependency/configuration files, scripts, and documentation enter Git.
+Local credentials, databases, backups, built distributions, and raw rehearsal
+evidence remain ignored. These commits do not resolve the documented upstream
+data defects or authorize production cutover.
+
+## Latest bounded VN intraday catch-up
+
+Normal VN minute/hourly updates previously requested only 40 candles after
+downtime. A newer page could therefore be appended while the intervening
+observed data was skipped. The worker now keeps ordinary checks at 40 candles
+and retries once on the same provider when newer data has outrun the published
+tail. The retry is bounded at 1,000 candles and must contain the actual stored
+tail timestamp. If it still lacks overlap, existing durable recovery is queued
+and published data stays intact. Expanded-request failures are dated errors;
+alternate-provider failures/switches retain the existing basis-recovery path.
+An observed sparse/weekend overlap needs no expansion or calendar guess.
+The larger page is compared against all stored overlap before publication.
+Corroborated changes older than the usual 50-bar comparison trigger staged
+revision recovery; representation noise does not. This avoids silently
+overwriting older adjusted prices during an otherwise successful catch-up.
+This protects catch-up coverage; it does not prove that every upstream minute
+is present or resolve intraday adjustment disagreements.
+
+Fourteen new regression cases cover minute/hourly catch-up and resource limits,
+providers ignoring requested counts, sparse weekends, expanded-request errors,
+provider switches, source-check outcomes, old-data preservation, and lease
+release, including changes outside the normal comparison window. All **278
+tests pass in 21.38 seconds**. Ruff lint and the **55-file**
+format check pass, and source/wheel distributions build offline.
+
+Six real native FPT pages from **VPS/VNDirect/DNSE**, each for minute/hourly data,
+are captured and replayed in isolated databases. All six recover **150 newer
+observed timestamps** with exact native OHLCV. Three minute rehearsals expand
+40 → 296 candles; hourly rehearsals request up to 1,000. A separate **six-case
+actual live-worker rehearsal** also passes: all expand 40 → 1,000 on the seeded
+outages. Minute updates publish 1,000 rows each; VPS/VNDirect/DNSE hourly updates
+publish **310 / 680 / 1,000 rows** respectively. Every published value matches
+the exact final native response; all six recover the 150 newer observed dates.
+These controlled outage checks do not establish complete provider hourly history
+or a corporate-action policy. Raw pages, request parameters, response checksums,
+isolated databases, and reports are preserved.
+
+The actual unpacked wheel passes both catch-up and short-page preservation
+scenarios, protects 200 original rows when an older corroborated revision is
+detected, and passes existing SQLite/Parquet hourly fixtures, current archive-index
+reconstruction, 11 historical-year reads, frozen DNSE index parsing, and gap
+guards. The wheel is additionally preserved under
+`data/builds/606833fa3ebc8a7979e3e9f008481b18ba2ba7fa79cb0c3c453fb6d8b6ccf092/aipriceaction_api-0.1.0-py3-none-any.whl`
+so later rebuilds do not remove this tested artifact.
+
+Current read-only SQLite integrity checking returns **ok**. All **ten populated
+source/interval groups** have **zero candles outside retention**, as of October
+3, 2026 UTC: three calendar years for daily/hourly, one year for minute data.
+This proves storage bounds, not complete coverage inside those bounds. Main
+SQLite remains at **5,684,283 candles**, and its daily/operational snapshot is
+unchanged during all isolated rehearsals. No main provider/archive publication
+or production routing change follows these checks.
+
+Evidence: `data/vn-outage-native-rehearsal-20261003/report.json`,
+`data/vn-outage-live-rehearsal-20261003/report.json` and their raw native pages /
+isolated databases, `data/vn-outage-revision-safe-live-rehearsal-20261003/report.json`
+(all six actual checks repeat successfully after the wider revision guard),
+`data/vn-outage-revision-safe-wheel-smoke-20261003.json`,
+`data/acceptance-state-20261003.json`, `data/vn-outage-final-audit-20261003.json`,
+and `data/vn-outage-{evidence-s3,final-evidence-s3}-20261003.json`.
+Native evidence/reports are preserved in immutable RustFS objects with exact
+readback; the active archive pointer and main SQLite snapshot stay unchanged.
+
+## Completion audit against the agreed objective
+
+Completion remains unproven. Implementation and scoped runtime checks do not
+replace the requirement to keep recent data reliable and served history usable.
+The current evidence supports the following states:
+
+| Requirement | Current authoritative evidence | Acceptance state |
+| --- | --- | --- |
+| Project, phased plan, Python/FastAPI, operational CLI | `pyproject.toml`, FastAPI app, CLI help, `TODO.md`, offline build and packaged checks | Implemented locally |
+| RustFS-only Compose; SQLite/DuckDB embedded | `docker-compose.yml`, effective settings, verified RustFS archive restoration | Implemented locally |
+| Exactly VPS/VNDirect/DNSE, excluding VCI provider | Actual provider registry/settings and six live intraday worker checks | Implemented; broader provider policies unresolved |
+| Three-year daily and one-year minute SQLite windows | Read-only SQL across all ten groups: zero rows before calendar cutoffs | Bounds pass; interior completeness unproven |
+| S3 history and boundary/indicator reads | 446 restored objects / 346,572 indexed rows, 11 historical-year checks, boundary regression tests | Partial: four objects pending and five typed gaps |
+| Existing web routes, parameters, JSON/CSV and indicators | `CONTRACT.md`, 278-test suite, captured full 2,103-query matrix | Partial: 44 historical requests fail; diagnostic storage header differs |
+| Existing web/SDK/analysis CLI usage | Recorded selected browser, unchanged SDK and CLI checks, including new hourly selections | Scoped checks pass; complete production flows unproven |
+| More selected tickers with reliable recent daily/minute data | 59 VN selections, 57 matching observed daily date sets, live handoffs and catch-up proof | Partial: four recent EIB/HHS sessions and known basis disagreements |
+| Corporate-action detection and coherent publication | Staged-repair, coverage-loss, revision, fairness, archive and native-candidate checks | Mechanism passes; provider policies and four pending archives unresolved |
+| Preserve all existing served older history and historical identities | Archive discovery/restoration and preserved originals; partial earlier-year migrations | Incomplete: full private/legacy inventory and wider old history absent |
+| Current sync records and authentication continuity | Isolated contract tests; private legacy PostgreSQL connection previously unavailable | Records/export unverified |
+| Recovery, backups and rollback | Existing populated restores and current actual packaged index recovery; documented routing rollback | Local recovery passes; no production migration/cutover |
+| Chosen-universe load/transfer evidence | Full query capture, local cold/warm profile measurements | Local measurements only; cloud transfer and sustained production load open |
+
+Remaining acceptance depends on complete valid provider history/adjustment
+evidence, access to the full legacy inventory, and production migration/runtime
+evidence. The catch-up change and its tests do not clear these unrelated gates.
+
+## Previous minute-derived hourly compatibility and full query matrix
+
+OCB/PNJ/DGC/NAB previously returned HTTP 200 with no candles for `1h` and `4h`:
+these selections ingest daily/minute data only. The reader now derives those
+intervals from minutes when there is no existing hourly series or active hourly
+archive. Existing hourly data stays preferred, and pending hourly repairs still
+reject affected requests. UTC-hour and Vietnamese 02:00 UTC four-hour boundaries,
+directional limits, complete buckets, and revision checks remain enforced.
+Available minute coverage limits these derived intervals; older hourly history
+is not fabricated. No candle, provider, archive, or worker metadata is changed.
+
+The shadow API on localhost:3002 serves all ten supported intervals for the
+configured 71 series, except SJC's daily-only cases. Four bounded readers execute
+**2,103 uncached queries**, capturing every response. **2,059 pass** the ordered,
+nonempty OHLCV schema checks; **44 return HTTP 503**, with no transport/schema
+failures. The failing symbols are VNINDEX, EIB, HHS, VND, SHS, GEX, and HAG.
+Their daily/weekly/biweekly/monthly requests touch known recent missing dates,
+unavailable years, or pending archive repairs. Short-history undefined MA values
+are recorded rather than invented. This audit proves sampled query behavior,
+not freshness, full history coverage, or numerical identity with the legacy API.
+
+All **843 responses** from the preceding four-interval audit remain byte-identical,
+including error responses. All **396 existing hourly responses** also remain
+byte-identical to localhost:3001. The **24 previously empty queries** for the four
+minute-only tickers now have 20 bars each, with OHLCV matching an independently
+grouped native-minute reference. **24 unchanged-SDK checks** reproduce exact
+dates/OHLCV/SMA/EMA and report API provenance. The public website's daily/one-hour
+charts and volume profiles pass for all four tickers with isolated browser/API
+routing. A separately preserved initial browser attempt fails because the public
+site exposes no four-hour button; four-hour functionality is tested through
+the API/SDK rather than claimed as a visible web control.
+
+All **264 API tests pass in 21.42 seconds**, including five new storage cases and
+one HTTP aliases/legacy-CSV regression. Ruff lint and **55-file** formatting pass;
+source and wheel distributions rebuild offline. The actual unpacked wheel serves
+hourly fixtures from SQLite and compressed Parquet, restores **446 archive
+objects / 346,572 indexed rows**, serves the same **11 historical years**, replays
+500 frozen DNSE index rows, and retains the known historical HTTP 503 guards.
+
+A fresh object-cache benchmark queries October 2, 2025 archived minute profiles
+for all **59 VN tickers** with four readers: all succeed, covering **11,866 minutes**
+with identical cold/warm results. Cold/warm total wall times are
+**815.65 / 381.49 ms**, median requests **47.9 / 22.92 ms**, and maximum requests
+**157.4 / 39.58 ms**. Cached Parquet occupies **338,101 bytes**; peak process RSS
+is **112,115,712 bytes**, and SQLite occupies **857,845,760 bytes**. These are
+local RustFS measurements for one observed day, not cloud transfer costs or
+production capacity. A separate 2020-minute experiment returns no data for all
+59 tickers and transfers zero object bytes. Its equal cold/warm values are equal
+errors/empty results, not a successful historical-data benchmark.
+
+After the shadow checks, the usual localhost:3001 API is refreshed with the
+tested code and the temporary localhost:3002 process is stopped. All 24 corrected
+hourly responses and seven representative historical error responses remain
+byte-identical to the recorded shadow results. The full audit and subsequent
+comparisons leave the main SQLite daily/operational snapshot unchanged. The
+active S3 index pointer is also unchanged, SHA-256
+`64dacd233188c10a9c996fad8983e1c7b785690c389dcf551d5045c75039561d`.
+Production routing remains unchanged. Four pending archives,
+five typed unavailable ranges, and previously recorded provider/interval-basis
+disagreements still prevent complete replacement acceptance.
+
+Evidence: `data/web-query-matrix-20261003.json`,
+`data/web-query-all-intervals-20261003.json` and their raw response directories,
+`data/minute-hourly-acceptance-20261003.json`, `data/sdk-minute-hourly-20261003.json`,
+`data/web-minute-derived-1h-{ocb,pnj,dgc,nab}-20261003.json` with screenshots,
+`data/web-minute-hourly-ocb-20261003.json` (the absent four-hour UI control),
+`data/minute-hourly-wheel-smoke-20261003.json`,
+`data/minute-hourly-final-audit-20261003.json`, and
+`data/archive-profiles-all-59-{2020,20251002}-20261003.json`.
+
+## Previous verified DNSE index parsing and remaining candidate checks
+
+The DNSE VNINDEX response contains daily timestamps at **02:15 UTC / 09:15 ICT**,
+alongside UTC-midnight and 02:00 UTC timestamps. A preserved native response has
+**1,019 rows**: **663** at offset **8,100 seconds**, **355** at **7,200 seconds**,
+and one at UTC midnight. Its observed transition to 02:00 UTC is **May 5, 2025**.
+The 02:15 UTC bars encode the same market dates; accepting this observed convention
+does not shift them to another date. [DNSE's trading-hour guide](https://hdsd.dnse.com.vn/man-hinh-giao-dich/cac-quy-dinh-ve-giao-dich-chung-khoan/1.-nguyen-tac-giao-dich-chung/1.1.1.-thoi-gian-giao-dich-tren-thi-truong)
+provides market-session context, while the actual timestamp convention is verified
+from captured endpoint data, not inferred from that guide.
+
+The parser now accepts 02:15 UTC **only for DNSE VNINDEX daily bars**, preserving
+dates, index price units, volume, and backward cursor. Other providers/symbols
+retain their previous timestamp checks. Invalid OHLC and conflicting duplicates
+remain errors. Six new timestamp regression cases verify the native transition,
+provider/symbol scope, and invalid/conflicting bars. A seventh regression case
+extends completed-observed-coverage protection to daily worker replacements.
+
+A fresh real DNSE worker repair parses its first **500 rows**, then refuses
+publication because its **746 staged rows** omit the previously observed
+**August 12, 2024** date. The isolated candidate retains all **747 original dates
+and OHLCV/provider/revision values**, while its job remains pending with
+`Replacement drops completed observed coverage at 1723420800`. Seeding the
+isolated database assigns clone update timestamps; that is separate from the
+worker's refusal to replace the original values. The main VNINDEX series remains
+ready on VNDirect revision `be58cc6c-ed45-42d8-867d-057344f8b35c`. Main daily data
+and operational metadata remain unchanged throughout all isolated rehearsals.
+This fixes parsing support; it does not certify complete DNSE index coverage or
+resolve VNINDEX's pending 2020 archive.
+
+Further isolated native candidates also remain unpublishable:
+
+- **GEX/DNSE** completes its **747-date** recent window, with **641 changed price
+  rows / 645 volumes** and maximum relative OHLC difference
+  `0.055693140586304146`. Its 2023 partition reconciles with all 185 original
+  dates, but December 27, 2022 has conflicting UTC-midnight / 02:00 UTC bars.
+  Raw OHLC **7.94 / 8.12 / 7.74 / 7.9**, volume **7,834,800**, conflicts with
+  **7.9 / 8.34 / 7.62 / 8.32**, volume **29,264,000**. Multiple request windows
+  reproduce the conflict. Replacing would lose readable 2022 history.
+- **SHS/VNDirect** fails recent OHLC validation. May 5, 2025 has open **12.4 >
+  high 12.3**; May 12 has open **12.3 < low 12.4**. Neither bar is clamped or
+  excluded from the requested recent window.
+- **VNINDEX/VPS** completes **747 recent dates**, with **185 changed price rows /
+  747 volumes** and maximum relative OHLC difference `0.01842041968051711`.
+  Its 2023/2022 partitions reconcile, but August 23, 2021 has open **1,329.43 >
+  high 1,326.07**. Two captured archive windows reproduce it. Switching would
+  lose a currently readable 2021 year before reaching the pending 2020 year.
+- **HAG/DNSE** completes **747 recent dates**, with **two changed price rows /
+  13 volumes** and maximum relative OHLC difference `0.021897810218978075`.
+  The 185-row 2023 archive reconciles; the readable 2022 archive fails on
+  conflicting December 27 native candles. Its existing VNDirect series stays intact.
+
+No main provider switch or archive publication follows these results. Existing
+readable data and original archive bytes remain preserved. The main index stays
+at **446 objects / 346,572 rows**, including **442 published / four pending**,
+**58 handoffs**, **34 dated recoveries**, and **five unavailable ranges**. Main
+SQLite stays at **5,684,283 candles / 43,632 VN daily rows**, **936 archive
+metadata rows**, **736 quality rows**, and **1,277 import receipts**.
+
+All **258 API tests pass** in **20.62 seconds**. Ruff lint and the **54-file**
+format check pass; source and wheel distributions rebuild offline. The actual
+unpacked new wheel replays **500 frozen native index rows** through its parser
+with exact dates/OHLCV and at least one 02:15 timestamp. Its actual CLI restores
+the index with **zero hot candles / jobs**, serves **11 historical years**, and
+retains older receipts and VND/EIB HTTP 503 gap guards.
+
+**53 evidence files / 46 distinct checksums** are uploaded to immutable RustFS
+objects and read back exactly. The active `LATEST.json` pointer remains byte
+identical, SHA-256
+`64dacd233188c10a9c996fad8983e1c7b785690c389dcf551d5045c75039561d`.
+Main SQLite's daily/operational snapshot also stays identical. The local API
+process and production routing are unchanged; new workers and rebuilt packages
+use the corrected parser. Remaining range/provider/private-inventory limitations
+still prevent declaring a complete production replacement.
+
+Evidence: `data/remaining-pending-archive-candidate-preflight-20261003.json`,
+`data/remaining-pending-archive-native-failure-diagnostics-20261003.json`,
+`data/final-daily-alternatives-candidate-preflight-20261003.json`,
+`data/final-daily-alternatives-failure-diagnostics-20261003.json`,
+`data/vnindex-dnse-verified-time-candidate-preflight-20261003.json`,
+`data/verified-index-time-native-preservation-audit-20261003.json`,
+`data/verified-index-time-wheel-smoke-20261003.json`,
+`data/verified-index-time-candidate-evidence-s3-20261003.json`,
+`data/verified-index-time-final-audit-20261003.json`, and the
+corresponding separate candidate databases/native-capture directories.
+
+## Previous verified ACB and LPB pending-year reconciliation
+
+ACB and LPB now use coherent VNDirect daily revisions
+`5283b13e-dcec-47c9-a58d-ef0166076cf2` and
+`5a28b40c-f161-4ce4-aec1-6f0ab1c7c5f4`. Each retains **747 recent candles**;
+their five older partitions contain **1,181 / 1,176 rows**. All ten original
+archive date sets remain exact, including previously published dates. The pending
+2020 partitions become readable with **247 ACB / 242 LPB dates**. Independent
+wide native responses reproduce all **1,928 / 1,923 recent/cold OHLCV rows
+exactly**, with no absent candidate dates or mismatched values.
+
+Recent ACB comparisons have **621 changed price rows / 675 volumes**, maximum
+relative OHLC difference `0.00007838219156597326` and volume difference
+`0.004136490583936281`. LPB has **568 / 652**, with maxima
+`0.00010207206287637938` and `0.008647132580394623`. Neither recent window has
+a volume difference above **1%**. Two older ACB volume changes exceed that
+threshold: September 12, 2022 changes **1,416,163 → 1,390,800**, and September
+13 changes **1,486,664 → 1,469,500**. Independent DNSE requests reproduce both
+candidate volumes exactly. LPB has no older volume change above 1%.
+
+Older prices are materially different from the former series. ACB's maximum
+relative OHLC differences are `0.20025784271594327` in 2019 and
+`0.20221223643276875` in 2021. LPB's 2019 maximum is
+`0.010073614877954329`. Targeted DNSE reads of these exact maximum-difference
+dates give maximum relative differences versus the candidate of
+`0.0007238508867173366`, `0.0004185851820845965`, and
+`0.004363347877826218` respectively. Their OHLC values are **not exactly equal**;
+all responses and comparisons are preserved. No factor is inferred, and this
+targeted evidence does not establish lifetime adjustment equivalence or exact
+legacy-price compatibility. Full numeric comparisons remain in the receipts.
+
+Minute data and handoffs stay unchanged. Each audit covers **248 completed
+observed dates**, with **55,664 ACB / 47,476 LPB minute candles**. Both old and
+candidate bases have **zero differences above 1%**. ACB's maximum relative
+minute/daily difference changes from `0.000048236358154873926` to
+`0.000024434941966910984`; LPB's changes from `0.00001966955153420713` to
+`0.000013394770681518509`. These audits do not prove an independent calendar.
+
+Publication holds scoped daily/archive-writer leases and atomically replaces
+both daily revisions and matching metadata. Original hot before-images, old
+archives, ten replacement partitions, and immutable rebaseline receipts are
+verified in RustFS. **28 raw captures/reports** are checksummed and read back;
+four later targeted price-evidence files are separately preserved in immutable
+S3 objects. Fresh **40-completed-candle** checks pass before and after publication.
+Only the two old archive jobs are retired. Normal `next_1d` schedules may change;
+other ticker fields and unrelated operational rows remain exact. The other
+**5,682,789 candles** match the rollback backup exactly, including provenance and
+update timestamps; all **57 other recent HTTP responses** remain identical.
+
+Ten actual yearly HTTP reads serve both symbols' 2019–2023 history with exact
+candidate OHLCV. **Twelve recent SDK cases** and **twelve historical SMA/EMA
+cases** match equivalent backward API requests exactly for dates, OHLCV,
+MA10–MA200, and API provenance. Every checked historical MA200 is defined.
+Forward requests reproduce OHLCV; their different EMA warmup scopes can differ
+numerically. The unchanged public daily/15-minute/weekly charts and profiles
+pass for both tickers, without JavaScript/network failures or writes. Known
+unrelated bulk EMA and VNINDEX weekly failures remain open.
+
+The frozen 59-ticker legacy replay finishes without errors or local mutations:
+**57 observed date sets match**, **four EIB/HHS dates remain missing**, and there
+are **zero extra dates**. Of **43,629 valid comparable rows**, **9,772 match OHLCV
+exactly**, **30,872 price rows exceed the representation threshold**, **5,343
+price differences exceed 1%**, and **778 volume differences exceed 1%**. Three
+invalid legacy OHLC rows remain identified. Date coverage does not imply
+numerical identity with the old API.
+
+At the ACB/LPB checkpoint, SQLite contained **5,684,283 candles / 43,632 VN daily rows**, **207 series**,
+**137 source checks**, **736 quality rows**, **1,277 import receipts**, and **936
+total archive metadata rows**. The active index remains **446 objects / 346,572
+rows**: **442 published / 345,571 rows**, **four pending / 1,001 rows**, **58
+handoffs**, **34 dated-year recoveries**, and **five unavailable ranges**. Pending
+objects are GEX 2019, HAG 2019, SHS 2022, and VNINDEX 2020. Cold reconstruction
+matches all archive/adoption/recovery/gap metadata exactly with zero hot candles
+or ingestion jobs. The actual unpacked wheel's CLI reconstructs this index and
+serves **11 checked historical years**, preserving older recovery evidence and
+the VND/EIB missing-range HTTP 503 guards.
+
+The populated backup and restored file are **857,845,760 bytes** each, SHA-256
+`e2011bb90bf3a595810ba0d1741dd4d4f3e1f446d6cddc04251579eb8235bf65`.
+Schema **2**, quick-check, full daily/operational metadata, archive evidence, and
+all quality findings restore exactly, including the unchanged CTR/VTP findings.
+Runtime code remains unchanged from the 251-test checkpoint. Ruff lint and the
+54-file format check pass; no runtime code or test changes require a repeated suite.
+
+GEX's alternate recent candidate fails on **May 13, 2025**, with raw VNDirect
+OHLC **19.562 / 19.562 / 18.948 / 18.172**: its close is below its low. The raw
+response is preserved; its current ready VPS series and archives remain intact.
+Read-only probes of VNDirect's `data-api.vndirect.com.vn/v4/stock_prices` alias
+for VND November 29, 2019, EIB September 13, 2022, and HHS December 19, 2019 all
+return **HTTP 401**, each preserving the exact 13-byte response and SHA-256.
+No substitute candles are obtained. [DNSE's current OHLC documentation](https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/)
+still identifies `/price/ohlc`; earlier normal unauthenticated 401 captures remain
+applicable, so the same protected requests are not repeated. Production routing
+is unchanged. VND 2020, recent EIB/HHS sessions, four pending archives, provider
+discrepancies, private inventory, and full replacement acceptance remain open.
+
+Evidence: `data/{acb,lpb}-pending-archive-preflight-20261003/`,
+`data/acb-lpb-pending-archive-rebaseline-publication-20261003.json`,
+`data/acb-lpb-pending-archive-rebaseline-other-candles-preservation-20261003.json`,
+`data/acb-lpb-pending-archive-rebaseline-index-restore-20261003.json`,
+`data/acb-lpb-pending-archive-rebaseline-backup-restore-20261003.json`,
+`data/acb-lpb-pending-archive-rebaseline-wheel-smoke-20261003.json`,
+`data/acb-lpb-pending-archive-final-audit-20261003.json`,
+`data/sdk-acb-lpb-pending-archive-rebaseline-20261003.json`,
+`data/sdk-{acb,lpb}-pending-archive-rebaseline-recent-20261003.json`,
+`data/web-{acb,lpb}-pending-archive-rebaseline-20261003.json`,
+`data/retained-vn-daily-after-acb-lpb-20261003.json`,
+`data/acb-lpb-historical-price-corroboration-20261003/`,
+`data/acb-lpb-historical-price-corroboration-s3-20261003.json`,
+`data/gex-pending-archive-preflight-20261003/failure-diagnostics.json`, and
+`data/vndirect-rest-alias-preflight-20261003.json`.
+
+## Previous verified NAB 2022 recovery and VND candidate checks
+
+NAB now uses one VNDirect daily revision,
+`bb48bb11-622d-411a-b8f2-6c2dc67ccd5c`, across **741 retained candles** and
+**four older partitions / 744 rows**. Independent original CSV/API captures agree
+on all **249 missing 2022 dates**, which now serve valid native candles. Every
+original recent date and previously published archive date remains present.
+A separate wide provider response reproduces all **1,485 recent/cold OHLCV
+candles exactly**, without absent candidate dates. Only NAB's verified 2022
+unavailable-range marker is cleared.
+
+Against the old VPS retained window, **607 price rows / 540 volumes** differ,
+with maximum relative differences `0.000145369966565001` and
+`0.007835091414682971`. No measured recent or older volume difference exceeds
+**1%**. The older maximum relative OHLC differences are
+`0.001953670108847394` (2023), `0.006641870350690748` (2021), and
+`0.006558173427252845` (2020). Original values and provider replies remain
+preserved without inferred factors, overrides, or claimed dividend equivalence.
+Both old and candidate minute/daily bases have **zero price differences above
+1%** across **248 completed observed dates / 37,759 minute candles**. Maximum
+relative OHLC differences are `0.00009224360245996266` and
+`0.000040000000000040004` respectively. Minute data and its handoff remain exact;
+these threshold/observed-date checks do not establish an independent calendar.
+
+Publication holds the daily/archive-writer leases, verifies RustFS readback of
+original hot before-image, preserved old archives, four native replacement
+partitions, and immutable recovery/rebaseline receipts, then atomically updates
+the daily revision and matching metadata. **13 raw captures/reports** are
+uploaded with SHA-256 and byte-count/readback verification. Fresh
+**40-completed-candle** provider checks pass before and after publication.
+NAB's normal `next_1d` schedule may change; other ticker fields and unrelated
+operational rows remain exact. The other **5,683,542 candles** match the rollback
+backup exactly in OHLCV, provider, revision, and update timestamp, with **zero
+differences**. All **58 other recent HTTP responses** remain identical.
+Original archives and earlier recovery receipts remain recoverable.
+
+Actual raw historical reads return NAB 2020 **60**, 2021 **250**, 2022 **249**,
+and 2023 **249** rows. Its **six recent SDK cases** (daily/minute/15-minute,
+SMA/EMA) and **six historical cases** (2022, early 2023, and the retention
+boundary) match equivalent backward API requests exactly for dates, OHLCV,
+and MA10–MA200 with API provenance. All checked historical MA200 values are now
+defined, including the **36-row** early-2023 cases. Forward queries reproduce
+OHLCV; their different EMA warmup seed produces a maximum relative EMA200
+difference `0.0000487576498579001` at the 2023 boundary. No SDK/runtime code changed.
+The unchanged public NAB daily, 15-minute, weekly charts and volume-profile
+checks pass through isolated local routing, without JavaScript/network failures
+or writes. Other known bulk EMA/VNINDEX weekly errors remain open.
+
+The frozen **59-ticker** legacy replay finishes with zero errors and unchanged
+local data/metadata: **57 observed date sets match**, **four EIB/HHS sessions
+remain missing**, and there are **zero extra dates**. Of **43,629 valid comparable
+rows**, **9,816 match OHLCV exactly**, **30,844 price rows exceed the representation
+threshold**, **5,343 price differences exceed 1%**, and **778 volume differences
+exceed 1%**. Three invalid original OHLC rows remain identified. These numerical
+discrepancies remain distinct from observed date coverage and replacement acceptance.
+
+VND's VNDirect and DNSE isolated candidates both complete **747-row** retained
+windows and independently recover all **252 original 2020 dates**. Neither
+preserves every currently readable older year. VNDirect reconciles three of
+four old objects, but its **November 29, 2019** bar has **open 2,628 > high 2,618**
+(low **2,571**, close **2,618**, volume **255,980**), reproduced in two captured
+request windows. This is inside the requested 250-row 2019 archive, so its
+replacement is rejected. DNSE reconciles 2023, then repeats two different
+**December 27, 2022** candles at the same date: OHLC **10,400 / 10,640 / 10,400 /
+10,530**, volume **8,521,500**, versus **10,530 / 11,170 / 10,530 / 11,170**,
+volume **22,800,600**. Multiple captures reproduce the conflict. DNSE also
+contains invalid 2019 rows outside its requested 2020 recovery; they do not
+license dropping or changing dates when that older year is requested.
+
+VND's VNDirect retained comparison has **584 changed price rows / 664 volumes**,
+maximum relative OHLC difference `0.0000935191246609346`; DNSE has **659 / 661**,
+maximum `0.021007786102541504`. Both candidates remain isolated. Main VND's
+**747 recent candles**, VPS revision `ec77a776-40b8-460e-a211-3bc3eb55fce0`,
+and four readable archives remain exact, including provenance and update times.
+No clamp, arbitrary duplicate choice, inferred factor, or cross-provider archive
+mix is applied. The 2020 gap remains explicit; staged native availability alone
+does not establish a complete publishable replacement.
+
+At the NAB checkpoint, SQLite retained **5,684,283 candles / 43,632 VN daily rows**, with **207
+series**, **137 source checks**, **736 quality rows**, **1,275 import receipts**,
+and **926 total archive metadata rows**. The active index has **446 objects /
+346,572 indexed rows**: **440 published / six pending**, plus **58 handoffs**,
+**34 dated-year recovery receipts**, and **five unavailable ranges** (VND 2020
+and four EIB/HHS sessions). Fresh reconstruction matches exactly. The actual
+unpacked wheel's CLI restores these records with **zero hot candles / jobs**;
+its packaged HTTP serves **nine checked historical years**, retains old recovery
+evidence, and preserves VND/EIB HTTP 503 guards. Cold reconstruction restores
+archive/recovery/gap metadata; populated SQLite backups preserve all generic
+quality findings, including the existing CTR/VTP disagreements.
+
+The populated backup and restored file are **857,563,136 bytes** each, SHA-256
+`3e04fd0304055eabbdaecae8ce5fbd9caa2c3642f4cfbe2754200672a9232987`.
+Schema **2**, quick-check, complete daily/operational metadata, archive evidence,
+and all quality findings restore exactly. Runtime remains unchanged from the
+**251-test** checkpoint. Ruff lint passes, **54 files** pass format checks, and
+source/wheel distributions rebuild offline from the existing cache. Production
+routing is unchanged. VND 2020, recent
+EIB/HHS sessions, six pending objects, provider/minute consistency, private
+production inventory, and full replacement acceptance remain open.
+
+Evidence: `data/nab-historical-gap-preflight-20261003/` (including original
+CSV/API captures, numeric comparison, native verification, and minute audit),
+`data/nab-historical-rebaseline-publication-20261003.json`,
+`data/nab-historical-rebaseline-other-candles-preservation-20261003.json`,
+`data/nab-historical-rebaseline-index-restore-20261003.json`,
+`data/nab-historical-rebaseline-backup-restore-20261003.json`,
+`data/retained-vn-daily-after-nab-20261003.json`,
+`data/sdk-nab-historical-rebaseline-recent-20261003.json`,
+`data/sdk-nab-historical-rebaseline-20261003.json`,
+`data/web-nab-historical-rebaseline-20261003.json`,
+`data/nab-historical-rebaseline-wheel-smoke-20261003.json`,
+`data/vnd-historical-gap-preflight-20261003/`,
+`data/vnd-dnse-historical-gap-preflight-20261003/`, and
+`data/vnd-historical-candidate-failure-diagnostics-20261003.json`.
+Rollback backup: `backups/local-rehearsal-before-nab-historical-rebaseline-20261003.sqlite3`.
+Verified populated backup: `backups/local-rehearsal-nab-historical-rebaseline-20261003.sqlite3`.
+
+## Earlier verified VIB/VTP daily rebaselines and historical recoveries
+
+VIB and VTP now each use a coherent VNDirect daily revision. VIB's revision is
+`d14dcd2e-d562-40aa-a0c7-a043e3533d2b`; VTP's is
+`3d2790fb-0161-4b2f-8d5c-aec29a9c3398`. Their retained windows contain **747 /
+740 candles**, with **five / six older partitions** containing **1,179 / 1,212
+rows** respectively. All original retained dates and all previously published
+older dates remain present. Independently captured original CSV/API timestamps
+recover **VIB 2019: 250**, **VTP 2019: 250**, and **VTP 2022: 249** native candles;
+only those three unavailable-range markers are cleared. VIB's previously pending
+2020 archive also becomes readable with its exact **245 original dates**.
+Separate wide native responses reproduce all **1,926 VIB / 1,952 VTP OHLCV
+candles exactly**, without absent candidate dates.
+
+Relative to original hot VPS data, VIB has **686 changed price rows / 730 changed
+volumes**, with maximum relative differences `0.0024007682458386803` and
+`0.0030992396603592987`. No VIB retained volume difference exceeds **1%**.
+VTP has **641 changed price rows / 584 changed volumes**, with maximum relative
+differences `0.00015156107911495909` and `0.023327236185443634`; **12 retained
+volume differences exceed 1%**. Historical price differences also remain measured:
+maximum relative OHLC differences reach `0.28925237250212177` for VIB 2021
+and `0.21613462650138093` for VTP 2018. VIB's original pending legacy 2020
+partition differs by up to `0.09033471830440076`. These are preserved provider
+differences, without claimed dividend equivalence or inferred scaling.
+
+DNSE independently corroborates VIB's one larger historical volume change:
+**July 7, 2021**, original **1,431,700**, native **1,467,100**, computed relative
+difference `0.02472585038765107`. VTP has **38 volume changes above 1%** across
+recent and older original data; DNSE corroborates **35**. Three remain unresolved:
+
+| VTP date | Original VPS volume | Published VNDirect volume | DNSE volume |
+| --- | ---: | ---: | ---: |
+| 2020-11-20 | 99,400 | 100,562 | 92,562 |
+| 2023-09-22 | 1,804,963 | 1,768,263 | 1,804,200 |
+| 2026-07-15 | 216,200 | 218,385 | 216,200 |
+
+Independent targeted VNDirect queries reproduce all three published native
+volumes exactly, matching the wide response. Each disagreement remains an
+unresolved `provider_volume_disagreement` SQLite finding and part of immutable
+S3 rebaseline evidence. Original values and raw provider replies are preserved;
+no override, dividend factor, or alternate provider's OHLC is mixed into the
+published native series. CTR's previously recorded disagreement remains unchanged.
+
+Both minute/daily audits compare **248 completed observed dates**. VIB retains
+**53,232 minute candles**, with old/candidate maximum relative OHLC differences
+`0.0000708399595199527` / `0.000035853468433266755`; VTP retains **45,244**, with
+`0.000018026966870809957` / `0.00010143774025839214`. Both old and new bases have
+**zero price differences above the explicit 1% threshold**. Minute rows and
+handoffs remain exact. Threshold/observed-date agreement does not prove a complete
+independent exchange calendar or exact provider adjustment equivalence.
+
+Publication holds both affected daily leases and the archive-writer lease,
+verifies RustFS readback of original hot before-images, retained old archives,
+11 replacement partitions, and immutable receipts, then atomically updates both
+daily revisions and matching metadata. **73 raw captures/reports** are uploaded
+with SHA-256 and byte-count/readback checks, and indexed inside the immutable
+receipts. Fresh **40-completed-candle** provider checks succeed before and after
+publication. Only the affected normal `next_1d` schedules may change; unrelated
+operational rows and other ticker fields stay exact. One obsolete VIB archive
+repair job is retired after its verified replacement is published.
+
+SQLite retains **5,684,283 candles / 43,632 VN daily rows**. The other
+**5,682,796 candles** match the rollback backup exactly in OHLCV, provider,
+revision, and update timestamp, with **zero differences**. The other **57 recent
+HTTP responses** remain identical. Raw historical reads pass for **11 dated
+symbol/year cases**, including all repaired years, previously published history,
+and both hot/cold 2023 boundaries. Original archive bytes and old recovery
+receipts remain recoverable even when their active objects are superseded.
+
+The unchanged SDK passes **12 recent cases** (daily/minute/15-minute SMA/EMA)
+and **12 historical cases** (2019, 2022, and 2023 retention-boundary SMA/EMA for
+both symbols). Dates, OHLCV, and MA10–MA200 match equivalent backward API queries
+exactly, with API provenance. Early 2019 correctly retains **199 VIB / 173 VTP
+missing MA200 values** in each checked SMA/EMA case; missing lookback is not
+invented. Forward query OHLCV matches; different EMA warmup seeds produce maximum
+relative EMA200 differences `0.00040096643618370287` (VIB) and
+`0.000438175946178454` (VTP) at the 2023 boundary. No SDK or runtime code changed.
+
+The unchanged public daily, 15-minute, weekly charts and volume profiles pass
+for both selected symbols with isolated local routing, no JavaScript/network
+failures, and no writes. Existing unrelated bulk EMA and VNINDEX weekly reads
+retain known HTTP 503 errors; selected successes do not imply every web request
+passes. The frozen **59-ticker** legacy replay finishes with zero errors and
+unchanged local data/metadata: **57 observed date sets match**, **four EIB/HHS
+sessions remain missing**, and there are **zero extra dates**. Across **43,629
+valid comparable rows**, **9,820 match OHLCV exactly**, **30,843 price rows exceed
+the representation threshold**, **5,343 price differences exceed 1%**, and
+**778 volume differences exceed 1%**. Three invalid original OHLC rows remain
+identified; remaining discrepancies are still required work.
+
+Current SQLite metadata contains **207 series**, **137 source checks**, **736
+quality rows**, **1,273 import receipts**, and **922 total archive metadata rows**.
+The active archive index has **445 objects / 346,323 indexed rows**, comprising
+**439 published / six pending**, plus **58 handoffs**, **33 dated-year recovery
+receipts**, and **six unavailable ranges** (VND 2020, NAB 2022, and four EIB/HHS
+sessions). Fresh reconstruction matches exactly. The actual unpacked wheel's CLI
+restores all these records with **zero hot candles / ingestion jobs**; packaged
+HTTP serves **eight checked historical years**, validates old recovery receipts,
+and retains VND/NAB/EIB missing-range HTTP 503 guards. Cold reconstruction covers
+archive/recovery/gap metadata; generic volume findings are preserved by the
+populated SQLite backup and immutable S3 receipts/raw evidence.
+
+The populated backup and restored file are **857,477,120 bytes** each, SHA-256
+`b19617157e67c553d7ae363bad60e05ed0df726f2fec39dc599c90b57ccab027`.
+Schema **2**, quick-check, complete daily/operational metadata, archive evidence,
+and **all quality findings** restore exactly. Runtime remains unchanged from the
+**251-test** checkpoint. Ruff lint passes, **54 files** pass format checks, and
+source/wheel distributions rebuild offline from the existing cache. Production
+routing is unchanged. Remaining old years,
+recent gaps, six pending objects, provider consistency, private production
+inventory, and full replacement acceptance remain open.
+
+Evidence: `data/vib-historical-gap-preflight-20261003/` and
+`data/vtp-historical-gap-preflight-20261003/` (including original CSV/API captures,
+numeric comparisons, native/volume verification, and minute-basis reports),
+`data/vib-vtp-historical-rebaseline-publication-20261003.json`,
+`data/vib-vtp-historical-rebaseline-other-candles-preservation-20261003.json`,
+`data/vib-vtp-historical-rebaseline-index-restore-20261003.json`,
+`data/vib-vtp-historical-rebaseline-backup-restore-20261003.json`,
+`data/retained-vn-daily-after-vib-vtp-20261003.json`,
+`data/sdk-{vib,vtp}-historical-rebaseline-recent-20261003.json`,
+`data/sdk-vib-vtp-historical-rebaseline-20261003.json`,
+`data/web-{vib,vtp}-historical-rebaseline-20261003.json`, and
+`data/vib-vtp-historical-rebaseline-wheel-smoke-20261003.json`.
+Rollback backup: `backups/local-rehearsal-before-vib-vtp-historical-rebaseline-20261003.sqlite3`.
+Verified populated backup: `backups/local-rehearsal-vib-vtp-historical-rebaseline-20261003.sqlite3`.
+
+## Earlier verified HCM daily rebaseline and 2020 recovery
+
+HCM now uses one VNDirect daily revision,
+`9fbc98cc-ce4c-457c-acbe-23c0b077bfd1`, across **747 retained candles** and
+**five older partitions / 1,186 rows**. Every original retained date and every
+previously published archive date remains present. Independent original CSV/API
+captures agree on all **252 timestamps in the missing 2020 year**; valid native
+candles now serve those dates. A separate wide native response reproduces all
+**1,933 recent/cold OHLCV candles exactly**, with no absent candidate dates.
+Only HCM's verified 2020 unavailable-range record is cleared.
+
+Compared with its previous VPS retained window, **645 price rows** differ, with
+maximum relative OHLC difference `0.0008160410352062719`. **693 volumes** differ;
+none exceeds **1%**, and their maximum relative difference is
+`0.0041068111332143165`. Older partitions retain their original date sets while
+using the same new revision. Their maximum relative OHLC differences are
+`0.0001116196004018466` (2023), `0.00016647244880974021` (2022),
+`0.012341992634617327` (2021), and `0.01067932364283597` (2019).
+These measured provider differences are retained without claimed adjustment
+equivalence, inferred dividend factors, or mixed-provider OHLC.
+
+The one historical volume difference above **1%** occurs on **March 14, 2019**:
+original VPS **606,620**, native VNDirect **632,930**, computed relative
+difference `0.04337146813491155`. DNSE independently returns **632,930** on that
+date. All 2021 volumes match; the measured 2022/2023 differences stay below 1%.
+Original values and checksummed provider captures remain preserved. The existing
+CTR July 15, 2026 unresolved volume finding is unchanged by this publication.
+
+The minute/daily audit compares **248 completed observed dates / 54,415 minute
+candles**. Neither original nor candidate basis has a price difference above the
+explicit **1%** threshold. Maximum relative OHLC differences are
+`0.000053533190578214374` and `0.000026504108136871096` respectively. HCM minute
+rows and its provider handoff remain exact. These are observed-session and
+threshold checks; they do not establish an independent exchange calendar.
+
+Publication holds the daily and archive-writer leases, verifies RustFS readback
+of the original hot before-image, preserved old archives, new native partitions,
+and immutable evidence receipts, then atomically updates the daily revision and
+matching archive metadata. Fresh **40-completed-candle** provider comparisons
+pass immediately before and after publication. HCM's normal `next_1d` schedule
+can change; other ticker fields and unrelated operational records remain exact.
+SQLite retains **5,684,283 candles / 43,632 VN daily rows**. The other
+**5,683,536 candles** match the rollback backup exactly in OHLCV, provider,
+revision, and update timestamp, with **zero differences**. The other **58 recent
+HTTP responses** remain identical. Old archive bytes and recovery receipts survive.
+
+Raw historical HTTP requests return 2019 **250**, 2020 **252**, 2021 **250**,
+2022 **249**, and 2023 **249** HCM rows on the coherent native basis. Six recent
+SDK daily/minute/15-minute SMA/EMA cases and six historical cases (2020, 2022,
+and the 2023 retention boundary) match equivalent backward API queries exactly
+for dates, OHLCV, and MA10–MA200, with API provenance. Forward queries still
+reproduce the same OHLCV; their different EMA warmup seed produces maximum
+relative EMA200 differences `0.0001964288711489015` for 2022 and
+`0.0008853716035817083` at the 2023 boundary. No SDK/runtime behavior changed.
+
+The unchanged public HCM daily, 15-minute, weekly charts and volume-profile
+checks pass with isolated local API routing, no JavaScript/network failures,
+and no writes. Other recorded bulk EMA and VNINDEX weekly requests still return
+their known HTTP 503 errors. Successful selected controls do not imply every
+public request passes. The frozen **59-ticker** legacy replay finishes with
+zero errors and unchanged local data/metadata: **57 observed date sets match**,
+**four EIB/HHS sessions remain missing**, and there are **zero extra dates**.
+Of **43,629 valid comparable rows**, **10,515 match OHLCV exactly**, **30,190
+price rows exceed the representation threshold**, **5,343 price differences
+exceed 1%**, and **766 volume differences exceed 1%**. Three invalid original
+OHLC rows remain identified; broader numerical differences remain open.
+
+Current SQLite metadata has **207 series**, **137 source checks**, **733 quality
+rows**, **1,268 import receipts**, and **911 total archive metadata rows**.
+The active archive index has **442 objects / 345,574 indexed rows**, comprising
+**435 published / seven pending**, plus **58 handoffs**, **30 dated-year recovery
+receipts**, and **nine unavailable ranges** (five older years and four recent
+sessions). Fresh index reconstruction matches exactly and creates zero hot
+candles. The actual unpacked wheel's packaged CLI restores these records without
+creating ingestion jobs; its packaged HTTP reads serve HCM 2020/2022 and the
+checked CTR/FPT 2018 years while preserving VTP/EIB HTTP 503 guards and the
+existing FPT receipt. Cold reconstruction restores archive/recovery/gap metadata;
+generic quality findings are preserved separately by populated SQLite backups
+and the original immutable publication evidence.
+
+The populated backup and restored SQLite file are **857,141,248 bytes** each,
+SHA-256 `337f292a25ad349ab7680e9b072d9cd7c413f56b7324eb78841ecc1ea73fffb8`.
+Schema **2**, quick-check, exact daily/operational metadata, archive evidence,
+and the existing unresolved CTR volume finding restore successfully. Runtime
+remains unchanged from the **251-test** checkpoint. Ruff lint and all **54**
+format checks pass; source and wheel distributions rebuild offline from the
+existing cache. Production routing is
+unchanged. Other unavailable years, recent gaps, pending objects, minute/provider
+consistency, private production inventory, and replacement acceptance remain open.
+
+Evidence: `data/hcm-historical-gap-preflight-20261003/` (including original
+CSV/API captures, all-archive numeric comparison, independent native/volume
+verification, and minute-basis report),
+`data/hcm-historical-rebaseline-publication-20261003.json`,
+`data/hcm-historical-rebaseline-other-candles-preservation-20261003.json`,
+`data/hcm-historical-rebaseline-index-restore-20261003.json`,
+`data/hcm-historical-rebaseline-backup-restore-20261003.json`,
+`data/retained-vn-daily-after-hcm-20261003.json`,
+`data/sdk-hcm-historical-rebaseline-recent-20261003.json`,
+`data/sdk-hcm-historical-rebaseline-20261003.json`,
+`data/web-hcm-historical-rebaseline-20261003.json`, and
+`data/hcm-historical-rebaseline-wheel-smoke-20261003.json`.
+Rollback backup: `backups/local-rehearsal-before-hcm-historical-rebaseline-20261003.sqlite3`.
+Verified populated backup: `backups/local-rehearsal-hcm-historical-rebaseline-20261003.sqlite3`.
+
+## Earlier verified CTR daily rebaseline and historical recovery
+
+CTR now uses a single VNDirect daily revision,
+`7131455e-b664-48c7-aa49-f03e601623b1`, across **747 retained candles** and
+**six older Parquet partitions / 1,435 rows**. All original retained dates and
+previously published older dates remain present. Independently dated original
+CSV/API evidence recovers **250 candles in 2019**; the previously pending
+**248-candle 2022** partition is also readable. Only CTR's recovered 2019 gap
+marker is cleared. A separate wide native response reproduces all **2,182
+candidate OHLCV candles exactly**, with no missing or extra candidate dates.
+
+Against its old VPS retained window, **617 price rows** differ, with maximum
+relative OHLC difference `0.0005611745513867117`. **691 volumes** differ; **five
+exceed 1%**, with maximum relative difference `0.018634615384615305`. DNSE
+independently corroborates four of those five native volumes. One remains
+unresolved: **July 15, 2026**, VNDirect **158,907** versus original VPS and DNSE
+**156,000**. Targeted and wide VNDirect responses agree with each other.
+Publication preserves the native VNDirect value, the original values, both raw
+provider replies, and an unresolved `provider_volume_disagreement` finding in
+SQLite and immutable S3 rebaseline evidence. No dividend factor or override is
+inferred. This is measured disagreement, not certification of every volume.
+
+The completed minute/daily audit compares **248 observed dates / 41,528 minute
+candles**. Neither old nor candidate daily basis has a price difference above
+the explicit **1%** audit threshold; their maximum relative OHLC differences are
+`0.000013379045070704976` and `0.000006705783738403248` respectively. CTR's minute
+rows and handoff remain unchanged. Threshold agreement does not establish an
+independent holiday/suspension calendar or exact provider equivalence.
+
+Publication verifies RustFS readback of the original hot before-image, preserved
+old archives, six new native partitions, and immutable receipts; affected daily
+and archive-writer leases protect the atomic SQLite change. Main SQLite retains
+**5,684,283 candles**, including **43,632 VN daily rows**. The other **5,683,536
+candles** match the rollback backup exactly, including OHLCV, provider, revision,
+and update timestamp. All **58 other recent HTTP responses** and unrelated
+operational rows remain exact. CTR's normal update changes its `next_1d`
+schedule; a fresh **40-completed-candle** provider comparison succeeds on the
+new revision. Original archive bytes and old recovery receipts remain preserved.
+
+Raw HTTP requests now return 2018 **250**, 2019 **250**, 2020 **252**, 2021
+**250**, 2022 **248**, and 2023 **249** CTR candles. The full frozen 59-ticker
+replay finishes with zero errors and verifies unchanged local data/metadata:
+**57 date sets match**, **four EIB/HHS dates are missing**, and **zero extra
+dates** exist. Across **43,629 valid comparable rows**, **10,566 OHLCV rows match
+exactly**, **30,144 price rows exceed the representation threshold**, **5,343
+price differences exceed 1%**, and **766 volume differences exceed 1%**.
+The original three invalid legacy OHLC rows remain identified. Date coverage
+and numerical parity are separate conclusions; broader discrepancies remain open.
+
+The unchanged SDK passes **six recent cases** (daily/minute/15-minute, SMA/EMA)
+and **six historical cases** (2019, 2022, and a 2023 retention-boundary range).
+Returned dates, OHLCV, and MA10–MA200 match **equivalent backward API queries
+exactly**, with API provenance. The SDK queries backward from the end date,
+then filters the requested start and tail limit. Comparing it to a forward
+start-date query uses a different EMA warmup seed: OHLCV still matches, but
+maximum relative EMA200 differences reach `0.000617794044242892` for 2022 and
+`0.00016603915723334417` at the 2023 boundary. The verification script now
+compares equivalent requests; no SDK or runtime code changed to conceal this.
+
+Selected unchanged public CTR daily, 15-minute, weekly chart and volume-profile
+checks pass with local API interception, no JavaScript/network failures, and no
+writes. Other VNINDEX weekly requests retain known unavailable-history errors.
+Actual default 59-ticker bulk daily **SMA JSON/CSV return HTTP 200**, whereas
+**EMA JSON/CSV return HTTP 503** because their 600-bar lookback crosses the
+recorded EIB May 22 / June 11, 2025 gaps. These checks do not establish that all
+public web requests pass; the existing unavailable-range guards remain intact.
+
+Current metadata contains **207 series**, **137 source checks**, **733 quality
+rows**, **1,266 import receipts**, and **906 total archive metadata rows**.
+The active index has **441 objects / 345,322 indexed rows**: **434 published /
+seven pending**, with **58 handoffs**, **29 dated-year recovery receipts**, and
+**10 unavailable ranges** (six older years and four recent sessions).
+Fresh index reconstruction matches those records exactly. The actual unpacked
+wheel restores the index without creating hot candles or jobs, serves checked
+CTR 2018/2019/2022 and FPT 2018 years, preserves old FPT/CTR recovery evidence,
+and retains VTP 2019 and EIB missing-session HTTP 503 guards. Cold-index restore
+reconstructs archive/recovery/gap metadata; the separate populated SQLite backup
+and immutable rebaseline receipt preserve the generic volume disagreement.
+
+The populated backup and restored file are **857,055,232 bytes** each, SHA-256
+`91b3790f9345ac7e61ba80f0a0e846bfb94cfe6cdb05a9e107c8be08dd98b3b2`.
+Schema **2**, SQLite quick-check, daily/operational metadata, archive evidence,
+and the unresolved volume finding restore exactly. Runtime remains unchanged
+from the **251-test** checkpoint. Ruff lint passes, **54 files** pass format
+checks, and source/wheel distributions rebuild offline from the existing cache.
+Production routing is unchanged. Complete
+history, the four recent gaps, pending objects, minute/provider consistency,
+private production inventory, and replacement acceptance remain open.
+
+Evidence: `data/ctr-historical-gap-preflight-20261003/` (including native window,
+volume corroboration, minute-basis audit, and preserved originals),
+`data/ctr-historical-rebaseline-publication-20261003.json`,
+`data/ctr-historical-rebaseline-other-candles-preservation-20261003.json`,
+`data/ctr-historical-rebaseline-index-restore-20261003.json`,
+`data/ctr-historical-rebaseline-backup-restore-20261003.json`,
+`data/retained-vn-daily-after-ctr-20261003.json`,
+`data/sdk-ctr-historical-rebaseline-recent-20261003.json`,
+`data/sdk-ctr-historical-rebaseline-20261003.json`,
+`data/web-ctr-historical-rebaseline-20261003.json`,
+`data/ctr-historical-rebaseline-bulk-check-20261003.json`, and
+`data/ctr-historical-rebaseline-wheel-smoke-20261003.json`.
+Rollback backup: `backups/local-rehearsal-before-ctr-historical-rebaseline-20261003.sqlite3`.
+Verified populated backup: `backups/local-rehearsal-ctr-historical-rebaseline-20261003.sqlite3`.
+
+## Earlier selected-universe 2018 archive extension
+
+A bounded nine-ticker pass recovers **eight complete original 2018 date sets**:
+DGC **250**, BSR **213**, VGI **69**, SHS **250**, CEO **250**, IDC **250**,
+CTR **250**, and VTP **26**—**1,558 candles** total. Separate frozen public CSV/API
+responses agree on every date. Native data retains every original timestamp
+without exclusions or guessed missing sessions. The new Parquet partitions use
+each existing daily revision: VPS for five tickers, VNDirect for CEO/IDC, and
+DNSE for SHS. Actual ordinary **40-candle updates** pass in isolated storage;
+fresh completed-provider comparisons pass again immediately before publication.
+
+DGC's original and native **OHLCV match exactly**. The other overlapping price
+rows differ; maximum relative OHLC differences are `0.011327759438085505` (BSR),
+`0.00008462825411914565` (VGI), `0.07788240042869776` (SHS),
+`0.0017764294579050155` (CEO), `0.06238667500528661` (IDC),
+`0.31363216707522845` (CTR), and `0.265500158674181` (VTP). These measured
+differences are preserved without inferred dividend factors or claimed numerical
+identity. Published history follows the existing native daily series coherently.
+
+All volumes match except BSR on August 15, 2018: legacy `2,353,749`, native
+`2,299,149`, with computed relative difference `0.023197035877657313`.
+Both VNDirect and DNSE independently return the same dated native volume. Their
+prices differ, so no alternate provider's OHLC is mixed into the pinned VPS
+partition. Checksummed source captures and original legacy values remain intact.
+
+GEE's 2018 CSV returns **403**; a separate bounded old API request returns
+**HTTP 200 with zero rows**. Both actual responses are preserved. Neither proves
+a listing date or a complete absence of private history. No GEE candles, exclusion
+policy, or history-gap record is fabricated from these replies.
+
+Publication verifies immutable originals, native Parquet, and recovery proofs
+through RustFS readback, holds archive-writer and affected daily leases, and
+atomically adds only archive metadata and receipts after checking ready series.
+All **5,684,283 existing hot candles** match the rollback backup exactly, including
+OHLCV, provider, revision, and update timestamp, with **zero differences**.
+Existing series/checks/quality/jobs/tickers/handoffs match exactly. Recent HTTP
+responses for **all 59 selected VN tickers** are unchanged; the eight dated raw
+requests change from empty to their verified original-date counts.
+
+The current snapshot has **1,264 import receipts**, **900 total archive metadata
+rows**, and **440 active objects / 345,072 indexed rows**: **432 published / eight
+pending**. Fresh index reconstruction exactly preserves these objects plus **58
+handoffs**, **28 dated-year recovery receipts**, and **11 unavailable ranges**.
+The actual unpacked wheel's packaged CLI restores the current index into fresh
+SQLite, serves **nine checked 2018 years** including existing FPT, retains known
+CTR/VTP/EIB HTTP 503 guards, and creates no hot candles or ingestion jobs.
+
+The existing SDK passes **28 historical comparisons** across full 2018 and six
+available early-2019 ranges with SMA/EMA, exact returned OHLCV/MA values, and API
+provenance. Its original tail-limit and short-series indicator behavior remain
+intact. CTR/VTP's independently unavailable 2019 years remain explicit HTTP 503
+and `AIPriceActionError`; neither request falls back silently to old archives.
+The newly verified preceding year does not clear a different year's gap record.
+
+The populated backup and restored file are **856,915,968 bytes** each with SHA-256
+`182154a8c8bd581eff53f291f906a3fb03ad42c8bca7c9f47c8020f73b1b9296`.
+Schema **2**, quick-check, complete operational metadata, and archive evidence
+match exactly. Runtime code is unchanged from the **251-test** checkpoint.
+Broader historical coverage, known gaps, adjustment differences, and production
+replacement acceptance remain open.
+
+Evidence: `data/older-daily-selected-2018-preflight-20261003/` (including
+`volume-disagreements.json` and `volume-provider-checks/`),
+`data/older-daily-selected-2018-publication-20261003.json`,
+`data/older-daily-selected-2018-original-candles-preservation-20261003.json`,
+`data/older-daily-selected-2018-index-restore-20261003.json`,
+`data/older-daily-selected-2018-backup-restore-20261003.json`,
+`data/sdk-older-daily-selected-2018-20261003.json`, and
+`data/older-daily-selected-2018-wheel-smoke-20261003.json`.
+The rollback backup is
+`backups/local-rehearsal-before-older-daily-selected-2018-20261003.sqlite3`;
+the verified populated backup is
+`backups/local-rehearsal-older-daily-selected-2018-20261003.sqlite3`.
+
+## Earlier verified pre-2018 daily archive extension
+
+VCB/MBB/VIC/HPG now each retain an additional **250 daily candles in 2017** and
+**251 in 2016**: **eight Parquet partitions / 2,004 rows**. Separate original
+public CSV/API captures agree on every date. Native VPS replies reproduce all
+original dates without exclusions and preserve the current daily provider and
+revision. Each isolated candidate passes an actual ordinary **40-candle update**;
+fresh completed-provider comparisons also pass immediately before publication.
+No recent daily or minute series is replaced.
+
+All overlapping 2016 volumes match exactly. For 2017, **two volume differences**
+occur on August 15: HPG legacy `4,397,780` versus native `4,573,670`, and VIC
+legacy `388,640` versus native `508,250`. Relative differences computed from
+these values are `0.039995179385962976` and `0.3077655413750515` respectively.
+Both VNDirect and DNSE return the same dated native volumes, independently
+corroborating the published VPS values. Their actual response captures remain
+checksummed in the isolated evidence directory. No provider's OHLC is mixed into
+the pinned VPS series. The original differing values are preserved as evidence.
+
+Every overlapping legacy price row differs. Maximum relative OHLC differences
+for VCB/MBB/VIC/HPG are respectively `0.008366019149847803`,
+`0.0004644681839294229`, `0.00006282964451254092`, and
+`0.36017400391617294` in 2017; in 2016 they are
+`0.008379471624849977`, `0.00048323947967920944`,
+`0.00008101101749835582`, and `0.3601742532499064`.
+These measured disagreements are recorded without guessed scaling or claimed
+corporate-action equivalence. The new history follows the existing native basis.
+
+Each publication verifies uploaded originals, Parquet, and recovery proofs by
+reading them back from local RustFS, holds the global archive-writer and affected
+daily leases, and atomically adds only metadata/receipts after checking unchanged
+ready series. Each full indexed before/after candle join proves **all 5,684,283
+hot candles unchanged**, with **zero differences** in OHLCV, provider, revision,
+or update timestamp. Existing series/checks/quality/jobs/tickers/handoffs match
+exactly; all **59 recent HTTP responses** remain identical. Eight dated requests
+that were empty now return their **250 / 251 verified rows**.
+
+The current snapshot has **1,256 import receipts**, **892 total archive metadata
+rows**, and **432 active objects / 343,514 indexed rows**: **424 published / eight
+pending**. Its **58 handoffs**, **20 dated-year recovery receipts**, and **11
+unavailable ranges** reconstruct exactly. Both checkpoints have verified populated
+backup restores. The actual unpacked wheel's packaged CLI restores the latest
+index into fresh SQLite; five checked 2016 years (including existing FPT) read
+successfully, the known EIB missing session remains HTTP 503, and no hot candles
+or ingestion jobs are created by index restoration.
+
+The unchanged SDK passes **32 additional historical comparisons**, covering full
+2016/2017 and their following early-year ranges with SMA/EMA and API provenance.
+Returned OHLCV and MA values are exact. Early-year MA200 lookback now draws from
+the preceding verified cold partition. Independently aggregating frozen native
+daily inputs across December 2016–February 2017 also matches **12 actual HTTP
+cases**: four symbols each at `1W`, `2W`, and `1M`, with **13 / six / three bars**
+respectively. Complete buckets and the explicit end-truncated final bucket match
+OHLCV exactly. No numerical identity with the old adjusted-price basis is claimed.
+
+The latest populated backup and restored file each contain **856,903,680 bytes**,
+with SHA-256 `c7fd3cd7fffff91812228cb7ac79dd633cc91e31a40fa66c122dbbabac5e3dd7`.
+Schema **2**, quick-check, complete operational metadata, and archive evidence
+match exactly. The runtime is unchanged from the
+**251-test** suite checkpoint. Production routing remains unchanged. Older served
+years, broader selected-universe history, complete indicator warmup, and adjustment
+semantics remain required work.
+
+Evidence: `data/older-daily-2017-preflight-20261003/` (including
+`volume-disagreements.json` and `volume-provider-checks/`),
+`data/older-daily-2016-preflight-20261003/`,
+`data/older-daily-{2017,2016}-publication-20261003.json`,
+`data/older-daily-{2017,2016}-original-candles-preservation-20261003.json`,
+`data/older-daily-{2017,2016}-index-restore-20261003.json`,
+`data/older-daily-{2017,2016}-backup-restore-20261003.json`,
+`data/sdk-older-daily-{2017,2016}-20261003.json`,
+`data/older-daily-{2017,2016}-wheel-smoke-20261003.json`, and
+`data/older-daily-pre2018-aggregation-20261003.json`.
+Rollback backups are
+`backups/local-rehearsal-before-older-daily-{2017,2016}-20261003.sqlite3`;
+verified post-publication backups are
+`backups/local-rehearsal-older-daily-{2017,2016}-20261003.sqlite3`.
+Braced years identify the two separately retained files, not a literal filename.
+
+## Earlier verified 2018 daily archive publication
+
+VCB, MBB, VIC, HPG, and VHM now have five additional 2018 Parquet partitions,
+containing **248 / 248 / 248 / 248 / 161 candles** respectively (**1,153 total**).
+Each uses its existing verified VPS daily revision and extends previously
+reconciled 2019–2023 cold history. Separate original public CSV and API captures
+agree on the original dates. Actual native responses and ordinary completed
+**40-candle updates per ticker** verify provider identity and the current basis
+before isolated recovery and again before local publication.
+
+The four full-year originals contain flat, positive-OHLC, zero-volume placeholders
+on January 23–24, 2018. The [VNDirect closure notice](https://www.vndirect.com.vn/vndirect-thong-bao-ve-viec-tam-ngung-giao-dich-tren-so-giao-dich-chung-khoan-thanh-pho-ho-chi-minh-ngay-24-01-2018/)
+documents both dates. Historical HOSE membership is independently supported by
+[Vietcombank's issuer history](https://vietcombank.com.vn/vi-VN/Ve-Vietcombank),
+[MB's issuer article](https://news.mbbank.com.vn/news/thuong-tuong-le-huu-djuc-vi-tuong-dji-tu-chien-truong-djen-thuong-truong-1703061927),
+[Vingroup's issuer prospectus](https://ircdn.vingroup.net/storage/Uploads/0_Quan%20he%20co%20dong/0_Vingroup_2022/TP/121004/2.%20BCB%20Niem%20yet%20VICB2124001%20-%2015.06.2022.pdf),
+and [Hoa Phat's issuer article](https://www.hoaphat.com.vn/tin-tuc/hoa-phat-duoc-chap-canh-boi-ttck.html).
+The policy explicitly adds only VCB/MBB/VIC/HPG to the existing FPT exception.
+VHM needs no exclusion. Every remaining original date and volume matches native
+data. The **eight excluded placeholders** remain in immutable original S3 bytes
+and per-partition receipts; no other missing date or guessed closure is licensed.
+Direct HTTP captures of the closure page and an earlier VIC prospectus returned
+403; those capture receipts are not document evidence. The cited closure content
+and 2022 issuer prospectus were verified separately through web results.
+
+Exact numeric price identity with the legacy provider is **not established**.
+Every overlapping price row differs; measured maximum relative OHLC differences
+are `0.00834588601400077` (VCB), `0.00024066915849307868` (MBB),
+`0.00003403273528113093` (VIC), `0.36017349564170265` (HPG), and
+`0.500021175843056` (VHM). All compared volumes match exactly. These are measured
+provider/basis disagreements, not inferred corporate-action factors. Published
+history follows the current native series coherently and preserves original prices
+as evidence; this checkpoint does not resolve dividend semantics.
+
+After verifying object/evidence checksums and reading them back from RustFS,
+publication holds the archive-writer and five daily leases, rechecks original
+ready series, and atomically adds only archive metadata and recovery receipts.
+It never updates hot candles. A full indexed before/after join verifies
+**all 5,684,283 hot candles unchanged**, including provider, revision, and update
+timestamps, with **zero differences**. Existing series, checks, quality, jobs,
+tickers, and handoffs are exact. All **59 recent HTTP responses** are exact,
+while the five raw dated 2018 requests change from empty to their verified counts.
+
+The local snapshot now has **1,248 import receipts** and **884 total archive
+metadata rows**, of which **424 objects / 341,510 indexed rows** are active:
+**416 published / eight pending**. Its **58 handoffs**, **12 dated-year recovery
+receipts**, and **11 unavailable ranges** reconstruct exactly in fresh SQLite.
+The previous FPT receipt still validates. The actual unpacked wheel's CLI restores
+this same index from RustFS, serves all six checked 2018 years, leaves the known
+EIB missing session at HTTP 503, and creates no hot candles or ingestion jobs.
+
+The existing Python SDK passes **20 historical comparisons** across five symbols,
+full 2018 and early 2019 ranges, with SMA/EMA, API provenance, and exact returned
+OHLCV/MA values. The reference respects the SDK's existing tail limit within an
+explicit date range, while the HTTP contract selects forward from its start date.
+Rust's documented short-series behavior is preserved: VHM's 161-bar 2018 request
+has expanding SMA200 values and EMA200 seeded on its last available bar. No
+synthetic prior candles are added. This verifies interface and indicator parity,
+not equality with original legacy-provider adjusted prices.
+
+The populated backup and restored file are each **856,903,680 bytes**, with SHA-256
+`08c339633e377c8f52c7ea9108445d300ebce0a31a3e3162af0991f3308860b6`.
+Schema version **2**, SQLite quick-check, operational metadata, and archive
+evidence match exactly. Full API tests pass **251 cases in 20.64 seconds**;
+lint/format checks pass across **54 Python files**, and the distribution builds
+offline. Production routing remains unchanged. Pre-2018 history beyond FPT,
+remaining minute coverage, frozen series, and provider discrepancies stay open.
+
+Evidence: `data/older-daily-2018-preflight-20261003/`,
+`data/older-daily-2018-publication-20261003.json`,
+`data/older-daily-2018-original-candles-preservation-20261003.json`,
+`data/older-daily-2018-index-restore-20261003.json`,
+`data/older-daily-2018-backup-restore-20261003.json`,
+`data/sdk-older-daily-2018-20261003.json`, and
+`data/older-daily-2018-wheel-smoke-20261003.json`.
+The rollback backup is
+`backups/local-rehearsal-before-older-daily-2018-20261003.sqlite3`;
+the verified post-publication backup is
+`backups/local-rehearsal-older-daily-2018-20261003.sqlite3`.
+
+## Earlier scoped VN repair pagination
+
+The repair worker previously validated a complete 500-row provider page even
+when its oldest candles preceded the requested retention floor. The DNSE
+EIB/HHS trial failed on December 27, 2022 duplicates while trying to reach the
+October 3, 2023 floor. VN repairs now pass that floor to normalization. `Page`
+retains its oldest selected native timestamp as a separate pagination cursor;
+only requested candles undergo OHLC/duplicate validation and staging. Every
+requested invalid or conflicting candle still rejects the repair. Unverified
+boundary timestamp conventions remain errors. Cursor progress indicates observed
+pagination, not a verified exchange calendar.
+
+An older terminal page with no requested rows can finish previously validated
+staging; an old-only initial page or no-data without a boundary cannot replace
+published data. The existing non-advancing-cursor, observed completed-coverage,
+provider identity, revision, lease, and current-tail checks remain in force.
+No service, public API parameter, database schema, or provider is added.
+Six regression cases cover old defects/missing values, a requested duplicate,
+invalid OHLC at the floor, an empty terminal page, and an old-only initial response.
+Numeric parsing also occurs only after selecting the requested timestamps, so a
+null price outside that scope cannot reject the recent page. The complete suite
+passes **246 tests in 20.43 seconds**. Lint/format checks pass across
+**54 Python files** and the distribution builds offline.
+
+The actual EIB/HHS worker jobs resume their exact checksummed second DNSE pages
+and existing **500-row** staging. Each stages **247 additional requested rows**
+and completes its isolated **747-candle** daily replacement, preserving every
+original observed date and recovering May 22 / June 11, 2025. No outside-floor
+candle is staged, and no conflicting 2022 row is arbitrarily selected. Each
+candidate passes an actual ordinary **40-candle completed update** on its same
+revision before and after cold reconciliation. Eight isolated HTTP checks pass
+for recovered dates and recent SMA/EMA. Relative price differences from the
+original VPS data reach `0.021220159151193574` for EIB and
+`0.022222222222222254` for HHS; **241 / 209** overlapping OHLC rows and **600 / 597**
+volumes differ respectively. These measured basis disagreements are preserved
+without inferred dividend factors.
+
+Of their **ten older objects**, **six reconcile** with exact original timestamps
+(2020, 2021, and 2023 for each ticker). Both 2022 objects still reject conflicting
+December 27 candles; both 2019 objects reject invalid OHLC. Those defects are
+inside the requested historical partitions. All originals were previously
+readable, so **neither candidate is eligible for main publication**. Original
+archive bytes, failed responses, and staging remain preserved. Main local VN
+daily values/provenance and all operational metadata match exactly before/after;
+the current four session guards, provider revisions, and S3 pointer remain
+unchanged.
+
+The actual unpacked wheel initializes a fresh SQLite file through its packaged
+CLI and replays both entire native repairs using verified frozen captures:
+**500 + 247** rows each, **1,494 retained rows** total, and **80 ordinary update
+candles** on unchanged revisions. The imported module path points inside the
+unpacked wheel. Neither this replay nor the live candidate trial changes the
+main API database.
+
+Evidence: `data/retained-daily-gap-dnse-scoped-repair-20261003.json`,
+`data/retained-daily-gap-dnse-scoped-captures-20261003/`,
+`data/retained-daily-gap-dnse-preflight-20261003.sqlite3`, and
+`data/scoped-repair-wheel-final-smoke-20261003.json`.
+
+## Earlier retained VN daily publication and recovery
+
+Five complete VNDirect daily candidates—HAG, MSN, STB, VDS, and VPL—are now
+published in the local rehearsal. They replace **3,328 original hot rows** with
+**3,337**, recovering **nine missing sessions** without removing any original
+date. Before and after publication, actual ordinary updates verify **40 completed
+candles per ticker** on the unchanged candidate revisions. The transaction
+rechecks original values/state, replaces only the five daily series, supersedes
+their old readable archive metadata, and resolves only the proven nine gap
+records. It preserves all minute handoffs. The global archive-writer and daily
+series leases protect publication. One obsolete HAG archive job is cancelled.
+
+The seven staged candidates' **30 older objects / 7,116 indexed rows** undergo
+actual native worker reconciliation. **27 reconcile** with the exact original
+timestamps. VNDirect returns invalid OHLC for **EIB September 13, 2022**, and
+**HAG/HHS December 19, 2019**. Raw checksummed responses are preserved; no candle
+is dropped, clamped, or corrected with a guessed factor. EIB 2022 and HHS 2019
+were readable under the original basis, so those two candidates remain isolated
+to avoid losing older availability. HAG 2019 was already pending and retains
+that status. Its **250-candle 2021 archive** is now recovered. The five published
+series use **19 verified native cold replacement objects** and the unchanged
+pending HAG 2019 object. Every old archive byte remains preserved; all original
+hot rows have immutable S3 Parquet before-images and per-ticker JSON evidence
+receipts, plus a populated rollback backup and the previous manifest pointer.
+
+Reusing all **59 initial frozen legacy captures** in a separate after-report
+compares **43,632 local rows / 43,636 observed legacy dates**. **57 date sets
+match**, with **four missing / zero extra dates**. EIB/HHS still lack May 22 and
+June 11, 2025. The three invalid legacy CEO/IDC rows remain excluded from numeric
+comparisons. Of **43,629 compared rows**, **10,614** match OHLCV exactly,
+**30,106** exceed the 1e-7 relative OHLC representation threshold, and **5,343**
+exceed 1% OHLC difference; **5,360** volumes differ, **761** by more than 1%.
+Date parity remains an observed-feed comparison; provider/adjustment differences
+are still material and do not prove a dividend factor or complete calendar.
+
+**90 real local HTTP cases** produce **83 successful responses / seven explicit
+503 errors**. All nine recovered dates match native JSON OHLCV, and CSV responses
+match the existing precision/column contract. Recent daily, minute, 15-minute,
+and weekly SMA/EMA checks pass except the existing HAG weekly EMA read requiring
+its pending 2019 lookback. The four EIB/HHS missing-date reads remain unavailable.
+Full HAG 2019 and first-candle 2020 reads retain explicit 503 errors: the latter
+requires one prior candle for change metrics even with moving averages disabled.
+The other 18 archive-partition reads succeed, including HAG 2021. Daily SMA/EMA
+reads at the three-year retention boundary succeed for all four older published
+tickers. Health matches all **11 typed gaps** exactly and reports the five daily
+series' current VNDirect verification. No claim of full historical coverage.
+
+The actual existing Python SDK passes **30 comparisons**: five tickers × daily,
+minute, and 15-minute intervals × SMA/EMA, with **20 rows each**, API provenance,
+and zero differences across timestamps, OHLCV, and all five moving averages.
+An actual browser loads the existing public HAG daily/15-minute charts and
+volume profile with isolated API reads redirected to localhost; page/network
+errors and blocked writes are empty. Production routing is unchanged.
+
+An indexed full comparison proves all **5,680,946 unrelated original candles**
+remain identical, including OHLCV, provider, revision, and update timestamps.
+Unrelated operational rows remain exact. SQLite now has **5,684,283 candles**,
+**207 series**, **137 source checks**, **732 quality records**, **1,243 import
+receipts**, **58 handoffs**, and **459 jobs**. The S3 index has **419 active
+objects / 340,357 indexed rows**, with **411 published / eight pending**.
+A fresh empty index restores all objects, **58 handoffs**, **seven dated-year
+recovery receipts**, and **11 gap records** exactly, including 250 readable HAG
+2021 candles and zero local candles. The five new rebaseline receipts remain
+in SQLite and immutable S3 evidence; they are distinct from dated-year recovery
+receipts reconstructed by `restore-index`.
+
+The actual CLI restores a new populated backup. Both files measure
+**856,903,680 bytes** and share SHA-256
+`70732c2bb7404c4a415fa88cd493db0c9ca548b8574d263fe80a0a123161262c`.
+All table counts, complete local VN daily data/provenance, operational metadata,
+archive objects, handoffs, recovery receipts, and gap records match exactly;
+schema version remains **2** and `quick_check` is **ok**. The files are
+`backups/local-rehearsal-retained-daily-repairs-20261003.sqlite3` and
+`data/restored-rehearsal-retained-daily-repairs-20261003.sqlite3`.
+
+The comparison helper adds `--captures` to preserve the initial report while
+reusing frozen evidence. Lint/format pass across **54 discovered Python files**,
+and the distribution builds offline. Runtime code is unchanged in this
+checkpoint; its preceding full suite has **240 passing tests**.
+
+Evidence: `data/retained-daily-cold-reconcile-20261003.json`,
+`data/retained-daily-cold-invalid-native-20261003.json`,
+`data/retained-daily-repairs-publication-20261003.json`,
+`data/retained-vn-daily-after-repairs-20261003.json`,
+`data/retained-daily-repairs-http-verification-20261003.json`,
+`data/retained-daily-repairs-other-candles-preservation-20261003.json`,
+`data/retained-daily-repairs-index-restore-20261003.json`,
+`data/retained-daily-repairs-backup-restore-20261003.json`, the five
+`data/sdk-*-retained-daily-repairs-20261003.json` reports, and
+`data/web-hag-retained-daily-repairs-20261003.json`.
+
+The follow-up actual DNSE worker trial for EIB/HHS remains isolated. Each
+stages **500 daily candles** from September 30, 2024 through October 2, 2026.
+Its second **500-row page** includes two conflicting normalized candles for
+**December 27, 2022**. Validation rejects both complete repair attempts rather
+than arbitrarily selecting one duplicate. This conflict lies outside the
+required three-year retention floor, so it does not prove a recent missing
+session; narrower remaining-window pagination still deserves investigation.
+It also blocks a straightforward coherent 2022 archive replacement. The raw
+responses, staging, errors, and main-state equality proof remain preserved.
+No additional main candle, provider, job, or gap change occurs. Evidence:
+`data/retained-daily-gap-dnse-preflight-20261003.json` and
+`data/retained-daily-gap-dnse-conflicts-20261003.json`.
+
+## Earlier retained VN daily audit and isolated recovery
+
+The reproducible `scripts/check_retained_vn_daily.py` opens SQLite in read-only
+mode and compares **all 59 selected VN tickers** within the three-calendar-year
+window, respecting VPL's verified first-listing bound. At the October 3, 2026
+checkpoint it compares **43,623 local rows** with **43,636 captured legacy dates**.
+**52 date sets match**, with **13 missing / zero extra dates** across seven
+tickers: EIB, HAG, HHS, MSN, STB, and VPL each lack **May 22 and June 11, 2025**;
+VDS lacks **June 11**. There are **zero request errors or duplicate legacy dates**.
+Legacy CEO has invalid OHLC on May 14/16, 2025; IDC has an invalid May 14 bar.
+Those **three malformed rows** are preserved and excluded from numerical
+comparison, while their dates remain observational coverage evidence.
+
+Among **43,620 numerically compared rows**, **9,729** match OHLCV exactly,
+**30,106** exceed the explicit **1e-7** relative OHLC representation threshold,
+and **5,343** have OHLC differences above the separate **1% review threshold**.
+Volumes differ on **5,842 rows**, including **764 above 1%**. Relative OHLC
+differences use the legacy value as denominator. The largest observed difference
+is VHM's `0.5000276251312193`. These measurements describe provider/basis
+disagreements, not proof that a revision is a dividend or license for a factor.
+Legacy date parity does not establish a complete exchange calendar. All **59
+checksummed response receipts** replay successfully offline; the runner verifies
+unchanged complete local VN daily values/provenance and all operational metadata.
+
+Bounded native daily probes cover the seven affected symbols on VPS, VNDirect,
+and DNSE. VPS omits every identified session while matching surrounding original
+OHLCV exactly. Both alternatives return traded candles on every missing date,
+but their surrounding volumes differ; DNSE also has meaningful price differences.
+No individual alternative-provider row was inserted under a VPS revision.
+
+In isolated SQLite/filesystem storage, seven actual worker repairs rebuild each
+entire retained daily window on VNDirect: **4,818 original rows become 4,831**,
+with all original dates preserved and all **13 missing dates recovered**. Six
+repairs use **two pages**; VPL uses **one page** and its original listing bound.
+Each passes an ordinary **40-candle completed update** on its new unchanged
+revision (**280 candles total**), exact dated HTTP reads, and recent SMA/EMA
+indicators. Maximum relative price differences from the original VPS data are
+zero for STB/VPL/MSN/HAG, `6.692992436918566e-05` for EIB,
+`0.00020584602717166334` for HHS, and `9.773260359646763e-05` for VDS.
+Volume changes are recorded separately. No shared price difference exceeds 1%.
+The seven candidates' **30 older archive objects / 7,116 indexed rows** still
+need coherent reconciliation before publication. The main provider revisions,
+candles, minute handoffs, and jobs remain unchanged.
+
+The existing typed guards now record the 13 confirmed missing sessions in one
+transaction, preserving the seven older unavailable years. **33 actual HTTP
+cases** (daily JSON/CSV and weekly) change from **200 empty/partial success** to
+explicit **503**. Recent daily output for **all 59 selected VN tickers** matches
+exactly before/after. All **5,684,274 candles**, **207 series**, **137 source
+checks**, **1,238 import receipts**, **58 handoffs**, and **459 jobs** remain
+unchanged; the **732 quality rows** now include **20 typed unavailable ranges**.
+Every original quality finding is preserved. The global archive-writer lease
+protects metadata publication. A fresh S3 index matches **419 active objects**,
+handoffs, recovery receipts, and all 20 gap records exactly; health metadata
+matches the stored records. The original manifest pointer and pre-publication
+SQLite backup remain preserved. A populated new backup/restore preserves the
+updated gap/index metadata, exact local daily values, and operational rows.
+Backup/restored files measure **856,797,184 bytes**, share SHA-256
+`2c4aecb1fc62d4560f99256a8e09cce624a3f71ddc7e844103a54111e0c00f94`,
+retain schema version **2**, and pass `quick_check`. They are
+`backups/local-rehearsal-retained-daily-gap-guards-20261003.sqlite3` and
+`data/restored-rehearsal-retained-daily-gap-guards-20261003.sqlite3`.
+
+Only the verification runner and local data/docs change in this checkpoint.
+The preceding runtime suite has **240 passing tests**. Lint/format checks pass
+across **50 files**, and the distribution builds offline. No new runtime service,
+schema, provider mixing, or production routing change is introduced.
+
+Evidence: `data/retained-vn-daily-legacy-comparison-20261003.json` and its
+checksummed capture/receipt directory,
+`data/retained-daily-gap-provider-preflight-20261003.json` and native captures,
+`data/retained-daily-gap-repair-preflight-20261003.json`,
+`data/retained-daily-gap-repair-preflight-20261003.sqlite3`,
+`data/retained-daily-gap-guards-publication-20261003.json`,
+`data/retained-daily-gap-guards-before-pointer-20261003.json`,
+`data/archive-index-retained-daily-gap-guards-restored-20261003.sqlite3`, and
+`data/retained-daily-gap-guards-backup-restore-20261003.json`.
+
+## Latest historical discovery and archive-only health
+
+The name route previously used only the packaged catalog. Registered/imported
+tickers with available history could be absent from discovery, and a reconstructed
+archive-only index had no per-series health entries. `/tickers/name` now merges
+registered and archived identities with the catalog, keeping the same map and
+source-mode contract. Catalog names retain precedence. Known registered names
+are preserved locally; an archive identity without company metadata uses its
+symbol. Discovery does not activate ingestion or invent company information.
+
+Operational status and `/health.storage.series` include archive-only identities
+with `archived` or `archive_pending` status. The separate published-object count,
+indexed row count, and minimum/maximum archived dates exclude pending/superseded
+objects; pending repairs have their own count. Existing local counts and dated
+provider checks retain their meaning. Indexed object rows may overlap and are
+not a deduplicated candle count or proof of continuous trading-session coverage.
+Archive-only identities carry no local-ingestion or successful-provider date and
+no live-verification claim. No schema or Compose service changes.
+
+Three added regressions cover archive-only name/health discovery and exact reads
+after reconstruction, source-mode/name precedence, and published/pending/
+superseded separation. The complete API suite passes **240 tests**, with one
+existing Starlette test-client deprecation warning. Lint and formatting pass
+across **49 files**, and the distribution builds offline. The unpacked-wheel
+smoke uses the actual packaged CLI to restore an index, verifies name fallback
+and HTTP archived bounds, and reproduces exact cold candles with no network.
+The packaged watchlist still contains **59 selected VN entries**.
+
+The restarted local API preserves every prior metadata entry and exposes **22
+previously missing VN index names**, including VNINDEX, VN30, and sector indices.
+Five actual HTTP cases compare payloads before/after: recent daily output for
+**all 59 selected VN tickers**, FPT 2017 cold history, PNJ 15-minute indicators,
+NAB recent daily indicators, and VTP 2022's explicit unavailable-range error.
+Every sampled payload matches exactly. All table counts and every ticker,
+series, source-check, quality, job, receipt, adoption, archive, and epoch row
+remain unchanged. The main database retains **5,684,274 candles / 207 series**.
+Its health separates **410 published objects / 338,124 indexed rows** from
+**nine pending repairs**; the combined active index remains **419 objects /
+340,357 rows**.
+
+A separate copied restored index was served temporarily on loopback port 3002.
+It exposes **137 archive-only series**, all with `archived` status and no live
+proof, across **410 published objects / 338,124 indexed rows** plus **nine
+pending repairs**. Every archive ticker appears in the correct source name map.
+There are **zero local candles, series states, provider checks, jobs, or enabled
+tickers**. FPT's **250 daily candles in 2017** exactly match the main API; NAB
+2022 returns **503**. The temporary server was stopped after verification; the
+main loopback API continues serving on port 3001. Production routing is unchanged.
+
+The unchanged public web passes VNINDEX daily/15-minute chart controls and volume
+profile with isolated API routing. Page-error, network-error, and blocked-write
+lists are empty. The existing Python SDK passes six FPT cases (daily/minute/
+15-minute, SMA/EMA), with exact candles/indicators and API provenance. VNINDEX's
+minute series remains a frozen preserved snapshot; successful rendering does
+not license its unresolved provider handoff or establish live freshness.
+
+Evidence: `data/historical-discovery-http-before-20261003.json`,
+`data/historical-discovery-http-verification-20261003.json`,
+`data/historical-discovery-index-http-20261003.json`,
+`data/archive-index-historical-discovery-restored-20261003.sqlite3`,
+`data/historical-discovery-wheel-smoke-20261003.json`,
+`data/web-vnindex-historical-discovery-20261003.json` and its screenshots, and
+`data/sdk-fpt-historical-discovery-20261003.json`.
+
+## Latest metadata publication recovery
+
+The actual `aipa-api publish-index` command retries archive metadata from the
+current SQLite index without provider downloads, Parquet uploads, or pruning.
+It uses the existing global archive-writer lease. Recovery's final receipt/gap
+publication previously called the manifest writer without that lease; it now
+uses the shared helper, as does compaction's final metadata publication.
+If another writer is active, a verified completed recovery keeps its local
+receipt and resolved gap, preserves the existing remote pointer, and reports
+the busy writer. The new command can publish that state after the lease clears.
+
+Three added regressions verify failed pointer writes with later metadata retry,
+refusal to publish under another writer's lease, and completed recovery state
+surviving that race before exact index reconstruction. At this checkpoint the full API suite passed
+**237 tests**. Lint/format checks cover **49 files**; the distribution builds
+offline. The unpacked wheel executes the actual publication/restoration commands
+and HTTP read/health guards with no network. Its seeded candles, series, checks,
+jobs, quality rows, archive index, and epoch are unchanged after publication.
+It embeds the **59-ticker** VN watchlist and uploads no Parquet object.
+
+The populated local SQLite/RustFS rehearsal preserves **all 5,684,274 candles**,
+**207 series**, **137 source checks**, **719 quality rows**, **1,238 import
+receipts**, **58 handoffs**, and **459 jobs**, including exact series/check/
+quality/archive metadata and epoch. Idempotent publication leaves the remote
+pointer byte-identical. A fresh reconstruction matches **419 objects / 340,357
+rows**, **58 handoffs**, **seven recovery receipts**, and **seven typed gaps**
+exactly. Existing populated backups remain preserved; no candle data changed.
+
+Evidence: `data/publish-index-rehearsal-20261003.json`,
+`data/publish-index-before-pointer-20261003.json`,
+`data/archive-index-publish-index-restored-20261003.sqlite3`, and
+`data/publish-index-wheel-smoke-20261003.json`.
+
+## Latest alternative endpoint evidence
+
+Read-only probes of DNSE's alternative Entrade mirror return **250 daily rows**
+each for SHS and NAB in 2022, repeating the conflicting **December 27, 2022**
+date. Each conflicting pair has different OHLC/volume values. The rows pass
+individual OHLC checks, but no evidence licenses choosing one duplicate.
+A bounded VND 2020 request to VNDirect's separate `stock_prices` endpoint ends
+in `ConnectTimeout`. It does not provide a substitute historical series.
+
+[DNSE's official Python SDK](https://github.com/dnse-tech/openapi-sdk/tree/main/python)
+documents API-key/secret credentials. Its
+[client implementation](https://github.com/dnse-tech/openapi-sdk/blob/main/python/dnse/api/client.py)
+defines `/price/ohlc` and `/market/working-dates`. Normal unauthenticated GET
+probes of both endpoints return **HTTP 401**, `OA-401`, and
+`X-API-Key header required`. The exact responses and checksums are preserved;
+no key was spoofed and no authenticated data was obtained.
+
+[VNDirect's adjusted-price disclosure](https://www.vndirect.com.vn/thong-bao-ve-thay-doi-cua-website-vndirect/)
+describes corporate-action-adjusted closes for technical charts. That broad
+description does not establish identical lifetime daily/minute or volume
+conventions for the currently probed endpoints. No main provider revision,
+candle, quality marker, or job changes on this evidence. The missing years
+remain unavailable; these checks do not prove a calendar or adjustment policy.
+
+Evidence: `data/daily-provider-endpoint-preflight-20261003.json`,
+`data/dnse-official-read-preflight-20261003.json`, and their corresponding
+directories of immutable raw response captures.
+
+## Latest NAB recent-window publication
+
+The selected VN universe now contains **59 tickers**. NAB's staged daily/minute
+data passed fresh ordinary VPS updates before and after publication: **40
+completed candles per interval**, on unchanged revisions. Its existing verified
+handoff compares **1,046 exact native candles across five completed sessions**.
+NAB's first listing date is **October 9, 2020**, corroborated by the
+[bank's original UPCoM announcement](https://www.namabank.com.vn/hon-389-trieu-co-phieu-cua-nam-a-bank-nab-chinh-thuc-giao-dich-tren-upcom).
+Daily/minute ingestion is enabled explicitly; native hourly ingestion is not.
+
+The local publication adds **741 daily candles**, **37,759 minute candles**, and
+**five active archive objects / 4,027 rows**, including minute indicator lookback
+and reconciled daily 2020/2021/2023 partitions. Every one of the **248 observed
+minute dates** matches the daily date set within the one-year window. The
+completed-session OHLC audit finds no disagreement above its explicit **1%
+review threshold**. This does not certify a complete exchange calendar or every
+provider's lifetime adjustment policy.
+
+The invalid **2022** original CSV and failed pinned-VPS recovery remain unresolved.
+The exact original bytes are preserved locally and in S3 at
+`archive-v2/evidence/legacy-daily/48f16ba9cc8819541f7d31d4db0200b46c76a2caa6e0bdaf141f8825a585d376.csv`.
+A seventh typed unavailable range blocks dated daily/weekly reads requiring that
+year. Recent SMA/EMA indicators work, and raw daily reads at the retention floor
+work. Early daily SMA/EMA requests that require the missing 2022 lookback return
+HTTP 503 instead of computing indicators over a skipped year. NAB was initially
+held back pending these explicit, recoverable historical-error guards.
+
+The running API passes **15 NAB HTTP cases**: **ten successful recent/cold/boundary
+reads**, **three 2022 rejection cases**, and **two early daily indicator-lookback
+rejections**. Six actual SDK cases cover daily/minute/15-minute SMA and EMA with
+exact candles/indicators and API provenance. An isolated browser verifies the
+unchanged public daily and 15-minute charts plus NAB's volume profile; page,
+network, and blocked-write error lists are empty. The rebuilt wheel embeds all
+59 selected VN entries and its actual packaged CLI initializes the watchlist.
+NAB's packaged bootstrap queues only daily/minute jobs with the configured floors.
+At this checkpoint the implementation suite remained **234 passed**; lint/format checks passed across
+49 files. This checkpoint changes the watchlist/data/docs, not API implementation.
+
+The earlier NAB checkpoint database contained **5,684,274 candles**, **207 series**,
+**137 source checks**, **719 quality rows**, **1,238 import receipts**, **58
+handoffs**, and **459 jobs**. VN retention comprises **43,623 daily** and
+**3,004,784 minute** rows. Fifty-six VN minute handoffs use **48 VPS / eight
+DNSE** providers; PLX, SSI, and VNINDEX remain frozen. The two global index
+handoffs bring the total to 58. Current S3 reconstruction restores **419 objects /
+340,357 rows**, **58 handoffs**, **seven recovery receipts**, and **seven typed
+gaps**, with exact metadata and a functioning restored gap guard. Of those
+objects, **410 are published / nine pending**. Coherent VN daily archives contain
+**63,001 rows / 271 objects across 58 tickers**.
+
+A new populated backup and restored copy preserve all counts, exact NAB candles,
+every quality/source-check row, and archive/adoption/recovery/gap metadata. Schema
+version remains **2** and `quick_check` passes. Both files measure **856,694,784
+bytes**, SHA-256
+`f805d6e16807cfb04f5ec8927eed5447286b5d2477d8925b9e3dc7b38f36cbd1`.
+The before-publication backup remains preserved independently. A full indexed
+comparison against it verifies **all 5,645,774 original candles** match exactly,
+including prices, volumes, providers, revisions, and update timestamps; **zero
+original candles changed**.
+
+Evidence: `data/nab-recent-publication-preflight-20261003.json`,
+`data/nab-recent-publication-20261003.json`,
+`data/nab-recent-http-verification-20261003.json`,
+`data/sdk-nab-recent-parity-20261003.json`,
+`data/web-nab-recent-publication-20261003.json` and its screenshots,
+`data/nab-wheel-watchlist-20261003.json`,
+`data/nab-recent-index-restore-20261003.json`,
+`data/nab-recent-backup-restore-20261003.json`, and
+`data/nab-original-candle-preservation-20261003.json`.
+
+## Latest alternate-provider missing-year preflight
+
+Read-only native probes reproduce every original date in the **six preceding
+missing years** on VNDirect: CTR 2019, HCM 2020, VIB 2019, VND 2020, and VTP
+2019/2022. The raw originals and every native JSON response are preserved.
+The complete retained daily date sets also match on VNDirect. That does not
+establish identical prices or volume conventions:
+
+| Ticker | Retained rows | Changed OHLC rows | Changed volumes | Maximum relative OHLC difference |
+| --- | ---: | ---: | ---: | ---: |
+| CTR | 747 | 617 | 691 | 0.0005611745513866232 |
+| HCM | 747 | 645 | 693 | 0.0008160410352063418 |
+| VIB | 747 | 686 | 730 | 0.002400768245838668 |
+| VND | 747 | 584 | 664 | 0.00009351912466099317 |
+| VTP | 740 | 641 | 584 | 0.0001515610791148833 |
+
+Changed OHLC rows use the explicit **1e-7 relative representation threshold**.
+DNSE reproduces the HCM/VND historical dates but fails on CTR/VIB/VTP 2019 invalid
+OHLC and conflicting VTP 2022 candles. Its retained VTP page omits one published
+date, October 13, 2023. Neither provider licenses silently relabeling historical
+candles under the current VPS revision. No main candle, provider revision, source
+check, quality record, job, or import receipt changed during these probes.
+
+Evidence: `data/history-gap-alternative-preflight-20261003.json` and the immutable
+original/native captures under `data/history-gap-alternative-preflight-20261003/`.
+
+## Latest unavailable-history read guards
+
+Six known failed legacy daily years previously returned **HTTP 200 with zero
+rows**: **CTR 2019, HCM 2020, VIB 2019, VND 2020, VTP 2019, and VTP 2022**.
+Their existing import-failure findings and absence of usable archived objects
+were checked before publishing typed `history_unavailable` ranges in the
+existing quality table. No candle, series, provider check, or job changed.
+The S3 pointer before metadata publication is retained separately.
+
+Reads requiring a known unavailable range now return **HTTP 503** with a clear
+reason. Directional limits check only their required native range; recent
+requests remain available when their indicator lookback is present. Broad
+history and SMA/EMA lookback cannot skip a missing year. The gap is scoped to
+source, ticker, and native interval. Operational status and additive
+`/health.storage.history_gaps` metadata expose the records.
+
+The running local API passes **18 historical rejection cases** across daily
+JSON, daily CSV, and weekly JSON, plus **ten exact recent SMA/EMA cases** for the
+five affected tickers. Independent FPT 2017 cold history and PNJ 15-minute EMA
+reads pass. The actual SDK reproduces VTP's recent SMA and EMA candles and
+indicators with no differences. This proves error behavior and continued recent
+reads; the six missing years remain unavailable.
+
+Failed older-only daily imports automatically persist bounded evidence, excluding
+already published current-basis archive ranges. Metadata publication uses the
+existing global archive-writer lease. S3 manifests carry an optional range list;
+restore validates the entire list before changing the target and merges it.
+An older manifest without the field cannot erase newer local observations.
+Only a complete verified dated recovery resolves its corresponding year;
+incomplete recovery and recovery of another year preserve the marker.
+
+A fresh S3 index restores **414 objects / 336,330 rows**, **57 handoffs**, **seven
+recovery receipts**, and all **six unavailable ranges**, with exact metadata.
+Reads against the reconstructed index still reject the missing years. A populated
+SQLite backup/restore retains **5,645,774 candles**, **205 series**, **135 source
+checks**, **716 quality rows**, **1,220 import receipts**, **57 handoffs**, and
+**459 jobs**. Every quality/source-check row and archive/adoption/recovery record
+matches. Schema version remains **2**; `quick_check` passes. Backup and restored
+files share SHA-256
+`d1a6d1dd2f93566548e31c8b77f08c02ad3078c76bc5e5e54c6a97ba349c08f7`
+and measure **851,214,336 bytes**.
+
+At this checkpoint the full API suite passed **234 tests**. Twenty added regressions cover
+range selection, indicator lookback, HTTP errors/health metadata, malformed
+manifest evidence, backup/index reconstruction, import failures, and scoped
+successful/failed recovery. Ruff lint/formatting checks pass across **49 files**.
+The distribution builds offline; an unpacked-wheel smoke verifies the actual
+packaged CLI, HTTP health/read behavior, and index-reconstructed read guard
+without network access.
+
+Evidence: `data/history-gaps-publication-20261003.json`,
+`data/history-gaps-before-manifest-pointer-20261003.json`,
+`data/history-gaps-http-before-20261003.json`,
+`data/history-gaps-http-verification-20261003.json`,
+`data/history-gaps-index-restore-20261003.json`,
+`data/history-gaps-backup-restore-20261003.json`,
+`data/sdk-vtp-history-gaps-parity-20261003.json`, and
+`data/history-gaps-wheel-smoke-20261003.json`.
+
+## Latest retained minute/daily basis audit
+
+The full local comparison covers **14,384 completed date partitions across all
+58 VN series**. It exposes **12 interval-basis findings / 1,537 dates** above an
+explicit **1% OHLC review threshold**: BSR, CTG, GAS, GEE, MWG, SHB, TCB, TPB,
+VHM, VND, VN30, and VNINDEX. Nine stock findings include older close differences;
+TPB differs on September 28–October 1. The two indices have high/low differences
+while their compared closes remain within the threshold. OCB, PNJ, and DGC have
+no differences above this threshold. Most session volumes differ from their
+daily provider totals; volume disagreements are not treated as price factors.
+
+The existing `aipa-api audit` now records `audit_interval_basis` observations
+with dates, minute counts, both OHLC arrays, daily provider identity, and maximum
+relative difference. Only completed local sessions of active tickers participate.
+Materialized session aggregates and indexed timestamp lookups prevent SQLite
+from reordering this into multiplicative whole-series scans. The measured main
+rehearsal takes **10.922 seconds**; its **134,135,808-byte peak RSS includes
+separate selected-candle checksum verification**, not just the SQL audit.
+No candle, series, source-check, or job counts change. VHM/TPB before/after
+checksums and states remain exact. Findings require adjustment/session review;
+the audit does not infer scaling, identify a dividend, or queue a repair.
+
+Dated native probes provide stronger evidence than cross-interval arithmetic.
+For VHM on July 6, VNDirect and DNSE both return **225 existing timestamps** with
+changed prices; their aggregated prices match their fresh daily candles.
+VPS returns no minutes for that date. VNDirect preserves the compared volumes;
+DNSE changes two minute volumes while retaining the same daily total. On the
+oldest retained October 3, 2025 session, no selected provider supplies the
+required minutes. This blocks a complete source-backed yearly replacement.
+
+For TPB on September 28, VPS reproduces all **224 published minutes** but their
+prices disagree with its own daily series. VNDirect returns adjusted minute
+prices with small daily rounding differences and one volume change. DNSE
+changes all 224 minute prices, preserves the compared minute volumes, and its
+aggregate exactly matches its own daily OHLCV. On October 2, DNSE and VPS both
+reproduce the complete current minute/daily session. These observations do not
+establish each provider's lifetime adjustment convention.
+
+Isolated complete-window DNSE recovery attempts stage **14,005 VHM minutes in
+nine pages** and **13,491 TPB minutes in eight pages**, reaching July 6, 2026.
+Both stop on invalid/missing arrays before the requested October 3, 2025 floor.
+Neither replacement publishes; the original **55,897 VHM** and **54,557 TPB**
+rows remain unchanged. Staging and durable errors remain available for review.
+The main database's ready states and jobs are unchanged.
+
+At this preceding checkpoint, the full suite passed **214 tests**. Three new regressions cover unfinished and
+inactive observations, unchanged published records/state/jobs, independent
+revision findings surviving audit resolution, rounding tolerance, and high/low
+disagreements with matching closes. Ruff lint/format checks pass across 48 files.
+The distribution builds offline; an unpacked-wheel check invokes the actual
+packaged CLI and obtains the expected review-only finding without network access.
+
+A populated backup/restore preserves every quality and source-check row,
+including all **12 basis findings**: **5,645,774 candles**, **205 series**, **135
+source checks**, **710 quality rows**, **1,220 import receipts**, **57 handoffs**,
+and **459 jobs**. It also preserves exact archive/adoption/recovery metadata and
+the selected VHM/TPB candles. `quick_check` passes. The backup is **851,214,336
+bytes**, SHA-256
+`4fdf7e9709d890c5b78b84b8911527c74139e5d842c2038893a7431667e78800`.
+
+Evidence: `data/vn-minute-daily-basis-audit-20261003.json`,
+`data/vn-minute-daily-operational-audit-20261003.json`,
+`data/vn-minute-basis-provider-preflight-20261003.json`, its dated provider-minute
+captures, `data/minute-basis-retained-recovery-preflight-20261003.json`,
+`data/minute-basis-audit-wheel-smoke-20261003.json`, and
+`data/minute-basis-audit-backup-restore-20261003.json`.
+
+## Preceding OCB/PNJ/DGC selected-universe expansion
+
+OCB, PNJ, and DGC are now published locally; the watchlist contains **58 VN
+tickers**. Each addition has **747 recent daily candles** and **248 observed
+minute date partitions**, exactly matching the daily dates in the one-year
+minute window. OCB retains **43,332 minutes**, PNJ **49,705**, and DGC **36,148**.
+These date checks do not establish a full exchange-calendar or every-candle
+corporate-action audit. The earlier daily comparison still records ten OCB and
+six PNJ volume differences against the old API; DGC volumes match that capture.
+
+PNJ passes the default handoff with **1,114 exact completed minutes across five
+sessions**. OCB's **746** and DGC's **85** recent native observations pass the
+existing explicit complete-session path: all original minute timestamps and
+OHLCV match, and aggregated sessions exactly reproduce fresh and retained VPS
+daily OHLCV, including total volume. Each series subsequently passes ordinary
+**40-candle daily and minute updates**, with unchanged revisions. The default
+1,000-candle criterion and provider validation were not relaxed.
+
+Before handoff, isolated captures archived **4,537 OCB**, **3,719 PNJ**, and
+**4,818 DGC** minute warm-up rows from September/early October 2025. Cold daily
+reconciliation reproduces original legacy date sets: OCB's 2021–2023 partitions
+contain **666 rows**, PNJ's 2019–2023 partitions **1,186**, and DGC's **1,180**.
+OCB's configured lower bound comes from its own [listing account](https://ocb.com.vn/en/news-events/news/en-ket-qua-thanh-tuu-ocb-nam-2021).
+NAB's isolated lower bound follows its [first UPCoM session](https://www.namabank.com.vn/hon-389-trieu-co-phieu-cua-nam-a-bank-nab-chinh-thuc-giao-dich-tren-upcom);
+its later HOSE transfer is not treated as the start of its history.
+
+NAB also passes recent daily/minute checks and a **1,046-minute/five-session**
+VPS handoff. Its original 2022 CSV contains invalid OHLC, and recovery through
+the pinned VPS provider also rejects invalid OHLC. At that checkpoint NAB remained isolated;
+its original bytes are preserved at
+`data/legacy-recovery-downloads/NAB-1D-2022-48f16ba9cc8819541f7d31d4db0200b46c76a2caa6e0bdaf141f8825a585d376.csv`.
+No guessed correction or provider mixing was applied.
+
+The three passing datasets and their metadata were inserted atomically after a
+populated before-backup and immutable object upload/readback. The selected
+intervals are explicitly daily/minute; native hourly history is not claimed.
+There are **33 passing HTTP checks** across recent daily/minute/15-minute reads,
+cold daily reads, and daily/minute retention boundaries. **18 SDK cases** compare
+20 rows each with both SMA and EMA; timestamps, OHLCV, and MA10/20/50/100/200 all
+have zero differences and report API provenance. The watchlist transaction
+tests still pass (**two tests**). The updated distribution builds offline and
+its packaged watchlist includes exactly the three new daily/minute entries,
+with NAB excluded. The unchanged public PNJ daily/15-minute charts and volume
+profile pass with local API routing and no page/network/write errors. Selecting
+a replacement chart does not automatically select its separate details panel;
+the browser rehearsal now clicks the normal chart interaction surface before
+requiring the selected symbol's profile response. It preserves the original
+assertion. Earlier failed attempts are retained for review.
+
+The authoritative local database now contains **5,645,774 candles**, including
+**42,882 VN daily rows** and **2,967,025 VN minute rows**. It preserves **135
+source checks**, **1,220 migration receipts**, and **57 handoffs** (55 VN and two
+global). Fifty-five of the 58 VN minute series have ongoing verified providers:
+47 VPS and eight DNSE. PLX, SSI, and VNINDEX remain frozen.
+
+Fresh S3 index reconstruction preserves exact metadata for **414 objects /
+336,330 archived rows**, **57 handoffs**, and **seven recoveries**. The index
+contains **405 published / nine pending objects**. Coherent VN daily archives
+contain **62,506 rows in 268 objects across 57 tickers**. A populated backup and
+separate SQLite restore pass `quick_check` and exact selected-candle/metadata
+comparisons: **849,293,312 bytes**, SHA-256
+`b7442863fa6a9fbdd48516e60dd7de318bf8658b7a30484c13ac25d0ac4af3ef`.
+Existing historical gaps and production cutover requirements remain open.
+
+Evidence: `data/expanded-vn-minute-preflight-20261003.json`,
+`data/expanded-vn-sparse-preflight-20261003.json`,
+`data/expanded-vn-publication-preflight-20261003.json`,
+`data/expanded-vn-daily-history-preflight-20261003.json`,
+`data/expanded-vn-nab-2022-recovery-20261003.json`,
+`data/expanded-vn-publication-20261003.json`,
+`data/expanded-vn-http-verification-20261003.json`,
+`data/expanded-vn-index-restore-20261003.json`,
+`data/expanded-vn-backup-restore-20261003.json`, and the three
+`data/sdk-{ocb,pnj,dgc}-expanded-parity-20261003.json` reports, plus
+`data/web-pnj-expanded-minutes-selected-surface-20261003.json` and
+`data/expanded-vn-wheel-watchlist-20261003.json`.
+Earlier sections below retain the counts at their respective checkpoints.
+
+## Completed checks
+
+- Python API suite: **240 passed**, covering HTTP contracts, archive boundaries,
+  deduplication, checksum failures, atomic sync writes, retention arithmetic,
+  backup/restore, lease recovery, provider switches, interrupted repairs,
+  independent archive repair checkpoints, bootstrap visibility, and concurrent
+  SQLite updates, and bounded explicit refresh passes. A checked-in compressed FPT fixture reproduces SMA/EMA
+  parity across an archive boundary offline. Starlette emits a test-client deprecation warning; tests pass.
+- Added recovery checks restrict closure exclusions to the reviewed FPT 2018
+  dates, require flat zero-volume original/provider placeholders, preserve the
+  immutable original snapshot, and reject missing ordinary dates or rehashed
+  evidence that expands the scope. Publication tests reject a different candidate
+  targeting a superseded object, preserve its manifest pointer, allow the same
+  candidate retry, and retire only obsolete unleased archive work.
+- Daily archive repair includes the complete final date for a provider using
+  a 02:00 UTC session timestamp. Four additional regressions preserve overlapping
+  rollover fragments and recent data, restart only explicitly scoped failed
+  staging, and honor live leases. Ordinary retry caching remains covered.
+- Eight source-check regressions cover atomic publication, stale attempts,
+  interrupted updates/lease release, completed rechecks after a provisional
+  candle, later import invalidation, provider-switch staging, frozen VN minute
+  handoff guards, and schema-upgrade/backup preservation. A clock advance alone
+  does not finalize a provider observation; failed updates preserve the dated
+  earlier success. Schema version 2 is additive and future versions are rejected.
+- Real bounded provider updates publish 40 FPT daily rows, 40 FPT minute rows,
+  and 123 BTC minute rows without changing their revisions. The BTC update
+  records 122 completed and one provisional returned candle. GEG's legacy
+  minute snapshot remains unchanged and does not call an upstream or queue an
+  unverified provider switch. Evidence is in
+  `data/source-check-live-updates-20261003.json`. A populated backup/restore
+  preserves all four source-check records and the candle/archive/adoption data;
+  its integrity/count evidence is in
+  `data/source-check-backup-restore-20261003.json`.
+- The populated `/health` returns 199 per-series records, exposing stale AAPL
+  hourly history separately from successful FPT updates and the frozen GEG
+  snapshot. Three loopback reads take 4,239.96, 2,200.39, and 2,198.09 ms;
+  the response is 135,970 bytes. The source-check fields supplement existing
+  aggregate health contracts and do not assert whole-window coverage or a
+  freshness SLA. Evidence is in `data/source-check-health-smoke-20261003.json`.
+- Further read-only VPS paging returns 855 exact legacy minute matches for
+  VPL, 705 for HHS, and 225 for GEG, then no older page for each. Every timestamp
+  in their five-session legacy windows is present, with no extras; each day's
+  aggregated minute OHLC matches its retained daily candle. These observations
+  do not satisfy the existing 1,000-candle handoff rule, which remains intact.
+  Evidence is in `data/remaining-minute-page-probes-20261003.json` and
+  `data/sparse-minute-complete-session-probes-20261003.json`.
+- The revision detector now requires three completed matching candles changed
+  by more than `1e-6` relative. Worker regressions confirm that a 0.1% change in
+  either direction stages recovery while published values remain intact;
+  `1e-7` representation noise does not queue a rebuild. This is an explicit
+  detection policy, not proof that a revision is a dividend.
+- Publication-race checks confirm that a rejected archive replacement cannot
+  advance the S3 manifest pointer. A verified local index survives manifest
+  failure, and pending objects cannot license pruning. Retrying preserves both
+  exported and concurrently corrected rows.
+- Compaction regressions preserve corrected candle values and provenance,
+  reject concurrent pending-repair changes before advertising a candidate, and
+  preserve a verified readable local index if manifest publication fails.
+- Existing SDK offline suite: **251 passed**, with four live S3 fundamental
+  tests excluded. New checks cover coherent API ranges, server-warmed MAs,
+  whole-series archive fallback, explicit date/limit behavior, large minute
+  pagination, interrupted pages, empty aggregation, and visible HTTP 503 errors.
+  Older mock URLs were corrected to include the existing `ema=false` parameter;
+  the prompt-only test explicitly disables its default reference ticker.
+  Sparse API indicators remain missing values: undefined volume change after
+  zero volume and an EMA before its seed no longer trigger archive fallback.
+  SJC requests retain the existing Yahoo API mode; an actual preserved SJC
+  daily snapshot matches SDK candles and both SMA/EMA output.
+- Sparse replacement regression checks cover VN hourly/minute, crypto minute,
+  and global minute data. Even when a replacement reaches the saved floor and
+  published latest candle, an omitted completed timestamp prevents publication.
+  The transaction rolls back, original values/versions remain readable, and the
+  durable job stays pending with a dated coverage finding. The check uses indexed
+  timestamp lookups and excludes known invalid VN weekend daily observations.
+- Provider normalization rejects conflicting duplicate candles inside the
+  requested range while accepting identical duplicates and ignoring excess old
+  conflicts. Crypto daily/hourly/minute pages must be contiguous; regression
+  checks reject a missing middle candle without fabricating its value.
+  Small live checks after the change returned 40 clean candles each for four
+  Binance minute series, FPT daily on VPS, and MBB minute on DNSE.
+- VN daily parsing now admits the observed UTC-midnight and DNSE session-start
+  conventions and rejects unverified offsets, including pure Vietnam-midnight
+  replies that would move a market date backward if floored. Raw DNSE MBB/SHS
+  probes show a 02:00 UTC session marker on their recent daily bars; normalizing
+  it preserves the date. Live VPS FPT, VNDirect VNINDEX, and DNSE SHS/MBB probes
+  pass. Unrelated unrequested old timestamp conventions remain ignorable. This
+  output follows the daily UTC-date convention described in
+  [TradingView's time documentation](https://www.tradingview.com/charting-library-docs/latest/connecting_data/time-and-sessions/),
+  rather than assuming every upstream already conforms. Raw evidence is in
+  `data/dnse-daily-raw-timestamp-diagnostics-20261003.json`.
+- Ruff lint/format checks pass. Source distribution and wheel build offline
+  using the locked dependencies. An isolated unpacked-wheel smoke check passes
+  initialization, the packaged 55/4/7 watchlist, compaction dry run, and recovery
+  command parsing without modifying the main database or watchlist.
+- The existing, unchanged `../aipriceaction/scripts/test-api.mjs` suite passes
+  **219 of 220 assertions** against a running FastAPI instance using public
+  legacy snapshots. Its remaining assertion requires
+  `x-data-source: redis-snap`; the replacement reports `sqlite+s3`. Refresh
+  authorization success paths are covered by Python tests; the JavaScript
+  success cases were skipped because its refresh secret was unset.
+- Eleven public legacy native-candle requests produced **9,959 candle
+  comparisons** with identical timestamps and OHLCV. These include daily,
+  hourly, minute, indexes, crypto, gold, and historical date ranges. Historical
+  FPT daily and VIC minute fixtures were exported to Parquet and pruned locally
+  before checking the API reader.
+- FPT daily/weekly/fortnightly/monthly SMA and EMA comparisons pass the recorded
+  relative tolerance of `1e-3`. Most numeric differences are floating-point
+  noise; weekly EMA's maximum observed absolute difference was
+  `0.009350771360914223` in an MA value. Full earlier history is essential:
+  the initial short-history comparison correctly exposed missing warm-up.
+- A completed-date FPT minute volume profile matches the legacy envelope and
+  numeric output at relative tolerance `1e-6`, absolute tolerance `1e-8`.
+  Both RRG algorithms match sampled FPT/VCB results and two-point trails at
+  those tolerances. Analysis universes differ until migration is complete, so
+  full-market rankings/sector totals are not claimed identical.
+- A separate concurrency check completed **48 concurrent writes/reads** with
+  six threads and retained exactly one unique candle.
+
+## RustFS integration
+
+The Compose service started with its default runtime user and fresh named
+volumes. S3 health and `/rustfs/console/health` return 200; the console UI at
+`/rustfs/console/` also returns 200. The console port's bare `/` returns 403,
+so the README links the correct UI path.
+
+The tested image is pinned to:
+
+```text
+rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff
+```
+
+An isolated synthetic fixture verified upload/download checksums and candle
+values, Parquet publication, pruning, manifest discovery, and indicator
+lookback across **240 archived + 120 local rows**. After restarting RustFS and
+discarding the cached object, an S3 byte-range read returned **206** and the
+Parquet `PAR1` signature. A fresh SQLite archive index restored all 240
+archived rows. Boundary queries retained 120 output rows with identical values.
+
+For this small fixture, a cold boundary query took **18.33 ms** and a cached
+query took **9.23 ms**. These are storage-proof measurements, not throughput,
+memory, or transfer-cost evidence for the complete maintained universe.
+A final recheck after strengthening manifest recovery measured 22.43 ms cold
+and 12.99 ms cached and passed the same persistence/coverage checks.
+The runtime uses boto3 transfers followed by local DuckDB reads; it requires
+no runtime `httpfs` extension installation.
+
+## Live VN provider probes
+
+Exactly VPS, VNDirect, and DNSE were probed with small public FPT requests and
+a VNINDEX daily request. Direct access was explicitly enabled for the probes.
+DNSE requires `1D`/`1H` resolutions; VPS/VNDirect use `D`/`60`. Native minute
+resolution is `1` for all three. Daily timestamps and stock/index price scales
+were normalized successfully.
+
+| FPT sample | VPS | VNDirect | DNSE |
+| --- | --- | --- | --- |
+| Recent daily | Returned data | Returned data | Returned data |
+| Near three-year daily floor | Returned data | Returned data | Returned data |
+| Recent hourly | Returned data | Returned data | Returned data |
+| Near three-year hourly floor | No data | Returned data | Returned data |
+| Recent minute | Returned data | Returned data | Returned data |
+| Near one-year minute floor | No data | Missing OHLCV arrays | Missing OHLCV arrays |
+
+VNINDEX recent daily data also returned from all three. These samples establish
+availability at the tested points; they do not establish uninterrupted history
+for every ticker or prove each provider's adjustment policy. The raw local
+probe report is in ignored `data/provider-probes.json`; rerun
+`scripts/probe_providers.py` to refresh it.
+
+The main development SQLite database completed bounded daily bootstrap for all
+**55 selected VN daily series**, retaining **40,699 rows**. Most series cover
+**2023-10-02 through 2026-10-02**, reflecting the saved jobs’ original UTC floor.
+VPL has 347 rows from **2025-05-13 through 2026-10-02**, using a listing date
+verified in the [regulator’s announcement](https://ssc.gov.vn/webcenter/portal/ubck/pages_r/l/chitit?dDocName=APPSSCGOVVN1620154820).
+Saved job status proves configured floor traversal; different row counts still
+require a holiday/suspension/no-trade audit. The main SQLite file measured
+**8,597,504 bytes** at that earlier stage. Subsequent populated runs below expand
+other markets and intraday coverage. RustFS remains running locally.
+
+Live bootstrap exposed invalid old candles outside requested pages: VPS
+returned 1,027 rows for a 500-row VNINDEX request, including a bad 2021 bar;
+VTP likewise included bad 2022 bars. Validation now checks the final requested
+page rather than unrelated excess history. Invalid requested candles still fail.
+Regression tests exercise both cases; no OHLC values were clamped or invented.
+
+## Real migration and archive reconciliation
+
+The public legacy S3 archive contains **headerless six-column CSV**. Daily/hourly
+files are yearly; minute files are per UTC day. Read-only probes verified these
+paths; a yearly minute URL returned 403, while dated minute objects returned 200.
+The importer now accepts actual legacy files plus named local/API exports and
+validates date bounds, OHLCV, volume integers, and conflicting duplicates.
+Checksummed downloads and SQLite period receipts make interrupted runs resumable.
+Resume fills missing rows without overwriting newer published corrections.
+Empty API replies and unavailable S3 files are retried and never prove coverage.
+
+Five explicit FPT daily files for 2019–2023 produced **1,185 older archived
+candles**; 65 recent source rows were skipped to preserve the live SQLite window.
+Two 2025 minute files produced **453 archived candles** in one monthly partition.
+Before reconciliation, historical HTTP responses matched cached source CSV OHLCV
+exactly: **1,001 daily rows** and **453 minute rows**. Cold/warm query times were
+**127.98/41.62 ms** daily and **18.92/13.58 ms** minute. These are small local
+measurements, not full-universe transfer-cost or throughput evidence.
+
+Imported daily history initially had an independent legacy revision. A query
+crossing that revision boundary returned 503 while independent historical and
+recent requests remained readable. Archive-only reconciliation then re-fetched
+all five old daily partitions from the current **VPS** provider, verifying exact
+timestamp sets and publishing immutable replacement objects. Recent SQLite
+candles were not rebuilt. All old/current daily partitions now share the same
+provider/revision, pending counts and related quality findings are zero, and
+the original immutable objects remain retained. An API query crossing
+2023-09-01–2023-11-01 returned **42 candles with MAs**, and a weekly query returned
+20 candles. Cold boundary latency was **129.38 ms** in that check.
+
+## Wider daily archive migration
+
+The bounded daily-history runner imported and reconciled **25 annual partitions**
+for VCB, MBB, VIC, VHM, and HPG, preserving **5,930 older daily rows**. Each
+replacement uses the currently pinned VPS provider and exactly reproduces the
+legacy partition's timestamp set. Recent SQLite candles are preserved. Each of
+the five HTTP historical checks returns **502 candles** for 2019–2020; each
+retention-boundary check returns **15 candles** with warmed EMA200. These checks
+took **21.56–33.77 ms** with the local object cache already populated.
+
+Archive publication now rechecks completed retained OHLC prices immediately
+before publishing a historical replacement. A changed retained basis schedules
+recent recovery first; insufficient overlap blocks publication. Regression
+checks preserve old data in both cases, scope repairs to the requested series,
+and resume a completed staged download after a temporary head-check outage.
+Small partitions request their remaining indexed candle count, avoiding an
+unrelated preceding range. A regression check verifies that an invalid older
+bar outside a one-candle partition does not prevent its valid replacement.
+
+The first broader run completed all 55 configured tickers. Eight encountered
+invalid legacy files, and five retained pending archive coverage disagreements.
+That checkpoint contains 216 published VN daily objects with 50,743 rows plus
+10 pending objects with 2,427 rows; publication alone is not proof that every
+independent legacy basis can be joined to recent data. Its report is
+`data/migration-vn-daily-history-universe.json`. The resumable follow-up also
+completed all 55 tickers and reports to `data/migration-vn-daily-history-resume.json`.
+That follow-up had **242 published daily objects / 56,721 rows across 54 tickers** whose
+provider and revision match their ready recent series. VPL's configured listing
+date excludes this older range. **11 pending objects / 2,668 rows across eight
+tickers** and **11 invalid source years** were recorded. All 55 recent daily
+series remain ready. These counts establish available coherent objects, not
+complete older-year coverage. Invalid CSV years
+and timestamp-set disagreements remain explicit. The runner now isolates each year,
+so one corrupt input does not block valid later years. A regression check proves
+the invalid first year's rejection and the valid next year's archived import.
+CSV validation errors include source, symbol, row, and timestamp.
+
+Read-only diagnostics preserved checksummed raw 2019 CSVs for VNINDEX, VN30,
+and VIB in `data/legacy-quarantine/`. The indexes contain opens outside the
+reported high/low range. VNDirect returns valid old candles with exactly the
+same 250-date sets for both indexes. Bounded recovery has now published VNINDEX
+2019/2021 and VN30 2019/2020 from their pinned VNDirect provider after matching 40 completed
+retained OHLC candles per index. The original CSVs and checksummed recovery
+records are preserved in RustFS. The resulting coherent daily archive has
+**247 objects / 57,725 rows across 54 tickers**, following rollover/compaction.
+The 11 pending objects remain; seven recorded invalid years remain unresolved.
+Only the four verified
+per-year findings were resolved; generic and other-year findings remain visible.
+Actual HTTP reads for June 24–July 1, 2019 return six valid candles per index,
+with unchanged recent SQLite data. Evidence is recorded in
+`data/recovered-index-http-check.json` and `data/recovery-index-restore-check.json`.
+A fresh SQLite index restored and verified **389 objects / 318,910 archived
+rows**, all **43 provider handoffs**, and all four recovery records, with matching
+archive IDs and an `ok` SQLite integrity check. Corrupt raw/evidence regression
+checks fail before partially restoring an index.
+The sampled old VPS page for VIB also fails validation. Narrowed requests for
+exactly 250 candles still fail on VPS/DNSE but return valid VIB history on
+VNDirect; changing its pinned daily basis remains a separate verified operation.
+No values were clamped,
+dates guessed, or questionable rows published. Public legacy ticker metadata
+was read successfully and contains 601 entries; it has no coverage date bounds.
+
+### Further rejected-year checks and IDC recovery
+
+A subsequent bounded preflight checks the six other rejected daily CSVs against
+each ticker's existing pinned provider. IDC 2019 returns valid VNDirect candles
+with exactly the original **244 dates**, and its latest **40 completed retained
+OHLC candles** match. The recovery publishes that year on the existing revision
+and replays its original CSV, proof, and Parquet evidence successfully. Hashes of
+all **747 recent IDC rows**, including provenance and update timestamps, are
+identical before and after publication; the series remains ready on VNDirect.
+VND 2020, HCM 2020, CTR 2019, and VTP 2019/2022 still fail upstream OHLC range
+validation on their pinned VPS provider. All six original input files are
+preserved with checksums, without modifying their bytes or publishing invalid
+candles. Six recorded invalid source years remain unresolved, including VIB
+2019; the 11 pending historical objects remain.
+
+VIB's separate read-only VNDirect preflight reproduces every existing archive
+date, all 250 rejected 2019 dates, and all 747 retained dates in an isolated
+repair rehearsal. Timestamp coverage alone does not justify changing the recent
+basis. Comparing the public old API's same 747 recent dates, VPS has zero
+median relative close difference and a maximum of `0.00003707380570860216`;
+VNDirect has median `0.00006715465717547512` and maximum
+`0.002400768245838668`. VPS volumes match all 747 observations; VNDirect volumes
+differ on 730. The main VIB series and archives remain unchanged. These are
+observed provider differences, without inferred corporate-action explanations
+or a claim that one source is universally more accurate. Evidence is in
+`data/vib-vndirect-whole-series-preflight-20261003.json` and
+`data/vib-retained-legacy-provider-comparison-20261003.json`.
+
+Actual IDC HTTP reads return all **244 recovered candles**, exactly matching
+the verified Parquet object. Boundary requests for September 25–October 10,
+2023 return **12 candles** with SMA200 and EMA200 available. A new S3 index
+restore verifies **395 objects / 320,224 archived rows**, **52 provider handoffs**,
+and **six recovery receipts**, with exact archive and receipt metadata and an
+`ok` SQLite quick check. There are now **384 published / 11 pending objects**;
+**253 coherent VN daily objects contain 59,039 rows** across 54 tickers.
+
+A new populated backup and its restored copy have identical SHA-256
+`18718b946d3fb649ae232d0015d5d1f4142077b35eca38cff3e2ad9f292bbe88`
+and **828,305,408 bytes**. Both preserve **5,513,154 candles**, **12 source checks**,
+**1,161 import receipts**, and the same archive/adoption/recovery metadata.
+Restored IDC candles match exactly. Reports are
+`data/remaining-invalid-daily-originals-20261003.json`,
+`data/remaining-invalid-daily-preflight-20261003.json`,
+`data/idc-2019-recovery-results-20261003.json`,
+`data/idc-2019-http-check-20261003.json`,
+`data/idc-2019-index-restore-20261003.json`, and
+`data/idc-2019-backup-restore-20261003.json`. No application code changed during
+these additional data checks; the previously passing 181-test suite remains
+the code validation for that checkpoint. The later explicit-refresh change and
+its expanded suite are recorded below.
+
+## Fresh VN rechecks and bounded refresh command
+
+A fresh bounded update passes for all **55 selected VN daily series** and all
+**52 adopted VN minute series**. Each rechecks **40 completed candles**, for
+**2,200 daily** and **2,080 minute** observations, with no provisional rows,
+new timestamps, provider switches, or revision changes. Daily providers are
+49 VPS, five VNDirect, and one DNSE; minute providers remain 44 VPS/eight DNSE.
+Every daily OHLCV and every minute volume remains identical. On 35 TCB and two
+GVR minute candles, multiplying provider prices into VND introduces only
+floating-point representation differences, with maximum absolute difference
+`3.637978807091713e-12`; all are within the existing absolute `1e-8` handoff
+tolerance. This is not an inferred dividend correction.
+
+Actual HTTP checks cover all **107 series**, returning exactly the current
+40 retained native candles and reporting `verification_current=true`,
+`latest_verification=completed_recheck`, the matching pinned provider/revision,
+and the successful dated check. PLX, SSI, and VNINDEX minute health remains
+unverified on `legacy-api`. These are fresh overlap checks, not proof of every
+candle or calendar date in their retained histories. Reports are
+`data/all-adopted-vn-daily-refresh-20261003.json`,
+`data/all-adopted-vn-minute-refresh-20261003.json`, and
+`data/all-vn-refresh-http-check-20261003.json`.
+
+The new `aipa-api refresh` command requires an explicit source/native interval,
+uses optional configured-symbol filters, and refreshes ready series once through
+the existing live update path. It bypasses scheduling cooldown while honoring
+live leases; it does not consume historical jobs or initialize missing series.
+Frozen minute handoffs and revision-repair gates remain active. Eight regressions
+cover cooldown/filter behavior with untouched historical staging, a held lease,
+independent failures, the frozen handoff guard, uninitialized/repairing series,
+connection cleanup, CLI arguments, and rejection of partially matching symbol
+filters before fetching. The full suite now passes **189 tests**. A live command
+in an isolated database writes 40 FPT minute rows and reports a PLX
+`handoff_required` outcome without fetching or changing its snapshot; evidence
+is `data/refresh-cli-live-smoke-20261003.json`.
+Ruff lint and formatting pass across 52 Python files; the offline distribution
+build succeeds. An isolated unpacked-wheel check loads the packaged refresh
+method/parser, initializes its own filesystem-backed database, and verifies
+that refreshing an uninitialized FPT series returns `not_ready` without
+bootstrapping it. Report: `data/refresh-wheel-smoke-20261003.json`.
+
+The populated backup and restored copy have identical SHA-256
+`e84daac8c61800d3378847307bcec2c45730cb76bbda22a961f8614ac99d8a1e`
+and **828,317,696 bytes**, preserving **5,513,154 candles**, **108 source checks**,
+**1,161 import receipts**, **52 handoffs**, and **395 active archive objects**.
+All source-check records and archive metadata match exactly; SQLite quick check
+is `ok`. Report: `data/all-vn-refresh-backup-restore-20261003.json`.
+
+## SHS historical recovery and daily repair boundary
+
+The six-series pending-date preflight reproduces SHS 2021's **250 original
+dates** and SHS 2023's **185 archived dates** on the existing DNSE revision.
+The explicit corrupt-CSV recovery publishes 2021 and preserves the original
+bytes and checksummed proof. Attempting that path for 2023 correctly rejects
+an existing rollover overlap. Ordinary archive repair is the correct path.
+Its initial request previously ended one second after normalized midnight,
+excluding DNSE's final raw candle at 02:00 UTC. It now includes the full final
+date; the exact timestamp-set, fresh retained-overlap, and publication guards
+remain unchanged. `archive-repair --restart` resets only unleased failed staging
+for an explicitly selected source/symbol/native interval, preserving originals,
+published values, and normal retry caching. Four added regression cases pass;
+the full suite is **193 passed**, and Ruff lint/format checks pass.
+
+The actual scoped restart publishes the **185-row** 2023 partition, preserving
+the superseded legacy object and the existing one-row native rollover fragment.
+SHS's **747 recent rows**, including provenance and update timestamps, and its
+provider/revision remain identical. Actual HTTP reads return all **250** verified
+2021 candles and **184** verified candles from January 4–October 2, 2023.
+January 2–5, 2024 returns **four candles with SMA200**. SHS 2022 still fails on
+conflicting native candles; requests at the start of 2023 that need a previous
+2022 candle still return **503**. Full 2023 availability and EMA200 across that
+unresolved boundary are not claimed.
+
+The current active archive index contains **395 objects / 320,224 rows**,
+with **386 published / nine pending**. **255 coherent VN daily objects contain
+59,474 rows across 54 tickers**. A fresh S3 index restore reproduces every active
+object, **52 handoffs**, and **seven recovery receipts**, with exact metadata
+and an `ok` SQLite quick check. The populated backup and restored copy have
+identical SHA-256
+`3cfd4c404f56048260eb93a872d3004d9969745f6705549f1b88dfad99091634`
+and **828,317,696 bytes**. They preserve **5,513,154 candles**, **108 source
+checks**, **1,162 import receipts**, all archive/adoption/recovery metadata, and
+the exact recent SHS rows. Reports are
+`data/pending-daily-date-diagnostics-20261003.json`,
+`data/shs-2021-2023-recovery-results-20261003.json` (2021 recovery only),
+`data/shs-history-http-check-20261003.json`,
+`data/shs-history-current-counts-20261003.json`,
+`data/shs-history-index-restore-20261003.json`, and
+`data/shs-history-backup-restore-20261003.json`.
+
+A read-only decoded-payload capture confirms DNSE's December 27, 2022 conflict
+in both the yearly and bounded 20-candle request. The midnight record has close
+`6.76` and volume `7,599,200`; the 02:00 UTC record has close `7.44` and volume
+`16,687,400`, in the provider's original price units. VPS and VNDirect each return
+a single candle with volume `16,691,215`, and differ from DNSE in other OHLC
+values. Independent responses therefore do not justify selecting either DNSE
+record or mixing providers. Validation continues to reject the year; the main
+series and pending object remain identical. Decoded payloads, their SHA-256
+checksums, and comparisons are recorded in
+`data/shs-2022-conflicting-native-preflight-20261003.json`.
+
+The source distribution and wheel rebuild offline with the repair fix. An
+isolated unpacked-wheel smoke check loads packaged code, initializes a separate
+filesystem-backed database, parses the scoped restart, rejects missing restart
+scope, and preserves an uninitialized series. Report:
+`data/shs-repair-wheel-smoke-20261003.json`.
+
+A further whole-series replacement preflight targets all **1,933 existing SHS
+daily timestamps**, including **747 retained rows**. Both VPS and VNDirect
+reject their first recent 500-candle page with an invalid OHLC range, so neither
+licenses replacement. The current DNSE basis differs from the public legacy
+API's same recent dates: median relative close difference is
+`0.000015163232194526088`, maximum is `0.0004750317495709755`, and volumes
+differ on **398** rows. The main series and all archives remain unchanged;
+matching dates do not establish perfect historical numerical fidelity.
+Report: `data/shs-whole-daily-provider-preflight-20261003.json`.
+
+## Additional VN daily candidates, isolated only
+
+OCB, NAB, PNJ, and DGC each complete an isolated three-year VPS daily bootstrap
+in **two pages**. OCB, PNJ, and DGC retain **747 rows** each; NAB retains **741**.
+All four have exactly the legacy API's timestamp sets for the requested window.
+Maximum relative close differences are respectively
+`0.00011708230886309234`, `0.00011943150603133112`,
+`0.000020829767756747053`, and `0.000013404646050374502`.
+Volumes differ on **10 OCB**, **one NAB**, **six PNJ**, and **zero DGC** rows.
+These are observed differences, without an inferred adjustment factor or a
+claim that matching dates prove perfect data. The main watchlist remains **55**
+VN tickers; minute coverage, historical migration, and ordinary provider
+verification must be addressed before claiming expanded coverage. Evidence is
+`data/expanded-vn-daily-preflight-20261003.json` and the isolated database
+`data/expanded-vn-daily-preflight-20261003.sqlite3`.
+
+## Fresh crypto and global daily updates
+
+All **12 selected crypto series** (four symbols each on daily/hourly/minute)
+and all **seven global daily series** pass bounded live updates with unchanged
+providers/revisions. Crypto daily updates publish **164 observations**, adding
+**four retained rows**; hourly updates publish **196**, adding **36**; minute
+updates publish **1,314**, adding **1,154**. Each daily/hourly check has one
+provisional observation. Minute checks contain respectively one provisional
+BTC, one ETH, zero SOL, and one BNB observation; the SOL minute finalized
+while requests were progressing. Clock passage alone does not rewrite that
+recorded finality. Corrections to the previously open daily/hourly candles
+are retained as actual provider updates, without an inferred dividend factor.
+
+SQL checks verify all **12 entire retained crypto windows**, using unique
+timestamps, alignment, count/span equality, and pinned provider/revision.
+All are continuous; their **2,104,161 minute rows** include the elapsed gap
+filled by this pass. Global daily updates recheck **280 completed candles**,
+with no new dates or queued revision repairs. Each stock/index changes one
+stored tail candle and gold changes three; these are measured provider updates,
+not proof of lifetime adjustment semantics. SJC's official request still fails;
+its **1,096-row** retained snapshot and revision remain unchanged, with a dated
+failed source check.
+
+Actual HTTP reads reproduce exactly the latest **40 stored candles for all
+20 series**, including SJC, and health reproduces the dated success/finality
+records for the 19 successful series. SJC remains unverified with its recorded
+error. The new populated backup and restored copy have identical SHA-256
+`c95175c1ad19ad478df59a156303f432e4a0c412071b119dfbf1ba469b8b2299`
+and **828,456,960 bytes**. They preserve **5,514,348 candles**, **127 source
+checks**, **1,162 import receipts**, **52 handoffs**, all **395 active archive
+objects**, and every recovery receipt, with an `ok` SQLite quick check.
+Reports: `data/cross-market-live-refresh-20261003.json`,
+`data/cross-market-refresh-http-check-20261003.json`, and
+`data/cross-market-refresh-backup-restore-20261003.json`.
+No application code changed; the passing **193-test** suite remains the
+implementation check for this checkpoint.
+
+## Global minute precision and JSON migration
+
+Read-only Yahoo minute probes return **1,951 shared timestamps across five UTC
+date partitions** for each of AAPL, MSFT, NVDA, SPY, the S&P index, and the Dow
+index. None exactly match the CSV-imported OHLCV; all six snapshots contain
+**four extra timestamps** inside the probed bounds. Gold's 2,000 returned native
+minutes do not overlap its stale imported snapshot. The main series and values
+remain unchanged. These differences must be understood before a live handoff.
+Evidence: `data/global-minute-native-handoff-preflight-20261003.json`, with
+checksummed native captures and individual field comparisons.
+
+For SPY's September 28 session, the old API's JSON preserves native precision:
+all **390 shared candles** match native Yahoo OHLCV exactly, while none match
+the CSV-imported prices exactly. The importer now supports explicit
+`--from-api --api-format json`, preserving original response bytes, checksums,
+capture timestamps, and full numerical precision. Existing CSV receipts retain
+their default behavior. JSON validates the requested symbol, OHLCV, dated
+bounds, conflicting timestamps, the 10,000-row truncation guard, and empty-response
+retries. Reusing a published period receipt after changing formats is rejected
+with a requirement for a new snapshot revision and separate migration database.
+Nine additional regressions pass; the full API suite is **202 passed** and Ruff
+lint/format checks pass.
+
+The actual CLI imports an isolated **1,955-row** SPY JSON snapshot covering
+September 28–October 2 in **two** bounded monthly requests. At all **1,951**
+native/shared timestamps, every OHLC price matches exactly. **1,949** rows also
+match volume; **two volumes differ** and **four extra legacy timestamps** remain.
+Precision preservation therefore resolves a migration error without licensing
+an automatic provider handoff or declaring full-year coverage. The main snapshot
+remains intact. Reports: `data/spy-legacy-json-precision-comparison-20261003.json`,
+`data/spy-json-native-minute-comparison-20261003.json`, and the separate database
+`data/global-json-minute-rehearsal-20261003.sqlite3`.
+
+The distributions rebuild offline with the JSON importer. An isolated
+unpacked-wheel smoke check executes the packaged CLI with a replayed original
+API JSON response, imports all **391 session rows**, and preserves every OHLCV
+value exactly. The request uses `format=json` and writes only its temporary
+filesystem-backed database. Report:
+`data/json-migration-wheel-smoke-20261003.json`.
+
+## Global JSON recapture and verified index minute handoffs
+
+A wider isolated JSON recapture preserves **340,023 candles** across AAPL,
+MSFT, NVDA, SPY, the S&P index, and the Dow index. Every series preserves its
+existing timestamp set and every volume; every original CSV price equals the
+rounded JSON price. The requested year begins October 3, 2025, but available
+snapshots begin March 9, 2026. Five older empty monthly batches per series remain
+retryable and do not establish a complete year. Native five-date comparisons
+contain **1,951 candles each**: **1,942 AAPL**, **1,589 MSFT**, **461 NVDA**,
+**1,949 SPY**, and all **1,951 candles for each index** match OHLCV exactly.
+The stock disagreements remain uncorrected; their full-precision snapshots
+stay isolated. Reports: `data/global-json-minute-year-recapture-20261003.json`
+and `data/global-json-csv-rounding-preflight-20261003.json`.
+
+The existing exact-overlap adoption path now accepts `--source yahoo` with
+the Yahoo provider. It retains the **1,000-candle/five-date** minimum, exact
+prices/volumes through the published tail, snapshot checksum, preserved
+provenance, and transaction/lease guards. Yahoo uses completed UTC minute bounds
+with finality validated during restoration. VN's complete-session and correction
+proofs remain VN-only. Unverified global minute snapshots stay frozen instead
+of queuing an unverified annual provider replacement. Nine additional regression
+cases cover Yahoo append and index restoration, concurrent correction/leases,
+market/finality validation, VN-only proofs, and the frozen-snapshot guard.
+The full suite passes **211 tests**; Ruff lint/format checks pass.
+
+Both index snapshots pass the real CLI handoff in the isolated database.
+Their main replacements publish atomically after verifying every old timestamp
+and volume and confirming each old price equals the rounded JSON price. Original
+retained before-images and complete full-precision captures are immutable,
+checksummed RustFS objects referenced by their adoption evidence. The S&P index
+retains **56,662 rows**, and the Dow **56,672**. Ordinary Yahoo refreshes each
+publish **40 completed candles**, preserving their values and revisions.
+Their explicit watchlist entries enable daily and minute ingestion; other
+global entries retain daily ingestion only. This licenses observed continuity,
+without certifying lifetime adjustments or missing earlier sessions.
+
+Actual minute and 15-minute HTTP reads match the stored/aggregated data exactly.
+Eight existing-SDK checks compare **20 candles each** on minute/15-minute and
+SMA/EMA modes, with no time/OHLCV/indicator differences. The unchanged public
+global page renders AAPL and both index 15-minute charts through isolated local
+API routing, with no page errors, network errors, or attempted writes. Reports:
+`data/global-index-json-publication-20261003.json`,
+`data/sdk-global-gspc-minute-json-parity-20261003.json`,
+`data/sdk-global-dji-minute-json-parity-20261003.json`, and
+`data/web-global-json-index-minutes-20261003.json`.
+
+A fresh S3 restore reproduces **395 archive objects / 320,224 rows**, all
+**54 handoffs** (52 VN plus two global), and **seven recoveries**, with exact
+metadata including the precision before-image references. The populated backup
+and restored copy have identical SHA-256
+`f5229686b51ec6ba2a670ccf2da6fa2caeff79fe11d7cd7110b64af472b80aa2`
+and **829,550,592 bytes**, preserving **5,514,348 candles**, **129 source checks**,
+**1,162 import receipts**, all **54 handoffs**, archive/recovery metadata, and the
+exact index candles. SQLite quick check is `ok`. Reports:
+`data/global-index-json-index-restore-20261003.json` and
+`data/global-index-json-backup-restore-20261003.json`.
+
+The source distribution and wheel build offline. An isolated unpacked-wheel
+check loads the packaged Yahoo CLI path and watchlist, verifies that only the
+two index entries enable minute ingestion, replays the **1,951-candle** native
+S&P capture, and publishes its handoff without changing any candle. Report:
+`data/yahoo-adoption-wheel-smoke-20261003.json`.
+
+## Isolated VNINDEX native minute rebuild
+
+A boundary probe returns no VPS minute data and unusable VNDirect arrays,
+while DNSE returns 500 valid candles around the one-year floor. Those timestamps
+all overlap the retained snapshot, but only 15 OHLCV records match exactly.
+An isolated full-series DNSE rebuild stages **23,453 valid rows** across **104
+observed date partitions**, then stops on its 48th page with an invalid OHLC
+range. Its native May 5, 2026 candle at 07:45 UTC has high `1873.31` below close
+`1874.85`; the decoded public response and its checksum are preserved. This
+is an actual provider error, without clamping or dropping that candle.
+
+Comparing the **103 fully fetched observed sessions** after the partial oldest
+day, DNSE has **23,323 rows** against **23,463 legacy rows**, with **162 missing**
+and **22 additional timestamps**. Many differences occur at 04:30/07:30 UTC;
+no auction/session conversion has been inferred. Ten close values also differ
+across the entire staged overlap, including the partial oldest session.
+The main **56,523 retained VNINDEX rows** and ready legacy series remain
+identical; the isolated job and staging are retained for diagnosis. This proves
+the failed native replacement cannot safely replace the published year.
+Evidence is in `data/vnindex-native-minute-history-probe-20261003.json`,
+`data/vnindex-dnse-minute-rebuild-rehearsal-20261003.json`,
+`data/vnindex-dnse-rehearsal-covered-sessions-20261003.json`, and
+`data/vnindex-dnse-invalid-minute-diagnostics-20261003.json`.
+
+DNSE's official [OHLC documentation](https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/)
+describes `/price/ohlc` for stocks, futures, and indices. Its
+[working-date documentation](https://developers.dnse.com.vn/docs/dnse/get-market-working-dates/)
+describes a one-year calendar excluding holidays and weekends. These are separate
+from the public chart endpoint tested here; the documentation alone does not
+establish volume semantics, adjustment equivalence, or complete retained coverage.
+
+## Extended FPT daily history and provider basis
+
+The public archive denies anonymous bucket listing. Explicit 2015–2018 FPT
+files remain readable, while the probed 2006–2014 files return 403. The old API
+independently exports 73 valid 2014 candles, which were migrated through that
+read path. An inaccessible object is recorded as unavailable, rather than proof
+that the year contains no trading data. Evidence is in
+`data/legacy-public-inventory-probe-20261003.json`,
+`data/migration-fpt-pre2019-20261003.json`, and
+`data/migration-fpt-2014-api-20261003.json`.
+
+FPT's original 2018 file contains 250 dates. VPS returns 248, omitting January
+23–24. The original rows are flat with zero volume; a contemporaneous
+[VNDirect notice](https://www.vndirect.com.vn/vndirect-thong-bao-ve-viec-tam-ngung-giao-dich-tren-so-giao-dich-chung-khoan-thanh-pho-ho-chi-minh-ngay-24-01-2018/)
+documents both HOSE closure dates, and the
+[2018 fund report](https://www.vietnamholding.com/media/b5qf5kcm/annual-report-30-june-2018.pdf)
+identifies FPT's historical exchange. The explicit recovery publishes all 248
+remaining dates and preserves the original 250-row CSV and reviewed references
+in checksummed S3 evidence. This exception does not generalize to other tickers
+or holidays. CTR's five missing 2022 dates remain unresolved; their nonzero-volume
+original rows do not pass this exception.
+
+The complete FPT comparison exposed a substantial VPS/legacy historical price
+basis difference before part of 2021. VNDirect preflight reproduces the exact
+date sets of all ten 2014–2023 partitions, and an isolated retained-window repair
+preserves all 747 recent dates. The main daily series was then replaced through
+durable staging and all ten archives reconciled to the same VNDirect revision.
+The final series has **3,003 candles: 747 in SQLite and 2,256 in Parquet**.
+Original VPS objects and recovery evidence remain immutable. A bounded normal
+VNDirect update rechecks 40 rows without changing the new revision. Reports are
+`data/fpt-vndirect-archive-preflight-20261003.json`,
+`data/fpt-vndirect-retained-rehearsal-20261003.json`,
+`data/fpt-vndirect-coherent-replacement-20261003.json`, and
+`data/fpt-vndirect-followup-update-20261003.json`.
+
+HTTP comparison against the preserved 3,005-row legacy export finds every
+ordinary date, with only the two reviewed closure placeholders excluded and no
+new dates. Sampled daily SMA, daily EMA, weekly EMA, and archived EMA ranges pass
+the earlier `1e-3` relative MA tolerance; the largest sampled MA difference is
+`0.0005954546269595561` relative. Prices and volumes are not identical: maximum
+relative open/close differences are `0.007076024967067722` and
+`0.004429636297768131`. Five historical dates have volume differences above 1%,
+including a relative difference of `2.084300424975482` on July 13, 2015.
+These remain an explicit `legacy_value_disagreement` finding. No provider
+corporate-action or volume semantics are inferred from this comparison. Evidence
+is in `data/fpt-vndirect-full-history-http-comparison-20261003.json` and
+`data/fpt-vndirect-volume-disagreements-20261003.json`. Nonempty legacy SMA200
+values can use partial windows and do not establish 200 earlier candles.
+
+A fresh RustFS index restore verifies **394 active objects / 319,980 archived
+rows**, **43 provider handoffs**, and **five recovery receipts**, including the
+preserved original FPT 2018 candidate after its later provider replacement.
+  Metadata matches exactly and SQLite `quick_check` returns `ok`. The active index
+contains 383 published and 11 pending objects; 252 coherent VN daily objects
+contain 58,795 rows across 54 tickers. A new populated backup/restore preserves
+all **5,513,154 local candles**, four source checks, all active archives, handoffs,
+and receipts. Both 826,900,480-byte files have SHA256
+`d035eb0553863bdcd4d1773eabcff3a6bef2d18bb4807e808fa58e5074975b8a`.
+Evidence is in `data/fpt-vndirect-archive-index-restore-20261003.json` and
+`data/fpt-vndirect-backup-restore-20261003.json`.
+
+The rebuilt wheel includes the session-exclusion module and recovery flag; an
+isolated unpacked-wheel check initializes its own SQLite database successfully.
+After restarting the loopback API, `/health` exposes FPT's ready VNDirect daily
+revision with 40 completed rechecked rows, no provisional rows, and a matching
+dated successful source check. The health request takes 2,219.85 ms, consistent
+with the earlier populated measurements. Evidence is in
+`data/fpt-recovery-wheel-smoke-20261003.json` and
+`data/fpt-vndirect-health-smoke-20261003.json`.
+
+## Real retention rollover and compaction
+
+The dry run identified expired UTC-floor rows. Execution published **129
+verified objects** before pruning their unchanged local versions. Two bounded
+compaction batches then replaced **218 fragments with 109 partitions**, reducing
+the active index from **498 to 389 objects**. All **32,413 canonical candles**
+match the saved pre-compaction checksums, including prices, volume, provider,
+revision, and nanosecond update versions. Duplicate timestamps retain the newer
+version. No original immutable object was deleted or upstream history fetched.
+SQLite's integrity check returns `ok`, and another fresh S3 index restore matches
+every active record, provider handoff, and recovery receipt. Evidence is in
+`data/retention-rollover-20261003-0210.json`,
+`data/compaction-values-before-20261003.json`,
+`data/compaction-values-after-20261003.json`, and
+`data/archive-index-compacted-restore-check.json`.
+The populated SQLite backup/restore also passes: **5,513,071 candles**, 389 active
+archive objects, 43 handoffs, and four recovery receipts survive the operational
+CLI round trip, with an `ok` integrity check. The backup is
+`backups/local-rehearsal-compacted-20261003.sqlite3`; its checksum and restored
+counts are recorded in `data/compacted-backup-check-20261003.json` and
+`data/compacted-sqlite-restore-check-20261003.json`.
+
+A bounded crypto update filled the outage gap. SQL counts/bounds and alignment
+checks prove **525,731 continuous minute rows per selected crypto ticker**,
+from October 3, 2025 through October 3, 2026 at 02:10 UTC. This is a dated
+rehearsal checkpoint; ongoing worker scheduling still determines freshness.
+
+## Selected global hourly snapshots
+
+The bounded hourly runner imported **24,184 candles across seven configured
+global tickers**, preserving original legacy S3 values/provenance and freezing
+each checksummed source file. Every 2023 file returned 403 and remains explicitly
+unavailable. Gold's 2026 CSV fails at row 809, timestamp `1775163599`, because
+it is not minute aligned; no guessed timestamp correction was applied.
+The other six hourly snapshots end August 26, 2026; gold's accepted hourly
+snapshot ends December 31, 2025. Complete coverage and ongoing Yahoo handoff
+remain unverified. Results are in `data/migration-global-hourly.json`.
+
+The deployed web page now renders AAPL and both default index one-hour charts
+with populated responses and no page/network errors. The page exposes no visible
+four-hour control, so four-hour behavior was checked through the HTTP API.
+All seven hourly and four-hour requests return 200 valid candles. Recovered
+VNINDEX August 23–26, 2021 and VN30 August 13–18, 2020 date ranges also return
+four valid daily candles each. Evidence is in
+`data/web-global-hourly-rehearsal.json` and
+`data/compacted-hourly-and-index-http-check.json`.
+
+## One-year FPT minute migration trials
+
+Separate SQLite migration files preserved the main database and archive index.
+An explicit S3 trial requested **365 dates**, 2025-10-03–2026-10-02. It imported
+**50,631 candles across 225 dates**, ending at **2026-08-27 02:41 UTC**. Compared
+with dates observed in the current daily FPT feed, **23 later dates** lacked
+minute files. Weekend/holiday URLs also returned 403; that status was recorded
+as unavailable, not proof of missing trading data.
+
+Read-only late-August minute probes returned no VPS data. VNDirect and DNSE
+returned 500 rows each; **301 timestamps overlapped** the legacy snapshot, with
+**zero fully matching OHLCV rows** at absolute tolerance 0.011. This observation
+requires further investigation of precision, volume, and adjustment semantics;
+it does not establish a dividend or justify applying a scaling factor.
+
+The public legacy HTTP API could export recent minute dates absent from S3.
+A separate bounded API-export trial imported **56,027 minute candles across
+248 dates**, from **2025-10-03 02:15 UTC through 2026-10-02 07:45 UTC**. Every
+observed daily FPT date in that window had minute data; no HTTP export hit its
+10,000-row limit. The SQLite file measured **7,516,160 bytes**. First/last-date
+API checks returned 226 candles each; a 15-minute query returned 20 candles.
+The snapshot remains isolated under explicit `legacy-api` provenance.
+
+This proves a workable public export path for PostgreSQL-only history without
+adding a PostgreSQL runtime dependency. It does not prove every expected minute
+was traded/recorded. Subsequent handoff checks and main-database imports are
+described below; wider universe migration remains required. Local coverage reports
+are in ignored `data/migration-fpt-coverage.json` and
+`data/migration-fpt-api-coverage.json`.
+
+## Verified snapshot handoff and the main minute window
+
+The main database now retains **56,253 FPT minute candles across 249 observed
+dates**, 2025-10-02–2026-10-02, matching its actual UTC calendar-year floor.
+Another **4,746 prior candles** provide archived September/October warm-up.
+
+A VPS sample contained **1,130 exact OHLCV matches across five completed
+sessions**, September 28–October 2, through the published completed tail.
+`adopt-snapshot --execute` recorded snapshot/overlap hashes and bounds, provider
+choice, capture cutoff, and the explicitly limited scope of this observation.
+It changed the ongoing provider to VPS without rewriting imported values or
+provenance. A subsequent bounded ordinary worker update succeeded without a
+retained-window repair. Original rows keep `legacy-api` provenance; actual
+provider updates use VPS within the evidenced revision.
+
+Adoption is rejected for any OHLCV disagreement, incomplete overlap, active
+repair, or concurrent snapshot correction. Later imports cannot reuse the
+already adopted snapshot revision. Corporate-action comparisons still check
+older adopted candles, and unverified provider/revision boundaries still fail.
+Tests cover these cases, mixed-provenance aggregation, archive publication,
+malformed manifests, and evidence recovery. The VN completed-session guard now
+recognizes completed weekday sessions after 15:15 ICT; this is a grace rule,
+not a complete holiday/suspension calendar.
+
+This handoff does not prove all historical adjustment policies equivalent.
+Separate August probes against the **current HTTP snapshot**, rather than the
+stale S3 snapshot discussed above, found 500 overlapping timestamps from both
+VNDirect and DNSE. Both had price differences; matched volumes numbered
+498 and 500 respectively. VPS supplied no August sample. No inferred scaling
+factor was applied.
+
+The main database also imports **56,751 VNINDEX minute candles across 249
+observed dates**, plus **4,788 prior archived warm-up candles**. All 366 bounded
+date exports returned HTTP 200; 117 were empty and remain retryable rather than
+being classified automatically as holidays. The snapshot is readable under
+`legacy-api` provenance. Exact handoff was rejected: VPS matched 1,126 of
+1,134 overlapping candles, VNDirect 716 of 1,905, and DNSE 156 of 1,991.
+Observed differences include opening/auction OHLCV and session timestamps.
+An actionable quality finding records this disagreement. The snapshot remains
+unchanged; ongoing index-provider adoption is still unresolved.
+
+A real RustFS manifest recovery reconstructed **10 archive objects and one
+adoption certificate** on a fresh temporary SQLite index. An online SQLite
+backup retained the same certificate and **153,703 candle rows**. The main
+database and backup each measured **21,020,672 bytes** at that check.
+
+## Complete-session handoff for sparse series
+
+The new explicit `adopt-snapshot --complete-sessions` path verifies every
+original timestamp in at least five completed weekday sessions through the
+published tail. Every positive-volume provider minute matches the original
+OHLCV. Each day's aggregated minutes must reproduce fresh provider daily
+candles and the ready retained daily revision, including the full volume total.
+The default 1,000-candle path remains available. This is a separate complete-
+session proof, rather than a smaller sample-count threshold.
+
+Receipts contain the compared original/provider minute and daily records,
+checksums, finality bound, and revisions. Index restoration replays those
+comparisons and rejects malformed, incomplete, or rehashed inconsistent proof
+before changing the target index. Publication checks both minute and daily
+snapshots again inside the SQLite transaction. Fourteen new regressions cover
+successful sparse append, truncated/missing/extra candles, missing/changed daily
+records, zero minute volume, insufficient sessions, concurrent daily value/state
+changes, and receipt restoration/corruption. The full API suite passes **170**.
+
+All eight real handoffs to VPS pass the complete five-session proof:
+
+| Symbol | Exact minute matches | Retained minute rows | Ordinary update rows |
+| --- | ---: | ---: | ---: |
+| VPL | 855 | 43,945 | 40 |
+| HHS | 705 | 40,286 | 40 |
+| GEG | 225 | 25,459 | 40 |
+| CTR | 674 | 41,528 | 40 |
+| NKG | 972 | 49,573 | 40 |
+| SBT | 817 | 31,042 | 40 |
+| VDS | 659 | 37,523 | 40 |
+| VGI | 937 | 53,361 | 40 |
+
+Adoption leaves imported values/provenance intact; every subsequent bounded
+update preserves the full retained timestamp/OHLCV checksum and revision while
+recording actual VPS provenance for the rechecked rows. Evidence is in
+`data/sparse-complete-session-adoption-preflight-20261003.json`,
+`data/sparse-complete-session-adoption-results-20261003.json`,
+`data/remaining-minute-complete-session-probes-20261003.json`, and
+`data/additional-complete-session-adoption-results-20261003.json`.
+
+At that checkpoint, the selected VN minute universe has **51 of 55** verified ongoing handoffs:
+43 VPS and eight DNSE. PLX, SSI, VGC, and VNINDEX disagree with every tested
+provider in the current overlap; their original snapshots remain preserved.
+This proof does not establish lifetime adjustment equivalence, certify all
+historical sessions, or license guessed timestamp/price transformations.
+
+Sixteen real native/15-minute HTTP requests pass for these eight series. Their
+health entries expose 40 completed rechecked rows with current VPS evidence and
+no provisional rows. A fresh S3 index reconstructs all **394 objects**, **51
+handoff receipts**, and **five legacy recovery receipts**, with exact metadata
+and an `ok` SQLite integrity check. The populated backup/restore preserves all
+**5,513,154 candles**, **11 source checks**, and those archive/evidence records.
+Both 827,899,904-byte files have SHA256
+`de42eb67980b9dc1e94097825d63c1167e37aa1479fb54aa7d2e1be36fed984a`.
+Reports are `data/all-complete-session-http-smoke-20261003.json`,
+`data/all-sparse-complete-session-index-restore-20261003.json`, and
+`data/complete-session-backup-restore-20261003.json`.
+
+Read-only diagnostics narrow the remaining disagreements. VPS reproduces all
+PLX and VGC timestamps in five completed sessions. PLX differs only in four
+minute volumes; VGC differs in two volumes and one minute's high/close. Both
+reproduce every 15-minute/hourly/daily aggregate, including fresh and retained
+daily OHLCV. SSI has six minute-open and 14 volume differences on VPS; one
+15-minute/hourly open differs, while daily aggregates match. VNINDEX has missing
+and extra minute timestamps and disagreements at aggregated and daily levels.
+Testing candidate offsets of minus/plus one minute does not reproduce the full
+original series. These observations do not establish which vendor's individual
+minute allocation is correct; no values or timestamps were transformed.
+Reports are `data/remaining-minute-value-diagnostics-20261003.json` and
+`data/remaining-minute-aggregate-diagnostics-20261003.json`.
+
+Ruff lint/format checks and the offline distribution build pass. An isolated
+unpacked-wheel smoke check initializes its own database and loads the packaged
+complete-session validator and CLI flag. Its report is
+`data/complete-session-wheel-smoke-20261003.json`.
+
+## Independently corroborated native-minute corrections
+
+Read-only comparison finds two changed VGC candles that agree on both VPS and
+DNSE. PLX's four VPS volume differences are not all confirmed by DNSE, and SSI's
+four DNSE volume differences are not all confirmed by VPS. The original records
+and raw witnesses are in
+`data/minute-correction-corroboration-preflight-20261003.json`.
+
+The explicit `--complete-sessions --corroborate-provider` path requires every
+changed native candle to match a distinct approved provider on timestamp and
+OHLCV. It preserves original/candidate 15-minute OHLCV and all existing fresh/
+retained daily checks. Corrections and the handoff publish together in one
+SQLite transaction after checking both snapshot revisions and values again.
+Unchanged candles retain their provenance. Receipts preserve the original
+records and second-provider witnesses; index restoration replays the checks.
+No timestamps are inserted/dropped and no scaling factor is inferred.
+
+Eleven additional regressions cover dry-run preservation, atomic corrections,
+retained provenance, missing/disagreeing/wrong-source witnesses, different
+15-minute allocations with equal daily volume, invalid daily evidence,
+concurrent changes, provider selection, and restoration with mixed provenance.
+The full API suite passes **181 tests**. The default exact-match paths remain
+unchanged.
+
+Actual VGC publication changes exactly **two of 40,648 retained minute
+candles**, preserves all timestamps and other records, then successfully
+rechecks 40 candles on VPS without changing their values or revision. Its
+825-candle HTTP range shows exactly the two recorded native differences;
+all 80 fifteen-minute and 25 hourly candles remain identical to the original
+aggregates. Health records the ready VPS revision and 40 completed rechecks.
+Reports are `data/corroborated-minute-correction-preflight-20261003.json`,
+`data/vgc-corroborated-minute-correction-results-20261003.json`, and
+`data/vgc-correction-http-smoke-20261003.json`.
+
+The selected minute universe now has **52 of 55** verified handoffs: 44 VPS and
+eight DNSE. PLX, SSI, and VNINDEX remain frozen. Larger-interval agreement alone
+does not license unconfirmed native corrections.
+
+A fresh S3 index reconstructs all **394 objects / 319,980 archived rows**, **52
+handoff receipts**, and **five recovery receipts**, replaying VGC's 825-row
+window and two DNSE witnesses. SQLite integrity is `ok` and metadata matches.
+The populated backup/restore preserves all **5,513,154 candles**, **12 source
+checks**, and those archive/evidence records, including exact corrected VGC
+candles. Both 828,301,312-byte files have SHA256
+`d4624120cf6b9e269ff4e05e139e7fa840a9c190666980ef9266a8fd806ebd31`.
+Evidence is in `data/vgc-correction-index-restore-20261003.json` and
+`data/vgc-correction-backup-restore-20261003.json`.
+
+Additional read-only VNDirect checks also fail to corroborate every changed
+PLX/SSI candle in their exact five-session windows. Their records remain intact;
+the raw comparisons are in
+`data/remaining-minute-vndirect-corroboration-20261003.json`.
+The offline wheel build, Ruff checks, and isolated packaged initialization/CLI
+flag check pass. Package evidence is in
+`data/corroborated-correction-wheel-smoke-20261003.json`.
+
+## Actual web, SDK, and CLI rehearsal
+
+An isolated headless Chromium loaded the public `aipriceaction.com` application
+while routing its API reads to the loopback FastAPI service. Production routing,
+accounts, and existing browser profiles were untouched. The original frontend
+rendered FPT daily candles, indicators, and its volume profile. Selecting its
+15-minute control returned populated CSV responses (including a 456-candle
+request). No page errors or attempted API writes were recorded. The default
+VNINDEX volume-profile request initially returned 404 for missing minute data;
+after the bounded import it returned 200 through the same frontend.
+
+The unchanged crypto page also renders BTCUSDT daily/15-minute charts and its
+minute volume profile. The global page renders AAPL daily/weekly charts. Both
+rehearsals recorded no page errors or attempted API writes. The first crypto
+rehearsal clicked an ambiguous ticker button and opened a symbol-picker modal;
+the corrected script uses the already populated default chart and scopes chart
+controls to the visible dialog when present. The global default Dow chart was
+empty because it was outside the initial watchlist; `^DJI` is now included and
+its 754-row daily bootstrap completed. Global minute snapshots are being imported
+after read-only checks confirmed the old API serves them. An operational Yahoo
+handoff and broader global interval coverage remain unverified.
+
+A final global rehearsal after migration renders both default index daily/weekly
+charts and the ^GSPC minute volume profile. It records no page errors, network
+errors, or attempted API writes. The script now waits for in-flight routes before
+closing the isolated browser; an earlier late health callback was canceled during
+browser teardown, rather than failing in the API.
+
+The existing SDK initially joined stale August S3 candles with an October live
+tail. This produced wrong daily dates/prices and stale moving averages even
+when the latest minute OHLCV matched. Its internal `get_ohlcv(use_live=True)`
+path now reads complete API ranges and warmed indicators. Methods and existing
+CLI options remain unchanged. Archive-only reads retain their CSV paths;
+unavailable/empty series use a complete archive fallback with DataFrame
+provenance. A history-consistency 503 reaches the caller rather than being
+hidden by stale archive fallback.
+
+Additional live SDK checks compare BTCUSDT daily/minute/15-minute SMA and EMA
+and AAPL daily/weekly SMA and EMA. All sampled values and missing indicators
+match the local API; DataFrame provenance reports `api`. Sparse responses that
+initially triggered fallback are covered by new SDK regressions.
+
+Six sampled SDK requests (daily, minute, 15-minute; SMA and EMA) each returned
+20 candles with **zero differences** in timestamps, OHLCV, and MA10–MA200
+against the local API. An existing Python `aipa get-ohlcv-data FPT --interval
+1m --limit 5 --ema --no-system-prompt` command also returned the expected data
+and ICT timestamps, using a rehearsal-only client injection. This does not
+publish a new SDK release or change its production default endpoint.
+
+Repeatable read-only checks are in `scripts/check_web_client.py` (optional
+Playwright/Chromium) and `scripts/check_sdk_client.py` (existing SDK environment).
+Their local reports/screenshots are ignored under `data/`. Broader historical
+scrolling, authenticated sync, and full production cutover still
+require acceptance checks and data migration.
+
+## Expanded recent data and bulk ingestion
+
+All four selected Binance symbols completed daily/hourly/minute bootstrap:
+**4,388 daily**, **105,308 hourly**, and **2,107,848 minute** candles. Each minute
+series has **526,962 unique aligned timestamps**, beginning **2025-10-02 UTC**;
+its timestamp span/count prove no missing minutes through the captured tail.
+These are bounded capture results, not a claim that a stopped worker stays fresh.
+Seven selected Yahoo daily series retain **5,281 rows**; the Dow index adds 754.
+
+Monthly Binance spot files accelerate long minute backfills using their official
+SHA-256 sidecars. A real August 2026 BTCUSDT file contained **44,640 rows**;
+**40 completed live API candles matched exactly** in timestamp and OHLCV.
+September's monthly checksum was absent at the probe time; the worker used
+bounded live pages for that unpublished month. Parsing verifies the complete
+calendar-month sequence, the 2025 microsecond timestamp change, ZIP/member size,
+finite prices/volume, and legacy integer volumes before staging. Corrupt caches,
+wrong hashes, missing/duplicate/out-of-order rows, and truncated months fail
+without altering published history. The monthly cache is bounded to 128 MiB.
+Publication timing and checksums are documented by
+[Binance](https://github.com/binance/binance-public-data).
+
+The public legacy SJC API snapshot supplies **1,097 recent daily rows** and
+**274 older archived rows**. The official SJC quote service and website returned
+403/Cloudflare challenges in actual probes. New official quote updates are not
+verified; the preserved snapshot remains readable without pretending an update
+succeeded.
+
+VCB's wider-minute trial imported **56,003 rows**, with every observed daily
+date represented. VPS matched **1,127 completed candles across five sessions**,
+licensing an exact handoff under its explicit snapshot revision. A resumable
+selected-universe migration is now applying bounded 31-day API exports, keeping
+monthly receipts/checksums, preserving earlier indicator warm-up in RustFS, and
+attempting the same strict handoff. MBB's price/volume disagreement and VPL's
+insufficient completed overlap are recorded; these snapshots remain unchanged.
+The bounded process completed for all 55 selected VN series: **2,848,973 minute
+rows** with every date observed in their retained daily feed represented.
+The first pass licensed 35 VPS handoffs. Strict alternate-provider checks then
+licensed eight DNSE handoffs (MBB, VND, HSG, GVR, VNM, SAB, GEE, HAG), each with
+2,000 exact completed candles. **43 of 55** now have certificates; CTR, GEG, HHS,
+NKG, PLX, SBT, SSI, VDS, VGC, VGI, VNINDEX, and VPL remain independent snapshots.
+No exact-match/coverage requirement was weakened. Reports are ignored under
+`data/migration-vn-universe-minute.json` and
+`data/migration-vn-minute-alternate-providers.json`.
+Selected global minute imports use smaller seven-day exports because longer
+trading sessions can hit the legacy API's 10,000-row limit. AAPL and MSFT each
+imported 56,671 rows; empty older weekly exports remain retryable, and complete
+one-year global coverage is not claimed. The global run ended with **363,484
+minute rows across seven symbols**. Most stock/index snapshots begin in March
+2026. GC=F stops during import because the legacy export contains a minute
+timestamp that is not aligned to a minute; earlier valid receipts remain
+published. No timestamp or OHLCV value was altered to hide this failure.
+
+A live hourly worker exposed a startup race: another filtered worker temporarily
+disabled the watchlist between transactions, causing a ticker lookup to fail.
+Activation now uses one transaction, with WAL-reader and genuine-removal tests.
+The resumed bounded hourly process exited successfully from saved checkpoints.
+Its VNDirect index fallback publishes valid values but has sparse older dates;
+53 DNSE stock hourly backfills remain pending after upstream history failures.
+Invalid OHLC values were rejected, never clamped or filled.
+
+The SQL audit reviews millions of local candles without materializing series in
+Python. Its first populated run took **5.603 seconds**, with **30,015,488 bytes**
+peak RSS. It reports continuous-market gaps/staleness, absent observed VN daily
+dates, and ambiguous long gaps separately. VNINDEX's two Sunday observations
+(**2025-05-04**, **2025-05-11**) are flagged as provider anomalies, preserved for
+review, and excluded from expected weekday sessions. Listing floors and
+unfinished sessions are respected; these checks still do not establish a full
+holiday/suspension calendar. Fixed audit findings resolve on recheck without
+hiding independent adjustment or migration findings.
+
+Read-only probes subsequently identified the weekend daily cause: VPS mixed
+UTC-midnight candles with 17:00 UTC (Vietnam-midnight) candles for the same
+market dates. Their opens differ, so a guessed timezone shift/deduplication would
+silently choose prices. The adapter now rejects affected requested pages while
+ignoring unrelated excess history. VNDirect/DNSE sampled date conventions were
+consistent. VNINDEX and VN30 daily windows were staged and rebuilt entirely on
+VNDirect; recent VN daily count is now **40,695**. Both series are ready, no weekend
+daily candles remain, and the follow-up audit resolves the corresponding finding.
+The earlier backup preserves the prior state; this is a bounded source rebuild,
+not proof that every provider adjustment/calendar policy is equivalent.
+
+Ordinary live updates passed on MBB, HSG, and VND via DNSE and VCB via VPS.
+Each wrote 40 provider candles within its evidenced revision, retaining imported
+provenance elsewhere. No pending repair or new provider-failure finding arose.
+
+An ordinary crypto restart exposed why a fixed 40-candle overlay is insufficient
+after downtime. Live page size now grows with the elapsed continuous-market gap,
+up to the existing 1,000-row API bound. A longer gap queues durable recovery and
+preserves the published series. Regression tests cover both paths; a real bounded
+restart filled the elapsed gap and retained aligned, continuous minute series.
+
+A fresh local online backup contains **5,505,290 candles and 43 certificates**
+and passes SQLite quick integrity checking. Its size is **822,169,600 bytes**.
+An isolated index reconstructed **all 117 published objects and 43 certificates**
+from RustFS, matching the main database. These object records account for
+**242,701 archived rows**, largely minute indicator warm-up, plus older FPT/SJC
+history. Older history across the whole selected universe still requires migration.
+
+The existing legacy dotenv configures a loopback PostgreSQL connection. A small
+inventory attempted enforced read-only transactions and short timeouts; that
+connection was unavailable. No production connection, credentials, or sync
+payloads were printed or modified. Private production export remains open.
+
+Health retains existing fields and adds per-source/interval date bounds and
+ingestion timestamps within `storage.coverage`. An old candle's timestamp remains
+visible independently of a recent import. Counts and last-ingest values come
+from one grouped SQL read. Per-series bounded provider-check and provisional
+observation tracking is now implemented as described above; full expected-
+session and provider adjustment-policy audits remain open.
+
+## Populated local measurements
+
+These read-only measurements used loopback FastAPI/RustFS during ongoing
+ingestion. Three HTTP samples were taken for each request; cache invalidation
+can occur between samples. They are local examples, not concurrent-load SLAs.
+
+| HTTP request | Rows | First / subsequent samples (ms) |
+| --- | ---: | --- |
+| 55 VN tickers, daily EMA | 1,100 | 396.35 / 392.76 / 33.86 |
+| BTCUSDT native minute export | 10,000 | 141.24 / 82.38 / 80.40 |
+| BTCUSDT 15-minute EMA | 200 | 79.06 / 7.04 / 6.79 |
+| VCB minute retention boundary | 64 | 50.06 / 3.03 / 2.92 |
+| AAPL weekly EMA | 20 | 13.20 / 1.60 / 1.60 |
+
+An independent reader used a separate emptied cache for each cold measurement:
+
+| History query | Rows | Cold / warm (ms) | Cached Parquet bytes |
+| --- | ---: | --- | ---: |
+| FPT daily 2019–2020 | 502 | 112.75 / 16.41 | 13,640 |
+| FPT daily retention boundary | 42 | 45.01 / 26.30 | 19,369 |
+| VCB minute retention boundary | 64 | 56.64 / 41.01 | 36,117 |
+
+The measurement process peaked at **126,746,624 bytes RSS**. The FastAPI process
+used **111,008 KiB RSS before** and **128,000 KiB after** those checks. SQLite
+measured **582,897,664 bytes** at the earlier populated checkpoint and continues
+growing during bounded imports. Cached bytes include indicator lookback, rather
+than being cloud-billing estimates. Full selected-universe archival transfer
+costs and production-scale concurrent HTTP load remain to be measured. The
+bounded local concurrent rehearsal below now supplements these isolated reads.
+
+Additional profile batches use a fresh temporary object cache and four read
+threads against local RustFS. All 55 configured VN tickers return profiles;
+cached and uncached results match exactly. These are direct reader/analysis
+measurements rather than concurrent HTTP SLAs:
+
+| Profile range | Native candles | Cold / warm batch (ms) | Cold / warm median query (ms) | Peak RSS bytes |
+| --- | ---: | --- | --- | ---: |
+| September 2025 | 229,589 | 1,511.36 / 1,063.30 | 96.71 / 72.59 | 111,935,488 |
+| September 2025–August 2026 | 2,843,368 | 37,566.18 / 38,684.09 | 2,742.85 / 2,885.78 | 318,685,184 |
+
+The monthly batch caches **1,733,603 bytes**; the mixed one-year batch caches
+**2,052,229 bytes**. The larger query is dominated by retained candle reads and
+analysis; a warm object cache did not improve its measured total. SQLite uses
+**826,900,480 bytes** at this checkpoint. Active verified Parquet objects use
+**3,881,127 bytes** across 389 objects: daily **1,705,982**, minute **2,162,783**,
+and hourly **12,362**. These exclude retained older versions, evidence and
+manifests, and do not estimate cloud billing. Evidence is in
+`data/archive-profile-benchmark.json`, `data/archive-profile-year-benchmark.json`,
+and `data/active-archive-footprint-20261003.json`. The reproducible read-only
+runner is `scripts/benchmark_archive_profiles.py`.
+
+A four-client HTTP rehearsal runs for **30.5 seconds** with response caching
+disabled and archive files warmed by sequential baselines. It completes
+**356 concurrent requests with zero failures or candle-payload changes**.
+Baselines cover daily and 15-minute reads for all 55 configured VN tickers,
+a bulk daily request, six older daily series, four 10,000-row crypto exports,
+three global weekly charts, and health. Payload hashes are compared throughout;
+health's changing clock fields are validated separately.
+
+| Concurrent HTTP request | Requests | Median / p95 (ms) |
+| --- | ---: | ---: |
+| VN daily, one ticker | 163 | 39.12 / 75.73 |
+| VN 15-minute, 200 candles | 163 | 673.85 / 711.54 |
+| Bulk daily, 55 tickers | 2 | 1,595.63 / 1,615.49 |
+| Older daily history | 12 | 131.02 / 177.93 |
+| Crypto minute, 10,000 candles | 8 | 926.88 / 1,015.58 |
+| Global weekly | 6 | 115.80 / 132.86 |
+| Health | 2 | 2,212.68 / 2,234.44 |
+
+This is a bounded local mixed workload; the two-sample categories do not
+establish reliable production percentiles. Cold S3 transfer and longer workloads
+remain separate acceptance checks. The complete request/result evidence is
+`data/http-concurrency-benchmark.json`; the read-only runner is
+`scripts/benchmark_http.py`.
+
+## Compatibility and data-quality boundaries
+
+- Existing routes, request shapes, repeated symbols, aliases, date direction,
+  JSON/CSV fields, SMA/EMA options, aggregations, auth, and static explorer are
+  implemented. `cache` controls the bounded in-memory candle response cache.
+  The `redis` and `snap` flags are accepted as compatibility inputs; SQLite/S3
+  supplies the data. Diagnostic header values describe the actual storage.
+- The packaged company/fundamental metadata is an existing static snapshot.
+  No VCI provider or new VCI fundamental fetching is implemented. The existing
+  SDK's legacy CSV, metadata, hashes, and fundamental URLs remain in place.
+- Historical indicators need earlier S3 data and a consistent provider/revision.
+  Missing or incompatible adjustment history must not be presented as a
+  continuous verified series. Repairing affected historical requests can be
+  unavailable while coherent recent requests remain readable.
+- Published legacy crude-oil data contained an invalid OHLC range, including
+  `CL=F` on `2026-09-06`, where close was below low. The fixture/import validator
+  rejected it. Legitimate negative futures prices are allowed; SJC's
+  quote-derived previous-close open has its own explicit validation rule.
+- During RRG comparison, the legacy API exposed different precision for VCB
+  candles through different request paths. One captured 100-candle average was
+  `59667.0772`; another current request returned `59666.81`, with 51 differing
+  closes. A completed-date recheck later matched both algorithms. The new
+  reader computes all dependent values from the same verified candle history.
+
+## Remaining acceptance work
+
+1. Populate intraday/other-market series and audit the configured universe. Prove complete trading-session
+   coverage with listing dates, holidays, suspensions, and no-trade periods;
+   the current audit reports observed gaps without inventing a VN calendar.
+2. Import retained and older legacy history under the new archive prefix.
+   Verify adjustment compatibility before combining it with current providers.
+   Public API exports supply sampled missing minute dates; wider provider
+   adoption and whole-universe history still need verification.
+3. Verify real provider corporate-action semantics separately for each native
+   interval. Thresholds and staged repairs are tested, but do not prove a
+   suspected revision was a dividend or that different providers share a basis.
+4. Benchmark the populated universe, including large cold historical profiles,
+   multi-symbol queries, memory, SQLite size, and archive transfer costs.
+5. Extend the selected deployed-web and Python SDK/CLI rehearsal to all required
+   flows, including authenticated sync and migration of existing sync records.
+   Preserve rollback routing and the legacy database/archive.
+
+At that checkpoint, the legacy backend and production data were not modified.
+The existing SDK was adapted internally for coherent API reads, and TODO.md
+described reviewable phases before actual Git commits were requested. The later
+local Git checkpoints are listed at the top of this report; production deployment
+remains outstanding.
