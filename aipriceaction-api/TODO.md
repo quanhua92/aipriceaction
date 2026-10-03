@@ -34,6 +34,14 @@ candidates, not published main replacements or licensed provider handoffs.
 VNINDEX's complete snapshot fails on an invalid 2019 candle; its separately
 verified 2020 year remains preserved. VND's invalid 2020 candle remains open.
 
+Daily adoption is now implemented and passes replay, race/lease, append,
+correction, and restore checks. Five live isolated VPS handoffs preserve every
+snapshot OHLCV/date; current daily SMA/EMA, historical, and weekly FastAPI reads
+pass. A separate extended SHS snapshot includes its existing 2018 history and
+preserves all 2,183 previously stored unique dates. The five intended candidates
+now total 9,915 candles / 26 older objects. Main publication and wider
+API/SDK/browser acceptance remain outstanding; these are still isolated proofs.
+
 The user explicitly selected the live `/tickers` API when legacy PostgreSQL is
 unavailable. Database access is not a prerequisite for migrating public candles.
 New checks capture all four missing EIB/HHS sessions plus valid GEX 2019, HAG
@@ -1470,7 +1478,7 @@ published series with a dated recovery/error, without silently skipping its tail
 - [x] Capture independent wide and yearly daily exports for five affected
   tickers. Verify all 9,665 OHLCV rows, preserve old/alternate captures, and check
   40 exact completed VPS candles per ticker. Keep main data exact.
-- [ ] Implement replayable daily snapshot handoff evidence with completed-tail,
+- [x] Implement replayable daily snapshot handoff evidence with completed-tail,
   provider identity, mutation/lease, append, correction, and restore checks.
 - [ ] Publish complete candidates only after fresh handoff, readable-date
   preservation, immutable originals, backup, and API/SDK/browser verification.

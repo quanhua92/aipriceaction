@@ -11,6 +11,7 @@ from .adoption import adopt_snapshot
 from .archive import Archive
 from .catalog import Catalog
 from .config import Settings
+from .daily_adoption import adopt_daily_snapshot
 from .domain import DataError, cutoff, interval, parse_time
 from .importing import import_bundle, import_csv
 from .migration import LegacyImporter
@@ -126,10 +127,11 @@ def parser():
     commands.add_parser("quality")
     adopt = commands.add_parser(
         "adopt-snapshot",
-        help="Verify exact completed minute overlap before enabling a provider on a legacy API snapshot",
+        help="Verify exact completed candle overlap before enabling a provider on a legacy API snapshot",
     )
     adopt.add_argument("--symbol", required=True)
     adopt.add_argument("--source", choices=("vn", "yahoo"), default="vn")
+    adopt.add_argument("--interval", choices=("1m", "1D"), default="1m")
     adopt.add_argument("--provider", choices=("vps", "vndirect", "dnse", "yahoo"), required=True)
     adopt.add_argument(
         "--complete-sessions",
@@ -372,8 +374,21 @@ async def execute(args, settings):
             )
         )
     elif args.command == "adopt-snapshot":
+        if args.interval == "1D" and (
+            args.source != "vn" or args.complete_sessions or args.corroborate_provider
+        ):
+            raise DataError(
+                "Daily adoption supports VN exact overlap without minute correction options", 400
+            )
         providers = Providers(settings)
         try:
+            if args.interval == "1D":
+                emit(
+                    await adopt_daily_snapshot(
+                        repo, providers, args.symbol.upper(), args.provider, args.execute
+                    )
+                )
+                return
             emit(
                 await adopt_snapshot(
                     repo,

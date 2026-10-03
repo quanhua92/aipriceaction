@@ -236,6 +236,11 @@ class Repository:
     @staticmethod
     def validate_adoption(record):
         try:
+            if record.get("interval") == "1D":
+                from .daily_adoption import validate_daily_adoption
+
+                validate_daily_adoption(record)
+                return
             evidence = json.loads(record["evidence"])
             valid = (
                 (

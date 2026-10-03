@@ -231,8 +231,10 @@ class Worker:
             if state["status"] != "ready":
                 return 0
             attempt = self.repo.start_source_check(source, symbol, iv)
-            if source in ("vn", "yahoo") and iv == "1m" and state["provider"] == "legacy-api":
-                reason = "Imported minute snapshot requires verified provider handoff"
+            if (
+                source in ("vn", "yahoo") and iv == "1m" or source == "vn" and iv == "1D"
+            ) and state["provider"] == "legacy-api":
+                reason = f"Imported {'daily' if iv == '1D' else 'minute'} snapshot requires verified provider handoff"
                 self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
                 self.repo.finding(source, symbol, iv, "provider_handoff_pending", reason)
                 return 0

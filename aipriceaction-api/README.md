@@ -210,11 +210,27 @@ timestamp tells you how old the proof is. It does not certify the whole retained
 history. `latest_verification` is `completed_recheck`, `provisional_at_check`, or
 `unverified`. Passing the completion cutoff without another provider read does
 not finalize a provisional record. Imported snapshots remain unverified until
-an actual published update succeeds. Frozen VN minute snapshots report
+an actual published update succeeds. Frozen VN daily/minute snapshots report
 `handoff_required` and do not initiate an unverified provider switch.
 The additive SQLite schema upgrade is automatic on startup; backup/restore
 preserves these records. `enabled` identifies an active ticker; the watchlist's
 interval configuration determines which intervals workers maintain.
+
+Daily snapshots can explicitly hand off to a selected VN provider:
+
+```sh
+uv run aipa-api --database ./data/api-daily-migration.sqlite3 --allow-direct adopt-snapshot --interval 1D --symbol GEX --provider vps
+uv run aipa-api --database ./data/api-daily-migration.sqlite3 --allow-direct adopt-snapshot --interval 1D --symbol GEX --provider vps --execute
+```
+
+Inspection is the default. Execution requires 40 exact completed daily candles
+through the imported tail, including volume. The replayable certificate retains
+original daily rows and archive identities; a concurrent snapshot change or
+active worker/recovery lease rejects publication. Original prices, provenance,
+and readable archives stay intact. Later provider corrections still queue
+retained-window recovery. This verifies a bounded append transition, not the
+provider's lifetime dividend policy. Minute adoption remains the default interval;
+its complete-session/correction options apply only to minute snapshots.
 
 For a bounded local read-only HTTP rehearsal, stop ingestion so payloads stay
 stable and run:

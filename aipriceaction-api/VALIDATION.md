@@ -6,6 +6,53 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Daily public-snapshot handoffs — 2026-10-04 ICT
+
+`adopt-snapshot --interval 1D` now supports frozen VN daily API snapshots. It
+requires **40 exact completed native candles** through the imported tail,
+including volume and provider identity. A replayable certificate stores the
+original retained rows, native overlap, snapshot checksums, finality, and archive
+identities. Execution rechecks all rows/state/archives under a short SQLite
+transaction, rejects active live/recovery leases, preserves original values and
+provenance, and changes only the allowed live provider. Original archive objects
+remain readable. Later corroborated revisions still queue staged recovery;
+newly inserted legacy data cannot masquerade as the verified frozen snapshot.
+Unadopted daily snapshots now report `handoff_required` without initiating a
+provider switch. Default minute adoption and its correction policy remain intact.
+
+**Seventeen new regressions** exercise inspection/execution, exact overlap,
+truncation/missing dates, future rows, provider identity, price/volume differences,
+concurrent candle/archive changes, active worker/job leases, foreign/pending
+archive bases, certificate replay/tampering, mutation after adoption, appending,
+and later revision recovery. The full API suite passes **302 tests**; Ruff lint
+and all **57 Python files** pass formatting, and source/wheel builds pass offline.
+
+All five isolated EIB/HHS/GEX/HAG/SHS candidates execute real VPS handoffs and
+bounded live workers successfully: each verifies 40 completed candles, preserves
+all 1,933 original OHLCV rows/dates, and leaves its five cold objects readable.
+The manifest reconstructs **25 objects and five adoption certificates** in a
+fresh database. **Twenty FastAPI requests** cover daily SMA, daily EMA, 2019
+history, and weekly charts across the five tickers; all return HTTP 200.
+These observations prove the bounded transition, not complete historical
+corporate-action or calendar semantics. Main SQLite remains exact.
+
+Main archive inventory additionally shows SHS's served history begins in 2018.
+Its first candidate covered only 2019 onward and is therefore insufficient for
+main replacement. A fresh database-backed 2018-through-current SHS snapshot
+imports **2,183 candles**, preserving every previously stored unique date,
+matches a separate wide API request exactly, and executes a fresh 40-candle VPS
+handoff. It has **747 hot rows and 1,436 cold rows in six objects**; the original
+main fragments remain untouched. Together with the other four candidates, this
+gives **9,915 candles / 26 cold objects** for subsequent publication checks.
+
+Evidence: `data/complete-live-api-20261003T183159Z/daily-handoffs-184223.json`,
+the preserved snapshot/index-restore databases and immutable manifest under
+`validation-complete-api-20261003T183159Z`, plus
+`data/shs-complete-api-20261003T184500Z/report.json` and its frozen API responses
+under `validation-shs-api-20261003T184500Z`. Main daily and operational hashes
+stay exact. Main adoption/publication, broader SDK/browser flows, remaining
+invalid VNINDEX/VND history, and full production acceptance remain open.
+
 ## Consistent complete public snapshots — 2026-10-04 ICT
 
 Complete yearly exports from 2019 through the current year reveal a legacy read-
@@ -37,8 +84,8 @@ database holds **3,735 recent rows**; RustFS holds **25 published Parquet object
 **40 completed candles**, through the imported tail. DNSE also matches all 40
 for EIB/HHS/GEX/HAG, but differs on one SHS open. VNDirect has independently
 recorded volume differences. No provider handoff is yet licensed, no factor is
-inferred, and no main data is changed. Daily adoption remains an explicit next
-implementation step; existing adoption code currently covers minute snapshots.
+inferred, and no main data is changed. At that checkpoint, daily adoption was
+the next implementation step; its later verified implementation is recorded above.
 
 The complete VNINDEX import fails strict OHLC validation in 2019 before any
 period is published. Its earlier isolated 2020 capture remains preserved; a
