@@ -6,6 +6,60 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native VN hourly handoff and isolated restoration — 2026-10-04 ICT
+
+The existing explicit adoption command now supports **VN hourly snapshots**
+using VPS, VNDirect or DNSE. It requires **100 exact bars across five observed
+completed VN session dates through the published tail**. Native identities,
+ordered unique timestamps, price/volume agreement, snapshot stability and job
+leases are checked. VN minute-aligned labels are preserved, including 02:15
+UTC index observations; Yahoo's whole-hour overlap requirement remains intact.
+Hourly correction/complete-session options remain rejected.
+
+VN hourly certificates use `exact_vn_hourly_snapshot_overlap` and retain the
+completed VN session cutoff. Validation rejects wrong market/interval/provider,
+insufficient overlap and forged/future finality bounds. The certificate permits
+ordinary native updates within the unchanged revision and survives cold
+restoration; it does not certify all historical adjustments or session calendars.
+Implementation commit: `f83ee67`.
+
+Live preflight of both unchanged isolated index snapshots passes **VPS with
+200 exact bars across 34 observed completed dates per index**. VNDirect matches
+only **one VN30 / zero VNINDEX records** in its 200-row samples; DNSE matches
+**ten VN30 / one VNINDEX records**. Both are rejected on completed OHLCV
+disagreement. All raw and normalized witnesses and detailed differences are
+preserved in `data/vn-hourly-handoff-preflight-20261004/`; its input database
+rows, states, certificates and epoch remain unchanged.
+
+A fresh isolated clone then executes both VPS handoffs. Adoption itself leaves
+all **3,448 records per index** unchanged. Ordinary provider-pinned refresh
+verifies **40 records per index**, preserves every timestamp/OHLCV value, and
+updates only those records' verified provider/capture provenance. This closed-
+market rehearsal appends **zero new timestamps**; synthetic tests separately
+exercise future appends. Its populated backup passes integrity/count and exact
+record checks with **6,896 rows**.
+
+Using a unique candidate S3 prefix, four provider-homogeneous archive objects
+are published and pruned in the clone, then restored into fresh SQLite. Both
+certificates and all **6,896 rows** restore exactly, including update versions;
+full four-hour query results also match. The main archive index stays at
+**701 objects**, the main database stays unchanged, and both original public
+candidates remain frozen and unmodified. Authoritative evidence:
+`data/vn-hourly-native-handoff-rehearsal-20261004/report.json`.
+All **19 supplementary artifacts** have immutable RustFS readbacks recorded in
+`data/vn-hourly-handoff-evidence-20261004.json`.
+
+The full suite passes **409 tests**, including **17 new VN hourly cases** for
+all three providers, historical labels, append/restoration, conflicts,
+duplicates/order, insufficient dates, races, leases, forged evidence and
+unfinished-session exclusion. Lint/format checks pass for **70 Python files**;
+offline wheel/source builds pass, and packaged adoption/storage modules match
+the tested source exactly.
+
+This supersedes the unsupported-VN-hourly-command limitation recorded below.
+It does not publish the canonical index replacement: explicit approval for the
+previously rejected primary-view timestamp/value change remains pending.
+
 ## VN hourly snapshot safeguard and isolated client review — 2026-10-04 ICT
 
 Worker refresh now protects imported **VN hourly** snapshots for all three

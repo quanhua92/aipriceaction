@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 392 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 409 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -101,9 +101,12 @@ history through `eb814ab`; they are not additional current open tasks.
   45 current native timestamps per index from the primary view, while retaining
   all original records in immutable before-images and backups. The rejected
   publication command has not run; isolated rehearsal is separate.
-- [ ] Implement and independently verify a supported native VN hourly handoff
-  path for frozen compatibility snapshots; current hourly adoption supports
-  Yahoo only. Preserve timestamp/session differences rather than splicing them.
+- [x] Implement native VN hourly handoff with market/interval-bound evidence,
+  100 exact bars, five observed completed dates and minute-aligned labels.
+  Both isolated index snapshots pass VPS with 200 exact bars across 34 dates;
+  VNDirect/DNSE disagreement remains rejected. Isolated adoption, normal
+  40-bar refreshes, populated backup and full 6,896-row/two-certificate S3
+  restoration pass; main data and the original candidates remain unchanged.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   are 58 series with pending work; readiness alone does not prove coverage.

@@ -390,6 +390,31 @@ later imports cannot reuse the adopted snapshot revision. This permits an
 observed handoff, without claiming all historical provider adjustment policies
 are equivalent. Failed verification leaves the published snapshot intact.
 
+VN hourly snapshots use `--interval 1h` and require at least 100 exact bars
+across five observed completed session dates through the published tail:
+
+```sh
+uv run aipa-api --allow-direct adopt-snapshot --source vn --symbol VNINDEX --interval 1h --provider vps
+```
+
+This applies to a ready `legacy-api` hourly snapshot. Add `--execute` only after
+reviewing its dry-run proof. The certificate preserves minute-aligned VN labels,
+including 02:15 UTC index bars, and binds finality to the completed VN session
+cutoff. Hourly correction/complete-session options remain unavailable; this
+proof licenses future updates, not historical scaling or calendar completeness.
+An imported hourly snapshot stays frozen until a handoff passes.
+
+Capture all three allowed VN sources without executing a handoff:
+
+```sh
+uv run python scripts/check_vn_hourly_snapshot_handoff.py --database data/candidate.sqlite3 --symbol VNINDEX --symbol VN30 --allow-direct --output data/hourly-handoff-preflight
+```
+
+The input must contain coherent imported snapshots. Raw/normalized responses
+and all differences are retained, and input rows/state/certificates/epoch are
+checked for preservation. A passing provider is recorded independently of
+providers that fail; failed proofs do not trigger a fallback or merge.
+
 Global minute snapshots use the same default exact-overlap path with Yahoo:
 
 ```sh
