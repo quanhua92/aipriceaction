@@ -6,6 +6,82 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Four coherent Yahoo stock/ETF daily histories published — 2026-10-04 ICT
+
+`scripts/stage_yahoo_daily_history.py` builds isolated full daily candidates for
+AAPL/MSFT/NVDA/SPY using the existing Yahoo normalization code. Raw native and
+public API responses and exact served before-images are checksummed and retained.
+The staged snapshots preserve every retained and public date, use a new native
+revision per symbol, and pass complete SQLite/Parquet readback. The main API is
+unchanged during staging. Tool/usage commit: `27eccd2`; Ruff lint/format pass.
+Stage evidence: `data/yahoo-daily-coherent-candidates-20261004/report.json`.
+
+| Symbol | Complete dates | Recent SQLite rows | Cold rows | New yearly objects |
+| --- | ---: | ---: | ---: | ---: |
+| AAPL | 11,544 | 753 | 10,791 | 44 |
+| MSFT | 10,218 | 753 | 9,465 | 38 |
+| NVDA | 6,967 | 753 | 6,214 | 25 |
+| SPY | 8,477 | 753 | 7,724 | 31 |
+
+The snapshots change adjusted prices on **342/394/366/380 original retained
+rows**, respectively, with exact original volumes. Computed maximum relative
+price differences are **3.2568537229746277e-7**, **3.4396855459126105e-7**,
+**3.082077497283551e-7** and **3.530119035277521e-7**. The existing adjustment
+detector returns no corroborated revision signal for any symbol; its threshold
+is unchanged. Full native snapshots replace the selected histories coherently;
+no old price is multiplied by an inferred factor, and strict legacy parity is
+not claimed. Earlier public adjusted values remain in immutable source evidence.
+
+Before publication, the real worker successfully refreshes **40 completed daily
+candles per candidate** and runs its historical probe. Every fresh price/volume
+matches the staged hot snapshot exactly, date sets remain unchanged, successful
+source checks use the new revision, and no repair job is queued. All archive
+objects are read back against the candidate. The publisher preserves original
+hot before-image Parquet, original cold objects, raw API/native bodies, worker
+response bodies and a populated before-backup. Archive and four series leases,
+current state/row/index checks and active-job checks protect one atomic SQLite
+replacement. Four old boundary objects become superseded; 138 new yearly objects
+provide the complete cold histories under the same revisions as recent data.
+
+**37,206 dates** now read exactly from the published candidates; **34,194 cold
+candles** include all four original boundary dates. All **5,681,275 unrelated
+candles** match the before-backup in every field, including provider/revision and
+write version. Unrelated series/source checks/archive entries, all ticker/job/
+staging/quality/sync/import/adoption records, all recoveries and unavailable-history
+records remain exact. Existing independent findings are not cleared. Evidence:
+`data/yahoo-daily-history-publication-20261003T203538Z/report.json`.
+
+Eight bounded historical HTTP exports verify all **37,206 timestamps/OHLCV**
+exactly. All four symbols pass daily/weekly SMA/EMA SDK checks with exact
+timestamps/OHLCV/MA10 through MA200. The real public web app, routed only in an
+isolated browser to localhost, passes AAPL daily/weekly and global benchmark
+requests without page/network/write errors. Reports:
+`data/http-yahoo-four-stock-daily-backfill-20261004.json`,
+`data/sdk-yahoo-daily-backfill-{AAPL,MSFT,NVDA,SPY}-20261004.json`, and
+`data/web-aapl-daily-backfill-20261004.json` with screenshots. This browser
+rehearsal covers AAPL; it is not a claim of all global web controls passing.
+
+The seven-series 2022 global cold/warm runner now succeeds for **six symbols**
+and explicitly fails only **GC=F**, so its overall exit remains nonzero. It
+downloads **60,342 bytes** across six objects cold and zero warm; successful
+cold/warm medians are **43.83/20.125 ms**. Full-record/provenance hashes match;
+main data/metadata is unchanged during the benchmark. Report:
+`data/history-global-four-stock-backfill-20261004.json`.
+
+Main SQLite remains **5,684,287 candles**; active archives rise to **687**.
+The populated after-backup is **865,284,096 bytes**, SHA-256
+`e3eb3ca9806f7a302c0220d1eb62ef1fd3745ca11fb37f7b4a3f95f4eb5488fb`, and passes
+`quick_check`. Isolated manifest recovery restores all 687 archive records,
+67 adoptions, 34 recoveries and one unavailable range exactly. Report:
+`data/yahoo-daily-history-publication-20261003T203538Z/backup-and-index-restore.json`.
+The original publication receipt is preserved independently; supplementary
+diagnostics/recovery proof use a separate content-hashed RustFS evidence key.
+
+GC=F is the remaining selected cross-market daily backfill. Its older quote
+semantics and the previously documented VN/global-minute disagreements remain
+open. API application code is unchanged; the latest full suite remains 335 tests.
+Production routing is unchanged.
+
 ## SJC and global index daily history restored — 2026-10-04 ICT
 
 Bounded database-backed public exports capture the selected global/SJC daily

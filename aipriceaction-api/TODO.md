@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,684,287 candles. The current S3 index has 553
+- The main local database has 5,684,287 candles. The current S3 index has 687
   active objects, 67 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -29,14 +29,14 @@ history through `eb814ab`; they are not additional current open tasks.
   Preserve and document 30 older legacy/native volume differences.
 - [x] Restore SJC and both global index daily histories: 21,582 older candles
   in 83 yearly objects; full-range HTTP, SDK and manifest recovery checks pass.
-- [ ] Backfill remaining cross-market daily history: AAPL/MSFT/NVDA/SPY/GC=F
-  2022 ranges remain absent locally but served by the live API.
-  Capture complete snapshots/verified native bases before publishing old candles.
-- [ ] Rebuild four stock/ETF daily histories from one coherent native snapshot
-  per symbol, retaining before-images and every served date. Wide Yahoo replies
-  alter retained adjusted prices slightly; joining them unchanged fails strict
-  basis checks. Investigate 26 old GC=F rows rejected by the current OHLC validator,
-  including futures settlement semantics, before treating them as corrupt.
+- [x] Rebuild AAPL/MSFT/NVDA/SPY daily histories from complete native snapshots:
+  37,206 dates including 34,194 cold candles in 138 objects. Preserve every
+  original/public date and before-image; worker, HTTP, SDK, AAPL web and complete
+  manifest recovery checks pass. Existing adjustment thresholds remain unchanged.
+- [ ] Backfill remaining selected GC=F daily history, including its absent 2022
+  range. Investigate 26 old public rows rejected by the current OHLC validator,
+  including futures settlement semantics, before treating them as corrupt or
+  changing validation. Capture/verify a complete coherent source before publication.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
