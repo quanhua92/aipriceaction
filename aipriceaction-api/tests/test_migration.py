@@ -385,6 +385,149 @@ def precise_quote(time="2025-01-02T13:30:00"):
 
 
 @pytest.mark.asyncio
+async def test_database_api_exports_pin_read_path_and_resume_frozen_data(system):
+    repo, archive, _ = system
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        assert request.url.params["redis"] == "false"
+        assert request.url.params["snap"] == "false"
+        assert request.url.params["cache"] == "false"
+        return httpx.Response(200, json={"SPY": [precise_quote()]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        importer = LegacyImporter(repo, archive, client=client)
+        options = dict(
+            from_api=True,
+            api_format="json",
+            api_read_backend="database",
+            start="2025-01-02",
+            end="2025-01-02",
+            provider="legacy-api",
+            revision="database-snapshot",
+        )
+        first = await importer.run("https://example.test", "yahoo", "SPY", "1m", **options)
+        saved = repo.read("yahoo", "SPY", "1m")
+        second = await importer.run("https://example.test", "yahoo", "SPY", "1m", **options)
+    assert len(calls) == 1 and second["cached"] == 1
+    assert first["periods"][0]["api_read_backend"] == "database"
+    assert repo.read("yahoo", "SPY", "1m") == saved
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("next_day", ["2025-01-02", "2025-02-03"])
+async def test_read_backend_switch_rejects_existing_and_new_periods_before_download(
+    system, next_day
+):
+    repo, archive, _ = system
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(200, json={"SPY": [precise_quote()]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        importer = LegacyImporter(repo, archive, client=client)
+        options = dict(from_api=True, api_format="json", provider="legacy-api", revision="frozen")
+        await importer.run(
+            "https://example.test",
+            "yahoo",
+            "SPY",
+            "1m",
+            start="2025-01-02",
+            end="2025-01-02",
+            **options,
+        )
+        saved = repo.read("yahoo", "SPY", "1m")
+        epoch = repo.epoch()
+        with pytest.raises(DataError, match="read backend changed"):
+            await importer.run(
+                "https://example.test",
+                "yahoo",
+                "SPY",
+                "1m",
+                start=next_day,
+                end=next_day,
+                api_read_backend="database",
+                **options,
+            )
+    assert len(calls) == 1 and repo.epoch() == epoch
+    assert repo.read("yahoo", "SPY", "1m") == saved
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("backend,from_api", [("unknown", True), ("database", False)])
+async def test_api_read_backend_rejects_invalid_or_non_api_inputs(system, backend, from_api):
+    repo, archive, _ = system
+    with pytest.raises(DataError, match="API read backend"):
+        await LegacyImporter(repo, archive).run(
+            "https://example.test",
+            "vn",
+            "FPT",
+            "1D",
+            years=[2025],
+            from_api=from_api,
+            api_read_backend=backend,
+        )
+    assert repo.archives() == [] and repo.state("vn", "FPT", "1D") is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("year", [2021, 2025])
+async def test_old_receipts_resume_default_and_block_backend_switch_into_another_year(system, year):
+    repo, archive, _ = system
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "FPT": [
+                    dict(time=f"{year}-01-04", open=100, high=110, low=90, close=100, volume=10)
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+        importer = LegacyImporter(repo, archive, client=client)
+        options = dict(
+            from_api=True,
+            api_format="json",
+            provider="legacy-api",
+            revision="old-receipt",
+            recent_floor=parse_time("2023-01-01"),
+        )
+        await importer.run("https://example.test", "vn", "FPT", "1D", years=[year], **options)
+        # Existing receipts predate both new result fields. Archive-only imports
+        # have no series state, but still belong to the frozen snapshot.
+        with repo.connect() as con:
+            receipt = con.execute("SELECT id,result FROM legacy_imports").fetchone()
+            result = json.loads(receipt["result"])
+            result.pop("api_read_backend")
+            result.pop("revision")
+            con.execute(
+                "UPDATE legacy_imports SET result=? WHERE id=?", (json.dumps(result), receipt["id"])
+            )
+        resumed = await importer.run(
+            "https://example.test", "vn", "FPT", "1D", years=[year], **options
+        )
+        assert resumed["periods"][0]["resumed"]
+        with pytest.raises(DataError, match="read backend changed"):
+            await importer.run(
+                "https://example.test",
+                "vn",
+                "FPT",
+                "1D",
+                years=[year + 1],
+                api_read_backend="database",
+                **options,
+            )
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
 async def test_json_api_import_preserves_precision_and_frozen_cache(system):
     repo, archive, _ = system
     calls = []

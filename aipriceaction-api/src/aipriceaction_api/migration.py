@@ -226,6 +226,7 @@ class LegacyImporter:
         from_api=False,
         api_batch_days=1,
         api_format="csv",
+        api_read_backend="default",
     ):
         parts = urlsplit(base_url)
         if (
@@ -241,6 +242,34 @@ class LegacyImporter:
             raise DataError("--older-only requires --split-retention", 400)
         if api_format not in ("csv", "json") or api_format != "csv" and not from_api:
             raise DataError("JSON format applies only to legacy API exports", 400)
+        if api_read_backend not in ("default", "database") or (
+            api_read_backend != "default" and not from_api
+        ):
+            raise DataError("API read backend applies only to legacy API exports", 400)
+        if from_api:
+            state = self.repo.state(source, symbol, iv)
+            same_snapshot = state and state["revision"] == revision
+            same_snapshot = same_snapshot or any(
+                obj["revision"] == revision for obj in self.repo.archives(source, symbol, iv)
+            )
+            if same_snapshot:
+                with self.repo.connect() as con:
+                    previous_results = [
+                        json.loads(row[0])
+                        for row in con.execute(
+                            "SELECT result FROM legacy_imports WHERE source=? AND symbol=? AND interval=?",
+                            (source, symbol, iv),
+                        )
+                    ]
+                if any(
+                    old.get("api_format")
+                    and old.get("revision") in (None, revision)
+                    and (old.get("api_read_backend") or "default") != api_read_backend
+                    for old in previous_results
+                ):
+                    raise DataError(
+                        "Legacy API read backend changed; use a new revision and separate migration database"
+                    )
         files = legacy_files(source, symbol, iv, years, start, end)
         if not isinstance(api_batch_days, int) or not 1 <= api_batch_days <= 31:
             raise DataError("API batch days must be between 1 and 31", 400)
@@ -264,6 +293,11 @@ class LegacyImporter:
                             "format": api_format,
                             "limit": 10_000,
                             "cache": "false",
+                            **(
+                                {"redis": "false", "snap": "false"}
+                                if api_read_backend == "database"
+                                else {}
+                            ),
                         }
                     ),
                     first,
@@ -414,10 +448,15 @@ class LegacyImporter:
                         "SELECT * FROM legacy_imports WHERE id=?", (identifier,)
                     ).fetchone()
                 if previous and from_api:
-                    prior_format = json.loads(previous["result"]).get("api_format") or "csv"
+                    prior_result = json.loads(previous["result"])
+                    prior_format = prior_result.get("api_format") or "csv"
                     if prior_format != api_format:
                         raise DataError(
                             "Legacy API format changed; use a new revision and separate migration database"
+                        )
+                    if (prior_result.get("api_read_backend") or "default") != api_read_backend:
+                        raise DataError(
+                            "Legacy API read backend changed; use a new revision and separate migration database"
                         )
                 if previous and previous["input_checksum"] == checksum:
                     report["periods"].append(
@@ -469,6 +508,8 @@ class LegacyImporter:
                     "skipped_recent": len(recent) if older_only else 0,
                     "archives": [obj["id"] for obj in objects],
                     "api_format": api_format if from_api else None,
+                    "api_read_backend": api_read_backend if from_api else None,
+                    "revision": revision,
                 }
                 if (
                     older

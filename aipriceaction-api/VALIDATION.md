@@ -6,6 +6,52 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Consistent complete public snapshots — 2026-10-04 ICT
+
+Complete yearly exports from 2019 through the current year reveal a legacy read-
+path difference: SHS has ten differing rows between default yearly requests and
+an independent database-backed wide request (some are float representation noise;
+others are changed prices/volumes). The Rust handler permits recent dated reads
+from Redis but falls back to PostgreSQL outside Redis coverage. A snapshot must
+choose one read path explicitly rather than treating HTTP 200 as consistency.
+
+`import-legacy --from-api --api-read-backend database` now sends `redis=false`
+and `snap=false` alongside the existing `cache=false`. It uses the public HTTP
+API, with no direct database connection. The default remains compatible with
+existing frozen exports. Receipts record the read backend and revision. A change
+within an existing snapshot is rejected before publication, including when a
+different month/year would otherwise have no previous period receipt. Old
+receipts resume their default path; archive-only snapshots are also protected.
+Seven regressions cover request flags, frozen-cache resume, existing/new-period
+switches, invalid/non-API inputs, and old hot/cold receipts.
+All **285 API tests pass**; Ruff lint and all 55 Python format checks pass, and
+source/wheel distributions build offline.
+An actual `aipa-api import-legacy` invocation with the new option also exports
+and archives all 250 GEX 2019 candles into isolated filesystem/SQLite storage;
+its receipt records `api_read_backend=database` and the explicit revision.
+
+The new mode captures **1,933 daily candles each for EIB, HHS, GEX, HAG, and SHS**:
+**9,665 total**. Every value matches a separate wide API request. Their isolated
+database holds **3,735 recent rows**; RustFS holds **25 published Parquet objects
+/ 5,930 older rows**. All five VPS head checks match every OHLCV field across
+**40 completed candles**, through the imported tail. DNSE also matches all 40
+for EIB/HHS/GEX/HAG, but differs on one SHS open. VNDirect has independently
+recorded volume differences. No provider handoff is yet licensed, no factor is
+inferred, and no main data is changed. Daily adoption remains an explicit next
+implementation step; existing adoption code currently covers minute snapshots.
+
+The complete VNINDEX import fails strict OHLC validation in 2019 before any
+period is published. Its earlier isolated 2020 capture remains preserved; a
+valid individual year must not be presented as a complete multi-year snapshot.
+VND 2020 retains its separately recorded invalid candle.
+
+Evidence: `data/complete-live-api-20261003T182812Z/report.json` (default-path
+comparison), `data/complete-live-api-20261003T183159Z/report.json` (database-backed
+comparison), their frozen download receipts, independent wide responses, and
+native head captures. The latter prefix is `validation-complete-api-20261003T183159Z`.
+Before/after main daily and operational hashes are exact in both rehearsals.
+The isolated CLI proof is preserved under `data/live-api-cli-proof-20261004/`.
+
 ## Live API candle migration — 2026-10-04 ICT
 
 The user directed migration through the live public `/tickers` endpoint instead

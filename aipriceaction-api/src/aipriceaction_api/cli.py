@@ -88,6 +88,12 @@ def parser():
         default="csv",
         help="JSON preserves full API price precision; use a new explicit snapshot revision",
     )
+    legacy.add_argument(
+        "--api-read-backend",
+        choices=("default", "database"),
+        default="default",
+        help="With --from-api, database disables legacy Redis/snapshot reads; use a new revision and migration database",
+    )
     legacy.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"), required=True)
     legacy.add_argument("--symbol", required=True)
     legacy.add_argument("--interval", default="1D")
@@ -362,6 +368,7 @@ async def execute(args, settings):
                 from_api=args.from_api,
                 api_batch_days=args.api_batch_days,
                 api_format=args.api_format,
+                api_read_backend=args.api_read_backend,
             )
         )
     elif args.command == "adopt-snapshot":

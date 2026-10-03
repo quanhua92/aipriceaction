@@ -361,7 +361,7 @@ uv run aipa-api import-csv /path/FPT-1D.csv --source vn --symbol FPT --interval 
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --dry-run
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1D --years 2020,2021,2022 --split-retention --older-only
 uv run aipa-api import-legacy --source vn --symbol FPT --interval 1m --start-date 2025-01-02 --end-date 2025-01-03 --split-retention
-uv run aipa-api --database ./data/api-daily-migration.sqlite3 import-legacy --from-api --api-format json --source vn --symbol GEX --interval 1D --years 2019 --split-retention --revision legacy-api-daily-20261004
+uv run aipa-api --database ./data/api-daily-migration.sqlite3 import-legacy --from-api --api-format json --api-read-backend database --source vn --symbol GEX --interval 1D --years 2019 --split-retention --revision legacy-api-daily-20261004
 uv run aipa-api --database ./data/migration.sqlite3 import-legacy --from-api --source vn --symbol FPT --interval 1m --start-date 2025-10-03 --end-date 2026-10-02
 uv run aipa-api --database ./data/migration.sqlite3 import-legacy --from-api --source vn --symbol VCB --interval 1m --start-date 2025-10-03 --end-date 2026-10-02 --api-batch-days 31
 uv run aipa-api --database ./data/json-migration.sqlite3 import-legacy --from-api --api-format json --source yahoo --symbol SPY --interval 1m --start-date 2026-09-28 --end-date 2026-10-02 --api-batch-days 7 --revision legacy-api-json-global-minute-20261003
@@ -392,6 +392,15 @@ same date, OHLCV, empty-response retry, and 10,000-row truncation checks. Changi
 the format of an existing period receipt requires a new revision and separate
 migration database. Verify the new snapshot before publishing it over old data;
 preserving precision does not resolve other provider or timestamp disagreements.
+
+Use `--api-read-backend database` for a consistent database-backed public export.
+This sends `redis=false&snap=false&cache=false` to the existing HTTP API; it does
+not open a PostgreSQL connection. The legacy API can otherwise serve recent
+ranges from Redis and wider ranges from its database, with different values.
+The default retains existing export behavior and frozen receipt compatibility.
+Backend choice is recorded with the snapshot revision; changing it within an
+existing snapshot, including when adding a new year/month, is rejected. Use a
+new revision and separate migration database for another read path.
 
 `--api-batch-days` optionally combines up to 31 adjacent minute-export dates
 within each receipt month. Its default remains one day; S3 daily object paths

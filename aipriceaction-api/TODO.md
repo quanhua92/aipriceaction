@@ -24,6 +24,16 @@ evidence are ignored. Data coverage and production cutover gates remain open.
 
 ## Live API migration takes priority — 2026-10-04 ICT
 
+Complete 2019-through-current API snapshots for EIB/HHS/GEX/HAG/SHS now stage
+9,665 exact daily candles, with three-calendar-year hot retention and 25 older
+Parquet objects. Independent wide exports match every candle. The new
+`--api-read-backend database` option prevents mixing recent Redis values with
+older database values; frozen receipts reject a read-path change. Each of the
+five snapshots has 40 exact completed VPS tail candles. These are isolated
+candidates, not published main replacements or licensed provider handoffs.
+VNINDEX's complete snapshot fails on an invalid 2019 candle; its separately
+verified 2020 year remains preserved. VND's invalid 2020 candle remains open.
+
 The user explicitly selected the live `/tickers` API when legacy PostgreSQL is
 unavailable. Database access is not a prerequisite for migrating public candles.
 New checks capture all four missing EIB/HHS sessions plus valid GEX 2019, HAG
@@ -1448,6 +1458,27 @@ changing existing series or pretending their minute history is complete.
 
 Acceptance: a bounded VN restart fills observed intraday data or preserves the
 published series with a dated recovery/error, without silently skipping its tail.
+
+### Commit 12w — `fix(migration): pin legacy API export read paths`
+
+- [x] Keep existing default exports and frozen receipts compatible. Add an
+  explicit database-backed public API option, without a direct PostgreSQL client.
+- [x] Record the read backend and revision; reject a backend switch within an
+  existing snapshot, including a new period or old archive-only receipts.
+- [x] Add seven regressions for pinned requests, resumable captures, invalid
+  inputs, same/new period switches, and pre-existing hot/cold receipts.
+- [x] Capture independent wide and yearly daily exports for five affected
+  tickers. Verify all 9,665 OHLCV rows, preserve old/alternate captures, and check
+  40 exact completed VPS candles per ticker. Keep main data exact.
+- [ ] Implement replayable daily snapshot handoff evidence with completed-tail,
+  provider identity, mutation/lease, append, correction, and restore checks.
+- [ ] Publish complete candidates only after fresh handoff, readable-date
+  preservation, immutable originals, backup, and API/SDK/browser verification.
+- [ ] Recover VNINDEX/VND invalid public history without guessed corrections;
+  broader reliability and production cutover acceptance remain open.
+
+Acceptance: public exports preserve one explicit read path and complete validated
+snapshots can advance under a verified provider without erasing served history.
 
 ### Commit 13 — `test(api): verify replacement and document deployment`
 
