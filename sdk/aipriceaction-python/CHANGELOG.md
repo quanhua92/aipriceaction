@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `get_ohlcv(use_live=True)` reads complete API ranges and warmed SMA/EMA values instead of joining a short live tail to potentially stale S3 history. Method signatures and CLI options are unchanged.
+- API-unavailable or empty tickers fall back to complete archive series; HTTP 503 history-consistency failures reach the caller. DataFrame `attrs["data_source"]` records API/archive fallback use.
+- Large minute requests paginate without silently losing rows, and empty aggregated archive reads return an empty DataFrame.
+- Undefined API indicators (EMA warm-up or volume change after zero volume) remain empty rather than triggering a stale archive fallback.
+- SJC API range requests use the existing `mode=yahoo` contract while retaining `source="sjc"` in the public SDK.
+
 ## [0.1.24] - 2026-06-11
 
 ### Added

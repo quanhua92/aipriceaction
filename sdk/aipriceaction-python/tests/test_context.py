@@ -90,9 +90,9 @@ class TestQuestions:
 
 
 class TestBuildNoData:
-    def test_build_no_args(self, builder):
-        """builder.build() with no args returns system prompt + disclaimer only."""
-        context = builder.build()
+    def test_build_without_market_or_reference(self, builder):
+        """Disabling the default reference returns system prompt + disclaimer only."""
+        context = builder.build(reference_ticker=None)
         assert "System Prompt" in context or "system prompt" in context.lower()
         assert "Disclaimer" in context or "disclaimer" in context.lower()
         # No market data section
@@ -343,7 +343,7 @@ class TestBuildSource:
         )
         # Live API response (contains both vn and crypto)
         responses.get(
-            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             json={
                 "VCB": [{"time": "2026-05-04", "open": 60500, "high": 60600, "low": 60000, "close": 60300, "volume": 1445700, "close_changed": 2.1}],
                 "FPT": [{"time": "2026-05-04", "open": 74800, "high": 75000, "low": 74600, "close": 74900, "volume": 500000, "close_changed": -0.5}],
@@ -380,7 +380,7 @@ class TestBuildSource:
             ],
         )
         responses.get(
-            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "https://api.aipriceaction.com/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             json={
                 "VCB": [{"time": "2026-05-04", "open": 60500, "high": 60600, "low": 60000, "close": 60300, "volume": 1445700}],
                 "BTCUSDT": [{"time": "2026-05-04", "open": 78568, "high": 80420, "low": 78288, "close": 80343, "volume": 3985}],

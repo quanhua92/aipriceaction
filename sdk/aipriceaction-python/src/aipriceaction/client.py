@@ -122,9 +122,8 @@ class AIPriceAction:
         base_url: S3 archive base URL. Defaults to "https://s3.aipriceaction.com".
         cache_dir: Local disk cache directory. Defaults to a temp dir. Pass None to disable.
         freshness_ttl: Seconds to trust disk cache before re-checking server hash (default 300).
-        use_live: Overlay live API data on top of S3 data (default False). When enabled,
-            the last candle(s) from S3 are overwritten with live data and any newer candles
-            are appended. Falls back to stale S3 data if the live API is unreachable.
+        use_live: Read coherent candle ranges and indicators from the API (default True).
+            Falls back to complete S3 series when the API is unreachable or has no data.
         live_url: Base URL for the live data API. Defaults to "https://api.aipriceaction.com".
         utc_offset: UTC offset in hours for display (default 7). Pass 0 to keep raw UTC.
     """
@@ -1123,6 +1122,93 @@ class AIPriceAction:
 
     # ── OHLCV data (mirrors /tickers endpoint) ──
 
+    def _fetch_api_ranges(self, resolved, interval, limit, start, end, ma, ema):
+        """Read complete API series; never graft a live tail onto an archived basis."""
+        columns = _OHLCV_COLUMNS + ["symbol"] + (_MA_COLUMNS if ma else [])
+
+        def fetch_one(src, symbols):
+            rows = {sym: [] for sym in symbols}
+            page_end = end
+            page_limit = min(limit, 10000)
+            while True:
+                params = [("symbol", sym) for sym in symbols] + [
+                    ("interval", interval), ("mode", "yahoo" if src == "sjc" else src), ("format", "json"),
+                    ("limit", page_limit), ("ma", str(ma).lower()),
+                    ("ema", str(ema).lower()), ("end_date", page_end.isoformat()),
+                ]
+                # SDK limits select the latest rows inside an explicit range;
+                # the HTTP endpoint selects the earliest when start_date is set.
+                # Query backwards from end and apply the lower bound locally.
+                try:
+                    response = self._session.get(
+                        f"{self._live_url}/tickers", params=params,
+                        timeout=_LIVE_REQUEST_TIMEOUT,
+                    )
+                    # A failed historical consistency check must reach the caller.
+                    # Falling back here would hide an incompatible adjustment basis.
+                    if response.status_code == 503:
+                        raise AIPriceActionError(
+                            "Requested API history is unavailable: " + response.text[:300]
+                        )
+                    response.raise_for_status()
+                    data = response.json()
+                    if not isinstance(data, dict):
+                        raise ValueError("Invalid candle response")
+                    for sym in symbols:
+                        candles = data.get(sym, [])
+                        if not isinstance(candles, list) or any(
+                            not isinstance(c, dict) or not all(k in c for k in _OHLCV_COLUMNS)
+                            for c in candles
+                        ):
+                            raise ValueError("Incomplete candle response")
+                        # Legacy responses omit undefined indicators: an EMA
+                        # before its seed, or volume change after a zero-volume
+                        # bar. Keep these as missing values; valid prices do not
+                        # justify switching the whole series to an older archive.
+                        rows[sym].extend({**c, "symbol": sym} for c in candles)
+                except AIPriceActionError:
+                    raise
+                except (requests.RequestException, ValueError, TypeError):
+                    # Discard partial pages; fallback uses one complete archive series.
+                    return {}
+
+                if len(symbols) != 1 or limit <= 10000:
+                    break
+                candles = data.get(symbols[0], [])
+                unique = {c["time"]: c for c in rows[symbols[0]]}
+                if len(unique) >= limit or len(candles) < page_limit or (
+                    start is not None and candles and
+                    min(c["time"] for c in candles)[:10] <= start.isoformat()
+                ):
+                    break
+                next_end = self._parse_date(min(c["time"] for c in candles)[:10])
+                if next_end >= page_end:
+                    raise AIPriceActionError("API candle pagination made no progress")
+                page_end = next_end  # Include this whole day; deduplicate its overlap.
+                page_limit = 10000
+
+            if start is not None:
+                rows = {sym: [c for c in candles if c["time"][:10] >= start.isoformat()]
+                        for sym, candles in rows.items()}
+            return {
+                sym: pd.DataFrame(candles).reindex(columns=columns)
+                .drop_duplicates(subset=["time"], keep="last")
+                .sort_values("time").tail(limit).reset_index(drop=True)
+                for sym, candles in rows.items() if candles
+            }
+
+        batches = []
+        for src in dict.fromkeys(src for src, _ in resolved):
+            symbols = list(dict.fromkeys(sym for s, sym in resolved if s == src))
+            size = 40 if limit <= 40 else 1
+            batches.extend((src, symbols[i:i + size]) for i in range(0, len(symbols), size))
+        frames = {}
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(fetch_one, src, symbols) for src, symbols in batches]
+            for future in as_completed(futures):
+                frames.update(future.result())
+        return frames
+
     def convert_time(self, time_str: str, interval: str = "1D") -> str:
         """Convert a UTC time string to the configured timezone (public API).
 
@@ -1165,11 +1251,11 @@ class AIPriceAction:
 
         Mirrors the /tickers REST API endpoint parameters.
 
-        When ``use_live=True`` is set on the client, live data from the REST API
-        is overlaid on top of S3 data — the last candle(s) are overwritten and
-        any newer candles are appended. Works for both native and aggregated
-        intervals (the backend handles aggregation server-side). If the live API
-        is unreachable, stale S3 data is used.
+        When ``use_live=True``, complete candle ranges and warmed indicators come
+        from the REST API, including aggregated intervals. If the API cannot be
+        reached or has no data for a ticker, that ticker uses its complete S3
+        series. API and S3 prices are never spliced within a ticker. Historical
+        consistency errors (HTTP 503) are reported rather than hidden by fallback.
 
         Args:
             ticker: Single ticker symbol (e.g. "VCB", "BTCUSDT"). None = all tickers.
@@ -1228,6 +1314,21 @@ class AIPriceAction:
         # Compute date range
         end = self._parse_date(end_date) if end_date else date.today()
         start = self._parse_date(start_date) if start_date else None
+
+        api_frames = {}
+        if self.use_live and resolved:
+            api_interval = agg_interval or base_interval
+            api_frames = self._fetch_api_ranges(
+                resolved, api_interval, limit, start, end, ma, ema,
+            )
+            resolved = [(src, sym) for src, sym in resolved if sym not in api_frames]
+            if not resolved:
+                result = pd.concat(api_frames.values(), ignore_index=True)
+                if self._utc_offset is not None:
+                    result = self._convert_time_column(result, interval)
+                result.attrs["data_source"] = "api"
+                return result
+            logger.warning("API unavailable or empty for %s; using complete S3 series", resolved)
 
         # Determine how many candles we need in total.
         # limit is user-visible candles; ma=True adds 200 buffer candles for MA-200.
@@ -1315,24 +1416,13 @@ class AIPriceAction:
                 )
                 agg_df["symbol"] = sym
                 all_agg.append(agg_df)
-            result = pd.concat(all_agg, ignore_index=True)
+            if all_agg:
+                result = pd.concat(all_agg, ignore_index=True)
 
         logger.debug("[get_ohlcv] pre-live: %d rows in result (%.3fs)", len(result), _time.monotonic() - _t0)
 
-        # Overlay live data on top of S3 data (before MA computation).
-        # The backend supports aggregated intervals directly, so we pass
-        # the original interval (aggregated or native) to the live API.
-        if self.use_live:
-            _t_live = _time.monotonic()
-            live_interval = agg_interval if agg_interval else base_interval
-            if live_interval in _LIVE_NATIVE_INTERVALS or agg_interval is not None:
-                live_data = self.fetch_live_data(live_interval, ma=False)
-                if live_data is not None:
-                    result = self._merge_live_data(result, live_data, resolved)
-            logger.debug("[get_ohlcv] live overlay done (%.3fs)", _time.monotonic() - _t_live)
-
         # Compute MA indicators per symbol
-        if ma:
+        if ma and not result.empty:
             _t_ma = _time.monotonic()
             from .indicators import compute_indicators
 
@@ -1366,6 +1456,13 @@ class AIPriceAction:
             result = (
                 result.groupby("symbol", sort=False).tail(limit).reset_index(drop=True)
             )
+
+        if api_frames:
+            result = pd.concat([result, *api_frames.values()], ignore_index=True)
+        result.attrs["data_source"] = (
+            "api+archive_fallback" if api_frames else
+            "archive_fallback" if self.use_live else "archive"
+        )
 
         # Convert time column to configured timezone
         if self._utc_offset is not None:

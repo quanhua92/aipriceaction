@@ -15,7 +15,7 @@ from aipriceaction import AIPriceAction
 def mock_live():
     """Mock live API endpoint for 1D interval."""
     responses.get(
-        "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+        "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
         json={
             "VCB": [
                 {
@@ -142,7 +142,7 @@ class TestFetchLiveData:
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             json=data,
         )
         result = client_live.fetch_live_data("1D")
@@ -157,7 +157,7 @@ class TestFetchLiveData:
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false&ema=false",
             json=data,
         )
         result = client_live.fetch_live_data("1D", ma=False)
@@ -178,12 +178,13 @@ class TestFetchLiveData:
 
         responses.add_callback(
             responses.GET,
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             callback=callback,
             content_type="application/json",
         )
         result1 = client_live.fetch_live_data("1D")
         result2 = client_live.fetch_live_data("1D")
+        assert result1 is not None
         assert call_count == 1
         assert result1 is result2
         responses.stop()
@@ -194,7 +195,7 @@ class TestFetchLiveData:
         responses.start()
         data = {"VCB": [{"time": "2025-04-29", "open": 58000, "high": 58500, "low": 57500, "close": 58200, "volume": 2000000, "symbol": "VCB"}]}
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             json=data,
         )
         client_live.fetch_live_data("1D")
@@ -205,7 +206,7 @@ class TestFetchLiveData:
         # Second call fails
         responses.reset()
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             status=500,
         )
         stale = client_live.fetch_live_data("1D")
@@ -218,7 +219,7 @@ class TestFetchLiveData:
         """No cache + API error returns None."""
         responses.start()
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true",
+            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=true&ema=false",
             status=500,
         )
         result = client_live.fetch_live_data("1D")
@@ -487,13 +488,16 @@ class TestGetOhlcvLive:
         assert len(df) == 1
         assert df.iloc[0]["close"] == 56887.44
 
-    def test_get_ohlcv_live_overlays_data(self, mock_s3_base, client_live):
-        """Live data overwrites S3 data when use_live=True."""
-        # get_ohlcv calls fetch_live_data with ma=False
+    def test_get_ohlcv_api_reads_complete_range(self, mock_s3_base, client_live):
+        """The full requested range comes from one API basis when use_live=True."""
         responses.get(
-            "http://localhost:9000/tickers?interval=1D&mode=all&format=json&limit=1&ma=false",
+            re.compile(r"http://localhost:9000/tickers\?"),
             json={
                 "VCB": [
+                    {
+                        "time": "2025-04-28", "open": 57000, "high": 58000,
+                        "low": 56000, "close": 57200, "volume": 1700000,
+                    },
                     {
                         "time": "2025-04-29",
                         "open": 58000,
@@ -546,8 +550,9 @@ class TestGetOhlcvLive:
             ma=False,
         )
         assert len(df) == 2
-        assert df.iloc[0]["close"] == 57086.00  # S3 row preserved
-        assert df.iloc[1]["close"] == 58200  # Live row overwrites
+        assert df.iloc[0]["close"] == 57200  # API basis across the entire range
+        assert df.iloc[1]["close"] == 58200
+        assert df.attrs["data_source"] == "api"
 
     def test_get_ohlcv_skips_aggregated_interval(self):
         """Aggregated intervals are not in the live native set."""
@@ -737,6 +742,6 @@ class TestMixedTimeFormatRegression:
     def test_get_ohlcv_without_start_date_still_works(self, mock_s3_date_only_with_live):
         """get_ohlcv without start_date works (MA buffer trim step is skipped)."""
         client = mock_s3_date_only_with_live
-        df = client.get_ohlcv("VCB", interval="1D", ma=True)
+        df = client.get_ohlcv("VCB", interval="1D", end_date="2025-04-29", ma=True)
         assert len(df) > 0
         assert "ma10" in df.columns

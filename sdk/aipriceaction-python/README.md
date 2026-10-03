@@ -67,7 +67,7 @@ client = AIPriceAction(utc_offset=-5)      # UTC-5 (EST)
 
 ## Live Data
 
-By default the SDK reads from an S3 archive which may be stale by minutes to hours. Enable `use_live=True` to overlay live data from the REST API on top of S3 data:
+By default (`use_live=True`), the SDK reads complete candle ranges and warmed indicators from the REST API. Metadata and fundamental files retain their existing S3 paths:
 
 ```python
 client = AIPriceAction(use_live=True)
@@ -75,14 +75,14 @@ df = client.get_ohlcv("VCB", interval="1D", limit=5, ma=False)
 ```
 
 When enabled, the SDK:
-- Fetches live data from the REST API (`https://api.aipriceaction.com` by default)
-- Overwrites the last candle(s) from S3 with live data
-- Appends any newer candles not yet in the archive
-- Falls back to S3-only data if the live API is unreachable
+- Fetches requested ranges and SMA/EMA values from `https://api.aipriceaction.com`
+- Uses server aggregation for API data
+- Falls back to a complete S3 series for each ticker whose API is unreachable or empty
+- Reports HTTP 503 history-consistency failures instead of hiding them with stale archive data
 
-Native intervals (`1D`, `1h`, `1m`) are stored in the archive. Aggregated intervals (`5m`, `15m`, `30m`, `4h`, `1W`, `2W`) are computed client-side from base data.
+API and archive candles are never spliced within one ticker. Inspect `df.attrs["data_source"]` for `api`, `archive`, `archive_fallback`, or `api+archive_fallback`. Fallback may be stale.
 
-Live responses are cached in memory for 120 seconds to avoid redundant API calls. On API failure, stale cached data is returned if available.
+Use `AIPriceAction(use_live=False)` for archive-only reads. Native intervals (`1D`, `1h`, `1m`) retain their CSV paths; archive aggregations and indicators are computed client-side. Existing timezone, explicit date-range, and per-ticker limit behavior is preserved.
 
 ### Direct live data access
 
