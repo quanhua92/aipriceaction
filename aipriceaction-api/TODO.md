@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 5,868,056 candle/quote records. The current S3 index has 701
+- The main local database has 6,033,566 candle/quote records. The current S3 index has 701
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -68,10 +68,17 @@ history through `eb814ab`; they are not additional current open tasks.
   provider overlap, immutable before-images and populated SQLite backups.
   FPT now serves 3,732 rows; all 500 original rows and unrelated records remain
   unchanged. Full HTTP, SDK and visible daily/hourly web controls pass.
+- [x] Extend guarded hourly progress to the other 52 selected VN stocks:
+  append 165,510 rows with 10,400 fresh exact native matches; preserve every
+  original record and operational table, and verify populated backups. Full
+  HTTP checks cover all 191,510 native hourly and 76,788 derived four-hour bars;
+  representative SDK historical ranges and actual ACB web controls pass.
 - [ ] Complete selected VN hourly backfills and reconcile public-only dates.
   FPT's bootstrap job remains pending at the retention boundary; three public
   timestamps remain absent from its native window. Partial publication does
-  not certify complete coverage or close the quality findings.
+  not certify complete coverage or close the quality findings. All 53 stock
+  hourly prefixes now reach their applicable retention/listing date; VNINDEX
+  and VN30 still begin after that date. Session completeness remains unproven.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   are 58 series with pending work; readiness alone does not prove coverage.

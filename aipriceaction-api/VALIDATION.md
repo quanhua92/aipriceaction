@@ -6,6 +6,62 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Selected VN hourly progress publication — 2026-10-04 ICT
+
+The bounded local batch runner applies the existing guarded progress command
+independently to configured VN watchlist symbols with older staging. Both its
+dry run and execution pass for **52 additional stocks**, each with **200 fresh
+exact DNSE matches across 40 or 41 observed UTC dates**. Execution appends
+**165,510 older rows** to their existing **26,000 rows**. All **5,868,056 original
+database candles**, including provider/revision/update versions, are unchanged;
+all prior tickers, jobs, staging, series, sync records, imports, adoptions,
+source checks, archive metadata and quality findings are also unchanged. The
+main database now contains **6,033,566 candles**. Publication is atomic per
+series; the whole pass is deliberately not presented as one transaction.
+
+Every published SQLite series matches its complete readback-verified immutable
+replacement image. Before/after populated database backups are retained under
+`data/vn-hourly-progress-publication-20261004/`. The after backup passes its own
+integrity/count/selected-record checks and is **910,966,784 bytes**, SHA-256
+`80b0a3ccc885e8d6a4cbd682134d375717cfba75e993e048ece36d1a0229c710`.
+The final publication receipt and all fresh native captures have exact RustFS
+readbacks; the active archive index remains unchanged. Authoritative reports:
+`data/vn-hourly-progress-preview-20261004/report.json` and
+`data/vn-hourly-progress-publication-20261004/report.json`.
+
+Full-range HTTP validation passes **104 requests**, matching every timestamp
+and OHLCV field across **191,510 native hourly** and **76,788 four-hour** records.
+Four-hour expectations are computed independently from stored native records
+using the existing VN 02:00 UTC bucket anchor, first/last prices, price extrema
+and summed volume. Evidence: `data/vn-hourly-progress-http-20261004.json`.
+The installed SDK passes **12 recent SMA/EMA cases** for ACB, HPG and VPL. It
+also passes four explicit June 2024 ACB/HPG hourly/four-hour requests covering
+**280 returned bars** via the API. These are request-contract checks, not an
+independent certificate of source prices. Reports:
+`data/sdk-acb-hourly-progress-20261004.json`, the corresponding HPG/VPL files,
+and `data/sdk-vn-hourly-older-ranges-20261004.json`.
+
+The actual public VN web renders ACB daily/hourly charts through October 2
+with no page/network errors or writes. Four-hour UI checks remain unavailable
+because the public web has no visible control for that interval. Its report
+is `data/web-acb-hourly-progress-20261004.json`. **62 supplementary artifacts**,
+including dry-run raw responses, client reports, updated inventory and browser
+screenshots, have immutable RustFS readbacks recorded in
+`data/vn-hourly-progress-client-evidence-20261004.json`.
+
+The new inventory still covers **71 selected tickers / 207 series / 198
+configured ingestion states**, none missing, with **58 series having pending
+jobs**. Of **55 VN hourly series**, all **53 stock series** now reach their
+applicable retention/listing date; VNINDEX/VN30 begin later. The inventory
+proves observed date span only: internal sessions, adjustment consistency and
+legacy-only timestamp reconciliation remain open. All bootstrap jobs and
+quality findings stay intact. Evidence:
+`data/selected-window-inventory-after-hourly-progress-20261004.json`.
+
+The eight existing progress guard tests pass again. Lint/format checks pass
+for **67 Python files**; the existing **389-test API checkpoint** is unchanged.
+The batch adds no dependency or service and does not change production routing.
+
 ## Verified FPT hourly bootstrap progress — 2026-10-04 ICT
 
 The explicit `publish-bootstrap-progress` command now publishes older validated
