@@ -511,6 +511,27 @@ class LegacyImporter:
                     "api_read_backend": api_read_backend if from_api else None,
                     "revision": revision,
                 }
+                quote_events = [row.time for row in rows if row.time % 60]
+                if quote_events:
+                    # Validation permits only the explicit legacy hourly
+                    # futures quote shape. Keep a visible finding and receipt;
+                    # acceptance does not certify these as hourly trades.
+                    result["legacy_quote_events"] = {
+                        "rows": len(quote_events),
+                        "start": min(quote_events),
+                        "end": max(quote_events),
+                    }
+                    self.repo.finding(
+                        source,
+                        symbol,
+                        iv,
+                        "legacy_quote_events",
+                        json.dumps(
+                            result["legacy_quote_events"]
+                            | {"input_checksum": checksum, "revision": revision},
+                            sort_keys=True,
+                        ),
+                    )
                 if (
                     older
                     and state

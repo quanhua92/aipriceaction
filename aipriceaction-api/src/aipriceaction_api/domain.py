@@ -178,7 +178,17 @@ class Candle:
             raise DataError("Invalid OHLC range", 400)
         if self.interval == "1D" and self.time % 86400:
             raise DataError("Daily candle must be midnight UTC", 400)
-        if self.time % 60:
+        # The legacy API includes timestamped zero-volume futures quotes in
+        # its hourly history. Preserve their seconds; they are observations,
+        # not newly fetched native candles or inferred hourly trades.
+        legacy_hourly_quote = (
+            futures
+            and self.interval == "1h"
+            and self.provider == "legacy-api"
+            and self.volume == 0
+            and self.open == self.high == self.low == self.close
+        )
+        if self.time % 60 and not legacy_hourly_quote:
             raise DataError("Candle must be aligned to a minute", 400)
         return self
 
