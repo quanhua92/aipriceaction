@@ -6,6 +6,74 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## AAPL/SPY full-precision minute publication — 2026-10-04 ICT
+
+A fresh read-only five-series Yahoo/public-API probe shows AAPL and SPY now
+match all **1,951 shared recent minute candles each** on both default and
+explicitly database-backed API paths. Each public snapshot retains four extra
+original close-time timestamps; the existing exact-overlap handoff preserves
+those originals and verifies every native/shared candle through the published
+tail. MSFT matches 1,590 shared candles, NVDA 460, and gold 1,988 of 1,990 shared
+candles, with ten native timestamps absent from gold's API response. These other
+series remain unadopted. No changed price, volume, or timestamp is guessed.
+Evidence: `data/global-minute-current-preflight-20261003T194148Z/report.json`.
+
+Complete served AAPL/SPY history is freshly captured through frozen,
+database-backed JSON exports: **56,671 AAPL rows and 56,675 SPY rows**. Both
+preserve every original timestamp and volume; every old CSV OHLC price equals
+the new full-precision JSON price rounded to two decimals. These precision
+changes do not represent a new inferred dividend or scaling factor. Each
+snapshot passes a replayable Yahoo `exact_snapshot_overlap` certificate with
+1,951 exact native candles across five observed UTC date partitions through its
+tail, plus isolated native 40-row updates. This establishes bounded append
+continuity, not a lifetime provider-policy or full exchange-calendar assertion.
+Captures: `data/aapl-spy-complete-api-minutes-20261003T194236Z/`.
+
+Only the two minute series are atomically published into main local SQLite.
+Their original CSV hot-row before-images, raw exports, certificate, publication
+receipts and before-backup remain preserved in local RustFS/storage. There are
+no old cold objects for these two histories. The shared writer publishes the
+main manifest with the new certificates. Publication and verification evidence:
+`data/api-aapl-spy-minute-publication-20261003T194337Z/`.
+
+The first post-publication checker assumed empty historical responses contained
+the requested symbol key. Publication and manifest verification had already
+succeeded. A read-only continuation accepts the existing omitted-symbol empty
+contract and verifies all **28 monthly windows**, including timestamp equality
+and all **113,346 populated OHLCV rows**; publication is not repeated.
+
+All **5,570,941 unrelated full candle records** remain exact versus the
+before-backup, including provider, revision and update timestamp. Unrelated
+operational records and the VN daily checksum remain exact. All twelve SDK
+daily/minute/15-minute SMA/EMA cases match timestamp, OHLCV and five moving
+averages exactly. Both selected public-web daily/15-minute chart rehearsals and
+their S&P/Dow benchmarks pass with populated successful responses, no page or
+network errors, and no blocked writes.
+
+The watchlist now enables daily/minute updates for AAPL/SPY alongside the two
+verified indexes. The actual operational CLI refresh publishes **40 completed
+rows per series**, with successful Yahoo/provider/revision observations and no
+provisional rows. Only AAPL/SPY ticker metadata changes versus the pre-publication
+backup. MSFT/NVDA/gold remain daily-only. Two watchlist tests pass; offline wheel
+and sdist builds pass. An isolated wheel-config smoke validates **71 configured
+tickers** and exactly the four licensed Yahoo minute entries, with packaged
+watchlist bytes identical to the workspace configuration.
+
+An isolated index restore exactly recovers **445 active objects**, **67 handoffs**,
+**34 recoveries** and **one unavailable-history record**. The populated
+post-CLI backup restores with identical bytes/checksum, exact quality/archive
+metadata and `quick_check=ok`: **865,026,048 bytes**, SHA-256
+`953f978efd1c14b17557c8afdb4192f3638d26f96e27437c3efdaf4ad08b26dc`.
+Main still holds **5,684,287 candles**.
+
+Available served AAPL/SPY minute history begins March 9, 2026. Capturing it
+completely does not prove the unavailable preceding portion of a year. MSFT,
+NVDA and gold minute handoffs, VNINDEX minute/daily semantics, VND/VNINDEX old
+daily history, wider provider/session/private-inventory and production
+acceptance remain open. The last complete implementation suite remains 324
+passing tests; this checkpoint changes local data, watchlist and documentation.
+Production routing remains unchanged.
+
 ## PLX minute publication and VNINDEX diagnostics — 2026-10-04 ICT
 
 PLX's complete frozen default-path public `/tickers` minute capture preserves

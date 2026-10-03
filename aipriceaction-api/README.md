@@ -343,8 +343,9 @@ Yahoo verification uses completed UTC minute bounds and requires 1,000 exact
 candles across five observed date partitions through the published tail. The
 VN complete-session/correction options remain restricted to VN data. Unverified
 global minute snapshots stay frozen; add `1m` to a global watchlist entry only
-after verifying its handoff. The included S&P and Dow entries enable daily and
-minute updates. Other global entries still ingest daily data only.
+after verifying its handoff. The included AAPL, SPY, S&P and Dow entries enable
+daily and minute updates after verified local snapshot handoffs. MSFT, NVDA and
+gold futures still ingest daily data only; their minute discrepancies remain open.
 
 For a sparse ticker with fewer available minute candles, use the explicit
 complete-session verification path:

@@ -22,6 +22,32 @@ every intermediate phase below.
 Local market databases, credentials, backups, distribution builds, and captured
 evidence are ignored. Data coverage and production cutover gates remain open.
 
+## AAPL/SPY minute handoffs — 2026-10-04 ICT
+
+- [x] Recheck current native Yahoo versus both public API paths. AAPL and SPY
+  now match all **1,951 shared recent candles each**; MSFT/NVDA/gold discrepancies
+  remain independently captured and unresolved.
+- [x] Recapture both complete served histories through frozen database-backed
+  JSON exports; preserve **113,346 timestamps and every volume**. Every original
+  CSV price equals the new full-precision JSON price rounded to two decimals.
+- [x] Verify exact Yahoo overlap through each published tail, rehearse native
+  appends, preserve immutable originals/raw exports/backups and publish only the
+  two minute snapshots locally in one transaction. No historical scaling.
+- [x] Verify 28 monthly HTTP ranges, 12 exact SDK SMA/EMA cases, both selected
+  daily/15-minute web charts and their benchmark charts, **5,570,941 unrelated
+  full candle records**, and independent archive-index/populated-backup restores.
+- [x] Enable AAPL/SPY minute updates in the packaged watchlist. Actual CLI refresh
+  succeeds for 40 completed rows per series; only their ticker metadata changes.
+  Two watchlist tests pass; offline distributions and packaged-config smoke pass.
+- [ ] Reconcile MSFT/NVDA/gold minute price, timestamp and volume discrepancies
+  before licensing their native handoffs. Preserve frozen originals meanwhile.
+
+The replacement now has four verified Yahoo minute handoffs alongside 58 VN
+minute handoffs. AAPL/SPY served minute history begins March 9, 2026; preservation
+of that history does not certify the unavailable preceding portion of a year.
+VND/VNINDEX history, index semantics and broader acceptance remain open.
+Evidence paths and current limits are in `VALIDATION.md`; production is unchanged.
+
 ## PLX minute publication and remaining index evidence — 2026-10-04 ICT
 
 - [x] Capture the complete served PLX minute history through one frozen public
@@ -1613,8 +1639,10 @@ snapshots can advance under a verified provider without erasing served history.
 - [x] Support full-precision legacy API JSON migration, preserving frozen raw
   responses and validating symbols, dates, OHLCV, truncation, empty retries,
   and receipt format changes. Rehearse an isolated SPY session/week capture.
-- [ ] Recapture selected global minute snapshots in JSON and resolve actual
-  timestamp/volume/price disagreements before licensing live Yahoo updates.
+- [x] Recapture full-precision AAPL/SPY snapshots and license verified Yahoo
+  updates; preserve every existing timestamp/volume and old rounded originals.
+- [ ] Resolve actual MSFT/NVDA/gold timestamp/volume/price disagreements before
+  licensing live Yahoo updates; keep the failed candidates and frozen data.
 - [x] Extend the default exact-overlap handoff to Yahoo with UTC minute finality,
   market/provider validation, preserved provenance, race/lease guards, and
   restoration checks. Enable and verify the two passing index minute series;
