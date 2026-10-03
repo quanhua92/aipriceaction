@@ -253,9 +253,14 @@ class Repository:
                 )
                 and (
                     record["interval"] == "1m"
+                    and evidence["kind"] != "exact_vn_hourly_snapshot_overlap"
                     or record["interval"] == "1h"
-                    and record["source"] == "yahoo"
-                    and evidence["kind"] == "exact_snapshot_overlap"
+                    and (
+                        record["source"] == "yahoo"
+                        and evidence["kind"] == "exact_snapshot_overlap"
+                        or record["source"] == "vn"
+                        and evidence["kind"] == "exact_vn_hourly_snapshot_overlap"
+                    )
                 )
                 and record["snapshot_provider"] == "legacy-api"
                 and bool(record["symbol"])
@@ -263,6 +268,7 @@ class Repository:
                 and evidence["kind"]
                 in {
                     "exact_snapshot_overlap",
+                    "exact_vn_hourly_snapshot_overlap",
                     "exact_complete_sessions",
                     "corroborated_complete_sessions",
                 }
@@ -270,7 +276,8 @@ class Repository:
                 and evidence["matched_rows"]
                 >= (
                     (100 if record["interval"] == "1h" else 1000)
-                    if evidence["kind"] == "exact_snapshot_overlap"
+                    if evidence["kind"]
+                    in {"exact_snapshot_overlap", "exact_vn_hourly_snapshot_overlap"}
                     else 5
                 )
                 and type(evidence["completed_sessions"]) is int
@@ -303,6 +310,17 @@ class Repository:
                     valid = valid and all(
                         evidence[key] % step == 0 for key in ("overlap_start", "overlap_end")
                     )
+            if valid and record["source"] == "vn" and record["interval"] == "1h":
+                valid = (
+                    type(evidence["completed_before"]) is int
+                    and evidence["completed_before"] % 86400 == 0
+                    and evidence["overlap_end"]
+                    < evidence["completed_before"]
+                    <= completed_vn_sessions(
+                        datetime.fromtimestamp(evidence["verified_at_ns"] // 1_000_000_000, UTC)
+                    )
+                    and all(evidence[key] % 60 == 0 for key in ("overlap_start", "overlap_end"))
+                )
             if valid and evidence["kind"] in {
                 "exact_complete_sessions",
                 "corroborated_complete_sessions",

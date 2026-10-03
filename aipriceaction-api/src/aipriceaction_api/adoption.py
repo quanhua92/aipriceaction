@@ -207,8 +207,8 @@ async def adopt_snapshot(
     source="vn",
     iv="1m",
 ):
-    if iv not in {"1m", "1h"} or iv == "1h" and source != "yahoo":
-        raise DataError("Intraday adoption supports minutes and Yahoo hourly snapshots", 400)
+    if iv not in {"1m", "1h"} or source not in {"vn", "yahoo"}:
+        raise DataError("Intraday adoption supports VN/Yahoo minute and hourly snapshots", 400)
     if iv != "1m" and (complete_sessions or corroborate is not None):
         raise DataError("Complete-session and correction proofs require minute snapshots", 400)
     allowed = (
@@ -253,11 +253,13 @@ async def adopt_snapshot(
     ):
         raise DataError("Provider identity changed during snapshot verification")
     incoming = [r for r in page.rows if r.time < completed and r.time <= rows[-1].time]
+    if iv == "1h" and [r.time for r in incoming] != sorted({r.time for r in incoming}):
+        raise DataError("Hourly overlap must contain ordered unique timestamps")
     by_time = {r.time: r for r in rows}
     corrections = []
     for row in incoming:
         row.validate()
-        if iv == "1h" and row.time % 3600:
+        if iv == "1h" and source == "yahoo" and row.time % 3600:
             raise DataError("Native hourly overlap must use whole-hour timestamps")
         previous = by_time.get(row.time)
         if previous is None:
@@ -304,6 +306,12 @@ async def adopt_snapshot(
         evidence["completed_before"] = completed
         evidence["scope"] = (
             "Exact observed overlap across five completed UTC date partitions permits append; no inferred historical scaling or complete trading-calendar certification"
+        )
+    elif iv == "1h":
+        evidence["kind"] = "exact_vn_hourly_snapshot_overlap"
+        evidence["completed_before"] = completed
+        evidence["scope"] = (
+            "Exact hourly overlap across five observed completed VN session dates permits append; original minute-aligned labels are preserved, with no inferred scaling or complete session/calendar certification"
         )
     daily_state = None
     if complete_sessions:
