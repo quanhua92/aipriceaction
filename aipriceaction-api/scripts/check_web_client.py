@@ -103,10 +103,13 @@ def check(api_url, symbol, report, market="vn", intervals=None, minimum_dates=No
             # An initial watchlist request does not select that ticker's chart.
             # Always open the requested ticker before exercising its controls.
             page.get_by_placeholder("Search by symbol...").fill(symbol)
-            with page.expect_response(lambda r: matches(r.url, "1D"), timeout=30_000):
-                page.locator("button").filter(
-                    has_text=re.compile("^" + re.escape(symbol))
-                ).first.click()
+            # The default crypto symbol also appears on a dialog trigger and
+            # a benchmark selector. Select its watchlist row, not those controls.
+            # Re-selecting an already displayed ticker can reuse the populated
+            # initial response; require chart data below rather than a new fetch.
+            page.locator('button:not([aria-haspopup]):not([role="combobox"])').filter(
+                has_text=re.compile("^" + re.escape(symbol))
+            ).first.click()
             page.wait_for_timeout(1500)
             page.screenshot(path=str(report.with_suffix(".daily.png")), full_page=True)
             dialog = page.get_by_role("dialog")

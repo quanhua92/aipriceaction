@@ -10,7 +10,15 @@ import requests
 from aipriceaction import AIPriceAction
 
 
-def check(api_url, symbol, report, source=None, intervals=("1D", "1m", "15m")):
+def check(
+    api_url,
+    symbol,
+    report,
+    source=None,
+    intervals=("1D", "1m", "15m"),
+    start_date=None,
+    end_date=None,
+):
     if urlsplit(api_url).hostname not in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("Use a loopback replacement API for this rehearsal")
     client = AIPriceAction(
@@ -24,17 +32,26 @@ def check(api_url, symbol, report, source=None, intervals=("1D", "1m", "15m")):
     ]
     for interval in intervals:
         for ema in (False, True):
-            frame = client.get_ohlcv(symbol, interval=interval, limit=20, ema=ema, source=source)
+            dates = {
+                key: value
+                for key, value in {"start_date": start_date, "end_date": end_date}.items()
+                if value is not None
+            }
+            frame = client.get_ohlcv(
+                symbol, interval=interval, limit=20, ema=ema, source=source, **dates
+            )
+            params = {
+                "symbol": symbol,
+                "interval": interval,
+                "limit": 20,
+                "ma": "true",
+                "ema": str(ema).lower(),
+                **({"mode": "yahoo" if source == "sjc" else source} if source else {}),
+                **({"end_date": end_date} if end_date is not None else {}),
+            }
             response = requests.get(
                 api_url.rstrip("/") + "/tickers",
-                params={
-                    "symbol": symbol,
-                    "interval": interval,
-                    "limit": 20,
-                    "ma": "true",
-                    "ema": str(ema).lower(),
-                    **({"mode": "yahoo" if source == "sjc" else source} if source else {}),
-                },
+                params=params,
                 timeout=30,
             )
             response.raise_for_status()
@@ -54,9 +71,47 @@ def check(api_url, symbol, report, source=None, intervals=("1D", "1m", "15m")):
                 "rows": len(frame),
                 "source": frame.attrs.get("data_source"),
                 "differences": differences,
+                "requested_dates": dates,
             }
             assert not any(differences.values()), result
             assert result["source"] == "api", result
+            if start_date is not None:
+                # Independently prove latest-in-range selection using the full
+                # dated HTTP range, whose API direction is earliest-first.
+                complete = requests.get(
+                    api_url.rstrip("/") + "/tickers",
+                    params={**params, **dates, "limit": 10000},
+                    timeout=30,
+                )
+                complete.raise_for_status()
+                reference = complete.json().get(symbol, [])
+                assert len(reference) < 10000, "Historical reference may be truncated"
+                tail = reference[-20:]
+                assert len(tail) == 20, "Historical range has fewer than 20 records"
+                assert all(
+                    a.get(field) == b.get(field)
+                    for a, b in zip(rows, tail, strict=True)
+                    for field in fields[:6]
+                ), "SDK result is not the complete historical range's OHLCV tail"
+                # Longer indicator context can change float accumulation or
+                # EMA seeding. Record those differences instead of hiding them.
+                result["reference_rows"] = len(reference)
+                result["full_range_ma_differences"] = {
+                    field: {
+                        "changed_rows": sum(
+                            a.get(field) != b.get(field) for a, b in zip(rows, tail, strict=True)
+                        ),
+                        "max_absolute_delta": max(
+                            (
+                                abs(a[field] - b[field])
+                                for a, b in zip(rows, tail, strict=True)
+                                if a.get(field) is not None and b.get(field) is not None
+                            ),
+                            default=None,
+                        ),
+                    }
+                    for field in fields[6:]
+                }
             results.append(result)
     report.parent.mkdir(parents=True, exist_ok=True)
     report.write_text(json.dumps(results, indent=2) + "\n")
@@ -69,6 +124,8 @@ if __name__ == "__main__":
     parser.add_argument("--symbol", default="FPT")
     parser.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
     parser.add_argument("--interval", action="append", help="Sample intervals; may repeat")
+    parser.add_argument("--start-date", help="Inclusive historical start date")
+    parser.add_argument("--end-date", help="Inclusive historical end date")
     parser.add_argument("--report", type=Path, default=Path("data/sdk-parity.json"))
     args = parser.parse_args()
     check(
@@ -77,4 +134,6 @@ if __name__ == "__main__":
         args.report,
         args.source,
         args.interval or ("1D", "1m", "15m"),
+        args.start_date,
+        args.end_date,
     )
