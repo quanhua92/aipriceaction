@@ -18,7 +18,9 @@ from scripts.artifact_budget import ArtifactBudget
 from scripts.compare_vn_feeds import FEEDS, FIELDS
 from scripts.ohlcv_disagreements import price_class
 from scripts.probe_vn_minute_basis import session
+from scripts.replay_daily_feed_failures import replay_native
 from scripts.replay_vci_candidate_pages import replay_record
+from scripts.vn_daily_volume_evidence import captured
 
 
 def date(stamp):
@@ -231,6 +233,74 @@ def compact_coherence(detail):
     }
 
 
+async def verified_daily_subsets(settings, daily_root, subset_root, daily_report, symbols):
+    """Reparse originals before using diagnostic subsets; malformed dates stay excluded."""
+    raw_report = (subset_root / "report.json").read_bytes()
+    report = json.loads(raw_report)
+    if (
+        report.get("diagnostic_only") is not True
+        or report.get("canonical_publication") is not False
+        or Path(report["audit_directory"]).resolve() != daily_root.resolve()
+        or report["errors"]
+    ):
+        raise DataError("Daily subset review must be diagnostic and bound to this source audit")
+    first = date_bounds(daily_report["daily_start"])
+    before = date_bounds(daily_report["end_date"], end=True) + 1
+    records, identities, seen = {}, {}, set()
+    for item in report["replays"]:
+        symbol, feed = item["symbol"], item["feed"]
+        key = (symbol, feed)
+        if symbol not in symbols or feed not in FEEDS or key in seen:
+            raise DataError("Duplicate or unexpected daily subset identity")
+        seen.add(key)
+        if feed == "legacy":
+            continue
+        original_path = daily_root / feed / f"{symbol}-1D.json"
+        original_raw = original_path.read_bytes()
+        original = json.loads(original_raw)
+        if "error" not in original or "rows" in original or len(original["captures"]) != 1:
+            raise DataError("Daily subsets may supplement only one rejected native capture")
+        raw = captured(original, {})
+        subset_path = subset_root / f"{symbol}-{feed}.json"
+        subset_raw = subset_path.read_bytes()
+        subset = json.loads(subset_raw)
+        if (
+            (subset["symbol"], subset["feed"]) != key
+            or subset.get("diagnostic_only") is not True
+            or subset["capture_sha256"] != hashlib.sha256(raw).hexdigest()
+        ):
+            raise DataError("Daily subset source identity changed")
+        rows, rejected = await replay_native(
+            replace(settings, vci_history_fallback=False, vci_volume_proofs=None),
+            symbol,
+            feed,
+            raw,
+            first,
+            before,
+        )
+        if (
+            not rejected
+            or item["valid_rows"] != len(rows)
+            or item["rejected"] != rejected
+            or subset["rejected"] != rejected
+            or json.dumps(subset["rows"], sort_keys=True, allow_nan=False)
+            != json.dumps(rows, sort_keys=True, allow_nan=False)
+        ):
+            raise DataError("Daily subset rows or rejected dates differ from native replay")
+        records[key] = rows
+        identities[key] = {
+            "path": str(subset_path),
+            "sha256": hashlib.sha256(subset_raw).hexdigest(),
+            "original_record_sha256": hashlib.sha256(original_raw).hexdigest(),
+            "capture_sha256": subset["capture_sha256"],
+            "native_parser_replayed": True,
+            "diagnostic_only": True,
+            "valid_rows": len(rows),
+            "rejected": rejected,
+        }
+    return records, identities, hashlib.sha256(raw_report).hexdigest()
+
+
 async def run(args):
     raw_review = (args.review / "report.json").read_bytes()
     reviewed = json.loads(raw_review)
@@ -264,6 +334,14 @@ async def run(args):
     settings = replace(
         Settings.from_env(), vci_history_fallback=True, vci_volume_proofs=args.proofs
     )
+    subset_root = getattr(args, "daily_valid_subsets", None)
+    subsets, subset_identities, subset_sha = {}, {}, None
+    if subset_root is not None:
+        if not all_series:
+            raise DataError("Daily valid subsets require the compact diagnostic-only review")
+        subsets, subset_identities, subset_sha = await verified_daily_subsets(
+            settings, args.daily, subset_root, daily_report, set(candidates)
+        )
     result = {
         "remote_requests": False,
         "canonical_publication": False,
@@ -277,12 +355,14 @@ async def run(args):
             else "all uniform-price-ratio exceptions in the completed VCI review"
         ),
         "compact_diagnostic_only": all_series,
+        "daily_valid_subsets_sha256": subset_sha,
+        "replayed_native_daily_subsets": len(subsets),
         "selected_symbols": candidates,
         "series": [],
         "completed": False,
         "limitations": [
             "Observed ratios and transition dates are descriptions, not inferred adjustment factors or corporate-action proof.",
-            "Daily references are saved normalized observations with original errors retained; native daily parsers are not replayed here.",
+            "Successful daily references are saved normalized observations with original errors retained; only explicitly supplied rejected native subsets are reparsed here.",
             "Minute session aggregates cover observed candles, not independently proven complete market sessions.",
             "Contiguous regimes follow observed dates; they do not prove trading or listing on absent dates.",
             "Price agreement within one VND is a reported comparison, not a publication license.",
@@ -334,7 +414,15 @@ async def run(args):
                 path = args.daily / feed / f"{symbol}-1D.json"
                 raw_daily = path.read_bytes()
                 daily_record = json.loads(raw_daily)
-                values = daily_record.get("rows", [])
+                key = (symbol, feed)
+                subset_identity = subset_identities.get(key)
+                if (
+                    subset_identity
+                    and subset_identity["original_record_sha256"]
+                    != hashlib.sha256(raw_daily).hexdigest()
+                ):
+                    raise DataError("Original daily record changed after subset verification")
+                values = subsets.get(key, daily_record.get("rows", []))
                 if len({date(row["time"]) for row in values}) != len(values):
                     raise DataError("Duplicate saved daily witness date")
                 daily[feed] = {date(row["time"]): row for row in values}
@@ -342,6 +430,7 @@ async def run(args):
                     "path": str(path),
                     "sha256": hashlib.sha256(raw_daily).hexdigest(),
                     "original_error": daily_record.get("error"),
+                    "verified_valid_subset": subset_identity,
                 }
             detail = timeline(local, source, daily)
             result["series"].append(
@@ -380,6 +469,11 @@ if __name__ == "__main__":
     parser.add_argument("--daily", type=Path, required=True)
     parser.add_argument("--proofs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--daily-valid-subsets",
+        type=Path,
+        help="Replay saved diagnostic subsets of rejected native daily responses",
+    )
     parser.add_argument(
         "--all-series",
         action="store_true",

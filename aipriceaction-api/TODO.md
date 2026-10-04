@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,046 tests; lint/format checks pass.
+- The latest complete API suite passes 1,053 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -267,6 +267,16 @@ history through `eb814ab`; they are not additional current open tasks.
   source. Preserve 14,732 bytes of public schema/report evidence under a 32 KiB
   cap. The documented route requires API key/date/signature headers; no signed
   trade request or canonical change occurs. No public recovery route is verified.
+- [x] Add opt-in daily valid-subset replay to the compact universe review.
+  Bind the diagnostic report to its original audit, verify capture bytes and
+  reparse each failed native response through the unchanged runtime parser.
+  Require exact saved row/rejection identity; preserve full-response errors and
+  exclude malformed dates. Reparse eight native subsets: 5,937 valid observations
+  and 13 rejected observations. Legacy never supplies a native witness. Restrict
+  this path to compact diagnostics; no ingestion or publication rule is relaxed.
+  Pass 27 focused tests and the 1,053-test complete suite.
+- [ ] Complete the running all-59 coherence review with these verified native
+  subsets and distinguish unavailable witnesses from remaining disagreements.
 - [ ] Follow up native daily-source errors, representation differences and the
   remaining minute exceptions using complete evidence before any publication.
   Reuse diagnostic valid subsets where a full native page was rejected; distinguish
