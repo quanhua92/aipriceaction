@@ -1,4 +1,4 @@
-"""Check local activated FPT/TPB HTTP reads and two-series S3 recovery."""
+"""Check selected local VN minute activations through HTTP and S3 recovery."""
 
 import argparse
 import asyncio
@@ -24,6 +24,10 @@ async def run(args):
     report = json.loads((root / "report.json").read_text())
     if not report["passed"] or not report["execute"]:
         raise ValueError("Require a completed local activation")
+    symbols = [item["symbol"] for item in report["symbols"]]
+    if not symbols or len(set(symbols)) != len(symbols):
+        raise ValueError("Activation report must contain a unique explicit selection")
+    placeholders = ",".join("?" for _ in symbols)
     settings = Settings.from_env()
     if settings.s3_endpoint != "http://127.0.0.1:9100":
         raise ValueError("Require local RustFS")
@@ -38,7 +42,8 @@ async def run(args):
     restore_settings = replace(settings, database=restored.path, cache_dir=args.output / "cache")
     remote = Archive(restored, restore_settings)
     result = {
-        "scope": "Local FPT/TPB minutes; two-series recovery, not whole deployment",
+        "scope": "Selected local VN minutes; scoped recovery, not whole deployment",
+        "symbols": symbols,
         "http_cases": [],
         "restoration": [],
         "passed": False,
@@ -51,11 +56,11 @@ async def run(args):
         r
         for r in manifest["adoptions"]
         if r["source"] == "vn"
-        and r["symbol"] in ("FPT", "TPB")
+        and r["symbol"] in symbols
         and r["interval"] == "1m"
         and r["revision"] == repo.state("vn", r["symbol"], "1m")["revision"]
     ]
-    assert len(records) == 2
+    assert len(records) == len(symbols)
     restored.restore_adoptions(records)
 
     def values(rows):
@@ -107,11 +112,12 @@ async def run(args):
     with repo.connect() as con:
         con.execute("ATTACH DATABASE ? AS original", (str(before.path),))
         fields = "source,symbol,interval,time,open,high,low,close,volume,provider,revision"
-        clause = "source='vn' AND NOT (symbol IN ('FPT','TPB') AND interval='1m')"
+        clause = f"source='vn' AND NOT (symbol IN ({placeholders}) AND interval='1m')"
         for left, right in (("main", "original"), ("original", "main")):
             assert (
                 con.execute(
-                    f"SELECT COUNT(*) FROM (SELECT {fields} FROM {left}.candles WHERE {clause} EXCEPT SELECT {fields} FROM {right}.candles WHERE {clause})"
+                    f"SELECT COUNT(*) FROM (SELECT {fields} FROM {left}.candles WHERE {clause} EXCEPT SELECT {fields} FROM {right}.candles WHERE {clause})",
+                    symbols + symbols,
                 ).fetchone()[0]
                 == 0
             )
@@ -119,10 +125,11 @@ async def run(args):
         result["source_checks"] = [
             dict(r)
             for r in con.execute(
-                "SELECT * FROM source_checks WHERE source='vn' AND symbol IN ('FPT','TPB') AND interval='1m'"
+                f"SELECT * FROM source_checks WHERE source='vn' AND symbol IN ({placeholders}) AND interval='1m'",
+                symbols,
             )
         ]
-        assert len(result["source_checks"]) == 2 and all(
+        assert len(result["source_checks"]) == len(symbols) and all(
             r["outcome"] == "succeeded" for r in result["source_checks"]
         )
     floor = cutoff(settings.minute_years)
@@ -187,7 +194,20 @@ async def run(args):
                                 else "corrected all-SQLite minute reference",
                             }
                         )
-            date = "2025-09-26" if symbol == "FPT" else "2026-06-23"
+            proof_path = report.get("volume_proofs_file")
+            proofs = json.loads(Path(proof_path).read_text()) if proof_path else []
+            days = sorted({p["day"] for p in proofs if p["symbol"] == symbol})
+            date = (
+                date_string(days[0])
+                if days
+                else (
+                    "2025-09-26"
+                    if symbol == "FPT"
+                    else "2026-06-23"
+                    if symbol == "TPB"
+                    else date_string(golden.read("vn", symbol, "1m", limit=1)[0].time)
+                )
+            )
             response = await client.get(
                 "/analysis/volume-profile", params=dict(symbol=symbol, date=date)
             )

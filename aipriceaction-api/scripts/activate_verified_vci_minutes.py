@@ -1,4 +1,4 @@
-"""Activate the rehearsed local FPT/TPB snapshots; preview unless --execute.
+"""Activate rehearsed/reviewed local VN stock minutes; preview unless --execute.
 
 Stop the local VN worker and API before execution. Other source workers may
 continue. Keep the SQLite backup and S3 before-images for recovery. This script
@@ -7,6 +7,7 @@ does not deploy production or certify exchange-calendar completeness.
 
 import argparse
 import asyncio
+import hashlib
 import json
 from collections import defaultdict
 from dataclasses import replace
@@ -23,6 +24,7 @@ from aipriceaction_api.storage import Repository
 from aipriceaction_api.vci_adoption import adopt_native_snapshot
 from aipriceaction_api.workers import Worker
 from scripts.stage_yahoo_daily_history import RecordingTransport
+from scripts.vci_activation_inputs import reviewed_inputs
 
 
 class MinuteVerificationHistory(History):
@@ -85,9 +87,12 @@ async def run(args):
     base = Settings.from_env()
     if base.s3_endpoint != "http://127.0.0.1:9100" or base.archive_backend != "s3":
         raise ValueError("Activation is restricted to the local RustFS environment")
-    rehearsal = json.loads((args.rehearsal / "report.json").read_text())
-    if not rehearsal["passed"] or rehearsal["main_publication"]:
-        raise DataError("A successful isolated storage rehearsal is required")
+    generic = bool(getattr(args, "review", None))
+    if generic:
+        if not args.candidates or not args.daily or args.rehearsal or args.tpb_daily:
+            raise DataError("Reviewed activation requires candidates/daily and no rehearsal inputs")
+    elif not args.rehearsal or not args.tpb_daily:
+        raise DataError("Choose a complete review or the FPT/TPB rehearsal inputs")
     if args.resume and not args.execute:
         raise ValueError("Resume requires --execute and an existing incomplete report")
     args.output.mkdir(parents=True, exist_ok=args.resume)
@@ -100,12 +105,13 @@ async def run(args):
     )
     main = Repository(settings.database)
     archive = Archive(main, settings)
-    candidate = Repository(Path(rehearsal["candidate_database"]))
-    candidate_settings = replace(settings, database=candidate.path, s3_prefix=rehearsal["prefix"])
-    candidate_history = History(
-        candidate, Archive(candidate, candidate_settings), candidate_settings
-    )
-    report = {"execute": args.execute, "passed": False, "symbols": [], "database": str(main.path)}
+    report = {
+        "execute": args.execute,
+        "passed": False,
+        "symbols": [],
+        "database": str(main.path),
+        "volume_proofs_file": str(args.volume_proofs.resolve()),
+    }
     path = args.output / "report.json"
     if args.resume:
         report = json.loads(path.read_text())
@@ -122,29 +128,46 @@ async def run(args):
     floor = cutoff(settings.minute_years)
     plans = []
     try:
-        # Preflight both symbols before any canonical mutation. These fresh
-        # native controls also prove that each candidate still reaches its tail.
-        witnesses = json.loads(args.tpb_daily.read_text())
-        tpb_references = {
-            r["feed"]: [Candle(**c) for c in r["rows"]]
-            for r in witnesses
-            if r["feed"] in ("vndirect", "dnse")
-        }
-        if set(tpb_references) != {"vndirect", "dnse"}:
-            raise DataError("Both TPB daily peers are required")
-        for symbol in ("FPT", "TPB"):
-            candidate.validate_adoption(
-                candidate.snapshot_adoption(candidate.state("vn", symbol, "1m"))
+        artifacts = {}
+        if generic:
+            inputs, artifacts = await reviewed_inputs(args, settings, main)
+        else:
+            rehearsal = json.loads((args.rehearsal / "report.json").read_text())
+            if not rehearsal["passed"] or rehearsal["main_publication"]:
+                raise DataError("A successful isolated storage rehearsal is required")
+            candidate = Repository(Path(rehearsal["candidate_database"]))
+            candidate_settings = replace(
+                settings, database=candidate.path, s3_prefix=rehearsal["prefix"]
             )
-            rows = candidate_history.read("vn", symbol, "1m")
-            price_reference = main.read("vn", symbol, "1D")
-            expected_provider = "vndirect" if symbol == "FPT" else "vps"
-            if {r.provider for r in price_reference} != {expected_provider}:
-                raise DataError("Retained daily price witness provider changed")
-            references = (
-                tpb_references if symbol == "TPB" else {"retained_vndirect": price_reference}
+            candidate_history = History(
+                candidate, Archive(candidate, candidate_settings), candidate_settings
             )
-            checks = daily_check(rows, price_reference, references)
+            witnesses = json.loads(args.tpb_daily.read_text())
+            tpb_references = {
+                r["feed"]: [Candle(**c) for c in r["rows"]]
+                for r in witnesses
+                if r["feed"] in ("vndirect", "dnse")
+            }
+            if set(tpb_references) != {"vndirect", "dnse"}:
+                raise DataError("Both TPB daily peers are required")
+            inputs = []
+            for symbol in ("FPT", "TPB"):
+                candidate.validate_adoption(
+                    candidate.snapshot_adoption(candidate.state("vn", symbol, "1m"))
+                )
+                rows = candidate_history.read("vn", symbol, "1m")
+                price_reference = main.read("vn", symbol, "1D")
+                expected_provider = "vndirect" if symbol == "FPT" else "vps"
+                if {r.provider for r in price_reference} != {expected_provider}:
+                    raise DataError("Retained daily price witness provider changed")
+                references = (
+                    tpb_references if symbol == "TPB" else {"retained_vndirect": price_reference}
+                )
+                inputs.append(
+                    (symbol, candidate, rows, daily_check(rows, price_reference, references))
+                )
+        # Preflight every selected symbol before any canonical mutation.
+        for symbol, candidate, rows, checks in inputs:
             native = await adopt_native_snapshot(candidate, providers, symbol)
             original = capture(main, archive, symbol)
             replacement = [
@@ -176,6 +199,8 @@ async def run(args):
                 report["symbols"].append(entry)
             plans.append((entry, original, replacement))
             save()
+        if args.resume and [e["symbol"] for e in report["symbols"]] != [i[0] for i in inputs]:
+            raise DataError("Resume must preserve the complete original activation selection")
         if args.execute and not args.resume:
             backup = args.output / "before.sqlite3"
             main.backup(backup)
@@ -185,6 +210,44 @@ async def run(args):
             (args.output / "before-LATEST.json").write_bytes(
                 archive.store.read(settings.s3_prefix + "/LATEST.json")
             )
+            save()
+        if args.execute:
+            selected = {i[0] for i in inputs}
+            with main.connect() as con:
+                selected.update(
+                    r[0]
+                    for r in con.execute(
+                        "SELECT symbol FROM series WHERE source='vn' AND interval='1m' AND provider='vci'"
+                    )
+                )
+            active_proofs = [
+                p for p in providers.vci_volume_proofs.values() if p["symbol"] in selected
+            ]
+            catalog_path = args.output / "active-volume-proofs.json"
+            catalog_raw = (json.dumps(active_proofs, indent=2, allow_nan=False) + "\n").encode()
+            catalog_path.write_bytes(catalog_raw)
+            digest = hashlib.sha256(catalog_raw).hexdigest()
+            artifacts[digest] = {"path": str(catalog_path)}
+            # Preserve original raw responses behind the active correction
+            # proofs as well as the full candidate traversal.
+            for proof in active_proofs:
+                digest = proof["source_capture_sha256"]
+                matches = list(settings.database.parent.rglob("native-" + digest + ".json"))
+                if not matches or hashlib.sha256(matches[0].read_bytes()).hexdigest() != digest:
+                    raise DataError("Active volume proof original capture is missing")
+                artifacts[digest] = {"path": str(matches[0])}
+            report["active_volume_proofs_file"] = str(catalog_path)
+            report["active_volume_proofs_count"] = len(active_proofs)
+            # Full immutable inputs survive loss of this workstation. Preview
+            # does not upload evidence or change any canonical pointer.
+            report["source_evidence"] = []
+            for digest, artifact in artifacts.items():
+                key = settings.s3_prefix + "/evidence/verified-vci-inputs/" + digest + ".json"
+                source = Path(artifact["path"])
+                archive.store.put(key, source)
+                if hashlib.sha256(archive.store.read(key)).hexdigest() != digest:
+                    raise DataError("Immutable source-evidence readback differs")
+                report["source_evidence"].append({"key": key, "sha256": digest})
             save()
         for entry, original, replacement in plans:
             symbol = entry["symbol"]
@@ -277,8 +340,12 @@ async def run(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rehearsal", type=Path, required=True)
-    parser.add_argument("--tpb-daily", type=Path, required=True)
+    parser.add_argument("--rehearsal", type=Path)
+    parser.add_argument("--tpb-daily", type=Path)
+    parser.add_argument("--review", type=Path)
+    parser.add_argument("--candidates", type=Path)
+    parser.add_argument("--daily", type=Path)
+    parser.add_argument("--symbol", action="append")
     parser.add_argument("--volume-proofs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
