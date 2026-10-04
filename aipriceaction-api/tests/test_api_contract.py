@@ -303,6 +303,65 @@ def test_sync_and_refresh_auth(client):
     assert refreshed["interval"] == "next_1d"
 
 
+SYNC_KEY = "550e8400-e29b-41d4-a716-446655440000"
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "uuid:" + SYNC_KEY,
+        "urn:" + SYNC_KEY,
+        "{{" + SYNC_KEY + "}}",
+        "{" + SYNC_KEY.replace("-", "") + "}",
+        "urn:uuid:" + SYNC_KEY.replace("-", ""),
+        SYNC_KEY.replace("-", "", 1),
+        SYNC_KEY.replace("-", "--", 1),
+        "-" + SYNC_KEY.replace("-", ""),
+    ],
+)
+def test_sync_rejects_uuid_shapes_rejected_by_legacy_parser(client, key):
+    headers = {"Authorization": "Bearer test-token"}
+    expected = {"success": False, "error": "Key must be a valid UUID"}
+    get = client.get(f"/sync/{key}", params={"secret": "s"}, headers=headers)
+    post = client.post(f"/sync/{key}", json={"secret": "s", "value": {}}, headers=headers)
+    assert get.status_code == post.status_code == 400
+    assert get.json() == post.json() == expected
+    with client.app.state.repo.connect() as con:
+        assert con.execute("SELECT count(*) FROM sync_kv").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    "key",
+    [SYNC_KEY.upper(), SYNC_KEY.replace("-", ""), "{" + SYNC_KEY + "}", "urn:uuid:" + SYNC_KEY],
+)
+def test_sync_valid_uuid_formats_share_one_canonical_record_and_secret(client, key):
+    headers = {"Authorization": "Bearer test-token"}
+    created = client.post(
+        f"/sync/{key}", json={"secret": "s", "value": {"watchlists": []}}, headers=headers
+    )
+    assert created.status_code == 200 and created.json()["id"] == SYNC_KEY
+    assert (
+        client.get(f"/sync/{SYNC_KEY}", params={"secret": "s"}, headers=headers).json()
+        == created.json()
+    )
+    rejected = client.post(
+        f"/sync/{SYNC_KEY}", json={"secret": "wrong", "value": {}}, headers=headers
+    )
+    assert rejected.status_code == 403
+    updated = client.post(
+        f"/sync/{SYNC_KEY}",
+        json={"secret": "s", "value": {"watchlists": ["VN30"]}},
+        headers=headers,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["created_at"] == created.json()["created_at"]
+    assert (
+        client.get(f"/sync/{key}", params={"secret": "s"}, headers=headers).json() == updated.json()
+    )
+    with client.app.state.repo.connect() as con:
+        assert con.execute("SELECT count(*) FROM sync_kv").fetchone()[0] == 1
+
+
 def test_cors_and_cache_epoch(client):
     response = client.options(
         "/sync/example",

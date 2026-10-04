@@ -20,6 +20,11 @@ The external production web application's source is outside this repository.
 | `GET /analysis/rrg` | JDK/mascore, dates, source, EMA, benchmark, period, trails, volume threshold |
 | `/explorer`, `/public/...` | Existing explorer/static files and caching/security headers |
 
+Sync keys follow Rust's UUID parser: simple hexadecimal, standard hyphenated,
+braced hyphenated, or `urn:uuid:` plus hyphenated. Hexadecimal case can vary;
+valid forms share one canonical key and secret. Malformed prefixes, extra
+braces and misplaced hyphens return the legacy HTTP 400 error after authorization.
+
 Native intervals are `1D`, `1h`, and `1m`; aggregate intervals are `5m`, `15m`,
 `30m`, `4h`, `1W`, `2W`, `1M`. Minute `1m` and monthly `1M` remain distinct.
 Hourly aliases, daily aliases, and mode aliases are retained. Daily and

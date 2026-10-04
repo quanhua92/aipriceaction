@@ -6,6 +6,25 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Sync UUID input compatibility — 2026-10-04 ICT
+
+The Rust handlers call `Uuid::parse_str` before binding a UUID to PostgreSQL.
+The pinned uuid 1.23.1 parser accepts four exact ASCII shapes: simple,
+hyphenated, braced hyphenated and a lower-case `urn:uuid:` prefix with a
+hyphenated UUID. Python's `uuid.UUID` additionally strips malformed prefixes,
+extra braces and misplaced hyphens. Eight endpoint regressions first reproduce
+HTTP 404 reads/HTTP 200 writes for those malformed keys; both should be HTTP
+400 with `Key must be a valid UUID`. Authorization now enforces the Rust shapes
+after token checks. Existing canonical storage behavior remains intact.
+
+Four valid-format regressions verify a single canonical record, reads/updates
+through either form, retained creation time and wrong-secret rejection. All
+541 tests pass, plus lint/format and offline wheel/source builds; the existing
+Starlette/httpx deprecation remains. The current local sync table has zero
+records. These checks neither obtain production sync credentials nor export
+private production data. Reference: the repository's Rust sync handlers and
+[the uuid parser](https://docs.rs/uuid/1.23.1/src/uuid/parser.rs.html).
+
 ## Cooperative worker termination and restartability — 2026-10-04 ICT
 
 Prepared Linux units under `ops/systemd/` supervise the existing host API and

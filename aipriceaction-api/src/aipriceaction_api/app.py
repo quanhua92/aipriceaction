@@ -389,7 +389,14 @@ def create_app(settings: Settings | None = None):
         ):
             raise DataError("Invalid or missing authorization token.", 401)
         try:
-            uuid.UUID(key)
+            parsed = uuid.UUID(key)
+            canonical = str(parsed)
+            # Rust Uuid::parse_str accepts four exact shapes. Python also
+            # strips malformed prefixes, braces and misplaced hyphens.
+            if key.lower() not in (canonical, parsed.hex, "{" + canonical + "}") and not (
+                key.startswith("urn:uuid:") and key[9:].lower() == canonical
+            ):
+                raise ValueError("Unsupported UUID shape")
         except ValueError as exc:
             raise DataError("Key must be a valid UUID", 400) from exc
 
