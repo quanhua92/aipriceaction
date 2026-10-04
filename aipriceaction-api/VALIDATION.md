@@ -3,6 +3,62 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Complete VCB source extension and temporary replacement rehearsal — 2026-10-04 ICT
+
+`scripts.extend_vci_replacement_candidates` automatically selects candidates
+whose saved daily price/volume checks have no unresolved exceptions. VCB qualifies;
+MWG remains refused for its recorded volume witness shortage. Source review,
+basis review, proof catalog and original source record hashes must agree. The
+existing VCB archive begins September 3, 2025, before the retained-year review.
+Reparsing immutable captures at that earlier floor preserves every previously
+accepted OHLCV observation, and rejects newly exposed cumulative contradictions.
+A fresh 10,000-candle seam matches exactly; one older native page adds the final
+747 observations. Complete captured coverage now contains 60,747 candles through
+October 2, with the original 5,191 cold observations included. No canonical or
+active proof-catalog change occurs. Source-extension evidence at
+`data/vci-replacement-archive-floor-extension-20261004` occupies 1,444,286 bytes
+under a 32 MiB cap; existing native captures are referenced rather than copied.
+
+`scripts.rehearse_captured_vci_replacement` then replays the full candidate and
+all three native daily source captures. Every saved daily normalized observation
+must match native parsing exactly. Across all 270 observed dates, candidate minute
+aggregates have retained daily OHLC differences below one VND (maximum 0.99 VND)
+and at least two exact native daily-volume witnesses. Native price/volume checks
+do not use legacy as a tie-breaker or infer a scaling factor.
+
+The actual local RustFS rehearsal passes with 55,556 hot and 5,191 cold candles;
+all 60,747 original timestamps survive. Atomic snapshot publication produces two
+replacement cold objects and durable original/hot images inside the owned test
+namespace. Eighteen raw/SMA/EMA minute, fifteen-minute and minute-derived hourly
+queries span the retention boundary and exactly match a scoped SQLite reference.
+Replaying the archive manifest and recorded hot image restores the complete
+series, preserving exact row versions and prior volume-correction evidence.
+Canonical source state, archive pointers, raw OHLCV and provider basis are
+unchanged. Minute-derived hourly tests do not certify or replace the API's
+separate native hourly series; live handoff and actual HTTP route checks remain
+required before canonical activation.
+
+All rehearsal SQLite files and caches live in `TemporaryDirectory`, removed on
+success and injected post-publication failure. Cleanup deletes only the exact
+owned UUID namespace and refuses escaped listings. The real run removes eight
+test objects; an independent check finds zero current objects, zero versions and
+zero delete markers, with bucket versioning unset. Future runs explicitly refuse
+enabled/suspended bucket versioning before upload to avoid retaining hidden test
+versions. Root `AGENTS.md` records this requirement. Only 54,850 bytes of rehearsal
+and independent cleanup reports remain at
+`data/vcb-captured-replacement-rehearsal-20261004`; no rehearsal database or
+replacement S3 object remains.
+
+Fifty focused tests pass, including native daily replay/row identity, price and
+volume refusals, earlier-floor cumulative contradictions, immutable capture
+preservation, coherent snapshot races, hot/cold restoration, versioned-bucket
+refusal and cleanup on success/failure. Local data rises from 7,608,608 to
+7,610,080 KiB, retaining source evidence and small reports. RustFS physical data
+is observed at 2,650,816 KiB afterward versus the earlier 2,642,856 KiB reading;
+logical/version listings prove the owned test namespace is empty. This does not
+claim immediate physical reclamation or attribute background volume changes.
+No production deployment, canonical correction or live provider handoff occurs.
+
 ## Historical price-scale timeline and daily coherence — 2026-10-04 ICT
 
 `scripts.review_vn_historical_price_basis` selects all uniform-price-ratio

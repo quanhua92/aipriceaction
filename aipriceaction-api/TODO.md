@@ -216,11 +216,26 @@ history through `eb814ab`; they are not additional current open tasks.
   two exact native daily-volume witnesses on 247 dates; MWG on 246, with its known
   November 10, 2025 residual still unresolved. Pass 20 focused tests and retain
   one 2,029,622-byte report without SQLite copies or S3 changes.
-- [ ] Rehearse a coherent VCB replacement from the verified capture chain,
+- [x] Extend eligible replacement captures to the complete existing archive
+  boundary without dropping older API timestamps. Automatically select VCB and
+  keep MWG's unresolved witness exception refused. Reparse original captures
+  at September 3, 2025 with exact old-observation preservation; verify a fresh
+  10,000-candle seam and fetch one older page. VCB covers all 60,747 observations.
+  Preserve 1,444,286 bytes of source captures/report references; no DB/S3 writes.
+- [x] Rehearse a coherent VCB replacement from the verified capture chain,
   replaying native daily witnesses and fresh source joins before publication.
-  Verify hot/cold API reads, all original timestamps and rollback scope; clean
-  temporary test databases. MWG still needs exact minute attribution for the
-  November 10, 2025 residual before full snapshot adoption.
+  Replay all three native daily captures and check all 270 observed sessions;
+  retain price agreement within one VND and two exact native daily-volume witnesses
+  on every date. Preserve all 60,747 timestamps (55,556 hot/5,191 cold); compare
+  18 minute/15m/minute-derived-hour raw/SMA/EMA boundary queries and exact
+  archive-index/hot-image restoration. Remove all temporary databases/caches and
+  eight owned RustFS objects, verify no current objects/versions/delete markers,
+  retain 54,850 bytes of reports. Pass 50 focused tests including failure cleanup.
+- [ ] Verify fresh oldest/middle/latest source controls and license VCB's live
+  handoff before guarded local activation, checking actual web API routes and
+  replayable rollback scope. The storage rehearsal is not a publication license.
+  MWG still needs exact minute attribution for the November 10, 2025 residual
+  before full snapshot adoption.
 - [ ] Verify the VCB/MWG historical price basis with source evidence. Investigate
   the 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals
