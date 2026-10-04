@@ -22,6 +22,10 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - Isolated RustFS rehearsal prefixes are temporary too. Clean only the exact
   prefix created by the completed test once no retained evidence depends on it.
   Never bulk-delete canonical OHLCV, manifests, or rollback references.
+- Verify temporary S3 cleanup leaves no current objects, retained versions or
+  delete markers. Rehearsals that delete only current objects must require an
+  unversioned local bucket before uploading; enabled or suspended versioning
+  can retain test data after ordinary deletion.
 - For bulk corrections, publish one archive manifest after the atomic batch.
   Do not retain a separate manifest per target for bulk testing/verification.
   Immutable originals and captures referenced by active correction receipts
