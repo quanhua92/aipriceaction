@@ -1,10 +1,8 @@
 """Replay complete candidate/source captures before local minute activation."""
 
-import hashlib
 import json
 from collections import defaultdict
 from dataclasses import replace
-from pathlib import Path
 
 import httpx
 
@@ -13,22 +11,11 @@ from aipriceaction_api.providers import Providers
 from aipriceaction_api.storage import Repository
 from scripts.compare_vn_feeds import FIELDS
 from scripts.probe_vn_minute_basis import session
+from scripts.vn_daily_volume_evidence import captured, volume_only_witnesses
 
 
 def values(rows):
     return [(r.time, r.open, r.high, r.low, r.close, r.volume) for r in rows]
-
-
-def captured(record, artifacts):
-    successful = [c for c in record["captures"] if c["status"] == 200]
-    if not successful:
-        raise DataError("Source record lacks a successful immutable capture")
-    for item in record["captures"]:
-        raw = Path(item["path"]).read_bytes()
-        if len(raw) != item["bytes"] or hashlib.sha256(raw).hexdigest() != item["sha256"]:
-            raise DataError("Source capture bytes changed since recording")
-        artifacts[item["sha256"]] = item
-    return Path(successful[-1]["path"]).read_bytes()
 
 
 async def replay_page(settings, raw, source, symbol, interval, before, count, start):
@@ -109,8 +96,22 @@ async def reviewed_inputs(args, settings, main):
         if maximum > 1:
             raise DataError("Candidate prices no longer match retained native daily witnesses")
         matched = defaultdict(list)
+        volume_scopes = []
         for feed in Providers.VN:
             record = json.loads((args.daily / feed / f"{symbol}-1D.json").read_text())
+            scoped = volume_only_witnesses(record, feed, symbol, artifacts)
+            if scoped is not None:
+                for row in scoped:
+                    if row["time"] in groups and row["volume"] == aggregates[row["time"]]["volume"]:
+                        matched[row["time"]].append(feed)
+                volume_scopes.append(
+                    {
+                        "feed": feed,
+                        "scope": "volume_only",
+                        "ohlc_rejections": record["volume_only_evidence"]["ohlc_rejections"],
+                    }
+                )
+                continue
             if "error" in record:
                 raise DataError("Selected candidate daily witness source is unavailable")
             first, end = (
@@ -143,6 +144,7 @@ async def reviewed_inputs(args, settings, main):
             "observed_dates": len(groups),
             "maximum_daily_price_difference_vnd": maximum,
             "daily_source_captures_replayed": 3,
+            "field_scoped_witnesses": volume_scopes,
             "native_volume_witnesses": [
                 {"day": day, "feeds": matched[day]} for day in sorted(groups)
             ],
