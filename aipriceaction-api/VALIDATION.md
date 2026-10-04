@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Automated full retained VN daily comparison — 2026-10-04 ICT
+
+The automated comparison covered all **59 selected VN symbols** for
+**October 4, 2023–October 2, 2026**, with **236 feed windows** across VPS,
+VNDirect, DNSE and the deployed legacy API reference. Daily count bounds exceed
+the requested calendar-day count; no result reached the page cap. This covers
+the requested retained daily source-comparison window, rather than only a recent
+sample. Provider disagreements still prevent market-accuracy certification.
+
+The observed timestamp union produced **3,476** complete four-feed agreements,
+**34,881** value disagreements and **5,221** incomplete four-feed observations.
+There were **ten rejected responses**, all due to invalid OHLC ranges:
+VPS (CEO, IDC, SHS), VNDirect (SHS, VIX, VNM, GEX, GEE) and legacy (CEO, IDC).
+DNSE returned structurally valid daily rows for all selected symbols. Invalid
+rows reject a full response; incomplete coverage counts consequently include
+these refusals and must not be interpreted as proven missing market sessions.
+
+Revalidating the original failed captures identified **16 malformed rows** on
+**13 distinct stock/date pairs**. The range violations include material open/
+close values outside reported extrema; they are not merely floating-point noise.
+The exact original captures, SHA256 identities, normalized values and violation
+sizes are recorded in `normalization-failure-witnesses.json`. A read-only check
+of current canonical daily candles on those 13 dates found all structurally
+valid: **five** match captured DNSE OHLCV exactly and **eight** differ. Neither
+DNSE validity nor shared source agreement is a publication license. No source
+values, provider order or stored candles were changed.
+
+The current SQLite comparison across all successful feeds found no disagreement
+with complete four-feed unanimity and no missing unanimously supported timestamp.
+The broader exception summary retains ten provider errors, 18 series with
+coverage differences, 52 with feed-value differences and 169 SQLite/feed
+comparison differences. These are categorized findings, not counts of bad
+canonical candles. Outputs are under
+`data/automated-vn-retained-daily-comparison-20261004`; raw captures and normalized
+reports occupied approximately **50 MiB** before the small derived summaries.
+No database copies or RustFS writes were created.
+
+The combined runner now automatically uses four native providers for minute-only
+requests, or three preferred feeds plus legacy for daily/hourly requests. Its
+SQLite comparison uses the declared feed set rather than hardcoding VCI, and an
+explicit comparison-mode flag supports either selection. Eleven focused
+pipeline/comparison tests pass, including daily-mode selection and detection of
+SQLite disagreement with the correct complete reference feed set. Lint/format
+checks pass. Full-year minute pagination and source/basis resolution remain open.
+
 ## Automated active cold archive structural audit — 2026-10-04 ICT
 
 `scripts.audit_archive_ohlcv` captures every active archive-index object in one

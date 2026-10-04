@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Automate the full retained VN daily source-value comparison across all 59
+  selected symbols for October 4, 2023–October 2, 2026. Preserve 236 feed-window
+  results and strict malformed-row refusals. Support correct automatic daily
+  versus minute feed selection and read-only SQLite comparison in the same runner.
+- [ ] Resolve retained daily provider/basis disagreements. Ten responses contain
+  invalid OHLC ranges on 13 distinct stock/date pairs; current stored rows are
+  structurally valid, with five matching DNSE exactly and eight differing.
+  Keep the captured witnesses and do not replace values by simple provider voting.
+
 - [x] Automatically validate all active cold archive objects against their
   checksums, identities, OHLCV/timestamp rules and indexed row counts/bounds.
   Check 888 objects containing 438,268 rows: no structural failures. Keep the

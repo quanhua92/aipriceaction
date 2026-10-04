@@ -1,6 +1,6 @@
 """Automated read-only VN OHLCV checks; report exceptions without choosing a winner.
 
-Inventories all selected sources, compares all four VN providers, then compares
+Inventories all selected sources, compares the selected four VN feeds, then compares
 their returned values with live SQLite in one read-only transaction. Keeps small
 reports and provider captures, never creates test databases or publishes candles.
 """
@@ -17,13 +17,14 @@ from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import date_bounds
 from scripts.audit_archive_ohlcv import audit as audit_archives
 from scripts.audit_sqlite_ohlcv import audit
-from scripts.compare_vn_feeds import FIELDS, NATIVE_FEEDS, same
+from scripts.compare_vn_feeds import FIELDS, same
 from scripts.compare_vn_feeds import run as compare_feeds
 from scripts.inventory_retained_windows import inventory
 
 
 def local_comparisons(settings, root, comparison):
     results = []
+    feeds = comparison["feeds"]
     with sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
         con.row_factory = sqlite3.Row
         con.execute("BEGIN")
@@ -43,7 +44,7 @@ def local_comparisons(settings, root, comparison):
                 }
                 peers = {}
                 returned = {}
-                for feed in NATIVE_FEEDS:
+                for feed in feeds:
                     record = json.loads((root / feed / f"{symbol}-{interval}.json").read_text())
                     if "rows" not in record:
                         continue
@@ -62,20 +63,15 @@ def local_comparisons(settings, root, comparison):
                         ],
                     }
                 agreed = []
-                if len(returned) == len(NATIVE_FEEDS):
+                if len(returned) == len(feeds):
                     shared_peers = set.intersection(*(set(rows) for rows in returned.values()))
                     agreed = [
                         t
                         for t in sorted(shared_peers)
-                        if all(
-                            same(returned[NATIVE_FEEDS[0]][t], rows[t])
-                            for rows in returned.values()
-                        )
+                        if all(same(returned[feeds[0]][t], rows[t]) for rows in returned.values())
                     ]
                 conflicts = [
-                    t
-                    for t in agreed
-                    if t in local and not same(local[t], returned[NATIVE_FEEDS[0]][t])
+                    t for t in agreed if t in local and not same(local[t], returned[feeds[0]][t])
                 ]
                 results.append(
                     {
@@ -153,6 +149,9 @@ async def run(args):
     (args.output / "archive-structure.json").write_text(
         json.dumps(cold, indent=2, allow_nan=False) + "\n"
     )
+    mode = getattr(args, "comparison_mode", None) or (
+        "native" if args.interval == ["1m"] else "legacy"
+    )
     comparison = await compare_feeds(
         SimpleNamespace(
             output=args.output / "providers",
@@ -161,7 +160,7 @@ async def run(args):
             daily_start=args.daily_start,
             intraday_start=args.intraday_start,
             end_date=args.end_date,
-            native_providers=True,
+            native_providers=mode == "native",
         )
     )
     local = local_comparisons(settings, args.output / "providers", comparison)
@@ -193,6 +192,7 @@ async def run(args):
         "symbols": comparison["symbols"],
         "intervals": comparison["intervals"],
         "providers": comparison["feeds"],
+        "comparison_mode": mode,
         "provider_windows": comparison["requests"],
         "exception_count": len(issues),
         "exceptions": issues,
@@ -203,6 +203,7 @@ async def run(args):
             "Local comparison covers SQLite only; cold archive validation is separate.",
             "This report never changes provider selection, data or recovery licenses.",
             "VCI is enabled for minute probes only; unsupported intervals remain explicit provider errors.",
+            "Legacy-mode daily/hourly comparisons use the deployed API as a reference, never ground truth.",
         ],
     }
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -218,4 +219,9 @@ if __name__ == "__main__":
     parser.add_argument("--daily-start", required=True)
     parser.add_argument("--intraday-start", required=True)
     parser.add_argument("--end-date", required=True)
+    parser.add_argument(
+        "--comparison-mode",
+        choices=("native", "legacy"),
+        help="Default: four native providers for minute-only runs; preferred three plus legacy reference otherwise",
+    )
     asyncio.run(run(parser.parse_args()))

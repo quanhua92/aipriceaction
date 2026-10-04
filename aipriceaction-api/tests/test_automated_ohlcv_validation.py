@@ -90,3 +90,55 @@ def test_zero_price_comparison_does_not_crash():
     row = {"time": 0, "open": 0, "high": 0, "low": 0, "close": 0, "volume": 0}
     report = compare_vn_feeds.compare({p: [row] for p in compare_vn_feeds.NATIVE_FEEDS})
     assert report["counts"] == {"four_feed_agreement": 1}
+
+
+def test_daily_pipeline_uses_legacy_reference_and_checks_the_correct_feed_set(
+    tmp_path, monkeypatch
+):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(json.dumps({"vn": [{"symbol": "FPT", "intervals": ["1D"]}]}))
+    settings = replace(Settings(), database=tmp_path / "live.sqlite3", watchlist=watchlist)
+    repo = Repository(settings.database)
+    repo.initialize()
+    stamp = parse_time("2020-01-02")
+    repo.put([Candle("vn", "FPT", "1D", stamp, 10, 11, 9, 10, 100)])
+    monkeypatch.setattr(Settings, "from_env", classmethod(lambda cls: settings))
+
+    async def reference_comparison(args):
+        assert args.native_providers is False
+        args.output.mkdir()
+        row = dict(time=stamp, open=10, high=11, low=9, close=10.5, volume=100)
+        for feed in compare_vn_feeds.FEEDS:
+            folder = args.output / feed
+            folder.mkdir()
+            (folder / "FPT-1D.json").write_text(json.dumps({"rows": [row]}))
+        comparison = compare_vn_feeds.compare({feed: [row] for feed in compare_vn_feeds.FEEDS})
+        return {
+            "feeds": compare_vn_feeds.FEEDS,
+            "symbols": ["FPT"],
+            "intervals": ["1D"],
+            "daily_start": args.daily_start,
+            "intraday_start": args.intraday_start,
+            "end_date": args.end_date,
+            "errors": [],
+            "requests": 4,
+            "comparisons": [{"symbol": "FPT", "interval": "1D", **comparison}],
+        }
+
+    monkeypatch.setattr(validate_ohlcv, "compare_feeds", reference_comparison)
+    result = asyncio.run(
+        validate_ohlcv.run(
+            SimpleNamespace(
+                output=tmp_path / "review",
+                symbol=None,
+                interval=["1D"],
+                daily_start="2020-01-02",
+                intraday_start="2020-01-02",
+                end_date="2020-01-02",
+            )
+        )
+    )
+    assert result["comparison_mode"] == "legacy"
+    assert result["providers"] == compare_vn_feeds.FEEDS
+    assert any(e["kind"] == "unanimous_provider_conflicts" for e in result["exceptions"])
+    assert result["perfect_data_proven"] is False

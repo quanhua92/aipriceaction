@@ -49,7 +49,20 @@ VPS/VNDirect/DNSE/VCI, then compares returned candles with SQLite. Its
 `report.json` lists provider errors, absent observations, timestamp coverage and
 price/volume discrepancies; detail and original captures remain alongside it.
 No candle is changed and no database copy is created. VCI probing is minute-only;
-use the existing four-feed comparison below for daily/hourly checks. Agreement
+daily/hourly checks automatically use the three preferred providers plus the
+legacy API reference. Override selection with `--comparison-mode native|legacy`.
+For example, compare the complete retained daily window:
+
+```sh
+uv run python -m scripts.validate_ohlcv --interval 1D \
+  --daily-start 2023-10-04 --intraday-start 2026-10-02 --end-date 2026-10-02 \
+  --output data/automated-vn-daily-review
+```
+
+Choose the actual retained start and completed end dates for subsequent runs.
+The daily page bound covers this three-year request; longer/intraday windows
+remain subject to provider page caps. A malformed candle rejects its response,
+and an incomplete/error feed is never counted as unanimous agreement. Agreement
 is not a market-truth oracle, and this bounded recent run does not certify the
 whole retained window or cold archive. Only exceptions need further investigation.
 
