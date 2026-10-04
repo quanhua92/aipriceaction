@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Independent announced HOSE date audit — 2026-10-04 ICT
+
+`7c4c288` adds a read-only SQLite date checker backed by HOSE's signed official
+2025 calendar notice, **2079/TB-SGDHCM**, issued December 26, 2024. The primary
+PDF was downloaded directly from HOSE, rendered and inspected visually. Its
+806,037 bytes are pinned by SHA-256
+`0399221e82ef182e23e3adf49ffc0b0fc89c0b9991615c9ed4e6785ac41cc911`.
+The manually transcribed declaration records all announced closures and the
+explicit exclusion of the April 26 makeup Saturday. The notice is available at
+the [official HOSE PDF](https://staticfile.hsx.vn/Uploads/UploadDocuments/1737138/20241226_20242612_Thong%20bao%20ve%20lich%20nghi%202025.pdf).
+
+The populated local SQLite audit covers January 1 through December 31, 2025.
+Both VNINDEX and VN30 have all **249 scheduled daily dates**, no missing
+scheduled dates, no unexpected holiday/weekend dates and no shifted daily
+timestamps. This checks an independently announced schedule, rather than an
+observed-date union or the legacy API. It does not establish OHLCV accuracy,
+intraday completeness or that every announced session actually took place.
+The existing index price/volume disagreements remain open.
+
+The checker validates source bytes before opening SQLite read-only, reads both
+series in one transaction, retains missing/unexpected date findings, rejects
+unknown calendar years and unlicensed symbols, and refuses to overwrite an
+earlier report. Twelve tests verify holiday and makeup-weekend handling,
+missing-date detection, shifted timestamps, invalid declarations, changed source
+bytes and unchanged SQLite file bytes. Synthetic PDF test data verifies byte
+binding only; it does not purport to automate the visual transcription check.
+The previous complete API suite remains 830 passing tests; these twelve new
+script tests pass separately. All 135 Python files pass lint and formatting.
+
+The original PDF, declaration and populated audit are also preserved as three
+content-addressed local RustFS evidence objects with exact byte readback, under
+`archive-v2/evidence/market-calendars/`. No canonical candle, archive pointer,
+manifest or provider basis was changed. Evidence receipts are in
+`data/hose-calendar-source-archive-20261004.json`; the populated report is
+`data/hose-2025-index-scheduled-date-audit-20261004.json`. Usage and scope are in
+`calendars/README.md`. Other years, exchanges, listing dates, suspensions and
+no-trade policies still require independent evidence.
+
+Four bounded queries to VNDirect's separate index-history endpoint all end in
+`ConnectTimeout`. They supply no usable semantic corroboration; the response
+schema and volume components remain unverified. The terminal capture report is
+`data/vn-index-secondary-native-controls-20261004/report.json`. DNSE's public
+OHLC/trade-history documentation describes the endpoints but does not resolve
+the observed public-chart index extrema and volume differences.
+
 ## Native index controls and DNSE timestamp repair — 2026-10-04 ICT
 
 VCI historical-minute probing and a verified fallback are explicitly authorized.

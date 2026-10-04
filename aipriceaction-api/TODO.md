@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Establish a source-backed announced-calendar audit independent of provider
+  observations. Download and visually verify HOSE's signed 2025 notice, bind its
+  bytes to the declaration, and check both indices in one read-only SQLite
+  snapshot. VNINDEX/VN30 each contain all 249 scheduled 2025 daily dates, with
+  no holiday/weekend observations or shifted timestamps. Twelve focused tests
+  pass. Preserve the PDF, declaration and populated audit in local RustFS with
+  exact readback. Scheduled-date coverage does not certify OHLCV accuracy or
+  actual exchange operations; other years/exchanges and stock-specific listing,
+  suspension and no-trade evidence remain open.
 - [x] Expand the remaining VN minute-basis investigation to complete daily
   windows from all four feeds and 44 exact-date VCI controls. All 36 stock
   controls align with retained daily prices within one VND; eight index controls
