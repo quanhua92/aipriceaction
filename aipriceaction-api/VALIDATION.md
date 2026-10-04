@@ -6,6 +6,29 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Live ingestion during slow archival transfers — 2026-10-04 ICT
+
+The worker previously awaited the entire daily maintenance batch between
+ingestion cycles. A real blocked filesystem Parquet transfer reproduces a
+timeout waiting for later ingestion cycles. Maintenance now runs in one
+background task per worker; a later cycle starts another batch only after the
+previous task completes. Normal bounded exit and cooperative cancellation close
+provider connections, await the active maintenance task and then release owned
+job claims. Existing exact-version verification/pruning rules are unchanged.
+
+The regression advances three ingestion cycles and stores three new minute
+records while the old transfer is blocked. Only one transfer is in progress;
+the original expired record stays local until verification succeeds. Bounded
+exit waits for release, verified publication/pruning completes, exact stored
+versions read back from Parquet and combined history preserves all four records.
+Existing tests cover concurrent correction/re-export, object-store failure and
+real subprocess SIGTERM/repeated-SIGTERM shutdown during archival work.
+
+All 562 tests pass, with lint/format and offline wheel/source builds. The known
+Starlette/httpx deprecation remains. The new delayed-transfer test uses the
+filesystem backend and real SQLite/Parquet; it does not simulate a production
+cloud outage or prove multi-day supervised uptime.
+
 ## Analysis and integer-query compatibility — 2026-10-04 ICT
 
 The Rust analysis query structs use unsigned 64-bit limits/counts, an unsigned

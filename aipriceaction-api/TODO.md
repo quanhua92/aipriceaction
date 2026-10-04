@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 561 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 562 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -31,6 +31,14 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Keep live ingestion advancing during slow archival uploads with one
+  background maintenance task per worker. Prevent overlapping maintenance
+  batches and drain active work on bounded exit/cooperative shutdown before
+  releasing job claims. A blocked-transfer regression reproduces the old stall,
+  then verifies three cycles/new candles, preserved unverified local data and
+  exact final archive readback/pruning. Existing repeated-SIGTERM subprocess
+  checks pass. This does not certify multi-day operation or provider completeness.
 
 - [x] Match legacy integer query widths/syntax for candles and analysis routes,
   reject invalid bounds before market reads, and preserve zero-valued clamps,

@@ -842,6 +842,7 @@ class Worker:
     async def run(
         self, once=False, cycles=None, source=None, symbols=None, interval=None, archive_daily=False
     ):
+        maintenance_task = None
         try:
             self.load_watchlist()
             self.configuration = [
@@ -867,7 +868,13 @@ class Worker:
             while True:
                 await self.cycle()
                 if maintenance is not None:
-                    await asyncio.to_thread(maintenance.tick)
+                    # One transfer batch at a time, independent of live ingestion.
+                    # Exact-version publication/pruning already handles corrections
+                    # written while an exported snapshot is being uploaded.
+                    if maintenance_task is None or maintenance_task.done():
+                        if maintenance_task is not None:
+                            await maintenance_task
+                        maintenance_task = asyncio.create_task(asyncio.to_thread(maintenance.tick))
                 completed_cycles += 1
                 if once or cycles and completed_cycles >= cycles:
                     break
@@ -876,4 +883,10 @@ class Worker:
             try:
                 await self.providers.close()
             finally:
-                self.repo.release_worker_leases(self.owner)
+                try:
+                    # Cancellation stops ingestion, not an upload's verification
+                    # and pruning. Drain before returning or releasing job claims.
+                    if maintenance_task is not None:
+                        await asyncio.shield(maintenance_task)
+                finally:
+                    self.repo.release_worker_leases(self.owner)

@@ -1,4 +1,6 @@
+import asyncio
 import json
+import threading
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
@@ -143,3 +145,65 @@ async def test_worker_continues_ingestion_when_daily_archive_is_unavailable(
     await worker.run(cycles=2, source="crypto", interval="1m", archive_daily=True)
     assert cycles == 2 and closed
     assert len(repo.read("crypto", "BTCUSDT", "1m")) == 1
+
+
+@pytest.mark.asyncio
+async def test_slow_archive_keeps_ingesting_without_overlapping_transfers_and_drains_on_exit(
+    system, monkeypatch, tmp_path
+):
+    repo, archive, settings = system
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(json.dumps({"crypto": [{"symbol": "BTCUSDT", "intervals": ["1m"]}]}))
+    settings = replace(settings, watchlist=watchlist)
+    floor = cutoff(1)
+    repo.put([bar("BTCUSDT", floor - 86400 + 120)])
+    original = repo.read("crypto", "BTCUSDT", "1m")
+    entered, release = threading.Event(), threading.Event()
+    progressed, closed = asyncio.Event(), asyncio.Event()
+    writes = 0
+    put = archive.store.put
+
+    def blocked_put(key, path):
+        nonlocal writes
+        if key.endswith(".parquet"):
+            writes += 1
+            entered.set()
+            if not release.wait(10):
+                raise TimeoutError("Test transfer was not released")
+        return put(key, path)
+
+    monkeypatch.setattr(archive.store, "put", blocked_put)
+
+    class Providers:
+        async def close(self):
+            closed.set()
+
+    worker = Worker(repo, settings, Providers(), archive)
+    cycles = 0
+
+    async def cycle():
+        nonlocal cycles
+        cycles += 1
+        repo.put([bar("BTCUSDT", floor + cycles * 60)])
+        if cycles == 3:
+            progressed.set()
+        return 1
+
+    monkeypatch.setattr(worker, "cycle", cycle)
+    task = asyncio.create_task(
+        worker.run(cycles=3, source="crypto", interval="1m", archive_daily=True)
+    )
+    try:
+        assert await asyncio.to_thread(entered.wait, 3)
+        await asyncio.wait_for(progressed.wait(), 4)
+        await asyncio.wait_for(closed.wait(), 1)
+        assert not task.done() and writes == 1
+        assert repo.read("crypto", "BTCUSDT", "1m")[0] == original[0]
+        assert len(repo.read("crypto", "BTCUSDT", "1m")) == 4
+    finally:
+        release.set()
+        await asyncio.wait_for(task, 8)
+    assert cycles == 3 and writes == 1
+    assert len(repo.read("crypto", "BTCUSDT", "1m")) == 3
+    assert archive.read(repo.archives()[0]) == original
+    assert len(History(repo, archive, settings).read("crypto", "BTCUSDT", "1m")) == 4

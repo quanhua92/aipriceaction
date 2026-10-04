@@ -194,6 +194,10 @@ selection; within those filters, archival includes stored series while ingestion
 remains watchlist-driven. Failed publication or concurrent corrections leave
 local rows available and retry attempts are spaced at least 60 seconds apart.
 Successful-day tracking is in memory; restarting harmlessly rechecks SQLite.
+One background maintenance task per worker lets ingestion continue during slow
+uploads. Transfers do not overlap within that worker. Normal bounded runs and
+cooperative shutdown wait for an active transfer's verification/pruning before
+returning; existing exact-version checks protect concurrent corrections.
 This needs no additional service. Keep the worker under your existing process
 supervisor for continuous operation. Prepared Linux units and their staging
 checks are in [ops/systemd/README.md](ops/systemd/README.md); their source scopes
