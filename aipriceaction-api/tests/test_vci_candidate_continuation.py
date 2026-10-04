@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from types import SimpleNamespace
 
@@ -7,7 +8,7 @@ import pytest
 from aipriceaction_api.domain import Candle, DataError, date_bounds
 from aipriceaction_api.providers import Page
 from scripts.artifact_budget import ArtifactBudgetExceeded
-from scripts.continue_vci_candidate_pages import continue_record
+from scripts.continue_vci_candidate_pages import combined_review, continue_record
 
 
 def inputs():
@@ -133,3 +134,78 @@ def test_artifact_exhaustion_closes_provider_and_keeps_failure_checkpoint(tmp_pa
     assert result["interrupted_series"] == {"symbol": "FPT", "captures": [capture]}
     assert json.loads((args.output / "report.json").read_text()) == result
     assert not list(args.output.rglob("*.sqlite*"))
+
+
+@pytest.mark.parametrize("invalid", ["catalog", "scope", "duplicate", "partial"])
+def test_combined_resume_rejects_changed_proof_or_review_scope(tmp_path, invalid):
+    proof = tmp_path / "proof.json"
+    proof.write_text("[]")
+    root = tmp_path / "review"
+    root.mkdir()
+    report = {
+        "completed": True,
+        "proofs_sha256": hashlib.sha256(proof.read_bytes()).hexdigest(),
+        "series": [{"symbol": "FPT"}],
+    }
+    if invalid == "catalog":
+        report["proofs_sha256"] = "changed"
+    elif invalid == "scope":
+        report["series"] = [{"symbol": "VCB"}]
+    elif invalid == "duplicate":
+        report["series"] *= 2
+    else:
+        report["completed"] = False
+    (root / "report.json").write_text(json.dumps(report))
+    with pytest.raises(DataError):
+        combined_review(root, {"symbols": ["FPT"]}, proof)
+
+
+def test_verified_boundaries_are_skipped_without_provider_requests(tmp_path, monkeypatch):
+    from scripts import continue_vci_candidate_pages as module
+
+    proof = tmp_path / "proof.json"
+    proof.write_text("[]")
+    audit = tmp_path / "audit"
+    audit.mkdir()
+    (audit / "summary.json").write_text(
+        json.dumps({"completed": True, "symbols": ["FPT"], "batches": [{"symbols": ["FPT"]}]})
+    )
+    root = tmp_path / "review"
+    root.mkdir()
+    (root / "report.json").write_text(
+        json.dumps(
+            {
+                "completed": True,
+                "proofs_sha256": hashlib.sha256(proof.read_bytes()).hexdigest(),
+                "series": [{"symbol": "FPT", "boundary_reached": True}],
+            }
+        )
+    )
+
+    class Provider:
+        closed = False
+
+        def __init__(self, settings, transport):
+            self.transport = transport
+
+        async def page(self, *args, **kwargs):
+            raise AssertionError("A verified complete window must not be downloaded again")
+
+        async def close(self):
+            Provider.closed = True
+            await self.transport.aclose()
+
+    monkeypatch.setattr(module, "Providers", Provider)
+    args = SimpleNamespace(
+        audit=audit,
+        proofs=proof,
+        combined_records=root,
+        output=tmp_path / "output",
+        max_pages=20,
+        artifact_budget_mib=16,
+    )
+    result = asyncio.run(module.run(args))
+    assert result["completed"] and Provider.closed
+    assert result["skipped_verified_boundary"] == ["FPT"]
+    assert result["series"] == []
+    assert not list(args.output.glob("native-*.json"))

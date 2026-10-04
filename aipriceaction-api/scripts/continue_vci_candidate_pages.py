@@ -23,6 +23,21 @@ def page_identity(page):
     return page.cursor, rows
 
 
+def combined_review(root, summary, proofs):
+    if root is None:
+        return None
+    review = json.loads((root / "report.json").read_text())
+    if (
+        not review["completed"]
+        or review["proofs_sha256"] != hashlib.sha256(proofs.read_bytes()).hexdigest()
+    ):
+        raise DataError("Review must be complete and use the current candidate proof catalog")
+    rows = {row["symbol"]: row for row in review["series"]}
+    if len(rows) != len(review["series"]) or set(rows) != set(summary["symbols"]):
+        raise DataError("Combined review symbol scope differs from the source audit")
+    return rows
+
+
 async def continue_record(providers, symbol, record, replay, max_pages):
     first = date_bounds(record["start_date"])
     cursor = replay["next_cursor"]
@@ -90,6 +105,8 @@ async def run(args):
     summary = json.loads((args.audit / "summary.json").read_text())
     if not summary["completed"]:
         raise DataError("Finish source collection before continuation")
+    combined_root = getattr(args, "combined_records", None)
+    reviewed = combined_review(combined_root, summary, args.proofs)
     settings = replace(
         Settings.from_env(),
         proxies=(),
@@ -111,8 +128,14 @@ async def run(args):
         "artifact_budget_mib": args.artifact_budget_mib,
         "series": [],
         "offline_blocked": [],
+        "skipped_verified_boundary": [],
         "completed": False,
     }
+    if combined_root is not None:
+        result["combined_records"] = str(combined_root)
+        result["combined_review_sha256"] = hashlib.sha256(
+            (combined_root / "report.json").read_bytes()
+        ).hexdigest()
 
     def checkpoint():
         # Reserve room for a final failure report even when captures hit their cap.
@@ -127,8 +150,16 @@ async def run(args):
     try:
         for batch in summary["batches"]:
             for symbol in batch["symbols"]:
-                record = json.loads((Path(batch["path"]) / "vci" / f"{symbol}-1m.json").read_text())
-                if "error" not in record:
+                if reviewed is not None and reviewed[symbol]["boundary_reached"]:
+                    result["skipped_verified_boundary"].append(symbol)
+                    continue
+                path = (
+                    combined_root / f"{symbol}-record.json"
+                    if reviewed is not None
+                    else Path(batch["path"]) / "vci" / f"{symbol}-1m.json"
+                )
+                record = json.loads(path.read_text())
+                if reviewed is None and "error" not in record:
                     continue
                 replay = await replay_record(settings, symbol, record, retain_last_page=True)
                 if not replay["captured_pages_passed"]:
@@ -178,6 +209,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audit", type=Path, required=True)
     parser.add_argument("--proofs", type=Path, required=True)
+    parser.add_argument(
+        "--combined-records",
+        type=Path,
+        help="Use reviewed combined capture references and skip their proven boundaries",
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-pages", type=int, default=20)
     parser.add_argument("--artifact-budget-mib", type=int, default=256)

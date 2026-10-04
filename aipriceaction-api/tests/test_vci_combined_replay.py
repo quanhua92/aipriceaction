@@ -174,3 +174,33 @@ def test_combined_review_uses_corrected_captures_and_readonly_sqlite_without_cop
     assert settings.database.read_bytes() == before
     assert not list(output.rglob("*.sqlite*"))
     assert json.loads((output / f"{symbol}-record.json").read_text())["rows"] == []
+    # A subsequent review can use saved references after the original normalized
+    # record is gone; it must still bind its continuation to the exact base report.
+    (batch / "vci" / f"{symbol}-1m.json").unlink()
+    round2 = tmp_path / "round2"
+    round2.mkdir()
+    next_report = {
+        "completed": True,
+        "series": [],
+        "combined_records": str(output),
+        "combined_review_sha256": hashlib.sha256((output / "report.json").read_bytes()).hexdigest(),
+    }
+    (round2 / "report.json").write_text(json.dumps(next_report))
+    next_args = SimpleNamespace(
+        audit=audit,
+        continuation=round2,
+        base_records=output,
+        proofs=settings.vci_volume_proofs,
+        calendar_catalog=calendar,
+        output=tmp_path / "review2",
+    )
+    reviewed = asyncio.run(module.run(next_args))
+    assert reviewed["accepted_rows"] == result["accepted_rows"]
+    assert reviewed["series"][0]["sqlite_comparison"] == checked["sqlite_comparison"]
+    assert settings.database.read_bytes() == before
+    next_report["combined_review_sha256"] = "tampered"
+    (round2 / "report.json").write_text(json.dumps(next_report))
+    next_args.output = tmp_path / "rejected"
+    with pytest.raises(DataError, match="different base combined review"):
+        asyncio.run(module.run(next_args))
+    assert not next_args.output.exists()

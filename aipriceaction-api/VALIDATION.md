@@ -5,6 +5,38 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+The next continuation reuses combined capture references and skips all 40
+previously verified boundaries. It checks the eleven passing partial candidates
+and replays the eight unsupported records offline. All eleven fresh joins match;
+MBB, VIC, DIG, GVR, MSN and GEX reach the requested boundary, while VCB, ACB, VPB,
+LPB and HCM reveal further older volume contradictions. It accepts 58,766
+additional candles and retains 17,313,438 bytes under a 128 MiB cap at
+`data/vn-minute-year-vci-continuation-round2-20261004`. No complete windows are
+downloaded again, and no databases are copied.
+
+Sixteen fresh exact-date daily requests verify eight more candidate corrections;
+none is rejected and one MSN target predates the requested year. The catalog has
+78 proofs. Discovery and fresh evidence are in `data/vn-minute-year-vci-round2-proposals-20261004`
+and `data/vn-minute-year-vci-round2-fresh-proofs-20261004` (6,549,663 bytes).
+Continuation requires a complete prior review with the same proof catalog and
+exact symbol scope; subsequent combined review binds the continuation to the
+base report's checksum. Eighty focused tests pass, including changed proof/scope,
+duplicate/incomplete reviews, no-request skips, reusable source references and
+rejection of a different base report. The active catalog and canonical data
+remain unchanged.
+
+The subsequent full-watchlist replay accepts 2,655,668 candles including partial
+records. Forty-seven candidates traverse the boundary and observe all 247
+reference dates, with no unexpected dates. VCB, ACB, VPB and LPB still need older
+uncaptured pages; the eight unsupported refusals remain unchanged. Receipt-aware
+SQLite review preserves 65,718 shared VCI price differences and 200 volume
+differences. No unanimous-provider conflicts or missing unanimous timestamps
+appear within the limited shared provider coverage. This does not establish
+historical market truth or authorize adoption of a different adjustment basis.
+The report and combined source references occupy 1,000,432 bytes at
+`data/vn-minute-year-vci-combined-round2-review-20261004`. Local data grows from
+7,562,676 to 7,593,488 KiB; RustFS data remains 2,586,396 KiB (logs grow 24 KiB).
+
 Further automatic daily verification licenses 16 additional candidate proofs with
 34 fresh VNDirect/DNSE requests. HPG's February contradiction still lacks matching
 daily-volume witnesses. Five discovered targets predate the requested year and

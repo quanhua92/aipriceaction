@@ -145,11 +145,23 @@ history through `eb814ab`; they are not additional current open tasks.
   candidates. No unexpected dates or unanimous-provider/SQLite conflicts; retain
   55,718 VCI/SQLite price differences and 192 volume differences. Pass 75 focused
   tests; retain only small reports/catalogs/source references, with no DB copies.
-- [ ] Continue the eleven passing partial candidates from the combined captured
-  cursors, reusing source references. Keep the eight unsupported refusals explicit.
-  Verify coherent source/SQLite adjustment basis and remaining price/volume
-  differences before active-provider or canonical changes. Reference-date presence
-  and boundary traversal do not certify every minute or OHLCV accuracy.
+- [x] Continue the eleven passing partial candidates from the combined captured
+  cursors, reusing source references and skipping 40 reviewed complete boundaries.
+  Reject changed proof catalogs, incomplete/duplicate/scope-mismatched base reviews
+  and a continuation bound to a different review checksum. Six candidates reach
+  the boundary; five expose older contradictions. Preserve 58,766 additional rows
+  through 17,313,438 bytes of evidence under a 128 MiB cap. Verify eight additional
+  corrections with 16 daily requests; exclude one older MSN target. Candidate
+  catalog has 78 proofs. Full combined review accepts 2,655,668 candles including
+  partials, with 47 candidates observing all 247 reference dates and no unexpected
+  dates. Keep eight refusals explicit; VCB/ACB/VPB/LPB need uncaptured older pages.
+  Preserve 65,718 shared VCI/SQLite price differences and 200 volume differences;
+  no unanimous-provider conflicts/missing timestamps. Pass 80 focused tests.
+- [ ] Continue VCB/ACB/VPB/LPB from the latest combined references. Verify coherent
+  source/SQLite adjustment basis and remaining price/volume differences before
+  active-provider or canonical changes. Reference-date presence and boundary
+  traversal do not certify every minute or OHLCV accuracy. Keep the eight
+  unsupported refusals explicit.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

@@ -73,6 +73,18 @@ async def run(args):
     settings = replace(
         Settings.from_env(), vci_history_fallback=True, vci_volume_proofs=args.proofs
     )
+    base_root = getattr(args, "base_records", None)
+    if base_root is not None:
+        base = json.loads((base_root / "report.json").read_text())
+        names = [row["symbol"] for row in base["series"]]
+        if not base["completed"] or len(names) != len(set(names)) or set(names) != set(symbols):
+            raise DataError("Base combined review must cover the source audit scope")
+        if (
+            continuation.get("combined_records") != str(base_root)
+            or continuation.get("combined_review_sha256")
+            != hashlib.sha256((base_root / "report.json").read_bytes()).hexdigest()
+        ):
+            raise DataError("Continuation refers to a different base combined review")
     args.output.mkdir(parents=True, exist_ok=False)
     budget = ArtifactBudget(args.output, 8 * 1024 * 1024)
     result = {
@@ -90,6 +102,11 @@ async def run(args):
         "series": [],
         "completed": False,
     }
+    if base_root is not None:
+        result["base_records"] = str(base_root)
+        result["base_review_sha256"] = hashlib.sha256(
+            (base_root / "report.json").read_bytes()
+        ).hexdigest()
     seen = set()
     for batch in summary["batches"]:
         root = Path(batch["path"])
@@ -107,7 +124,12 @@ async def run(args):
             if symbol in seen or symbol not in symbols:
                 raise DataError("Duplicate or unexpected audit symbol")
             seen.add(symbol)
-            original = json.loads((root / "vci" / f"{symbol}-1m.json").read_text())
+            original_path = (
+                base_root / f"{symbol}-record.json"
+                if base_root is not None
+                else root / "vci" / f"{symbol}-1m.json"
+            )
+            original = json.loads(original_path.read_text())
             if (original["start_date"], original["end_date"]) != (
                 request["start_date"],
                 request["end_date"],
@@ -173,6 +195,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audit", type=Path, required=True)
     parser.add_argument("--continuation", type=Path, required=True)
+    parser.add_argument(
+        "--base-records",
+        type=Path,
+        help="Replay an additional continuation from a prior combined review",
+    )
     parser.add_argument("--proofs", type=Path, required=True)
     parser.add_argument("--calendar-catalog", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
