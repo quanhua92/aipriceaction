@@ -275,12 +275,12 @@ class Providers:
             if iv == "1D":
                 # Observed daily conventions: UTC midnight on VPS/VNDirect;
                 # DNSE also uses 02:00 UTC (09:00 Vietnam session start).
-                # Verified VNINDEX responses additionally use 02:15 UTC
+                # Verified VNINDEX/VN30 responses additionally use 02:15 UTC
                 # before May 2025. Accept that observed index convention only.
                 # Both map to the same market date. Unknown conventions remain
                 # blocked until verified against dated provider evidence.
                 verified_offsets = {0, 2 * 3600} if provider == "dnse" else {0}
-                if provider == "dnse" and symbol == "VNINDEX":
+                if provider == "dnse" and symbol in {"VNINDEX", "VN30"}:
                     verified_offsets.add(2 * 3600 + 15 * 60)
                 if timestamp % 86400 not in verified_offsets:
                     unverified_days.add(timestamp // 86400 * 86400)

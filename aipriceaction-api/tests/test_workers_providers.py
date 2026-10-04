@@ -1,5 +1,7 @@
 import asyncio
+import gzip
 import importlib.util
+import json
 import time
 from argparse import Namespace
 from dataclasses import replace
@@ -1110,8 +1112,58 @@ async def test_dnse_vnindex_session_timestamp_transition_preserves_market_dates(
         await providers.close()
 
 
+@pytest.mark.parametrize("control_index", range(18))
+@pytest.mark.asyncio
+async def test_captured_index_daily_timestamps_preserve_exact_native_ohlcv(system, control_index):
+    _, _, settings = system
+    evidence = json.loads(
+        gzip.decompress(
+            (
+                Path(__file__).parent / "fixtures/vn_index_daily_timestamp_controls.json.gz"
+            ).read_bytes()
+        )
+    )["controls"][control_index]
+    day = parse_time(evidence["date"])
+    native = evidence["target_rows"]
+    assert len(native) == 1
+    expected = native[0]
+    offset = 8100 if evidence["date"] < "2025-05-01" else 7200
+    assert expected["t"] == day + (offset if evidence["feed"] == "dnse" else 0)
+    providers = Providers(
+        settings,
+        httpx.MockTransport(lambda _: httpx.Response(200, json=evidence["payload"])),
+    )
+    try:
+        page = await providers.page(
+            "vn",
+            evidence["symbol"],
+            "1D",
+            day + 86400,
+            count=100,
+            start=day,
+            provider=evidence["feed"],
+        )
+        assert len(page.rows) == 1
+        row = page.rows[0]
+        assert row.time == day
+        assert (row.open, row.high, row.low, row.close, row.volume) == tuple(
+            expected[key] for key in ("o", "h", "l", "c", "v")
+        )
+        assert page.cursor < day  # Older native timestamps still control pagination.
+    finally:
+        await providers.close()
+
+
 @pytest.mark.parametrize(
-    "provider,symbol", [("dnse", "FPT"), ("vps", "VNINDEX"), ("vndirect", "VNINDEX")]
+    "provider,symbol",
+    [
+        ("dnse", "FPT"),
+        ("dnse", "VNMIDCAP"),
+        ("vps", "VNINDEX"),
+        ("vndirect", "VNINDEX"),
+        ("vps", "VN30"),
+        ("vndirect", "VN30"),
+    ],
 )
 @pytest.mark.asyncio
 async def test_vnindex_session_convention_does_not_allow_other_series(system, provider, symbol):
@@ -1138,8 +1190,11 @@ async def test_vnindex_session_convention_does_not_allow_other_series(system, pr
 
 
 @pytest.mark.parametrize("violation", ["conflict", "ohlc"])
+@pytest.mark.parametrize("symbol", ["VNINDEX", "VN30"])
 @pytest.mark.asyncio
-async def test_dnse_vnindex_session_bars_still_require_valid_unique_ohlcv(system, violation):
+async def test_dnse_vnindex_session_bars_still_require_valid_unique_ohlcv(
+    system, violation, symbol
+):
     _, _, settings = system
     day = parse_time("2024-03-08")
     payload = {
@@ -1160,7 +1215,7 @@ async def test_dnse_vnindex_session_bars_still_require_valid_unique_ohlcv(system
     )
     try:
         with pytest.raises(DataError, match="conflicting candles|OHLC range"):
-            await providers.page("vn", "VNINDEX", "1D", day + 86400, count=1, provider="dnse")
+            await providers.page("vn", symbol, "1D", day + 86400, count=1, provider="dnse")
     finally:
         await providers.close()
 
