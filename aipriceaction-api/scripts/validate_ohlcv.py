@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import date_bounds
+from scripts.audit_sqlite_ohlcv import audit
 from scripts.compare_vn_feeds import FIELDS, NATIVE_FEEDS, same
 from scripts.compare_vn_feeds import run as compare_feeds
 from scripts.inventory_retained_windows import inventory
@@ -143,6 +144,10 @@ async def run(args):
     settings = Settings.from_env()
     state = inventory(settings)
     (args.output / "inventory.json").write_text(json.dumps(state, indent=2) + "\n")
+    structural = audit(settings.database)
+    (args.output / "sqlite-structure.json").write_text(
+        json.dumps(structural, indent=2, allow_nan=False) + "\n"
+    )
     comparison = await compare_feeds(
         SimpleNamespace(
             output=args.output / "providers",
@@ -157,11 +162,21 @@ async def run(args):
     local = local_comparisons(settings, args.output / "providers", comparison)
     (args.output / "sqlite-comparison.json").write_text(json.dumps(local, indent=2) + "\n")
     issues = exceptions(comparison, local)
+    if not structural["structural_validity_passed"]:
+        issues.append(
+            {
+                "kind": "sqlite_structural_invalidity",
+                "invalid_rows": structural["invalid_rows"],
+                "sqlite_quick_check": structural["sqlite_quick_check"],
+            }
+        )
     report = {
         "checked_at": datetime.now(UTC).isoformat(),
         "read_only": True,
         "canonical_publication": False,
         "perfect_data_proven": False,
+        "structural_checked_rows": structural["checked_rows"],
+        "structural_invalid_rows": structural["invalid_rows"],
         "symbols": comparison["symbols"],
         "intervals": comparison["intervals"],
         "providers": comparison["feeds"],

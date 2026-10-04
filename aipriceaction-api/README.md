@@ -43,13 +43,26 @@ uv run python -m scripts.validate_ohlcv --interval 1m \
 
 Choose completed dates and a new output directory. With no `--symbol`, every
 selected VN ticker is checked. The runner inventories retained storage and jobs,
-compares VPS/VNDirect/DNSE/VCI, then compares returned candles with SQLite. Its
+streams every SQLite candle through structural validation, compares
+VPS/VNDirect/DNSE/VCI, then compares returned candles with SQLite. Its
 `report.json` lists provider errors, absent observations, timestamp coverage and
 price/volume discrepancies; detail and original captures remain alongside it.
 No candle is changed and no database copy is created. VCI probing is minute-only;
 use the existing four-feed comparison below for daily/hourly checks. Agreement
 is not a market-truth oracle, and this bounded recent run does not certify the
 whole retained window or cold archive. Only exceptions need further investigation.
+
+To run only the full SQLite structural check without provider requests:
+
+```sh
+uv run python -m scripts.audit_sqlite_ohlcv --report data/sqlite-structure-review.json
+```
+
+This reads one snapshot, checks SQLite integrity and validates every candle's
+numeric values, OHLC range and timestamp alignment. Errors retain bounded row
+samples, including non-finite values as text. SJC quote and Yahoo futures
+exceptions follow the same rules as ingestion. It creates no database copy;
+valid structure does not prove market accuracy or complete trading coverage.
 
 A read-only recent comparison captures all four feeds and reports all six pairs:
 

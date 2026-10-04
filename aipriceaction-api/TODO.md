@@ -38,6 +38,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Automatically validate every live SQLite OHLCV row in one read-only
+  snapshot, with bounded invalid-row samples and quote/futures rules preserved.
+  Check 6,022,230 candles across 207 series: no structural violations and SQLite
+  integrity passes. Integrate this step into the automated provider pipeline;
+  keep the 22 KB report without database copies. Twelve focused tests pass.
+  Structural validity is separate from market accuracy and completeness.
+
 - [x] Add one automated OHLCV review command that inventories selected storage,
   compares all four native VN minute providers and checks SQLite against them.
   Run it across all 59 selected VN symbols for October 2, 2026: 236 provider

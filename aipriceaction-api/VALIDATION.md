@@ -6,6 +6,31 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Automated full SQLite OHLCV structural audit — 2026-10-04 ICT
+
+`scripts.audit_sqlite_ohlcv` streams every current candle in one `mode=ro`
+transaction through the ingestion domain rules, independently checks integral
+volume/timestamps, and records per-series counts with bounded invalid-row samples.
+Non-finite values remain printable as text in JSON witnesses. The audit preserves
+SJC quote-derived range conventions and Yahoo settlement/legacy quote exceptions;
+it does not reinterpret them as traded candles. SQLite `quick_check` runs in the
+same snapshot. The provider validation pipeline now includes this step and flags
+its failures separately from coverage and source-value differences.
+
+The real run checked **6,022,230 rows** across **207 series** in **27.293 seconds**:
+VN **3,232,815**, crypto **2,214,848**, Yahoo **573,472**, SJC **1,095**. There were
+**zero structural violations**, and SQLite integrity returned `ok`. The report
+`data/automated-retained-sqlite-structure-20261004.json` is **21,931 bytes**.
+No database copies, provider requests or RustFS writes were made. Workers may
+advance after the snapshot; this result does not freeze or certify future data.
+
+Twelve focused audit/pipeline/comparison tests pass. New fixtures prove valid
+SJC/futures quote cases are retained, corrupt ranges/non-finite prices/fractional
+volumes/shifted daily timestamps are detected, samples are bounded, JSON remains
+valid and the live SQLite bytes are unchanged. Lint/format checks pass. Cold
+archive structure, retained-session completeness and cross-provider market
+accuracy remain separate acceptance work; this pass is not “perfect data.”
+
 ## Automated selected-universe minute OHLCV validation — 2026-10-04 ICT
 
 `scripts.validate_ohlcv` connects the retained-storage inventory, native-provider
