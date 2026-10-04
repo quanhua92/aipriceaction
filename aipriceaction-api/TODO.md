@@ -29,6 +29,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Confirm public `/tickers` JSON exports work without a legacy PostgreSQL
+  connection; a fresh bounded VCB request returns HTTP 200.
+- [x] Distinguish exact hourly float noise from material differences without
+  rounding records or ignoring missing timestamps; three regression tests pass.
+- [ ] Reconcile Yahoo hourly request-window behavior before S&P/Dow handoff.
+  Eight captured requests reproduce identical OHLC with zero versus nonzero
+  volume for the same September 24 observation depending on request start date.
+  Preserve public snapshots; do not trim proof windows to obtain acceptance.
+
 - [x] Finish VPL's hourly bootstrap at its verified listing-day prefix:
   recognize DNSE's explicit empty arrays/zero timestamp marker, bind the empty
   prefix to the configured sourced listing date and earliest current/staged bar,

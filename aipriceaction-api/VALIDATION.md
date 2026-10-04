@@ -6,6 +6,39 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Public migration and hourly request-window evidence — 2026-10-04 ICT
+
+A direct public `/tickers?symbol=VCB&source=vn&interval=1D&limit=2&format=json`
+request returns HTTP 200 and a JSON object keyed by `VCB`. The implemented public
+JSON importer remains the primary migration path. No legacy PostgreSQL connection
+is needed for these exports. Existing provider disagreements concern ongoing
+ingestion compatibility, not permission to download public data.
+
+The hourly diagnostic now retains exact differences and separately reports
+material differences under the existing handoff tolerance: absolute price
+`1e-8`, exact volume. Missing flat zero-volume observations remain coverage
+failures. Canonical epoch changes also fail the check. Three focused regression
+tests pass, with lint and formatting checks; the last complete application suite
+remains the 451-test run recorded below.
+
+Fresh S&P and Dow hourly handoff proofs both reject a single material volume
+difference in their 200 returned bars, with no missing native timestamps. At the
+September 24, 2026 13:00 UTC canonical hour label, public volume is zero; wider
+native requests return 530,160,293 for S&P and 81,932,011 for Dow. OHLC prices
+agree within the handoff tolerance. Frozen-body replay evidence is
+`data/global-index-hourly-handoff-probe-20261004/replay-comparison.json`.
+
+Eight additional read-only requests establish a request-window dependency for
+that same raw 13:30 UTC observation. Requests starting September 23 return those
+nonzero volumes, while requests starting September 24 return zero, with identical
+OHLC. Both `60m` and `1h` wire intervals produce the same respective result.
+Original responses and URLs are captured in
+`data/global-index-hourly-volume-windows-20261004/report.json`; canonical epoch
+remains 3526 before and after. This demonstrates that disagreement need not mean
+an adjustment. It does not establish which volume is authoritative or license
+replacement, selective request-window trimming, or native handoff. Public
+snapshots remain preserved while the request policy is reconciled.
+
 ## Verified VPL hourly listing boundary — 2026-10-04 ICT
 
 The [regulator's listing notice](https://ssc.gov.vn/webcenter/portal/ubck/pages_r/l/chitit?dDocName=APPSSCGOVVN1620154820)
