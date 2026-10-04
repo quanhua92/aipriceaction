@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,019,512 candle/quote records. The current S3 index has 890
+- The main local database has 6,019,512 candle/quote records. The current S3 index has 894
   active objects, 69 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -19,7 +19,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 469 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 480 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,14 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Serve explicitly bounded expired FPT minute history from a separate,
+  coherent public snapshot in S3. Four frozen objects preserve 10,397 candles,
+  including 4,746 previously absent August timestamps; every original candle
+  version and archive remains intact. Nine historical HTTP/indicator cases match
+  the public candidate, and complete 894-object restoration reproduces them.
+  All 633 recent compatibility responses remain byte-identical. This does not
+  license replacing recent VPS data or crossing incompatible adjustment frames.
 
 - [x] Enable gold's verified native hourly updates using the legacy five-day
   request policy. Keep the 100-bar/five-date/tail/race guards, pin the policy in
@@ -64,8 +72,11 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] Exercise dated recent web requests across all 71 selected tickers:
   633 requests for daily/15-minute/hourly controls, without indicators and with
   SMA/EMA, through October 2, 2026. All pass nonempty ordered OHLCV/date-bound
-  checks. The corresponding October 1–3, 2025 audit has 584 passes, 48 empty
-  responses and one FPT EMA guard. Public checks reproduce the 14 empty global
+  checks. The latest corresponding October 1–3, 2025 audit has 585 passes and
+  48 empty responses; the older FPT EMA guard is resolved for that bounded range.
+  The broader ten-interval audit has 2,093/2,103 recent passes, with ten existing
+  VNINDEX/VND long-indicator guards, and 1,541/2,103 historical passes, with 558
+  empty ranges and four long-indicator guards. Public checks reproduce the 14 empty global
   ranges, but both missing index hourly ranges have public candles. Exact wider
   numerical parity, freshness and full-year coverage remain separate gates.
 - [x] Add opt-in daily maintenance to the worker without another service:
@@ -78,10 +89,11 @@ history through `eb814ab`; they are not additional current open tasks.
   exact cold readback and all surviving candle versions, 890-object manifest
   restoration, and 177 HTTP boundary queries covering 24,980 records. No expired
   local rows remain at the checked UTC cutoff. Unattended scheduling remains open.
-- [ ] Fill coherent older FPT aggregate EMA context: the October 3, 2025 query
-  reaches an incompatible January legacy archive beyond the adopted September
-  lookback. The same guard occurs before and after rollover; pinned VPS dated
-  August/September probes return no data. Do not relabel or mix those revisions.
+- [ ] Reconcile FPT context across the cold/recent boundary. The expired October
+  1–3, 2025 range now has a coherent frozen public view, but the October 1–10
+  range retains three incompatible-context guards (15-minute EMA, 30-minute
+  SMA/EMA). Pinned VPS dated August/September probes return no data. Preserve
+  both frames; do not relabel or mix revisions.
 - [x] Execute the due crypto rollover after its populated rehearsal: preserve
   5,860 expired rows in 12 immutable Parquet objects, prune exact local versions,
   verify every surviving record and restore the 713-object canonical manifest.

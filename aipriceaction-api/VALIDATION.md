@@ -6,6 +6,68 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Frozen public history and current local checkpoint — 2026-10-04 ICT
+
+Commit `4a0cb68` adds an explicitly bounded expired-history view from immutable
+public snapshots. Publication requires an entirely cold `legacy-api` revision
+distinct from the current series; it cannot prune or replace primary objects.
+Indicators and aggregate boundary completion stay pinned to the selected frame.
+Recent, open-ended and cross-retention queries retain their existing primary
+frame and incompatible-context guards.
+
+The FPT candidate publishes 10,397 minute candles in four frozen objects for
+January and August–October 2025. All 5,651 previously archived timestamps remain
+represented, with 4,746 additional August timestamps. The separate January view
+contains 453 changed public values; original primary records and archives are
+retained. Six disputed recent public/VPS values remain unchanged in SQLite.
+Fresh DNSE and VNDirect captures agree with the public feed on those six values,
+but contain other disagreements and do not establish a complete native handoff.
+
+The populated rehearsal, canonical publication and real HTTP checks verify nine
+October 1–3, 2025 minute/15-minute/30-minute cases without indicators and with
+SMA/EMA against the coherent public candidate. Twenty other recent, wide and
+cross-boundary cases preserve exact responses, including the three existing
+October 1–10 aggregate context guards. Every one of the 6,019,512 canonical candle
+versions, all unrelated operational rows and every original archive index row
+remain unchanged. Four objects advance epoch 3528 to 3532; seven jobs remain.
+
+Real RustFS restoration reads back all 894 active objects, 69 certificates,
+34 recoveries and one history gap into an isolated SQLite index. Frozen snapshot
+statuses survive restoration, and all nine historical query/indicator arrays
+match the running local API. SQLite `quick_check` passes. Current backup:
+`data/fpt-historical-snapshot-canonical-20261004/after.sqlite3`, SHA-256
+`dd9ced4cd227f62146a88319f313e31394918186c25d1067da48de0167566abe`.
+Evidence is in `data/fpt-historical-snapshot-rehearsal-20261004-v3/report.json`,
+`data/fpt-historical-snapshot-canonical-20261004/report.json` and
+`data/fpt-historical-snapshot-live-restoration-20261004/report.json`.
+
+The diagnostic HTTP parameter was corrected from `use_sma` to the actual `ema`
+parameter before FPT publication. The earlier gold report's four supposed
+SMA/EMA cases exercised SMA only. A corrected check against a writable clone of
+the preserved pre-gold VPL backup verifies actual hourly/four-hourly SMA and EMA
+responses independently, with distinct hashes and exact before/after parity:
+`data/gold-hourly-correct-ema-verification-20261004-v2/report.json`. Reference
+backups are cloned before application startup, which can initialize metadata.
+
+The running local API now uses current code. A ten-interval audit of 71 selected
+tickers passes 2,093 of 2,103 recent requests; ten VNINDEX/VND weekly/fortnightly/
+monthly indicator requests retain existing daily-history guards. All 633 cases
+in the earlier daily/15-minute/hourly matrix are byte-identical. The October
+1–3, 2025 audit passes 1,541 of 2,103 requests, with 558 empty ranges and four
+monthly indicator guards; its corresponding 633-case subset has 585 passes,
+48 empty ranges and no HTTP guard. Both audits leave their measured canonical
+snapshot unchanged; their recorded hash scope excludes individual non-VN-daily
+candle versions. Reports are `data/web-{recent,historical}-frozen-history-matrix-20261004.json`
+and `data/web-recent-frozen-history-core-parity-20261004.json`.
+
+The complete suite passes 480 tests, including eleven new frozen-history cases;
+lint, formatting and offline builds pass. Native SJC official requests still
+return HTTP 403, recorded without bypass in
+`data/sjc-official-endpoint-probe-20261004/report.json`. Public imports remain
+available without PostgreSQL. No production routing or rejected VN index hourly
+replacement is changed; multi-day supervision and remaining coverage gates stay
+open.
+
 ## Verified gold hourly request policy and native handoff — 2026-10-04 ICT
 
 The legacy Rust hourly worker uses `range=5d&interval=1h`. Captured comparisons
