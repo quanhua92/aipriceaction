@@ -134,11 +134,22 @@ history through `eb814ab`; they are not additional current open tasks.
   and compact checkpoints using 52,058,271 bytes; no database copies or publication.
   Pass 61 continuation/replay/budget/proof/refresh tests, including changed joins,
   out-of-window/non-progressing cursors and cleanup/checkpoint on budget exhaustion.
-- [ ] Automatically verify fresh daily witnesses for the newly exposed older
+- [x] Automatically verify fresh daily witnesses for the newly exposed older
   contradictions and replay the combined captures without unnecessary downloads.
-  Verify full-year calendar coverage and coherent source/SQLite basis before
-  active-provider or canonical changes; reaching a pagination boundary alone
-  does not certify missing sessions, complete minutes or OHLCV accuracy.
+  Verify 16 additional proofs using 34 fresh daily requests; HPG remains blocked,
+  and five older targets are outside the minute-year window. Candidate catalog
+  has 70 proofs. Recheck fresh joins offline before combining capture references,
+  enforcing hashes, page counts, consecutive request cursors and exact row counts.
+  Review all 59 symbols: 2,552,713 accepted candles, 40 boundary-complete candidates
+  observing all 247 reference dates, eight refusals and eleven passing partial
+  candidates. No unexpected dates or unanimous-provider/SQLite conflicts; retain
+  55,718 VCI/SQLite price differences and 192 volume differences. Pass 75 focused
+  tests; retain only small reports/catalogs/source references, with no DB copies.
+- [ ] Continue the eleven passing partial candidates from the combined captured
+  cursors, reusing source references. Keep the eight unsupported refusals explicit.
+  Verify coherent source/SQLite adjustment basis and remaining price/volume
+  differences before active-provider or canonical changes. Reference-date presence
+  and boundary traversal do not certify every minute or OHLCV accuracy.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

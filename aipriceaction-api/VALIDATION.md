@@ -5,6 +5,44 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+Further automatic daily verification licenses 16 additional candidate proofs with
+34 fresh VNDirect/DNSE requests. HPG's February contradiction still lacks matching
+daily-volume witnesses. Five discovered targets predate the requested year and
+are excluded. The candidate catalog has 70 proofs; the active worker catalog is
+unchanged. Evidence is `data/vn-minute-year-vci-continuation-proposals-20261004`
+and `data/vn-minute-year-vci-continuation-fresh-proofs-20261004` (6,099,899 bytes
+for the fresh proof/witness artifacts).
+
+`scripts.review_vci_combined_captures` reviews all 59 selected symbols offline,
+replaying original and continuation source captures through the unchanged native
+provider. It rechecks the fresh join before excluding that duplicate page from
+the combined chain, verifies capture hashes/status/bytes, recorded row counts
+and consecutive request cursors, and preserves valid partial rows while exposing
+every parser refusal. Combined records retain source references, not copies of
+the raw captures or normalized rows. A read-only SQLite comparison injects the
+replayed VCI rows alongside the three existing native captures and includes the
+actual MWG correction receipt. Each symbol uses its own SQLite transaction;
+this does not claim one cross-symbol point-in-time snapshot.
+
+The review accepts 2,552,713 candles, including valid partial records. Forty
+candidates traverse the boundary and observe all 247 reference dates; none has
+unexpected dates. VNINDEX, VN30, CEO, TCH, IDC, SHS, HPG and VGI remain rejected.
+VCB, MBB, ACB, VPB, LPB, VIC, DIG, HCM, GVR, MSN and GEX pass captured-page replay
+but still require uncaptured older pages. These remain candidates: calendar/date
+presence cannot establish every minute or market truth. The updated VCI/SQLite
+comparison retains 55,718 shared price disagreements and 192 volume disagreements.
+There are no conflicts or missing timestamps where all four native feeds agree;
+this agreement is constrained by their limited shared history and is not a
+license for older source replacement.
+
+The combined report/record references occupy 996,283 bytes under an 8 MiB cap
+at `data/vn-minute-year-vci-combined-review-20261004`. Seventy-five focused tests
+pass, covering combined source identity, changed joins, missing capture records,
+disconnected cursors, corrected source replay, truthful SQLite disagreements and
+unchanged source databases. No database copies, canonical writes or RustFS data
+writes occur. Local data grows from 7,549,620 to 7,562,676 KiB; RustFS data stays
+at 2,586,396 KiB (logs increase by 48 KiB during this run).
+
 The bounded follow-up continuation finishes all 27 candidate records whose
 captured pages replayed successfully. Before requesting older pages,
 `scripts.continue_vci_candidate_pages` re-fetches the last captured page and

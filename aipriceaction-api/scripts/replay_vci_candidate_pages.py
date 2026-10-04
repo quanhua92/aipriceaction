@@ -4,7 +4,9 @@ import argparse
 import asyncio
 import hashlib
 import json
+from collections import Counter
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -15,13 +17,15 @@ from aipriceaction_api.providers import Providers
 from scripts.artifact_budget import ArtifactBudget
 
 
-async def replay_record(settings, symbol, record, *, retain_last_page=False):
+async def replay_record(settings, symbol, record, *, retain_last_page=False, retain_rows=False):
     first = date_bounds(record["start_date"])
     before = date_bounds(record["end_date"], end=True) + 1
     pages = record["window"]["pages"]
     captures = record["captures"]
-    if len(captures) != len(pages) + 1:
-        raise DataError("Expected successful pages followed by one rejected VCI capture")
+    if not captures or len(captures) != len(pages) + int("error" in record):
+        raise DataError(
+            "Expected recorded successful pages and optionally one rejected VCI capture"
+        )
     responses, cursors = {}, []
     for index, capture in enumerate(captures):
         cursor = (
@@ -40,6 +44,8 @@ async def replay_record(settings, symbol, record, *, retain_last_page=False):
             raise DataError("VCI replay capture identity changed")
         if cursor in responses:
             raise DataError("Duplicate VCI replay request cursor")
+        if index and cursor != pages[index - 1]["cursor"]:
+            raise DataError("VCI replay request skips the preceding page cursor")
         responses[cursor] = raw
         cursors.append(cursor)
 
@@ -55,19 +61,37 @@ async def replay_record(settings, symbol, record, *, retain_last_page=False):
     )
     result = {
         "symbol": symbol,
-        "original_error": record["error"],
+        "original_error": record.get("error"),
         "pages": [],
         "captured_pages_passed": False,
         "requested_year_proven": False,
     }
+    rows = {}
+
+    def finish_rows():
+        result["accepted_rows"] = len(rows)
+        result["rows_by_date"] = dict(
+            sorted(
+                Counter(
+                    datetime.fromtimestamp(stamp, UTC).strftime("%Y-%m-%d") for stamp in rows
+                ).items()
+            )
+        )
+        if retain_rows:
+            result["rows"] = list(rows.values())
+
     try:
         for index, cursor in enumerate(cursors):
             try:
                 page = await providers.page(
                     "vn", symbol, "1m", cursor, count=10000, start=first, provider="vci"
                 )
-                if index < len(pages) and page.cursor != pages[index]["cursor"]:
-                    raise DataError("VCI replay changed a previously observed cursor")
+                if page.cursor is not None and page.cursor >= cursor:
+                    raise DataError("VCI replay cursor did not move backwards")
+                if index < len(pages) and (
+                    page.cursor != pages[index]["cursor"] or len(page.rows) != pages[index]["rows"]
+                ):
+                    raise DataError("VCI replay changed a previously observed cursor or row count")
                 result["pages"].append(
                     {
                         "before": cursor,
@@ -76,11 +100,20 @@ async def replay_record(settings, symbol, record, *, retain_last_page=False):
                         "applied_proofs": len(page.volume_proofs),
                     }
                 )
+                for row in page.rows:
+                    if not first <= row.time < cursor:
+                        raise DataError("VCI replay row outside request window")
+                    if row.time in rows:
+                        raise DataError("VCI replay repeated a timestamp across pages")
+                    rows[row.time] = row
             except DataError as exc:
                 result["error"] = str(exc)
+                result["next_cursor"] = cursor
+                finish_rows()
                 return result
         result["captured_pages_passed"] = True
         result["next_cursor"] = result["pages"][-1]["cursor"]
+        finish_rows()
         if retain_last_page:
             result["last_page"] = page
         return result

@@ -25,7 +25,7 @@ from scripts.inventory_retained_windows import inventory
 from scripts.replay_daily_feed_failures import run as replay_daily_failures
 
 
-def local_comparisons(settings, root, comparison):
+def local_comparisons(settings, root, comparison, *, records=None):
     results = []
     feeds = comparison["feeds"]
     with sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
@@ -60,7 +60,9 @@ def local_comparisons(settings, root, comparison):
                 peers = {}
                 returned = {}
                 for feed in feeds:
-                    record = json.loads((root / feed / f"{symbol}-{interval}.json").read_text())
+                    record = (records or {}).get((feed, symbol, interval))
+                    if record is None:
+                        record = json.loads((root / feed / f"{symbol}-{interval}.json").read_text())
                     if "rows" not in record:
                         continue
                     rows = {r["time"]: r for r in record["rows"]}
