@@ -181,6 +181,10 @@ Compose builds the Python 3.13 image and runs FastAPI, the Python ingestion
 worker, and RustFS. It contains no legacy Rust API service. SQLite is bind-mounted
 at `./data/aipriceaction.sqlite3`; the live ticker-catalog snapshot and bounded
 archive cache use the same `./data` mount. DuckDB remains embedded in Python.
+On Colima, `AIPA_DATA_DIR` must use a path shared with its VM. If the repository
+is physically under `/Volumes`, set it in `.env` to an equivalent shared
+`/Users/...` path and confirm `docker inspect` reports the same source for the
+API and worker. Otherwise Colima can silently create a second SQLite database.
 
 Initialization refreshes VN, crypto, and Yahoo ticker groups from
 `api.aipriceaction.com`, creates the RustFS bucket, and enables every catalog
