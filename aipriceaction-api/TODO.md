@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 895 active objects, 69 handoff certificates, 34 recoveries and
+  The S3 index has 896 active objects, 69 handoff certificates, 34 recoveries and
   two unavailable-history markers preserving VND's invalid date and native basis.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -31,6 +31,18 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Restore bounded VNINDEX 2020 daily reads through a separate coherent
+  frozen public capture: all 252 original year dates plus the preceding session.
+  Fix the reader's false rejection when a verified pending archive's relevant
+  timestamps are already covered, while retaining guards for absent dates and
+  failed archive verification. Populated rehearsal changes only archives/meta;
+  actual publication preserves both indices' recent record versions, states and
+  all 895 original active objects. Full raw year and December SMA serve through
+  the local API; twelve recent controls stay exact. Fresh restoration verifies
+  all 896 objects, 69 certificates, 34 receipts and six raw evidence readbacks.
+  Native primary repair, early SMA/EMA context and the rejected hourly
+  replacements remain open; the wider public capture contains eight invalid rows.
 
 - [x] Recover 251 valid VND 2020 daily records from an exact public API capture
   matching the original CSV. Preserve February 19's invalid record, immutable

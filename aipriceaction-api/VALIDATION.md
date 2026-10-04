@@ -45,6 +45,34 @@ All 512 tests pass. Lint/format and the offline wheel/source build pass, with th
 existing Starlette/httpx deprecation warning. Continuous native workers remain
 running; disputed index hourly replacements are outside this change.
 
+After the isolated checks pass, the 253-row daily snapshot is published to the
+local replacement, raising active objects from 895 to 896 and preserving all
+original objects. Six checksummed original capture/report files, including the
+rejected wider response, are stored and read back under
+`archive-v2/evidence/public-daily/`. Both indices' retained record versions
+remain exact: SHA-256
+`3ef8e994ff6955d4199c99630248f30de594855852cb46136c699e158bca04bc`.
+VNINDEX's three primary interval states and pending daily archive are unchanged.
+The consistent after-backup passes `quick_check`, SHA-256
+`994dfdca7d5b5ea71e32e4415d7fb90278c41193ed2455fbbb92c36b8e7df096`.
+Evidence: `data/vnindex-public-daily-publication-20261004/report.json`.
+
+The local API restarts with commit `f965348` as PID 10663, session 8785. Actual
+loopback checks reproduce all five recovered historical controls, three
+incompatible/mixed guards and twelve byte-identical recent controls. The previous
+VND publication's twelve recent and eight historical/guarded controls also pass
+after the reader update. VN/crypto/global workers remain uninterrupted.
+Evidence: the new publication's `http-before.json` and `http-after.json`, and
+the rechecked VND `http-after.json` in its preceding publication directory.
+
+Fresh isolated RustFS restoration verifies all 896 objects, 69 adoption
+certificates, 34 recovery receipts, both VND gap markers and all six immutable
+capture/report files. The full 252-row raw year and nine December SMA rows are
+readable with exact public OHLCV; two incompatible indicator controls remain
+guarded and the pending primary archive survives. SQLite `quick_check` passes.
+Evidence: adjacent `restore-report.json` and `restored.sqlite3`. Production
+routing, the legacy service and the rejected index hourly proposals are unchanged.
+
 ## Public daily-year recovery with preserved invalid dates — 2026-10-04 ICT
 
 The public `/tickers` response for VND's complete 2020 daily year returns HTTP
