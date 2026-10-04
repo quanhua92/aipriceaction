@@ -6,6 +6,29 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## HNX 2025 reference schedule — 2026-10-04 ICT
+
+Downloaded the broker-hosted signed HNX notice **5386/TB-SGDHN**, issued
+December 23, 2024, and visually inspected its full-page media-box rendering.
+The declaration in `calendars/hnx-2025.json` binds all 527,599 PDF bytes to
+SHA-256 `335dfdf7b5f76e138fad3d716329b1d67bb1c55bced2ef1b5ac00cd2f937e782`.
+Its announced weekday closures match the verified HOSE 2025 closure table.
+The mirror and incoming-document stamp are identified explicitly. Unlike the
+HOSE notice, this copy does not explicitly exclude the employee makeup Saturday
+from trading; no such exclusion is attributed to it.
+
+This is a reference declaration, with no licensed stock symbols. The existing
+HOSE index checker rejects it. No OHLCV, series state, archive pointer or runtime
+provider changes. Stock historical venues, listing/transfer boundaries,
+suspensions and no-trade dates remain unverified, as do HNX notices/amendments
+for the other retained years. Calendar agreement alone does not certify stock
+coverage. Local source and full-page rendering:
+`data/hnx-calendar-primary-20261004/`.
+
+Source byte verification and weekday-closure comparison pass. The 21 existing
+calendar regressions pass, including rejection of out-of-scope declarations;
+the latest complete API run remains 851 passing tests.
+
 ## Retained index schedules, amendments and intraday date coverage — 2026-10-04 ICT
 
 `284a9ed` extends the independent announced-calendar checker to all calendar

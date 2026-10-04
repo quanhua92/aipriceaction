@@ -38,6 +38,11 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Preserve and visually verify HNX's signed 2025 reference notice, with
+  source-byte binding and mirror distribution recorded. Its weekday closures
+  match HOSE's verified table. Keep the declaration unlicensed for stocks;
+  historical venues, listing/transfers, suspensions and no-trade evidence, plus
+  the other HNX retained-year notices/amendments, remain open.
 - [x] Extend the source-backed index schedule audit across the entire retained
   three-year daily/hourly and one-year minute windows. Visually verify 2023/2024/
   2026 annual notices and required 2024/2026 amendments, preserving mirror versus

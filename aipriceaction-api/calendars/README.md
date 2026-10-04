@@ -63,3 +63,19 @@ Other exchanges and years need their own verified notices and amendments;
 unknown windows are rejected rather than inferred from the legacy API.
 SQLite-only absence must also be checked against the API's merged SQLite/S3
 reader before it is described as absence from the served dataset.
+
+## HNX reference evidence
+
+`hnx-2025.json` records the closure table in signed HNX notice
+**5386/TB-SGDHN**, dated December 23, 2024. The full-page PDF rendering was
+visually checked; the document is distributed through a
+[broker-hosted mirror](https://vietsc.vn/public/contents/vsc-ve-viec-cong-bo-lich-nghi-giao-dich-trong.pdf).
+Its weekday closures match the verified 2025 HOSE table. Unlike the HOSE notice,
+this copy mentions the April 26 employee makeup Saturday without explicitly
+declaring its trading status, so it records no explicit weekend exclusion.
+
+This is reference evidence only. Its empty symbol list licenses no stock audit,
+and the HOSE index checker continues to reject it. Historical venue changes,
+listing boundaries, suspensions and no-trade evidence must be established before
+a stock's absent date can be called missing OHLCV. HNX notices and amendments for
+the other retained years remain to be verified.
