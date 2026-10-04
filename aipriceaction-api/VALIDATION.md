@@ -6,6 +6,41 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Inherited bootstrap placeholder cancellation — 2026-10-04 ICT
+
+PLX and SSI had never-started minute bootstrap jobs created before their
+complete public snapshot migrations and verified VPS handoffs. Their obsolete
+job revisions differ from the currently served revisions. A restarted worker
+could otherwise repeatedly fetch an obsolete backfill that cannot finish.
+Normal bootstrap startup now cancels such untouched placeholders atomically
+only when the current ready provider/revision has valid adoption evidence,
+the snapshot starts at or before the configured floor, and the job predates
+verification by at least one recorded second. Attempts, cursor, chosen provider,
+leases, staging, later jobs, repairing states and missing evidence prevent
+cancellation. This is not a new coverage certificate or a provider change.
+
+The full suite passes **433 tests**, including the inherited publication case,
+idempotence and 12 protected cases. Lint, formatting and offline package builds
+pass. The known Starlette/httpx deprecation warning remains unchanged.
+
+The populated rehearsal verifies hashes/counts of every row in every table.
+Only `jobs` and the epoch in `meta` change; all **6,019,512** candle versions and
+all staging, archives, handoffs, recoveries, sync records, schedules and quality
+findings are exact. Repeating bootstrap makes no additional changes and performs
+no provider requests. The canonical application reproduces that result: only
+the two job rows' status/reason/update time change, epoch **3523 → 3525**, and
+pending jobs **10 → 8**. The index publication and historical quality gates
+remain untouched.
+
+Evidence: `data/unstarted-bootstrap-cleanup-rehearsal-20261004/report.json` and
+`data/unstarted-bootstrap-cleanup-canonical-20261004/report.json`. The canonical
+before-image is the rehearsal's consistent `before.sqlite3`; its unchanged
+snapshot was checked before application. The canonical checked after-backup is
+`data/unstarted-bootstrap-cleanup-canonical-20261004/after.sqlite3`, SHA-256
+`bfced2fff1a6fc25b76cbd4991ab3f29a5d87d8e5a1d9f703bb9a6c4562529d2`.
+SQLite `quick_check` returns `ok` and the saved backup contains eight pending
+jobs. Original cancelled job identities and cancellation reasons remain stored.
+
 ## Dated selected-universe web query coverage — 2026-10-04 ICT
 
 The read-only web query matrix now accepts `--start-date`/`--end-date`, verifies

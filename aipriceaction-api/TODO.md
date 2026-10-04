@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 420 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 433 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,12 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Retire inherited unstarted PLX/SSI minute bootstrap placeholders after
+  their already verified snapshot handoffs. Match the current revision/provider
+  certificate and rolling floor, reject started/newer/staged jobs, and preserve
+  every candle and other table. Populated rehearsal and canonical application
+  pass full-table hashes, idempotence and a checked backup. Eight pending jobs
+  remain; cancellation does not certify full session coverage.
 - [x] Exercise dated recent web requests across all 71 selected tickers:
   633 requests for daily/15-minute/hourly controls, without indicators and with
   SMA/EMA, through October 2, 2026. All pass nonempty ordered OHLCV/date-bound
@@ -146,7 +152,8 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   were 58 series with pending work at that inventory checkpoint; the current
-  database has 10 pending jobs after rolling-floor completion. Readiness alone
+  database has eight pending jobs after rolling-floor completion and guarded
+  cancellation of two obsolete placeholders. Readiness alone
   does not prove coverage.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
