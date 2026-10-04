@@ -850,8 +850,12 @@ This read-only check preserves original public/native responses and compares
 native hourly values, the stored hourly series, and minute aggregation. Yahoo
 hourly timestamps follow the legacy worker's whole-hour labels; source OHLCV
 values are preserved, rather than regrouped from minute candles. The command
-exits unsuccessfully when the captured native window differs from the public
-window. That result is diagnostic evidence, not permission to discard older
+reports exact differences alongside material differences using the existing
+handoff price tolerance (absolute `1e-8`, with exact volume comparison). It exits
+unsuccessfully for missing public timestamps, material native differences or a
+changed canonical epoch during the check. Missing flat, zero-volume observations
+remain missing; their separate count does not waive coverage. Neither input is
+rounded or changed. That result is diagnostic evidence, not permission to discard older
 timestamps or a certificate for an ongoing provider handoff.
 
 The six chosen stock/index hourly series now use complete public JSON snapshots
