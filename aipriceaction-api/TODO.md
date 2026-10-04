@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 706 tests; lint/format checks pass.
+- The latest complete API suite passes 708 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -32,6 +32,21 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Expand the remaining VN minute-basis investigation to complete daily
+  windows from all four feeds and 44 exact-date VCI controls. All 36 stock
+  controls align with retained daily prices within one VND; eight index controls
+  remain discrepant. Preserve GEE/VN30 daily source errors independently.
+- [x] Stage eight additional coherent stock minute candidates across their
+  entire existing September 2025–October 2026 scope (468,309 total candles).
+  Resume failed isolated captures from verified cursors after corroborating
+  single-minute defects; preserve source evidence and canonical rows.
+  Full-date/native-volume/archive reviews pass BSR, TCB, VHM and VND. These are
+  isolated review results, requiring fresh handoffs and guarded activation.
+- [ ] Finish CTG's closed-day proof with two separate contradictory minutes;
+  the existing single-correction proof intentionally rejects it. Reconcile GAS's
+  observed minute gap, MWG's two full-day volume differences, GEE's invalid
+  VNDirect daily response, and SHB's observed binary32 rounding equivalence.
+  Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.
   Keep the three preferred providers and daily/hourly sourcing unchanged; append
   VCI only for older minute requests. Validate units, symbol, arrays, timestamps,

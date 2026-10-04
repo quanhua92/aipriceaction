@@ -6,6 +6,102 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Remaining VN minute-basis candidates and peer review — 2026-10-04 ICT
+
+After the local FPT/TPB correction, a fresh consistent SQL snapshot finds material
+minute/daily price-basis discrepancies on eleven symbols; TPB is no longer among
+them. Capture all four daily feeds over September 3, 2025–October 2, 2026 and 44
+exact-date VCI controls across first/middle/last discrepant and recent sessions.
+All 36 stock controls align with retained native daily prices within one VND;
+all eight VNINDEX/VN30 controls still disagree. The legacy feed is a peer, never
+the accuracy oracle. The daily audit retains two source errors: VNDirect's GEE
+invalid range at Unix 1773792000 and DNSE's unverified VN30 daily labels. Neither
+is silently converted to a valid candle or counted as agreement.
+
+The initial daily audit used a recent-window 100-row cap and rejected full-year
+responses. The comparator now budgets daily rows from the requested calendar
+span, bounded by 10,000, and continues to reject a saturated page. Initial and
+corrected audits remain separate. Exact-day VCI probes pass `start` explicitly;
+an unrelated prior-day contradiction cannot masquerade as corruption of the
+requested day's candles. Wider source and handoff requests still reject those
+contradictions when their dates are in scope.
+
+Full isolated pagination captures eight coherent stock histories, totaling
+468,309 candles. All cover 270 observed dates and preserve every original hot
+timestamp. Their full-date price comparisons against retained native daily data
+stay within one VND. A storage dry run also preserves every existing hot and
+active archived timestamp without mutation. Candidate completeness certifies
+observed reference coverage, not an independent exchange calendar.
+
+| Candidate | Total minute candles | Full-date peer/storage review |
+| --- | ---: | --- |
+| BSR | 60,120 | Pass; all original 55,076 hot and 5,044 cold timestamps survive |
+| GAS | 55,800 | One unresolved minute-gap volume difference |
+| GEE | 48,515 | DNSE totals match; independent full-window VNDirect witness incomplete |
+| MWG | 60,453 | Two unresolved full-day volume differences |
+| SHB | 60,985 | 38 differences match binary32 rounding; raw values preserved |
+| TCB | 60,810 | Pass; all original 55,614 hot and 5,196 cold timestamps survive |
+| VHM | 60,815 | Pass; all original 55,675 hot and 5,140 cold timestamps survive |
+| VND | 60,811 | Pass; all original 55,614 hot and 5,197 cold timestamps survive |
+
+These eight candidates remain isolated. Passing review requires retained native
+prices and at least two native daily volume witnesses on every observed date,
+plus the timestamp-preserving storage preview. Legacy agreement alone cannot
+make review pass. Known price rounding and conflicting vendor totals are recorded
+separately. Four passing candidates still require fresh native handoffs, immutable
+before-images, canonical activation and live HTTP/recovery checks.
+
+The proposal catalog has 19 replayable proofs, including the two already used
+for FPT/TPB. New proposals remain isolated and are not installed in the running
+worker. Each new single-candle proof replays a closed full day, exact cumulative
+increments, session reconciliation and matching VNDirect/DNSE daily volumes.
+Partial pagination replies for VND December 16 and GAS December 2 initially
+failed session-total proof; complete-day recaptures resolve both. No partial sum
+is treated as a provider daily-total disagreement. The resumable staging command
+preserves its verified prefix and retries the failed cursor. Two regressions
+prove prefix write versions remain intact and unrecorded rows block resume.
+
+CTG remains quarantined on April 7, 2026: 225 captured rows sum to 4,948,000,
+while the final cumulative volume and both daily peers report 4,955,000. Two
+separate consecutive-minute differences are 8,400 versus 11,400 and 23,000
+versus 27,000. The current proof format permits one correction per closed day,
+so it rejects both rather than inventing a partial proof.
+
+GAS July 10, 2026 has a real 120-second timestamp gap. Its observed minute sum
+is 512,500; the cumulative total and both daily peers are 512,700. The candle
+after the gap reports 200 shares but the cumulative increment is 400. Preserve
+the evidence and seek the missing observation; never assign its volume to the
+next candle without source OHLCV. MWG's September 16 and November 10 minute
+sums differ from matching VNDirect/DNSE daily totals by 2,600 and 600; VCI's own
+final cumulative totals equal its minute sums. Those are distinct unresolved
+source coverage/convention cases, not consecutive-minute defects.
+
+All 38 SHB DNSE differences equal the exact IEEE binary32 rounding of the
+integer minute total, with a maximum eight-share difference. VNDirect and VCI's
+own cumulative total match the exact integer on all these dates. This is verified
+numerical equivalence; DNSE's internal storage type is an inference, not a
+documented protocol fact. Raw daily/minute values and the strict review result
+remain intact pending explicit precision treatment.
+
+Evidence:
+
+- `data/vn-minute-basis-current-20261004.json`;
+- `data/vn-remaining-basis-daily-four-feeds-complete-20261004/` and
+  `data/vn-remaining-basis-vci-dated-controls-20261004/`;
+- `data/vn-remaining-coherent-vci-candidates-20261004/` and
+  `data/vn-remaining-vci-candidate-review-20261004/report.json`;
+- `data/vci-volume-proposals-round3-20261004/`, plus GEE exact-day witnesses
+  and VND/GAS full-day recaptures in their separate evidence directories;
+- `data/vn-remaining-vci-volume-gap-diagnostics-20261004.json` and
+  `data/shb-dnse-volume-precision-diagnostic-20261004.json`.
+
+All capture processes are terminal at this checkpoint. Main source candles,
+provider preferences, running proof catalog and production routing remain
+unchanged. A full local quality audit refreshes its own findings and resolves
+TPB's stale pre-correction basis finding while preserving the original quality
+record. Output is in `data/quality-after-vci-canonical-corrections-20261004.json`.
+The full suite passes 708 tests, with lint/format checks passing.
+
 ## Verified local FPT/TPB minute activation — 2026-10-04 ICT
 
 The following checkpoint supersedes the earlier isolated-candidate status for
