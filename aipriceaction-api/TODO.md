@@ -445,6 +445,11 @@ an explicit quality finding, not a claim of complete coverage.
 
 - [x] Bootstrap only configured tickers and required recent windows, with durable
   checkpoints, bounded concurrency, leases, restart recovery, and idempotency.
+- [x] Advance leased configured bootstrap/repair floors with rolling retention;
+  finish crossed bounds without obsolete fetches, preserve older published rows,
+  and guard empty current windows and missing observed VN hourly session dates.
+  Rehearse then complete 48 selected stock-hourly jobs with every candle/version
+  unchanged. Hold IDC, GEE, VGI, VTP and VPL for remaining coverage/boundary proof.
 - [x] Activate watchlists atomically and tolerate actual removals during another
   worker's run; test concurrent readers and preserve metadata/schedules/history.
 - [x] Accelerate selected crypto minute bootstrap with checksummed Binance

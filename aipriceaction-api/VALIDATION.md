@@ -6,6 +6,52 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Rolling job bounds and observed VN hourly coverage — 2026-10-04 ICT
+
+A read-only inventory compares **39,160 daily dates** with **39,155 hourly dates**
+across **53 selected VN stock tickers** inside the rolling hourly window. Five
+daily dates have no hourly observations: IDC May 15, 2025; GEE April 17 and
+November 28, 2024; VGI and VTP October 13, 2023. No hourly date lacks a daily
+observation. This is observed-date agreement, not an independent exchange
+calendar, complete hourly slots or price/volume convention parity.
+
+Dated DNSE, VPS and VNDirect requests fail to provide hourly rows on these five
+dates. The database-backed public API exposes **five hourly bars each** for IDC,
+VGI and VTP, confirming a native coverage gap; those raw records are preserved
+as candidates rather than spliced across unverified adjustment bases. Public
+hourly queries are empty on both GEE dates. Its local daily bars are flat with
+volume zero and one respectively; this remains a no-trade/provider-convention
+review, without synthesized intraday candles.
+
+Configured worker jobs now advance their leased recent-data floor with rolling
+retention. At October 4 UTC, 52 stock-hourly staged cursors already cross the
+current three-year bound, while their old jobs still target October 2, 2023.
+Completion avoids another obsolete provider request, preserves all published
+older data, rejects an empty current window and checks every completed observed
+weekday daily date against staged or published hourly observations. Missing-date
+findings retain the current provider/revision instead of triggering fallback.
+
+A populated isolated rehearsal completes **48 jobs**, holds IDC, GEE, VGI and
+VTP for the observed gaps and VPL for its remaining history-start boundary, and
+makes zero provider requests. The same guarded 48 transitions then run against
+the main database. Exhaustive before/after comparisons preserve every one of
+the **6,037,613 candle records and update versions**, all series/source checks,
+archive objects, handoff certificates and import receipts. Unselected jobs and
+quality records, including both index snapshots awaiting separate approval,
+remain exact. SQLite passes `quick_check`; pending jobs fall from **58 to 10**,
+and the epoch advances from **3073 to 3121**.
+
+Inventory/probes, rehearsal and canonical transition reports/backups remain in
+`data/vn-hourly-session-inventory-20261004/`,
+`data/vn-hourly-missing-date-probes-20261004/`,
+`data/vn-hourly-rolling-job-rehearsal-20261004/` and
+`data/vn-hourly-completed-jobs-20261004/`. Immutable RustFS evidence receipt:
+`data/vn-hourly-rolling-completion-evidence-20261004.json`. Canonical after-backup
+SHA-256: `d6583cfa002cd6eb069e0729a6cdff82cc9475fba2c1d40146df57e6bdeb6ee9`.
+**416 tests**, lint, formatting and offline package builds pass. Job completion
+does not certify legacy numerical parity, every hourly slot, provider adjustment
+history or the broader historical/cutover gates.
+
 ## Bounded recurring crypto scheduler — 2026-10-04 ICT
 
 The ordinary worker runs **75 cycles** from October 3 **23:54:26 to 23:55:55 UTC**.

@@ -304,6 +304,16 @@ is supported by the [regulator’s listing announcement](https://ssc.gov.vn/webc
 After correcting a history-start setting for a pending series, `reconcile` uses
 that verified floor when rebuilding it.
 
+Configured worker jobs advance their retained-data floor as the rolling window
+moves forward, under the current job lease. If a staged cursor already reaches
+that bound, the worker can finish without requesting history outside the current
+window. Published older candles remain intact; archival maintenance is separate.
+Completion still requires a nonempty current window and preserved observed
+coverage. VN hourly bootstrap additionally checks every completed weekday daily
+date observed for that ticker against staged or published hourly observations.
+Absent dates remain review findings without an automatic provider switch. This
+checks observed dates, not a complete exchange calendar or every hourly slot.
+
 For a stalled VN hourly bootstrap, verified older staged rows can be made
 readable without marking the job complete:
 
