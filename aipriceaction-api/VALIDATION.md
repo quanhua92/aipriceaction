@@ -3,6 +3,59 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Recent four-provider disagreement review — 2026-10-04 ICT
+
+`scripts.review_vn_recent_disagreements` automatically reviews September
+28–October 2 across all 59 selected symbols, all four native provider observations
+and all six provider pairs. It scopes saved rows before comparison with SQLite,
+preserves source record hashes and original errors, and retains three diagnostic
+examples per category/day while counting all observations. The requested review
+is limited to seven calendar days inside a completed collection, with an 8 MiB
+artifact budget. No download, database copy, canonical mutation or S3 write occurs.
+
+The original VCI collection has no accepted recent rows for six symbols. The
+review supplements those symbols by replaying combined content-verified captures
+through the native parser, using the exact proof catalog and source-audit identity
+bound by the completed combined review. ACB, VPB, LPB, VPL and DGC gain accepted
+observations. VN30 still refuses its capture and contributes no VCI observations;
+that error is retained rather than counted as agreement. Previously accepted
+normalized observations from the other providers are compared without replaying
+their native parsers; their raw evidence remains in the original collection.
+
+| Provider versus SQLite | Shared candles | Price differences | Volume differences |
+| --- | ---: | ---: | ---: |
+| VPS | 59,809 | 913 | 98 |
+| VNDirect | 59,811 | 481 | 1,665 |
+| DNSE | 59,805 | 955 | 2,171 |
+| VCI | 58,673 | 41 | 145 |
+
+VCI's 145 volume differences occupy 38 ticker/date pairs with matching observed
+timestamps and equal full observed day totals. This supports investigating minute
+allocation rather than replacing whole days; it does not prove either side is
+correct. Other providers disagree too: VNDirect has equal totals on only four of
+249 differing-volume days, while DNSE has equal totals on 53 of 63. These totals
+cover observed candles, not independently verified complete market sessions.
+Zero unanimous-provider conflicts is not an accuracy certificate, particularly
+when a provider lacks observations.
+
+VCB and MWG have no uniform scale differences in this recent window; their large
+uniform differences in the year review require historical basis investigation.
+The recent VPS comparison's 883 uniform-ratio observations are on TPB, whose
+licensed VCI minute adoption and older VPS reference differences are already
+documented below. Source majority does not override that adoption or establish
+corporate-action semantics. Per-batch live SQLite snapshots can differ from the
+earlier year review, so equal aggregate counts do not imply identical exceptions.
+
+Thirty-one focused tests pass, including four-provider/six-pair integration,
+date scoping, opposing volume differences, no database mutation/copies, retained
+partial replay errors, changed proof rejection and malformed scope rejection.
+The retained report at
+`data/vn-recent-four-provider-combined-diagnosis-20261004/report.json` occupies
+2,365,323 bytes. Its superseded exploratory report (2,324,407 bytes) is removed.
+Local data grows from 7,604,312 to 7,606,624 KiB; RustFS data remains 2,642,856 KiB
+at the final size check (logs 147,484 KiB). All historical-basis, unsupported-source
+and minute-allocation acceptance gates remain open.
+
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
 Automatic post-activation classification explains the scope of the remaining

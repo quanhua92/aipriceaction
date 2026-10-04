@@ -26,7 +26,9 @@ from scripts.ohlcv_disagreements import diagnose
 from scripts.replay_daily_feed_failures import run as replay_daily_failures
 
 
-def local_comparisons(settings, root, comparison, *, records=None, diagnose_feed=None):
+def local_comparisons(
+    settings, root, comparison, *, records=None, diagnose_feed=None, diagnose_samples=20
+):
     results = []
     feeds = comparison["feeds"]
     with sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
@@ -80,8 +82,8 @@ def local_comparisons(settings, root, comparison, *, records=None, diagnose_feed
                             t for t in shared if local[t]["volume"] != rows[t]["volume"]
                         ],
                     }
-                    if feed == diagnose_feed:
-                        peers[feed]["diagnostics"] = diagnose(local, rows)
+                    if diagnose_feed == "all" or feed == diagnose_feed:
+                        peers[feed]["diagnostics"] = diagnose(local, rows, samples=diagnose_samples)
                 agreed = []
                 if len(returned) == len(feeds):
                     shared_peers = set.intersection(*(set(rows) for rows in returned.values()))

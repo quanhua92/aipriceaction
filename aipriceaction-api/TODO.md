@@ -194,6 +194,16 @@ history through `eb814ab`; they are not additional current open tasks.
   sides' counts/totals and bounded examples, with no source winner or inferred
   dividend. Reconcile classification/band/day counts against exact comparisons;
   pass 24 focused tests. Keep 1,143,308 bytes of reports/references, no DB copies.
+- [x] Review September 28–October 2 across all 59 selected symbols and all four
+  native providers, including six provider pairs, automatically from saved
+  observations. Replay combined checksummed VCI captures with their exact proof
+  catalog when original accepted pages do not reach this window. Five supplements
+  provide observations; VN30's rejection remains explicit. Preserve original
+  errors, missing timestamps, source hashes and read-only snapshot limitations.
+  VCI has 41 price/145 volume differences; all 38 differing-volume days have equal
+  observed day totals and matching times. Other providers also disagree, so no
+  winner is selected. Pass 31 focused tests; retain one 2,365,323-byte report and
+  remove the superseded exploratory report. No DB copies or canonical/S3 writes.
 - [ ] Verify the VCB/MWG historical price basis with source evidence. Investigate
   the 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals
