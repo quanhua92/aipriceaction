@@ -41,6 +41,34 @@ checksummed response bodies. Canonical epoch remains **3523** and the canonical
 FPT record/provenance digest is unchanged. The candidate remains unpublished;
 historical adjustment and recent correction witnesses still need verification.
 
+The subsequent three-provider investigation preserves bounded original responses
+and uses a separate candidate database seeded with retained daily records. DNSE
+agrees with the public snapshot at all six recent VPS disagreements. Therefore
+those six VPS corrections lack independent DNSE witnesses; complete-session
+adoption is rejected before publication. A wider **2,000-record** DNSE response
+also differs from the public snapshot at two other September 30 minutes, Unix
+timestamps `1790741220` and `1790741280`. A fresh DNSE adoption attempt rejects
+that snapshot. VNDirect matches the public snapshot at those two minutes, so it
+does not corroborate the DNSE correction either. Its complete observed
+2,000-record overlap has **42** material price/volume differences from the public
+snapshot. These are provider disagreements, not a verified dividend event or a
+license to infer historical scaling.
+
+Original response bodies and candidate/replay results are under
+`data/fpt-extended-corroborated-candidate-20261004/`,
+`data/fpt-extended-dnse-adoption-20261004/` and
+`data/fpt-extended-vndirect-witness-20261004/`. All canonical epochs remain
+**3523**. No candidate receives a provider adoption certificate; canonical data
+and its existing provider remain unchanged. Neither the failed complete-session
+attempt nor the head comparisons prove a full historical adjustment basis.
+
+Adoption validation now preserves the underlying reason, for example
+`Invalid snapshot adoption evidence: Minute correction is not independently corroborated`,
+instead of returning only the generic evidence error. Both actual publication
+attempts and restored/tampered receipts continue rejecting a changed witness.
+The full suite passes **420 tests**; focused adoption tests pass **47 tests**,
+lint and formatting pass. The existing Starlette/httpx deprecation warning remains.
+
 ## Opt-in worker daily retention maintenance — 2026-10-04 ICT
 
 `worker --archive-daily` runs the existing verified archive publication and

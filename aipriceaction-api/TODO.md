@@ -614,6 +614,10 @@ charts and indicators never silently join incompatible adjustment revisions.
   retained timestamp. It changes 459 existing candles and fails native VPS
   handoff on six recent candles; it is not published. Preserve both snapshots
   and obtain adjustment/correction witnesses before accepting a replacement.
+  Fresh DNSE witnesses agree with the public API at those six candles but have
+  two other recent differences; VNDirect matches public data at those two and
+  differs at 42 candles across its wider overlap. No provider handoff is licensed
+  by these contradictory witnesses. Validation now exposes the specific reason.
 - [ ] Recover the remaining VND 2020 unavailable range and VNINDEX 2020 pending
   partition through complete coherent validated history. Preserve invalid public
   originals and reject guessed corrections or partial incompatible splices.
