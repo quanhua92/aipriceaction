@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 891 active objects, 76 handoff certificates, 34 recoveries and
+  The S3 index has 890 active objects, 77 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,9 +21,9 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- Seven licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, TCB,
-  VHM and VND. The three preferred providers remain unchanged for other sources/windows.
-- The latest complete API suite passes 727 tests; lint/format checks pass.
+- Eight licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GEE,
+  TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
+- The latest complete API suite passes 749 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -61,9 +61,16 @@ history through `eb814ab`; they are not additional current open tasks.
   handoff, preserving every timestamp and immutable before-images. Verify a real
   40-row refresh, 18 boundary queries, 28 HTTP cases and exact two-object S3
   restoration. Keep 15 curated proofs for seven active VCI series.
+- [x] Recover GEE's native volume corroboration while retaining the rejected
+  VNDirect OHLC row. Verify 269 valid daily candles in separate bounded requests;
+  validate captured volume fields independently with explicit field scope,
+  request/source/symbol bindings, hash checks and all OHLC rejections retained.
+  GEE's full 48,515-candle candidate passes all 270 observed dates, fresh native
+  overlap, guarded local activation, 40-row refresh, 18 boundary queries, 28 HTTP
+  cases and exact two-object S3 restoration. Keep 16 curated volume proofs for
+  eight licensed VCI series; GAS/MWG/SHB/VN30/VNINDEX remain unresolved.
 - [ ] Reconcile GAS's
-  observed minute gap, MWG's two full-day volume differences, GEE's invalid
-  VNDirect daily response, and SHB's observed binary32 rounding equivalence.
+  observed minute gap, MWG's two full-day volume differences, and SHB's observed binary32 rounding equivalence.
   Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.
   Keep the three preferred providers and daily/hourly sourcing unchanged; append

@@ -6,6 +6,53 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## GEE verified local minute activation — 2026-10-04 ICT
+
+GEE now joins the seven previously licensed local VCI minute series. The
+field-scoped witness implementation is committed as `67a7e4e`. Three fresh
+bounded VNDirect controls return 133 valid daily candles before March 18 and
+136 afterward; the March 18 request still rejects its invalid OHLC range.
+The native response reports a close above its high. That row remains rejected
+for prices; neither the daily adapter nor canonical daily candles are changed.
+
+The explicit `vndirect_daily_volume_only` evidence format separately validates
+the frozen native response's exact UTC daily timestamps and integer volumes,
+array shapes, finite positive price fields and unique timestamps. It retains
+the original source error and every selected OHLC rejection. Replay verifies
+capture bytes, hashes and the native request's endpoint, symbol, resolution,
+window and count. Edited evidence, duplicate/unknown timestamps, fractional or
+negative volumes, hidden errors and invented price rows remain rejected.
+This format supplies only timestamp/volume pairs. It cannot publish candles or
+license prices from the rejected response.
+
+On March 18, all three observed volume values are exactly 2,025,300:
+VCI minute sum, VNDirect's daily volume field and DNSE's valid daily candle.
+Across all 270 observed dates, GEE has two exact native volume witnesses.
+The full 48,515-candle minute candidate also matches retained valid native daily
+prices within one VND. Its 25 recorded minute pages and all three native daily
+captures are replayed before activation; a fresh 2,000-candle overlap matches
+across ten observed sessions.
+
+Guarded local publication preserves every observed timestamp, a whole SQLite
+backup and immutable original hot/cold images. The result contains 45,348
+SQLite candles and 3,167 S3 candles in two objects. A real 40-row native refresh,
+18 boundary queries and 28 actual HTTP cases pass. Scoped restoration reproduces
+all 48,515 candles and exact hot write versions from S3; its native handoff
+certificate is valid, original before-images remain readable and all unrelated
+VN OHLCV/provider basis is unchanged. Forty-two immutable source-evidence objects
+have verified readbacks.
+
+Evidence is in `data/gee-vndirect-bounded-controls-20261004/report.json`,
+`data/vn-daily-field-scoped-evidence-20261004/report.json`,
+`data/gee-local-activation-20261004/report.json` and
+`data/gee-local-http-restoration-20261004/report.json`. The restarted local VN
+worker uses the activation directory's `active-volume-proofs.json`, with 16
+proofs for eight licensed VCI series. The current manifest has 890 objects,
+77 handoff certificates, 34 recoveries and eight protected history markers.
+The refreshed audit leaves GAS/MWG/SHB/VN30/VNINDEX interval-basis findings open.
+The full suite passes 749 tests; lint and formatting pass. Calendar completeness,
+other unresolved data-quality gates and production cutover remain unproven.
+
 ## CTG verified local minute activation — 2026-10-04 ICT
 
 CTG now joins the six previously licensed VCI stock minute histories locally.
