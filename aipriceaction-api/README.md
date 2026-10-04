@@ -614,6 +614,10 @@ aggregation buckets stay on the selected revision. Live, open-ended and queries
 crossing local coverage continue using the primary history. Insufficient context
 that would require another primary basis still raises the existing guard.
 Snapshots preserve primary records/objects and are verified during restoration.
+An overlapping pending primary archive does not prevent reading a complete
+frozen snapshot when its verified relevant timestamps are all represented.
+Missing primary timestamps, unverifiable archive data and incompatible older
+context still block the read. Primary repair status is preserved.
 
 Use `import-history` for an already captured, single-symbol `/tickers` JSON
 response (or `--format csv` for a CSV export). Supply its actual UTC capture time

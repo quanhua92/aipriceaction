@@ -70,10 +70,17 @@ class History:
             if any(r.time not in merged for r in other_local):
                 raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
             for obj in other_objects:
-                if obj["status"] == "pending_repair":
-                    raise DataError(f"Historical adjustment repair pending for {symbol} {iv}")
-                fetched = self.archive.read(obj, start, end, limit, forward=forward)
+                try:
+                    fetched = self.archive.read(obj, start, end, limit, forward=forward)
+                except DataError as exc:
+                    if obj["status"] == "pending_repair":
+                        raise DataError(
+                            f"Historical adjustment repair pending for {symbol} {iv}"
+                        ) from exc
+                    raise
                 if any(r.time not in merged for r in fetched):
+                    if obj["status"] == "pending_repair":
+                        raise DataError(f"Historical adjustment repair pending for {symbol} {iv}")
                     raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
         result = sorted(merged.values(), key=lambda r: r.time)
         if limit:

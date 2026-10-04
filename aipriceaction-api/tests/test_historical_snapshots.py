@@ -75,6 +75,51 @@ def test_open_ended_and_cross_retention_primary_reads_preserve_original_dates_an
     assert history.read("vn", "FPT", "1D", start=cold[0].time, end=original[-1].time) == original
 
 
+def test_complete_frozen_snapshot_can_cover_a_valid_pending_primary_archive(system):
+    repo, _, history, cold, frozen, original, _ = setup(system)
+    with repo.connect() as con:
+        con.execute("UPDATE archives SET status='pending_repair' WHERE id=?", (original["id"],))
+    assert history.read("vn", "FPT", "1D", end=cold[-1].time, limit=10000) == frozen
+    result = history.query("vn", "FPT", "1D", end=cold[-1].time, limit=10000)
+    assert len(result) == len(frozen)
+    assert all(row["close"] == 200 for row in result)
+    assert (
+        next(o for o in repo.archives() if o["id"] == original["id"])["status"] == "pending_repair"
+    )
+    with pytest.raises(DataError, match="repair pending"):
+        history.read("vn", "FPT", "1D")
+
+
+def test_frozen_snapshot_cannot_hide_a_missing_pending_primary_timestamp(system):
+    repo, archive, history = system
+    cold = rows(30)
+    original = archive.publish(cold)
+    with repo.connect() as con:
+        con.execute("UPDATE archives SET status='pending_repair' WHERE id=?", (original["id"],))
+    frozen = rows(29, revision="public-frozen", provider="legacy-api", close=200)
+    archive.publish(frozen, historical_snapshot=True)
+    with pytest.raises(DataError, match="repair pending"):
+        history.read("vn", "FPT", "1D", end=cold[-1].time, limit=10000)
+
+
+def test_frozen_snapshot_preserves_pending_guard_when_archive_cannot_be_verified(
+    system, monkeypatch
+):
+    _, archive, history, cold, _, original, _ = setup(system)
+    with history.repo.connect() as con:
+        con.execute("UPDATE archives SET status='pending_repair' WHERE id=?", (original["id"],))
+    read = archive.read
+
+    def broken(obj, *args, **kwargs):
+        if obj["id"] == original["id"]:
+            raise DataError("Invalid Parquet archive")
+        return read(obj, *args, **kwargs)
+
+    monkeypatch.setattr(archive, "read", broken)
+    with pytest.raises(DataError, match="repair pending"):
+        history.read("vn", "FPT", "1D", end=cold[-1].time, limit=10000)
+
+
 def test_frozen_snapshot_does_not_hide_a_short_incompatible_native_warmup(system):
     repo, archive, history, cold, _, _, _ = setup(system, count=20)
     archive.publish(rows(1, start=-1, revision="older-basis"))

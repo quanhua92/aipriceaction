@@ -6,6 +6,45 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## VNINDEX frozen daily history and pending-archive coverage — 2026-10-04 ICT
+
+A fresh 2014–October 3, 2023 public daily request returns 2,186 records starting
+January 5, 2015. Eight fail OHLC validation: May 11–13, 2015, October 24, 2016,
+June 24–26, 2019 and August 23, 2021. The complete original response is retained
+and rejected, with exact per-row findings in
+`data/vnindex-public-daily-capture-20261004/validation-report.json`.
+No invalid row is corrected or silently dropped.
+
+A separate coherent capture includes all 252 valid 2020 candles plus December
+31, 2019, their previous session. The 2020 timestamps and OHLCV exactly match the
+preserved pending primary archive. The extra session supplies raw change
+context; it does not establish a native provider handoff. Response SHA-256:
+`fc6cb253da0055bac76fb03f2550434fff3d51c2068a5fb518b533679f133b5d`.
+Evidence: adjacent `2020-with-previous-report.json` and public JSON.
+
+The first populated rehearsal exposes a reader defect: an overlapping pending
+primary archive blocks even a frozen snapshot containing every relevant date.
+The reader now verifies that archive's relevant timestamps against the selected
+snapshot. Complete coverage can serve; absent timestamps or unreadable archive
+data retain the repair guard. Its rows never enter the frozen result, and primary
+and mixed-window reads still encounter the pending archive. Three regression
+cases cover full coverage, a missing timestamp and failed object verification.
+
+The corrected isolated populated rehearsal changes only archives and metadata.
+All retained record versions, series, jobs, adoption/import/quality tables and
+original primary objects are exact. Twelve recent daily/hourly/minute/15-minute
+raw/SMA/EMA responses remain byte-identical. Five historical controls now return
+HTTP 200 with exact public OHLCV, including the full 252-row raw year and nine
+December SMA rows. A mixed-window request remains the same repair-pending 503;
+December EMA and March SMA remain 503 for incompatible older context. Evidence:
+`data/vnindex-public-daily-rehearsal-20261004-verified/report.json`. The original
+failed candidate remains in `data/vnindex-public-daily-rehearsal-20261004/`.
+Neither rehearsal changes the canonical database or archive.
+
+All 512 tests pass. Lint/format and the offline wheel/source build pass, with the
+existing Starlette/httpx deprecation warning. Continuous native workers remain
+running; disputed index hourly replacements are outside this change.
+
 ## Public daily-year recovery with preserved invalid dates — 2026-10-04 ICT
 
 The public `/tickers` response for VND's complete 2020 daily year returns HTTP
