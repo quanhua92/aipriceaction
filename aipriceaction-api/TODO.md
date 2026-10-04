@@ -37,7 +37,9 @@ history through `eb814ab`; they are not additional current open tasks.
   empty sector lists and signed RRG volume controls. Restore volume-profile's
   case-insensitive source dispatch/default VN behavior and empty-symbol error
   precedence. Twenty endpoint regressions pass; a compiled Rust parser check
-  corroborates integer syntax. Wider data/production acceptance remains open.
+  corroborates integer syntax. The running API preserves six completed-date
+  controls byte-for-byte and passes seven corrected-input checks while workers
+  continue. Wider data/production acceptance remains open.
 
 - [x] Preserve the legacy sync UUID input contract. Reproduce eight malformed
   inputs accepted by Python but rejected by Rust's pinned parser, then return

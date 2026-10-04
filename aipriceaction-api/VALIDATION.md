@@ -31,6 +31,17 @@ All 561 tests pass; lint, formatting and offline wheel/source builds pass. The
 existing Starlette/httpx deprecation remains. These changes preserve API input
 behavior; they do not resolve provider gaps or certify production data migration.
 
+The local API loads `67585b1` as PID 35486, session 40288 after PID 32428
+is confirmed terminal. All six completed-date controls remain byte-exact:
+FPT candles, performers, sector scores, mascore RRG and VN/crypto volume profiles.
+Seven live controls confirm upper-case crypto and unknown/default-VN profile
+modes reproduce the corresponding original profiles, and five invalid query or
+empty-symbol requests return HTTP 400. Main candle limit overflow is among those
+checks. SQLite health remains HTTP 200; native worker PIDs 27785, 27790 and
+27795 continue. Before/after HTTP evidence and the compiled integer probe are
+under `data/analysis-query-contract-runtime-20261004/`. No live market or sync
+records are written by these HTTP checks.
+
 ## Sync UUID input compatibility — 2026-10-04 ICT
 
 The Rust handlers call `Uuid::parse_str` before binding a UUID to PostgreSQL.
