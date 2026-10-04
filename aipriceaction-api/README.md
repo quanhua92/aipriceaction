@@ -38,6 +38,15 @@ Explicit VCI reads also support recent overlap verification. VCI prices are
 already VND and are not multiplied by 1,000. Unverified worker candidates remain
 staged; verified per-series adoption is required before publication or updates.
 
+VCI minute volumes that contradict consecutive cumulative totals are rejected.
+An explicit JSON proof list (`VCI_VOLUME_PROOFS` or `--vci-volume-proofs`) can
+license a narrowly verified volume substitution: the whole observed day must
+reconcile with cumulative totals and matching VNDirect/DNSE daily volumes.
+The source candle and both cumulative values must still match the proof.
+Prices, timestamps and provider/revision remain unchanged; workers retain
+replayed evidence in SQLite. This does not license snapshot publication or
+provider handoff. The staging script accepts the same file via `--volume-proofs`.
+
 ```sh
 uv run aipa-api --allow-direct --vci-history-fallback probe FPT \
   --provider vci --interval 1m --before 2025-10-04 --count 20
@@ -97,8 +106,8 @@ inventories.
 
 `watchlist.json` selects 59 Vietnamese tickers/indexes, four cryptocurrencies,
 seven global daily series, and SJC daily quotes. Ticker `VCI` is a stock symbol;
-the VCI **data provider** is excluded. Exactly three VN adapters are implemented:
-VPS, VNDirect, and DNSE. Daily/minute bootstrap starts with VPS; hourly starts
+the optional VCI **data provider** is a separate historical-minute fallback.
+VPS, VNDirect, and DNSE remain preferred. Daily/minute bootstrap starts with VPS; hourly starts
 with DNSE because the live probe found deeper hourly coverage there. Additional
 configured providers are tried on initial failures. A later provider switch
 queues a complete retained-window replacement before adopting the new basis.

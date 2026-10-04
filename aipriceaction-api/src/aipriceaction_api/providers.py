@@ -1,6 +1,7 @@
 """Provider adapters. Market source and upstream provider are separate identities."""
 
 import asyncio
+import json
 import time
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
@@ -10,6 +11,7 @@ import httpx
 
 from .binance_files import BinanceFiles
 from .domain import INDEXES, Candle, DataError
+from .vci_volume import apply_volume_proof, validate_volume_proof
 
 
 @dataclass
@@ -20,6 +22,7 @@ class Page:
     # Oldest selected timestamp before retention filtering, used only to
     # advance pagination. It does not establish an exchange calendar.
     cursor: int | None = None
+    volume_proofs: tuple[dict, ...] = ()
 
 
 class RateLimiter:
@@ -56,11 +59,32 @@ class Providers:
         "dnse": ("https://api.dnse.com.vn/chart-api/v2/ohlcs/stock", "https://www.dnse.com.vn/"),
     }
 
-    def __init__(self, settings, transport=None):
+    def __init__(self, settings, transport=None, *, vci_volume_proofs=None):
         self.settings = settings
         self.transport = transport
         self.clients = {}
         self.limits = {}
+        if vci_volume_proofs is None:
+            path = getattr(settings, "vci_volume_proofs", None)
+            vci_volume_proofs = ()
+            if path:
+                try:
+                    if path.stat().st_size > 16 * 1024 * 1024:
+                        raise DataError("VCI volume proof file exceeds its byte budget")
+                    vci_volume_proofs = json.loads(path.read_text())
+                    if type(vci_volume_proofs) is not list or len(vci_volume_proofs) > 100:
+                        raise DataError("VCI volume proof file requires a bounded list")
+                except (OSError, ValueError) as exc:
+                    raise DataError("VCI volume proof file cannot be read") from exc
+        self.vci_volume_proofs = {}
+        if vci_volume_proofs and not settings.vci_history_fallback:
+            raise DataError("VCI volume proofs require explicit fallback enablement", 400)
+        for proof in vci_volume_proofs:
+            corrected = validate_volume_proof(proof)
+            key = (corrected.symbol, corrected.time)
+            if key in self.vci_volume_proofs:
+                raise DataError("Duplicate VCI volume correction proof")
+            self.vci_volume_proofs[key] = proof
         self.binance_files = BinanceFiles(
             settings.cache_dir.parent / "binance-files", self.binary_request
         )
@@ -355,12 +379,20 @@ class Providers:
                         raise DataError("VCI conflicting accumulated volumes")
                     cumulative[t] = int(number)
             rows = []
+            applied = []
+            originals = {}
             for t, o, h, low, c, v in zip(stamps, *arrays[1:], strict=True):
                 if t not in selected or start is not None and t < start:
                     continue
                 volume = float(v)
                 if isinstance(v, bool) or not volume.is_integer():
                     raise ValueError("Invalid volume")
+                original_values = (float(o), float(h), float(low), float(c), int(volume))
+                if t in originals:
+                    if originals[t] != original_values:
+                        raise DataError("VCI conflicting source candles before volume correction")
+                    continue
+                originals[t] = original_values
                 # Cumulative totals corroborate consecutive minutes only. A
                 # sparse quote page cannot allocate trades across missing bars,
                 # and the exchange-session total resets on the next VN day.
@@ -371,11 +403,34 @@ class Providers:
                     and (t + 7 * 3600) // 86400 == (previous + 7 * 3600) // 86400
                     and cumulative[t] - cumulative[previous] != int(volume)
                 ):
-                    raise DataError(
-                        f"VCI minute volume contradicts cumulative total for {symbol} at {t}: "
-                        f"volume={int(volume)}, delta={cumulative[t] - cumulative[previous]}; "
-                        "retain raw evidence and reconcile before publication"
+                    proof = self.vci_volume_proofs.get((symbol, t))
+                    if proof is None:
+                        raise DataError(
+                            f"VCI minute volume contradicts cumulative total for {symbol} at {t}: "
+                            f"volume={int(volume)}, delta={cumulative[t] - cumulative[previous]}; "
+                            "retain raw evidence and reconcile before publication"
+                        )
+                    source = {r["time"]: r for r in proof["source_rows"]}
+                    if (
+                        previous not in source
+                        or cumulative[t] != source[t]["cumulative_volume"]
+                        or cumulative[previous] != source[previous]["cumulative_volume"]
+                    ):
+                        raise DataError("VCI cumulative totals changed since the correction proof")
+                    original = Candle(
+                        "vn",
+                        symbol,
+                        "1m",
+                        t,
+                        float(o),
+                        float(h),
+                        float(low),
+                        float(c),
+                        int(volume),
+                        "vci",
                     )
+                    volume = apply_volume_proof(original, proof).volume
+                    applied.append(proof)
                 # Captured VCI quotes are already in VND, not thousands of VND.
                 # Keep exact minute labels; validation rejects unknown conventions.
                 rows.append(
@@ -396,6 +451,7 @@ class Providers:
             raise DataError("VCI invalid minute numeric values") from exc
         page = self.normalize(rows, before, count, "vci")
         page.cursor = min(selected) if selected else None
+        page.volume_proofs = tuple(applied)
         return page
 
     async def crypto_page(self, symbol, iv, before, count):

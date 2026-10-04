@@ -55,6 +55,13 @@ history through `eb814ab`; they are not additional current open tasks.
   sparse minutes and VN daily resets never trigger guessed allocation.
   Corrections remain isolated proposals, requiring peer evidence and coherent
   publication rather than silently replacing raw source volumes.
+- [x] Add explicit replayable VCI volume proofs for the corroborated FPT/TPB
+  defects. Require one consecutive-minute contradiction, a complete observed
+  cumulative prefix, reconciled session total and matching VNDirect/DNSE daily
+  volumes. Apply only to an exact unchanged source candle/cumulative pair;
+  preserve OHLC, timestamps and provider/revision. Persist applied proofs in
+  SQLite, protect unlicensed worker publication and preserve raw/proof evidence
+  in local RustFS with exact readback. Keep runtime enablement explicit.
 - [x] Compare TPB's complete three-year daily window across all four feeds.
   VNDirect/DNSE daily volumes match retained minute sums on 246/247 dates;
   the remaining date has one VCI cumulative-volume contradiction. VPS/legacy

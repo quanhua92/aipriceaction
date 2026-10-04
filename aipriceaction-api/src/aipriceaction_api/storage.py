@@ -776,12 +776,26 @@ class Repository:
             )
             self.bump(con)
 
-    def finding(self, source, symbol, interval, kind, detail):
+    def finding(self, source, symbol, interval, kind, detail, *, resolved=False):
         now = int(time.time())
         with self.connect() as con:
             con.execute(
-                "INSERT INTO quality(source,symbol,interval,kind,detail,first_seen,last_seen) VALUES (?,?,?,?,?,?,?) ON CONFLICT(source,symbol,interval,kind,detail) DO UPDATE SET last_seen=excluded.last_seen,resolved=0",
-                (source, symbol, interval, kind, detail, now, now),
+                "INSERT INTO quality(source,symbol,interval,kind,detail,first_seen,last_seen,resolved) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(source,symbol,interval,kind,detail) DO UPDATE SET last_seen=excluded.last_seen,resolved=excluded.resolved",
+                (source, symbol, interval, kind, detail, now, now, int(resolved)),
+            )
+
+    def record_volume_proofs(self, proofs):
+        from .vci_volume import validate_volume_proof
+
+        for proof in proofs:
+            corrected = validate_volume_proof(proof)
+            self.finding(
+                "vn",
+                corrected.symbol,
+                "1m",
+                "verified_vci_volume",
+                json.dumps(proof, sort_keys=True, allow_nan=False),
+                resolved=True,
             )
 
     def findings(self):

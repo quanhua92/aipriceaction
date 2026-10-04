@@ -57,6 +57,9 @@ async def run(args):
         vci_history_fallback=True,
         allow_direct=args.allow_direct,
         proxies=() if args.allow_direct else base.proxies,
+        vci_volume_proofs=args.volume_proofs.resolve()
+        if args.volume_proofs
+        else base.vci_volume_proofs,
     )
     candidate = Repository(settings.database)
     candidate.initialize()
@@ -104,6 +107,7 @@ async def run(args):
             # Reject repeated observations with changed values instead of overwriting
             # a candidate assembled from inconsistent captures.
             if page.rows:
+                candidate.record_volume_proofs(page.volume_proofs)
                 previous = {
                     r.time: r
                     for r in candidate.read(
@@ -123,6 +127,7 @@ async def run(args):
                     "cursor": page.cursor,
                     "rows": len(page.rows),
                     "captures": transport.captures[first_capture:],
+                    "volume_proofs": list(page.volume_proofs),
                 }
             )
             report["crossed_floor"] = page.cursor <= first
@@ -198,4 +203,5 @@ if __name__ == "__main__":
     parser.add_argument("--end-date", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--allow-direct", action="store_true")
+    parser.add_argument("--volume-proofs", type=Path)
     asyncio.run(run(parser.parse_args()))

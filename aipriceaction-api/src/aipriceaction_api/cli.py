@@ -37,6 +37,11 @@ def parser():
         action="store_true",
         help="Enable VCI as a last-resort older-minute source; verified publication is still required",
     )
+    p.add_argument(
+        "--vci-volume-proofs",
+        type=Path,
+        help="Explicit replayable VCI volume proof list; requires VCI fallback enablement",
+    )
     commands = p.add_subparsers(dest="command", required=True)
     init = commands.add_parser(
         "init", help="Initialize SQLite metadata; optionally initialize archive bucket"
@@ -378,6 +383,7 @@ async def execute(args, settings):
                     "no_data": page.no_data,
                     "rows": [r.record() for r in page.rows],
                     "next_before": page.rows[0].time if page.rows else None,
+                    "volume_proofs": list(page.volume_proofs),
                 }
             )
         finally:
@@ -721,6 +727,8 @@ def main(argv=None):
             overrides["allow_direct"] = True
         if args.vci_history_fallback:
             overrides["vci_history_fallback"] = True
+        if args.vci_volume_proofs:
+            overrides["vci_volume_proofs"] = args.vci_volume_proofs.resolve()
         asyncio.run(
             execute_with_shutdown(args, replace(settings, **overrides), restore_signal=False)
         )

@@ -52,6 +52,7 @@ class Settings:
     )
     vn_providers: tuple[str, ...] = ("vps", "vndirect", "dnse")
     vci_history_fallback: bool = False
+    vci_volume_proofs: Path | None = None
     proxies: tuple[str, ...] = ()
     allow_direct: bool = False
     worker_concurrency: int = 3
@@ -101,6 +102,7 @@ class Settings:
             "cors_origins": "CORS_ORIGINS",
             "vn_providers": "VN_PROVIDERS",
             "vci_history_fallback": "VCI_HISTORY_FALLBACK",
+            "vci_volume_proofs": "VCI_VOLUME_PROOFS",
             "proxies": "HTTP_PROXIES",
             "allow_direct": "ALLOW_DIRECT",
             "worker_concurrency": "WORKER_CONCURRENCY",
@@ -122,7 +124,7 @@ class Settings:
                 values[attr] = raw.lower() in ("1", "true", "yes")
             elif isinstance(default, int):
                 values[attr] = int(raw)
-            elif isinstance(default, Path) or attr == "company_info":
+            elif isinstance(default, Path) or attr in ("company_info", "vci_volume_proofs"):
                 path = Path(raw).expanduser() if raw else None
                 values[attr] = (
                     (path if path.is_absolute() else ROOT / path).resolve() if path else None

@@ -117,6 +117,58 @@ All 620 tests pass with one existing warning; whole-project lint/format and
 offline wheel/source builds pass. The runtime configuration is not changed by
 these probes or staging commands. No new dependency or Compose service is added.
 
+## Replayable corroborated VCI volume corrections — 2026-10-04 ICT
+
+`vci_volume.py` validates a separate, narrow volume proof. It replays the entire
+observed source day, requires a unique chronological minute set with an exact
+cumulative prefix, rejects decreasing totals and volume allocations across
+missing minutes, and allows exactly one consecutive-minute contradiction.
+The corrected sum must equal the source's final cumulative total and both
+VNDirect/DNSE daily volumes. The proof contains normalized source observations,
+their checksum and the full raw capture's SHA-256 reference. This corroborates
+a specific substitution, not independent market truth or a price adjustment.
+
+The adapter accepts an explicit bounded JSON proof list via `VCI_VOLUME_PROOFS`
+or `--vci-volume-proofs`, requiring VCI fallback enablement separately. Before
+substitution, the exact original candle's OHLCV and both current cumulative
+values must still match the proof. Changed upstream evidence remains rejected.
+Only volume changes; timestamp, OHLC, provider and revision are preserved.
+Applied proofs accompany the internal page and workers retain them in resolved
+`verified_vci_volume` SQLite quality records. Bootstrap/replacement publication
+and live-provider handoff guards remain independent and active. Default VCI
+behavior still quarantines contradictions without a supplied proof.
+
+Actual full-day proofs replay FPT's September 26, 2025 candle to volume 5,100
+and TPB's June 23, 2026 candle to 15,200. Fresh 500-minute source requests
+confirm both corrections against unchanged cumulative pairs; fresh daily
+VNDirect/DNSE requests reconfirm totals 8,080,800 and 14,302,200 respectively.
+An actual isolated CLI probe with the proof-file flag returns the corrected
+two-minute FPT page and its proof. The running main configuration is unchanged.
+
+Proof catalogue: `data/vci-volume-proofs-20261004.json`. Fresh raw captures and
+report: `data/vci-volume-proof-live-recheck-20261004/`. Nine content-addressed
+proof/raw evidence objects plus the report are retained in local RustFS under
+`archive-v2/evidence/vci-volume/`; every upload has exact byte readback.
+`publication-receipt.json` identifies the receipt object and confirms no
+canonical publication. Compressed regression fixtures contain the actual full
+226/216-row observed days. A further regression ensures normalization cannot
+hide conflicting native duplicate candles. All 26 proof/adapter/worker
+regressions and all 667 tests pass with the existing warning; whole-project
+lint/format pass.
+
+New proof-backed full-window captures complete in 33 FPT pages and 28 TPB
+pages. Their 65,745/54,332 candles exactly reproduce the isolated corrected
+proposals, applying and persisting one proof each. FPT minute totals match
+the retained daily reference on all 291 observed dates; TPB minute totals
+match both VNDirect and DNSE on all 247. Minute-derived prices remain within
+0.5/0.99 VND of the retained daily references. Raw-capture replay after the
+duplicate guard passes all pages. Main source candles have zero OHLCV/basis
+or timestamp changes during staging; each normal worker refresh updates 40
+record-version timestamps. See `proof-validation.json` and
+`duplicate-guard-replay.json` under `data/fpt-proof-backed-vci-candidate-20261004/`
+and `data/tpb-proof-backed-vci-candidate-20261004/`. Completion still certifies
+observed capture coverage, not calendar completeness or canonical publication.
+
 ## VCI comparison at the minute archive boundary — 2026-10-04 ICT
 
 The read-only `scripts/audit_vci_archive_overlap.py` paginates pinned VCI

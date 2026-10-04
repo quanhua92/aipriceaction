@@ -137,6 +137,7 @@ class Worker:
             if oldest >= before:
                 raise DataError("Provider cursor did not move backwards")
             prepared = [replace(r, revision=job["revision"]) for r in page.rows]
+            self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             complete = oldest <= job["floor"]
             self.repo.stage(job, prepared, oldest, page.provider)
             if (
@@ -495,6 +496,7 @@ class Worker:
             ]
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")
+            self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
             # The recent observation and candles are committed together. A later
             # optional historical probe must not rewrite that successful result,
@@ -703,6 +705,7 @@ class Worker:
                     ]
                     # Stable job revision isolates all staging pages. A failed
                     # publication/head check can reuse this completed download.
+                    self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
                     self.repo.stage(
                         job,
                         [replace(r, revision=job["revision"]) for r in rows],
