@@ -69,10 +69,42 @@ No repair proposal is published to canonical storage.
 
 TPB differs from the original minute reference on 883 prices, all materially
 changed, and zero volumes. The candidate aligns prices with daily/hourly history.
-Daily and minute volumes agree on only one of 247 dates; the source conventions
-need explicit interpretation, not guessed volume scaling. A separate recent VCI
+Its minute volumes agree with the VPS daily reference on only one of 247 dates.
+A complete three-year daily comparison captures 746 dates from each of VPS,
+VNDirect, DNSE and legacy. VNDirect/DNSE daily volumes instead match minute sums
+on 246 of the 247 retained dates. VPS/legacy report small additional volumes on
+246 dates; the largest daily/minute ratio is 1.0034258449304174. These findings
+do not establish the vendors' chart-volume coverage or justify scaling. A separate recent VCI
 probe supports the VNDirect/DNSE price frame and preserves all observed minute
 volumes. Native/reference agreement is evidence, not an independent market oracle.
+
+The remaining TPB date is June 23, 2026: minute volumes sum to 14,301,300,
+while both VNDirect and DNSE daily totals and VCI's last cumulative total are
+14,302,200. The captured candle at timestamp 1782183840 reports volume 14,300,
+but its consecutive-minute cumulative increment is 15,200. Exactly this
+900-share discrepancy explains the daily difference. Evidence is retained in
+`data/tpb-volume-conventions-20261004/` and the candidate's
+`accumulated-volume-diagnostics.json`.
+
+An isolated TPB repair proposal changes only that candle's volume to 15,200.
+Readback verifies all 54,332 timestamps and OHLC values remain unchanged and
+exactly one volume changes. The repaired daily sum is 14,302,200. Its separate
+SQLite and receipt are in the TPB candidate's `volume-repair-proposal/` directory;
+the original source candidate is preserved and canonical data is untouched.
+
+The adapter now rejects requested candles whose volumes contradict supplied
+cumulative totals between consecutive minutes on the same Vietnamese date.
+It does not prefer cumulative volume automatically, allocate missing trades
+across sparse timestamps, or compare cumulative values across daily resets.
+Missing cumulative fields remain compatible; malformed arrays are rejected.
+Two actual capture excerpts with full-capture SHA-256 references reproduce the
+FPT/TPB failures in regressions. Existing candidates predate this guard and
+remain unlicensed; they must be reconciled before publication.
+
+Full captured-page replay accepts 32 of 33 FPT pages and 27 of 28 TPB pages,
+rejecting exactly the two documented defects. Each candidate's
+`cumulative-guard-replay.json` retains the result. All 627 tests pass with the
+existing warning; whole-project lint and format checks pass.
 
 Candidate roots: `data/fpt-coherent-vci-minute-candidate-20261004/` and
 `data/tpb-coherent-vci-minute-candidate-20261004/`. `report.json` completion means

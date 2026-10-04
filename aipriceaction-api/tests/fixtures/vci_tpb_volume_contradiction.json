@@ -1,0 +1,37 @@
+{
+  "capture_sha256": "f6b3ff8a12843e2bef38c8a7230e517df9c97982b8eaec6fe82a6d9fbae668bb",
+  "capture_path": "data/tpb-coherent-vci-minute-candidate-20261004/native-f6b3ff8a12843e2bef38c8a7230e517df9c97982b8eaec6fe82a6d9fbae668bb.json",
+  "payload": [
+    {
+      "t": [
+        "1782183780",
+        "1782183840"
+      ],
+      "o": [
+        13556.31,
+        13556.31
+      ],
+      "h": [
+        13556.31,
+        13598.28
+      ],
+      "l": [
+        13556.31,
+        13556.31
+      ],
+      "c": [
+        13556.31,
+        13598.28
+      ],
+      "v": [
+        1100,
+        14300
+      ],
+      "accumulatedVolume": [
+        2841700,
+        2856900
+      ],
+      "symbol": "TPB"
+    }
+  ]
+}

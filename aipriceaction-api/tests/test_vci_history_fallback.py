@@ -36,6 +36,71 @@ def settings(enabled=True):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("symbol", ("FPT", "TPB"))
+async def test_captured_vci_volume_contradictions_are_quarantined(symbol):
+    fixture = json.loads(
+        (
+            Path(__file__).parent / f"fixtures/vci_{symbol.lower()}_volume_contradiction.json"
+        ).read_text()
+    )
+    body = fixture["payload"][0]
+    last = max(int(t) for t in body["t"])
+    providers = Providers(
+        settings(), httpx.MockTransport(lambda request: httpx.Response(200, json=[body]))
+    )
+    try:
+        with pytest.raises(DataError, match="volume contradicts cumulative total"):
+            await providers.page("vn", symbol, "1m", last + 60, provider="vci")
+        # The capture is preserved. Only a separately corroborated correction
+        # can make this volume internally consistent; prices stay untouched.
+        index = body["t"].index(str(last))
+        previous = body["t"].index(str(last - 60))
+        body["v"][index] = int(body["accumulatedVolume"][index]) - int(
+            body["accumulatedVolume"][previous]
+        )
+        page = await providers.page("vn", symbol, "1m", last + 60, provider="vci")
+        assert len(page.rows) == 2
+        assert next(row for row in page.rows if row.time == last).volume == body["v"][index]
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("case", ("gap", "day_reset", "filtered", "length", "fractional"))
+async def test_vci_cumulative_check_respects_gaps_sessions_and_retention(case):
+    body = payload()[0]
+    first = parse_time("2025-10-02T16:59:00Z") if case == "day_reset" else STAMP
+    last = first + (120 if case == "gap" else 60)
+    for key in ("o", "h", "l", "c", "v"):
+        body[key] *= 2
+    body["t"] = [str(first), str(last)]
+    body["accumulatedVolume"] = [50000, 19100]
+    if case == "length":
+        body["accumulatedVolume"] = [50000]
+    elif case == "fractional":
+        body["accumulatedVolume"][1] = 19100.5
+    providers = Providers(
+        settings(), httpx.MockTransport(lambda request: httpx.Response(200, json=[body]))
+    )
+    try:
+        if case in ("length", "fractional"):
+            with pytest.raises(DataError):
+                await providers.page("vn", "FPT", "1m", last + 60, provider="vci")
+        else:
+            page = await providers.page(
+                "vn",
+                "FPT",
+                "1m",
+                last + 60,
+                provider="vci",
+                start=last + 60 if case == "filtered" else None,
+            )
+            assert len(page.rows) == (0 if case == "filtered" else 2)
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("wrapped", (False, True))
 async def test_vci_protocol_preserves_vnd_units_and_minute_labels(wrapped):
     seen = []

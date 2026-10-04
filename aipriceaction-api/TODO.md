@@ -47,9 +47,19 @@ history through `eb814ab`; they are not additional current open tasks.
   exchange calendars or permission to publish. Canonical OHLCV stays intact.
 - [ ] Finish and license coherent candidate publication across SQLite/S3 with
   immutable before-images, source witnesses and cold/recent boundary checks.
-  FPT has one corroborated isolated 200-share repair proposal; TPB's volume
-  convention still needs explicit treatment. Preserve existing dates and prove
+  FPT/TPB have corroborated isolated 200/900-share repair proposals; VPS/legacy
+  daily-volume coverage still needs explicit treatment. Preserve existing dates and prove
   completed OHLCV corrections instead of silently choosing legacy or scaling.
+- [x] Reject VCI consecutive-minute volume contradictions when cumulative
+  totals are supplied. Captured FPT/TPB regressions reproduce both defects;
+  sparse minutes and VN daily resets never trigger guessed allocation.
+  Corrections remain isolated proposals, requiring peer evidence and coherent
+  publication rather than silently replacing raw source volumes.
+- [x] Compare TPB's complete three-year daily window across all four feeds.
+  VNDirect/DNSE daily volumes match retained minute sums on 246/247 dates;
+  the remaining date has one VCI cumulative-volume contradiction. VPS/legacy
+  report small additional daily volumes on 246 dates. Their chart coverage
+  convention is unproven; do not label this dividend scaling or assume odd lots.
 - [x] Diagnose same-feed minute/hour differences for all selected VN tickers.
   VNDirect excludes late-session observations in 12 captured hours; legacy does
   so in three. Other observed aggregation disagreements remain explicit. Captured

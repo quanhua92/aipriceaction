@@ -335,11 +335,25 @@ class Providers:
             raise DataError("VCI invalid minute OHLCV arrays")
         if not arrays[0]:
             return Page([], "vci", True)
+        accumulated = body.get("accumulatedVolume")
+        if accumulated is not None and (
+            not isinstance(accumulated, list) or len(accumulated) != len(arrays[0])
+        ):
+            raise DataError("VCI invalid accumulated-volume array")
         try:
             stamps = [int(t) for t in arrays[0]]
             if any(isinstance(t, bool) or isinstance(t, float) and t != int(t) for t in arrays[0]):
                 raise ValueError("Fractional timestamp")
             selected = set(sorted({t for t in stamps if t < before})[-count:])
+            cumulative = {}
+            if accumulated is not None:
+                for t, value in zip(stamps, accumulated, strict=True):
+                    number = float(value)
+                    if isinstance(value, bool) or not number.is_integer() or number < 0:
+                        raise ValueError("Invalid accumulated volume")
+                    if t in cumulative and cumulative[t] != int(number):
+                        raise DataError("VCI conflicting accumulated volumes")
+                    cumulative[t] = int(number)
             rows = []
             for t, o, h, low, c, v in zip(stamps, *arrays[1:], strict=True):
                 if t not in selected or start is not None and t < start:
@@ -347,6 +361,21 @@ class Providers:
                 volume = float(v)
                 if isinstance(v, bool) or not volume.is_integer():
                     raise ValueError("Invalid volume")
+                # Cumulative totals corroborate consecutive minutes only. A
+                # sparse quote page cannot allocate trades across missing bars,
+                # and the exchange-session total resets on the next VN day.
+                previous = t - 60
+                if (
+                    t in cumulative
+                    and previous in cumulative
+                    and (t + 7 * 3600) // 86400 == (previous + 7 * 3600) // 86400
+                    and cumulative[t] - cumulative[previous] != int(volume)
+                ):
+                    raise DataError(
+                        f"VCI minute volume contradicts cumulative total for {symbol} at {t}: "
+                        f"volume={int(volume)}, delta={cumulative[t] - cumulative[previous]}; "
+                        "retain raw evidence and reconcile before publication"
+                    )
                 # Captured VCI quotes are already in VND, not thousands of VND.
                 # Keep exact minute labels; validation rejects unknown conventions.
                 rows.append(
