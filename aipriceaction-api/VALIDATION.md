@@ -6,6 +6,67 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native index controls and DNSE timestamp repair — 2026-10-04 ICT
+
+VCI historical-minute probing and a verified fallback are explicitly authorized.
+VPS, VNDirect and DNSE remain the preferred sources; legacy API observations
+remain comparisons rather than correctness requirements.
+
+`3ccb9ad` accepts DNSE's observed 02:15 UTC daily timestamps for VN30, as already
+supported for VNINDEX. Eighteen fresh native controls cover both indices on
+July 3, 2023, April 29, 2025 and May 5, 2025 across VPS, VNDirect and DNSE.
+The first two dates use 02:15 on DNSE; May 5 uses 02:00. These map to the same
+calendar date as native midnight bars. Prices agree across all three sources
+on the two earlier dates. The May 5 VPS opening prices and several volumes
+still differ and are preserved exactly, rather than normalized into agreement.
+
+The repair addresses a real pagination rejection: the complete VN30 daily
+response contains older 02:15 observations used as a cursor, even when the
+requested retained dates contain only verified 02:00 observations. It permits
+this convention only for these two DNSE indices. Other symbols/providers,
+unknown timestamp conventions, invalid OHLC ranges and conflicting duplicate
+dates remain rejected. Eighteen immutable captured-response regressions exercise
+the actual parser, retain exact native OHLCV and verify the older cursor.
+
+A fresh eight-request daily audit of September 3, 2025 through October 2, 2026
+now succeeds for both indices across VPS, VNDirect, DNSE and the legacy API,
+with 270 shared dates per index and no adapter errors. Across the 540 index/date
+comparisons, nine agree on all OHLCV fields and 531 differ. This is observed
+coverage, not independently verified exchange-session completeness.
+
+Separately, 24 native minute controls cover VNINDEX and VN30 on October 6, 2025
+and October 2, 2026. VCI is requested with 500, 2,000 and 10,000 observations on
+each target. Four native VCI daily requests show exact OHLCV agreement with all
+three VCI minute aggregations for each target. The newer session has usable
+minute responses from all three preferred providers; the older one has usable
+DNSE minute data but no usable VPS/VNDirect minute response.
+
+| Index / date | VCI minute and native daily low | VNDirect native daily low |
+| --- | ---: | ---: |
+| VNINDEX / 2025-10-06 | 1,664.17 | 1,643.23 |
+| VNINDEX / 2026-10-02 | 1,731.03 | 1,728.36 |
+| VN30 / 2025-10-06 | 1,883.64 | 1,858.23 |
+| VN30 / 2026-10-02 | 1,871.33 | 1,865.78 |
+
+On these controls, daily opening and closing prices agree; price differences
+are in lows. Native volumes also differ. VCI's internal coherence rules out a
+simple minute-summing error on these targets, but does not establish which
+source captures the exchange's intended index/volume semantics. No venue,
+auction or adjustment explanation is inferred, and no index candle or provider
+basis is replaced from this evidence alone. Previously rejected index hourly
+publication remains untouched.
+
+Full API validation passes **830 tests** with one known Starlette/httpx
+deprecation warning; all 133 Python files pass lint and formatting checks.
+The tracked fixture is `tests/fixtures/vn_index_daily_timestamp_controls.json.gz`.
+Local raw evidence and comparisons are in:
+
+- `data/vn-index-daily-timestamp-controls-20261004/report.json`
+- `data/vn-index-daily-after-timestamp-fix-20261004/report.json`
+- `data/vn-index-four-native-minute-controls-20261004/report.json`
+- `data/vn-index-vci-daily-controls-20261004/report.json`
+- `data/vn-index-native-daily-minute-comparison-20261004.json`
+
 ## MWG closing-hour volume attribution diagnosis — 2026-10-04 ICT
 
 `54b079f` adds resumable, read-only native closing-resolution probing and an

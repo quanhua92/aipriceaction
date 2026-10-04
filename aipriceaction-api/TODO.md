@@ -23,7 +23,11 @@ history through `eb814ab`; they are not additional current open tasks.
   quote-event seconds preserved; native gold minute ingestion remains frozen.
 - Ten licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
   GEE, SHB, TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
-- The latest complete API suite passes 797 tests; lint/format checks pass.
+- DNSE's captured VN30 daily timestamp transition is supported without altering
+  native OHLCV. Fresh index comparisons still show source price/volume
+  disagreements; VCI daily/minute coherence is verified only on the recorded
+  controls, not a license to replace unresolved index history.
+- The latest complete API suite passes 830 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
