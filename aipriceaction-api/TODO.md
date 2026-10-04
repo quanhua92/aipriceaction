@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 890 active objects, 77 handoff certificates, 34 recoveries and
+  The S3 index has 889 active objects, 78 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,9 +21,9 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- Eight licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GEE,
-  TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
-- The latest complete API suite passes 749 tests; lint/format checks pass.
+- Nine licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
+  GEE, TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
+- The latest complete API suite passes 781 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -75,12 +75,19 @@ history through `eb814ab`; they are not additional current open tasks.
   proposal. Both minute peers place the extra 200 shares on an existing minute;
   they do not supply the apparently missing timestamp. Ten focused regression
   tests pass. The proposal cannot license runtime publication.
-- [ ] Add durable, replayable peer-minute volume proofs distinct from cumulative
+- [x] Add durable, replayable peer-minute volume proofs distinct from cumulative
   correction proofs, then re-stage/review/activate GAS only if every gate passes.
   GAS's July 10 target is 09:00 UTC: native peers report 1,300 versus VCI's 1,100,
   with 181 identical timestamps and all other volumes matching. Corrected totals
   match both daily peers and final cumulative volume. Never synthesize the absent
   09:01 candle or move volume to 09:02 to force reconciliation.
+  The freshly re-staged 55,800-candle GAS history passes all 270 observed dates,
+  full immutable source replay and a fresh 2,000-candle native overlap. Activate
+  locally with whole SQLite backup and immutable hot/cold before-images; verify
+  40-row refresh, 18 boundary queries, 28 HTTP cases and exact S3 recovery.
+  Retain all four minute/daily witness captures behind the peer proof in S3,
+  plus the original VCI capture. Curate 20 proofs for nine licensed VCI series;
+  MWG/SHB/VN30/VNINDEX interval-basis findings remain open.
 - [ ] Reconcile MWG's two full-day volume differences and SHB's observed binary32 rounding equivalence.
   Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.

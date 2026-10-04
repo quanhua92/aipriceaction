@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## GAS verified local minute activation — 2026-10-04 ICT
+
+GAS now joins the eight previously licensed local VCI stock minute histories.
+`7062595` implements the distinct `vci_peer_minute_volume` proof and guarded
+runtime replay. It verifies the full observed day from both native minute peers,
+one exact volume disagreement, unchanged VNDirect target OHLC, a unique complete
+source cumulative prefix, the precisely located residual across the following
+gap, and both native daily totals. Each original timestamp and price is retained.
+It cannot invent a missing candle, correct multiple targets or license provider
+adoption. Current native observations are checked against the captured proof
+before replay; changed source values, cumulative totals or timestamps reject it.
+Existing cumulative-proof rules remain separate and strict.
+
+A new complete GAS candidate contains 55,800 candles across 270 observed dates.
+Every date now has two exact native volume witnesses; maximum retained native
+daily price disagreement is 0.98 VND. All 28 captured minute pages and three
+native daily response captures are replayed before publication. A fresh
+2,000-candle native overlap matches across ten observed sessions. The peer
+correction changes only July 10's existing 09:00 UTC volume from 1,100 to 1,300;
+the absent 09:01 timestamp is left absent and 09:02 volume remains unchanged.
+
+Guarded publication preserves every existing observed timestamp, a whole SQLite
+backup and immutable hot/cold before-images. Canonical GAS now has 51,510 SQLite
+candles and 4,290 S3 candles in two objects. A real 40-row native refresh succeeds,
+all 18 boundary queries match the reference and all 28 actual HTTP cases pass.
+Scoped S3 restoration reproduces all 55,800 candles and exact hot write versions,
+validates its native certificate and reads original before-images. A bidirectional
+backup comparison proves unrelated VN OHLCV/provider basis is unchanged.
+
+The curated catalog has 20 proofs for nine licensed VCI series, including four
+GAS targets. Its original VCI source capture and all four independent minute/daily
+witness captures for the peer proof are retained in immutable S3 evidence objects
+with exact readback checks. Fifty input-evidence objects support this activation.
+The restarted local worker uses
+`data/gas-local-activation-20261004/active-volume-proofs.json`.
+
+Reports are `data/gas-peer-corrected-review-20261004/report.json`,
+`data/gas-local-activation-20261004/report.json` and
+`data/gas-local-http-restoration-20261004/report.json`. The current manifest
+contains 889 objects, 78 handoff certificates, 34 recoveries and eight protected
+history markers. The refreshed audit removes GAS's old interval-basis finding;
+MWG/SHB/VN30/VNINDEX remain open. All 781 tests pass; lint and formatting pass.
+This checkpoint does not establish calendar completeness, resolve other remaining
+data-quality gates or authorize production cutover.
+
 ## GAS/MWG native minute attribution probes — 2026-10-04 ICT
 
 `2f27af2` adds closed-day native probing and offline peer-volume proposal tools.
