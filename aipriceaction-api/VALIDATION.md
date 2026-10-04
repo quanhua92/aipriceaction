@@ -6,6 +6,32 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Full VND provider-transition attempt — 2026-10-04 ICT
+
+After the recent-window comparison, bounded pinned-provider pagination attempts
+complete coherent VNDirect and DNSE daily candidates from January 2019 through
+the current completed tail. The candidate must preserve all 1,927 observed
+dates from current SQLite, published/frozen archives and the original invalid
+2020 record before any isolated publication can begin. It cannot splice years
+from different providers or silently omit failed source records.
+
+Neither candidate passes source validation. VNDirect repeatedly returns an
+invalid November 29, 2019 candle: raw open 2.628 exceeds high 2.618, with low
+2.571 and close 2.618. DNSE repeatedly returns two different December 27, 2022
+candles at Unix 1672099200 and 1672106400. Their normalized market dates collide;
+one closes at 10.53 with volume 8,521,500, while the other closes at 11.17 with
+volume 22,800,600. Each response is retained for the initial attempt and retry.
+No unambiguous source evidence licenses choosing one duplicate or correcting
+the invalid range. No complete candidate database/archive is published.
+
+Evidence is under `data/vnd-coherent-daily-candidates-20261004/`. Ten raw,
+parsed-partial, report and analysis JSON files have checksummed exact RustFS
+readback under `archive-v2/evidence/vnd-full-daily-candidates/`; the local
+`evidence-receipt.json` records their keys. Partial pages are failed candidates,
+not complete coverage. Canonical candles, provider revisions and historical
+guards stay intact. Valid 2020 data alone is insufficient to complete a coherent
+full-history transition and resolve the current VND indicator failures.
+
 ## Daily repair provider continuity — 2026-10-04 ICT
 
 Fresh read-only 60-row overlaps test whether providers with valid older-year

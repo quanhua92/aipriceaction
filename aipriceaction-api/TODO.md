@@ -96,6 +96,11 @@ history through `eb814ab`; they are not additional current open tasks.
   alternate windows cover 746 dates but change prices on 583/658 dates. Preserve
   twenty evidence objects with exact RustFS readback. A coherent full-history
   transition remains open; recent overlap cannot license mixing providers.
+- [x] Attempt complete coherent VND daily transitions on both historical
+  alternatives, requiring all 1,927 original observed dates. VNDirect repeats
+  an invalid 2019 range; DNSE repeats conflicting 2022 candles. Preserve ten
+  checksummed evidence objects and initial/retry witnesses; publish neither
+  failed candidate. Resolve source ambiguity before licensing a transition.
 - [x] Prepare Linux host supervisor examples for the API and the three current
   native worker scopes. Require per-source argument files, keep both indices
   excluded from VN, and preserve RustFS-only Compose. Parse the argument files
