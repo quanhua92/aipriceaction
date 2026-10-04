@@ -31,6 +31,7 @@ async def run(args):
         "captures": [],
         "attempts": [],
         "cycles": args.cycles,
+        "archive_daily": args.archive_daily,
     }
     report_path = args.output / "report.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
@@ -61,7 +62,7 @@ async def run(args):
 
     try:
         await RecordedWorker(repo, settings, CapturedProviders(settings)).run(
-            cycles=args.cycles, source="crypto"
+            cycles=args.cycles, source="crypto", archive_daily=args.archive_daily
         )
     finally:
         repo.backup(args.output / "after.sqlite3")
@@ -183,6 +184,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--cycles", type=int, default=75)
+    parser.add_argument(
+        "--archive-daily", action="store_true", help="Exercise worker daily retention maintenance"
+    )
     parser.add_argument(
         "--verify-only", action="store_true", help="Recheck saved backups and report; no worker run"
     )

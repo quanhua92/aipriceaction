@@ -451,10 +451,10 @@ class Archive:
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
-    def eligible(self, source=None, symbols=None, interval=None):
+    def eligible(self, source=None, symbols=None, interval=None, now=None):
         groups = []
         symbols = set(symbols or ())
-        now = datetime.now(UTC)
+        now = now or datetime.now(UTC)
         floors = {
             iv: cutoff(years, now)
             for iv, years in (

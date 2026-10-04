@@ -47,6 +47,11 @@ def parser():
         cmd.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
         cmd.add_argument("--symbol", action="append", help="Filter configured tickers; may repeat")
         cmd.add_argument("--interval", choices=("1D", "1h", "1m"))
+        cmd.add_argument(
+            "--archive-daily",
+            action="store_true",
+            help="Publish and verified-prune old rows once per UTC day within these filters",
+        )
     refresh = commands.add_parser(
         "refresh", help="Recheck selected ready series once without processing historical jobs"
     )
@@ -264,6 +269,7 @@ async def execute(args, settings):
             args.source,
             [s.upper() for s in args.symbol] if args.symbol else None,
             args.interval,
+            args.archive_daily,
         )
         if args.once or args.cycles:
             status = repo.status()

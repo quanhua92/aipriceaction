@@ -785,7 +785,9 @@ class Worker:
         finally:
             await self.providers.close()
 
-    async def run(self, once=False, cycles=None, source=None, symbols=None, interval=None):
+    async def run(
+        self, once=False, cycles=None, source=None, symbols=None, interval=None, archive_daily=False
+    ):
         try:
             self.load_watchlist()
             self.configuration = [
@@ -799,9 +801,19 @@ class Worker:
             if not self.configuration:
                 raise DataError("No configured watchlist entries match worker filters", 400)
             self.bootstrap()
+            maintenance = None
+            if archive_daily:
+                from .archive import Archive
+                from .maintenance import DailyArchive
+
+                maintenance = DailyArchive(
+                    self.archive or Archive(self.repo, self.settings), source, symbols, interval
+                )
             completed_cycles = 0
             while True:
                 await self.cycle()
+                if maintenance is not None:
+                    await asyncio.to_thread(maintenance.tick)
                 completed_cycles += 1
                 if once or cycles and completed_cycles >= cycles:
                     break
