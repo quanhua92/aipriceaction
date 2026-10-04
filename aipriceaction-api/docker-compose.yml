@@ -28,7 +28,7 @@ x-api-environment: &api-environment
   MINUTE_RETENTION_YEARS: ${MINUTE_RETENTION_YEARS:-1}
   SYNC_TOKEN: ${SYNC_TOKEN:-}
   REFRESH_SECRET: ${REFRESH_SECRET:-}
-  CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com,http://localhost:3001,http://127.0.0.1:3001}
+  CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com,http://localhost:3001,http://127.0.0.1:3001,http://0.0.0.0:3001}
 
 x-api-service: &api-service
   build:
@@ -48,8 +48,8 @@ services:
   rustfs:
     image: ${RUSTFS_IMAGE:-rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff}
     ports:
-      - "127.0.0.1:${RUSTFS_API_PORT:-9100}:9000"
-      - "127.0.0.1:${RUSTFS_CONSOLE_PORT:-9101}:9001"
+      - "0.0.0.0:${RUSTFS_API_PORT:-9100}:9000"
+      - "0.0.0.0:${RUSTFS_CONSOLE_PORT:-9101}:9001"
     environment:
       RUSTFS_VOLUMES: /data
       RUSTFS_ADDRESS: 0.0.0.0:9000
@@ -92,7 +92,7 @@ services:
     <<: *api-service
     command: ["aipa-api", "serve", "--host", "0.0.0.0", "--port", "3001"]
     ports:
-      - "127.0.0.1:${AIPA_API_PORT:-3001}:3001"
+      - "0.0.0.0:${AIPA_API_PORT:-3001}:3001"
     restart: unless-stopped
     healthcheck:
       test:

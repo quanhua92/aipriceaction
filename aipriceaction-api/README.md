@@ -173,9 +173,9 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-API: `http://127.0.0.1:3001`; explorer: `/explorer`; OpenAPI: `/docs`.
-RustFS S3: `http://127.0.0.1:9100`; console:
-`http://127.0.0.1:9101/rustfs/console/`. Local credentials are `aipa-local` and
+API listens on `0.0.0.0:3001`; explorer: `/explorer`; OpenAPI: `/docs`.
+RustFS S3 listens on `0.0.0.0:9100`; console:
+`0.0.0.0:9101/rustfs/console/`. Local credentials are `aipa-local` and
 `aipa-local-development-only`. The image digest is pinned to the tested build.
 Compose builds the Python 3.13 image and runs FastAPI, the Python ingestion
 worker, and RustFS. It contains no legacy Rust API service. SQLite is bind-mounted
