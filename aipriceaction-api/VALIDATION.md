@@ -6,6 +6,40 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Offline valid-subset replay of retained daily failures — 2026-10-04 ICT
+
+The ten rejected full daily responses previously excluded every candle from
+those feeds, although only 16 rows on 13 distinct dates were malformed.
+`scripts.replay_daily_feed_failures` now replays checksummed original captures
+offline. Native replay uses the unchanged `Providers.page` parser through
+`httpx.MockTransport`, splitting only at explicitly rejected candle dates;
+legacy replay validates each original row. Rejected dates remain incomplete.
+Unknown/conflicting daily timestamp bases and other unlocalizable errors cannot
+be silently skipped. No price is clamped or synthesized; ingestion continues to
+reject the original bad response.
+
+All **ten** failed captures replayed successfully without new provider requests.
+The original timestamp union is unchanged. Complete four-feed agreements rose
+from 3,476 to **3,666**, value disagreements rose from 34,881 to **39,879**, and
+incomplete observations fell from 5,221 to **33**. Thus **5,188** observations
+became comparable; this does not repair any market value or prove source truth.
+The 16 rejected row witnesses remain attached to ten diagnostic records, and
+the original full-response errors remain in the primary audit.
+
+Outputs are under `data/automated-vn-retained-daily-valid-subsets-20261004`,
+approximately **14 MiB**, with no SQLite copies or RustFS writes. They are
+explicitly marked diagnostic-only and cannot serve as publication licenses.
+The combined daily validator now triggers this step automatically after capture
+failures, retaining primary errors and adding secondary comparison counts and
+rejected-row totals. Standalone replay remains available for saved audits.
+
+Fifteen focused replay/pipeline/comparison tests pass: ordinary ingestion still
+rejects a bad page, valid subset rows preserve adapter units and original bytes,
+malformed dates remain excluded, unknown daily timestamp bases remain rejected,
+legacy symbol identity is checked, and automatic pipeline replay preserves the
+original provider error. Lint/format checks pass. Underlying value/basis
+disagreements and full-year minute validation remain open.
+
 ## Automated full retained VN daily comparison — 2026-10-04 ICT
 
 The automated comparison covered all **59 selected VN symbols** for

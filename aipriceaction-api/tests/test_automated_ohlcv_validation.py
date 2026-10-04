@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from dataclasses import replace
 from types import SimpleNamespace
@@ -92,8 +93,9 @@ def test_zero_price_comparison_does_not_crash():
     assert report["counts"] == {"four_feed_agreement": 1}
 
 
+@pytest.mark.parametrize("failed", [False, True])
 def test_daily_pipeline_uses_legacy_reference_and_checks_the_correct_feed_set(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, failed
 ):
     watchlist = tmp_path / "watchlist.json"
     watchlist.write_text(json.dumps({"vn": [{"symbol": "FPT", "intervals": ["1D"]}]}))
@@ -111,19 +113,54 @@ def test_daily_pipeline_uses_legacy_reference_and_checks_the_correct_feed_set(
         for feed in compare_vn_feeds.FEEDS:
             folder = args.output / feed
             folder.mkdir()
-            (folder / "FPT-1D.json").write_text(json.dumps({"rows": [row]}))
-        comparison = compare_vn_feeds.compare({feed: [row] for feed in compare_vn_feeds.FEEDS})
-        return {
+            if failed and feed == "vps":
+                raw = json.dumps(
+                    {
+                        "symbol": "FPT",
+                        "s": "ok",
+                        "t": [stamp],
+                        "o": [12],
+                        "h": [11],
+                        "l": [9],
+                        "c": [10.5],
+                        "v": [100],
+                    }
+                ).encode()
+                capture = folder / "captured.json"
+                capture.write_bytes(raw)
+                record = {
+                    "error": "Invalid OHLC range",
+                    "captures": [
+                        {
+                            "path": str(capture),
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "status": 200,
+                        }
+                    ],
+                }
+            else:
+                record = {"rows": [row]}
+            (folder / "FPT-1D.json").write_text(json.dumps(record))
+        comparison = compare_vn_feeds.compare(
+            {feed: [row] for feed in compare_vn_feeds.FEEDS if not (failed and feed == "vps")}
+        )
+        result = {
             "feeds": compare_vn_feeds.FEEDS,
             "symbols": ["FPT"],
             "intervals": ["1D"],
             "daily_start": args.daily_start,
             "intraday_start": args.intraday_start,
             "end_date": args.end_date,
-            "errors": [],
+            "errors": (
+                [{"symbol": "FPT", "interval": "1D", "feed": "vps", "error": "Invalid OHLC range"}]
+                if failed
+                else []
+            ),
             "requests": 4,
             "comparisons": [{"symbol": "FPT", "interval": "1D", **comparison}],
         }
+        (args.output / "report.json").write_text(json.dumps(result))
+        return result
 
     monkeypatch.setattr(validate_ohlcv, "compare_feeds", reference_comparison)
     result = asyncio.run(
@@ -140,5 +177,12 @@ def test_daily_pipeline_uses_legacy_reference_and_checks_the_correct_feed_set(
     )
     assert result["comparison_mode"] == "legacy"
     assert result["providers"] == compare_vn_feeds.FEEDS
-    assert any(e["kind"] == "unanimous_provider_conflicts" for e in result["exceptions"])
+    assert (
+        any(e["kind"] == "unanimous_provider_conflicts" for e in result["exceptions"]) is not failed
+    )
+    if failed:
+        assert result["diagnostic_rejected_rows"] == 1
+        assert any(e["kind"] == "provider_error" for e in result["exceptions"])
+        replay = tmp_path / "review/valid-subsets/FPT-vps.json"
+        assert json.loads(replay.read_text())["rows"] == []
     assert result["perfect_data_proven"] is False

@@ -38,6 +38,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Automatically replay captured daily failures through the unchanged parser,
+  preserving rejected dates while comparing their valid subsets. All ten failed
+  retained daily responses replayed offline: incomplete four-feed observations
+  shrink from 5,221 to 33; all malformed dates and original errors remain visible.
+  Integrate as automatic daily diagnostics; pass 15 focused tests. No downloads,
+  database copies or publication, and unknown timestamp bases stay rejected.
+
 - [x] Automate the full retained VN daily source-value comparison across all 59
   selected symbols for October 4, 2023–October 2, 2026. Preserve 236 feed-window
   results and strict malformed-row refusals. Support correct automatic daily

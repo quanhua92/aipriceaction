@@ -20,6 +20,7 @@ from scripts.audit_sqlite_ohlcv import audit
 from scripts.compare_vn_feeds import FIELDS, same
 from scripts.compare_vn_feeds import run as compare_feeds
 from scripts.inventory_retained_windows import inventory
+from scripts.replay_daily_feed_failures import run as replay_daily_failures
 
 
 def local_comparisons(settings, root, comparison):
@@ -163,6 +164,11 @@ async def run(args):
             native_providers=mode == "native",
         )
     )
+    diagnostic = None
+    if comparison["intervals"] == ["1D"] and comparison["errors"]:
+        diagnostic = await replay_daily_failures(
+            SimpleNamespace(audit=args.output / "providers", output=args.output / "valid-subsets")
+        )
     local = local_comparisons(settings, args.output / "providers", comparison)
     (args.output / "sqlite-comparison.json").write_text(json.dumps(local, indent=2) + "\n")
     issues = exceptions(comparison, local)
@@ -206,6 +212,14 @@ async def run(args):
             "Legacy-mode daily/hourly comparisons use the deployed API as a reference, never ground truth.",
         ],
     }
+    if diagnostic is not None:
+        report["diagnostic_valid_subset_counts"] = diagnostic["counts"]
+        report["diagnostic_rejected_rows"] = sum(
+            len(row["rejected"]) for row in diagnostic["replays"]
+        )
+        report["limitations"].append(
+            "Valid-subset replay is diagnostic only; original provider errors remain unresolved and ingestion stays strict."
+        )
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"symbols": len(report["symbols"]), "exceptions": len(issues)}))
     return report

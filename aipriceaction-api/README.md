@@ -66,6 +66,19 @@ and an incomplete/error feed is never counted as unanimous agreement. Agreement
 is not a market-truth oracle, and this bounded recent run does not certify the
 whole retained window or cold archive. Only exceptions need further investigation.
 
+Daily failures also trigger a diagnostic replay of the saved responses. The
+existing parser validates smaller date windows around rejected candles; no
+network request is made and ingestion rules stay strict. `valid-subsets/` reports
+compare valid rows while preserving every rejected date and original provider
+error. These diagnostic subsets are not publication candidates. To replay an
+existing daily audit separately:
+
+```sh
+uv run python -m scripts.replay_daily_feed_failures \
+  --audit data/automated-vn-retained-daily-comparison-20261004 \
+  --output data/daily-valid-subsets-review
+```
+
 To run only the full SQLite structural check without provider requests:
 
 ```sh
