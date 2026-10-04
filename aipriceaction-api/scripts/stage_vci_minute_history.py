@@ -45,7 +45,8 @@ async def run(args):
     symbols = {e if isinstance(e, str) else e["symbol"] for e in entries}
     if args.symbol not in symbols:
         raise ValueError("Choose a selected VN ticker")
-    args.output.mkdir(parents=True, exist_ok=False)
+    resume = getattr(args, "resume", False)
+    args.output.mkdir(parents=True, exist_ok=resume)
     main = Repository(base.database)
     originals = main.read("vn", args.symbol, "1m", first, last)
     daily = main.read("vn", args.symbol, "1D", first, last)
@@ -90,14 +91,38 @@ async def run(args):
         ],
     }
     path = args.output / "report.json"
+    if resume:
+        report = json.loads(path.read_text())
+        if (
+            report["complete"]
+            or report["main_publication"]
+            or (
+                report["source"],
+                report["symbol"],
+                report["provider"],
+                report["start_date"],
+                report["end_date"],
+            )
+            != ("vn", args.symbol, "vci", args.start_date, args.end_date)
+        ):
+            raise DataError("Resume requires this incomplete isolated VCI candidate")
+        existing = candidate.read("vn", args.symbol, "1m")
+        if len(existing) != sum(page["rows"] for page in report["pages"]) or any(
+            (r.provider, r.revision) != ("vci", "vci-candidate") or not first <= r.time <= last
+            for r in existing
+        ):
+            raise DataError("Staged rows no longer match the recorded pagination checkpoint")
+        if "error" in report:
+            report.setdefault("previous_errors", []).append(report.pop("error"))
+        report.setdefault("resume_inputs", []).append({"volume_proofs": str(args.volume_proofs)})
 
     def save():
         path.write_text(json.dumps(report, indent=2) + "\n")
 
     save()
-    before = last + 1
+    before = report["pages"][-1]["cursor"] if resume and report["pages"] else last + 1
     try:
-        for number in range(200):
+        for number in range(len(report["pages"]), 200):
             first_capture = len(transport.captures)
             page = await providers.page(
                 "vn", args.symbol, "1m", before, count=2000, provider="vci", start=first
@@ -204,4 +229,9 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--allow-direct", action="store_true")
     parser.add_argument("--volume-proofs", type=Path)
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume an incomplete isolated candidate after corroborating a source defect",
+    )
     asyncio.run(run(parser.parse_args()))

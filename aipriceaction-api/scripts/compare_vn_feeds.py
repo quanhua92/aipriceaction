@@ -114,7 +114,11 @@ async def run(args):
                         if providers:
                             # Large enough for these bounded recent windows. An exact
                             # cap is an error, not a silently accepted truncated result.
-                            count = {"1D": 100, "1h": 100, "1m": 1000}[iv]
+                            count = (
+                                min(10000, max(100, (before - start) // 86400 + 1))
+                                if iv == "1D"
+                                else {"1h": 100, "1m": 1000}[iv]
+                            )
                             page = await providers.page(
                                 "vn", symbol, iv, before, count=count, start=start, provider=feed
                             )
