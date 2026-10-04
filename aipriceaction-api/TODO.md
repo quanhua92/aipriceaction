@@ -90,6 +90,12 @@ history through `eb814ab`; they are not additional current open tasks.
   indicators and SQLite/Parquet reads. The populated 71-ticker audit passes
   2,093/2,103 requests, restores 414 previously empty requests and keeps all
   1,679 previous successes byte-exact. Ten VND/VNINDEX context guards remain.
+- [x] Check whether valid older-year alternatives can repair the remaining daily
+  context guards without a retained provider transition. Six fresh 60-row
+  overlaps preserve actual price/volume disagreements; both complete VND
+  alternate windows cover 746 dates but change prices on 583/658 dates. Preserve
+  twenty evidence objects with exact RustFS readback. A coherent full-history
+  transition remains open; recent overlap cannot license mixing providers.
 - [x] Prepare Linux host supervisor examples for the API and the three current
   native worker scopes. Require per-source argument files, keep both indices
   excluded from VN, and preserve RustFS-only Compose. Parse the argument files

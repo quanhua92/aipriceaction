@@ -6,6 +6,34 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Daily repair provider continuity — 2026-10-04 ICT
+
+Fresh read-only 60-row overlaps test whether providers with valid older-year
+data can repair the remaining VND/VNINDEX indicator-context failures without a
+retained provider transition. VND/VPS and VNINDEX/VNDirect reproduce all 60
+retained OHLCV values. VND/VNDirect matches 57 and DNSE 59: all differences in
+this recent overlap are volumes, on July 15, July 22 and August 11 for VNDirect,
+and July 22 for DNSE. VNINDEX/VPS and DNSE each match zero complete rows.
+
+The complete three-calendar-year VND comparison then reads both alternatives
+with bounded pinned-provider pagination. Each returns all 746 retained dates,
+without missing or additional dates. VNDirect changes 663 records, including
+prices on 583 dates; DNSE changes 660 records, including prices on 658 dates.
+Recent price agreement therefore does not prove a compatible full-history
+basis. Joining their valid 2020 candles to the retained VPS series is unlicensed;
+a complete coherent transition must preserve originals and validate the entire
+published history separately. This investigation does not fabricate corrected
+candles or remove existing repair guards.
+
+The verified roots are `data/daily-repair-provider-head-20261004-verified/` and
+`data/vnd-daily-window-provider-repair-20261004/`. Twenty JSON captures/reports
+are checksummed and stored with exact RustFS readback under
+`archive-v2/evidence/daily-repair-provider-comparison/`, with local receipts in
+`data/daily-repair-provider-evidence-20261004.json`. An earlier head-probe harness
+had an incompatible capture-function signature, made no upstream requests and
+is excluded from provider evidence. No canonical candle, state or manifest is
+published by these probes.
+
 ## Dated partial aggregation compatibility — 2026-10-04 ICT
 
 An isolated populated FastAPI process exercises all 71 configured tickers across
