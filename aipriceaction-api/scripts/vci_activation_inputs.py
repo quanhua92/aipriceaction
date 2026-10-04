@@ -1,5 +1,6 @@
 """Replay complete candidate/source captures before local minute activation."""
 
+import hashlib
 import json
 from collections import defaultdict
 from dataclasses import replace
@@ -10,6 +11,7 @@ from aipriceaction_api.domain import DataError, date_bounds
 from aipriceaction_api.providers import Providers
 from aipriceaction_api.storage import Repository
 from scripts.compare_vn_feeds import FIELDS
+from scripts.dnse_precision_witnesses import precision_witnesses
 from scripts.probe_vn_minute_basis import session
 from scripts.vn_daily_volume_evidence import captured, volume_only_witnesses
 
@@ -97,8 +99,15 @@ async def reviewed_inputs(args, settings, main):
             raise DataError("Candidate prices no longer match retained native daily witnesses")
         matched = defaultdict(list)
         volume_scopes = []
+        records = {}
         for feed in Providers.VN:
-            record = json.loads((args.daily / feed / f"{symbol}-1D.json").read_text())
+            record_path = args.daily / feed / f"{symbol}-1D.json"
+            record = json.loads(record_path.read_text())
+            records[feed] = record
+            if record.get("volume_precision_evidence") is not None:
+                artifacts[hashlib.sha256(record_path.read_bytes()).hexdigest()] = {
+                    "path": str(record_path)
+                }
             scoped = volume_only_witnesses(record, feed, symbol, artifacts)
             if scoped is not None:
                 for row in scoped:
@@ -134,9 +143,13 @@ async def reviewed_inputs(args, settings, main):
             for row in page.rows:
                 if row.time in groups and row.volume == aggregates[row.time]["volume"]:
                     matched[row.time].append(feed)
+        rounded = precision_witnesses(staged, groups, records, artifacts)
+        rounded_days = {r["day"] for r in rounded}
+        for witness in rounded:
+            matched[witness["day"]].append("dnse")
         if any(len(matched[day]) < 2 for day in groups):
             raise DataError(
-                "Candidate lacks two exact native volume witnesses on every observed day"
+                "Candidate lacks two exact native volume witnesses or explicit corroborated representation evidence on every observed day"
             )
         checks = {
             "source_replayed_rows": len(replayed),
@@ -145,8 +158,17 @@ async def reviewed_inputs(args, settings, main):
             "maximum_daily_price_difference_vnd": maximum,
             "daily_source_captures_replayed": 3,
             "field_scoped_witnesses": volume_scopes,
+            "rounded_volume_witnesses": rounded,
             "native_volume_witnesses": [
-                {"day": day, "feeds": matched[day]} for day in sorted(groups)
+                {
+                    "day": day,
+                    "feeds": matched[day],
+                    "exact_feeds": [
+                        f for f in matched[day] if f != "dnse" or day not in rounded_days
+                    ],
+                    "rounded_feeds": ["dnse"] if day in rounded_days else [],
+                }
+                for day in sorted(groups)
             ],
         }
         inputs.append((symbol, candidate, rows, checks))

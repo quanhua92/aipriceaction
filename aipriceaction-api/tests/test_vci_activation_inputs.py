@@ -8,6 +8,7 @@ import pytest
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError, date_bounds
 from aipriceaction_api.storage import Repository
+from scripts.dnse_precision_witnesses import derive_precision_witnesses
 from scripts.vci_activation_inputs import reviewed_inputs
 from scripts.vn_daily_volume_evidence import project_vndirect_volumes
 
@@ -251,5 +252,122 @@ async def test_volume_only_activation_rejects_missing_or_tampered_evidence(setup
             "countback=100", "countback=99"
         )
     path.write_text(json.dumps(record))
+    with pytest.raises(DataError):
+        await reviewed_inputs(args, settings, main)
+
+
+def precision_record(args, candidate):
+    from collections import defaultdict
+
+    source = args.candidates / "bsr" / "raw.json"
+    body = json.loads(source.read_text())
+    body[0]["v"][1] = 88707100
+    body[0]["accumulatedVolume"][1] = 88707100
+    data = json.dumps(body).encode()
+    source.write_bytes(data)
+    path = args.candidates / "bsr" / "report.json"
+    staged = json.loads(path.read_text())
+    staged["provider"] = "vci"
+    staged["pages"][0]["captures"][0].update(
+        sha256=hashlib.sha256(data).hexdigest(), bytes=len(data)
+    )
+    path.write_text(json.dumps(staged))
+    with candidate.connect() as con:
+        con.execute(
+            "UPDATE candles SET volume=88707100 WHERE time=?", (date_bounds("2025-10-06") + 8100,)
+        )
+    records = {}
+    end = date_bounds("2025-10-08")
+    for feed in ("vps", "vndirect", "dnse"):
+        folder = args.daily / feed
+        source = folder / "raw.json"
+        raw = json.loads(source.read_text())
+        raw["v"][0] = {"vps": 88707200, "vndirect": 88707100, "dnse": 88707104}[feed]
+        data = json.dumps(raw).encode()
+        source.write_bytes(data)
+        path = folder / "BSR-1D.json"
+        record = json.loads(path.read_text())
+        record["rows"][0]["volume"] = raw["v"][0]
+        capture = record["captures"][0]
+        capture.update(sha256=hashlib.sha256(data).hexdigest(), bytes=len(data))
+        host, api, res = (
+            ("dchart-api.vndirect.com.vn", "dchart/history", "D")
+            if feed == "vndirect"
+            else ("api.dnse.com.vn", "chart-api/v2/ohlcs/stock", "1D")
+        )
+        capture["url"] = (
+            f"https://{host}/{api}?symbol=BSR&resolution={res}&from={end - 300 * 86400}&to={end - 1}&countback=100"
+        )
+        path.write_text(json.dumps(record))
+        records[feed] = record
+    groups = defaultdict(list)
+    for row in candidate.read("vn", "BSR", "1m"):
+        groups[row.time // 86400 * 86400].append(row.record())
+    evidence = derive_precision_witnesses(staged, groups, records)
+    return records, evidence
+
+
+@pytest.mark.asyncio
+async def test_explicit_precision_witness_preserves_source_numbers_and_exact_candidate(setup):
+    args, settings, main, candidate = setup
+    records, evidence = precision_record(args, candidate)
+    with pytest.raises(DataError, match="two exact native volume witnesses"):
+        await reviewed_inputs(args, settings, main)
+    path = args.daily / "dnse" / "BSR-1D.json"
+    records["dnse"]["volume_precision_evidence"] = evidence
+    path.write_text(json.dumps(records["dnse"]))
+    before = candidate.read("vn", "BSR", "1m")
+    inputs, _ = await reviewed_inputs(args, settings, main)
+    assert inputs[0][3]["rounded_volume_witnesses"][0]["exact_volume"] == 88707100
+    assert inputs[0][3]["rounded_volume_witnesses"][0]["reported_volume"] == 88707104
+    assert candidate.read("vn", "BSR", "1m") == before
+    assert json.loads(path.read_text())["rows"][0]["volume"] == 88707104
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "defect",
+    (
+        "declaration",
+        "hidden_assumption",
+        "source_hash",
+        "wrong_source",
+        "exact_peer",
+        "cumulative_prefix",
+    ),
+)
+async def test_precision_witness_rejects_stale_unbound_or_unproven_sources(setup, defect):
+    args, settings, main, candidate = setup
+    records, evidence = precision_record(args, candidate)
+    record = records["dnse"]
+    record["volume_precision_evidence"] = evidence
+    if defect == "declaration":
+        evidence["dates"][0]["reported_volume"] += 1
+    elif defect == "hidden_assumption":
+        evidence["provider_storage_type_verified"] = True
+    elif defect == "source_hash":
+        record["captures"][0]["sha256"] = "0" * 64
+    elif defect == "wrong_source":
+        record["captures"][0]["url"] = record["captures"][0]["url"].replace(
+            "symbol=BSR", "symbol=SHB"
+        )
+    elif defect == "exact_peer":
+        path = args.daily / "vndirect" / "BSR-1D.json"
+        peer = json.loads(path.read_text())
+        peer["rows"][0]["volume"] += 4
+        path.write_text(json.dumps(peer))
+    elif defect == "cumulative_prefix":
+        source = args.candidates / "bsr" / "raw.json"
+        body = json.loads(source.read_text())
+        body[0]["accumulatedVolume"][1] += 4
+        data = json.dumps(body).encode()
+        source.write_bytes(data)
+        path = args.candidates / "bsr" / "report.json"
+        staged = json.loads(path.read_text())
+        staged["pages"][0]["captures"][0].update(
+            sha256=hashlib.sha256(data).hexdigest(), bytes=len(data)
+        )
+        path.write_text(json.dumps(staged))
+    (args.daily / "dnse" / "BSR-1D.json").write_text(json.dumps(record))
     with pytest.raises(DataError):
         await reviewed_inputs(args, settings, main)

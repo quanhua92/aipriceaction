@@ -12,6 +12,7 @@ from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import DataError, cutoff
 from aipriceaction_api.storage import Repository
 from scripts.compare_vn_feeds import FEEDS, FIELDS
+from scripts.dnse_precision_witnesses import precision_witnesses
 from scripts.probe_vn_minute_basis import session
 from scripts.vn_daily_volume_evidence import volume_only_witnesses
 
@@ -54,8 +55,10 @@ def run(args):
         )
         entry["feeds"] = {}
         matched = defaultdict(list)
+        records = {}
         for feed in FEEDS:
             record = json.loads((args.daily / feed / f"{symbol}-1D.json").read_text())
+            records[feed] = record
             scoped = volume_only_witnesses(record, feed, symbol)
             reference = {
                 r["time"]: r for r in (scoped if scoped is not None else record.get("rows", []))
@@ -82,6 +85,10 @@ def run(args):
                 "source_error": record.get("error"),
                 "witness_scope": "volume_only" if scoped is not None else "ohlcv",
             }
+        rounded = precision_witnesses(staged, groups, records)
+        for witness in rounded:
+            matched[witness["day"]].append("dnse")
+        entry["rounded_volume_witnesses"] = rounded
         entry["dates_without_two_native_volume_witnesses"] = [
             {
                 "day": day,
