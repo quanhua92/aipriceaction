@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import base_interval, date_bounds, parse_time
+from aipriceaction_api.domain import base_interval, bucket, date_bounds, parse_time
 from scripts.check_retained_vn_daily import read_snapshot
 
 INTERVALS = ("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "2W", "1M")
@@ -117,7 +117,14 @@ async def check(args):
                         assert 0 < len(rows) <= 20, "Missing or oversized result"
                         times = [parse_time(row["time"]) for row in rows]
                         assert times == sorted(set(times)), "Dates repeat or are unordered"
-                        assert lower is None or times[0] >= lower, "Result precedes start date"
+                        output_lower = (
+                            bucket(lower, case["interval"], case["source"])
+                            if lower is not None
+                            else None
+                        )
+                        assert output_lower is None or times[0] >= output_lower, (
+                            "Result precedes first requested bucket"
+                        )
                         assert upper is None or times[-1] <= upper, "Result follows end date"
                         for row in rows:
                             validate_prices(row, case["source"], case["symbol"], case["interval"])

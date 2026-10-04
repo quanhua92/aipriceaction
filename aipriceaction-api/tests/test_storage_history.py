@@ -73,6 +73,29 @@ def bar(day, close=100, revision="initial"):
     )
 
 
+@pytest.mark.parametrize(
+    "iv,stamp", [("1W", "2020-02-03"), ("2W", "2020-02-03"), ("1M", "2020-02-01")]
+)
+def test_partial_dated_aggregate_spans_archive_and_sqlite_without_earlier_inputs(system, iv, stamp):
+    repo, archive, history = system
+    rows = [bar("2020-02-06", 1000), bar("2020-02-07", 100), bar("2020-02-08", 200)]
+    repo.put(rows)
+    archive.publish(repo.read("vn", "FPT", "1D", end=parse_time("2020-02-07")), prune=True)
+    result = history.query(
+        "vn", "FPT", iv, parse_time("2020-02-07"), parse_time("2020-02-08"), limit=1, ma=False
+    )
+    assert len(result) == 1
+    row = result[0]
+    assert row["time"] == stamp
+    assert (row["open"], row["high"], row["low"], row["close"], row["volume"]) == (
+        100,
+        201,
+        99,
+        200,
+        2000,
+    )
+
+
 def fragments(system):
     repo, archive, _ = system
     repo.put([bar("2020-01-01"), bar("2020-01-02")])

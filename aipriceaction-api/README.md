@@ -621,6 +621,10 @@ chart requests without maintaining another ingestion series.
 The history reader combines actual SQLite/S3 coverage, applies limits in the
 correct direction, and loads earlier indicator data. Historical queries with
 `start_date` return the first requested candles; latest queries return the last.
+For dated aggregates, native observations are clipped to the requested range
+before grouping. A partial weekly, fortnightly or monthly candle retains its
+bucket timestamp, which can precede `start_date`. This matches the legacy
+PostgreSQL path; its Redis path can instead return a whole cached bucket.
 Archive files are partitioned yearly for daily data and monthly for intraday
 data. Exact object keys, bounds, checksums, providers, and revisions are indexed
 in SQLite. Immutable manifests allow archive-index recovery.

@@ -6,6 +6,41 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Dated partial aggregation compatibility — 2026-10-04 ICT
+
+An isolated populated FastAPI process exercises all 71 configured tickers across
+ten intervals and raw/SMA/EMA requests for October 1–2, 2026. The initial matrix
+passes 1,679/2,103 requests: 420 weekly/fortnightly requests return empty data,
+and four monthly indicator requests hit existing VND/VNINDEX context guards.
+Live public FPT controls prove the empty weekly responses differ from legacy.
+
+The PostgreSQL aggregation path filters native observations by the requested
+dates before grouping and retains the first partial bucket's earlier timestamp.
+The replacement instead expanded the native lower bound to the bucket start
+and then discarded that bucket. It now clips native inputs first, retains the
+partial bucket and respects the requested start when completing a limited tail.
+Latest reads and their complete leading-bucket expansion retain their behavior.
+The matrix checker accepts the first requested bucket's timestamp while keeping
+its upper-date, symbol, price, ordering and limit checks.
+
+Thirteen new regressions cover weekly/fortnightly/monthly partial inputs,
+raw/SMA/EMA output, mid-month limits and SQLite/Parquet boundaries. All 582 tests,
+lint/format and offline wheel/source builds pass. The same populated matrix now
+passes 2,093/2,103 requests: 414 become readable, all 1,679 previous successful
+payloads remain byte-identical, and ten VND/VNINDEX context requests retain HTTP
+503. Six formerly empty requests now reach these real context guards. Evidence
+under `data/recent-universe-audit-20261004/` includes complete before/after bodies,
+comparison results and unchanged isolated snapshot metadata.
+
+Twelve public cross-market raw controls cover FPT, BTCUSDT, AAPL and GC=F for
+weekly, fortnightly and monthly intervals. Eleven OHLCV projections match the
+default legacy response. BTC's monthly default differs because its Redis path
+returns later whole-bucket data: disabling Redis/snapshots produces exactly the
+replacement's bounded OHLCV. Complete payloads differ because the replacement
+retains earlier context for change metrics; these checks do not claim complete
+indicator parity or cure the existing historical adjustment guards. Canonical
+market records and archives are untouched by this isolated rehearsal.
+
 ## Independent SQLite recovery — 2026-10-04 ICT
 
 The restore CLI previously initialized the configured runtime database before

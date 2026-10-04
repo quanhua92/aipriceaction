@@ -114,6 +114,54 @@ def test_minute_monthly_and_weekly_contract(client):
     assert all(datetime.fromisoformat(r["time"]).weekday() == 0 for r in weekly)
 
 
+@pytest.mark.parametrize(
+    "iv,stamp", [("1W", "2024-02-05"), ("2W", "2024-02-05"), ("1M", "2024-02-01")]
+)
+@pytest.mark.parametrize("indicator", ["none", "sma", "ema"])
+def test_dated_aggregate_keeps_partial_first_bucket_and_clips_input(client, iv, stamp, indicator):
+    response = client.get(
+        "/tickers",
+        params={
+            "symbol": "FPT",
+            "interval": iv,
+            "start_date": "2024-02-07",
+            "end_date": "2024-02-08",
+            "ma": str(indicator != "none").lower(),
+            "ema": str(indicator == "ema").lower(),
+            "limit": 1,
+        },
+    )
+    assert response.status_code == 200
+    rows = response.json()["FPT"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["time"] == stamp
+    assert (row["open"], row["high"], row["low"], row["close"], row["volume"]) == (
+        100370,
+        100390,
+        100360,
+        100380,
+        400075,
+    )
+
+
+def test_midmonth_limit_completes_only_requested_first_bucket(client):
+    response = client.get(
+        "/tickers",
+        params={
+            "symbol": "FPT",
+            "interval": "1M",
+            "start_date": "2024-02-07",
+            "limit": 1,
+            "ma": "false",
+        },
+    )
+    row = response.json()["FPT"][0]
+    assert row["time"] == "2024-02-01"
+    assert row["open"] == 100370 and row["close"] == 100590
+    assert row["volume"] == sum(200000 + i for i in range(37, 60))
+
+
 def test_minute_only_ticker_serves_hourly_aliases_and_legacy_csv(client):
     origin = parse_time("2024-01-03T02:15:00+00:00")
     client.app_instance.state.repo.put(

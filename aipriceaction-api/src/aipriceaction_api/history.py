@@ -167,7 +167,9 @@ class History:
             else {"5m": 5, "15m": 15, "30m": 30, "4h": 4, "1W": 7, "2W": 14, "1M": 31}[iv]
         )
         count = min((limit + 1) * factor, self.settings.archive_max_rows)
-        lower = bucket(start, iv, source) if start is not None else None
+        # Legacy dated aggregation clips native observations first. The first
+        # output bucket can therefore start before the requested date.
+        lower = start
         forward = start is not None
         while True:
             rows = self.read(
@@ -176,7 +178,7 @@ class History:
             if not rows:
                 return []
             bars = aggregate(rows, iv, source, self.repo.validate_basis)
-            selected = [r for r in bars if start is None or r.time >= start]
+            selected = bars
             if len(selected) > limit or len(rows) < count:
                 if forward:
                     target = selected[:limit]
@@ -188,7 +190,7 @@ class History:
                         source,
                         symbol,
                         native,
-                        last,
+                        max(last, start),
                         min(last + size, end) if end is not None else last + size,
                         revision=rows[0].revision,
                     )
@@ -199,7 +201,7 @@ class History:
                         source,
                         self.repo.validate_basis,
                     )
-                    return [r for r in completed if r.time >= start][:limit]
+                    return completed[:limit]
                 # The first fetched bucket may be partial. Read its complete
                 # native range before publishing any selected output candle.
                 first = bucket(rows[0].time, iv, source)
@@ -207,7 +209,7 @@ class History:
                     source, symbol, native, first, rows[0].time - 1, revision=rows[0].revision
                 )
                 bars = aggregate(prefix + rows, iv, source, self.repo.validate_basis)
-                return [r for r in bars if start is None or r.time >= start][-limit:]
+                return bars[-limit:]
             if count == self.settings.archive_max_rows:
                 raise DataError("Historical request exceeds resource limit", 400)
             count = min(count * 2, self.settings.archive_max_rows)

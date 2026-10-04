@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 569 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 582 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -84,6 +84,12 @@ history through `eb814ab`; they are not additional current open tasks.
   Seven operational regressions pass; a populated 6,020,562-candle restore is
   byte-identical, with all 13 tables independently compared. Production sync
   export remains open.
+- [x] Preserve dated partial aggregate buckets. Clip native observations before
+  aggregation and retain the first bucket's timestamp even before `start_date`.
+  Thirteen regressions cover weekly/fortnightly/monthly input bounds, limits,
+  indicators and SQLite/Parquet reads. The populated 71-ticker audit passes
+  2,093/2,103 requests, restores 414 previously empty requests and keeps all
+  1,679 previous successes byte-exact. Ten VND/VNINDEX context guards remain.
 - [x] Prepare Linux host supervisor examples for the API and the three current
   native worker scopes. Require per-source argument files, keep both indices
   excluded from VN, and preserve RustFS-only Compose. Parse the argument files
