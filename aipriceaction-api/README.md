@@ -197,6 +197,13 @@ Successful-day tracking is in memory; restarting harmlessly rechecks SQLite.
 This needs no additional service. Keep the worker under your existing process
 supervisor for continuous operation.
 
+`SIGTERM` stops `worker` and `bootstrap` cooperatively. Provider connections
+close, the exiting worker's live/job claims are released, and staged candles,
+cursor progress and retry history stay intact. Other workers' leases and daily
+sentinel leases remain owned. Wait for the process to exit before restarting:
+an active archive transfer finishes its verified publication/pruning first.
+Forceful termination continues to rely on durable lease expiry.
+
 Rehearse configured native VN refreshes on an isolated populated copy before
 expanding a live worker:
 

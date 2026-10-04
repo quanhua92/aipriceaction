@@ -6,6 +6,34 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Cooperative worker termination and restartability — 2026-10-04 ICT
+
+The ordinary CLI previously used the operating system's default SIGTERM action,
+which bypassed asynchronous cleanup and could leave a claimed repair job leased.
+Worker/bootstrap commands now cancel their running task once on SIGTERM, close
+provider connections and return normally after cleanup. Other cancellation
+still propagates and the previous signal handler is restored.
+
+Worker exit atomically releases only that worker's exact live/job lease owner.
+Running jobs become unleased pending jobs without changing cursor, staging,
+attempt/error/retry history or data/revision fields. Peer leases and once-daily
+sentinel leases remain untouched. Release still occurs if provider close fails.
+The schema and ordinary bounded command output are unchanged.
+
+Seven regressions cover ownership, staged repair resume, close failure, repeated
+signals, unrelated cancellation and real subprocess shutdown. The subprocess
+bootstrap test sends SIGTERM while a provider call holds an actual running job;
+it closes connections, exits cleanly and allows immediate reclaim of the same
+job. The archival subprocess blocks a real filesystem Parquet transfer, then
+receives SIGTERM: rows remain available while transfer is blocked, the process
+waits, verified publication/pruning completes after release, and the archive
+writer lease is cleared. Exact stored record versions survive Parquet readback.
+
+All 523 tests pass, plus lint/format and the offline wheel/source build. The
+existing Starlette/httpx deprecation warning remains. These deterministic
+shutdown checks do not claim automatic supervisor configuration or actual
+multi-day uptime.
+
 ## VNINDEX 2015–2018 archival rehearsal — 2026-10-04 ICT
 
 All four legacy yearly CSVs are accessible without PostgreSQL and exactly match

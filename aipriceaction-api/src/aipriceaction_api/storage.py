@@ -1043,6 +1043,18 @@ class Repository:
                 "status": "running",
             }
 
+    def release_worker_leases(self, owner):
+        """Release an exiting worker's claims without changing durable progress."""
+        if not isinstance(owner, str) or not owner:
+            raise DataError("A worker lease owner is required", 400)
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            con.execute("DELETE FROM live_leases WHERE owner=?", (owner,))
+            con.execute(
+                "UPDATE jobs SET status='pending',lease_owner=NULL,lease_until=0 WHERE lease_owner=? AND status='running'",
+                (owner,),
+            )
+
     def stage(self, job, candles, cursor, provider):
         candles = [c.validate() for c in candles]
         with self.connect() as con:

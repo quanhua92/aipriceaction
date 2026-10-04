@@ -873,4 +873,7 @@ class Worker:
                     break
                 await asyncio.sleep(1)
         finally:
-            await self.providers.close()
+            try:
+                await self.providers.close()
+            finally:
+                self.repo.release_worker_leases(self.owner)

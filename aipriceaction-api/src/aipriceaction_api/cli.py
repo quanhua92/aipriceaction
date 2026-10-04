@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import logging
+import signal
 import sqlite3
 import sys
 from dataclasses import replace
@@ -646,6 +647,30 @@ async def execute(args, settings):
         emit({"restored": str(args.destination)})
 
 
+async def execute_with_shutdown(args, settings):
+    if args.command not in ("worker", "bootstrap"):
+        return await execute(args, settings)
+    loop, task = asyncio.get_running_loop(), asyncio.current_task()
+    stopping = False
+
+    def stop():
+        nonlocal stopping
+        if not stopping:
+            stopping = True
+            logging.getLogger(__name__).info("Worker shutdown requested")
+            task.cancel()
+
+    previous = signal.getsignal(signal.SIGTERM)
+    signal.signal(signal.SIGTERM, lambda *_: loop.call_soon_threadsafe(stop))
+    try:
+        await execute(args, settings)
+    except asyncio.CancelledError:
+        if not stopping:
+            raise
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+
+
 def main(argv=None):
     args = parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -659,7 +684,7 @@ def main(argv=None):
             overrides["archive_backend"] = args.archive_backend
         if args.allow_direct:
             overrides["allow_direct"] = True
-        asyncio.run(execute(args, replace(settings, **overrides)))
+        asyncio.run(execute_with_shutdown(args, replace(settings, **overrides)))
     except KeyboardInterrupt:
         pass
     except (DataError, ValueError, OSError) as exc:
