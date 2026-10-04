@@ -100,6 +100,15 @@ history through `eb814ab`; they are not additional current open tasks.
   and all input captures in immutable S3 evidence. Curate 22 correction proofs for
   ten licensed VCI series; MWG/VN30/VNINDEX interval-basis findings remain open.
 - [ ] Reconcile MWG's two full-day volume differences.
+- [x] Locate both MWG residuals using eight new four-feed hourly controls and
+  24 native closing-session queries at 1/5/15/30-minute resolutions. Replay minute,
+  hourly and both daily native responses before diagnosis. DNSE's first four hours
+  match minute sums exactly; the final hour accounts for the entire 2,600/600-share
+  residual. Both native daily peers match the native hourly totals. All smaller
+  native resolution queries are empty/no-data. Ten actual-fixture regressions
+  pass; the diagnosis explicitly cannot attribute a minute or license publication.
+  Native trade/minute evidence or independently verified session/venue semantics
+  remain necessary; do not force an hourly residual into an auction candle.
   Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.
   Keep the three preferred providers and daily/hourly sourcing unchanged; append

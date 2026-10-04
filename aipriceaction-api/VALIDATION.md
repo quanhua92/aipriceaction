@@ -6,6 +6,48 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## MWG closing-hour volume attribution diagnosis — 2026-10-04 ICT
+
+`54b079f` adds resumable, read-only native closing-resolution probing and an
+offline minute/hourly/daily residual validator. Eight four-feed hourly requests
+on September 16 and November 10 recover five DNSE native hourly candles on each
+date; VPS and VNDirect return no selected hourly rows. The legacy hourly values
+retain the original minute totals and do not determine correctness.
+
+The diagnostic replays the frozen full-day VCI minute response, the DNSE hourly
+response and both VNDirect/DNSE full-window daily responses using the actual
+adapters. It verifies captured byte hashes, parsed values, unique identical hour
+coverage and matching native daily totals before locating volume differences.
+
+| MWG date | VCI minute total | DNSE hourly / both native daily totals | Residual |
+| --- | ---: | ---: | ---: |
+| 2025-09-16 | 8,925,100 | 8,927,700 | 2,600 |
+| 2025-11-10 | 7,273,600 | 7,274,200 | 600 |
+
+On each date, the first four observed hours match the minute sums exactly.
+The entire residual occurs in the final 07:00 UTC hour. This narrows the source
+disagreement but does not identify the exact minute or trade venue responsible.
+Twenty-four direct native queries cover the closing session at 1-, 5-, 15- and
+30-minute resolutions across VPS, VNDirect and DNSE. All return empty/no-data
+arrays. The completed probe preserves null-array replies rather than treating
+them as successful candle coverage or inferring trades from missing minutes.
+
+The validator always sets minute attribution and publication licensing to false.
+It changes no stored candle, price, volume or provider basis. Ten fixture tests
+verify the actual two-day residuals and reject missing/duplicate hour coverage,
+duplicate or wrong-day minutes, wrong providers and invalid daily corroboration.
+Native minute/trade evidence or independently verified session/venue semantics
+remain necessary before a correction can be licensed. No residual is added to an
+auction candle or invented timestamp merely to make daily sums match.
+
+Evidence is in `data/mwg-september-hourly-controls-20261004/report.json`,
+`data/mwg-november-hourly-controls-20261004/report.json`,
+`data/mwg-last-hour-resolution-controls-20261004/report.json` and
+`data/mwg-closing-volume-diagnosis-20261004/report.json`. Lint and formatting
+pass; the last complete API suite remains the 797-test checkpoint, with ten new
+targeted diagnostic tests passing separately. MWG's candidate remains isolated;
+canonical data, running services and production are unchanged by these probes.
+
 ## SHB verified local minute activation with explicit precision witnesses — 2026-10-04 ICT
 
 SHB now joins the nine previously licensed local VCI stock minute histories.
