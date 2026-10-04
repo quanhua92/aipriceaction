@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 523 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 529 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -31,6 +31,16 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Verify cooperative termination and real local restart of all three scoped
+  native workers with the latest shutdown correction. Confirm old processes are
+  terminal before replacements start; all 57 stock, four crypto and four enabled
+  global minute series record fresh successes on their existing provider/revision.
+  Consistent images preserve formerly verified completed values, every frozen
+  and index record version, series states, archives, certificates and imports.
+  Provide a reusable read-only verifier and reject stale/wrong-frame successes
+  and changed protected records. API PID 16546 remains running. This verifies
+  one restart; real supervisor recovery and multi-day operation remain open.
 
 - [x] Preserve VNINDEX's verified 2015–2018 legacy daily history: 995 valid
   public candles in four frozen yearly objects, with four invalid dates retained

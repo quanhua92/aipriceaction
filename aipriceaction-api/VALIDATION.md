@@ -8,6 +8,41 @@ explicitly and do not claim exact numerical identity with the legacy API.
 
 ## Cooperative worker termination and restartability — 2026-10-04 ICT
 
+Actual local process restarts are recorded under
+`data/crypto-worker-restart-20261004/` and
+`data/vn-yahoo-worker-restart-20261004/`. Crypto resumed all four minute
+checks; all twelve retained native series stayed continuous. VN resumed all
+57 selected stock minute checks and Yahoo all four enabled native minute
+checks. Consistent before/after images contain zero changes to formerly
+verified completed OHLCV/provider/revision values. VN/Yahoo series states,
+frozen record versions, both index record versions, archive metadata, handoff
+certificates and import receipts stay exact. VN/Yahoo after-image SHA256 is
+`769932f17de780a6ec1820f39b819dc27c641017aef669a6dacfb7149bd96584`.
+These restarts load `e0cb4ee`; they do not demonstrate the subsequent repeated
+SIGTERM correction is loaded. API PID 16546 continues serving throughout.
+
+The subsequent `data/native-worker-shutdown-restart-20261004/` checkpoint
+gracefully stops crypto PID 21614, VN PID 23642 and Yahoo PID 23669 using SIGTERM.
+Exact process inspection and all three tool sessions confirm clean terminal
+exit before replacements start. New PIDs are crypto 27790 (session 91575), VN
+27785 (session 87201) and Yahoo 27795 (session 26640), loading `a30faf9` with
+unchanged source/ticker filters and daily maintenance. Both indices remain
+excluded from the VN worker. All 65 eligible minute series record fresh
+successful checks on their existing provider/revision: 57 VN, four crypto and
+four Yahoo. The reusable verifier passes against consistent before/after
+images with zero changed formerly verified completed values and exact protected
+tables/record versions/series. After-image SHA256 is
+`95bcdb8de93883028604fff7c97772c634b169c1514a3545ba085606da7710ea`.
+The API remains PID 16546. This proves one actual restart with the current code;
+repeated SIGTERM during a blocked archive transfer is separately proved by the
+deterministic real-process regression below.
+
+The repository's read-only `scripts/check_worker_restart.py` reproduces the
+scoped image comparison. Six regressions reject changed completed values,
+rewritten frozen/index versions, stale successes and wrong provider frames,
+while allowing provisional updates and a subsequent check already in progress.
+Neither input image is modified. Independent market workers may continue.
+
 The ordinary CLI previously used the operating system's default SIGTERM action,
 which bypassed asynchronous cleanup and could leave a claimed repair job leased.
 Worker/bootstrap commands now cancel their running task once on SIGTERM, close
@@ -34,7 +69,7 @@ with the earlier handler restoration. The CLI now retains its shutdown handler
 through `asyncio.run` executor draining and restores it only afterward; both
 signals allow the verified transfer to finish.
 
-All 523 tests pass, plus lint/format and the offline wheel/source build. The
+All 529 tests pass, plus lint/format and the offline wheel/source build. The
 existing Starlette/httpx deprecation warning remains. These deterministic
 shutdown checks do not claim automatic supervisor configuration or actual
 multi-day uptime.

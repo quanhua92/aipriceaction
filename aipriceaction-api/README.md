@@ -205,6 +205,23 @@ an active archive transfer finishes its verified publication/pruning first,
 including when another SIGTERM arrives during that wait.
 Forceful termination continues to rely on durable lease expiry.
 
+Check consistent SQLite backups around a restart without changing either image:
+
+```sh
+uv run python -m scripts.check_worker_restart --before data/restart/before.sqlite3 --after data/restart/after.sqlite3 --source vn --source yahoo --checkpoint-at-ns 1791086716327498000 --exclude-symbol VNINDEX --exclude-symbol VN30
+```
+
+Record your own nanosecond checkpoint immediately before stopping the workers.
+The verifier requires a fresh successful minute check on the same provider and
+revision for every eligible native minute series in the before-image. The
+explicit exclusions must match the workers' actual scope. A subsequent check
+already in progress does not erase a recorded success. Completed values must
+stay intact; frozen snapshots, both VN indices, series states and archive/import
+metadata must retain exact versions. Native provisional candles can advance.
+This check reports conservative failure on a completed correction or archival
+rollover; investigate it against captured provider/maintenance evidence.
+It does not certify exchange-session completeness or multi-day uptime.
+
 Rehearse configured native VN refreshes on an isolated populated copy before
 expanding a live worker:
 
