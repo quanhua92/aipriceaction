@@ -6,6 +6,44 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Storage footprint correction — 2026-10-04 ICT
+
+The local `data/` directory reached approximately **102 GiB** because validation
+kept full before/after/rehearsal SQLite images repeatedly. SQLite files accounted
+for **99.21 GiB**; the live database was approximately **869 MiB** and the archive
+cache approximately **29 MiB**. This was validation artifact accumulation,
+not the required size of the retained OHLCV database.
+
+After checking process arguments and open files, 114 explicitly inventoried
+inactive images (**102,034,567,168 bytes**) were packed into 95 unique,
+content-addressed zstd blobs (**15,395,875,300 bytes**). Every original checksum
+was verified against decompressed bytes before replacement by a restoration
+receipt. The directory now occupies approximately **21.2 GiB**, freeing about
+**80.7 GiB** without discarding snapshot contents. The live database, latest
+SHB activation rollback image, unresolved index candidates, source captures,
+active proof catalogs, JSON reports and S3 manifests were preserved. Historical
+report database paths now require restoration using their adjacent receipts.
+These compressed snapshots remain optional validation storage, not runtime data.
+
+A real packed image was restored in a temporary directory: its exact SHA256
+matched, SQLite `quick_check` returned `ok`, and it contained **5,513,154** candle
+rows. The temporary restored copy was removed. Three maintenance tests cover
+deduplication/restore, overwrite prevention, source changes, live paths,
+symlinks and outstanding journals; all pass. Together with the existing calendar
+review tests, the focused run passed **49 tests**. No market values were changed.
+The inventory, receipts, result and populated restore check remain under `data/`.
+
+Docker's read-only volume inventory reported RustFS data **2.583 GB**, logs
+**123.8 MB**. The local bucket contained 4,908 objects totaling
+**2,579,613,962 bytes**: manifests **2,010,240,369**, evidence **301,344,003**,
+rehearsals **171,758,375**, originals **61,134,727**, and OHLCV objects
+**25,428,862** bytes. Thus RustFS was not the 100 GiB source, but 1,129 historical
+manifests dominate its footprint. Its active manifest was 18,753,626 bytes and
+bound 888 active objects, 79 adoptions, 34 recoveries and eight history markers.
+No RustFS objects were deleted; manifest retention needs reference-aware cleanup
+before this accumulation becomes a long-term issue. The read-only summary is
+`data/rustfs-disk-inventory-20261004.json`.
+
 ## Source-bound GEE transfer interval review — 2026-10-04 ICT
 
 `03170b4` adds opt-in transfer annotations to the source-backed stock date

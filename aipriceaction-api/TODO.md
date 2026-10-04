@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Diagnose oversized local validation storage and losslessly compact inactive
+  SQLite images. Preserve live data, current rollback image, pending index
+  candidates and source captures; verify a real populated restore.
+- [ ] Bound historical S3 manifest retention while preserving every active,
+  recovery and explicitly retained rollback reference. The local RustFS audit
+  found 2.01 GB of manifests out of 2.58 GB total; do not prune by age alone.
+  Keep disposable full-database rehearsals temporary instead of accumulating
+  permanent copies after every check.
+
 - [x] Verify GEE's last UPCoM and first HOSE trading sessions from signed
   exchange notices. Add opt-in, source-bound transfer annotations to the stock
   date review, retaining original absences and observed conflicting rows. Both

@@ -5,6 +5,32 @@ CLI. Recent candles live in SQLite; older candles live in compressed Parquet in
 S3-compatible storage. DuckDB reads verified, cached files. The existing Python
 `aipa` analysis CLI and SDK remain available with their existing commands.
 
+Disk usage should be driven by one live SQLite database and the bounded archive
+cache (`ARCHIVE_CACHE_BYTES`, default 512 MiB). RustFS objects live in Docker's
+named volume, separately from `data/`. Full before/after/rehearsal databases are
+validation artifacts, not required runtime storage. Do not accumulate full
+database copies for each check: use temporary directories for disposable checks,
+retain the latest rollback image and unresolved candidates, and compact finished
+images immediately. Preserve provider captures, active proof catalogs and audit
+reports. Never remove a database or journal being used by a process.
+
+For existing inactive images, `scripts/compact_validation_snapshots.py` packs an
+explicit inventory losslessly, shares identical images by SHA256, and verifies
+decompressed bytes before replacing originals with `.packed.json` receipts.
+The optional `zstd` executable is used only for this maintenance operation.
+An inventory contains `root` and `files`, each with relative `path`, `bytes`,
+`mtime_ns` and `sha256`. Keep it with the receipts; old report paths require
+restoration before rerunning checks. Compaction never changes live OHLCV or S3
+manifests. Compressed historical validation images still consume disk space;
+they are not part of the production retention requirement.
+
+```sh
+uv run python -m scripts.compact_validation_snapshots compact --plan data/snapshot-compaction-plan.json
+uv run python -m scripts.compact_validation_snapshots compact --plan data/snapshot-compaction-plan.json --execute
+uv run python -m scripts.compact_validation_snapshots restore --root data \
+  --receipt data/example/before.sqlite3.packed.json --destination /tmp/review.sqlite3
+```
+
 The implementation runs locally. [TODO.md](TODO.md) tracks the proposed commits
 and remaining acceptance work. [VALIDATION.md](VALIDATION.md) records actual
 checks, provider coverage limits, and compatibility differences. Production
