@@ -41,6 +41,13 @@ history through `eb814ab`; they are not additional current open tasks.
   Provide a reusable read-only verifier and reject stale/wrong-frame successes
   and changed protected records. API PID 16546 remains running. This verifies
   one restart; real supervisor recovery and multi-day operation remain open.
+- [x] Prepare Linux host supervisor examples for the API and the three current
+  native worker scopes. Require per-source argument files, keep both indices
+  excluded from VN, and preserve RustFS-only Compose. Parse the argument files
+  with the real CLI and inspect the configured/native states: 167 VN, 12 crypto,
+  13 Yahoo. The staging runbook requires actual manager recovery and UTC-day
+  archival checks. Linux unit verification/activation remains unperformed on
+  this macOS workspace; examples do not certify supervised uptime.
 
 - [x] Preserve VNINDEX's verified 2015–2018 legacy daily history: 995 valid
   public candles in four frozen yearly objects, with four invalid dates retained

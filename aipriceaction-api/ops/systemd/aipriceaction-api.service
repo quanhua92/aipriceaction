@@ -1,0 +1,21 @@
+[Unit]
+Description=AIPriceAction FastAPI
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+User=aipriceaction
+Group=aipriceaction
+WorkingDirectory=/srv/aipriceaction-api
+Environment=AIPA_API_HOME=/srv/aipriceaction-api
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/aipriceaction-api/.venv/bin/aipa-api serve --host 127.0.0.1 --port 3001
+Restart=always
+RestartSec=10
+TimeoutStopSec=300
+KillSignal=SIGTERM
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

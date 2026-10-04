@@ -8,6 +8,18 @@ explicitly and do not claim exact numerical identity with the legacy API.
 
 ## Cooperative worker termination and restartability — 2026-10-04 ICT
 
+Prepared Linux units under `ops/systemd/` supervise the existing host API and
+the three worker instances, with required per-source scope files. Local scope
+validation parses those files with the actual CLI, confirms 57 unique VN stocks
+without either index, and inspects the watchlist: 167 VN configured intervals,
+12 native crypto and 13 native Yahoo intervals. Every configured crypto/Yahoo
+state remains ready on the expected native provider. The recorded check is
+`data/native-worker-shutdown-restart-20261004/prepared-supervisor-scopes.json`.
+The current macOS host lacks `systemd-analyze`; the units are not installed or
+activated. The accompanying runbook requires Linux verification, unexpected
+exit recovery and a real UTC-day archival transition. Compose remains RustFS
+only, and this preparation does not certify supervised or multi-day uptime.
+
 Actual local process restarts are recorded under
 `data/crypto-worker-restart-20261004/` and
 `data/vn-yahoo-worker-restart-20261004/`. Crypto resumed all four minute

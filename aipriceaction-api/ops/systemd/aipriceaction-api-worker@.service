@@ -1,0 +1,23 @@
+[Unit]
+Description=AIPriceAction %i ingestion and daily archival worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+User=aipriceaction
+Group=aipriceaction
+WorkingDirectory=/srv/aipriceaction-api
+Environment=AIPA_API_HOME=/srv/aipriceaction-api
+Environment=PYTHONUNBUFFERED=1
+# Required: a missing scope file must fail instead of enabling a broader worker.
+EnvironmentFile=/srv/aipriceaction-api/ops/systemd/worker-%i.env
+ExecStart=/srv/aipriceaction-api/.venv/bin/aipa-api $WORKER_GLOBAL_ARGS worker --source %i --archive-daily $WORKER_SYMBOL_ARGS
+Restart=always
+RestartSec=10
+TimeoutStopSec=300
+KillSignal=SIGTERM
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

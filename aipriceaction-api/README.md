@@ -195,7 +195,9 @@ remains watchlist-driven. Failed publication or concurrent corrections leave
 local rows available and retry attempts are spaced at least 60 seconds apart.
 Successful-day tracking is in memory; restarting harmlessly rechecks SQLite.
 This needs no additional service. Keep the worker under your existing process
-supervisor for continuous operation.
+supervisor for continuous operation. Prepared Linux units and their staging
+checks are in [ops/systemd/README.md](ops/systemd/README.md); their source scopes
+match the verified local workers.
 
 `SIGTERM` stops `worker` and `bootstrap` cooperatively. Provider connections
 close, the exiting worker's live/job claims are released, and staged candles,
