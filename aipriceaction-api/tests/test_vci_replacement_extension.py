@@ -91,7 +91,10 @@ def test_changed_evidence_or_scope_is_rejected(tmp_path, change):
         asyncio.run(expand_floor(settings, "FPT", original, floor))
 
 
-def test_eligible_candidate_extends_without_database_copies_or_network(tmp_path, monkeypatch):
+@pytest.mark.parametrize("compact", [False, True])
+def test_eligible_candidate_extends_without_database_copies_or_network(
+    tmp_path, monkeypatch, compact
+):
     settings, record, _ = inputs(tmp_path)
     settings = replace(settings, database=tmp_path / "live.sqlite3")
     repo = Repository(settings.database)
@@ -112,6 +115,7 @@ def test_eligible_candidate_extends_without_database_copies_or_network(tmp_path,
     (review / "report.json").write_bytes(raw_review)
     basis_report = {
         "completed": True,
+        "compact_diagnostic_only": compact,
         "review_sha256": hashlib.sha256(raw_review).hexdigest(),
         "proofs_sha256": hashlib.sha256(proofs.read_bytes()).hexdigest(),
         "series": [
@@ -134,6 +138,11 @@ def test_eligible_candidate_extends_without_database_copies_or_network(tmp_path,
     args = SimpleNamespace(
         review=review, basis=basis, proofs=proofs, output=tmp_path / "result", max_pages=2
     )
+    if compact:
+        with pytest.raises(DataError, match="Basis review"):
+            asyncio.run(run(args))
+        assert not args.output.exists() and settings.database.read_bytes() == original_database
+        return
     result = asyncio.run(run(args))
     assert result["completed"] and not result["canonical_publication"]
     assert result["series"][0]["candidate_ready"]

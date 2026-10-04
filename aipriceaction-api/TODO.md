@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,041 tests; lint/format checks pass.
+- The latest complete API suite passes 1,046 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -246,6 +246,15 @@ history through `eb814ab`; they are not additional current open tasks.
   temporary and removed on success/failure; local data measures 7,620,676 KiB.
 - [ ] Resolve MWG's exact minute-volume attribution for November 10, 2025 and
   the separately recorded older September 16 residual before snapshot adoption.
+- [x] Add a compact automated minute/daily coherence review for every saved
+  symbol, including incomplete VCI captures. Compare both receipt-aware current
+  SQLite minutes and replayed VCI minutes against all saved daily witnesses;
+  count every observed date and retain at most 20 exception examples per category.
+  Exclude legacy from native witness counts; keep original source errors and
+  incomplete capture status. Reject compact diagnostics as replacement-extension
+  inputs. Pass the 1,046-test full suite without database copies or new feeds.
+- [ ] Complete the current all-59 coherence review and classify the resulting
+  repair candidates using full source evidence before any publication.
 - [ ] Resolve the remaining MWG historical price basis and other source disagreements. Investigate
   the pre-VCB-activation 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals

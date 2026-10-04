@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import replace
+from datetime import date, timedelta
 from types import SimpleNamespace
 
 import pytest
@@ -76,9 +77,50 @@ def test_saved_legacy_agreement_cannot_supply_a_second_native_volume_witness():
     assert not summary["publication_license"]
 
 
+def test_compact_review_counts_all_days_and_limits_samples_without_using_legacy():
+    dates = [(date(2026, 3, 1) + timedelta(days=i)).isoformat() for i in range(32)]
+    local = [row(day, volume=101) for day in dates]
+    source = [row(day, ratio=0.9) for day in dates]
+    daily = {
+        feed: {
+            day: row(
+                day, ratio=1 if feed == "legacy" else 0.9, volume=101 if feed == "legacy" else 100
+            )
+            for day in dates
+        }
+        for feed in ("legacy", "vndirect", "dnse")
+    }
+    result = review.compact_coherence(review.timeline(local, source, daily))
+    assert result["observed_day_count"] == 32
+    assert result["price_classes"] == {"uniform_price_ratio": 32}
+    assert result["daily_coherence_counts"]["sqlite_minutes"] == {
+        "observed_days": 32,
+        "two_native_price_within_1_vnd_days": 0,
+        "two_exact_native_volume_days": 0,
+    }
+    assert result["daily_coherence_counts"]["vci_minutes"] == {
+        "observed_days": 32,
+        "two_native_price_within_1_vnd_days": 32,
+        "two_exact_native_volume_days": 32,
+    }
+    assert len(result["daily_coherence_exception_samples"]["sqlite_minutes"]) == 20
+    assert not result["daily_coherence_exception_samples"]["vci_minutes"]
+    assert not result["publication_license"] and "days" not in result
+
+
+def test_compact_review_retains_source_absence_and_every_volume_shortage_count():
+    dates = [(date(2026, 3, 1) + timedelta(days=i)).isoformat() for i in range(32)]
+    local = [row(day) for day in dates]
+    result = review.compact_coherence(review.timeline(local, [], {}))
+    assert result["daily_coherence_counts"]["vci_minutes"]["observed_days"] == 0
+    assert result["summary"]["native_volume_witness_exception_count"] == 32
+    assert len(result["summary"]["native_volume_witness_exception_samples"]) == 20
+
+
 @pytest.mark.parametrize("changed_proof", [False, True])
+@pytest.mark.parametrize("all_series", [False, True])
 def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
-    tmp_path, monkeypatch, changed_proof
+    tmp_path, monkeypatch, changed_proof, all_series
 ):
     settings = replace(Settings(), database=tmp_path / "live.sqlite3")
     repository = Repository(settings.database)
@@ -114,6 +156,7 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
     )
     record = {"start_date": "2026-09-01", "end_date": "2026-09-30"}
     (combined / "FPT-record.json").write_text(json.dumps(record))
+    (combined / "VCB-record.json").write_text(json.dumps(record))
     (daily / "report.json").write_text(
         json.dumps(
             {
@@ -137,6 +180,9 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
                 }
             )
         )
+        (daily / feed / "VCB-1D.json").write_text(
+            json.dumps({"rows": [row("2026-09-28", ratio=0.9)]})
+        )
     if changed_proof:
         proofs.write_text("[1]")
     calls = []
@@ -150,14 +196,22 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
         }
 
     monkeypatch.setattr(review, "replay_record", replay)
-    args = SimpleNamespace(review=combined, daily=daily, proofs=proofs, output=tmp_path / "result")
+    args = SimpleNamespace(
+        review=combined,
+        daily=daily,
+        proofs=proofs,
+        output=tmp_path / "result",
+        all_series=all_series,
+    )
     if changed_proof:
         with pytest.raises(DataError, match="exact proof catalog"):
             asyncio.run(review.run(args))
         assert not calls and not args.output.exists()
     else:
         result = asyncio.run(review.run(args))
-        assert calls == result["selected_symbols"] == ["FPT"]
+        assert calls == result["selected_symbols"] == (["FPT", "VCB"] if all_series else ["FPT"])
+        assert result["compact_diagnostic_only"] == all_series
+        assert ("days" in result["series"][0]) != all_series
         assert result["completed"] and not result["canonical_publication"]
         assert result["series"][0]["daily_observations"]["legacy"]["original_error"]
         assert not list(args.output.rglob("*.sqlite3*"))

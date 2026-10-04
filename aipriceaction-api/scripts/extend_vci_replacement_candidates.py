@@ -75,6 +75,7 @@ async def run(args):
     if (
         not review["completed"]
         or not basis["completed"]
+        or basis.get("compact_diagnostic_only", False)
         or basis["review_sha256"] != hashlib.sha256(review_raw).hexdigest()
         or basis["proofs_sha256"] != proof_sha
         or review["proofs_sha256"] != proof_sha

@@ -171,6 +171,66 @@ def summarize(days):
     }
 
 
+def compact_coherence(detail):
+    """Count every observed day while retaining bounded diagnostic examples."""
+    summary = summarize(detail["days"])
+    shortages = summary.pop("native_volume_witness_exceptions")
+    summary["native_volume_witness_exception_count"] = len(shortages)
+    summary["native_volume_witness_exception_samples"] = shortages[:20]
+    counts = {}
+    samples = {}
+    for basis in ("sqlite_minutes", "vci_minutes"):
+        observed, price_supported, volume_supported = 0, 0, 0
+        exceptions = []
+        for day in detail["days"]:
+            aggregate = day["observed_minute_aggregates"][basis]
+            if aggregate is None:
+                continue
+            observed += 1
+            price_feeds, volume_feeds = [], []
+            for feed in ("vps", "vndirect", "dnse"):
+                witness = day["daily_witnesses"].get(feed)
+                if witness is None:
+                    continue
+                comparison = witness["minute_comparisons"][basis]
+                if comparison["maximum_price_difference_vnd"] <= 1:
+                    price_feeds.append(feed)
+                if comparison["volume_difference"] == 0:
+                    volume_feeds.append(feed)
+            price_supported += len(price_feeds) >= 2
+            volume_supported += len(volume_feeds) >= 2
+            if len(price_feeds) < 2 or len(volume_feeds) < 2:
+                if len(exceptions) < 20:
+                    exceptions.append(
+                        {
+                            "date": day["date"],
+                            "aggregate": aggregate,
+                            "price_within_1_vnd_feeds": price_feeds,
+                            "exact_volume_feeds": volume_feeds,
+                            "daily_witnesses": day["daily_witnesses"],
+                        }
+                    )
+        counts[basis] = {
+            "observed_days": observed,
+            "two_native_price_within_1_vnd_days": price_supported,
+            "two_exact_native_volume_days": volume_supported,
+        }
+        samples[basis] = exceptions
+    classes = Counter()
+    for day in detail["days"]:
+        classes.update(day["price_classes"])
+    return {
+        "summary": summary,
+        "observed_day_count": len(detail["days"]),
+        "observed_regimes": detail["observed_regimes"],
+        "price_classes": dict(classes),
+        "daily_coherence_counts": counts,
+        "daily_coherence_exception_samples": samples,
+        "samples_per_category": 20,
+        "publication_license": False,
+    }
+
+
 async def run(args):
     raw_review = (args.review / "report.json").read_bytes()
     reviewed = json.loads(raw_review)
@@ -179,10 +239,12 @@ async def run(args):
         or reviewed["proofs_sha256"] != hashlib.sha256(args.proofs.read_bytes()).hexdigest()
     ):
         raise DataError("Use a completed VCI review with its exact proof catalog")
+    all_series = getattr(args, "all_series", False)
     candidates = [
         row["symbol"]
         for row in reviewed["series"]
-        if row["sqlite_comparison"]["providers"]["vci"]["diagnostics"]["price_classes"].get(
+        if all_series
+        or row["sqlite_comparison"]["providers"]["vci"]["diagnostics"]["price_classes"].get(
             "uniform_price_ratio"
         )
     ]
@@ -209,7 +271,12 @@ async def run(args):
         "review_sha256": hashlib.sha256(raw_review).hexdigest(),
         "proofs_sha256": reviewed["proofs_sha256"],
         "daily_report_sha256": hashlib.sha256(daily_report_bytes).hexdigest(),
-        "selection": "all uniform-price-ratio exceptions in the completed VCI review",
+        "selection": (
+            "all series in the completed VCI review, including incomplete source captures"
+            if all_series
+            else "all uniform-price-ratio exceptions in the completed VCI review"
+        ),
+        "compact_diagnostic_only": all_series,
         "selected_symbols": candidates,
         "series": [],
         "completed": False,
@@ -219,6 +286,7 @@ async def run(args):
             "Minute session aggregates cover observed candles, not independently proven complete market sessions.",
             "Contiguous regimes follow observed dates; they do not prove trading or listing on absent dates.",
             "Price agreement within one VND is a reported comparison, not a publication license.",
+            "Exact native witness counts do not apply scoped representation or volume-only allowances; shortages remain diagnostic findings, not a revocation of existing handoffs.",
             "This review does not change source selection, historical candles, or the active proof catalog.",
         ],
     }
@@ -283,11 +351,21 @@ async def run(args):
                     "replay": replay,
                     "volume_correction_receipts": len(receipts),
                     "daily_observations": identities,
-                    "summary": summarize(detail["days"]),
-                    **detail,
+                    **(
+                        compact_coherence(detail)
+                        if all_series
+                        else {"summary": summarize(detail["days"]), **detail}
+                    ),
                 }
             )
-            print(json.dumps({"symbol": symbol, "regimes": detail["observed_regimes"]}), flush=True)
+            print(
+                json.dumps(
+                    {"symbol": symbol, "observed_days": len(detail["days"])}
+                    if all_series
+                    else {"symbol": symbol, "regimes": detail["observed_regimes"]}
+                ),
+                flush=True,
+            )
     result["completed"] = True
     args.output.mkdir(parents=True, exist_ok=False)
     ArtifactBudget(args.output, 8 * 1024 * 1024).write(
@@ -302,4 +380,9 @@ if __name__ == "__main__":
     parser.add_argument("--daily", type=Path, required=True)
     parser.add_argument("--proofs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--all-series",
+        action="store_true",
+        help="Review every saved series, retaining bounded daily-coherence examples only",
+    )
     asyncio.run(run(parser.parse_args()))
