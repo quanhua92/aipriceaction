@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 888 active objects, 79 handoff certificates, 34 recoveries and
+  The latest verified S3 index has 887 active objects, 79 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,13 +21,13 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- Ten licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
-  GEE, SHB, TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
+- Eleven licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
+  GEE, SHB, TCB, VHM, VND and VCB. The three preferred providers remain unchanged for other sources/windows.
 - DNSE's captured VN30 daily timestamp transition is supported without altering
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 991 tests; lint/format checks pass.
+- The latest complete API suite passes 1,041 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -231,13 +231,23 @@ history through `eb814ab`; they are not additional current open tasks.
   archive-index/hot-image restoration. Remove all temporary databases/caches and
   eight owned RustFS objects, verify no current objects/versions/delete markers,
   retain 54,850 bytes of reports. Pass 50 focused tests including failure cleanup.
-- [ ] Verify fresh oldest/middle/latest source controls and license VCB's live
-  handoff before guarded local activation, checking actual web API routes and
-  replayable rollback scope. The storage rehearsal is not a publication license.
-  MWG still needs exact minute attribution for the November 10, 2025 residual
-  before full snapshot adoption.
-- [ ] Verify the VCB/MWG historical price basis with source evidence. Investigate
-  the 41 recent OHLC differences and 145 minute-volume allocations across all
+- [x] Verify fresh oldest/middle/latest source controls and license VCB's live
+  handoff through guarded local activation. Fresh 1,000/1,000/2,000-candle controls
+  match exactly. Publish all 60,747 observations without dropping timestamps,
+  replay native daily witnesses, verify a 40-row worker refresh, 18 boundary
+  queries and six actual API route cases. Restart the API/VN worker with the
+  active 27-proof catalog, then verify six live HTTP cases and the entire VCB
+  series through temporary restoration of all 887 archive-index objects.
+- [x] Verify the latest populated operational rollback and retire its superseded
+  full SQLite predecessor. Check original VCB state/hot checksum/archive metadata
+  and preserved published SHB state; remove only the old 911,646,720-byte backup.
+  Preserve active catalogs/captures, immutable S3 before-images, unresolved
+  candidates and the latest full rollback. All verifier databases/caches are
+  temporary and removed on success/failure; local data measures 7,620,676 KiB.
+- [ ] Resolve MWG's exact minute-volume attribution for November 10, 2025 and
+  the separately recorded older September 16 residual before snapshot adoption.
+- [ ] Resolve the remaining MWG historical price basis and other source disagreements. Investigate
+  the pre-VCB-activation 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals
   cannot license changing individual minute values. Reference-date presence does
   not certify every minute or OHLCV accuracy; keep eight unsupported refusals.

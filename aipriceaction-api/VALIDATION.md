@@ -3,6 +3,60 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## VCB activation, live HTTP and full-index restoration — 2026-10-04 ICT
+
+The verified VCB capture is now canonical locally, using revision
+`verified-vci-vcb-vcb-captured-local-activation-20261004`. All 60,747 original
+minute timestamps survive: 55,556 in SQLite and 5,191 in two cold objects.
+Fresh oldest/middle controls each match 1,000 native candles exactly; the latest
+2,000 match across nine observed sessions. All three native daily captures replay
+exactly, with two exact daily-volume witnesses for all 270 observed dates and
+retained daily OHLC differences below one VND. These checks do not infer a
+corporate-action cause or authorize a replacement of separate native hourly data.
+
+`scripts.captured_vci_activation_inputs` binds completed extension/rehearsal hashes
+and source records, validates native daily and fresh minute evidence, and feeds
+the existing guarded publisher. Actual activation verifies a 40-row native worker
+refresh, 18 raw/SMA/EMA boundary queries and six FastAPI route responses. Source
+evidence is persisted immutably; the new active catalog contains 27 volume proofs
+and licenses eleven VCI stock minute series. Local API/VN worker PIDs are now
+79778/79779; Yahoo/crypto remain 98059/98060. The restarted VN worker independently
+reports 40 refreshed rows with no provisional rows.
+
+`scripts.check_captured_vci_activation` then checks the running loopback API,
+replays the whole captured series using the active catalog, and restores all
+887 current archive-index objects plus the recorded replacement hot image.
+Complete VCB OHLCV matches both canonical reads and restored data. Six live HTTP
+minute/15-minute raw/SMA/EMA responses match an independent scoped SQLite
+reference across retention: 2,254 minute and 160 fifteen-minute rows per mode.
+Temporary databases and caches are removed; the final restore receipt is only
+1,089 bytes. Failure-injection tests verify cleanup when restoration fails.
+
+Evidence is in `data/vcb-captured-local-activation-20261004/report.json`,
+`data/vcb-captured-live-restoration-check-20261004/report.json` and
+`data/vcb-captured-runtime-20261004/processes.json`. The latest full operational
+rollback is `data/vcb-captured-local-activation-20261004/before.sqlite3`,
+911,646,720 bytes. A read-only integrity check passes; original VCB state, hot
+checksum and archive metadata match activation's frozen before-state exactly.
+The backup also preserves the published SHB revision. Its superseded SHB full
+backup is removed, freeing 911,646,720 bytes; active proof dependencies and all
+immutable S3 rollback evidence remain. The bounded retirement receipt records
+these checks. No completed test database is retained as a packed snapshot.
+
+Local `data/` measures 7,620,676 KiB after retirement, versus 8,510,952 KiB before.
+RustFS data measures 2,701,576 KiB and logs 158,232 KiB after actual publication;
+these include operational evidence and rollback objects. The earlier rehearsal's
+owned namespace remains empty. Physical filesystem sizes are not S3 billing or
+proof of immediate object reclamation.
+
+The full suite passes 1,041 tests in 63.01 seconds using
+`.venv/bin/python -m pytest -q`, with one existing Starlette/httpx deprecation
+warning. Lint and formatting pass for the new verifier and tests. MWG remains unadopted: its November 10, 2025
+minute aggregate lacks an exact native daily-volume witness, and the earlier
+September 16 residual remains separately unresolved. Other provider differences,
+unsupported source windows and production acceptance gates remain open. No push,
+production deployment or change to `api.aipriceaction.com` occurs.
+
 ## Complete VCB source extension and temporary replacement rehearsal — 2026-10-04 ICT
 
 `scripts.extend_vci_replacement_candidates` automatically selects candidates
