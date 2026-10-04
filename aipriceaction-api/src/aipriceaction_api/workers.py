@@ -85,6 +85,18 @@ class Worker:
     async def _repair_page(self, job):
         before = job["cursor"] or int(time.time()) + 1
         try:
+            entry = next(
+                (
+                    entry
+                    for entry in self.configuration
+                    if (entry["source"], entry["symbol"]) == (job["source"], job["symbol"])
+                ),
+                None,
+            )
+            if entry is not None:
+                job = self.repo.advance_job_floor(job, self.floor(entry, job["interval"]))
+            if job["cursor"] is not None and job["cursor"] <= job["floor"]:
+                return self.finish_recent_job(job)
             page = await self.providers.page(
                 job["source"],
                 job["symbol"],
@@ -148,10 +160,7 @@ class Worker:
                         (self.owner, int(time.time()) + 120, job["id"]),
                     )
                     claimed = dict(row) | {"lease_owner": self.owner}
-                self.repo.finish_job(claimed)
-                self.repo.schedule(
-                    job["source"], job["symbol"], job["interval"], int(time.time()) + 60
-                )
+                self.finish_recent_job(claimed)
             return len(prepared)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
@@ -204,6 +213,33 @@ class Worker:
                     except Exception:
                         continue
             return 0
+
+    def finish_recent_job(self, job):
+        # Cursor progress proves only the requested bound. A VN hourly bootstrap
+        # also needs every completed daily date observed for this same ticker.
+        # Missing dates remain reviewable; never invent candles or switch bases.
+        if job["source"] == "vn" and job["interval"] == "1h" and job["kind"] == "bootstrap":
+            with self.repo.connect() as con:
+                missing = con.execute(
+                    """SELECT d.time FROM candles d WHERE d.source='vn' AND d.symbol=?
+                    AND d.interval='1D' AND d.time>=? AND d.time<?
+                    AND strftime('%w',d.time,'unixepoch') NOT IN ('0','6')
+                    AND NOT EXISTS (SELECT 1 FROM staging s WHERE s.job_id=?
+                        AND s.time>=d.time AND s.time<d.time+86400)
+                    AND NOT EXISTS (SELECT 1 FROM candles c WHERE c.source='vn'
+                        AND c.symbol=d.symbol AND c.interval='1h'
+                        AND c.time>=d.time AND c.time<d.time+86400)
+                    ORDER BY d.time LIMIT 1""",
+                    (job["symbol"], job["floor"], completed_vn_sessions(), job["id"]),
+                ).fetchone()
+            if missing:
+                reason = f"Hourly bootstrap lacks observed daily session at {missing[0]}; verify provider coverage or no-trade convention"
+                self.repo.finding("vn", job["symbol"], "1h", "coverage_pending", reason)
+                self.repo.fail_job(job, reason)
+                return 0
+        self.repo.finish_job(job)
+        self.repo.schedule(job["source"], job["symbol"], job["interval"], int(time.time()) + 60)
+        return 0
 
     async def sync(self, entry, iv):
         try:

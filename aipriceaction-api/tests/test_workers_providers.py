@@ -63,6 +63,77 @@ class Pages:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("missing_session", [False, True])
+async def test_rolling_hourly_bootstrap_finishes_without_obsolete_fetch_but_preserves_missing_dates(
+    system, monkeypatch, missing_session
+):
+    repo, archive, settings = system
+    first, floor = parse_time("2024-01-02"), parse_time("2024-01-03")
+    repo.queue("vn", "FPT", "1h", "bootstrap", first - 86400, "dnse")
+    job = repo.claim_job("setup")
+    rows = [
+        replace(
+            candle(day, provider="dnse", revision=job["revision"]),
+            interval="1h",
+            time=first + (day - 2) * 86400 + 7200,
+        )
+        for day in (2, 3, 4)
+    ]
+    repo.stage(job, rows, first + 7200, "dnse")
+    repo.put(rows)
+    repo.put([candle(day) for day in ((3, 4, 5) if missing_session else (3, 4))])
+    original = repo.read("vn", "FPT", "1h")
+    providers = Pages()
+    worker = Worker(repo, settings, providers, archive)
+    worker.configuration = [{"source": "vn", "symbol": "FPT", "intervals": ["1h"]}]
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: floor)
+    monkeypatch.setattr(
+        "aipriceaction_api.workers.completed_vn_sessions", lambda: first + 5 * 86400
+    )
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
+    assert providers.calls == []
+    assert repo.read("vn", "FPT", "1h") == original
+    with repo.connect() as con:
+        stored = con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+    assert stored["floor"] == floor
+    assert stored["status"] == ("pending" if missing_session else "complete")
+    assert stored["provider"] == "dnse" and stored["revision"] == job["revision"]
+    if missing_session:
+        assert "lacks observed daily session" in stored["error"]
+
+
+def test_recent_job_floor_requires_current_lease_and_never_moves_backwards(system):
+    repo, _, _ = system
+    first = parse_time("2024-01-01")
+    repo.queue("vn", "FPT", "1D", "repair", first, "vps")
+    job = repo.claim_job("owner")
+    advanced = repo.advance_job_floor(job, first + 86400)
+    assert repo.advance_job_floor(advanced, first)["floor"] == first + 86400
+    with pytest.raises(DataError, match="lease expired or superseded"):
+        repo.advance_job_floor(job | {"lease_owner": "other"}, first + 2 * 86400)
+
+
+@pytest.mark.asyncio
+async def test_advanced_retention_floor_cannot_complete_an_empty_current_window(
+    system, monkeypatch
+):
+    repo, archive, settings = system
+    first = parse_time("2024-01-01")
+    repo.queue("vn", "FPT", "1D", "bootstrap", first, "vps")
+    job = repo.claim_job("setup")
+    rows = [replace(candle(2), revision=job["revision"])]
+    repo.stage(job, rows, first + 86400, "vps")
+    repo.put(rows)
+    original = repo.read("vn", "FPT", "1D")
+    worker = Worker(repo, settings, Pages(), archive)
+    worker.configuration = [{"source": "vn", "symbol": "FPT", "intervals": ["1D"]}]
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first + 3 * 86400)
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
+    assert repo.status()["jobs"][0]["status"] == "pending"
+    assert repo.read("vn", "FPT", "1D") == original
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("iv,step", [("1D", 86400), ("1h", 3600), ("1m", 60)])
 async def test_yahoo_native_interval_labels_preserve_source_values(system, iv, step):
     _, _, settings = system

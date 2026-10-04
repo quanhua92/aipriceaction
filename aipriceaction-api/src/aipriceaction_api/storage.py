@@ -942,6 +942,23 @@ class Repository:
                 (cursor, provider, time.time_ns(), job["id"]),
             )
 
+    def advance_job_floor(self, job, floor):
+        """Move a leased recent-data job forward with its rolling retention window."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+            if (
+                not row
+                or row["kind"] not in ("bootstrap", "repair")
+                or row["lease_owner"] != job["lease_owner"]
+                or row["revision"] != job["revision"]
+                or row["lease_until"] < int(time.time())
+            ):
+                raise DataError("Recent repair lease expired or superseded")
+            floor = max(row["floor"], floor)
+            con.execute("UPDATE jobs SET floor=? WHERE id=?", (floor, job["id"]))
+            return dict(row) | {"floor": floor}
+
     def finish_job(self, job):
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
@@ -975,7 +992,11 @@ class Repository:
                 "SELECT MAX(time) FROM candles WHERE source=? AND symbol=? AND interval=?",
                 (job["source"], job["symbol"], job["interval"]),
             ).fetchone()[0]
-            if not staged[2] or (latest is not None and staged[1] < latest):
+            if (
+                not staged[2]
+                or staged[1] < row["floor"]
+                or (latest is not None and staged[1] < latest)
+            ):
                 raise DataError("Replacement is empty or ends before published data")
             completed = (
                 completed_vn_sessions()
