@@ -58,10 +58,18 @@ history through `eb814ab`; they are not additional current open tasks.
   originals. Freeze source captures and original-day Parquet; reject changed
   snapshots/targets and conflicting receipts. Pass five receipt tests plus the
   925-test full suite. The real MWG preview passes without publication.
-- [ ] Restart all local API/worker processes on receipt-aware code before local
+- [x] Restart all local API/worker processes on receipt-aware code before local
   MWG activation; older manifest writers would omit the receipt metadata.
   Publish the verified receipt, check live API aggregates and isolated RustFS
   restore, and remove all temporary restore databases/objects afterward.
+  Local API/VN/Yahoo/crypto PIDs are 98057/98058/98059/98060. The first attempt
+  correctly refused a busy MWG worker lease; retry published one receipt.
+  Verify 225 minute/16 fifteen-minute candles, one changed volume per interval,
+  unchanged OHLC and the exact 2,969,500 day total. Replay all 888 archive objects
+  and the receipt in a temporary index; mount only original-day evidence for
+  the scoped cold read. No full hot SQLite recovery is claimed. Verify the latest
+  worker-written manifest retains the receipt; keep the 4 KB restore report.
+  Align automated comparisons with the API's receipt-aware data; 26 focused tests pass.
 
 - [x] Automatically summarize observed dates and candle counts per date for
   every compared feed, exposing missing days and partial sessions independently

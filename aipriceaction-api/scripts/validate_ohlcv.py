@@ -9,12 +9,14 @@ import argparse
 import asyncio
 import json
 import sqlite3
+from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import date_bounds
+from aipriceaction_api.domain import Candle, date_bounds
+from aipriceaction_api.volume_corrections import apply_records
 from scripts.audit_archive_ohlcv import audit as audit_archives
 from scripts.audit_sqlite_ohlcv import audit
 from scripts.compare_vn_feeds import FIELDS, same
@@ -35,14 +37,26 @@ def local_comparisons(settings, root, comparison):
                     comparison["daily_start" if interval == "1D" else "intraday_start"]
                 )
                 before = date_bounds(comparison["end_date"], end=True) + 1
-                local = {
-                    r["time"]: dict(r)
+                raw_local = [
+                    Candle(**dict(r))
                     for r in con.execute(
-                        "SELECT time,open,high,low,close,volume FROM candles "
+                        "SELECT * FROM candles "
                         "WHERE source='vn' AND symbol=? AND interval=? AND time>=? AND time<?",
                         (symbol, interval, start, before),
                     )
-                }
+                ]
+                receipts = (
+                    [
+                        dict(r)
+                        for r in con.execute(
+                            "SELECT * FROM volume_corrections WHERE source='vn' AND symbol=? AND interval=? AND time>=? AND time<? ORDER BY time,id",
+                            (symbol, interval, start, before),
+                        )
+                    ]
+                    if interval == "1m"
+                    else []
+                )
+                local = {row.time: asdict(row) for row in apply_records(raw_local, receipts)}
                 peers = {}
                 returned = {}
                 for feed in feeds:
@@ -79,6 +93,7 @@ def local_comparisons(settings, root, comparison):
                         "symbol": symbol,
                         "interval": interval,
                         "sqlite_rows": len(local),
+                        "volume_correction_receipts": len(receipts),
                         "providers": peers,
                         "unanimous_provider_conflicts": conflicts,
                         "missing_unanimous_provider_timestamps": [

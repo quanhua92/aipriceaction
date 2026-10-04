@@ -1,8 +1,10 @@
 import gzip
 import json
 import time
-from dataclasses import replace
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -13,6 +15,8 @@ from aipriceaction_api.history import History
 from aipriceaction_api.storage import Repository
 from aipriceaction_api.vci_volume import proof_from_capture, validate_volume_proof
 from aipriceaction_api.volume_corrections import make_record, publish_correction
+from scripts import check_volume_correction_restore
+from scripts.validate_ohlcv import local_comparisons
 
 
 @pytest.fixture
@@ -124,3 +128,61 @@ def test_busy_series_prevents_publication_and_releases_archive_lease(system):
         publish_correction(repo, archive, proof, raw)
     assert repo.volume_corrections() == []
     assert repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", "check")
+
+
+def test_automated_comparator_uses_verified_volume_projection(system, tmp_path):
+    repo, archive, settings, rows, proof, raw = system
+    publish_correction(repo, archive, proof, raw)
+    staged = History(repo, archive, settings).read("vn", proof["symbol"], "1m")
+    root = tmp_path / "comparison"
+    feeds = ["vps", "vndirect", "dnse", "vci"]
+    for feed in feeds:
+        directory = root / feed
+        directory.mkdir(parents=True)
+        (directory / f"{proof['symbol']}-1m.json").write_text(
+            json.dumps({"rows": [asdict(row) for row in staged]})
+        )
+    day = datetime.fromtimestamp(proof["day"], UTC).strftime("%Y-%m-%d")
+    result = local_comparisons(
+        settings,
+        root,
+        {
+            "feeds": feeds,
+            "symbols": [proof["symbol"]],
+            "intervals": ["1m"],
+            "intraday_start": day,
+            "end_date": day,
+        },
+    )[0]
+    assert result["volume_correction_receipts"] == 1
+    assert result["unanimous_provider_conflicts"] == []
+    assert all(peer["volume_disagreements"] == [] for peer in result["providers"].values())
+    assert repo.read("vn", proof["symbol"], "1m") == rows
+
+
+@pytest.mark.parametrize("failure", [False, True])
+def test_restore_verifier_removes_temporary_databases_and_cache(
+    system, tmp_path, monkeypatch, failure
+):
+    repo, archive, settings, rows, proof, raw = system
+    record = publish_correction(repo, archive, proof, raw)
+    monkeypatch.setattr(Settings, "from_env", classmethod(lambda cls: settings))
+    monkeypatch.setattr(check_volume_correction_restore, "verify_http", lambda *args: {})
+    if failure:
+
+        def fail(*args):
+            raise DataError("Restore failure")
+
+        monkeypatch.setattr(Archive, "restore_index", fail)
+    output = tmp_path / "verification"
+    args = SimpleNamespace(receipt=record["id"], output=output, base_url="http://127.0.0.1:3001")
+    if failure:
+        with pytest.raises(DataError, match="Restore failure"):
+            check_volume_correction_restore.run(args)
+        assert list(output.iterdir()) == []
+    else:
+        result = check_volume_correction_restore.run(args)
+        assert result["temporary_storage_removed"]
+        assert result["cold_rows"] == len(rows)
+        assert list(output.iterdir()) == [output / "report.json"]
+    assert repo.read("vn", proof["symbol"], "1m") == rows

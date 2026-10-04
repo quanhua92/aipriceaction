@@ -5,6 +5,33 @@ full data coverage and production cutover acceptance.
 
 ## Full-year MWG minute-volume proof control — 2026-10-04 ICT
 
+Local activation is complete. The API and VN/Yahoo/crypto workers restarted on
+receipt-aware code as PIDs 98057/98058/98059/98060 with their existing arguments.
+The first attempt encountered a real worker refresh lease and inserted no
+receipt; a subsequent guarded retry succeeded. Receipt
+`484a768eb7dbdf4bd9be61b97899bdea5f1ceb48a4f03717c857ae23e247bf00`
+is persisted locally and in the latest RustFS manifest. Raw legacy candles remain
+unchanged. No production endpoint was switched.
+
+Live loopback HTTP verification covers all 225 minute and 16 fifteen-minute
+candles for June 2, 2026. Exactly one candle/bucket volume changes in each
+interval; every OHLC price remains unchanged. Both interval totals are
+2,969,500. The reusable `scripts.check_volume_correction_restore` runner restores
+the entire 888-object manifest and correction receipt into a temporary index,
+then mounts the receipt's original-day object only in that temporary index to
+verify the scoped cold read equals the projected 225 records. This checks
+receipt restoration; it does not restore the full hot SQLite dataset.
+
+All temporary restore databases/cache objects are removed on completion, and
+success/failure cleanup is tested. The 4 KB report is retained under
+`data/mwg-volume-correction-restore-20261004`; HTTP/activation evidence is under
+`data/mwg-volume-correction-activation-retry-20261004`. The current manifest was
+rechecked after workers resumed and retains the receipt. Local data remains
+approximately 5.7 GiB; RustFS data is 2.617 GB (from 2.584 GB before activation,
+including manifest growth). The automated SQLite/provider comparator now applies
+verified receipts in its same read transaction, matching the API data view
+while keeping raw structural checks separate. Twenty-six focused tests pass.
+
 Receipt-aware publication is now implemented and tested. A `volume_corrections`
 ledger stores the narrowly scoped proof and exact frozen originals. Publication
 claims archive/series leases, freezes and reads back source captures and original
