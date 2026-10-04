@@ -10,26 +10,17 @@ cache (`ARCHIVE_CACHE_BYTES`, default 512 MiB). RustFS objects live in Docker's
 named volume, separately from `data/`. Full before/after/rehearsal databases are
 validation artifacts, not required runtime storage. Do not accumulate full
 database copies for each check: use temporary directories for disposable checks,
-retain the latest rollback image and unresolved candidates, and compact finished
-images immediately. Preserve provider captures, active proof catalogs and audit
+retain the latest rollback image and unresolved candidates, and delete completed
+test images immediately. Preserve provider captures, active proof catalogs and audit
 reports. Never remove a database or journal being used by a process.
 
-For existing inactive images, `scripts/compact_validation_snapshots.py` packs an
-explicit inventory losslessly, shares identical images by SHA256, and verifies
-decompressed bytes before replacing originals with `.packed.json` receipts.
-The optional `zstd` executable is used only for this maintenance operation.
-An inventory contains `root` and `files`, each with relative `path`, `bytes`,
-`mtime_ns` and `sha256`. Keep it with the receipts; old report paths require
-restoration before rerunning checks. Compaction never changes live OHLCV or S3
-manifests. Compressed historical validation images still consume disk space;
-they are not part of the production retention requirement.
-
-```sh
-uv run python -m scripts.compact_validation_snapshots compact --plan data/snapshot-compaction-plan.json
-uv run python -m scripts.compact_validation_snapshots compact --plan data/snapshot-compaction-plan.json --execute
-uv run python -m scripts.compact_validation_snapshots restore --root data \
-  --receipt data/example/before.sqlite3.packed.json --destination /tmp/review.sqlite3
-```
+`check_native_refresh`, `check_retention_rollover` and `check_crypto_worker`
+keep full database images in `TemporaryDirectory` and remove them on normal or
+exceptional exit. Their report/capture output remains persistent. Reported
+checksums document completed checks; temporary database paths are not retained
+fixtures. Re-run the check to create fresh images. Do not pack or archive
+disposable testing databases. See the mandatory storage lifecycle rules in the
+repository's `AGENTS.md`.
 
 The implementation runs locally. [TODO.md](TODO.md) tracks the proposed commits
 and remaining acceptance work. [VALIDATION.md](VALIDATION.md) records actual
@@ -1139,17 +1130,17 @@ To verify recurring crypto updates against the populated database:
 ```sh
 uv run python scripts/check_crypto_worker.py --cycles 75 --output ./data/crypto-worker-review
 uv run python scripts/check_crypto_worker.py --cycles 75 --archive-daily --output ./data/crypto-worker-maintenance-review
-uv run python scripts/check_crypto_worker.py --verify-only --output ./data/crypto-worker-review
 ```
 
 The first command runs the ordinary crypto worker and updates this database;
 use a new output directory. It captures Binance responses and consistent
-before/after backups. Checks require successful updates for initially due
+temporary before/after images, removed when the run ends. `--verify-only` works
+only with explicitly supplied or previously retained images. Checks require
+successful updates for initially due
 series, repeated minute updates, continuous stored timestamps, native completed
 candle parity, preserved completed history and other-market candles, and
 unchanged series, jobs, handoffs, import receipts and archive index. Daily series
-whose cooldown has not expired remain scheduled. The second command rechecks
-the saved evidence without running ingestion. A bounded run does not install a
+whose cooldown has not expired remain scheduled. A bounded run does not install a
 supervisor. Retention pruning occurs only with the explicit `--archive-daily`
 option; the checker verifies its existing archive metadata stays unchanged when
 no rows are expired.

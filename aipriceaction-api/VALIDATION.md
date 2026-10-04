@@ -6,7 +6,46 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
-## Storage footprint correction — 2026-10-04 ICT
+## Completed test database removal — 2026-10-04 ICT
+
+The user clarified that disposable testing databases must be removed when tests
+finish, rather than retained as compressed snapshots. All 114 previously packed
+images and their 95 shared blobs were removed, reclaiming a further
+**15,395,875,300 bytes**. This brought `data/` to approximately **6.8 GiB**. The small
+cleanup inventory, reports and provider evidence remain. Live OHLCV, the latest
+SHB activation rollback image, unresolved index candidates and all RustFS objects
+were preserved. Old compaction receipts and compressed images no longer exist;
+prior validation narratives describe checks performed at that time, not retained
+database fixtures.
+
+A further 72 completed rehearsal/restore/golden comparison images, including
+the superseded CTR backup, were removed (**1,311.9 MiB**). The latest SHB rollback
+image replaces that old full backup for operational retention. The final data
+directory occupies approximately **5.5 GiB**. These additional removals are
+recorded in `data/remaining-completed-test-database-cleanup.json`; pending index
+images and unactivated provider candidates remain. No report or raw provider
+capture was deleted.
+
+The unnecessary compaction tool was removed. Mandatory root `AGENTS.md` rules
+now require temporary full-database test copies, cleanup on completion/failure,
+scoped fixtures, size checks and protection of operational data. Three recurring
+full-database checks (`check_native_refresh`, `check_retention_rollover`,
+`check_crypto_worker`) now allocate images inside `TemporaryDirectory`; reports
+and provider captures retain their separate output paths. Rollover's local
+object/cache files are temporary too. Operational publication backups are not
+automatically removed by these test wrappers.
+
+Seven tests verify successful and failing cleanup for all three runners,
+preservation of their reports, and a real isolated SQLite/Parquet rollover with
+manifest restoration that leaves the original unchanged and only the report in
+its output directory. All seven pass. Crypto `--verify-only` remains compatible
+with explicitly supplied old images; normal runs retain no database copies.
+`data/completed-test-database-cleanup.json` records the removal.
+
+The lifecycle tests, existing storage/history tests and worker restart checks
+passed together: **46 tests**. Lint and format checks pass for the changed scripts.
+
+## Initial storage footprint correction — 2026-10-04 ICT
 
 The local `data/` directory reached approximately **102 GiB** because validation
 kept full before/after/rehearsal SQLite images repeatedly. SQLite files accounted
@@ -18,12 +57,12 @@ After checking process arguments and open files, 114 explicitly inventoried
 inactive images (**102,034,567,168 bytes**) were packed into 95 unique,
 content-addressed zstd blobs (**15,395,875,300 bytes**). Every original checksum
 was verified against decompressed bytes before replacement by a restoration
-receipt. The directory now occupies approximately **21.2 GiB**, freeing about
+receipt. At that intermediate checkpoint the directory occupied **21.2 GiB**, freeing about
 **80.7 GiB** without discarding snapshot contents. The live database, latest
 SHB activation rollback image, unresolved index candidates, source captures,
 active proof catalogs, JSON reports and S3 manifests were preserved. Historical
-report database paths now require restoration using their adjacent receipts.
-These compressed snapshots remain optional validation storage, not runtime data.
+report database paths required restoration using their adjacent receipts.
+Those compressed images were subsequently removed as documented above.
 
 A real packed image was restored in a temporary directory: its exact SHA256
 matched, SQLite `quick_check` returned `ok`, and it contained **5,513,154** candle
@@ -31,7 +70,8 @@ rows. The temporary restored copy was removed. Three maintenance tests cover
 deduplication/restore, overwrite prevention, source changes, live paths,
 symlinks and outstanding journals; all pass. Together with the existing calendar
 review tests, the focused run passed **49 tests**. No market values were changed.
-The inventory, receipts, result and populated restore check remain under `data/`.
+The inventory, result and populated restore check remain under `data/`; the
+receipts and packed images were subsequently removed as documented above.
 
 Docker's read-only volume inventory reported RustFS data **2.583 GB**, logs
 **123.8 MB**. The local bucket contained 4,908 objects totaling

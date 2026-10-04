@@ -13,6 +13,7 @@ from collections import Counter
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from aipriceaction_api.config import Settings
 from aipriceaction_api.providers import Providers
@@ -32,10 +33,15 @@ def source_digest(path, source):
 
 
 async def run(args):
+    with TemporaryDirectory(prefix="aipa-native-refresh-") as temporary:
+        return await _run(args, Path(temporary))
+
+
+async def _run(args, databases):
     source = args.source
     original = Settings.from_env()
     args.output.mkdir(parents=True, exist_ok=False)
-    before, candidate = args.output / "before.sqlite3", args.output / "candidate.sqlite3"
+    before, candidate = databases / "before.sqlite3", databases / "candidate.sqlite3"
     main = Repository(original.database)
     main.backup(before)
     Repository(before).backup(candidate)

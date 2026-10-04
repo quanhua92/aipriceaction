@@ -38,9 +38,10 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
-- [x] Diagnose oversized local validation storage and losslessly compact inactive
-  SQLite images. Preserve live data, current rollback image, pending index
-  candidates and source captures; verify a real populated restore.
+- [x] Remove completed test databases, including unnecessary compressed copies.
+  Preserve live data, current rollback image, pending index candidates and source
+  captures. Add mandatory `AGENTS.md` lifecycle rules and automatic temporary
+  directory cleanup to full-database refresh/rollover/worker checks.
 - [ ] Bound historical S3 manifest retention while preserving every active,
   recovery and explicitly retained rollback reference. The local RustFS audit
   found 2.01 GB of manifests out of 2.58 GB total; do not prune by age alone.

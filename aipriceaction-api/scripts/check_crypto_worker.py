@@ -1,7 +1,7 @@
 """Run bounded real crypto scheduler cycles and verify populated before/after data.
 
 Updates the configured database through the ordinary worker. Captures native
-responses and preserves consistent backups; does not run archive maintenance.
+responses and checks consistent temporary backups; does not run archive maintenance.
 """
 
 import argparse
@@ -11,6 +11,7 @@ import json
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from aipriceaction_api.archive import sha256
 from aipriceaction_api.config import Settings
@@ -20,10 +21,15 @@ from aipriceaction_api.workers import Worker
 
 
 async def run(args):
+    with TemporaryDirectory(prefix="aipa-crypto-worker-") as temporary:
+        return await _run(args, Path(temporary))
+
+
+async def _run(args, databases):
     settings = Settings.from_env()
     repo = Repository(settings.database)
     args.output.mkdir(parents=True, exist_ok=False)
-    before = args.output / "before.sqlite3"
+    before = databases / "before.sqlite3"
     repo.backup(before)
     report = {
         "passed": False,
@@ -65,16 +71,17 @@ async def run(args):
             cycles=args.cycles, source="crypto", archive_daily=args.archive_daily
         )
     finally:
-        repo.backup(args.output / "after.sqlite3")
+        repo.backup(databases / "after.sqlite3")
         report["finished_at"] = datetime.now(UTC).isoformat()
         report_path.write_text(json.dumps(report, indent=2) + "\n")
-    verify(args.output)
+    verify(args.output, databases)
 
 
-def verify(output):
+def verify(output, databases=None):
     report_path = output / "report.json"
     report = json.loads(report_path.read_text())
-    before, after = output / "before.sqlite3", output / "after.sqlite3"
+    databases = databases or output
+    before, after = databases / "before.sqlite3", databases / "after.sqlite3"
     if any(not a["check"] or a["check"]["outcome"] != "succeeded" for a in report["attempts"]):
         raise AssertionError("A scheduled update failed or has no recorded source check")
     with sqlite3.connect(after) as con:

@@ -4,6 +4,25 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 
 **Language:** Use `--lang vn` on any command to get Vietnamese output.
 
+## API development: test storage lifecycle (MANDATORY)
+
+- Full SQLite copies used by tests, benchmarks, migration rehearsals, and restore
+  checks are temporary. Use `tempfile.TemporaryDirectory` and clean them up when
+  the run ends, including failed runs. Do not leave before/after/restored database
+  copies in `aipriceaction-api/data/` or compress them as permanent test archives.
+- Retain small reports, checksums, and provider captures needed to verify OHLCV.
+  Keep live SQLite, active proof catalogs, unresolved data candidates, and the
+  latest necessary operational rollback backup. These are not disposable tests.
+- Never create another full database backup merely to prove a backup exists.
+  Reuse the same temporary before-image within a run. Use small scoped fixtures
+  when the behavior does not require a full populated database.
+- Inspect local data and RustFS volume sizes before and after large validation
+  runs. Remove the run's temporary database files and SQLite sidecars before
+  reporting completion. Do not delete unrelated files or active data.
+- Isolated RustFS rehearsal prefixes are temporary too. Clean only the exact
+  prefix created by the completed test once no retained evidence depends on it.
+  Never bulk-delete canonical OHLCV, manifests, or rollback references.
+
 ## 1. Agent Role
 
 You are **AIPriceAction Investment Advisor**, an AI-powered financial advisor. You have deep expertise in:

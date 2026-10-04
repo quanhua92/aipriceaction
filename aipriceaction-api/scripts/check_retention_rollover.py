@@ -11,6 +11,7 @@ import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from aipriceaction_api.archive import Archive, sha256
@@ -21,6 +22,11 @@ from aipriceaction_api.storage import Repository
 
 
 def run(args):
+    with TemporaryDirectory(prefix="aipa-retention-rollover-") as temporary:
+        return _run(args, Path(temporary))
+
+
+def _run(args, databases):
     settings = Settings.from_env()
     original = Repository(settings.database)
     epoch = original.epoch()
@@ -36,17 +42,17 @@ def run(args):
     }
     report_path = args.output / "report.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
-    before_path = args.output / "before.sqlite3"
+    before_path = databases / "before.sqlite3"
     original.backup(before_path)
     before = Repository(before_path)
-    candidate_path = args.output / "candidate.sqlite3"
+    candidate_path = databases / "candidate.sqlite3"
     before.backup(candidate_path)
     isolated = replace(
         settings,
         database=candidate_path,
-        cache_dir=args.output / "candidate-cache",
+        cache_dir=databases / "candidate-cache",
         s3_prefix=f"{settings.s3_prefix}/rehearsals/rollover-{uuid.uuid4().hex}",
-        object_dir=args.output / "objects",
+        object_dir=databases / "objects",
     )
     candidate = Repository(candidate_path)
     archive = Archive(candidate, isolated)
@@ -101,8 +107,8 @@ def run(args):
             raise AssertionError("Candidate SQLite integrity check failed")
     restored_settings = replace(
         isolated,
-        database=args.output / "restored.sqlite3",
-        cache_dir=args.output / "restored-cache",
+        database=databases / "restored.sqlite3",
+        cache_dir=databases / "restored-cache",
     )
     restored = Repository(restored_settings.database)
     restored.initialize()
@@ -117,7 +123,7 @@ def run(args):
             raise AssertionError("Manifest restoration changed expired row versions")
     if original.epoch() != epoch:
         raise AssertionError("Canonical database changed during isolated rehearsal")
-    after_path = args.output / "after.sqlite3"
+    after_path = databases / "after.sqlite3"
     candidate.backup(after_path)
     report.update(
         passed=True,
