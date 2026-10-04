@@ -86,6 +86,10 @@ def proof_from_capture(raw, daily_witnesses, stamp, verified_at_ns, *, allow_mul
 
 def validate_volume_proof(proof):
     """Return the single corrected candle after replaying every source observation."""
+    if isinstance(proof, dict) and proof.get("kind") == "vci_peer_minute_volume":
+        from .vci_peer_volume import validate_peer_volume_proof
+
+        return validate_peer_volume_proof(proof)
     try:
         if (
             proof["kind"] != "vci_cumulative_volume"

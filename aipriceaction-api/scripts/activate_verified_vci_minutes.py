@@ -231,11 +231,14 @@ async def run(args):
             # Preserve original raw responses behind the active correction
             # proofs as well as the full candidate traversal.
             for proof in active_proofs:
-                digest = proof["source_capture_sha256"]
-                matches = list(settings.database.parent.rglob("native-" + digest + ".json"))
-                if not matches or hashlib.sha256(matches[0].read_bytes()).hexdigest() != digest:
-                    raise DataError("Active volume proof original capture is missing")
-                artifacts[digest] = {"path": str(matches[0])}
+                for digest in [
+                    proof["source_capture_sha256"],
+                    *proof.get("witness_capture_sha256", []),
+                ]:
+                    matches = list(settings.database.parent.rglob("native-" + digest + ".json"))
+                    if not matches or hashlib.sha256(matches[0].read_bytes()).hexdigest() != digest:
+                        raise DataError("Active volume proof original capture is missing")
+                    artifacts[digest] = {"path": str(matches[0])}
             report["active_volume_proofs_file"] = str(catalog_path)
             report["active_volume_proofs_count"] = len(active_proofs)
             # Full immutable inputs survive loss of this workstation. Preview

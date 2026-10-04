@@ -397,13 +397,33 @@ class Providers:
                 # sparse quote page cannot allocate trades across missing bars,
                 # and the exchange-session total resets on the next VN day.
                 previous = t - 60
-                if (
+                proof = self.vci_volume_proofs.get((symbol, t))
+                peer_proof = proof is not None and proof["kind"] == "vci_peer_minute_volume"
+                if peer_proof:
+                    source = {r["time"]: r for r in proof["source_rows"]}
+                    for position, stamp in enumerate(stamps):
+                        if stamp // 86400 * 86400 != proof["day"]:
+                            continue
+                        if (
+                            stamp not in source
+                            or cumulative.get(stamp) != source[stamp]["cumulative_volume"]
+                            or any(
+                                float(arrays[field][position]) != source[stamp][name]
+                                for field, name in enumerate(
+                                    ("time", "open", "high", "low", "close", "volume")
+                                )
+                            )
+                        ):
+                            raise DataError(
+                                "VCI observations changed since the native peer correction proof"
+                            )
+                contradiction = (
                     t in cumulative
                     and previous in cumulative
                     and (t + 7 * 3600) // 86400 == (previous + 7 * 3600) // 86400
                     and cumulative[t] - cumulative[previous] != int(volume)
-                ):
-                    proof = self.vci_volume_proofs.get((symbol, t))
+                )
+                if contradiction or peer_proof:
                     if proof is None:
                         raise DataError(
                             f"VCI minute volume contradicts cumulative total for {symbol} at {t}: "
@@ -411,7 +431,7 @@ class Providers:
                             "retain raw evidence and reconcile before publication"
                         )
                     source = {r["time"]: r for r in proof["source_rows"]}
-                    if (
+                    if not peer_proof and (
                         previous not in source
                         or cumulative[t] != source[t]["cumulative_volume"]
                         or cumulative[previous] != source[previous]["cumulative_volume"]

@@ -2,8 +2,10 @@
 
 import argparse
 import asyncio
+import hashlib
 import json
 import math
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,6 +14,7 @@ import httpx
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import DataError, date_bounds
 from aipriceaction_api.providers import Providers
+from aipriceaction_api.vci_peer_volume import peer_proof_from_capture
 from scripts.vn_daily_volume_evidence import captured
 
 
@@ -93,6 +96,7 @@ async def run(args):
         raise DataError("Require isolated read-only native controls")
     args.output.mkdir(parents=True, exist_ok=False)
     artifacts, report = {}, {"main_publication": False, "proposals": [], "blocked": []}
+    proofs = json.loads(args.volume_proofs.read_text())
     targets = sorted({(r["symbol"], r["date"]) for r in controls["controls"]})
     for symbol, date in targets:
         pages, raws = {}, {}
@@ -139,10 +143,14 @@ async def run(args):
                 for t, v in zip(body[0]["t"], body[0]["accumulatedVolume"], strict=True)
                 if day <= int(t) < day + 86400
             )
-            daily = []
+            daily, witness_hashes = (
+                [],
+                [hashlib.sha256(raws[f]).hexdigest() for f in ("vndirect", "dnse")],
+            )
             for feed in ("vndirect", "dnse"):
                 record = json.loads((args.daily / feed / f"{symbol}-1D.json").read_text())
                 raw = captured(record, artifacts)
+                witness_hashes.append(hashlib.sha256(raw).hexdigest())
                 first, end = (
                     date_bounds(record["start_date"]),
                     date_bounds(record["end_date"], True) + 1,
@@ -169,11 +177,22 @@ async def run(args):
                 if page.rows != expected:
                     raise DataError("Daily controls differ from captured native responses")
                 daily.append(next(r for r in page.rows if r.time == day))
-            report["proposals"].append(proposal(symbol, date, pages, daily, native[-1][1]))
+            proposed = proposal(symbol, date, pages, daily, native[-1][1])
+            proof = peer_proof_from_capture(
+                raws["vci"],
+                [r.record() for r in daily],
+                {f: [r.record() for r in pages[f].rows] for f in ("vndirect", "dnse")},
+                proposed["target_time"],
+                time.time_ns(),
+                witness_hashes,
+            )
+            proofs.append(proof)
+            report["proposals"].append(proposed)
         except DataError as exc:
             report["blocked"].append({"symbol": symbol, "date": date, "error": str(exc)})
     report["source_artifacts"] = list(artifacts.values())
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    (args.output / "proofs.json").write_text(json.dumps(proofs, indent=2) + "\n")
     print(json.dumps({"proposals": report["proposals"], "blocked": report["blocked"]}))
 
 
