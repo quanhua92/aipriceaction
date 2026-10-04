@@ -1,6 +1,7 @@
 import hashlib
 import json
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
@@ -75,8 +76,80 @@ def test_recent_and_satisfied_forward_limits_ignore_unneeded_missing_year(system
         0
     ].time == parse_time("2021-12-30")
     assert len(history.query("vn", "FPT", "1D", limit=1, ma=False)) == 1
+    recent = history.query("vn", "FPT", "1D", start=parse_time("2023-01-02"), limit=1, ma=True)
+    assert recent[0]["close"] == 100 and "ma10" not in recent[0]
+
+
+@pytest.mark.parametrize("ema", [False, True])
+def test_optional_warmup_stops_at_gap_without_losing_valid_candles_or_polluting_ma(system, ema):
+    repo, _, history = system
+    old = replace(bar("2021-12-31"), open=1000, high=1001, low=999, close=1000)
+    start = parse_time("2023-01-02")
+    recent = [
+        replace(
+            bar("2023-01-02"),
+            time=start + i * 86400,
+            open=i + 1,
+            high=i + 2,
+            low=i + 0.5,
+            close=i + 1,
+        )
+        for i in range(101)
+    ]
+    repo.put([old] + recent)
+    gap(repo)
+    result = history.query(
+        "vn", "FPT", "1D", start=recent[-1].time, end=recent[-1].time, limit=1, ema=ema
+    )
+    assert len(result) == 1 and result[0]["close"] == 101
+    row = result[0]
+    if ema:
+        expected = sum(range(1, 21)) / 20
+        for value in range(21, 102):
+            expected = value * 2 / 21 + expected * 19 / 21
+        assert row["ma20"] == pytest.approx(expected)
+    else:
+        assert row["ma20"] == pytest.approx(sum(range(82, 102)) / 20)
+        assert row["ma100"] == pytest.approx(sum(range(2, 102)) / 100)
+        assert "ma200" not in row and "ma200_score" not in row
+    assert repo.read("vn", "FPT", "1D")[0].close == 1000
+    assert len(repo.history_gaps("vn", "FPT", "1D")) == 1
     with pytest.raises(DataError, match="Historical data unavailable"):
-        history.query("vn", "FPT", "1D", start=parse_time("2023-01-02"), limit=1, ma=True)
+        history.query("vn", "FPT", "1D", start=old.time, end=recent[-1].time, ema=ema)
+
+
+def test_short_sma_is_not_a_shortened_period_average(system):
+    repo, _, history = system
+    repo.put([bar("2026-01-02"), bar("2026-01-03")])
+    row = history.query("vn", "FPT", "1D", limit=1)[0]
+    assert row["close"] == 100
+    assert not any(key.startswith("ma") for key in row)
+
+
+def test_warmup_does_not_swallow_request_resource_errors():
+    def invalid(_):
+        raise DataError("Historical request exceeds resource limit", 400)
+
+    with pytest.raises(DataError, match="resource limit"):
+        History.warmup(invalid, 200)
+
+
+@pytest.mark.parametrize("interval,period", [("1W", 200), ("2W", 100)])
+def test_aggregate_sma_uses_available_trading_bars_without_overreading_bad_year(
+    system, interval, period
+):
+    repo, _, history = system
+    origin = datetime(2021, 1, 4, tzinfo=UTC)
+    recent = []
+    for i in range(1450):
+        day = origin + timedelta(days=i)
+        if day.weekday() < 5:
+            recent.append(bar(day.strftime("%Y-%m-%d")))
+    repo.put([bar("2019-12-31")] + recent)
+    gap(repo, 2020)
+    row = history.query("vn", "FPT", interval, limit=1)[0]
+    assert row["close"] == 100 and row[f"ma{period}"] == pytest.approx(100)
+    assert len(repo.history_gaps()) == 1
 
 
 def test_unavailable_range_is_scoped_to_market_ticker_and_native_interval(system):

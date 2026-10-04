@@ -1,3 +1,4 @@
+import math
 import time
 
 from .calculations import aggregate, enhance
@@ -7,6 +8,28 @@ from .domain import DataError, base_interval, bucket, cutoff
 class History:
     def __init__(self, repo, archive, settings):
         self.repo, self.archive, self.settings = repo, archive, settings
+
+    @staticmethod
+    def warmup(load, limit):
+        """Use the longest verified recent context without crossing a bad older range."""
+        try:
+            return load(limit)
+        except DataError as exc:
+            if exc.status != 503:
+                raise
+        earlier = []
+        low, high = 0, limit - 1
+        while low < high:
+            count = (low + high + 1) // 2
+            try:
+                candidate = load(count)
+            except DataError as exc:
+                if exc.status != 503:
+                    raise
+                high = count - 1
+            else:
+                earlier, low = candidate, count
+        return earlier
 
     def read(
         self, source, symbol, iv, start=None, end=None, limit=None, forward=False, revision=None
@@ -166,7 +189,7 @@ class History:
             if native == "1m" and iv in ("1h", "4h")
             else {"5m": 5, "15m": 15, "30m": 30, "4h": 4, "1W": 7, "2W": 14, "1M": 31}[iv]
         )
-        count = min((limit + 1) * factor, self.settings.archive_max_rows)
+        count = min(limit + 1, self.settings.archive_max_rows)
         # Legacy dated aggregation clips native observations first. The first
         # output bucket can therefore start before the requested date.
         lower = start
@@ -212,7 +235,13 @@ class History:
                 return bars[-limit:]
             if count == self.settings.archive_max_rows:
                 raise DataError("Historical request exceeds resource limit", 400)
-            count = min(count * 2, self.settings.archive_max_rows)
+            # Grow from observed bucket density rather than assuming every
+            # calendar day trades. Unneeded older data must not block an SMA
+            # whose full period is already covered by valid recent candles.
+            count = min(
+                max(count + 1, math.ceil(count * (limit + 1) / len(selected)) + factor),
+                self.settings.archive_max_rows,
+            )
 
     def query(self, source, symbol, iv, start=None, end=None, limit=252, ma=True, ema=False):
         native = self.native_interval(source, symbol, iv)
@@ -223,27 +252,33 @@ class History:
             target = self.read(source, symbol, native, start, end, limit, forward=start is not None)
             if not target:
                 return []
-            earlier = self.read(
-                source,
-                symbol,
-                native,
-                end=target[0].time - 1,
-                limit=buffer,
-                revision=target[0].revision,
+            earlier = self.warmup(
+                lambda count: self.read(
+                    source,
+                    symbol,
+                    native,
+                    end=target[0].time - 1,
+                    limit=count,
+                    revision=target[0].revision,
+                ),
+                buffer,
             )
             rows = earlier + target
         else:
             target = self.aggregated(source, symbol, iv, start, end, limit, native=native)
             if not target:
                 return []
-            earlier = self.aggregated(
-                source,
-                symbol,
-                iv,
-                end=target[0].time - 1,
-                limit=buffer,
-                native=native,
-                revision=target[0].revision,
+            earlier = self.warmup(
+                lambda count: self.aggregated(
+                    source,
+                    symbol,
+                    iv,
+                    end=target[0].time - 1,
+                    limit=count,
+                    native=native,
+                    revision=target[0].revision,
+                ),
+                buffer,
             )
             rows = earlier + target
         if len({r.revision for r in rows}) > 1:

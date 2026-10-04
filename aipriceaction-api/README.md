@@ -629,6 +629,21 @@ Archive files are partitioned yearly for daily data and monthly for intraday
 data. Exact object keys, bounds, checksums, providers, and revisions are indexed
 in SQLite. Immutable manifests allow archive-index recovery.
 
+OHLCV availability takes priority over optional indicator warmup. Requested
+candles still require valid coverage and one verified adjustment basis. If older
+indicator context is unavailable, the reader uses the longest verified recent
+context it can read without crossing the bad range or mixing revisions. SMA
+values require the complete named period; unavailable longer SMAs are omitted.
+EMA retains the existing SMA-seeded formula with available history, so limited
+warmup gives an approximation rather than a lifetime-history guarantee. Existing
+JSON/CSV response shapes and raw-history quality markers are preserved.
+
+SJC is dated Vietnamese gold bid/ask quote data, not traded OHLCV. Its compatible
+representation uses sell/buy for high/low, their midpoint for close and the
+previous midpoint for open. Volume is a placeholder and must not be interpreted
+as trading activity. Quote validation permits the prior midpoint outside today's
+spread; it does not infer missing quotes or intraday trades.
+
 Use bounded JSON exports from `https://api.aipriceaction.com/tickers` as the
 primary legacy candle migration source. PostgreSQL access is not required for
 candles exposed by that endpoint, including history absent from the old CSV
@@ -646,13 +661,15 @@ positive capture versions and a revision distinct from the active series.
 Explicit historical requests ending outside retention can select that snapshot
 when no local candles fall in the requested range. Indicator context and partial
 aggregation buckets stay on the selected revision. Live, open-ended and queries
-crossing local coverage continue using the primary history. Insufficient context
-that would require another primary basis still raises the existing guard.
+crossing local coverage continue using the primary history. Optional context
+that would require another basis is shortened; requested candles that cross
+incompatible bases still raise the existing guard.
 Snapshots preserve primary records/objects and are verified during restoration.
 An overlapping pending primary archive does not prevent reading a complete
 frozen snapshot when its verified relevant timestamps are all represented.
-Missing primary timestamps, unverifiable archive data and incompatible older
-context still block the read. Primary repair status is preserved.
+Missing primary timestamps, unverifiable archive data and incompatible bases
+inside requested candle coverage still block the read. Primary repair status
+is preserved even when optional indicator context is shortened.
 
 Use `import-history` for an already captured, single-symbol `/tickers` JSON
 response (or `--format csv` for a CSV export). Supply its actual UTC capture time

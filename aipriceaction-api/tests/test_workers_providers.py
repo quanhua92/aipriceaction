@@ -969,8 +969,12 @@ def test_indicator_warmup_cannot_cross_revisions(system):
     with repo.connect() as con:
         con.execute("UPDATE series SET revision='adjusted'")
     repo.put([candle(2, 90, revision="adjusted")])
+    history = History(repo, archive, settings)
+    rows = history.query("vn", "FPT", "1D", limit=1)
+    assert rows[0]["close"] == 90
+    assert "ma10" not in rows[0] and "close_changed" not in rows[0]
     with pytest.raises(DataError, match="adjustment revisions"):
-        History(repo, archive, settings).query("vn", "FPT", "1D", limit=1)
+        history.read("vn", "FPT", "1D")
 
 
 @pytest.mark.parametrize("ratio", [0.8, 1.2])

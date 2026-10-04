@@ -6,6 +6,37 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Flexible indicator context — 2026-10-04 ICT
+
+The user revised acceptance to prioritize OHLCV, exact full-period SMA and
+useful finite-history EMA over reproducing all legacy indicator context.
+Requested candles still undergo strict coverage and revision checks. Optional
+older context failures shorten warmup to the longest verified recent prefix;
+resource-limit and other errors still propagate. Short SMA periods are omitted
+rather than presented as full-period averages. EMA retains the inherited
+available-history SMA seed and remains an approximation to longer-history EMA.
+Aggregate warmup grows using observed bucket density, avoiding calendar-day
+assumptions that unnecessarily reach damaged older years.
+
+Six new regressions cover optional gaps, exact/short SMA, finite EMA, resource
+limits and full weekly/fortnightly SMA periods. All 588 tests pass, with lint,
+format and offline wheel/source builds passing. The final isolated populated
+matrix passes all 2,103 requests across 71 tickers and ten intervals, resolving
+the ten previous optional-context HTTP 503 responses. Every target OHLCV
+projection equals its previous raw control (701 distinct controls). Sixty-nine
+previously successful complete payloads change indicator/context-derived fields;
+this is not a claim of legacy indicator numerical parity. Snapshot metadata and
+all local VN daily versions remain unchanged within the recorded audit scope.
+Evidence: `data/recent-universe-audit-20261004/flexible-final.json`, captured
+response bodies, and `flexible-policy-comparison.json`.
+
+SJC's existing mapping uses sell as high, buy as low, their midpoint as close,
+the previous midpoint as open and volume 1 as a compatibility placeholder.
+README now explains that these are physical-gold quotes, not traded candles or
+observed volume. No SJC provider behavior changes. Actual requested historical
+gaps, invalid candles, provider transitions and production cutover remain open;
+the earlier context-blocker narratives below describe the prior strict policy.
+
 ## Full VND provider-transition attempt — 2026-10-04 ICT
 
 After the recent-window comparison, bounded pinned-provider pagination attempts
@@ -30,7 +61,8 @@ readback under `archive-v2/evidence/vnd-full-daily-candidates/`; the local
 `evidence-receipt.json` records their keys. Partial pages are failed candidates,
 not complete coverage. Canonical candles, provider revisions and historical
 guards stay intact. Valid 2020 data alone is insufficient to complete a coherent
-full-history transition and resolve the current VND indicator failures.
+full-history transition. Optional recent indicator warmup now follows the
+revised policy above; actual historical source defects remain unresolved.
 
 ## Daily repair provider continuity — 2026-10-04 ICT
 

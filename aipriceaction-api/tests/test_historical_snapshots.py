@@ -155,12 +155,15 @@ def test_frozen_snapshot_preserves_pending_guard_when_archive_cannot_be_verified
         history.read("vn", "FPT", "1D", end=cold[-1].time, limit=10000)
 
 
-def test_frozen_snapshot_does_not_hide_a_short_incompatible_native_warmup(system):
+def test_incompatible_older_warmup_does_not_block_or_pollute_native_candles(system):
     repo, archive, history, cold, _, _, _ = setup(system, count=20)
     archive.publish(rows(1, start=-1, revision="older-basis"))
     original = repo.read("vn", "FPT", "1D")
+    result = history.query("vn", "FPT", "1D", limit=1, ema=True)
+    assert result[0]["close"] == 100
+    assert result[0]["ma200"] == pytest.approx(100)
     with pytest.raises(DataError, match="Incompatible adjustment revisions"):
-        history.query("vn", "FPT", "1D", limit=1, ema=True)
+        history.read("vn", "FPT", "1D")
     assert repo.read("vn", "FPT", "1D") == original
 
 

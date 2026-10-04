@@ -49,8 +49,6 @@ def moving_average(values, period, ema=False):
                 running -= values[i - period]
             if i >= period - 1:
                 result[i] = running / period
-            elif len(values) < period:
-                result[i] = running / (i + 1)
     return result
 
 
