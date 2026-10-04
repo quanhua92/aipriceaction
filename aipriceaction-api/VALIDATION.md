@@ -3,6 +3,74 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Automated universe minute/daily coherence — 2026-10-04 ICT
+
+The `--all-series` mode of `scripts.review_vn_historical_price_basis` compares
+all 59 saved series, including incomplete VCI captures, in one read-only SQLite
+transaction. Every minute capture replays through the unchanged native parser
+with the exact bound 78-proof candidate catalog. Saved daily observations retain
+their source identities and original errors; this check does not replay native
+daily parsers or replace their prior full/valid-subset audits. Current candles
+include revision-aware volume receipts, so VCB's activated snapshot is compared
+against the same immutable year-window source used for the earlier diagnosis.
+
+All 59 reviews complete, replaying 2,699,606 accepted native minutes. Fifty-one
+source traversals pass and eight retain their cumulative-volume refusals:
+VNINDEX, VN30, CEO, TCH, IDC, SHS, HPG and VGI. Partial source observations remain
+partial even when canonical SQLite has all 247 observed daily dates. Date presence
+and agreement between saved feeds do not prove exchange-calendar completeness
+or every individual candle's market accuracy.
+
+VCB now matches all 55,556 captured retained-year OHLC observations exactly, with
+two saved native daily price controls within one VND and two exact daily-volume
+controls on every one of its 247 observed dates. Full OHLCV identity across the
+longer 60,747-candle activated series is verified separately below. Across the
+whole saved universe, minute price classifications are 2,658,068 exact matches,
+41,497 uniform differences, all on MWG, and 41 nonuniform differences across
+19 symbols. Those remaining observations require investigation; neither VCI nor
+legacy is selected as an oracle. The pre-activation 81,274-price-difference total
+in earlier sections is historical, not the current checkpoint.
+
+MWG's current minute prices meet two saved native daily-price controls on 62 of
+247 observed dates; captured VCI prices meet them on all 247. Both minute histories
+have two exact native daily-volume controls on 246 dates. November 10 remains
+unresolved: minute volume is 7,273,600, VNDirect/DNSE daily volumes are 7,274,200,
+and VPS daily volume is 7,283,809. The separately recorded September 16 residual
+is outside this year-window audit and remains open. No minute is invented or
+changed to absorb either shortage.
+
+Twenty-two current series meet both daily-control counts on all 247 dates under
+the stated thresholds. Other shortages include seven symbols with retained
+full-response daily errors, source basis disagreements and exact-volume
+representation differences. The exact-count diagnostic does not apply declared
+rounded or field-only witness allowances and does not revoke existing handoffs.
+Equal daily totals still cannot establish minute-by-minute volume allocation.
+The report retains at most 20 examples per category while counting every date;
+compact diagnostics are explicitly refused as replacement-extension inputs.
+
+The full suite passes 1,046 tests in 62.61 seconds, with one existing
+Starlette/httpx deprecation warning. Lint/format checks pass. Tests cover automatic
+whole-review selection, exact proof binding, all-date counts with bounded samples,
+missing sources, exclusion of legacy from native witness counts, unchanged
+canonical SQLite and refusal of compact reports by the extension workflow.
+Implementation is committed as `ef4aa47`.
+
+Only the 2,593,363-byte report remains under
+`data/vn-minute-daily-universe-coherence-20261004`, below its 8 MiB cap. No provider
+requests, S3 writes, database copies or proof-catalog changes occur. Local data
+measures 7,623,232 KiB afterward versus 7,620,676 KiB before; RustFS data remains
+2,701,576 KiB, with logs measured separately at 158,076 KiB. Existing operational
+rollback and source evidence remain intact.
+
+A separate bounded inspection of the official DNSE historical-trade documentation
+finds `GET /price/{symbol}/trades`, board/time/limit query parameters, and required
+`X-API-Key`, `X-Aux-Date` and `X-Signature` headers. Public access for MWG recovery
+is not established; no trade request is sent. The official schema and its SHA256
+receipt occupy 14,732 bytes under a 32 KiB cap at
+`data/dnse-historical-trade-interface-review-20261004`. Source:
+[DNSE historical trade documentation](https://developers.dnse.com.vn/docs/dnse/get-history-trades/).
+This does not establish auction/venue semantics or attribute either MWG residual.
+
 ## VCB activation, live HTTP and full-index restoration — 2026-10-04 ICT
 
 The verified VCB capture is now canonical locally, using revision

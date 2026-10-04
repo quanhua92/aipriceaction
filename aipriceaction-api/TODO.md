@@ -253,8 +253,24 @@ history through `eb814ab`; they are not additional current open tasks.
   Exclude legacy from native witness counts; keep original source errors and
   incomplete capture status. Reject compact diagnostics as replacement-extension
   inputs. Pass the 1,046-test full suite without database copies or new feeds.
-- [ ] Complete the current all-59 coherence review and classify the resulting
-  repair candidates using full source evidence before any publication.
+- [x] Complete all 59 minute/daily coherence reviews from immutable source
+  captures, in one read-only SQLite snapshot without provider requests or database
+  copies. Replay 2,699,606 accepted native minutes; retain eight source refusals.
+  VCB's 55,556 retained-year observations now match exactly. Remaining price
+  classifications include 41,497 uniform differences (MWG) and 41 nonuniform
+  differences across 19 symbols. Twenty-two current series have two saved native
+  daily price/volume witnesses on all 247 observed dates under the stated exact
+  thresholds; this does not prove each minute allocation or market completeness.
+  Retain a 2,593,363-byte report under the 8 MiB cap. RustFS data remains
+  2,701,576 KiB; local data measures 7,623,232 KiB, with no test databases.
+- [x] Check DNSE's official historical-trade interface for a possible MWG repair
+  source. Preserve 14,732 bytes of public schema/report evidence under a 32 KiB
+  cap. The documented route requires API key/date/signature headers; no signed
+  trade request or canonical change occurs. No public recovery route is verified.
+- [ ] Follow up native daily-source errors, representation differences and the
+  remaining minute exceptions using complete evidence before any publication.
+  Reuse diagnostic valid subsets where a full native page was rejected; distinguish
+  unavailable witnesses from actual canonical-data disagreement.
 - [ ] Resolve the remaining MWG historical price basis and other source disagreements. Investigate
   the pre-VCB-activation 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals
