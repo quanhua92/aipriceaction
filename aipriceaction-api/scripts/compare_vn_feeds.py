@@ -82,6 +82,54 @@ def compare(feeds):
     }
 
 
+async def paged_window(providers, symbol, interval, start, before, feed, count, max_pages):
+    """Collect bounded pages; empty/short responses never prove full coverage."""
+    rows, pages, cursor = {}, [], before
+    for _ in range(max_pages):
+        try:
+            page = await providers.page(
+                "vn", symbol, interval, cursor, count=count, start=start, provider=feed
+            )
+        except DataError as exc:
+            return list(rows.values()), {
+                "pages": pages,
+                "stop": "provider_error",
+                "error": str(exc),
+                "reached_requested_start": False,
+            }
+        for row in page.rows:
+            value = asdict(row)
+            if not start <= row.time < cursor:
+                raise ValueError("Page outside requested cursor window")
+            if row.time in rows and not same(rows[row.time], value):
+                raise ValueError("Conflicting overlapping page candles")
+            rows[row.time] = value
+        next_cursor = page.cursor
+        if next_cursor is None and page.rows:
+            next_cursor = min(r.time for r in page.rows)
+        pages.append({"before": cursor, "rows": len(page.rows), "cursor": next_cursor})
+        if next_cursor is not None and next_cursor >= cursor:
+            raise ValueError("Provider cursor did not move backwards")
+        if next_cursor is not None and next_cursor <= start:
+            return list(rows.values()), {
+                "pages": pages,
+                "stop": "requested_boundary",
+                "reached_requested_start": True,
+            }
+        if not page.rows:
+            return list(rows.values()), {
+                "pages": pages,
+                "stop": "provider_empty_before_boundary",
+                "reached_requested_start": False,
+            }
+        cursor = next_cursor
+    return list(rows.values()), {
+        "pages": pages,
+        "stop": "page_budget",
+        "reached_requested_start": False,
+    }
+
+
 async def run(args):
     native = getattr(args, "native_providers", False)
     selected_feeds = NATIVE_FEEDS if native else FEEDS
@@ -92,24 +140,62 @@ async def run(args):
         allow_direct=True,
         vci_history_fallback=native or base.vci_history_fallback,
     )
+    proofs = getattr(args, "vci_volume_proofs", None)
+    if proofs is not None:
+        settings = replace(settings, vci_history_fallback=True, vci_volume_proofs=proofs)
     entries = json.loads(settings.watchlist.read_text())["vn"]
     symbols = args.symbol or [e if isinstance(e, str) else e["symbol"] for e in entries]
     if len(set(symbols)) != len(symbols):
         raise ValueError("Duplicate symbols")
     intervals = args.interval or ["1D", "1h", "1m"]
-    args.output.mkdir(parents=True, exist_ok=False)
+    resume = getattr(args, "resume", False)
+    paginate = getattr(args, "paginate", False)
+    if paginate and not native:
+        raise ValueError("Pagination requires --native-providers")
+    max_pages = getattr(args, "max_pages", 100)
+    if not 1 <= max_pages <= 1000:
+        raise ValueError("Use a page budget between 1 and 1000")
+    request = {
+        "symbols": symbols,
+        "intervals": intervals,
+        "feeds": selected_feeds,
+        "daily_start": args.daily_start,
+        "intraday_start": args.intraday_start,
+        "end_date": args.end_date,
+        "paginate": paginate,
+        "max_pages": max_pages,
+        "volume_proofs_sha256": (
+            hashlib.sha256(settings.vci_volume_proofs.read_bytes()).hexdigest()
+            if settings.vci_volume_proofs
+            else None
+        ),
+    }
+    args.output.mkdir(parents=True, exist_ok=resume)
+    request_path = args.output / "request.json"
+    if resume:
+        if json.loads(request_path.read_text()) != json.loads(json.dumps(request)):
+            raise ValueError(
+                "Resume must preserve the original comparison request and proof identity"
+            )
+    else:
+        request_path.write_text(json.dumps(request, indent=2) + "\n")
     results = {(symbol, iv): {} for symbol in symbols for iv in intervals}
     completed = 0
 
     async def collect(feed):
         nonlocal completed
         root = args.output / feed
-        root.mkdir()
+        root.mkdir(exist_ok=resume)
         transport = RecordingTransport(root) if feed != "legacy" else None
         providers = Providers(settings, transport=transport) if transport else None
         try:
             async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
                 for symbol, iv in results:
+                    path = root / f"{symbol}-{iv}.json"
+                    if resume and path.exists():
+                        results[symbol, iv][feed] = json.loads(path.read_text())
+                        completed += 1
+                        continue
                     start_date = args.daily_start if iv == "1D" else args.intraday_start
                     start = date_bounds(start_date)
                     before = date_bounds(args.end_date, end=True) + 1
@@ -128,12 +214,26 @@ async def run(args):
                                 if iv == "1D"
                                 else {"1h": 100, "1m": 1000}[iv]
                             )
-                            page = await providers.page(
-                                "vn", symbol, iv, before, count=count, start=start, provider=feed
-                            )
-                            if len(page.rows) >= count:
-                                raise ValueError("Window may be truncated at page cap")
-                            rows = [asdict(r) for r in page.rows]
+                            if paginate:
+                                rows, window = await paged_window(
+                                    providers, symbol, iv, start, before, feed, 10000, max_pages
+                                )
+                                record["window"] = window
+                                if window.get("error"):
+                                    record["error"] = window["error"]
+                            else:
+                                page = await providers.page(
+                                    "vn",
+                                    symbol,
+                                    iv,
+                                    before,
+                                    count=count,
+                                    start=start,
+                                    provider=feed,
+                                )
+                                if len(page.rows) >= count:
+                                    raise ValueError("Window may be truncated at page cap")
+                                rows = [asdict(r) for r in page.rows]
                         else:
                             params = dict(
                                 symbol=symbol,
@@ -186,8 +286,9 @@ async def run(args):
                         )
                     if transport:
                         record["captures"] = transport.captures[first_capture:]
-                    path = root / f"{symbol}-{iv}.json"
-                    path.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+                    checkpoint = path.with_suffix(".json.tmp")
+                    checkpoint.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
+                    checkpoint.replace(path)
                     results[symbol, iv][feed] = record
                     completed += 1
                     if completed % 20 == 0:
@@ -220,6 +321,13 @@ async def run(args):
         "symbols": symbols,
         "intervals": intervals,
         "requests": completed,
+        "paginated": paginate,
+        "provider_window_stops": [
+            {"symbol": symbol, "interval": iv, "feed": feed, **record["window"]}
+            for (symbol, iv), records in results.items()
+            for feed, record in records.items()
+            if "window" in record
+        ],
         "daily_start": args.daily_start,
         "intraday_start": args.intraday_start,
         "end_date": args.end_date,
@@ -232,7 +340,8 @@ async def run(args):
             "No feed is authoritative; agreement does not prove accuracy.",
             "Legacy may share an upstream with a native feed; four feeds are not four independent witnesses.",
             "Coverage uses observed timestamp unions, not an independent exchange calendar.",
-            "Single bounded pages; no claim of full retained-history validation.",
+            "Requested-boundary completion records cursor progress only; missing sessions and provider gaps require separate verification.",
+            "Completed failures are preserved on resume; retrying them requires a new evidence run.",
             "Prices ignore only floating representation noise; volume comparison is exact.",
         ],
     }
@@ -260,4 +369,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Compare VPS/VNDirect/DNSE/VCI directly instead of using legacy as the fourth feed",
     )
+    parser.add_argument("--paginate", action="store_true")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Continue missing feed/symbol records; preserve completed failures",
+    )
+    parser.add_argument("--max-pages", type=int, default=100)
+    parser.add_argument("--vci-volume-proofs", type=Path)
     asyncio.run(run(parser.parse_args()))

@@ -91,6 +91,9 @@ def local_comparisons(settings, root, comparison):
 
 def exceptions(comparison, local):
     issues = []
+    for window in comparison.get("provider_window_stops", []):
+        if not window["reached_requested_start"]:
+            issues.append({**window, "kind": "provider_window_incomplete"})
     for error in comparison["errors"]:
         issues.append({**error, "kind": "provider_error"})
     for row in comparison["comparisons"]:
@@ -162,6 +165,9 @@ async def run(args):
             intraday_start=args.intraday_start,
             end_date=args.end_date,
             native_providers=mode == "native",
+            paginate=getattr(args, "paginate", False),
+            max_pages=getattr(args, "max_pages", 100),
+            vci_volume_proofs=getattr(args, "vci_volume_proofs", None),
         )
     )
     diagnostic = None
@@ -233,6 +239,9 @@ if __name__ == "__main__":
     parser.add_argument("--daily-start", required=True)
     parser.add_argument("--intraday-start", required=True)
     parser.add_argument("--end-date", required=True)
+    parser.add_argument("--paginate", action="store_true")
+    parser.add_argument("--max-pages", type=int, default=100)
+    parser.add_argument("--vci-volume-proofs", type=Path)
     parser.add_argument(
         "--comparison-mode",
         choices=("native", "legacy"),

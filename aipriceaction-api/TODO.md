@@ -38,6 +38,22 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Add bounded native-feed pagination and atomic resumable feed-window
+  checkpoints, bound to requested symbols/dates and the effective volume-proof
+  catalog hash. Preserve completed errors on resume. Report empty/error/page-budget
+  stops as incomplete history even when overlapping observations agree.
+  Pass 19 focused tests and run October 4, 2025–October 2, 2026 minute controls
+  for FPT/MWG/VNINDEX. VCI reaches the requested boundary for FPT; VNDirect
+  reaches it for all three, which proves cursor progress rather than complete
+  market coverage. Eight windows remain incomplete and five provider errors
+  expose DNSE parsing/OHLC failures and unverified MWG/VNINDEX VCI volumes.
+  Retain `data/paginated-minute-year-controls-20261004/` captures, comparisons
+  and SQLite exception reports (about 82 MB); no database copies or publication.
+  Resume repeats no provider calls; RustFS data remains 2.584 GB.
+- [ ] Expand resumable full-year minute comparison across selected symbols with
+  an explicit artifact budget. Diagnose missing/bad source rows automatically;
+  preserve strict ingestion and require evidence before licensing corrections.
+
 - [x] Automatically replay captured daily failures through the unchanged parser,
   preserving rejected dates while comparing their valid subsets. All ten failed
   retained daily responses replayed offline: incomplete four-feed observations
