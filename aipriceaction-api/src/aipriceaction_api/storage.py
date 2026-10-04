@@ -259,7 +259,14 @@ class Repository:
                 raise DataError("Invalid Yahoo hourly request policy")
             valid = (
                 (
-                    (record["source"] == "vn" and record["provider"] in {"vps", "vndirect", "dnse"})
+                    (
+                        record["source"] == "vn"
+                        and (
+                            record["provider"] in {"vps", "vndirect", "dnse"}
+                            or record["provider"] == "vci"
+                            and record["interval"] == "1m"
+                        )
+                    )
                     or (
                         record["source"] == "yahoo"
                         and record["provider"] == "yahoo"

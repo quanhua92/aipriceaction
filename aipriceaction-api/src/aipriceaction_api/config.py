@@ -51,6 +51,7 @@ class Settings:
         "http://localhost:5173",
     )
     vn_providers: tuple[str, ...] = ("vps", "vndirect", "dnse")
+    vci_history_fallback: bool = False
     proxies: tuple[str, ...] = ()
     allow_direct: bool = False
     worker_concurrency: int = 3
@@ -99,6 +100,7 @@ class Settings:
             "refresh_secret": "REFRESH_SECRET",
             "cors_origins": "CORS_ORIGINS",
             "vn_providers": "VN_PROVIDERS",
+            "vci_history_fallback": "VCI_HISTORY_FALLBACK",
             "proxies": "HTTP_PROXIES",
             "allow_direct": "ALLOW_DIRECT",
             "worker_concurrency": "WORKER_CONCURRENCY",

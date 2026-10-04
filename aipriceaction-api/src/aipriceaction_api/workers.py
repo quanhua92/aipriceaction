@@ -7,7 +7,7 @@ import uuid
 from dataclasses import replace
 
 from .domain import DataError, completed_vn_sessions, cutoff
-from .providers import Providers, adjustment_changes
+from .providers import Providers, adjustment_changes, vn_provider_order
 from .quality import audit as audit  # Re-export for the existing operational CLI.
 
 log = logging.getLogger(__name__)
@@ -142,6 +142,7 @@ class Worker:
             if (
                 job["kind"] == "bootstrap"
                 and self.repo.state(job["source"], job["symbol"], job["interval"]) is None
+                and page.provider != "vci"
             ):
                 # Publish the first validated recent page promptly, without
                 # claiming that the requested history floor has been reached.
@@ -180,7 +181,7 @@ class Worker:
                 and job["provider"]
                 and job["attempts"] >= 2
             ):
-                for alternate in self.settings.vn_providers:
+                for alternate in vn_provider_order(self.settings, job["interval"], before):
                     if alternate == job["provider"]:
                         continue
                     try:
@@ -264,6 +265,19 @@ class Worker:
         )
 
     def finish_recent_job(self, job):
+        if job["provider"] == "vci":
+            state = self.repo.state(job["source"], job["symbol"], job["interval"])
+            if not state or state["provider"] != "vci" or not self.repo.snapshot_adoption(state):
+                reason = "VCI candidate remains staged until a verified per-series handoff licenses publication"
+                self.repo.finding(
+                    job["source"],
+                    job["symbol"],
+                    job["interval"],
+                    "vci_verification_pending",
+                    reason,
+                )
+                self.repo.fail_job(job, reason)
+                return 0
         # Cursor progress proves only the requested bound. A VN hourly bootstrap
         # also needs every completed daily date observed for this same ticker.
         # Missing dates remain reviewable; never invent candles or switch bases.
@@ -330,6 +344,11 @@ class Worker:
                 reason = f"Imported {label} snapshot requires verified provider handoff"
                 self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
                 self.repo.finding(source, symbol, iv, "provider_handoff_pending", reason)
+                return 0
+            if state["provider"] == "vci" and not self.repo.snapshot_adoption(state):
+                reason = "VCI minute source requires verified per-series handoff"
+                self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
+                self.repo.finding(source, symbol, iv, "vci_verification_pending", reason)
                 return 0
             latest = self.repo.read(source, symbol, iv, limit=50)
             hourly_range = self.repo.snapshot_hourly_range(state)

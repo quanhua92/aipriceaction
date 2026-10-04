@@ -223,6 +223,8 @@ async def adopt_snapshot(
         if source == "yahoo"
         else ()
     )
+    if source == "vn" and iv == "1m" and getattr(providers.settings, "vci_history_fallback", False):
+        allowed = (*allowed, "vci")
     if provider not in allowed:
         raise DataError("Adoption requires a configured provider for its market source", 400)
     if source != "vn" and (complete_sessions or corroborate is not None):

@@ -36,6 +36,16 @@ class RateLimiter:
             self.next = time.monotonic() + self.delay
 
 
+def vn_provider_order(settings, iv, before):
+    selected = list(settings.vn_providers)
+    if iv == "1h" and "dnse" in selected:
+        selected.remove("dnse")
+        selected.insert(0, "dnse")
+    if settings.vci_history_fallback and iv == "1m" and before < time.time() - 7 * 86400:
+        selected.append("vci")
+    return selected
+
+
 class Providers:
     VN = {
         "vps": ("https://histdatafeed.vps.com.vn/tradingview/history", "https://www.vps.com.vn/"),
@@ -67,7 +77,11 @@ class Providers:
             raise DataError("VN requests require HTTP_PROXIES or explicit ALLOW_DIRECT=true")
         return routes
 
-    async def request(self, provider, url, params=None, referer=None, data=None, vn=False):
+    async def request(
+        self, provider, url, params=None, referer=None, data=None, vn=False, json_body=None
+    ):
+        if data is not None and json_body is not None:
+            raise DataError("Cannot combine form and JSON request bodies", 400)
         last = None
         routes = self.routes(vn)
         for attempt in range(3):
@@ -91,10 +105,11 @@ class Providers:
             try:
                 client = self.clients[client_key]
                 response = await client.request(
-                    "POST" if data is not None else "GET",
+                    "POST" if data is not None or json_body is not None else "GET",
                     url,
                     params=params,
                     data=data,
+                    json=json_body,
                     headers={"Referer": referer} if referer else None,
                 )
                 response.raise_for_status()
@@ -179,6 +194,8 @@ class Providers:
         return Page(result, provider, not result, cursor)
 
     async def vn_page(self, provider, symbol, iv, before, count, start=None):
+        if provider == "vci":
+            return await self.vci_minute_page(symbol, iv, before, count, start)
         if provider not in self.VN:
             raise DataError("Unsupported VN provider")
         url, referer = self.VN[provider]
@@ -286,6 +303,70 @@ class Providers:
             # to UTC silently moves its market date backward. Preserve published
             # candles rather than inventing a conversion for an unknown basis.
             raise DataError(f"{provider} uses unverified VN daily timestamps")
+        return page
+
+    async def vci_minute_page(self, symbol, iv, before, count, start=None):
+        if not self.settings.vci_history_fallback or iv != "1m":
+            raise DataError("VCI requires explicit historical-minute fallback enablement", 400)
+        if not 1 <= count <= 10000:
+            raise DataError("VCI minute page count must be between 1 and 10000", 400)
+        payload = await self.request(
+            "vci",
+            "https://trading.vietcap.com.vn/api/chart/OHLCChart/gap-chart",
+            referer="https://trading.vietcap.com.vn/",
+            json_body={
+                "timeFrame": "ONE_MINUTE",
+                "symbols": [symbol],
+                "to": before - 1,
+                "countBack": count,
+            },
+            vn=True,
+        )
+        payload = payload.get("data") if isinstance(payload, dict) else payload
+        if payload == []:
+            return Page([], "vci", True)
+        if not isinstance(payload, list) or len(payload) != 1 or not isinstance(payload[0], dict):
+            raise DataError("VCI invalid minute response envelope")
+        body = payload[0]
+        if body.get("symbol") != symbol:
+            raise DataError("VCI minute response has wrong symbol")
+        arrays = [body.get(key) for key in ("t", "o", "h", "l", "c", "v")]
+        if any(not isinstance(a, list) for a in arrays) or len({len(a) for a in arrays}) != 1:
+            raise DataError("VCI invalid minute OHLCV arrays")
+        if not arrays[0]:
+            return Page([], "vci", True)
+        try:
+            stamps = [int(t) for t in arrays[0]]
+            if any(isinstance(t, bool) or isinstance(t, float) and t != int(t) for t in arrays[0]):
+                raise ValueError("Fractional timestamp")
+            selected = set(sorted({t for t in stamps if t < before})[-count:])
+            rows = []
+            for t, o, h, low, c, v in zip(stamps, *arrays[1:], strict=True):
+                if t not in selected or start is not None and t < start:
+                    continue
+                volume = float(v)
+                if isinstance(v, bool) or not volume.is_integer():
+                    raise ValueError("Invalid volume")
+                # Captured VCI quotes are already in VND, not thousands of VND.
+                # Keep exact minute labels; validation rejects unknown conventions.
+                rows.append(
+                    Candle(
+                        "vn",
+                        symbol,
+                        "1m",
+                        t,
+                        float(o),
+                        float(h),
+                        float(low),
+                        float(c),
+                        int(volume),
+                        "vci",
+                    )
+                )
+        except (ValueError, TypeError, OverflowError) as exc:
+            raise DataError("VCI invalid minute numeric values") from exc
+        page = self.normalize(rows, before, count, "vci")
+        page.cursor = min(selected) if selected else None
         return page
 
     async def crypto_page(self, symbol, iv, before, count):
@@ -454,10 +535,7 @@ class Providers:
         before = before or int(time.time()) + 1
         if source == "vn":
             errors = []
-            selected_providers = list(self.settings.vn_providers)
-            if iv == "1h" and "dnse" in selected_providers:
-                selected_providers.remove("dnse")
-                selected_providers.insert(0, "dnse")
+            selected_providers = vn_provider_order(self.settings, iv, before)
             for selected in (provider,) if provider else selected_providers:
                 try:
                     page = await self.vn_page(selected, symbol, iv, before, count, start)

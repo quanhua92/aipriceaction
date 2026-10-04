@@ -32,6 +32,11 @@ def parser():
     p.add_argument(
         "--allow-direct", action="store_true", help="Explicitly allow direct VN provider requests"
     )
+    p.add_argument(
+        "--vci-history-fallback",
+        action="store_true",
+        help="Enable VCI as a last-resort older-minute source; verified publication is still required",
+    )
     commands = p.add_subparsers(dest="command", required=True)
     init = commands.add_parser(
         "init", help="Initialize SQLite metadata; optionally initialize archive bucket"
@@ -64,7 +69,7 @@ def parser():
     probe = commands.add_parser("probe", help="Read one upstream page without modifying candles")
     probe.add_argument("symbol")
     probe.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"), default="vn")
-    probe.add_argument("--provider", choices=("vps", "vndirect", "dnse"))
+    probe.add_argument("--provider", choices=("vps", "vndirect", "dnse", "vci"))
     probe.add_argument("--interval", default="1D")
     probe.add_argument("--before")
     probe.add_argument("--count", type=int, default=20)
@@ -173,7 +178,9 @@ def parser():
     adopt.add_argument("--symbol", required=True)
     adopt.add_argument("--source", choices=("vn", "yahoo"), default="vn")
     adopt.add_argument("--interval", choices=("1m", "1h", "1D"), default="1m")
-    adopt.add_argument("--provider", choices=("vps", "vndirect", "dnse", "yahoo"), required=True)
+    adopt.add_argument(
+        "--provider", choices=("vps", "vndirect", "dnse", "vci", "yahoo"), required=True
+    )
     adopt.add_argument(
         "--yahoo-hourly-range",
         choices=("5d",),
@@ -712,6 +719,8 @@ def main(argv=None):
             overrides["archive_backend"] = args.archive_backend
         if args.allow_direct:
             overrides["allow_direct"] = True
+        if args.vci_history_fallback:
+            overrides["vci_history_fallback"] = True
         asyncio.run(
             execute_with_shutdown(args, replace(settings, **overrides), restore_signal=False)
         )
