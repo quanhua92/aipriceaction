@@ -1170,16 +1170,21 @@ class Repository:
                 # depth or host-parameter limit. A connection-local table keeps
                 # eligibility bounded and does not publish scheduler state.
                 con.execute(
-                    "CREATE TEMP TABLE allowed_jobs(source TEXT,symbol TEXT,interval TEXT,PRIMARY KEY(source,symbol,interval)) WITHOUT ROWID"
+                    "CREATE TEMP TABLE allowed_jobs(source TEXT,symbol TEXT,interval TEXT,priority INTEGER NOT NULL,PRIMARY KEY(source,symbol,interval)) WITHOUT ROWID"
                 )
+                ordered = list(dict.fromkeys(allowed))
                 con.executemany(
-                    "INSERT OR IGNORE INTO allowed_jobs VALUES (?,?,?)", sorted(set(allowed))
+                    "INSERT INTO allowed_jobs VALUES (?,?,?,?)",
+                    [(*identity, priority) for priority, identity in enumerate(ordered)],
                 )
                 extra = " AND EXISTS (SELECT 1 FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval)"
+                order = " ORDER BY (SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
+            else:
+                order = " ORDER BY updated_at,created_at LIMIT 1"
             row = con.execute(
                 "SELECT * FROM jobs WHERE status IN ('pending','running') AND kind NOT LIKE 'archive_repair%' AND retry_at<=? AND lease_until<=?"
                 + extra
-                + " ORDER BY updated_at,created_at LIMIT 1",
+                + order,
                 (now, now),
             ).fetchone()
             if not row:

@@ -85,6 +85,16 @@ async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_pa
     assert vcb["history_start"] == "2020-01-01"
     assert vcb["intervals"] == ["1D", "1h", "1m"]
     assert aapl["intervals"] == ["1D", "1m"]
+    assert [row["symbol"] for row in entries if row["source"] == "vn"] == [
+        "VCB",
+        "TCB",
+        "VNINDEX",
+    ]
+    assert [row["symbol"] for row in entries if row["source"] == "yahoo"] == [
+        "AAPL",
+        "GC=F",
+        "MSFT",
+    ]
     assert all(row["enabled"] for row in repo.tickers())
 
 

@@ -28,14 +28,22 @@ class Worker:
             from .catalog import Catalog
 
             overrides = {}
+            preferred = {}
             for source, items in raw.items():
+                preferred[source] = []
                 for item in items:
                     entry = {"symbol": item} if isinstance(item, str) else dict(item)
-                    overrides[(source, entry["symbol"].upper())] = entry
+                    symbol = entry["symbol"].upper()
+                    overrides[(source, symbol)] = entry
+                    preferred[source].append(symbol)
             expanded = {}
             catalog = Catalog(self.settings)
             for source, groups in catalog.groups_by_source.items():
-                symbols = sorted({symbol for values in groups.values() for symbol in values})
+                catalog_symbols = {symbol for values in groups.values() for symbol in values}
+                priority = [
+                    symbol for symbol in preferred.get(source, ()) if symbol in catalog_symbols
+                ]
+                symbols = priority + sorted(catalog_symbols - set(priority))
                 expanded[source] = [
                     {"symbol": symbol} | overrides.get((source, symbol), {}) for symbol in symbols
                 ]

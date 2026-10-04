@@ -64,6 +64,14 @@ def test_catalog_sized_allowed_set_does_not_exceed_sqlite_expression_depth(syste
     )
 
 
+def test_allowed_order_prioritizes_curated_jobs_over_catalog_tail(system):
+    repo, _ = system
+    repo.queue("vn", "AAA", "1D", "bootstrap", cutoff(3), "vps")
+    repo.queue("vn", "VCB", "1D", "bootstrap", cutoff(3), "vps")
+    claimed = repo.claim_job("catalog-worker", allowed=[("vn", "VCB", "1D"), ("vn", "AAA", "1D")])
+    assert claimed["symbol"] == "VCB"
+
+
 @pytest.mark.asyncio
 async def test_cancelled_worker_closes_provider_and_immediately_resumes_staged_repair(system):
     repo, settings = system
