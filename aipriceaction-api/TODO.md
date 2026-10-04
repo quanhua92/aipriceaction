@@ -38,6 +38,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Check recent official HNX scale totals against dated native controls and
+  preserve bounded, offline replayable query evidence. Adjacent SHS sessions
+  match VNDirect totals; one official component sum differs by 1,800 shares.
+  The attempted April 22 query returns no records. Keep board/session scope
+  unresolved and do not infer odd-lot corrections or license minute allocation.
+  Diagnostic parser rejects changed source/query/layout and has 12 focused tests.
+
 - [x] Propose the newly discovered MWG VCI minute correction from complete
   cumulative-volume captures and verify it against fresh VNDirect/DNSE daily
   witnesses. Replay the same page: active catalog rejects; candidate validates

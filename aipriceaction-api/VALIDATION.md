@@ -3,6 +3,36 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Official HNX volume-scope diagnostic — 2026-10-04 ICT
+
+The current public HNX listed-equity scale page is
+https://www.hnx.vn/co-phieu-etfs/du-lieu-thi-truong-ny-quy-mo.html.
+Its interface advertises only the recent month. Three bounded read-only form
+queries preserve the exact request, returned HTML and SHA256 under
+`data/hnx-volume-scope-20261004/`, capped at 512 KiB. An adjacent-date control
+returns a different SHS row; both recent totals match the dated, verified native
+VNDirect subset. The response rows themselves contain no session date, so the
+report keeps request dates distinct from independently certified response dates.
+
+| SHS requested session | Official displayed total | Sum of displayed execution components | Total minus components |
+| --- | ---: | ---: | ---: |
+| 2026-09-28 | 13,716,282 | 13,718,082 | -1,800 |
+| 2026-09-29 | 6,264,781 | 6,264,781 | 0 |
+| 2026-04-22 | No records returned | Unavailable | Unavailable |
+
+The September 28 components include 15,000 shares after hours. This does not
+establish additive session/board semantics or prove that odd lots explain native
+minute/daily differences. The older April query supplies no exchange witness
+for the unresolved cumulative proof. No daily total is allocated to individual
+minutes; canonical rows, provider selection and proof gates remain unchanged.
+
+`scripts.review_hnx_volume_scope` replays saved captures offline. It rejects
+changed headers, malformed integers, ambiguous records, inconsistent summary
+rows, and changed capture/query/symbol bindings. Every result explicitly remains
+diagnostic and cannot authorize publication. Twelve focused HNX tests and five
+artifact-budget tests pass; lint passes. This run creates only small HTML/JSON
+evidence and one small test fixture, with no SQLite copies or S3 writes.
+
 ## Verified daily subsets clarify universe coherence — 2026-10-04 ICT
 
 The new `--daily-valid-subsets` option in
