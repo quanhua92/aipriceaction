@@ -3,6 +3,40 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Hourly publication verification storage fixed — 2026-10-04 ICT
+
+`scripts.publish_vn_hourly_progress` formerly retained a full `after.sqlite3`
+image for post-publication verification, in addition to the necessary operational
+rollback before-image. That verification image now lives in TemporaryDirectory,
+and is removed after successful validation, count/value mismatches or failed
+backup writes, including sidecars. The receipt keeps its size, checksum and
+quick-check result, plus explicit temporary/removed flags, without advertising
+a retained after-image path. The operational before-image remains intact.
+
+Candidate selection now applies the same effective job/retention floor as the
+guarded publisher. The current live database has four old staging prefixes but
+zero eligible prefix additions; previously those expired prefixes could cause
+an unnecessary full before/after backup cycle. Empty batches now produce only a
+small report, without backups or provider clients. Both preview and execution
+paths are tested. This does not complete the pending jobs or waive missing-date
+coverage checks.
+
+Nine new storage tests cover temporary backup cleanup on success/failure,
+untouched operational rollback images, mismatched selected candles, interrupted
+backup writes, empty batches, expired staging, and a real guarded publication
+with a small local filesystem fixture. That publication appends 50 verified
+hourly rows while preserving 150 originals and its before-image; its after-image
+is removed. All 17 storage/bootstrap-progress tests and lint pass. No canonical
+publication runs against the live database for this check.
+
+The actual live preview returns zero candidates, no captures and only a 174-byte
+report at `data/hourly-progress-empty-preview-20261004/report.json`. It creates
+no full database backups and makes no provider or S3 requests. Root `AGENTS.md`
+now explicitly requires temporary post-publication verification images and
+backup/provider-free empty batches.
+The complete suite passes 1,111 tests in 62.18 seconds, with the existing
+Starlette/httpx deprecation warning; lint and formatting pass.
+
 ## Exact hourly-gap recovery candidates — 2026-10-04 ICT
 
 Current pending hourly jobs identify five absent stock/date pairs: VGI and VTP

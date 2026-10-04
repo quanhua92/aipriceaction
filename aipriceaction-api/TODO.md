@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,087 tests; lint/format checks pass.
+- The latest complete API suite passes 1,111 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -37,6 +37,15 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Fix hourly publication verification storage: use TemporaryDirectory for
+  the post-change full SQLite copy, preserve the operational rollback before-image,
+  and retain only verification hashes/counts. Clean up successful/failed copies
+  and sidecars. Filter expired staging with the publisher's effective retention
+  floor; empty batches must not create backups or provider clients. Nine new
+  storage tests and 17 focused checks pass, including actual small-fixture
+  publication. The live preview has no eligible prefixes and retains only
+  174 bytes. Keep the four missing-session hourly jobs pending.
 
 - [x] Query the five exact missing stock/hourly date pairs for the four pending
   jobs against VPS, VNDirect, DNSE and the live legacy API. Recover 15 raw-bound

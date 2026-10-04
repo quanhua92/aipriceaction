@@ -2,20 +2,22 @@
 
 Only configured watchlist series with older staging are attempted. Each series
 uses the existing provider/snapshot guards; a refusal leaves that series alone.
-Execution is restricted to local RustFS and takes populated before/after backups.
+Execution is restricted to local RustFS. Retain the operational before-image;
+post-publication verification copies are temporary, including failed checks.
 """
 
 import argparse
 import asyncio
 import hashlib
 import json
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
 from aipriceaction_api.archive import Archive
 from aipriceaction_api.bootstrap_progress import publish_bootstrap_progress
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import DataError
+from aipriceaction_api.domain import DataError, cutoff
 from aipriceaction_api.providers import Providers
 from aipriceaction_api.storage import COLUMNS, Repository
 
@@ -51,15 +53,16 @@ async def run(args):
             for row in con.execute(
                 "SELECT DISTINCT j.symbol FROM jobs j JOIN staging s ON s.job_id=j.id "
                 "WHERE j.source='vn' AND j.interval='1h' AND j.kind='bootstrap' "
-                "AND j.status IN ('pending','running') AND s.time < "
+                "AND j.status IN ('pending','running') AND s.time>=MAX(j.floor,?) AND s.time < "
                 "(SELECT MIN(c.time) FROM candles c WHERE c.source=j.source "
-                "AND c.symbol=j.symbol AND c.interval=j.interval) ORDER BY j.symbol"
+                "AND c.symbol=j.symbol AND c.interval=j.interval) ORDER BY j.symbol",
+                (cutoff(settings.hourly_years),),
             )
             if row[0] in selected and (not requested or row[0] in requested)
         ]
     args.output.mkdir(parents=True, exist_ok=False)
     report_path = args.output / "report.json"
-    before, after = args.output / "before.sqlite3", args.output / "after.sqlite3"
+    before = args.output / "before.sqlite3"
     report = {
         "dry_run": not args.execute,
         "candidates": candidates,
@@ -72,6 +75,15 @@ async def run(args):
         report_path.write_text(json.dumps(report, indent=2) + "\n")
 
     checkpoint()
+    if not candidates:
+        report.update(no_candidates=True, captures=[])
+        checkpoint()
+        print(
+            json.dumps(
+                {"report": str(report_path), "candidates": 0, "preservation_verified": False}
+            )
+        )
+        return report
     if args.execute:
         repo.backup(before)
         report["before_backup"] = str(before)
@@ -145,26 +157,14 @@ async def run(args):
                         raise AssertionError(f"Operational records changed: {table}")
             if con.execute("PRAGMA quick_check").fetchone()[0] != "ok":
                 raise AssertionError("Main SQLite integrity check failed")
-        repo.backup(after)
-        copied = Repository(after)
-        with copied.connect() as con:
-            if con.execute("PRAGMA quick_check").fetchone()[0] != "ok":
-                raise AssertionError("Backup SQLite integrity check failed")
-            if con.execute("SELECT COUNT(*) FROM candles").fetchone()[0] != new_count:
-                raise AssertionError("Backup candle count differs")
-        for result in published:
-            if copied.read("vn", result["symbol"], "1h") != repo.read("vn", result["symbol"], "1h"):
-                raise AssertionError("Backup selected records differ")
+        backup_check = verify_temporary_backup(repo, published, new_count)
         report.update(
             preservation_verified=True,
             original_candles_exact=old_count,
             appended_rows=expected,
             total_candles=new_count,
             published_symbols=len(published),
-            after_backup=str(after),
-            after_backup_bytes=after.stat().st_size,
-            after_backup_sha256=checksum(after),
-            backup_quick_check="ok",
+            **backup_check,
         )
         checkpoint()
         evidence = []
@@ -197,6 +197,30 @@ async def run(args):
             }
         )
     )
+    return report
+
+
+def verify_temporary_backup(repo, published, expected_count):
+    with tempfile.TemporaryDirectory(prefix="aipa-hourly-progress-check-") as directory:
+        after = Path(directory) / "after.sqlite3"
+        repo.backup(after)
+        copied = Repository(after)
+        with copied.connect() as con:
+            if con.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                raise AssertionError("Backup SQLite integrity check failed")
+            if con.execute("SELECT COUNT(*) FROM candles").fetchone()[0] != expected_count:
+                raise AssertionError("Backup candle count differs")
+        for result in published:
+            if copied.read("vn", result["symbol"], "1h") != repo.read("vn", result["symbol"], "1h"):
+                raise AssertionError("Backup selected records differ")
+        result = {
+            "after_backup_bytes": after.stat().st_size,
+            "after_backup_sha256": checksum(after),
+            "backup_quick_check": "ok",
+            "after_backup_retained": False,
+        }
+    result["temporary_backup_removed"] = True
+    return result
 
 
 if __name__ == "__main__":

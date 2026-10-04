@@ -16,6 +16,10 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - Never create another full database backup merely to prove a backup exists.
   Reuse the same temporary before-image within a run. Use small scoped fixtures
   when the behavior does not require a full populated database.
+- Publication verification copies are temporary too. Preserve the necessary
+  operational rollback before-image, but remove the post-change verification
+  image on success or failure. Empty publication batches must not create full
+  database backups or start provider requests.
 - Inspect local data and RustFS volume sizes before and after large validation
   runs. Remove the run's temporary database files and SQLite sidecars before
   reporting completion. Do not delete unrelated files or active data.
