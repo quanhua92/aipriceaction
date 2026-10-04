@@ -38,6 +38,16 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Propose the newly discovered MWG VCI minute correction from complete
+  cumulative-volume captures and verify it against fresh VNDirect/DNSE daily
+  witnesses. Replay the same page: active catalog rejects; candidate validates
+  10,000 rows with one scoped proof. A candidate-only full-year VCI probe returns
+  55,262 candles across 247 observed dates. Keep VNINDEX's failed proposal blocked.
+  Preserve small captures/reports; no database copies or canonical changes.
+- [ ] Rehearse canonical volume-only recovery for MWG Unix 1780382460 (700 to
+  800), preserving legacy OHLC prices, original provenance and archive rollback.
+  Do not adopt VCI's different adjusted price basis through a volume license.
+
 - [x] Automatically summarize observed dates and candle counts per date for
   every compared feed, exposing missing days and partial sessions independently
   of cursor completion. Replay the existing full-year controls without downloads

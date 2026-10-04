@@ -2,6 +2,33 @@
 
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
+
+## Full-year MWG minute-volume proof control — 2026-10-04 ICT
+
+The automated full-year comparison rejected a VCI page at Unix 1780382460
+because its minute volume was 700 while consecutive cumulative totals increased
+by 800. The existing proof builder proposed a correction scoped to this minute.
+Both fresh VNDirect and DNSE daily witnesses match the corrected session volume
+of 2,969,500; the complete captured day has 225 rows and its corrected volume sum
+matches the final cumulative total. The same proof rules reject the VNINDEX
+candidate because its two daily witnesses do not match.
+
+Offline replay of the same checksummed MWG page confirms the active catalog
+rejects it, while the candidate catalog validates all 10,000 rows and applies one
+proof. A subsequent read-only full-year VCI control with that candidate catalog
+returns 55,262 candles across 247 observed dates and reaches the requested
+October 4, 2025 boundary. This establishes a usable bounded source response,
+not independent exchange truth or automatic permission for a whole-series price
+basis replacement.
+
+Evidence is retained in `data/paginated-minute-volume-proposals-20261004`,
+`data/mwg-volume-proof-refresh-20261004` and
+`data/mwg-minute-year-proof-control-20261004` (about 8.2 MB total). SQLite still
+has the original volume 700 at the target and legacy prices that differ from
+VCI's current adjusted basis. No canonical candle, active proof catalog, worker
+configuration or RustFS object was changed. Safe canonical volume-only recovery,
+the earlier MWG session residuals and VNINDEX reconciliation remain open.
+
 Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
