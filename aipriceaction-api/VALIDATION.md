@@ -41,6 +41,14 @@ retains earlier context for change metrics; these checks do not claim complete
 indicator parity or cure the existing historical adjustment guards. Canonical
 market records and archives are untouched by this isolated rehearsal.
 
+The main local API now loads `17435f1` as PID 49110, session 48936 after the
+previous API PID 35486 is confirmed terminal. The isolated API PID 47002 also
+exits after its audit. All 12 aggregate controls on the main API match the
+isolated corrected payloads; six completed daily/15-minute controls remain
+byte-identical and SQLite health is HTTP 200. Before/after runtime evidence is
+stored beside the matrix reports. The three native workers keep their existing
+scopes; this reload does not activate production routing.
+
 ## Independent SQLite recovery — 2026-10-04 ICT
 
 The restore CLI previously initialized the configured runtime database before
