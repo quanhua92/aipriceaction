@@ -3,6 +3,55 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Historical price-scale timeline and daily coherence — 2026-10-04 ICT
+
+`scripts.review_vn_historical_price_basis` selects all uniform-price-ratio
+exceptions from the completed VCI diagnostic review, rather than choosing tickers
+manually. Its bound proof catalog must match exactly. The selected VCB and MWG
+capture chains replay offline through the unchanged native parser. One read-only
+SQLite transaction supplies current minute/daily rows and verified volume
+receipts. Every observed minute date is classified, including partial/mixed
+sessions; source and SQLite timestamps match throughout both selected windows.
+Daily comparisons preserve their saved record hashes and original source errors.
+
+| Series | Uniform-ratio candles | Observed ratio | Mixed transition day | Equal basis afterward |
+| --- | ---: | ---: | --- | --- |
+| VCB | 39,736 | 0.9917 | June 23, 2026: 166 scaled, 60 equal | June 24–October 2 |
+| MWG | 41,497 | 0.9847 | July 3, 2026: 100 scaled, 125 equal | July 6 onward, apart from one September 28 candle |
+
+These ratios describe captured values; they are not applied to any candle and do
+not establish a dividend cause. The within-day mixture matters: recent refresh
+success alone does not establish coherent prices across the retained year.
+
+For both series, VCI minute aggregates agree with retained SQLite and saved VPS
+daily OHLC within one VND on all 247 observed dates (maximum difference 0.99 VND),
+and with saved VNDirect daily OHLC within half a VND on all 247 dates. Original
+SQLite minute aggregates meet the one-VND daily comparison on only 70 VCB dates
+and 62 MWG dates; their largest differences are 655 and 1,445 VND respectively.
+DNSE and legacy daily price disagreements remain visible. Native daily captures
+are not replayed by this timeline check; that verification and fresh minute joins
+still precede any adoption. Session aggregates describe observed candles rather
+than independently certified complete trading minutes.
+
+VCB has at least two exact native daily-volume witnesses on every observed date.
+MWG has them on 246 dates. Its remaining November 10, 2025 exception reproduces
+the existing attribution problem: VCI minutes total 7,273,600, VNDirect/DNSE daily
+both total 7,274,200, and VPS daily reports 7,283,809. No provider has an exact
+daily-volume witness for that minute aggregate. Do not fabricate a minute to
+absorb the residual. VCB can advance to guarded replacement rehearsal; MWG cannot
+pass the complete snapshot-volume gate yet. No publication license is granted
+by this read-only timeline report.
+
+Twenty focused tests pass, covering automatically selected exceptions, bound
+proof catalogs, exact/partial/mixed regimes, duplicate timestamp rejection,
+daily-price comparisons, explicit volume witness shortages and exclusion of
+legacy from native witness counts. The report at
+`data/vn-historical-price-basis-timeline-20261004/report.json` occupies
+2,029,622 bytes under an 8 MiB cap. No temporary database, canonical change or
+S3 object is created. Local data grows from 7,606,624 to 7,608,608 KiB; final
+RustFS data is unchanged at 2,642,856 KiB. Existing historical sampling/recovery
+guards remain in place; no worker or active proof catalog changes in this step.
+
 ## Recent four-provider disagreement review — 2026-10-04 ICT
 
 `scripts.review_vn_recent_disagreements` automatically reviews September

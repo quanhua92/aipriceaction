@@ -204,6 +204,23 @@ history through `eb814ab`; they are not additional current open tasks.
   observed day totals and matching times. Other providers also disagree, so no
   winner is selected. Pass 31 focused tests; retain one 2,365,323-byte report and
   remove the superseded exploratory report. No DB copies or canonical/S3 writes.
+- [x] Automatically trace every uniform-price-ratio exception in the completed
+  VCI review, replaying its exact native captures/proof catalog and comparing each
+  observed session with retained daily and saved four-feed daily observations.
+  VCB has 39,736 scaled candles, a mixed June 23 session (166 scaled/60 equal),
+  then equality from June 24. MWG has 41,497 scaled candles, a mixed July 3 session
+  (100 scaled/125 equal), then equality apart from one recent candle. Both VCI
+  minute series align with SQLite/VPS daily prices within one VND on all 247
+  observed dates and VNDirect within half a VND. Preserve legacy/DNSE differences;
+  do not infer dividend causes or apply ratios. All timestamps match. VCB has
+  two exact native daily-volume witnesses on 247 dates; MWG on 246, with its known
+  November 10, 2025 residual still unresolved. Pass 20 focused tests and retain
+  one 2,029,622-byte report without SQLite copies or S3 changes.
+- [ ] Rehearse a coherent VCB replacement from the verified capture chain,
+  replaying native daily witnesses and fresh source joins before publication.
+  Verify hot/cold API reads, all original timestamps and rollback scope; clean
+  temporary test databases. MWG still needs exact minute attribution for the
+  November 10, 2025 residual before full snapshot adoption.
 - [ ] Verify the VCB/MWG historical price basis with source evidence. Investigate
   the 41 recent OHLC differences and 145 minute-volume allocations across all
   native providers before provider adoption or price changes. Equal day totals
