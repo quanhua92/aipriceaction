@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,053 tests; lint/format checks pass.
+- The latest complete API suite passes 1,057 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -275,8 +275,21 @@ history through `eb814ab`; they are not additional current open tasks.
   and 13 rejected observations. Legacy never supplies a native witness. Restrict
   this path to compact diagnostics; no ingestion or publication rule is relaxed.
   Pass 27 focused tests and the 1,053-test complete suite.
-- [ ] Complete the running all-59 coherence review with these verified native
-  subsets and distinguish unavailable witnesses from remaining disagreements.
+- [x] Complete all 59 coherence reviews with eight verified native daily
+  subsets. Existing canonical minutes gain two saved native daily-price controls
+  on 1,011 stock/date pairs and exact-volume controls on 1,036 pairs. Twenty-three
+  series now meet both controls on all 247 dates; GEX joins the previous 22.
+  Native VCI price classifications and eight incomplete traversals remain unchanged.
+  Preserve the 2,181,230-byte report and a 5,891-byte comparison receipt; no provider
+  request, database copy, active-catalog change or canonical correction occurs.
+- [x] Explicitly close the read-only SQLite snapshot on success/failure and test
+  both paths. The live WAL grows transiently during concurrent worker writes,
+  then disappears after the completed audit; do not delete live sidecars manually.
+  Pass 31 focused tests and the 1,057-test full suite after the lifecycle fix.
+- [x] Distinguish SHS's formerly unavailable VNDirect witness from its actual
+  April 22, 2026 volume disagreement: VNDirect 8,071,900 versus DNSE 8,067,500.
+  The cumulative-volume proof still refuses the correction; preserve a bounded
+  1,088-byte target report and source hashes without licensing publication.
 - [ ] Follow up native daily-source errors, representation differences and the
   remaining minute exceptions using complete evidence before any publication.
   Reuse diagnostic valid subsets where a full native page was rejected; distinguish

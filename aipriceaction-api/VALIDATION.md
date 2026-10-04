@@ -3,6 +3,66 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Verified daily subsets clarify universe coherence — 2026-10-04 ICT
+
+The new `--daily-valid-subsets` option in
+`scripts.review_vn_historical_price_basis` is restricted to compact diagnostics.
+It binds the subset report to its original source audit, checks captured byte
+length/SHA256 and reparses rejected native responses through the unchanged runtime
+parser. Saved normalized rows, rejection reasons/dates and row-count declarations
+must agree exactly. Original full-response errors remain attached; malformed
+rows stay excluded. Successful daily feed records retain their saved-observation
+status; this step does not replay every successful daily source response or
+relax ingestion/publication rules. Legacy cannot supply a native witness.
+
+All eight native subset captures reparse successfully, with 5,937 valid daily
+observations and 13 rejected observations. The updated review completes all
+59 symbols in one read-only SQLite snapshot, with the same 2,699,606 accepted
+native minutes and eight incomplete VCI traversals. Minute price-class counts are
+unchanged for every symbol. Adding valid daily evidence clarifies current prices
+on 1,011 additional stock/date pairs and exact volumes on 1,036 pairs; these are
+additional saved native daily controls, not recovered or corrected candles.
+
+| Current minute comparison | Original daily evidence | With verified native subsets |
+| --- | ---: | ---: |
+| Observed stock/date pairs | 14,573 | 14,573 |
+| Two native daily price controls within one VND | 12,724 | 13,735 |
+| Two exact native daily-volume controls | 12,233 | 13,269 |
+| Series meeting both controls on all 247 observed dates | 22 | 23 |
+
+GEX joins the fully supported group under these diagnostic thresholds. Improvements
+occur for CEO, IDC, SHS, VIX, VNM, GEX and GEE. SHS moves from no two-feed price
+controls to 246 dates, and no two-feed volume controls to 138 dates. Its actual
+April 22 volume mismatch still refuses a cumulative proof: validated VNDirect
+reports 8,071,900, while saved DNSE reports 8,067,500, a 4,400-share difference.
+That cannot be hidden by the earlier full-response error or assigned to a minute.
+The bounded target report preserves source hashes at
+`data/vn-daily-subset-target-diagnosis-20261004/report.json` (1,088 bytes).
+
+MWG's recorded November 10 shortage and older September 16 residual remain open.
+The eight incomplete VCI histories and other observed price/volume differences
+remain open too. These diagnostics do not resolve board/venue semantics, apply
+declared rounded/volume-only witness allowances, or establish every minute's
+allocation. They do not license a provider change or price/volume correction.
+
+The source-bound verifier and tests are committed as `1ef3a77`. Subsequent
+connection lifecycle tests require explicit closure of the read-only SQLite
+connection on both success and an injected minute-replay failure. The final
+full suite passes 1,057 tests in 63.28 seconds, with one existing Starlette/httpx
+deprecation warning. Thirty-one focused subset/replay/basis/extension tests pass;
+lint and formatting pass. Changed source bytes, normalized values, rejected
+rows, duplicate identities and unrelated subset audits are refused.
+
+Only a 2,181,230-byte report and a 5,891-byte comparison receipt remain under
+`data/vn-minute-daily-validated-witnesses-20261004`, within the 8 MiB artifact cap.
+No provider requests, database copies, S3 writes or active-catalog changes occur.
+During the consistent read snapshot, concurrent workers grow the live SQLite WAL;
+a read observes 14,069,832 bytes in that operational file. After the audit process
+finishes, the WAL is absent without manual deletion. Local data measures
+7,625,368 KiB before the final small comparison receipt versus 7,623,232 KiB
+before the run. RustFS data remains 2,701,576 KiB; logs measure 158,152 KiB.
+The latest necessary rollback and all active source evidence remain intact.
+
 ## Automated universe minute/daily coherence — 2026-10-04 ICT
 
 The `--all-series` mode of `scripts.review_vn_historical_price_basis` compares

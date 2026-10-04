@@ -6,6 +6,7 @@ import hashlib
 import json
 import sqlite3
 from collections import Counter, defaultdict
+from contextlib import closing
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -370,7 +371,9 @@ async def run(args):
             "This review does not change source selection, historical candles, or the active proof catalog.",
         ],
     }
-    with sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
+    with closing(
+        sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True)
+    ) as con:
         con.row_factory = sqlite3.Row
         con.execute("BEGIN")
         for symbol in candidates:

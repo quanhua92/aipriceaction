@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import sqlite3
 from dataclasses import replace
 from datetime import date, timedelta
 from types import SimpleNamespace
@@ -119,8 +120,9 @@ def test_compact_review_retains_source_absence_and_every_volume_shortage_count()
 
 @pytest.mark.parametrize("changed_proof", [False, True])
 @pytest.mark.parametrize("all_series", [False, True])
+@pytest.mark.parametrize("read_failure", [False, True])
 def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
-    tmp_path, monkeypatch, changed_proof, all_series
+    tmp_path, monkeypatch, changed_proof, all_series, read_failure
 ):
     settings = replace(Settings(), database=tmp_path / "live.sqlite3")
     repository = Repository(settings.database)
@@ -186,10 +188,28 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
     if changed_proof:
         proofs.write_text("[1]")
     calls = []
+    connections = []
+    original_connect = sqlite3.connect
+
+    class TrackedConnection(sqlite3.Connection):
+        closed = False
+
+        def close(self):
+            self.closed = True
+            super().close()
+
+    def connect(*args, **kwargs):
+        connection = original_connect(*args, **kwargs, factory=TrackedConnection)
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(review.sqlite3, "connect", connect)
 
     async def replay(config, symbol, captured, retain_rows):
         calls.append(symbol)
         assert retain_rows and config.vci_volume_proofs == proofs and captured == record
+        if read_failure:
+            raise DataError("Injected minute replay failure")
         return {
             "rows": [Candle("vn", symbol, "1m", **row("2026-09-28", ratio=0.9))],
             "captured_pages_passed": True,
@@ -207,6 +227,12 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
         with pytest.raises(DataError, match="exact proof catalog"):
             asyncio.run(review.run(args))
         assert not calls and not args.output.exists()
+        assert not connections
+    elif read_failure:
+        with pytest.raises(DataError, match="Injected minute replay failure"):
+            asyncio.run(review.run(args))
+        assert calls == ["FPT"] and not args.output.exists()
+        assert connections and all(c.closed for c in connections)
     else:
         result = asyncio.run(review.run(args))
         assert calls == result["selected_symbols"] == (["FPT", "VCB"] if all_series else ["FPT"])
@@ -215,4 +241,5 @@ def test_automatic_exception_selection_is_read_only_and_binds_proof_catalog(
         assert result["completed"] and not result["canonical_publication"]
         assert result["series"][0]["daily_observations"]["legacy"]["original_error"]
         assert not list(args.output.rglob("*.sqlite3*"))
+        assert connections and all(c.closed for c in connections)
     assert settings.database.read_bytes() == before
