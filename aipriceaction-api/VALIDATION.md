@@ -30,6 +30,16 @@ all local VN daily versions remain unchanged within the recorded audit scope.
 Evidence: `data/recent-universe-audit-20261004/flexible-final.json`, captured
 response bodies, and `flexible-policy-comparison.json`.
 
+The main local API reloads committed `bf6e2f1` as PID 89835, session 9439.
+Previous main PID 49110 and completed isolated audit PID 88079 exit before the
+replacement starts. All six completed-date FPT/BTCUSDT/AAPL daily/minute controls
+remain byte-identical. All ten formerly blocked indicator requests return HTTP
+200 with OHLCV equal to their raw main-runtime controls; health returns HTTP 200.
+The three scoped workers retain PIDs 38579 (VN), 38581 (crypto) and 38512 (Yahoo).
+Runtime captures are `flexible-runtime-before.json` and
+`flexible-runtime-after.json` in the same evidence directory. This is a local
+API reload, not production deployment or a multi-day uptime certification.
+
 SJC's existing mapping uses sell as high, buy as low, their midpoint as close,
 the previous midpoint as open and volume 1 as a compatibility placeholder.
 README now explains that these are physical-gold quotes, not traded candles or
