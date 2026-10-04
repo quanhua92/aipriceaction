@@ -6,6 +6,75 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Four further verified local VN minute activations — 2026-10-04 ICT
+
+BSR, TCB, VHM and VND now join FPT/TPB as active, licensed VCI minute histories
+in local SQLite/RustFS. This checkpoint supersedes their isolated-only status
+below; the other candidates and production remain unchanged.
+
+The generalized activation path accepts explicit reviewed stock selections.
+Before mutation, it verifies capture byte hashes and replays every complete
+minute page and all three native daily responses with the actual adapters and
+an offline transport. It rejects changed candidates, daily evidence or traversal
+checkpoints even when an earlier review said pass. On every observed date it
+rechecks retained native daily prices within one VND and at least two exact
+native daily volume witnesses. Legacy agreement alone cannot satisfy that gate.
+Each selected snapshot also matches a fresh 2,000-candle native VCI overlap
+through its completed tail, across nine observed sessions.
+
+The operation preserves all 242,556 existing observed timestamps, a whole
+pre-activation SQLite backup, the previous manifest pointer and immutable
+original hot/archive images. Prepared new images read back exactly before each
+stock's hot rows, cold pointers and revision change together. No prices or
+volumes are scaled. Post-publication handoffs license pinned native updates;
+all four real 40-row refreshes succeed and full source checks report `succeeded`.
+
+| Series | Total candles | SQLite candles | S3 candles / objects |
+| --- | ---: | ---: | --- |
+| BSR minute | 60,120 | 55,076 | 5,044 / 2 |
+| TCB minute | 60,810 | 55,614 | 5,196 / 2 |
+| VHM minute | 60,815 | 55,675 | 5,140 / 2 |
+| VND minute | 60,811 | 55,614 | 5,197 / 2 |
+
+All 72 raw/SMA/EMA minute-derived queries across the SQLite/S3 boundary match
+all-SQLite references. Actual local HTTP verifies another 112 cases, including
+recent/bounded minute and 15-minute candles, unchanged native hourly controls,
+and corrected-date volume profiles. Fresh isolated restoration reproduces all
+242,556 candles, eight cold objects, exact hot-image write versions and four
+native refresh certificates from S3. Original before-images remain readable.
+A bidirectional comparison with the full backup proves every other VN series'
+OHLCV/provider/revision values are unchanged; routine refresh metadata may move.
+
+The source evidence is durable as 142 content-addressed JSON objects under
+`archive-v2/evidence/verified-vci-inputs/`, each with exact readback. This includes
+the full raw minute/daily traversals, original capture bytes behind the active
+volume proofs and a curated ten-proof catalog for the six licensed VCI series.
+The VN worker runs its same 57 unique stock selection and archive policy with
+this catalog at `data/remaining-vci-local-activation-20261004/active-volume-proofs.json`.
+Unlicensed candidate proposals remain outside that running catalog. Indices
+remain excluded, and VPS/VNDirect/DNSE remain the preferred other-interval sources.
+The local API restarted at its existing `127.0.0.1:3001` address. Crypto/Yahoo
+workers continued; no production routing or `.env` credentials changed.
+
+Evidence and recovery paths:
+
+- `data/remaining-vci-activation-preview-20261004/report.json`;
+- `data/remaining-vci-local-activation-20261004/report.json`, containing
+  immutable source keys, prepared receipts, before/after images and native
+  overlaps; its `before.sqlite3` and `before-LATEST.json` preserve the checkpoint;
+- `data/remaining-vci-local-http-restoration-20261004/report.json` and its fresh
+  `restored.sqlite3` for the scoped four-series recovery;
+- `data/quality-after-four-vci-activations-20261004.json` for the refreshed full
+  local audit. Old findings remain preserved as resolved records.
+
+The audit's remaining material minute/daily basis symbols are CTG, GAS, GEE,
+MWG, SHB, VN30 and VNINDEX. These activations prove their stated observed data,
+source replay, storage, refresh and interface behavior; they do not certify
+other symbols, a complete exchange calendar or production cutover. The current
+index has 892 active objects, 75 retained certificates, 34 recovery receipts and
+eight protected invalid-history markers. All 714 tests pass, including six new
+source/candidate integrity regressions; lint and formatting pass.
+
 ## Remaining VN minute-basis candidates and peer review — 2026-10-04 ICT
 
 After the local FPT/TPB correction, a fresh consistent SQL snapshot finds material

@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 896 active objects, 71 handoff certificates, 34 recoveries and
+  The S3 index has 892 active objects, 75 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,7 +21,9 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 708 tests; lint/format checks pass.
+- Six licensed VN stock minute series now use VCI: FPT, TPB, BSR, TCB, VHM and
+  VND. The three preferred providers remain unchanged for other sources/windows.
+- The latest complete API suite passes 714 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -41,7 +43,16 @@ history through `eb814ab`; they are not additional current open tasks.
   Resume failed isolated captures from verified cursors after corroborating
   single-minute defects; preserve source evidence and canonical rows.
   Full-date/native-volume/archive reviews pass BSR, TCB, VHM and VND. These are
-  isolated review results, requiring fresh handoffs and guarded activation.
+  now activated locally after fresh handoffs and guarded publication.
+- [x] Generalize verified stock minute activation with full immutable minute/daily
+  source replay, exact native volume witnesses on every observed date and fresh
+  completed-tail controls. Detect stale passed reviews, altered source/candidate
+  bytes and changed daily witnesses. Publish BSR/TCB/VHM/VND locally with complete
+  backups, 142 verified source-evidence objects, 72 boundary cases, 112 HTTP
+  checks and exact eight-object/four-series restoration. Preserve all 242,556
+  existing observed timestamps and all unrelated VN OHLCV/provider basis.
+  Curate ten replayable proofs for the six active VCI series; broader proposals
+  remain isolated. Current audit leaves CTG/GAS/GEE/MWG/SHB/VN30/VNINDEX open.
 - [ ] Finish CTG's closed-day proof with two separate contradictory minutes;
   the existing single-correction proof intentionally rejects it. Reconcile GAS's
   observed minute gap, MWG's two full-day volume differences, GEE's invalid
