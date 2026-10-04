@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 895 tests; lint/format checks pass.
+- The latest complete API suite passes 991 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -173,13 +173,22 @@ history through `eb814ab`; they are not additional current open tasks.
   legacy prices/provenance. Keep a 45,073-byte report, no database copies, with
   explicit absence of publication license. Pass 100 focused tests including
   read-only projection/basis checks and correct recognition of an applied receipt.
-- [ ] Publish only verified available volume projections with immutable source
-  evidence and guarded recovery. Batch metadata publication to avoid multiplying
-  retained manifest snapshots; verify actual HTTP aggregates and cold restoration.
-  Verify coherent source/SQLite adjustment basis and remaining price/volume
-  differences before provider adoption or price changes. Reference-date presence
-  does not certify every minute or OHLCV accuracy; keep the eight unsupported
-  refusals explicit.
+- [x] Publish all 55 available single-volume projections atomically with immutable
+  native captures/original-day Parquet, matching source/snapshot evidence, ready
+  revisions and whole-batch lease/race guards. Refuse duplicate targets/days;
+  publish one manifest rather than 55 snapshots. Pointer failure leaves the whole
+  verified batch locally visible and permits safe retry. Keep raw candles and all
+  prices/provenance unchanged. Pass the 991-test full suite before local activation.
+  Verify all 11,706 minute/880 fifteen-minute candles across 55 days/27 symbols,
+  exactly 55 changed volumes per interval, and full manifest/scoped cold restoration.
+  Remove the temporary index/cache. Latest manifest includes all 56 receipts;
+  post-activation projection audit recognizes 56 already applied, with prior
+  refusals/exclusion unchanged. Full source replay reduces shared VCI/SQLite volume
+  disagreements from 200 to 145; 81,274 price disagreements remain unchanged.
+- [ ] Verify coherent source/SQLite adjustment basis and resolve the remaining
+  145 volume differences and 81,274 price differences before provider adoption
+  or price changes. Reference-date presence does not certify every minute or
+  OHLCV accuracy; keep the eight unsupported refusals explicit.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

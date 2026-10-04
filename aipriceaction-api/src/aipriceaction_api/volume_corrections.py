@@ -116,42 +116,81 @@ def apply_records(rows, records):
 
 
 def publish_correction(repo, archive, proof, raw):
-    target = validate_volume_proof(proof)
-    if digest(raw) != proof["source_capture_sha256"]:
-        raise DataError("Volume correction capture checksum differs")
+    return publish_corrections(repo, archive, [(proof, raw)])[0]
+
+
+def publish_corrections(repo, archive, candidates):
+    """Commit checked receipts atomically, then publish one recoverable manifest."""
+    candidates = list(candidates)
+    if not 1 <= len(candidates) <= 100:
+        raise DataError("Use a volume correction batch between 1 and 100 targets")
+    targets = [validate_volume_proof(proof) for proof, _ in candidates]
+    if len({(row.symbol, row.time) for row in targets}) != len(targets):
+        raise DataError("Volume correction batch repeats a target")
+    if len(
+        {(row.symbol, proof["day"]) for row, (proof, _) in zip(targets, candidates, strict=True)}
+    ) != len(targets):
+        raise DataError("Volume correction batch repeats a source day")
+    for target, (proof, raw) in zip(targets, candidates, strict=True):
+        if digest(raw) != proof["source_capture_sha256"]:
+            raise DataError("Volume correction capture checksum differs")
+        if (
+            proof_from_capture(raw, proof["daily_witnesses"], target.time, proof["verified_at_ns"])
+            != proof
+        ):
+            raise DataError("Volume correction native capture differs")
     owner = uuid.uuid4().hex
     if not repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
         raise DataError("Another archive writer is active")
-    claimed = False
+    claimed, prepared, records, pending = [], [], [], []
     try:
-        claimed = repo.live_claim("vn", target.symbol, "1m", owner, lease=3600)
-        if not claimed:
-            raise DataError("Volume correction series is busy")
-        rows = repo.read("vn", target.symbol, "1m", proof["day"], proof["day"] + 86400 - 1)
-        project_legacy_volume(rows, proof)
-        existing = repo.volume_corrections("vn", target.symbol, "1m", target.time, target.time)
-        for record in existing:
-            if record["revision"] != rows[0].revision:
-                continue
-            original_rows, _ = validate_record(record, archive)
-            if json.loads(record["evidence"])["proof"] != proof or original_rows != rows:
-                raise DataError("Conflicting existing volume correction")
-            archive.manifest(repo.archives())
-            return record
-        original = archive.prepare(rows)
-        key = f"{archive.settings.s3_prefix}/evidence/volume-corrections/{digest(raw)}.json"
-        with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "capture.json"
-            path.write_bytes(raw)
-            archive.store.put(key, path)
-        record = make_record(rows, proof, original, key)
-        validate_record(record, archive)
-        repo.record_volume_correction(record, rows)
-        # If this fails the verified local receipt remains visible. A retry of
-        # metadata publication is safe; canonical original candles were untouched.
+        for symbol in sorted({row.symbol for row in targets}):
+            if not repo.live_claim("vn", symbol, "1m", owner, lease=3600):
+                raise DataError("Volume correction series is busy")
+            claimed.append(symbol)
+        # Check every day before creating any new evidence objects.
+        for target, (proof, raw) in zip(targets, candidates, strict=True):
+            rows = repo.read("vn", target.symbol, "1m", proof["day"], proof["day"] + 86400 - 1)
+            staged = project_legacy_volume(rows, proof)
+            served = apply_records(
+                rows,
+                repo.volume_corrections(
+                    "vn", target.symbol, "1m", proof["day"], proof["day"] + 86399
+                ),
+            )
+            if served != rows and served != staged:
+                raise DataError("Existing volume corrections differ from this candidate day")
+            existing = [
+                record
+                for record in repo.volume_corrections(
+                    "vn", target.symbol, "1m", target.time, target.time
+                )
+                if record["revision"] == rows[0].revision
+            ]
+            record = existing[0] if existing else None
+            if record is not None:
+                original_rows, _ = validate_record(record, archive)
+                if json.loads(record["evidence"])["proof"] != proof or original_rows != rows:
+                    raise DataError("Conflicting existing volume correction")
+            prepared.append((proof, raw, rows, record))
+        for proof, raw, rows, record in prepared:
+            if record is None:
+                original = archive.prepare(rows)
+                key = f"{archive.settings.s3_prefix}/evidence/volume-corrections/{digest(raw)}.json"
+                with tempfile.TemporaryDirectory() as temporary:
+                    path = Path(temporary) / "capture.json"
+                    path.write_bytes(raw)
+                    archive.store.put(key, path)
+                record = make_record(rows, proof, original, key)
+                validate_record(record, archive)
+                pending.append((record, rows))
+            records.append(record)
+        repo.record_volume_corrections(pending)
+        # A pointer failure leaves the entire verified batch locally visible;
+        # retry republishes these same receipts, with original candles immutable.
         archive.manifest(repo.archives())
-        return record
+        return records
     finally:
-        if claimed:
-            repo.live_release("vn", target.symbol, "1m", owner)
+        for symbol in claimed:
+            repo.live_release("vn", symbol, "1m", owner)
         repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)

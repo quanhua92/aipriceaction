@@ -5,6 +5,60 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+The 55 available single-volume corrections are now active on the local API.
+`publish_corrections` checks every native capture against its full proof, claims
+the archive writer and all 27 series leases, verifies every frozen day before
+creating evidence, then persists all receipts in one SQLite transaction. Every
+expected snapshot must equal its receipt's original evidence and current rows;
+ready revisions must match. A later race rolls back the whole insert batch.
+Duplicate targets/days are refused. Immutable original-day Parquet and native
+captures are frozen/read back before insertion, and one manifest is published
+afterward. A pointer failure leaves the complete verified batch locally visible;
+retry validates/reuses the same receipts and repairs metadata without re-insertion.
+The single-target publisher delegates to this path, preserving its interface.
+
+The preview and actual activation are at `data/vn-volume-batch-preview-20261004`
+and `data/vn-volume-batch-activation-20261004`. All 55 targets pass audit/catalog,
+native source and original/candidate checksum checks. Activation succeeds with
+no busy-lease retry and no raw candle mutation. The post-activation projection
+audit recognizes 56 already-applied corrections, including MWG's earlier receipt;
+21 refusals and one out-of-window target remain unchanged.
+
+`scripts.check_volume_catalog_restore` verifies every minute/15-minute value
+through the running loopback API and restores the full archive manifest into a
+temporary index. It mounts only the 55 original-day evidence objects for scoped
+cold reads. All 11,706 minute and 880 fifteen-minute candles match their projected
+OHLCV exactly; exactly 55 minute and 55 fifteen-minute volumes change, with every
+price unchanged. All 55 cold reads match, all 888 active archive objects restore
+and the temporary index/cache are removed. This is full receipt/manifest recovery
+plus scoped evidence-day reads, not full hot SQLite recovery. Only a 29,848-byte
+report remains at `data/vn-volume-batch-restore-20261004/report.json`.
+
+The latest manifest has 56 receipts and retains every batch receipt, confirmed by
+checksum in `data/vn-volume-batch-latest-manifest-20261004.json`. The observed
+manifest is 25,272,634 bytes; publishing it once avoids 55 additional retained
+versions. Source evidence is operational rollback/restore data, not test garbage.
+Root `AGENTS.md` now makes single-manifest batch publication explicit alongside
+temporary test database cleanup. Local data grows from 7,601,552 to 7,603,104 KiB;
+RustFS data grows from 2,586,396 to 2,656,072 KiB for durable evidence/metadata and
+concurrent runtime activity. No completed test database copies remain.
+
+The complete suite passes 991 tests with one known Starlette/httpx deprecation
+warning; lint/format checks pass. New tests cover atomic race rollback, busy-lease
+cleanup, exact source/snapshot evidence, duplicate targets/days, safe pointer-failure
+retry, cold batch restore and temporary cleanup on successful/failed HTTP checks.
+All four existing local API/VN/Yahoo/crypto processes remain live; unchanged
+receipt formats are readable by their already-running receipt-aware code.
+
+Full post-activation replay keeps 2,699,606 accepted candles, 51 boundary/date
+complete candidates and eight rejected records. Shared VCI/SQLite volume
+disagreements fall from 200 to 145; all 81,274 price disagreements remain unchanged.
+No unanimous-provider conflicts or missing unanimous timestamps appear within
+the limited four-feed overlap. The compact report/source references occupy
+999,051 bytes at `data/vn-minute-year-vci-post-volume-activation-review-20261004`.
+Remaining volume, price/basis and unsupported-source acceptance gates remain open;
+no production endpoint/provider routing is changed.
+
 The last four passing partial windows finish without discovering another
 in-window volume contradiction. All fresh joins match. VCB, ACB, VPB and LPB
 add 43,938 accepted candles through 7,064,715 bytes of captures/reports under a

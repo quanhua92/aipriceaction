@@ -251,39 +251,67 @@ class Repository:
                 self.bump(con)
 
     def record_volume_correction(self, record, expected):
+        self.record_volume_corrections([(record, expected)])
+
+    def record_volume_corrections(self, candidates):
         from .volume_corrections import validate_record
 
-        validate_record(record)
+        candidates = list(candidates)
+        if not candidates:
+            return
+        if len(candidates) > 100 or len({record["id"] for record, _ in candidates}) != len(
+            candidates
+        ):
+            raise DataError("Volume correction batch is too large or repeats a receipt")
+        for record, expected in candidates:
+            original, _ = validate_record(record)
+            if original != expected:
+                raise DataError("Volume correction snapshot differs from its original evidence")
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
-            current = [
-                Candle(**dict(row))
-                for row in con.execute(
-                    "SELECT * FROM candles WHERE source=? AND symbol=? AND interval=? AND time>=? AND time<? ORDER BY time",
-                    (
-                        record["source"],
-                        record["symbol"],
-                        record["interval"],
-                        expected[0].time // 86400 * 86400,
-                        (expected[0].time // 86400 + 1) * 86400,
+            for record, expected in candidates:
+                if not expected:
+                    raise DataError("Volume correction requires an original day snapshot")
+                current = [
+                    Candle(**dict(row))
+                    for row in con.execute(
+                        "SELECT * FROM candles WHERE source=? AND symbol=? AND interval=? AND time>=? AND time<? ORDER BY time",
+                        (
+                            record["source"],
+                            record["symbol"],
+                            record["interval"],
+                            expected[0].time // 86400 * 86400,
+                            (expected[0].time // 86400 + 1) * 86400,
+                        ),
+                    )
+                ]
+                if current != expected:
+                    raise DataError("Volume correction snapshot changed before publication")
+                state = con.execute(
+                    "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
+                    tuple(record[k] for k in ("source", "symbol", "interval")),
+                ).fetchone()
+                if (
+                    not state
+                    or state["status"] != "ready"
+                    or state["revision"] != record["revision"]
+                ):
+                    raise DataError("Volume correction series basis changed")
+                con.execute(
+                    "INSERT INTO volume_corrections VALUES (?,?,?,?,?,?,?)",
+                    tuple(
+                        record[k]
+                        for k in (
+                            "id",
+                            "source",
+                            "symbol",
+                            "interval",
+                            "time",
+                            "revision",
+                            "evidence",
+                        )
                     ),
                 )
-            ]
-            if current != expected:
-                raise DataError("Volume correction snapshot changed before publication")
-            state = con.execute(
-                "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
-                tuple(record[k] for k in ("source", "symbol", "interval")),
-            ).fetchone()
-            if not state or state["status"] != "ready" or state["revision"] != record["revision"]:
-                raise DataError("Volume correction series basis changed")
-            con.execute(
-                "INSERT INTO volume_corrections VALUES (?,?,?,?,?,?,?)",
-                tuple(
-                    record[k]
-                    for k in ("id", "source", "symbol", "interval", "time", "revision", "evidence")
-                ),
-            )
             self.bump(con)
 
     def restore_recoveries(self, records):
