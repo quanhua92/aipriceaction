@@ -78,4 +78,47 @@ This is reference evidence only. Its empty symbol list licenses no stock audit,
 and the HOSE index checker continues to reject it. Historical venue changes,
 listing boundaries, suspensions and no-trade evidence must be established before
 a stock's absent date can be called missing OHLCV. HNX notices and amendments for
-the other retained years remain to be verified.
+the other retained years are now also recorded below.
+
+| Year | Annual HNX notice | Required amendment |
+| --- | --- | --- |
+| 2023 | 3451/TB-SGDHN, December 14, 2022 | None recorded |
+| 2024 | 5270/TB-SGDHN, December 8, 2023 | 1977/TB-SGDHN: April 29 closure; no May 4 makeup trading |
+| 2025 | 5386/TB-SGDHN, December 23, 2024 | None recorded |
+| 2026 | 5305/TB-SGDHN, December 3, 2025 | 5680/TB-SGDHN: January 2 closure; no January 10 makeup trading |
+
+The 2023, 2024 and 2026 documents and both amendments were downloaded from
+official HNX attachment links. Every page was visually checked. The 2026 annual
+notice also explicitly excludes the August 22 makeup Saturday. All declarations
+pin source URLs, exact bytes and SHA-256; their empty symbol lists do not certify
+stock sessions.
+
+## Stock date review
+
+`scripts.check_vn_stock_scheduled_dates` verifies both exchange declarations and
+every required amendment before reading local SQLite in one read-only transaction.
+It requires identical scheduled weekdays in the requested year/window, avoiding
+an assumption that today's exchange metadata proves a stock's historical venue.
+Different schedules are rejected pending venue evidence. For example:
+
+```sh
+.venv/bin/python -m scripts.check_vn_stock_scheduled_dates \
+  --hose-calendar calendars/hose-2025.json \
+  --hose-source data/hose-calendar-primary-20261004/hose-2025.pdf \
+  --hnx-calendar calendars/hnx-2025.json \
+  --hnx-source data/hnx-calendar-primary-20261004/hnx-2025.pdf \
+  --symbol FPT --symbol VPL --interval 1D \
+  --start-date 2025-01-01 --end-date 2025-12-31 \
+  --output data/stock-2025-date-review.json
+```
+
+Supply repeated `--hose-amendment` and `--hnx-amendment` source files for amended
+years. Only explicit three-letter stock requests and native stored intervals are
+accepted. Existing output is preserved. Daily shifted timestamps and unexpected
+dates remain visible; intraday checks project date presence without changing any
+timestamp.
+
+`absent_shared_schedule_dates` are candidates for review, not licensed missing
+stock sessions. The report makes no completeness pass claim, does not infer
+listing or transfer dates, and cannot publish candles. Before treating SQLite
+absence as served-data absence, verify the API's merged SQLite/S3 history reader.

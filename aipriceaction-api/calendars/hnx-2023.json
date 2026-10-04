@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "exchange": "HNX",
+  "year": 2023,
+  "symbols": [],
+  "weekdays": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "closed_ranges": [
+    [
+      "2023-01-02",
+      "2023-01-02"
+    ],
+    [
+      "2023-01-20",
+      "2023-01-26"
+    ],
+    [
+      "2023-05-01",
+      "2023-05-03"
+    ],
+    [
+      "2023-09-01",
+      "2023-09-04"
+    ]
+  ],
+  "explicit_closed_weekends": [],
+  "source": {
+    "notice": "3451/TB-SGDHN",
+    "published": "2022-12-14",
+    "url": "https://owa.hnx.vn/ftp//PORTALNEW/HEADER_IMAGES/20221214/3451-tb_0001.pdf",
+    "distribution": "Official HNX attachment linked from its public calendar page.",
+    "sha256": "940627376e1db49ea25ff0f75357424a2f4cfc10dc31e8024d1bbd116934ffe8",
+    "bytes": 409816,
+    "transcription_verification": "Visually checked all pages of the downloaded signed notice, including identifier, issue date, closure table and any explicit non-trading makeup Saturday."
+  },
+  "limitations": [
+    "Reference schedule only: no ticker is licensed for a stock completeness audit by this declaration.",
+    "The existing HOSE index checker intentionally rejects this HNX declaration.",
+    "This is the announced schedule, not proof that every scheduled session actually took place.",
+    "Current exchange metadata does not establish historical venues, listing boundaries, suspensions or no-trade sessions.",
+    "Source hashes preserve bytes; visual checking does not cryptographically authenticate a signature or prove there were no later amendments."
+  ]
+}

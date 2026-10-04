@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "exchange": "HNX",
+  "year": 2026,
+  "symbols": [],
+  "weekdays": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "closed_ranges": [
+    [
+      "2026-01-01",
+      "2026-01-01"
+    ],
+    [
+      "2026-02-16",
+      "2026-02-20"
+    ],
+    [
+      "2026-04-27",
+      "2026-04-27"
+    ],
+    [
+      "2026-04-30",
+      "2026-05-01"
+    ],
+    [
+      "2026-08-31",
+      "2026-09-02"
+    ]
+  ],
+  "explicit_closed_weekends": [
+    "2026-08-22"
+  ],
+  "source": {
+    "notice": "5305/TB-SGDHN",
+    "published": "2025-12-03",
+    "url": "https://owa.hnx.vn/ftp//PORTALNEW/HEADER_IMAGES/20251204/5305-tb_0001.pdf",
+    "distribution": "Official HNX attachment linked from its public calendar page.",
+    "sha256": "213e8621883eef4bc5ed949e15b0d9e19a0184a509129d10420c00a88b8d4b97",
+    "bytes": 668966,
+    "transcription_verification": "Visually checked all pages of the downloaded signed notice, including identifier, issue date, closure table and any explicit non-trading makeup Saturday."
+  },
+  "amendments": [
+    {
+      "closed_ranges": [
+        [
+          "2026-01-02",
+          "2026-01-02"
+        ]
+      ],
+      "explicit_closed_weekends": [
+        "2026-01-10"
+      ],
+      "source": {
+        "notice": "5680/TB-SGDHN",
+        "published": "2025-12-25",
+        "url": "https://owa.hnx.vn/ftp//PORTALNEW/HEADER_IMAGES/20251225/5680-tb_0001.pdf",
+        "distribution": "Official HNX attachment linked from its public calendar page.",
+        "sha256": "2fed6d2a9a4792e83c10f46eb4abf275f6ce9e5537e8df072ddb204ef7fbf5b1",
+        "bytes": 466569,
+        "transcription_verification": "Visually checked all pages of the downloaded signed notice, including identifier, issue date, closure table and any explicit non-trading makeup Saturday."
+      }
+    }
+  ],
+  "limitations": [
+    "Reference schedule only: no ticker is licensed for a stock completeness audit by this declaration.",
+    "The existing HOSE index checker intentionally rejects this HNX declaration.",
+    "This is the announced schedule, not proof that every scheduled session actually took place.",
+    "Current exchange metadata does not establish historical venues, listing boundaries, suspensions or no-trade sessions.",
+    "Source hashes preserve bytes; visual checking does not cryptographically authenticate a signature or prove there were no later amendments."
+  ]
+}

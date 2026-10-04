@@ -43,11 +43,31 @@ def load_calendar(path, source_pdf, amendment_files=()):
         or calendar.get("symbols") != ["VNINDEX", "VN30"]
     ):
         raise DataError("Unsupported announced calendar scope")
+    return calendar, calendar_closures(calendar, source_pdf, amendment_files)
+
+
+def load_reference_calendar(path, source_file, amendment_files=()):
+    """Verify known exchange reference schedules without licensing stock sessions."""
+    calendar = json.loads(path.read_text())
+    scopes = {"HOSE": ["VNINDEX", "VN30"], "HNX": []}
+    if (
+        calendar.get("schema") != 1
+        or calendar.get("exchange") not in scopes
+        or calendar.get("symbols") != scopes[calendar["exchange"]]
+        or type(calendar.get("year")) is not int
+        or not 2000 <= calendar["year"] <= 2100
+        or calendar.get("weekdays") != [0, 1, 2, 3, 4]
+    ):
+        raise DataError("Unsupported announced reference calendar scope")
+    return calendar, calendar_closures(calendar, source_file, amendment_files)
+
+
+def calendar_closures(calendar, source_file, amendment_files):
     amendments = calendar.get("amendments", [])
     if len(amendment_files) != len(amendments):
         raise DataError("Supply every declared calendar amendment source in order")
     declarations = [calendar, *amendments]
-    for declaration, source_path in zip(declarations, [source_pdf, *amendment_files], strict=True):
+    for declaration, source_path in zip(declarations, [source_file, *amendment_files], strict=True):
         verify_source(declaration["source"], source_path)
     closed = set()
     for declaration in declarations:
@@ -64,7 +84,7 @@ def load_calendar(path, source_pdf, amendment_files=()):
             if day.year != calendar["year"] or day.weekday() < 5 or day in closed:
                 raise DataError("Invalid explicit non-trading weekend")
             closed.add(day)
-    return calendar, closed
+    return closed
 
 
 def compare_dates(calendar, closed, first, last, timestamps):
