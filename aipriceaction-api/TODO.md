@@ -60,6 +60,12 @@ history through `eb814ab`; they are not additional current open tasks.
   the remaining date has one VCI cumulative-volume contradiction. VPS/legacy
   report small additional daily volumes on 246 dates. Their chart coverage
   convention is unproven; do not label this dividend scaling or assume odd lots.
+- [x] Audit all seven active primary FPT/TPB minute archives against pinned VCI
+  pagination. All three TPB partitions and two FPT October partitions match
+  exactly. FPT September is quarantined by the cumulative-volume guard;
+  FPT January has a different primary price basis, while the newer frozen
+  public snapshot matches VCI and minute-derived daily prices/volumes agree
+  with the retained daily reference. Preserve these originals during migration.
 - [x] Diagnose same-feed minute/hour differences for all selected VN tickers.
   VNDirect excludes late-session observations in 12 captured hours; legacy does
   so in three. Other observed aggregation disagreements remain explicit. Captured

@@ -117,6 +117,38 @@ All 620 tests pass with one existing warning; whole-project lint/format and
 offline wheel/source builds pass. The runtime configuration is not changed by
 these probes or staging commands. No new dependency or Compose service is added.
 
+## VCI comparison at the minute archive boundary — 2026-10-04 ICT
+
+The read-only `scripts/audit_vci_archive_overlap.py` paginates pinned VCI
+responses across each existing primary minute archive. It requires crossing
+the archive floor, preserves raw replies and original/candidate JSON with
+SHA-256 checksums, and records price, volume and timestamp differences
+separately. Empty replies and stalled/partial pagination fail verification.
+No candle, series revision, archive index or remote manifest is published.
+
+For FPT/TPB, the seven primary archive partitions contain 10,831 rows.
+All three TPB partitions match VCI exactly on 5,180 candles. FPT's October
+partitions match on all 678 candles. Its September partition fails the new
+volume guard at the already documented September 26 contradiction, with raw
+responses retained. FPT January has all 453 prices changed, zero volume
+changes and identical timestamps; the largest symmetric price difference is
+10.326382542268494%. This is a basis discrepancy, not permission to scale.
+
+The newer FPT January frozen public snapshot matches VCI on all 453 OHLCV
+records. Their minute-derived daily candles agree with retained VNDirect daily
+prices within 0.5 VND on January 2 and within 0.26 VND on January 3. Both daily
+volumes match exactly. This supports rebuilding a coherent current-basis
+archive while preserving the original primary and frozen captures as evidence.
+It does not license a generic correction or establish independent market truth.
+
+Evidence: `data/vci-archive-overlap-20261004/report.json` and
+`fpt-january-basis.json`. Original archive metadata remains unchanged.
+Seven pagination regressions pass, including sparse observed coverage,
+empty/stalled replies, provider changes, range violations, bounded incomplete
+pagination and inconsistent repeated candles. The intended invocation is
+`python -m scripts.audit_vci_archive_overlap --symbol FPT --symbol TPB
+--output data/NEW_DIRECTORY --allow-direct` from the API project environment.
+
 ## Intraday feed omission diagnostics — 2026-10-04 ICT
 
 A read-only replay of the same four-feed captures compares each native hourly
