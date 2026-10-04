@@ -9,6 +9,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import tempfile
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
@@ -23,6 +24,7 @@ from aipriceaction_api.providers import Providers
 from aipriceaction_api.storage import Repository
 from aipriceaction_api.vci_adoption import adopt_native_snapshot
 from aipriceaction_api.workers import Worker
+from scripts.captured_vci_activation_inputs import captured_inputs, http_controls
 from scripts.stage_yahoo_daily_history import RecordingTransport
 from scripts.vci_activation_inputs import reviewed_inputs
 
@@ -84,11 +86,29 @@ def daily_check(rows, price_reference, volume_references):
 
 
 async def run(args):
+    with tempfile.TemporaryDirectory(prefix="aipa-vci-activation-") as temporary:
+        return await _run(args, Path(temporary))
+
+
+async def _run(args, temporary):
     base = Settings.from_env()
     if base.s3_endpoint != "http://127.0.0.1:9100" or base.archive_backend != "s3":
         raise ValueError("Activation is restricted to the local RustFS environment")
     generic = bool(getattr(args, "review", None))
-    if generic:
+    captured_mode = bool(getattr(args, "captured_extension", None))
+    if captured_mode:
+        if (
+            not args.captured_rehearsal
+            or not args.daily
+            or generic
+            or args.candidates
+            or args.rehearsal
+            or args.tpb_daily
+        ):
+            raise DataError(
+                "Captured activation requires source/rehearsal/daily inputs and no other candidate mode"
+            )
+    elif generic:
         if not args.candidates or not args.daily or args.rehearsal or args.tpb_daily:
             raise DataError("Reviewed activation requires candidates/daily and no rehearsal inputs")
     elif not args.rehearsal or not args.tpb_daily:
@@ -129,7 +149,9 @@ async def run(args):
     plans = []
     try:
         artifacts = {}
-        if generic:
+        if captured_mode:
+            inputs, artifacts = await captured_inputs(args, settings, main, temporary, providers)
+        elif generic:
             inputs, artifacts = await reviewed_inputs(args, settings, main)
         else:
             rehearsal = json.loads((args.rehearsal / "report.json").read_text())
@@ -285,7 +307,7 @@ async def run(args):
                 (r.time, r.open, r.high, r.low, r.close, r.volume) for r in replacement
             ]:
                 raise DataError("Canonical OHLCV differs after refresh")
-            golden = Repository(args.output / (symbol + "-golden.sqlite3"))
+            golden = Repository(temporary / (symbol + "-golden.sqlite3"))
             golden.initialize()
             golden.put(replacement)
             reference = History(golden, Archive(golden, settings), settings)
@@ -318,6 +340,8 @@ async def run(args):
                         )
             entry["boundary_queries"] = cases
             entry["readback_checksum"] = checksum(actual)
+            if captured_mode:
+                entry["http_routes"] = http_controls(settings, symbol)
             save()
             print(
                 json.dumps(
@@ -346,6 +370,8 @@ if __name__ == "__main__":
     parser.add_argument("--rehearsal", type=Path)
     parser.add_argument("--tpb-daily", type=Path)
     parser.add_argument("--review", type=Path)
+    parser.add_argument("--captured-extension", type=Path)
+    parser.add_argument("--captured-rehearsal", type=Path)
     parser.add_argument("--candidates", type=Path)
     parser.add_argument("--daily", type=Path)
     parser.add_argument("--symbol", action="append")
