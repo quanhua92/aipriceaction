@@ -45,6 +45,36 @@ Three selection cases and a multi-invalid-date restoration case bring the full
 suite to 516 passing tests. Lint/format and offline package builds pass; the
 existing Starlette/httpx warning remains.
 
+After those checks pass, the local canonical publication adds five objects,
+raising the active index from 896 to 901 and preserving all original active
+objects. Scoped index candle/series hashes remain exact while unrelated native
+workers continue running. There are eight active invalid-date/basis markers.
+The consistent after-backup passes SQLite `quick_check`, SHA-256
+`3be551b6c6bc08da669fa65a13d5a3695fc18ba3e8dffead47f27a73e0388f17`.
+Evidence: `data/vnindex-pre2019-publication-20261004/report.json`.
+Native 2019 dates and OHLCV remain exact; the first raw row's derived changes
+and all 250 SMA rows' derived fields acquire the earlier native context. These
+are measured calculation changes, not claims of byte parity for old indicators.
+
+The local API loads `cb52e11` as PID 16546, session 21912. Actual HTTP and a fresh
+isolated restored API reproduce all thirteen older positive/context/guarded
+controls. Full raw 2017 and 2018 each return 250 rows; all 250 2018 SMA rows are
+readable. The four invalid dates and the affected 2018 EMA remain guarded.
+Restoration verifies all 901 objects, 69 certificates, 34 recovery receipts and
+all eight active markers; SQLite `quick_check` passes. All source CSV/public/native
+captures and reports are checksummed, uploaded and read back under
+`archive-v2/evidence/index-old-daily/`. Evidence: adjacent
+`restore-http-report.json` and `restored.sqlite3`.
+
+All nine previously restored FPT October 1–3, 2025 HTTP raw/SMA/EMA responses
+remain byte-identical across the API restart, recorded in adjacent
+`fpt-before.json` and `fpt-after.json`. The preceding VND and VNINDEX 2020
+publication runners also pass their twelve recent controls apiece and all
+historical/guarded controls on the updated local API. The 2015–2018 public
+capture does not license a native handoff or complete cross-frame historical
+queries. Production routing and the rejected index hourly proposals remain
+unchanged.
+
 ## VNINDEX frozen daily history and pending-archive coverage — 2026-10-04 ICT
 
 A fresh 2014–October 3, 2023 public daily request returns 2,186 records starting
