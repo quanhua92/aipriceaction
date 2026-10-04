@@ -19,10 +19,27 @@ from urllib.parse import urlsplit
 import httpx
 
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import parse_time
+from aipriceaction_api.domain import base_interval, date_bounds, parse_time
 from scripts.check_retained_vn_daily import read_snapshot
 
 INTERVALS = ("1m", "5m", "15m", "30m", "1h", "4h", "1D", "1W", "2W", "1M")
+
+
+def validate_prices(row, source, symbol, interval):
+    values = [row[field] for field in ("open", "high", "low", "close")]
+    futures = source == "yahoo" and symbol.endswith("=F")
+    assert all(
+        isinstance(value, (int, float)) and math.isfinite(value) and (value > 0 or futures)
+        for value in values
+    ), "Invalid price"
+    ranged = (
+        [row["close"]]
+        if source == "sjc"
+        else [row["open"]]
+        if futures and base_interval(interval) == "1D"
+        else [row["open"], row["close"]]
+    )
+    assert row["low"] <= min(ranged) <= max(ranged) <= row["high"], "Invalid OHLC range"
 
 
 async def check(args):
@@ -30,6 +47,9 @@ async def check(args):
         raise ValueError("Use a loopback replacement API")
     if not 1 <= args.workers <= 4:
         raise ValueError("Use one to four readers")
+    lower, upper = date_bounds(args.start_date), date_bounds(args.end_date, end=True)
+    if lower is not None and upper is not None and lower > upper:
+        raise ValueError("Start date must not follow end date")
     settings = Settings.from_env()
     watchlist = json.loads(settings.watchlist.read_text())
     cases = []
@@ -65,6 +85,10 @@ async def check(args):
                     ema=str(case["indicator"] == "ema").lower(),
                     cache="false",
                 )
+                if args.start_date:
+                    params["start_date"] = args.start_date
+                if args.end_date:
+                    params["end_date"] = args.end_date
                 started = time.perf_counter()
                 result = dict(case=index, **case, params=params)
                 try:
@@ -83,20 +107,20 @@ async def check(args):
                         result["failure"] = response.text[:1000]
                     else:
                         payload = response.json()
+                        assert payload, (
+                            "Missing historical data"
+                            if lower is not None or upper is not None
+                            else "Missing data"
+                        )
                         assert set(payload) == {case["symbol"]}, "Response symbol mismatch"
                         rows = payload[case["symbol"]]
                         assert 0 < len(rows) <= 20, "Missing or oversized result"
                         times = [parse_time(row["time"]) for row in rows]
                         assert times == sorted(set(times)), "Dates repeat or are unordered"
+                        assert lower is None or times[0] >= lower, "Result precedes start date"
+                        assert upper is None or times[-1] <= upper, "Result follows end date"
                         for row in rows:
-                            values = [row[field] for field in ("open", "high", "low", "close")]
-                            assert all(
-                                isinstance(x, (int, float)) and math.isfinite(x) and x > 0
-                                for x in values
-                            ), "Invalid price"
-                            assert row["low"] <= min(values) <= max(values) <= row["high"], (
-                                "Invalid OHLC range"
-                            )
+                            validate_prices(row, case["source"], case["symbol"], case["interval"])
                             assert (
                                 isinstance(row["volume"], (int, float))
                                 and math.isfinite(row["volume"])
@@ -128,7 +152,7 @@ async def check(args):
 
         await asyncio.gather(*(reader() for _ in range(args.workers)))
     _, _, after = read_snapshot(settings.database.resolve())
-    assert before == after, "Local candle or operational data changed during the audit"
+    assert before == after, "VN daily records, candle counts or operational metadata changed"
     results.sort(key=lambda row: row["case"])
     failures = [row for row in results if "failure" in row]
     report = dict(
@@ -137,12 +161,15 @@ async def check(args):
         workers=args.workers,
         configured_series=sum(len(entries) for entries in watchlist.values()),
         intervals=list(args.interval or INTERVALS),
+        start_date=args.start_date,
+        end_date=args.end_date,
         requests=len(results),
         passed_requests=len(results) - len(failures),
         failed_requests=len(failures),
         passed=not failures,
         statuses=dict(Counter(str(row.get("status", "transport_error")) for row in results)),
         main_snapshot_unchanged=True,
+        snapshot_scope="VN daily record versions, total candle count and operational tables including epoch; other candle versions are not individually hashed.",
         before=before,
         after=after,
         results=results,
@@ -167,5 +194,7 @@ if __name__ == "__main__":
     parser.add_argument("--url", default="http://127.0.0.1:3001")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--interval", action="append", choices=INTERVALS)
+    parser.add_argument("--start-date")
+    parser.add_argument("--end-date")
     parser.add_argument("--report", type=Path, default=Path("data/web-query-matrix.json"))
     raise SystemExit(asyncio.run(check(parser.parse_args())))

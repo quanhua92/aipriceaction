@@ -973,6 +973,21 @@ uv build
 ```
 
 Optional read-only provider and legacy-response probes live in `scripts/`.
+`check_web_query_matrix.py` checks every configured ticker with no indicators,
+SMA and EMA. Use explicit dates to audit historical or recent session ranges:
+
+```sh
+uv run python -m scripts.check_web_query_matrix --interval 1D --interval 15m --interval 1h --start-date 2026-09-28 --end-date 2026-10-02 --report data/dated-web-audit.json
+```
+
+The report and its response-capture directory must be new. Empty ranges fail
+the coverage audit; compare them with bounded public API requests to determine
+whether they are missing migration data or also absent from the legacy source.
+The checker verifies requested date bounds and the existing SJC quote/futures
+settlement price rules. Its unchanged-state evidence covers VN daily versions,
+total candle counts and operational tables including the epoch; it does not
+individually hash every other candle or certify legacy numerical parity.
+
 `check_sdk_client.py` runs in the existing SDK environment and checks sampled
 daily/minute/15-minute candles plus SMA/EMA against the local API.
 Use `--start-date` and `--end-date` for archived SDK ranges. The SDK selects
