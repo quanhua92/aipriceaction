@@ -118,6 +118,18 @@ history through `eb814ab`; they are not additional current open tasks.
   daily witnesses before retrying the failed minute windows. Diagnose missing/bad
   source rows automatically; preserve strict ingestion and require evidence
   before licensing corrections.
+- [x] Refresh all 29 in-window proposals with 58 exact-date VNDirect/DNSE
+  requests; all pass. Recheck discovery failures with fresh exact-date witnesses,
+  recovering VNM/GEX while preserving eight rejected observations on seven
+  symbols and excluding the old GAS/GEE targets. Candidate catalog has 54 proofs;
+  active worker catalogs/canonical data are unchanged. Replaying all rejected
+  captures offline passes 27 symbol records and blocks VNINDEX/VN30/CEO/TCH/IDC/
+  SHS/VGI. Pass 48 refresh/replay/proof tests, including tampered capture, wrong
+  witness identity/volume and refusal to infer full requested-history coverage.
+- [ ] Continue the 27 replayed VCI records past their captured cursors under
+  an explicit artifact budget. Verify full-year calendar coverage and coherent
+  source/SQLite basis before active-provider or canonical changes; successful
+  captured-page replay alone does not prove the requested year.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

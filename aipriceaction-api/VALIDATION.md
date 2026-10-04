@@ -5,6 +5,32 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+Follow-up automated proof refresh and native-parser replay make further progress
+without changing canonical data. `scripts.refresh_vci_volume_proposals` rechecks
+the 29 in-window proposals against 58 fresh exact-date VNDirect/DNSE daily
+responses; all pass. It caches witnesses by symbol/date/feed and bounds evidence
+to 64 MiB. Rechecking previously blocked discoveries recovers VNM and GEX;
+the old GAS/GEE targets are outside the requested minute-year window and remain
+excluded. Eight observations on seven symbols still fail daily-volume
+corroboration. No parser or proof guard was relaxed.
+
+The final candidate catalog contains 54 proofs, incorporating the original 23
+and 31 freshly verified additions. `scripts.replay_vci_candidate_pages` verifies
+capture hashes/bytes/status and replays exact request cursors through the
+unchanged runtime provider using MockTransport. It accepts all captured pages
+for 27 formerly rejected symbol records; VNINDEX, VN30, CEO, TCH, IDC, SHS and
+VGI remain blocked. This makes no requests and explicitly does not certify the
+uncaptured older part of the requested year. Fresh active catalog/canonical
+publication is still absent.
+
+Evidence is under `data/vn-minute-year-volume-proofs-refreshed-20261004`
+(4,835,031 bytes), `data/vn-minute-year-volume-proofs-exact-date-20261004`
+(4,627,514 bytes) and the corresponding VCI replay directories (26,467/26,427
+bytes). These contain source captures/catalogs/reports, with no database copies.
+Forty-eight focused tests pass: fresh witness scope and volume checks, cached
+witness reuse, blocked-discovery recovery, capture tampering, licensed versus
+unlicensed native replay, and incomplete-history status remain enforced.
+
 The resumable comparison completed all 59 selected VN symbols and 236 native
 provider windows for October 4, 2025–October 2, 2026 in four-symbol batches.
 It retained 1,503,844,875 bytes of source captures, normalized checkpoints and
