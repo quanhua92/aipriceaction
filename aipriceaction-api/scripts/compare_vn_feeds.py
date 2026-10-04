@@ -32,6 +32,33 @@ def same(a, b, fields=FIELDS):
     )
 
 
+def date_coverage(feeds):
+    """Observed day gaps and partial days; never infer an exchange schedule."""
+    counts = {
+        feed: Counter(datetime.fromtimestamp(row["time"], UTC).strftime("%Y-%m-%d") for row in rows)
+        for feed, rows in feeds.items()
+    }
+    days = sorted(set().union(*(set(value) for value in counts.values())))
+    largest = {day: max(value.get(day, 0) for value in counts.values()) for day in days}
+    return {
+        "basis": "union_of_observed_provider_dates_not_exchange_calendar",
+        "observed_dates": len(days),
+        "providers": {
+            feed: {
+                "observed_dates": len(value),
+                "rows_by_date": dict(sorted(value.items())),
+                "missing_observed_dates": [day for day in days if day not in value],
+                "fewer_rows_than_largest_provider": {
+                    day: {"rows": value[day], "largest_observed": largest[day]}
+                    for day in sorted(value)
+                    if value[day] < largest[day]
+                },
+            }
+            for feed, value in counts.items()
+        },
+    }
+
+
 def compare(feeds):
     """Compare every pair, then report four-way agreement and individual outliers."""
     available = {name: {r["time"]: r for r in rows} for name, rows in feeds.items()}
@@ -75,6 +102,7 @@ def compare(feeds):
                 dissenters.append(feed)
         issues.append({"time": stamp, "kind": "values", "three_agree_outlier": dissenters})
     return {
+        "date_coverage": date_coverage(feeds),
         "counts": dict(counts),
         "three_agree_outliers": dict(outliers),
         "pairs": pairs,

@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Automatically summarize observed dates and candle counts per date for
+  every compared feed, exposing missing days and partial sessions independently
+  of cursor completion. Replay the existing full-year controls without downloads
+  or database copies: FPT has 247 observed dates on VCI versus 127 on VNDirect,
+  62 on DNSE and five on VPS. VNDirect lacks 120 dates in that observed union;
+  this is not an exchange-calendar completeness claim. Captured DNSE nextTime
+  hints for FPT/MWG lead to null arrays rather than candles in read-only controls,
+  so keep the strict adapter unchanged. Pass 185 provider/comparison/pipeline tests.
+
 - [x] Add bounded native-feed pagination and atomic resumable feed-window
   checkpoints, bound to requested symbols/dates and the effective volume-proof
   catalog hash. Preserve completed errors on resume. Report empty/error/page-budget

@@ -1,4 +1,4 @@
-from scripts.compare_vn_feeds import compare
+from scripts.compare_vn_feeds import compare, date_coverage
 
 
 def candle(stamp=0, close=10.0, volume=100):
@@ -71,3 +71,20 @@ def test_empty_feeds_do_not_certify_any_candle():
     report = compare({"vps": [], "vndirect": [], "dnse": [], "legacy": []})
     assert report["counts"] == {}
     assert report["three_agree_outliers"] == {}
+
+
+def test_cursor_completion_cannot_hide_missing_days_or_partial_sessions():
+    report = date_coverage(
+        {
+            "vci": [candle(0), candle(60), candle(86400), candle(2 * 86400)],
+            "vndirect": [candle(0), candle(2 * 86400)],
+            "dnse": [],
+        }
+    )
+    assert report["basis"] == "union_of_observed_provider_dates_not_exchange_calendar"
+    assert report["observed_dates"] == 3
+    assert report["providers"]["vndirect"]["missing_observed_dates"] == ["1970-01-02"]
+    assert report["providers"]["vndirect"]["fewer_rows_than_largest_provider"] == {
+        "1970-01-01": {"rows": 1, "largest_observed": 2}
+    }
+    assert len(report["providers"]["dnse"]["missing_observed_dates"]) == 3
