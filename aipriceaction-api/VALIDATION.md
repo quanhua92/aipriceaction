@@ -5,6 +5,42 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+The last four passing partial windows finish without discovering another
+in-window volume contradiction. All fresh joins match. VCB, ACB, VPB and LPB
+add 43,938 accepted candles through 7,064,715 bytes of captures/reports under a
+64 MiB cap; 47 previously complete windows are skipped. Evidence is
+`data/vn-minute-year-vci-continuation-round3-20261004`. The proof catalog stays
+at 78; no additional daily witness requests are needed.
+
+The final full-watchlist combined replay accepts 2,699,606 candles including
+valid partial records. Fifty-one candidates traverse the requested boundary
+and contain all 247 reference dates, with no unexpected dates or passing partial
+windows left. VNINDEX, VN30, CEO, TCH, IDC, SHS, HPG and VGI remain strict parser
+refusals. Receipt-aware comparison retains 81,274 shared VCI/SQLite price
+disagreements and 200 volume disagreements. No unanimous-provider conflicts or
+missing unanimous timestamps appear within the limited four-feed overlap;
+this does not prove older market truth. Combined reports and source references
+use 1,000,775 bytes at `data/vn-minute-year-vci-combined-round3-review-20261004`.
+
+`scripts.audit_legacy_volume_projections` checks every target in the 78-proof
+catalog against complete original SQLite days in one read-only transaction.
+It enforces the existing single cumulative-volume projection, frozen legacy
+identity/original volumes, ready series revision and receipt replay without
+changing prices or provenance. Fifty-five targets can form guarded candidates;
+the existing MWG receipt is correctly recognized as already applied. Twenty-one
+remain rejected (18 frozen identity/volume mismatches; three unsupported peer or
+multiple corrections), and one target predates the requested year. This audit
+does not grant publication. The 45,073-byte report is at
+`data/vn-legacy-volume-projection-catalog-20261004/report.json`.
+
+One hundred focused tests pass, including unchanged databases, full frozen-day
+refusals, repairing/revised basis, duplicate proof targets, scoped date exclusion,
+peer-proof refusal and recognition of an existing replayed receipt. No database
+copies or canonical/RustFS data writes occur. Local data grows from 7,593,488 to
+7,601,524 KiB; RustFS data stays at 2,586,396 KiB (logs increase by 16 KiB).
+Actual batch publication/recovery and remaining source/price-basis acceptance
+remain open.
+
 The next continuation reuses combined capture references and skips all 40
 previously verified boundaries. It checks the eleven passing partial candidates
 and replays the eight unsupported records offline. All eleven fresh joins match;

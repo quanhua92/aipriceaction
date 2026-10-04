@@ -157,11 +157,29 @@ history through `eb814ab`; they are not additional current open tasks.
   dates. Keep eight refusals explicit; VCB/ACB/VPB/LPB need uncaptured older pages.
   Preserve 65,718 shared VCI/SQLite price differences and 200 volume differences;
   no unanimous-provider conflicts/missing timestamps. Pass 80 focused tests.
-- [ ] Continue VCB/ACB/VPB/LPB from the latest combined references. Verify coherent
-  source/SQLite adjustment basis and remaining price/volume differences before
-  active-provider or canonical changes. Reference-date presence and boundary
-  traversal do not certify every minute or OHLCV accuracy. Keep the eight
-  unsupported refusals explicit.
+- [x] Continue VCB/ACB/VPB/LPB from the latest combined references, skipping 47
+  complete windows under a 64 MiB cap. All four joins match and reach the boundary;
+  no new proof requests are needed. Retain 43,938 additional candles through
+  7,064,715 bytes of captures/reports. Final full-watchlist replay accepts 2,699,606
+  candles including partials: 51 candidates contain all 247 reference dates,
+  no passing partial windows remain and the eight unsupported refusals persist.
+  Keep 81,274 shared VCI/SQLite price differences and 200 volume differences;
+  no unanimous-provider conflicts/missing timestamps or unexpected dates.
+- [x] Automatically audit the 78-proof candidate catalog against exact frozen
+  legacy days and ready SQLite revisions. Find 55 available single-volume
+  projections and one already-applied receipt; retain 21 refusals and one target
+  outside the requested year. Eighteen refusals differ in frozen identity/volumes;
+  three require unsupported peer/multiple projection semantics. Preserve all
+  legacy prices/provenance. Keep a 45,073-byte report, no database copies, with
+  explicit absence of publication license. Pass 100 focused tests including
+  read-only projection/basis checks and correct recognition of an applied receipt.
+- [ ] Publish only verified available volume projections with immutable source
+  evidence and guarded recovery. Batch metadata publication to avoid multiplying
+  retained manifest snapshots; verify actual HTTP aggregates and cold restoration.
+  Verify coherent source/SQLite adjustment basis and remaining price/volume
+  differences before provider adoption or price changes. Reference-date presence
+  does not certify every minute or OHLCV accuracy; keep the eight unsupported
+  refusals explicit.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,
