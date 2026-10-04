@@ -197,6 +197,20 @@ Successful-day tracking is in memory; restarting harmlessly rechecks SQLite.
 This needs no additional service. Keep the worker under your existing process
 supervisor for continuous operation.
 
+Rehearse configured native VN refreshes on an isolated populated copy before
+expanding a live worker:
+
+```sh
+uv run python -m scripts.check_vn_refresh --allow-direct --output data/vn-refresh-review
+```
+
+This captures VPS/VNDirect/DNSE responses, checks native daily/hourly/minute
+states and verifies protected records and archives. It does not publish the
+candidate or process queued repairs. Frozen snapshots and both disputed index
+hourly series remain excluded; nonconfigured intervals are reported separately.
+Inspect recorded outcomes and queued quality findings before treating a recent
+refresh as proof of complete historical coverage.
+
 For bounded runs and focused recovery:
 
 ```sh

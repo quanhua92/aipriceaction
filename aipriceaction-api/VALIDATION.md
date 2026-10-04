@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Full native VN refresh rehearsal and stock worker — 2026-10-04 ICT
+
+`scripts.check_vn_refresh` creates populated before/candidate SQLite files,
+captures real VPS/VNDirect/DNSE responses and runs ordinary explicit refreshes
+without processing repair jobs or publishing the candidate. All 170 eligible
+checks succeed: 59 daily, 53 hourly and 58 minute series. The run records 218
+responses from 02:28:18 to 02:35:02 UTC and includes existing older daily
+sentinel checks. Every retained VN OHLCV value remains unchanged. Candidate
+non-VN candle versions, archives, adoption certificates and import records are
+exact; both directions of job comparison also match, with zero new jobs.
+SQLite `quick_check` passes. The candidate contains 6,019,990 records.
+
+The canonical VN record-version hash is unchanged before/after rehearsal:
+`e4571035b87d91b53de9464fe9ac9504ee901844cfc10369d359690b75d316dc`.
+The separate crypto worker continues operating, so this is a scoped VN claim,
+not a claim that every canonical record/epoch remained unchanged. Both disputed
+index hourly series and the frozen VNINDEX minute snapshot are excluded. Four
+additional stocks have no configured hourly ingestion. The reusable script
+explicitly recognizes nonconfigured intervals and fails on empty/unsuccessful
+rehearsals; these refinements do not change the 170-series eligibility in this
+recorded run. Evidence:
+`data/vn-native-refresh-rehearsal-20261004/report.json` and
+`data/vn-native-refresh-rehearsal-20261004/continuous-observation.json`.
+
+After the rehearsal passes, one continuous local VN worker starts for all 57
+stock tickers with explicit direct access, source filtering and daily archive
+maintenance. VNINDEX and VN30 are excluded entirely, preserving the automatic
+review rejection boundary. Process inspection confirms PID 93795 alongside
+crypto PID 90049 and API PID 83407. At 02:37:17 UTC, the new VN worker has recorded
+46 successful minute and four successful hourly checks, with one minute check
+in progress. The first maintenance pass has zero due partitions. IDC/GEE/VGI/VTP
+hourly bootstrap jobs remain guarded; observed recovery pages report zero
+published progress rather than waiving their known gaps. Output is preserved in
+`data/vn-native-refresh-rehearsal-20261004/continuous-worker.log`.
+
+The installed SDK passes 24 completed-date SMA/EMA cases for FPT/VCB/MBB across
+daily/hourly/minute/15-minute intervals during live ingestion. All 390 returned
+rows match the corresponding HTTP selection and use the API; complete-range
+OHLCV tails also match. Inherited longer-range indicator warmup differences
+remain recorded. Evidence: `data/vn-continuous-worker-sdk-20261004/`.
+The new diagnostic passes lint/format and its CLI help check. Application code
+is unchanged in this step, so the last full suite remains 492 passing tests.
+Actual multi-day uptime, restart supervision, session completeness, frozen
+handoffs and production cutover remain open.
+
 ## Real scheduling and continuous crypto worker — 2026-10-04 ICT
 
 An authoritative process check found only the local API running before this
