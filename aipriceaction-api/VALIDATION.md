@@ -6,6 +6,57 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Executed remaining-market rollover — 2026-10-04 ICT
+
+The due Vietnam/global/gold rollover publishes **177 immutable Parquet objects /
+12,387 expired records**: 58 VN daily candles, 260 VN hourly candles, 12,061 VN
+minute candles, seven Yahoo daily candles and one SJC daily quote. Exact exported
+versions are pruned after upload/readback verification. No expired local rows
+remain at the checked October 4 UTC retention cutoff. This does not establish
+full coverage where an upstream series begins after the configured floor.
+
+Cold readback preserves every moved value, provider, revision and update version.
+Every partition's boundary query includes the first remaining local observation,
+including the weekend between the expired VN Friday and retained Monday minute
+sessions. Exhaustive before/after comparisons preserve every surviving candle
+and version, with no new records and exactly the 12,387 selected missing local
+rows. Series, source checks, jobs, quality records, ticker schedules, handoffs
+and import receipts remain exact; original archive-index records are preserved.
+SQLite passes `quick_check`. The main record count falls from **6,031,821 to
+6,019,434**, and the epoch advances **3157 to 3511**. Index observations are moved
+without changing their values or replacing the held hourly snapshots.
+
+The canonical manifest restores **890 objects** into fresh SQLite with a separate
+cold cache; every moved record reads back exactly. All **177 HTTP boundary queries
+/ 24,980 records** match the populated before-image through the unchanged API.
+Installed SDK checks pass **eight SMA/EMA cases / 152 records**: archived FPT
+native minutes, a current short FPT 15-minute session, and NVDA/SJC daily history
+spanning the boundary. SDK/API fields match exactly in these cases. Full-range
+indicator context differences remain recorded separately.
+
+The verifier initially assumed 20 records for a valid 16-record VN aggregate
+session. Its first adjustment used a forward query, changing indicator context.
+The final verifier matches the SDK's actual backward request and local start-date
+filter; it verifies shorter ranges without trimming unexpected API output.
+Checker lint, formatting and offline package builds pass.
+
+A distinct historical FPT 15-minute EMA request ending October 3, 2025 still
+fails its revision guard: the 600-aggregate lookback reaches an older January
+`legacy-snapshot` archive beyond the coherent adopted September data. Direct
+before/after snapshot queries produce the identical error, proving it predates
+this rollover. Dated pinned VPS probes return no August/September 2025 minutes,
+while the October 2, 2026 head returns 100 observations. Captures are preserved;
+no missing data, adjustment factor or revised provenance is invented. This
+older indicator-context gate remains open despite raw boundary preservation.
+
+Backups, publications, HTTP responses, SDK results and error diagnostics remain
+under `data/all-market-canonical-rollover-20261004/` and
+`data/fpt-older-warmup-native-probe-20261004/`. Immutable RustFS receipt:
+`data/all-market-canonical-rollover-evidence-20261004.json`. Canonical after-backup
+SHA-256: `fac9974d7e840e3d63729b2b09005bce7cdbbd350ad2547b5ca33b6150065229`.
+Other historical/provider-basis gates, unattended scheduling and production
+cutover remain open.
+
 ## Executed canonical crypto rollover and subsequent ingestion — 2026-10-04 ICT
 
 After the dated isolated rehearsal, `archive --source crypto --execute --prune`

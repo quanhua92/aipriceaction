@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,031,821 candle/quote records. The current S3 index has 713
+- The main local database has 6,019,434 candle/quote records. The current S3 index has 890
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -29,6 +29,14 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Execute the remaining-market rollover: 12,387 rows in 177 partitions,
+  exact cold readback and all surviving candle versions, 890-object manifest
+  restoration, and 177 HTTP boundary queries covering 24,980 records. No expired
+  local rows remain at the checked UTC cutoff. Unattended scheduling remains open.
+- [ ] Fill coherent older FPT aggregate EMA context: the October 3, 2025 query
+  reaches an incompatible January legacy archive beyond the adopted September
+  lookback. The same guard occurs before and after rollover; pinned VPS dated
+  August/September probes return no data. Do not relabel or mix those revisions.
 - [x] Execute the due crypto rollover after its populated rehearsal: preserve
   5,860 expired rows in 12 immutable Parquet objects, prune exact local versions,
   verify every surviving record and restore the 713-object canonical manifest.
