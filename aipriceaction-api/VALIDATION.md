@@ -39,6 +39,28 @@ expectation and this verified result are retained under
 `data/vnd-public-partition-rehearsal-20261004-verified/report.json`.
 This rehearsal does not publish to canonical SQLite or RustFS.
 
+The verified recovery is subsequently published to the local replacement:
+895 active objects, preserving all 894 original active objects, and two active
+gap markers. It changes archive/quality metadata; independent native workers
+continue ingesting recent candles. The consistent after-backup passes SQLite
+`quick_check` and has SHA-256
+`762ac6c46e53896c1551ad0975ad66cdd04e30fd9b7ec2c73e293c69fc5e6250`.
+Evidence: `data/vnd-public-partition-publication-20261004/report.json`.
+The local API is restarted with the committed reader as PID 7786, session 63711;
+VN, crypto and global workers remain running. All twelve completed-date recent
+HTTP responses match the before-image, four recovered historical controls return
+200 with exact public OHLCV, and four invalid/incomplete controls return 503.
+Evidence: adjacent `http-before.json` and `http-after.json`.
+Fresh isolated restoration from RustFS verifies all 895 objects, 69 adoption
+certificates and 34 recovery receipts, retaining both active gap markers and
+the exact invalid public record. December's nine SMA rows remain readable and
+the invalid date remains guarded; SQLite `quick_check` passes. Evidence:
+adjacent `restore-report.json` and `restored-verified.sqlite3`. The initial
+diagnostic completed object/context validation but used an incorrect table name
+when reporting certificate counts; that before-image remains preserved as
+`restored.sqlite3`. The corrected run uses a fresh database.
+Production routing and the legacy service are unchanged.
+
 All 509 tests pass, including seventeen new cases covering capture identity,
 coverage, race rollback, readback failure, manifest retry/restoration, retained
 records, primary/mixed guards and CLI dry runs. Lint, formatting and the offline

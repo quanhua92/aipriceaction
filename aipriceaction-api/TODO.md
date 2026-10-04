@@ -9,9 +9,10 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The latest verified populated backup has 6,019,974 candle/quote records; the
-  scoped VN/crypto/global workers now advance the live database. The S3 index has 894
-  active objects, 69 handoff certificates, 34 recoveries and one unavailable range.
+- The scoped VN/crypto/global workers advance the live database; populated
+  backup images and their exact scope are recorded in `VALIDATION.md`.
+  The S3 index has 895 active objects, 69 handoff certificates, 34 recoveries and
+  two unavailable-history markers preserving VND's invalid date and native basis.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
   SPY also has a verified native hourly handoff; five other current stock/index
@@ -20,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 492 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 509 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -30,6 +31,17 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Recover 251 valid VND 2020 daily records from an exact public API capture
+  matching the original CSV. Preserve February 19's invalid record, immutable
+  inputs and the full-year native/mixed basis guard. Isolated full-table checks
+  preserve every retained version. Local publication preserves all 894 original
+  active objects; twelve recent HTTP controls remain exact and four recovered
+  historical controls pass. Invalid-date/context controls remain HTTP 503.
+  Fresh RustFS restoration verifies all 895 objects, 69 certificates, 34 receipts
+  and both markers; historical SMA remains readable with the invalid date guarded.
+  This partial frozen-year recovery does not heal the invalid date or license
+  combining the snapshot with native data.
 
 - [x] Rehearse all 13 configured native global series and enable their scoped
   continuous worker. Seven daily, two hourly and four minute checks pass with
