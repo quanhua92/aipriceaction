@@ -1093,6 +1093,10 @@ Backups use SQLite's online backup API. Backup and restore destinations must be
 new files. `restore-index` verifies archive objects from the manifest; it does
 not restore recent candles or sync records. Back up the SQLite database and
 retain S3 objects together. `docker compose stop` preserves named-volume data.
+`restore` opens the backup read-only, checks its integrity, and copies every
+table into the new destination without opening or initializing the configured
+runtime database. It can therefore recover while that database is missing,
+corrupt or uses a newer schema. Switch to the verified restored file separately.
 
 For cutover, freeze a verified migration snapshot, validate the selected
 universe and historical ranges, back up SQLite/S3, then point the existing

@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 562 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 569 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -77,6 +77,13 @@ history through `eb814ab`; they are not additional current open tasks.
   remain exact. API PID 35486 continues running. Same-day maintenance has no
   objects due; slow-transfer concurrency is covered by the SQLite/Parquet
   regression, with multi-day supervised operation still open.
+- [x] Make SQLite restore independent of the configured runtime database.
+  Restore works when that file is missing, corrupt or has a newer schema;
+  preserve candles and sync records, open backup filenames safely, reject bad
+  backups without creating a destination, and refuse existing/runtime targets.
+  Seven operational regressions pass; a populated 6,020,562-candle restore is
+  byte-identical, with all 13 tables independently compared. Production sync
+  export remains open.
 - [x] Prepare Linux host supervisor examples for the API and the three current
   native worker scopes. Require per-source argument files, keep both indices
   excluded from VN, and preserve RustFS-only Compose. Parse the argument files

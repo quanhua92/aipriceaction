@@ -6,6 +6,33 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Independent SQLite recovery — 2026-10-04 ICT
+
+The restore CLI previously initialized the configured runtime database before
+opening its backup. Five regressions reproduce failed recovery or unintended
+runtime creation when that database is corrupt, newer or missing, or the backup
+is invalid. Restore now opens the backup read-only using an escaped file URI,
+checks integrity and copies directly into an exclusively created destination.
+It does not initialize the runtime database or construct archive storage.
+
+Seven operational regressions verify recovery with all three runtime conditions,
+exact candle/sync values, unchanged original files, filenames containing `?`/`#`,
+invalid-backup errors without destination creation and rejection of existing or
+configured runtime targets. All 569 tests, lint/format and offline builds pass.
+
+The populated rehearsal under `data/independent-restore-20261004/` restores the
+previous consistent checkpoint while its configured runtime file contains
+deliberately invalid bytes. Integrity, schema/version and bidirectional row
+comparisons pass for all 13 tables, including 6,020,562 candles, 1,426 archive
+records (including superseded records), 69 adoption certificates and 1,286 import
+receipts. The backup checksum and damaged runtime bytes remain unchanged.
+The restored file is byte-identical to its source, with SHA-256
+`45eae972ec4646620d30dd4f958fae571681066f81755ec754b74e29851f67b7`.
+The populated sync table is empty; fixture regressions prove sync preservation,
+but this does not obtain or validate private production sync data. The running
+API/workers and canonical SQLite/S3 are unaffected. Recovery remains separate
+from activation or production cutover.
+
 ## Live ingestion during slow archival transfers — 2026-10-04 ICT
 
 The worker previously awaited the entire daily maintenance batch between

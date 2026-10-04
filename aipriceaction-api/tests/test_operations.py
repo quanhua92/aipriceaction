@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 
@@ -11,6 +12,75 @@ from aipriceaction_api.domain import Candle, DataError, parse_time
 from aipriceaction_api.history import History
 from aipriceaction_api.importing import import_csv
 from aipriceaction_api.storage import Repository
+
+
+@pytest.mark.parametrize("runtime_state", ["corrupt", "newer", "missing"])
+def test_restore_recovers_without_opening_runtime_database(tmp_path, monkeypatch, runtime_state):
+    runtime = tmp_path / "runtime.sqlite3"
+    if runtime_state == "corrupt":
+        runtime.write_bytes(b"damaged runtime database")
+    elif runtime_state == "newer":
+        with sqlite3.connect(runtime) as con:
+            con.execute("PRAGMA user_version=999")
+    original_runtime = runtime.read_bytes() if runtime.exists() else None
+    settings = replace(Settings(), database=runtime)
+    monkeypatch.setattr(Settings, "from_env", classmethod(lambda cls: settings))
+    original = Repository(tmp_path / "original.sqlite3")
+    original.initialize()
+    candle = Candle("vn", "FPT", "1D", parse_time("2026-10-02"), 100, 101, 99, 100, 1000)
+    original.put([candle])
+    key = "12345678-1234-1234-1234-123456789abc"
+    sync = original.sync(key, "test-secret", {"watchlist": ["FPT"]}, write=True)
+    backup = tmp_path / "backup ?# snapshot.sqlite3"
+    original.backup(backup)
+    source_bytes = backup.read_bytes()
+    destination = tmp_path / "recovery" / "restored.sqlite3"
+    assert main(["restore", str(backup), "--destination", str(destination)]) == 0
+    restored = Repository(destination)
+    assert restored.read("vn", "FPT", "1D") == original.read("vn", "FPT", "1D")
+    assert restored.sync(key, "test-secret") == sync
+    assert restored.epoch() == original.epoch()
+    assert backup.read_bytes() == source_bytes
+    assert (runtime.read_bytes() if runtime.exists() else None) == original_runtime
+
+
+@pytest.mark.parametrize("invalid_source", ["missing", "corrupt"])
+def test_restore_invalid_backup_leaves_no_destination_or_runtime(
+    tmp_path, monkeypatch, capsys, invalid_source
+):
+    runtime = tmp_path / "runtime.sqlite3"
+    monkeypatch.setattr(
+        Settings, "from_env", classmethod(lambda cls: replace(Settings(), database=runtime))
+    )
+    source = tmp_path / "source.sqlite3"
+    if invalid_source == "corrupt":
+        source.write_bytes(b"invalid backup")
+    destination = tmp_path / "restored.sqlite3"
+    assert main(["restore", str(source), "--destination", str(destination)]) == 1
+    assert "error" in json.loads(capsys.readouterr().out)
+    assert not runtime.exists() and not destination.exists()
+    assert source.exists() == (invalid_source == "corrupt")
+
+
+@pytest.mark.parametrize("target", ["existing", "runtime"])
+def test_restore_refuses_existing_or_configured_destination(tmp_path, monkeypatch, target):
+    runtime = tmp_path / "runtime.sqlite3"
+    monkeypatch.setattr(
+        Settings, "from_env", classmethod(lambda cls: replace(Settings(), database=runtime))
+    )
+    source = tmp_path / "backup.sqlite3"
+    with sqlite3.connect(source) as con:
+        con.execute("CREATE TABLE preserved(value TEXT)")
+        con.execute("INSERT INTO preserved VALUES ('original')")
+    original = source.read_bytes()
+    destination = tmp_path / "existing.sqlite3" if target == "existing" else runtime
+    if target == "existing":
+        destination.write_bytes(b"existing data")
+    assert main(["restore", str(source), "--destination", str(destination)]) == 1
+    assert source.read_bytes() == original
+    assert not runtime.exists()
+    if target == "existing":
+        assert destination.read_bytes() == b"existing data"
 
 
 @pytest.mark.parametrize("execute", [False, True])

@@ -5,6 +5,7 @@ import logging
 import signal
 import sqlite3
 import sys
+from contextlib import closing
 from dataclasses import replace
 from pathlib import Path
 
@@ -269,6 +270,29 @@ def native_interval(value):
     return result
 
 
+def restore_backup(path, destination, runtime_database):
+    if destination.exists() or destination.resolve() == runtime_database.resolve():
+        raise DataError("Restore destination must be a NEW database path", 400)
+    created = False
+    try:
+        with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as source:
+            if source.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+                raise DataError("Backup integrity check failed")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            # Claim the new path exclusively so a concurrent creator cannot be
+            # overwritten between validation and SQLite's destination open.
+            with destination.open("xb"):
+                created = True
+            with closing(sqlite3.connect(destination)) as target:
+                source.backup(target)
+    except Exception as exc:
+        if created:
+            destination.unlink(missing_ok=True)
+        if isinstance(exc, sqlite3.Error):
+            raise DataError("Backup could not be read or restored") from exc
+        raise
+
+
 async def execute(args, settings):
     if args.command == "serve":
         import uvicorn
@@ -280,6 +304,10 @@ async def execute(args, settings):
             uvicorn.Config(create_app(settings), host=args.host, port=args.port, access_log=False)
         )
         await server.serve()
+        return
+    if args.command == "restore":
+        restore_backup(args.path, args.destination, settings.database)
+        emit({"restored": str(args.destination)})
         return
     repo = Repository(settings.database)
     repo.initialize()
@@ -637,14 +665,6 @@ async def execute(args, settings):
     elif args.command == "backup":
         repo.backup(args.path)
         emit({"backup": str(args.path)})
-    elif args.command == "restore":
-        if args.destination.exists() or args.destination.resolve() == settings.database.resolve():
-            raise DataError("Restore destination must be a NEW database path", 400)
-        with sqlite3.connect(f"file:{args.path.resolve()}?mode=ro", uri=True) as source:
-            if source.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                raise DataError("Backup integrity check failed")
-        Repository(args.path).backup(args.destination)
-        emit({"restored": str(args.destination)})
 
 
 async def execute_with_shutdown(args, settings, *, restore_signal=True):
