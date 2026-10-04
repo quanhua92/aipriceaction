@@ -6,6 +6,48 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Real scheduling and continuous crypto worker — 2026-10-04 ICT
+
+An authoritative process check found only the local API running before this
+run. The bounded native worker executes 125 real cycles with daily archive
+maintenance from 02:21:35 to 02:24:03 UTC. All 20 scheduled checks succeed:
+each of the four configured tickers has one daily/hourly and three minute
+updates. Native requests expand the minute overlap after the idle interval;
+all twelve retained series remain continuous. Checksummed original responses
+verify 1,242 completed candle rows exactly. Forming daily/hourly/minute bars
+remain provisional.
+
+Full populated before/after verification preserves every noncrypto candle
+version, previously completed crypto values and series/archive/adoption/import/
+job table rows. The consistent after-backup has 6,019,974 records, an increase
+of 462 from the preserved before-image. No historical object is added or pruned
+in this same-UTC-day run. Evidence:
+`data/crypto-worker-frozen-history-checkpoint-20261004/report.json`.
+Its `after.sqlite3` SHA-256 is
+`be2203054bf25645582e1d36654e423781011dda137a9b115a712ad2ca0732c9`.
+
+During ingestion, the installed Python SDK passes 32 completed-date SMA/EMA
+cases for all four cryptocurrencies across daily/hourly/minute/15-minute
+intervals. All 496 returned rows match the corresponding HTTP selection and
+come from the API. Complete-range OHLCV tail selection also matches; longer
+indicator warmup retains the documented context-dependent numerical differences.
+Nine frozen FPT historical HTTP responses remain byte-identical to their
+canonical public-reference captures. Evidence is under
+`data/crypto-worker-frozen-history-sdk-20261004/`.
+
+After the bounded verifier exits successfully, one continuous local worker
+starts with `aipa-api worker --source crypto --archive-daily`. Process inspection
+confirms PID 90049 and the existing API PID 83407, with no duplicate worker.
+The first maintenance cycle reports zero due partitions. At 02:25:12 UTC,
+all four minute checks have succeeded after continuous startup, and the live
+database has advanced to 6,019,978 records/epoch 3556. Its process handle, command
+and observed checks are recorded in
+`data/crypto-worker-frozen-history-checkpoint-20261004/continuous-observation.json`;
+output is in `continuous-worker.log` beside it. Later counts may advance.
+Actual multi-day operation, process-manager restart behavior, unresolved
+VN/global handoffs and production cutover remain open. This step changes no
+application code; the last complete suite remains 492 passing tests.
+
 ## Supported public history CLI — 2026-10-04 ICT
 
 `aipa-api import-history` accepts a captured single-symbol public `/tickers`

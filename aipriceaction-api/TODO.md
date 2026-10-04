@@ -9,7 +9,8 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,019,512 candle/quote records. The current S3 index has 894
+- The latest verified populated backup has 6,019,974 candle/quote records; the
+  scoped crypto worker now advances the live database. The S3 index has 894
   active objects, 69 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -29,6 +30,15 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Recheck real crypto scheduling against the frozen-history checkpoint:
+  125 cycles, 20 successful attempts, three minute updates per ticker and 1,242
+  completed native-response rows verified. All noncrypto versions, previously
+  completed crypto values and protected operational tables remain exact; twelve
+  retained crypto series stay continuous. Thirty-two installed SDK SMA/EMA cases
+  and nine frozen FPT HTTP responses pass during ingestion. Leave one scoped
+  crypto worker running with daily maintenance; actual multi-day/restart
+  supervision remains open.
 
 - [x] Provide a supported operational command for frozen public history:
   `import-history` reads single-symbol JSON/CSV captures, requires an explicit
