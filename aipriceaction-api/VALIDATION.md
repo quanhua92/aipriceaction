@@ -6,6 +6,66 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Retained stock date review against both exchanges — 2026-10-04 ICT
+
+`23da063` adds a read-only stock date-candidate review backed by independently
+announced HOSE and HNX schedules. All HNX 2023/2024/2026 annual notices and both
+required amendments were downloaded directly from official HNX attachment links;
+every page was visually checked. The earlier 2025 HNX copy remains identified
+as a broker mirror. New declarations pin exact source bytes and hashes and
+retain empty symbol lists: they do not certify individual stock sessions.
+
+The HNX 2024 amendment **1977/TB-SGDHN** adds April 29 and excludes May 4 makeup
+trading. The 2026 amendment **5680/TB-SGDHN** adds January 2 and excludes January
+10 makeup trading; the annual notice already excludes August 22. The stock
+review requires both annual sources and every declared amendment. It rejects
+different exchange weekday schedules pending historical venue evidence and
+preserves the original HOSE index checker's scope guard. Source integrity and
+the distinction between date candidates and licensed missing sessions have
+regression coverage.
+
+The populated reviews cover all **57 selected stocks** in the retained daily
+window, **October 4, 2023–October 2, 2026**, and minute window,
+**October 4, 2025–October 2, 2026**. Hourly reviews cover the **53 stocks** with
+that interval configured; OCB/PNJ/DGC/NAB are not assessed as hourly series.
+Both exchange schedules agree on all **746 daily/hourly scheduled weekdays**
+and **247 minute scheduled weekdays**. Every selected stock minute series has
+at least one observation on all 247 scheduled dates. No unexpected dates occur
+in any of the ten year/interval reviews; daily timestamps have no shifts.
+Date presence does not prove every intraday candle or OHLCV value is correct.
+
+Daily absent-date candidates are confined to these stocks:
+
+| Stock | Recorded absent scheduled dates | Required next evidence |
+| --- | --- | --- |
+| VPL | Retained dates before May 13, 2025 | Verify the listing boundary referenced in the watchlist |
+| GEE | 18 weekdays, July 19–August 13, 2024 | Verify historical transfer/trading status |
+| VTP | 7 weekdays, March 1–11, 2024 | Verify historical transfer/trading status |
+| NAB | 6 weekdays, February 29–March 7, 2024 | Verify historical transfer/trading status |
+| BSR | 8 weekdays, January 7–16, 2025 | Verify historical transfer/trading status |
+
+Hourly candidates include the same applicable ranges, plus GEE April 17 and
+November 28, 2024; VGI/VTP October 13, 2023; and IDC May 15, 2025. The actual
+`History.read` path was checked for every candidate series/year in a read-only
+SQLite transaction using the configured archive store. None of these candidate
+dates is filled by a primary S3 archive. These are observed served-data absences,
+not a claim that a stock should have traded on each date. No fabricated candle,
+listing inference or source replacement is licensed by this result.
+
+The complete API suite passes **863 tests**, including 33 calendar tests, with
+one known Starlette/httpx deprecation warning; all lint/format checks pass.
+Twenty-two PDF/declaration/review artifacts are preserved as content-addressed
+local RustFS evidence with exact byte readbacks. Canonical OHLCV, provider bases,
+archive pointers and manifests are unchanged. Evidence:
+
+- `data/hnx-retained-calendar-sources-20261004/`
+- `data/vn-stock-shared-schedule-review-20261004/report.json`
+- `data/vn-stock-shared-schedule-review-20261004/merged-storage-candidates.json`
+- `data/vn-stock-shared-schedule-evidence-20261004.json`
+
+Stock listing/transfer boundaries, suspensions/no-trade evidence, individual
+prices/volumes and full intraday completeness remain separate open gates.
+
 ## HNX 2025 reference schedule — 2026-10-04 ICT
 
 Downloaded the broker-hosted signed HNX notice **5386/TB-SGDHN**, issued

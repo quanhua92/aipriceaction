@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 851 tests; lint/format checks pass.
+- The latest complete API suite passes 863 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -38,11 +38,17 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
-- [x] Preserve and visually verify HNX's signed 2025 reference notice, with
-  source-byte binding and mirror distribution recorded. Its weekday closures
-  match HOSE's verified table. Keep the declaration unlicensed for stocks;
-  historical venues, listing/transfers, suspensions and no-trade evidence, plus
-  the other HNX retained-year notices/amendments, remain open.
+- [x] Verify signed HNX schedules across 2023–2026, including the required 2024/
+  2026 amendments. Bind every source byte and record official versus mirror
+  distribution. Both exchanges have equal scheduled weekdays across retained
+  windows. Add a read-only stock date-candidate review with mandatory source
+  checks, preserving the HOSE index scope guard. Audit all 57 stocks daily/minute
+  and 53 configured hourly series. Every stock minute series contains all 247
+  scheduled retained dates; daily/hourly absences remain explicit candidates.
+  Actual merged SQLite/S3 reads confirm the candidate dates are still absent.
+  Preserve 22 evidence artifacts with exact local RustFS readback and pass 863
+  API tests. Stock listing/transfers, suspensions, no-trade evidence, per-candle
+  completeness and OHLCV values remain separate open gates.
 - [x] Extend the source-backed index schedule audit across the entire retained
   three-year daily/hourly and one-year minute windows. Visually verify 2023/2024/
   2026 annual notices and required 2024/2026 amendments, preserving mirror versus
