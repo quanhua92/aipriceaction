@@ -92,8 +92,16 @@ history through `eb814ab`; they are not additional current open tasks.
   Retain `data/paginated-minute-year-controls-20261004/` captures, comparisons
   and SQLite exception reports (about 82 MB); no database copies or publication.
   Resume repeats no provider calls; RustFS data remains 2.584 GB.
-- [ ] Expand resumable full-year minute comparison across selected symbols with
-  an explicit artifact budget. Diagnose missing/bad source rows automatically;
+- [x] Add a shared artifact-byte budget to native/legacy captures, normalized
+  feed checkpoints and comparison reports, including existing resume files and
+  atomic replacement peak bytes. Cancel/close collectors on exhaustion and keep
+  completed records. Add a resumable universe runner with at most four symbols
+  in memory per batch, a default 2 GiB cap and reserved status-report space.
+  Pass 25 focused budget/pagination/comparison/pipeline tests.
+- [ ] Complete the launched full-year minute universe comparison across all 59
+  selected symbols under the 2 GiB cap. Artifacts/checkpoints are under
+  `data/vn-minute-year-universe-20261004`; the run uses verified candidate VCI
+  proofs and makes no canonical writes. Diagnose missing/bad source rows automatically;
   preserve strict ingestion and require evidence before licensing corrections.
 
 - [x] Automatically replay captured daily failures through the unchanged parser,

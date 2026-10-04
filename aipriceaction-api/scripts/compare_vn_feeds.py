@@ -16,11 +16,35 @@ import httpx
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError, date_bounds, parse_time
 from aipriceaction_api.providers import Providers
+from scripts.artifact_budget import ArtifactBudget, ArtifactBudgetExceeded
 from scripts.stage_yahoo_daily_history import RecordingTransport
 
 FEEDS = ("vps", "vndirect", "dnse", "legacy")
 NATIVE_FEEDS = ("vps", "vndirect", "dnse", "vci")
 FIELDS = ("open", "high", "low", "close", "volume")
+
+
+class BudgetedTransport(RecordingTransport):
+    def __init__(self, root, budget):
+        super().__init__(root)
+        self.budget = budget
+
+    async def handle_async_request(self, request):
+        response = await httpx.AsyncHTTPTransport.handle_async_request(self, request)
+        raw = await response.aread()
+        digest = hashlib.sha256(raw).hexdigest()
+        path = self.root / f"native-{digest}.json"
+        self.budget.write(path, raw)
+        self.captures.append(
+            {
+                "path": str(path),
+                "sha256": digest,
+                "bytes": len(raw),
+                "url": str(request.url),
+                "status": response.status_code,
+            }
+        )
+        return response
 
 
 def same(a, b, fields=FIELDS):
@@ -183,6 +207,10 @@ async def run(args):
     max_pages = getattr(args, "max_pages", 100)
     if not 1 <= max_pages <= 1000:
         raise ValueError("Use a page budget between 1 and 1000")
+    args.output.mkdir(parents=True, exist_ok=resume)
+    budget = getattr(args, "artifact_budget", None) or ArtifactBudget(
+        args.output, getattr(args, "artifact_budget_mib", 512) * 1024 * 1024
+    )
     request = {
         "symbols": symbols,
         "intervals": intervals,
@@ -192,13 +220,13 @@ async def run(args):
         "end_date": args.end_date,
         "paginate": paginate,
         "max_pages": max_pages,
+        "artifact_budget_bytes": budget.limit,
         "volume_proofs_sha256": (
             hashlib.sha256(settings.vci_volume_proofs.read_bytes()).hexdigest()
             if settings.vci_volume_proofs
             else None
         ),
     }
-    args.output.mkdir(parents=True, exist_ok=resume)
     request_path = args.output / "request.json"
     if resume:
         if json.loads(request_path.read_text()) != json.loads(json.dumps(request)):
@@ -206,7 +234,7 @@ async def run(args):
                 "Resume must preserve the original comparison request and proof identity"
             )
     else:
-        request_path.write_text(json.dumps(request, indent=2) + "\n")
+        budget.write(request_path, (json.dumps(request, indent=2) + "\n").encode())
     results = {(symbol, iv): {} for symbol in symbols for iv in intervals}
     completed = 0
 
@@ -214,7 +242,7 @@ async def run(args):
         nonlocal completed
         root = args.output / feed
         root.mkdir(exist_ok=resume)
-        transport = RecordingTransport(root) if feed != "legacy" else None
+        transport = BudgetedTransport(root, budget) if feed != "legacy" else None
         providers = Providers(settings, transport=transport) if transport else None
         try:
             async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
@@ -279,7 +307,7 @@ async def run(args):
                             raw = response.content
                             digest = hashlib.sha256(raw).hexdigest()
                             capture = root / f"{symbol}-{iv}-{digest}.response"
-                            capture.write_bytes(raw)
+                            budget.write(capture, raw)
                             record["capture"] = str(capture)
                             record["http_status"] = response.status_code
                             response.raise_for_status()
@@ -305,6 +333,8 @@ async def run(args):
                                 raise ValueError("Conflicting duplicate timestamp")
                             selected[stamp] = {key: row[key] for key in ("time", *FIELDS)}
                         record["rows"] = [selected[t] for t in sorted(selected)]
+                    except ArtifactBudgetExceeded:
+                        raise
                     except Exception as exc:
                         # Avoid raw network exception strings that may contain URLs.
                         record["error"] = (
@@ -314,9 +344,9 @@ async def run(args):
                         )
                     if transport:
                         record["captures"] = transport.captures[first_capture:]
-                    checkpoint = path.with_suffix(".json.tmp")
-                    checkpoint.write_text(json.dumps(record, indent=2, allow_nan=False) + "\n")
-                    checkpoint.replace(path)
+                    budget.write(
+                        path, (json.dumps(record, indent=2, allow_nan=False) + "\n").encode()
+                    )
                     results[symbol, iv][feed] = record
                     completed += 1
                     if completed % 20 == 0:
@@ -328,7 +358,14 @@ async def run(args):
             if providers:
                 await providers.close()
 
-    await asyncio.gather(*(collect(feed) for feed in selected_feeds))
+    tasks = [asyncio.create_task(collect(feed)) for feed in selected_feeds]
+    try:
+        await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
     comparisons = []
     errors = []
     total_counts, total_outliers = Counter(), Counter()
@@ -373,7 +410,7 @@ async def run(args):
             "Prices ignore only floating representation noise; volume comparison is exact.",
         ],
     }
-    (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
+    budget.write(args.output / "report.json", (json.dumps(report, indent=2) + "\n").encode())
     print(
         json.dumps(
             {k: report[k] for k in ("requests", "counts", "three_agree_outliers")}
@@ -404,5 +441,6 @@ if __name__ == "__main__":
         help="Continue missing feed/symbol records; preserve completed failures",
     )
     parser.add_argument("--max-pages", type=int, default=100)
+    parser.add_argument("--artifact-budget-mib", type=int, default=512)
     parser.add_argument("--vci-volume-proofs", type=Path)
     asyncio.run(run(parser.parse_args()))
