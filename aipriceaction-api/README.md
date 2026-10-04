@@ -544,6 +544,20 @@ Private sync records are a separate migration concern because `/tickers` does
 not expose them. Imported snapshots and new-provider data need compatible
 adjustment bases before they can be joined.
 
+Check an isolated filesystem-backed public snapshot against retained raw
+records and historical indicator reads before proposing its publication:
+
+```sh
+uv run python -m scripts.check_staged_public_history --candidate data/candidate.sqlite3 --objects data/candidate-objects --output data/candidate-check --symbol FPT --end-date 2025-10-03
+```
+
+The output directory must be new. The checker inventories all retained versions
+without using mixed revisions for calculations, requires every retained timestamp
+in the candidate, and runs ordinary SMA/EMA history queries against both stores.
+It verifies that the canonical epoch and record digest stay unchanged. `passed`
+means timestamp preservation and readable candidate indicators; changed OHLCV
+is reported separately and does not license replacement or provider handoff.
+
 If a native history page fails OHLC validation, the error includes its provider,
 market, symbol, interval and Unix timestamp. Use a bounded public JSON export
 and a dated native request to preserve and compare the actual records. An
