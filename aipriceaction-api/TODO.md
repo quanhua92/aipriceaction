@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Query the five exact missing stock/hourly date pairs for the four pending
+  jobs against VPS, VNDirect, DNSE and the live legacy API. Recover 15 raw-bound
+  legacy hourly bars for IDC/VGI/VTP; all three native feeds lack these dates.
+  GEE's two dates have no usable legacy rows. Preserve source errors and daily
+  price/volume disagreements; no missing-date exclusions or publication occur.
+  Add an offline candidate reviewer with exact temporary SQLite/Parquet round
+  trips, existing-row refusal and cleanup tests. Retain 89,516 bytes of evidence;
+  37 focused tests and lint pass. All four hourly jobs remain pending.
+
 - [x] Fresh-check PNJ's October 2 minute exceptions against all four native
   providers and replay each captured response. All 226 observed timestamps and
   each provider's prior values remain stable. SQLite matches fresh VPS exactly;

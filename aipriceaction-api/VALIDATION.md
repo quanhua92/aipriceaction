@@ -3,6 +3,51 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Exact hourly-gap recovery candidates — 2026-10-04 ICT
+
+Current pending hourly jobs identify five absent stock/date pairs: VGI and VTP
+on October 13, 2023; GEE on April 17 and November 28, 2024; IDC on May 15, 2025.
+Twenty exact-date requests compare VPS, VNDirect, DNSE and the live legacy API.
+The legacy API supplies five structurally valid hourly bars for each of VGI,
+VTP and IDC, while all three native sources return no observations on those
+dates. GEE has no usable legacy hourly response on either date; VNDirect's
+April response is also rejected for its envelope. Errors remain explicit.
+
+`scripts.review_hourly_gap_candidates` preserves the 15 recovered observations
+as candidate-only JSON, verifies legacy capture checksums and reparses exact
+symbol/date/OHLCV values. Native source captures retain checksums and original
+parser errors; their saved controls are not independently reparsed in this
+review. Source directories/windows must match the selected exact-day audit.
+Every original timestamp is preserved, including labels that are minute-aligned
+rather than whole-hour aligned. Existing live hourly observations cause refusal.
+
+| Recovered session | Candidate hourly bars | Candidate hourly volume minus retained daily volume |
+| --- | ---: | ---: |
+| VGI, 2023-10-13 | 5 | -1,374 |
+| VTP, 2023-10-13 | 5 | -4,178 |
+| IDC, 2025-05-15 | 5 | -959 |
+
+Price differences against daily controls also remain. No native hourly witness
+establishes these candidates' basis or minute/session conventions. They cannot
+be silently spliced into the native series. GEE's zero-volume April daily row
+and one-volume November row do not authorize excluding dates or marking the
+bootstrap complete. All four existing hourly jobs remain pending; canonical
+candles, adoptions, proof catalogs and archive metadata are unchanged.
+
+All candidate fields round-trip exactly through a small temporary SQLite fixture
+and Parquet. Temporary databases, CSVs, Parquet and recheck outputs are removed
+after success and failure. Fifteen new tests cover raw/saved-value mutations,
+wrong symbols/windows, malformed OHLC, duplicates, ordering, existing-row
+refusals, unavailable zero-volume dates and cleanup. Thirty-seven focused
+candidate/recent-disagreement/artifact-budget tests and lint pass. The current
+reviewer independently reproduces both retained candidate artifacts exactly.
+
+Raw source controls at `data/vn-hourly-gap-controls-20261004/` occupy 77,005 bytes,
+under four 8 MiB per-window caps. Candidate JSON and its report at
+`data/vn-hourly-gap-candidates-20261004/` occupy 12,511 bytes under a 128 KiB cap.
+Total retained evidence is 89,516 bytes; no full database copies or S3 writes
+occur. Post-run local `data/` occupies 7,628,716 KiB.
+
 ## PNJ disputed-session source stability — 2026-10-04 ICT
 
 A fresh bounded October 2 minute query succeeds against all four native
