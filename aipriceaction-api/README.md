@@ -325,6 +325,16 @@ date observed for that ticker against staged or published hourly observations.
 Absent dates remain review findings without an automatic provider switch. This
 checks observed dates, not a complete exchange calendar or every hourly slot.
 
+A linked, verified `history_start` also permits completion at the first listing
+day's empty hourly prefix. The pinned provider must explicitly return no data,
+the cursor must equal the earliest staged/published bar on that same day, and
+the ready provider/revision must match. Ordinary history exhaustion, unlinked
+dates, later-day gaps and repairing series remain pending. Observed daily-date
+coverage and the existing atomic record-preservation checks still apply. DNSE's
+captured empty response is recognized only as six explicit empty arrays and
+integer `nextTime=0`, without extra error fields; it never establishes a listing
+date by itself.
+
 At bootstrap, the worker also retires an untouched placeholder left behind by
 an adopted snapshot. Cancellation requires a ready current revision, its valid
 provider handoff certificate, a snapshot beginning at or before the requested floor,

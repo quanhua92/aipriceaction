@@ -123,6 +123,8 @@ class Worker:
                 if page.cursor is not None
                 else (page.rows[0].time if page.rows else None)
             )
+            if self.at_verified_listing_prefix(job, entry, page):
+                return self.finish_recent_job(job)
             if oldest is None or (
                 not page.rows and (job["cursor"] is None or oldest > job["floor"])
             ):
@@ -217,6 +219,49 @@ class Worker:
                     except Exception:
                         continue
             return 0
+
+    def at_verified_listing_prefix(self, job, entry, page):
+        """Accept an empty prefix only within an independently sourced listing day."""
+        from .domain import parse_time
+
+        if (
+            job["source"] != "vn"
+            or job["interval"] != "1h"
+            or job["kind"] != "bootstrap"
+            or not entry
+            or not entry.get("history_start")
+            or not isinstance(entry.get("history_start_source"), str)
+            or not entry["history_start_source"].startswith("https://")
+            or job["floor"] != parse_time(entry["history_start"])
+            or job["floor"] % 86400
+            or job["cursor"] is None
+            or not job["floor"] < job["cursor"] < job["floor"] + 86400
+            or not page.no_data
+            or page.rows
+            or page.cursor is not None
+            or not job["provider"]
+            or page.provider != job["provider"]
+        ):
+            return False
+        with self.repo.connect() as con:
+            con.execute("BEGIN")
+            state = con.execute(
+                "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
+                (job["source"], job["symbol"], job["interval"]),
+            ).fetchone()
+            first = con.execute(
+                """SELECT MIN(time) FROM (
+                SELECT time FROM staging WHERE job_id=?
+                UNION ALL SELECT time FROM candles
+                WHERE source=? AND symbol=? AND interval=?)""",
+                (job["id"], job["source"], job["symbol"], job["interval"]),
+            ).fetchone()[0]
+        return bool(
+            state
+            and state["status"] == "ready"
+            and (state["provider"], state["revision"]) == (job["provider"], job["revision"])
+            and first == job["cursor"]
+        )
 
     def finish_recent_job(self, job):
         # Cursor progress proves only the requested bound. A VN hourly bootstrap

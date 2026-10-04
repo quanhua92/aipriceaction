@@ -209,6 +209,18 @@ class Providers:
         )
         if payload.get("s") == "no_data":
             return Page([], provider, True)
+        fields = ("t", "o", "h", "l", "c", "v")
+        if (
+            provider == "dnse"
+            and set(payload) == {*fields, "nextTime"}
+            and type(payload["nextTime"]) is int
+            and payload["nextTime"] == 0
+            and all(payload[key] == [] for key in fields)
+        ):
+            # Captured DNSE listing-prefix responses omit TradingView's status
+            # and explicitly return six empty arrays with no earlier timestamp.
+            # This establishes no data for the request, never a listing date.
+            return Page([], provider, True)
         arrays = [payload.get(k) or [] for k in ("t", "o", "h", "l", "c", "v")]
         if len({len(a) for a in arrays}) != 1 or not arrays[0]:
             raise DataError(f"{provider} invalid/missing OHLCV arrays")

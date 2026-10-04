@@ -63,6 +63,123 @@ class Pages:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "shape", ["empty", "missing", "error", "hint", "boolean", "other_provider"]
+)
+async def test_dnse_explicit_empty_history_requires_complete_observed_shape(system, shape):
+    _, _, settings = system
+    payload = {key: [] for key in ("t", "o", "h", "l", "c", "v")}
+    payload["nextTime"] = 0
+    if shape == "missing":
+        payload.pop("v")
+    elif shape == "error":
+        payload["error"] = "unavailable"
+    elif shape == "hint":
+        payload["nextTime"] = 1
+    elif shape == "boolean":
+        payload["nextTime"] = False
+    providers = Providers(
+        settings, transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload))
+    )
+    try:
+        provider = "vps" if shape == "other_provider" else "dnse"
+        if shape == "empty":
+            page = await providers.page(
+                "vn", "VPL", "1h", before=parse_time("2025-05-13T02:00:00Z"), provider=provider
+            )
+            assert page.no_data and page.rows == [] and page.cursor is None
+        else:
+            with pytest.raises(DataError, match="invalid/missing OHLCV arrays"):
+                await providers.page("vn", "VPL", "1h", provider=provider)
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "boundary",
+    [
+        "verified",
+        "missing_session",
+        "unlinked",
+        "later_day",
+        "wrong_date",
+        "wrong_provider",
+        "not_no_data",
+        "hint",
+        "repair",
+        "repairing",
+        "older_candle",
+        "new_revision",
+    ],
+)
+async def test_listing_day_empty_prefix_can_finish_only_verified_hourly_bootstrap(
+    system, monkeypatch, boundary
+):
+    repo, archive, settings = system
+    floor = parse_time("2024-01-02")
+    first = floor + 7200
+    repo.queue("vn", "FPT", "1h", "bootstrap", floor, "dnse")
+    job = repo.claim_job("setup")
+    hourly = [
+        replace(
+            candle(day, provider="dnse", revision=job["revision"]),
+            interval="1h",
+            time=floor + (day - 2) * 86400 + 7200,
+        )
+        for day in (2, 3, 4)
+    ]
+    repo.stage(job, hourly, first, "dnse")
+    repo.put(hourly)
+    repo.put(
+        [candle(day) for day in ((2, 3, 4, 5) if boundary == "missing_session" else (2, 3, 4))]
+    )
+    entry = {
+        "source": "vn",
+        "symbol": "FPT",
+        "intervals": ["1h"],
+        "history_start": "2024-01-02",
+        "history_start_source": "https://example.test/listing",
+    }
+    page = Page([], "dnse", True)
+    if boundary == "unlinked":
+        entry.pop("history_start_source")
+    elif boundary == "later_day":
+        with repo.connect() as con:
+            con.execute("UPDATE jobs SET cursor=cursor+86400 WHERE id=?", (job["id"],))
+    elif boundary == "wrong_date":
+        entry["history_start"] = "2024-01-01"
+    elif boundary == "wrong_provider":
+        page.provider = "vps"
+    elif boundary == "not_no_data":
+        page.no_data = False
+    elif boundary == "hint":
+        page.cursor = first - 60
+    elif boundary == "repair":
+        with repo.connect() as con:
+            con.execute("UPDATE jobs SET kind='repair' WHERE id=?", (job["id"],))
+    elif boundary == "repairing":
+        with repo.connect() as con:
+            con.execute("UPDATE series SET status='repairing' WHERE interval='1h'")
+    elif boundary == "older_candle":
+        repo.put([replace(hourly[0], time=floor - 86400 + 7200)])
+    elif boundary == "new_revision":
+        with repo.connect() as con:
+            con.execute("UPDATE series SET revision='new' WHERE interval='1h'")
+    original = repo.read("vn", "FPT", "1h")
+    worker = Worker(repo, settings, Pages(page), archive)
+    worker.configuration = [entry]
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: floor)
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
+    assert repo.read("vn", "FPT", "1h") == original
+    with repo.connect() as con:
+        stored = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone())
+    assert stored["status"] == ("complete" if boundary == "verified" else "pending")
+    if boundary == "missing_session":
+        assert "lacks observed daily session" in stored["error"]
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("missing_session", [False, True])
 async def test_rolling_hourly_bootstrap_finishes_without_obsolete_fetch_but_preserves_missing_dates(
     system, monkeypatch, missing_session
