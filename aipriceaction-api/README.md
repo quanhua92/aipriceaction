@@ -10,6 +10,25 @@ and remaining acceptance work. [VALIDATION.md](VALIDATION.md) records actual
 checks, provider coverage limits, and compatibility differences. Production
 cutover requires completing those remaining checks.
 
+Data correctness is assessed across VPS, VNDirect, DNSE and the legacy API.
+The legacy feed can be incorrect and is not ground truth. Preserving the API
+interface does not require preserving erroneous candle values. Compare prices,
+volumes and coverage separately; shared upstreams make agreement dependent.
+Verified coherent corrections preserve original evidence and rollback versions.
+
+A read-only recent comparison captures all four feeds and reports all six pairs:
+
+```sh
+uv run python -m scripts.compare_vn_feeds --daily-start 2026-09-07 \
+  --intraday-start 2026-10-01 --end-date 2026-10-02 --output data/four-feed-audit
+```
+
+The default scope is every selected VN ticker, daily/hourly/minute. Choose
+completed dates and a new output directory. The runner uses direct requests
+with the configured native provider rate limits, changes no market data and
+records errors or unavailable coverage rather than choosing a winning feed.
+Its single-page bounds suit recent windows, not a full-history certification.
+
 ## Start locally
 
 Use Python 3.13 or newer. From this directory:

@@ -407,6 +407,12 @@ history through `eb814ab`; they are not additional current open tasks.
 - Project: `aipriceaction-api/`, Python with FastAPI.
 - Keep existing web routes, request parameters, response shapes, CSV exports,
   aggregation behavior, sync authentication, and errors compatible.
+- Treat VPS, VNDirect, DNSE and the legacy API as four comparison feeds, with
+  no authoritative legacy baseline. Interface compatibility does not require
+  preserving incorrect legacy prices. Audit same-date/interval prices, volumes
+  and timestamp coverage across all six feed pairs. Agreement is evidence,
+  not independent truth when feeds share an upstream. Verified coherent
+  corrections may supersede legacy values while preserving originals for rollback.
 - SQLite stores a rolling three-calendar-year daily window and one-calendar-year
   minute window. Compute cutoffs in UTC using calendar arithmetic, with an
   explicit leap-day rule. Archive older candles rather than deleting history.
