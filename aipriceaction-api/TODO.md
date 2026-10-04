@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 683 tests; lint/format checks pass.
+- The latest complete API suite passes 700 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -58,6 +58,13 @@ history through `eb814ab`; they are not additional current open tasks.
   and corrected captures in isolated SQLite/RustFS, then restore exact row
   versions and pass all 36 boundary queries. Source licensing, native handoff
   and canonical execution remain open; storage activation is not a market proof.
+- [x] License same-provider refresh of a coherent native VCI snapshot with a
+  replayable exact completed overlap. Require at least 1,000 candles across
+  five observed sessions through the published completed tail, preserving every
+  overlap timestamp and exact OHLCV. Guard concurrent changes/workers, preserve
+  explicit volume normalization proofs and retain legacy snapshot freeze rules.
+  Verify real FPT/TPB 2,000-row handoffs, 40-row worker refreshes and restored
+  native certificates in isolated RustFS. Canonical activation remains open.
 - [x] Reject VCI consecutive-minute volume contradictions when cumulative
   totals are supplied. Captured FPT/TPB regressions reproduce both defects;
   sparse minutes and VN daily resets never trigger guessed allocation.

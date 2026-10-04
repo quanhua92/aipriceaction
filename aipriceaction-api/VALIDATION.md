@@ -117,6 +117,41 @@ All 620 tests pass with one existing warning; whole-project lint/format and
 offline wheel/source builds pass. The runtime configuration is not changed by
 these probes or staging commands. No new dependency or Compose service is added.
 
+## Native VCI snapshot handoff and refresh — 2026-10-04 ICT
+
+`vci_adoption.py` adds a replayable exact-overlap certificate specifically for
+an already coherent, populated native VCI minute snapshot. It compares up to
+2,000 completed source candles, requires at least 1,000 matches across five
+observed sessions through the published completed tail, and rejects any missing
+snapshot observation within the overlap. Every timestamp/OHLCV value must match
+exactly. Saved/native overlap arrays and checksums are replayed during certificate
+validation; explicit volume normalization proofs remain attached and scoped to
+their corresponding witness. Publication rechecks the entire hot checksum and
+series state under an immediate transaction and rejects active worker leases.
+
+This certificate permits subsequent writes from the same provider/revision.
+It does not license switching providers or a historical price correction.
+The immutable import-date bound remains applicable to legacy snapshot aliases;
+it does not freeze later native VCI candles. Archive restoration applies the
+same distinction and validates the native certificate. The operational command
+`adopt-vci-snapshot` defaults to a read-only preview; `--execute` installs the
+certificate and publishes the archive metadata. VCI enablement stays explicit.
+
+Live isolated FPT and TPB handoffs match all 2,000 candles over nine and ten
+observed sessions respectively. Each real worker refresh writes 40 newer record
+versions, preserves all OHLCV/provenance and keeps the whole hot/cold series
+readable. The new checkpoint restores six cold objects and valid native
+certificates. An actual CLI preview also verifies FPT's 2,000 rows without
+changing the snapshot. Evidence: `data/native-vci-handoff-rehearsal-20261004/`.
+The main database, runtime flags and production endpoint remain unchanged.
+
+Seventeen regressions cover exact handoff, future native write versions,
+archive/certificate restoration, price/volume/tail/hole/provider disagreements,
+tampered evidence, stale snapshots, active workers, normalization proof scope
+and explicit opt-in/native snapshot prerequisites. All 700 tests pass with the
+existing warning; whole-project lint and format checks pass. Canonical execution
+and broader selected-universe OHLCV verification remain acceptance gates.
+
 ## Atomic frozen minute snapshot activation — 2026-10-04 ICT
 
 `coherent_snapshot.py` replaces a complete observed VN minute snapshot in one

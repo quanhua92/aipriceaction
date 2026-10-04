@@ -207,6 +207,14 @@ def parser():
         help="Default verifies and reports without changing the snapshot",
     )
     commands.add_parser("audit")
+    native_vci = commands.add_parser(
+        "adopt-vci-snapshot",
+        help="Verify exact completed overlap before refreshing one native VCI minute snapshot",
+    )
+    native_vci.add_argument("symbol")
+    native_vci.add_argument(
+        "--execute", action="store_true", help="Default verifies without changing the snapshot"
+    )
     reconcile = commands.add_parser(
         "reconcile", help="Queue retained-window repair; no immediate historical wipe"
     )
@@ -502,6 +510,19 @@ async def execute(args, settings):
                     repo, providers, archive, args.symbol.upper(), args.execute
                 )
             )
+        finally:
+            await providers.close()
+    elif args.command == "adopt-vci-snapshot":
+        from .vci_adoption import adopt_native_snapshot
+
+        providers = Providers(settings)
+        try:
+            result = await adopt_native_snapshot(
+                repo, providers, args.symbol.upper(), execute=args.execute
+            )
+            if args.execute:
+                archive.publish_metadata()
+            emit(result)
         finally:
             await providers.close()
     elif args.command == "adopt-snapshot":

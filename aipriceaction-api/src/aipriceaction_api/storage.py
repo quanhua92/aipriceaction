@@ -252,6 +252,11 @@ class Repository:
                 validate_daily_adoption(record)
                 return
             evidence = json.loads(record["evidence"])
+            if evidence.get("kind") == "native_vci_snapshot_overlap":
+                from .vci_adoption import validate_native_adoption
+
+                validate_native_adoption(record)
+                return
             hourly_range = evidence.get("yahoo_hourly_range")
             if hourly_range is not None and (
                 hourly_range != "5d" or record["source"] != "yahoo" or record["interval"] != "1h"
@@ -402,7 +407,9 @@ class Repository:
             self.validate_adoption(dict(record))
             verified = json.loads(record["evidence"])["verified_at_ns"]
             if any(
-                c.provider == record["snapshot_provider"] and not 0 < c.updated_at <= verified
+                record["snapshot_provider"] != record["provider"]
+                and c.provider == record["snapshot_provider"]
+                and not 0 < c.updated_at <= verified
                 for c in candles
             ):
                 raise DataError(

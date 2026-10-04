@@ -437,8 +437,10 @@ class Archive:
                     if obj["provider"] not in (record["snapshot_provider"], record["provider"]):
                         raise DataError("Archive provider is outside its snapshot adoption")
                     verified = json.loads(record["evidence"])["verified_at_ns"]
-                    if obj["provider"] == record["snapshot_provider"] and any(
-                        not 0 < row.updated_at <= verified for row in rows
+                    if (
+                        record["snapshot_provider"] != record["provider"]
+                        and obj["provider"] == record["snapshot_provider"]
+                        and any(not 0 < row.updated_at <= verified for row in rows)
                     ):
                         raise DataError("Archive snapshot was changed after adoption")
         from .recovery import validate_recovery

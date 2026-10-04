@@ -47,6 +47,14 @@ Prices, timestamps and provider/revision remain unchanged; workers retain
 replayed evidence in SQLite. This does not license snapshot publication or
 provider handoff. The staging script accepts the same file via `--volume-proofs`.
 
+For a coherent snapshot whose candles already come from VCI, use
+`aipa-api --vci-history-fallback adopt-vci-snapshot FPT` to preview the native
+handoff, then `--execute` to install its certificate and publish the archive
+checkpoint. It requires exact completed OHLCV through the stored tail across
+at least five observed sessions. It does not convert a legacy snapshot or
+authorize a price correction. Same-provider updates can advance after verification;
+legacy imported snapshot timestamps retain their existing freeze protections.
+
 ```sh
 uv run aipa-api --allow-direct --vci-history-fallback probe FPT \
   --provider vci --interval 1m --before 2025-10-04 --count 20
