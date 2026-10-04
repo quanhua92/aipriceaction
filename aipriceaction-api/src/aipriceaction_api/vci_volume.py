@@ -18,7 +18,7 @@ def digest(value):
     ).hexdigest()
 
 
-def proof_from_capture(raw, daily_witnesses, stamp, verified_at_ns):
+def proof_from_capture(raw, daily_witnesses, stamp, verified_at_ns, *, allow_multiple=False):
     """Extract one entire observed day from a frozen native response."""
     try:
         payload = json.loads(raw)
@@ -68,6 +68,14 @@ def proof_from_capture(raw, daily_witnesses, stamp, verified_at_ns):
             "source_rows_checksum": digest(rows),
             "daily_witnesses": daily_witnesses,
         }
+        contradictions = [
+            row["time"]
+            for previous, row in zip(rows, rows[1:], strict=False)
+            if row["time"] == previous["time"] + 60
+            and row["cumulative_volume"] - previous["cumulative_volume"] != row["volume"]
+        ]
+        if allow_multiple and len(contradictions) > 1:
+            proof.update(schema_version=2, target_time=stamp, correction_times=contradictions)
         corrected = validate_volume_proof(proof)
         if corrected.time != stamp:
             raise DataError("VCI volume capture contradicts a different requested minute")
@@ -81,7 +89,8 @@ def validate_volume_proof(proof):
     try:
         if (
             proof["kind"] != "vci_cumulative_volume"
-            or proof["schema_version"] != 1
+            or type(proof["schema_version"]) is not int
+            or proof["schema_version"] not in (1, 2)
             or type(proof["day"]) is not int
             or proof["day"] % 86400
             or type(proof["verified_at_ns"]) is not int
@@ -131,14 +140,30 @@ def validate_volume_proof(proof):
                 # A larger gap may hide trades; never allocate their volume to
                 # the next observed bar just to force a matching day total.
                 raise DataError("VCI volume proof cannot allocate volume across a minute gap")
-        if len(corrections) != 1:
+        if proof["schema_version"] == 1 and len(corrections) != 1:
             raise DataError(
                 "VCI volume proof requires exactly one consecutive-minute contradiction"
             )
-        corrected = corrections[0]
-        original = next(row for row in rows if row.time == corrected.time)
-        total = sum(r.volume for r in rows) - original.volume + corrected.volume
-        if total != cumulative[-1] or corrected.volume <= 0:
+        if proof["schema_version"] == 2:
+            declared = proof["correction_times"]
+            if (
+                type(declared) is not list
+                or not 2 <= len(declared) <= 10
+                or any(type(t) is not int for t in declared)
+                or declared != sorted(set(declared))
+                or declared != [r.time for r in corrections]
+                or type(proof["target_time"]) is not int
+                or proof["target_time"] not in declared
+            ):
+                raise DataError(
+                    "VCI multi-correction proof must declare every contradiction and one exact target"
+                )
+            corrected = next(r for r in corrections if r.time == proof["target_time"])
+        else:
+            corrected = corrections[0]
+        corrected_by_time = {r.time: r for r in corrections}
+        total = sum(corrected_by_time.get(r.time, r).volume for r in rows)
+        if total != cumulative[-1] or any(r.volume <= 0 for r in corrections):
             raise DataError("VCI corrected minute volumes do not reconcile with the session total")
         witnesses = [Candle(**raw).validate() for raw in proof["daily_witnesses"]]
         if {r.provider for r in witnesses} != {"vndirect", "dnse"} or any(

@@ -134,6 +134,124 @@ def captured(symbol="fpt"):
     )
 
 
+def test_actual_ctg_day_requires_explicit_multi_correction_and_reconciles_both():
+    proof = captured("ctg")
+    keys = {
+        "t": "time",
+        "o": "open",
+        "h": "high",
+        "l": "low",
+        "c": "close",
+        "v": "volume",
+        "accumulatedVolume": "cumulative_volume",
+    }
+    body = {key: [row[field] for row in proof["source_rows"]] for key, field in keys.items()}
+    body["symbol"] = "CTG"
+    raw = json.dumps([body]).encode()
+    with pytest.raises(DataError, match="exactly one"):
+        proof_from_capture(
+            raw, proof["daily_witnesses"], proof["target_time"], proof["verified_at_ns"]
+        )
+    total = sum(r["volume"] for r in proof["source_rows"])
+    for stamp, expected in zip(proof["correction_times"], (11400, 27000), strict=True):
+        rebuilt = proof_from_capture(
+            raw, proof["daily_witnesses"], stamp, proof["verified_at_ns"], allow_multiple=True
+        )
+        corrected = validate_volume_proof(rebuilt)
+        original = next(r for r in proof["source_rows"] if r["time"] == stamp)
+        row = Candle(**{k: v for k, v in original.items() if k != "cumulative_volume"})
+        assert apply_volume_proof(row, rebuilt) == replace(row, volume=expected)
+        other = next(t for t in proof["correction_times"] if t != stamp)
+        other_raw = next(r for r in proof["source_rows"] if r["time"] == other)
+        with pytest.raises(DataError, match="exact original source"):
+            apply_volume_proof(
+                Candle(**{k: v for k, v in other_raw.items() if k != "cumulative_volume"}), rebuilt
+            )
+        total += corrected.volume - row.volume
+    assert total == 4955000 == proof["source_rows"][-1]["cumulative_volume"]
+    assert all(w["volume"] == total for w in proof["daily_witnesses"])
+
+
+@pytest.mark.parametrize(
+    "defect",
+    (
+        "single_schema",
+        "missing",
+        "reversed",
+        "duplicate",
+        "unknown_target",
+        "bool_target",
+        "bool_schema",
+        "bool_time",
+        "third_contradiction",
+        "gap",
+        "peer_volume",
+    ),
+)
+def test_multi_correction_rejects_incomplete_declaration_or_unproven_totals(defect):
+    proof = deepcopy(captured("ctg"))
+    rows = proof["source_rows"]
+    if defect == "single_schema":
+        proof["schema_version"] = 1
+    elif defect == "missing":
+        proof["correction_times"].pop()
+    elif defect == "reversed":
+        proof["correction_times"].reverse()
+    elif defect == "duplicate":
+        proof["correction_times"].append(proof["correction_times"][-1])
+    elif defect == "unknown_target":
+        proof["target_time"] += 60
+    elif defect == "bool_target":
+        proof["target_time"] = True
+    elif defect == "bool_schema":
+        proof["schema_version"] = True
+    elif defect == "bool_time":
+        proof["correction_times"][0] = True
+    elif defect == "third_contradiction":
+        rows[1]["volume"] += 100
+    elif defect == "gap":
+        index = next(i for i, r in enumerate(rows) if r["time"] == proof["target_time"])
+        rows.pop(index - 1)
+    elif defect == "peer_volume":
+        proof["daily_witnesses"][0]["volume"] += 100
+    proof["source_rows_checksum"] = digest(rows)
+    with pytest.raises(DataError):
+        validate_volume_proof(proof)
+
+
+@pytest.mark.asyncio
+async def test_multi_day_provider_requires_a_separate_proof_for_each_exact_target():
+    first = captured("ctg")
+    second = deepcopy(first)
+    second["target_time"] = next(t for t in first["correction_times"] if t != first["target_time"])
+    fields = {
+        "t": "time",
+        "o": "open",
+        "h": "high",
+        "l": "low",
+        "c": "close",
+        "v": "volume",
+        "accumulatedVolume": "cumulative_volume",
+    }
+    body = {"symbol": "CTG"} | {k: [r[f] for r in first["source_rows"]] for k, f in fields.items()}
+    for proofs in ([first], [first, second]):
+        providers = Providers(
+            replace(Settings(), vci_history_fallback=True),
+            httpx.MockTransport(lambda request: httpx.Response(200, json=[body])),
+            vci_volume_proofs=proofs,
+        )
+        try:
+            if len(proofs) == 1:
+                with pytest.raises(DataError):
+                    await providers.page("vn", "CTG", "1m", body["t"][-1] + 60, provider="vci")
+            else:
+                page = await providers.page("vn", "CTG", "1m", body["t"][-1] + 60, provider="vci")
+                assert sum(r.volume for r in page.rows) == 4955000
+                assert len(page.volume_proofs) == 2
+        finally:
+            await providers.close()
+
+
 @pytest.mark.parametrize("symbol,expected", (("fpt", 5100), ("tpb", 15200)))
 def test_actual_full_day_volume_proofs_reconcile_exactly_one_candle(symbol, expected):
     proof = captured(symbol)

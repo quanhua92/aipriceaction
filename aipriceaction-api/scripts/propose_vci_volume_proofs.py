@@ -55,7 +55,13 @@ def run(args):
                     witnesses.append(
                         Candle("vn", symbol, "1D", provider=feed, **daily[key][day]).record()
                     )
-                proof = proof_from_capture(raw, witnesses, stamp, time.time_ns())
+                proof = proof_from_capture(
+                    raw,
+                    witnesses,
+                    stamp,
+                    time.time_ns(),
+                    allow_multiple=getattr(args, "allow_multiple", False),
+                )
                 corrected = validate_volume_proof(proof)
             except DataError as exc:
                 report["blocked"].append(
@@ -87,4 +93,9 @@ if __name__ == "__main__":
     parser.add_argument("--daily", type=Path, required=True)
     parser.add_argument("--existing", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--allow-multiple",
+        action="store_true",
+        help="Explicitly propose bounded multi-correction closed-day proofs",
+    )
     run(parser.parse_args())
