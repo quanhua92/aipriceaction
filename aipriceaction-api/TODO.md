@@ -38,6 +38,14 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Fresh-check PNJ's October 2 minute exceptions against all four native
+  providers and replay each captured response. All 226 observed timestamps and
+  each provider's prior values remain stable. SQLite matches fresh VPS exactly;
+  VNDirect/DNSE/VCI still disagree at individual minutes. Preserve the full 70-row
+  disagreement matrix and source hashes in 532,408 bytes without correcting by
+  consensus or equal day totals. Defer identical PNJ probes until new evidence;
+  minute-level truth and the broader exception gates remain unresolved.
+
 - [x] Reparse all 169 successful native daily controls in the saved selected
   universe through the current runtime adapters; verify recorded request source,
   symbol, interval, date window and capture hashes. All 124,764 rows match exactly.

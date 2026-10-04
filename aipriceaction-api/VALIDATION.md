@@ -3,6 +3,45 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## PNJ disputed-session source stability — 2026-10-04 ICT
+
+A fresh bounded October 2 minute query succeeds against all four native
+providers, preserving raw captures under the 4 MiB cap at
+`data/pnj-four-native-minute-refresh-20261004/`. Each response is then replayed
+through the unchanged runtime parser via MockTransport, with its capture bytes,
+source URL and request method checked; VCI's symbol, minute timeframe, cursor
+and countback are checked too. All saved normalized OHLCV rows equal replay.
+
+Each provider returns the same 226 timestamps as SQLite. All four retain exactly
+their own previously captured values on that session: no normalized price or
+volume revisions are observed. The result therefore rules out a transient saved
+capture difference for this control, without deciding which feed describes the
+underlying trades correctly.
+
+| Native feed versus SQLite | OHLC differences | Volume differences | Observed session volume |
+| --- | ---: | ---: | ---: |
+| VPS | 0 | 0 | 76,068,800 |
+| VNDirect | 12 | 36 | 76,972,200 |
+| DNSE | 10 | 60 | 76,068,800 |
+| VCI | 8 | 25 | 76,068,800 |
+
+SQLite is exactly faithful to the fresh VPS source on this observed session.
+The 70 disputed timestamps across all four providers are preserved row by row
+in `source-stability.json`, together with source-record hashes and replay status.
+Equal VPS/DNSE/VCI day totals still do not establish individual minute allocation,
+and a provider majority cannot license changing prices or volumes. No rows,
+adoptions or proof catalogs change. Repeat PNJ probing is deferred until evidence
+changes; recovery requires a verified minute-level witness or trade-level source,
+rather than another identical daily total.
+
+The complete retained probe occupies 532,408 bytes. There are no database copies
+or S3 writes. Post-run local `data/` occupies 7,628,468 KiB, while RustFS `/data`
+remains 2,701,576 KiB. This scoped source-fidelity control does not prove the
+complete market session, the other symbols, or the older disputed data.
+All 22 focused recent-disagreement, OHLCV classification and artifact-budget
+tests pass. Runtime code is unchanged; the preceding complete suite remains the
+1,087-test checkpoint.
+
 ## Successful native daily controls replayed — 2026-10-04 ICT
 
 `scripts.verify_native_daily_controls` verifies every successful VPS, VNDirect
