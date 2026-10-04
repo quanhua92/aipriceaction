@@ -1,6 +1,7 @@
 import asyncio
 import hmac
 import logging
+import re
 import time
 import uuid
 from collections import OrderedDict
@@ -14,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
@@ -30,12 +31,29 @@ from .storage import Repository
 log = logging.getLogger(__name__)
 
 
+def unsigned_integer(value):
+    if isinstance(value, str) and not re.fullmatch(r"\+?[0-9]+", value):
+        raise ValueError("Invalid unsigned integer query value")
+    return value
+
+
+def signed_integer(value):
+    if isinstance(value, str) and not re.fullmatch(r"[+-]?[0-9]+", value):
+        raise ValueError("Invalid signed integer query value")
+    return value
+
+
+Unsigned64 = Annotated[int, BeforeValidator(unsigned_integer), Query(ge=0, le=(1 << 64) - 1)]
+Unsigned32 = Annotated[int, BeforeValidator(unsigned_integer), Query(ge=0, le=(1 << 32) - 1)]
+Signed64 = Annotated[int, BeforeValidator(signed_integer), Query(ge=-(1 << 63), le=(1 << 63) - 1)]
+
+
 class TickersQuery(BaseModel):
     symbol: list[str] | None = None
     interval: str = "1D"
     start_date: str | None = None
     end_date: str | None = None
-    limit: int | None = Field(None, ge=1)
+    limit: Signed64 | None = Field(None, ge=1)
     legacy: bool = False
     format: str = "json"
     cache: bool = True
@@ -417,8 +435,8 @@ def create_app(settings: Settings | None = None):
         ema: bool = False,
         sort_by: str = "close_changed",
         direction: str = "desc",
-        limit: int = 10,
-        min_volume: int = 10000,
+        limit: Unsigned64 = 10,
+        min_volume: Unsigned64 = 10000,
         sector: str | None = None,
         snap: bool = True,
     ):
@@ -439,10 +457,10 @@ def create_app(settings: Settings | None = None):
         mode_value: Annotated[str, Query(alias="mode")] = "vn",
         date: str | None = None,
         ema: bool = False,
-        ma_period: int = 20,
+        ma_period: Unsigned32 = 20,
         min_score: float = 0,
         above_threshold_only: bool = False,
-        top_per_sector: int = 10,
+        top_per_sector: Unsigned64 = 10,
         snap: bool = True,
     ):
         return await background(
@@ -463,13 +481,13 @@ def create_app(settings: Settings | None = None):
         date: str | None = None,
         start_date: str | None = None,
         end_date: str | None = None,
-        bins: int = 50,
+        bins: Unsigned64 = 50,
         value_area_pct: float = 70,
     ):
         return await background(
             analysis.profile,
             symbol,
-            mode(mode_value),
+            mode_value,
             date,
             start_date,
             end_date,
@@ -484,9 +502,9 @@ def create_app(settings: Settings | None = None):
         ema: bool = False,
         algorithm: str = "jdk",
         benchmark: str | None = None,
-        period: int = 10,
-        trails: int = 10,
-        min_volume: int = 100000,
+        period: Unsigned64 = 10,
+        trails: Unsigned64 = 10,
+        min_volume: Signed64 = 100000,
         snap: bool = True,
     ):
         return await background(

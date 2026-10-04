@@ -271,6 +271,94 @@ def test_analysis_envelopes_and_historical_date(client):
     assert jdk["data"]["tickers"]
 
 
+@pytest.mark.parametrize(
+    "route,field,bits,signed",
+    [
+        ("top-performers", "limit", 64, False),
+        ("top-performers", "min_volume", 64, False),
+        ("ma-scores-by-sector", "ma_period", 32, False),
+        ("ma-scores-by-sector", "top_per_sector", 64, False),
+        ("volume-profile", "bins", 64, False),
+        ("rrg", "period", 64, False),
+        ("rrg", "trails", 64, False),
+        ("rrg", "min_volume", 64, True),
+    ],
+)
+def test_analysis_integer_query_bounds_reject_before_reading_history(
+    client, monkeypatch, route, field, bits, signed
+):
+    def unexpected(*args, **kwargs):
+        raise AssertionError("Invalid query reached market data reads")
+
+    monkeypatch.setattr(client.app_instance.state.history, "query", unexpected)
+    monkeypatch.setattr(client.app_instance.state.history, "read", unexpected)
+    lower = -(1 << (bits - 1)) if signed else 0
+    upper = (1 << (bits - int(signed))) - 1
+    for value in (lower - 1, upper + 1):
+        params = {field: value}
+        if route == "volume-profile":
+            params.update(symbol="FPT", date="2024-02-01")
+        response = client.get(f"/analysis/{route}", params=params)
+        assert response.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "mode,expected", [("CRYPTO", "crypto"), ("YaHoO", "yahoo"), ("unknown", "vn")]
+)
+def test_volume_profile_legacy_mode_dispatch(client, monkeypatch, mode, expected):
+    stamp = parse_time("2024-02-01T02:00:00")
+    rows = [Candle(expected, "FPT", "1m", stamp, 100, 110, 90, 105, 1000)]
+    calls = []
+
+    def read(source, symbol, interval, start, end):
+        calls.append((source, symbol, interval, start, end))
+        return rows
+
+    monkeypatch.setattr(client.app_instance.state.history, "read", read)
+    response = client.get(
+        "/analysis/volume-profile", params={"symbol": "FPT", "date": "2024-02-01", "mode": mode}
+    )
+    assert response.status_code == 200
+    assert calls[0][:3] == (expected, "FPT", "1m")
+    assert response.json()["data"]["total_minutes"] == 1
+
+
+def test_volume_profile_empty_symbol_error_precedes_date_validation(client):
+    response = client.get("/analysis/volume-profile", params={"symbol": ""})
+    assert response.status_code == 400
+    assert response.json() == {"error": "symbol parameter is required"}
+
+
+def test_analysis_zero_controls_keep_legacy_semantics(client):
+    performers = client.get("/analysis/top-performers", params={"limit": 0})
+    assert performers.status_code == 200 and len(performers.json()["data"]["performers"]) == 1
+    sectors = client.get("/analysis/ma-scores-by-sector", params={"top_per_sector": 0})
+    assert sectors.status_code == 200
+    assert sectors.json()["data"]["sectors"]
+    assert all(not item["top_stocks"] for item in sectors.json()["data"]["sectors"])
+    rrg = client.get("/analysis/rrg", params={"period": 0, "trails": 0, "min_volume": -1})
+    assert rrg.status_code == 200 and rrg.json()["data"]["period"] == 4
+    assert all("trails" not in item for item in rrg.json()["data"]["tickers"])
+
+
+@pytest.mark.parametrize("value", ["1.0", " 1", "1 ", "1e0", "１", "--1"])
+def test_integer_query_lexical_validation(client, value):
+    for path, params in (
+        ("/tickers", {"symbol": "FPT", "limit": value}),
+        ("/analysis/top-performers", {"limit": value}),
+        ("/analysis/rrg", {"min_volume": value}),
+    ):
+        assert client.get(path, params=params).status_code == 400
+
+
+def test_unsigned_negative_zero_and_signed_integer_forms(client):
+    assert client.get("/analysis/top-performers", params={"limit": "-0"}).status_code == 400
+    assert client.get("/analysis/top-performers", params={"limit": "+01"}).status_code == 200
+    assert client.get("/tickers", params={"symbol": "FPT", "limit": "+01"}).status_code == 200
+    rrg = client.get("/analysis/rrg", params={"min_volume": "-0", "trails": "0"})
+    assert rrg.status_code == 200 and rrg.json()["data"]["tickers"]
+
+
 def test_archive_backed_web_response(client):
     app = client.app_instance
     before = client.get(

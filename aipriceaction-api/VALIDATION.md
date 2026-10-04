@@ -6,6 +6,31 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Analysis and integer-query compatibility — 2026-10-04 ICT
+
+The Rust analysis query structs use unsigned 64-bit limits/counts, an unsigned
+32-bit MA period and a signed 64-bit RRG volume filter. FastAPI previously
+accepted negative/oversized values and could read market history before applying
+handler clamps. Explicit input bounds now reject these values before any market
+read. Integer syntax also matches Rust: decimal-point/exponent strings,
+whitespace, non-ASCII numerals and malformed signs are rejected. Unsigned `-0`
+is rejected, signed `-0` and `+01` remain valid. A compiled standard-library
+Rust probe corroborates these cases; its source/output are retained under
+`data/analysis-query-contract-runtime-20261004/`.
+
+The volume-profile Rust handler has a separate string mode parser that accepts
+case-insensitive `crypto` and `yahoo`, defaulting other values to VN. FastAPI now
+preserves this behavior instead of using the other routes' strict mode parser.
+An empty symbol returns the original error before missing-date validation.
+Twenty endpoint regressions cover bounds/read exclusion, mode dispatch, error
+precedence and lexical forms. Existing zero controls retain their behavior:
+performers limit clamps to one, sector top lists can be empty, RRG period clamps
+to four and zero trails omit the trail field. Signed RRG volume remains valid.
+
+All 561 tests pass; lint, formatting and offline wheel/source builds pass. The
+existing Starlette/httpx deprecation remains. These changes preserve API input
+behavior; they do not resolve provider gaps or certify production data migration.
+
 ## Sync UUID input compatibility — 2026-10-04 ICT
 
 The Rust handlers call `Uuid::parse_str` before binding a UUID to PostgreSQL.

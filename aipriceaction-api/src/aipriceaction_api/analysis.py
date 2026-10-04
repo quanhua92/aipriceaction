@@ -173,6 +173,8 @@ class Analysis:
         bins=50,
         value_area_pct=70,
     ):
+        if not symbol:
+            raise DataError("symbol parameter is required", 400)
         start = date or start_date
         end = date or end_date or start_date
         if not start:
@@ -182,7 +184,9 @@ class Analysis:
         lo, hi = date_bounds(start), date_bounds(end, True)
         if hi < lo:
             raise DataError("end_date must be >= start_date", 400)
-        source = "crypto" if mode == "crypto" else "yahoo" if mode == "yahoo" else "vn"
+        source = (
+            "crypto" if mode.lower() == "crypto" else "yahoo" if mode.lower() == "yahoo" else "vn"
+        )
         rows = self.history.read(source, symbol, "1m", lo, hi)
         data = volume_profile(rows, symbol, source, bins, value_area_pct)
         return envelope(

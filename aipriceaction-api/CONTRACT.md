@@ -25,6 +25,13 @@ braced hyphenated, or `urn:uuid:` plus hyphenated. Hexadecimal case can vary;
 valid forms share one canonical key and secret. Malformed prefixes, extra
 braces and misplaced hyphens return the legacy HTTP 400 error after authorization.
 
+Integer query values preserve Rust's signed/unsigned widths and ASCII decimal
+syntax. Decimal-point, exponent, whitespace and non-ASCII numeral strings are
+rejected. Zero values retain the handler's existing clamp or empty-list behavior;
+RRG's signed minimum volume still accepts negative values. Volume-profile mode
+matching is case-insensitive for `crypto`/`yahoo` and defaults other values to
+Vietnam, as in its separate legacy string parser.
+
 Native intervals are `1D`, `1h`, and `1m`; aggregate intervals are `5m`, `15m`,
 `30m`, `4h`, `1W`, `2W`, `1M`. Minute `1m` and monthly `1M` remain distinct.
 Hourly aliases, daily aliases, and mode aliases are retained. Daily and
