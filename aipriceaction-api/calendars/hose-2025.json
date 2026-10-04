@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "exchange": "HOSE",
+  "year": 2025,
+  "symbols": ["VNINDEX", "VN30"],
+  "weekdays": [0, 1, 2, 3, 4],
+  "closed_ranges": [
+    ["2025-01-01", "2025-01-01"],
+    ["2025-01-27", "2025-01-31"],
+    ["2025-04-07", "2025-04-07"],
+    ["2025-04-30", "2025-05-02"],
+    ["2025-09-01", "2025-09-02"]
+  ],
+  "explicit_closed_weekends": ["2025-04-26"],
+  "source": {
+    "notice": "2079/TB-SGDHCM",
+    "published": "2024-12-26",
+    "url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/1737138/20241226_20242612_Thong%20bao%20ve%20lich%20nghi%202025.pdf",
+    "sha256": "0399221e82ef182e23e3adf49ffc0b0fc89c0b9991615c9ed4e6785ac41cc911",
+    "bytes": 806037,
+    "transcription_verification": "Visually checked against the downloaded signed one-page HOSE notice."
+  },
+  "limitations": [
+    "This is the announced schedule, not proof that every scheduled session actually took place.",
+    "Ticker listing dates, suspensions and no-trade days are not inferred.",
+    "This declaration licenses date checks only for the two named HOSE indices and only in 2025.",
+    "PDF hash verification preserves the source; it does not automate verification of the manual transcription."
+  ]
+}
