@@ -126,10 +126,19 @@ history through `eb814ab`; they are not additional current open tasks.
   captures offline passes 27 symbol records and blocks VNINDEX/VN30/CEO/TCH/IDC/
   SHS/VGI. Pass 48 refresh/replay/proof tests, including tampered capture, wrong
   witness identity/volume and refusal to infer full requested-history coverage.
-- [ ] Continue the 27 replayed VCI records past their captured cursors under
-  an explicit artifact budget. Verify full-year calendar coverage and coherent
-  source/SQLite basis before active-provider or canonical changes; successful
-  captured-page replay alone does not prove the requested year.
+- [x] Continue the 27 replayed VCI records past their captured cursors under
+  a 256 MiB artifact budget. Re-fetch and exactly compare the last captured page
+  before continuing: all 27 joins match timestamps, OHLCV and cursor. Twelve
+  candidates reach the requested boundary; 15 encounter further cumulative-volume
+  contradictions. Preserve 286,067 additional valid candles through raw captures
+  and compact checkpoints using 52,058,271 bytes; no database copies or publication.
+  Pass 61 continuation/replay/budget/proof/refresh tests, including changed joins,
+  out-of-window/non-progressing cursors and cleanup/checkpoint on budget exhaustion.
+- [ ] Automatically verify fresh daily witnesses for the newly exposed older
+  contradictions and replay the combined captures without unnecessary downloads.
+  Verify full-year calendar coverage and coherent source/SQLite basis before
+  active-provider or canonical changes; reaching a pagination boundary alone
+  does not certify missing sessions, complete minutes or OHLCV accuracy.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

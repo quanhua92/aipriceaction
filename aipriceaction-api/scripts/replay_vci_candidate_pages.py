@@ -15,7 +15,7 @@ from aipriceaction_api.providers import Providers
 from scripts.artifact_budget import ArtifactBudget
 
 
-async def replay_record(settings, symbol, record):
+async def replay_record(settings, symbol, record, *, retain_last_page=False):
     first = date_bounds(record["start_date"])
     before = date_bounds(record["end_date"], end=True) + 1
     pages = record["window"]["pages"]
@@ -81,6 +81,8 @@ async def replay_record(settings, symbol, record):
                 return result
         result["captured_pages_passed"] = True
         result["next_cursor"] = result["pages"][-1]["cursor"]
+        if retain_last_page:
+            result["last_page"] = page
         return result
     finally:
         await providers.close()

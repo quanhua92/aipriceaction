@@ -5,6 +5,32 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+The bounded follow-up continuation finishes all 27 candidate records whose
+captured pages replayed successfully. Before requesting older pages,
+`scripts.continue_vci_candidate_pages` re-fetches the last captured page and
+compares every timestamp/OHLCV tuple plus its cursor exactly, excluding runtime
+metadata. All 27 joins match. VIB, VPL, HHS, VCI, HSG, VNM, HAG, SBT, CTR, PNJ,
+DGC and NAB traverse the requested start boundary. VCB, BID, MBB, ACB, VPB, LPB,
+VIC, DIG, SSI, HCM, HPG, GVR, MSN, GEX and OCB encounter further volume
+contradictions on older pages. The seven previously blocked records remain
+blocked offline. No strict provider guard or active catalog is changed.
+
+This continuation retains 286,067 additional accepted rows through source
+captures and small per-symbol reports, using 52,058,271 bytes under a 256 MiB
+cap. Evidence is `data/vn-minute-year-vci-continuation-20261004`. No SQLite copies
+or remote storage writes were made. Local data grows from 7,498,548 to
+7,549,620 KiB; RustFS data remains 2,586,396 KiB (logs grow by 12 KiB during the
+run). Sixty-one focused continuation/replay/budget/proof/refresh tests pass.
+The budget-exhaustion test verifies provider cleanup and retained capture
+references in the failure checkpoint. Changed joins, invalid cursors, out-of-range
+rows and empty responses cannot certify the requested boundary.
+
+Boundary traversal remains separate from calendar completeness and source/SQLite
+adjustment-basis acceptance. The fresh join checks one captured page, not the
+entire historical corporate-action basis. Every candidate explicitly retains
+`requested_year_proven: false`. Further fresh daily corroboration and combined
+capture replay remain open before any provider adoption or canonical change.
+
 Follow-up automated proof refresh and native-parser replay make further progress
 without changing canonical data. `scripts.refresh_vci_volume_proposals` rechecks
 the 29 in-window proposals against 58 fresh exact-date VNDirect/DNSE daily
