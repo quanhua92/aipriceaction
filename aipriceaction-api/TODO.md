@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,037,525 candle/quote records. The current S3 index has 701
+- The main local database has 6,031,821 candle/quote records. The current S3 index has 713
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 410 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 416 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Execute the due crypto rollover after its populated rehearsal: preserve
+  5,860 expired rows in 12 immutable Parquet objects, prune exact local versions,
+  verify every surviving record and restore the 713-object canonical manifest.
+  All 12 boundary HTTP cases and archived SDK checks pass. Subsequent native
+  updates add 68 current candles through October 4 at 00:10 UTC without changing
+  completed history, archive metadata or other markets. Other-market rollover
+  and unattended scheduling remain separate gates.
 - [x] Refresh all four configured crypto tickers on the pinned Binance basis:
   3,895 new minute and 64 new hourly candles through October 3 at 23:33 UTC.
   All 12 native series have continuous retained timestamps; previously completed

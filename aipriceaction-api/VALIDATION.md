@@ -6,6 +6,53 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Executed canonical crypto rollover and subsequent ingestion — 2026-10-04 ICT
+
+After the dated isolated rehearsal, `archive --source crypto --execute --prune`
+executes the due October 4 UTC rollover on the main local database. It publishes
+**12 immutable Parquet objects / 5,860 expired candles** to canonical RustFS:
+four daily candles, 96 hourly candles and 5,760 minute candles. Each object is
+uploaded and verified before its exact exported local versions are pruned.
+SQLite now begins crypto daily/hourly data at October 4, 2023, and minute data
+at October 4, 2025. A follow-up eligibility check finds no expired crypto rows.
+
+Cold object readback and boundary history match the populated before-image
+exactly, including every value, provider, revision and update version. An
+exhaustive comparison finds no changed surviving candles or new records and
+exactly the 5,860 selected missing local rows. All other operational metadata
+and original archive-index records remain exact. SQLite passes `quick_check`.
+The canonical manifest restores **713 objects** into fresh SQLite with a separate
+cold cache, preserving exact access to every moved candle. The main record count
+falls from **6,037,613 to 6,031,753** and the epoch advances **3121 to 3145**.
+
+The running FastAPI passes **12 native boundary queries / 11,720 records** against
+the before-image. Installed SDK checks pass **four BTC minute/15-minute SMA/EMA
+cases / 80 records** across the archived boundary. Full-range versus tail EMA
+contexts retain the documented inherited seeding behavior; they are not asserted
+to be numerically identical.
+
+All **12** pinned Binance daily/hourly/minute refreshes succeed after pruning,
+adding **68 candles**: 60 minute candles, four hourly candles and four daily
+candles. Minute tails reach October 4 **00:10 UTC**; daily/hourly tails reach
+October 4 **00:00 UTC**. This brings the main database to **6,031,821 records**.
+Completed crypto OHLCV/provenance and all noncrypto candle values/versions remain
+exact. Series, jobs, archive index, handoff certificates and import receipts
+remain unchanged; separate comparisons preserve noncrypto schedules, source
+checks and quality records. Installed SDK latest daily/hourly/4-hour SMA/EMA
+checks pass **six cases / 120 records** with zero HTTP field differences.
+
+Populated backups, native responses, HTTP/SDK results and restoration reports
+remain under `data/crypto-canonical-rollover-20261004/` and
+`data/crypto-post-rollover-refresh-20261004/`. **31 JSON artifacts** are preserved
+with immutable RustFS readback; receipt
+`data/crypto-canonical-rollover-evidence-20261004.json`. After-rollover backup
+SHA-256: `862add9f859d2451b0dca4baee17f618e01569131cff21dcab54b5fcfe6876ef`.
+Latest post-refresh backup SHA-256:
+`6d44a917109de06818d192c6b50c4b19a985b5ca0c571ce7dc465d9357d1a7c2`.
+This is an executed local crypto rollover and subsequent bounded ingestion;
+other-market rollover, unattended supervision and production S3/cutover remain
+open. No production route or legacy database was changed.
+
 ## Rolling job bounds and observed VN hourly coverage — 2026-10-04 ICT
 
 A read-only inventory compares **39,160 daily dates** with **39,155 hourly dates**
