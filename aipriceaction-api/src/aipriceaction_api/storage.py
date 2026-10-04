@@ -511,7 +511,7 @@ class Repository:
             return [Candle(**dict(r)) for r in (rows if forward else reversed(rows))]
 
     def archives(self, source=None, symbol=None, interval=None, start=None, end=None):
-        where, args = ["status IN ('published','pending_repair')"], []
+        where, args = ["status IN ('published','pending_repair','historical_snapshot')"], []
         for col, value in (("source", source), ("symbol", symbol), ("interval", interval)):
             if value is not None:
                 where.append(f"{col}=?")

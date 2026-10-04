@@ -314,12 +314,49 @@ class Archive:
             if self.store.read(f"{self.settings.s3_prefix}/LATEST.json") != path.read_bytes():
                 raise DataError("Archive manifest pointer verification failed")
 
-    def publish(self, candles, prune=False, replaces=None, *, require_current=False):
+    def validate_historical_snapshot(self, candles):
+        if not candles:
+            raise DataError("Historical snapshots require frozen public candles")
+        first = candles[0]
+        years = {
+            "1m": self.settings.minute_years,
+            "1h": self.settings.hourly_years,
+            "1D": self.settings.daily_years,
+        }[first.interval]
+        if not first.revision or any(
+            row.provider != "legacy-api" or row.updated_at <= 0 or row.time >= cutoff(years)
+            for row in candles
+        ):
+            raise DataError(
+                "Historical snapshots require a separate frozen public revision wholly outside retention"
+            )
+
+    def publish(
+        self,
+        candles,
+        prune=False,
+        replaces=None,
+        *,
+        require_current=False,
+        historical_snapshot=False,
+    ):
+        if historical_snapshot:
+            if not candles or prune or replaces is not None or require_current:
+                raise DataError("Historical snapshots must preserve primary records and objects")
+            self.validate_historical_snapshot(candles)
+            first = candles[0]
+            state = self.repo.state(first.source, first.symbol, first.interval)
+            if state and first.revision == state["revision"]:
+                raise DataError(
+                    "Historical snapshots require a separate frozen public revision wholly outside retention"
+                )
         owner = uuid.uuid4().hex
         if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
             raise DataError("Another archive writer is active")
         try:
             obj = self.prepare(candles)
+            if historical_snapshot:
+                obj["status"] = "historical_snapshot"
             # Validate/commit the local index before advertising it remotely.
             # A concurrent series repair must not leak a rejected replacement
             # through LATEST. Failed manifest publication keeps all local rows.
@@ -363,6 +400,8 @@ class Archive:
             if obj.get("schema_version") != 1:
                 raise DataError("Unsupported archive schema version")
             rows = self.read(obj, refresh=True)
+            if obj.get("status") == "historical_snapshot":
+                self.validate_historical_snapshot(rows)
             if (
                 not rows
                 or len(rows) != obj["row_count"]

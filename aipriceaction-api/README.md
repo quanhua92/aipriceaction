@@ -586,6 +586,17 @@ Private sync records are a separate migration concern because `/tickers` does
 not expose them. Imported snapshots and new-provider data need compatible
 adjustment bases before they can be joined.
 
+Frozen public history can also be published as a separate `historical_snapshot`
+archive revision with `Archive.publish(rows, historical_snapshot=True)`. This
+requires checksummed public rows wholly outside the configured retention window,
+positive capture versions and a revision distinct from the active series.
+Explicit historical requests ending outside retention can select that snapshot
+when no local candles fall in the requested range. Indicator context and partial
+aggregation buckets stay on the selected revision. Live, open-ended and queries
+crossing local coverage continue using the primary history. Insufficient context
+that would require another primary basis still raises the existing guard.
+Snapshots preserve primary records/objects and are verified during restoration.
+
 Check an isolated filesystem-backed public snapshot against retained raw
 records and historical indicator reads before proposing its publication:
 

@@ -1,21 +1,44 @@
 import time
 
 from .calculations import aggregate, enhance
-from .domain import DataError, base_interval, bucket
+from .domain import DataError, base_interval, bucket, cutoff
 
 
 class History:
     def __init__(self, repo, archive, settings):
         self.repo, self.archive, self.settings = repo, archive, settings
 
-    def read(self, source, symbol, iv, start=None, end=None, limit=None, forward=False):
+    def read(
+        self, source, symbol, iv, start=None, end=None, limit=None, forward=False, revision=None
+    ):
         """Return chronological native candles; consult only required objects."""
         local = self.repo.read(source, symbol, iv, start, end, limit, forward=forward)
+        other_local = [r for r in local if revision is not None and r.revision != revision]
+        if revision is not None:
+            local = [r for r in local if r.revision == revision]
         local_times = {r.time for r in local}
         merged = {r.time: r for r in local}
         if len(merged) > self.settings.archive_max_rows:
             raise DataError("Historical request exceeds resource limit", 400)
         objects = self.repo.archives(source, symbol, iv, start, end)
+        snapshots = [obj for obj in objects if obj["status"] == "historical_snapshot"]
+        primary = [obj for obj in objects if obj["status"] != "historical_snapshot"]
+        years = {
+            "1m": self.settings.minute_years,
+            "1h": self.settings.hourly_years,
+            "1D": self.settings.daily_years,
+        }[iv]
+        # Frozen public snapshots can serve wholly expired, explicitly bounded
+        # history. They never replace local candles or enter live/default reads.
+        if revision is None and not local and end is not None and end < cutoff(years) and snapshots:
+            revision = max(snapshots, key=lambda obj: obj["created_at"])["revision"]
+        if revision is None:
+            objects = primary
+        other_objects = [
+            obj for obj in primary if revision is not None and obj["revision"] != revision
+        ]
+        if revision is not None:
+            objects = [obj for obj in objects if obj["revision"] == revision]
         if forward:
             objects.sort(key=lambda obj: (obj["start"], obj["end"]))
         for obj in objects:
@@ -41,6 +64,17 @@ class History:
                     merged[row.time] = row
             if len(merged) > self.settings.archive_max_rows:
                 raise DataError("Historical request exceeds resource limit", 400)
+        if revision is not None and (not limit or len(merged) < limit):
+            # A pinned context must not hide older observations by returning a
+            # shorter lookback when only another adjustment basis contains them.
+            if any(r.time not in merged for r in other_local):
+                raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
+            for obj in other_objects:
+                if obj["status"] == "pending_repair":
+                    raise DataError(f"Historical adjustment repair pending for {symbol} {iv}")
+                fetched = self.archive.read(obj, start, end, limit, forward=forward)
+                if any(r.time not in merged for r in fetched):
+                    raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
         result = sorted(merged.values(), key=lambda r: r.time)
         if limit:
             result = result[:limit] if forward else result[-limit:]
@@ -71,7 +105,9 @@ class History:
                 return "1m"
         return native
 
-    def aggregated(self, source, symbol, iv, start=None, end=None, limit=252, native=None):
+    def aggregated(
+        self, source, symbol, iv, start=None, end=None, limit=252, native=None, revision=None
+    ):
         """Expand recent native reads until enough complete output buckets exist."""
         native = native or self.native_interval(source, symbol, iv)
         factor = (
@@ -83,7 +119,9 @@ class History:
         lower = bucket(start, iv, source) if start is not None else None
         forward = start is not None
         while True:
-            rows = self.read(source, symbol, native, lower, end, count, forward=forward)
+            rows = self.read(
+                source, symbol, native, lower, end, count, forward=forward, revision=revision
+            )
             if not rows:
                 return []
             bars = aggregate(rows, iv, source, self.repo.validate_basis)
@@ -101,6 +139,7 @@ class History:
                         native,
                         last,
                         min(last + size, end) if end is not None else last + size,
+                        revision=rows[0].revision,
                     )
                     tail = [r for r in tail if bucket(r.time, iv, source) == last]
                     completed = aggregate(
@@ -113,7 +152,9 @@ class History:
                 # The first fetched bucket may be partial. Read its complete
                 # native range before publishing any selected output candle.
                 first = bucket(rows[0].time, iv, source)
-                prefix = self.read(source, symbol, native, first, rows[0].time - 1)
+                prefix = self.read(
+                    source, symbol, native, first, rows[0].time - 1, revision=rows[0].revision
+                )
                 bars = aggregate(prefix + rows, iv, source, self.repo.validate_basis)
                 return [r for r in bars if start is None or r.time >= start][-limit:]
             if count == self.settings.archive_max_rows:
@@ -129,14 +170,27 @@ class History:
             target = self.read(source, symbol, native, start, end, limit, forward=start is not None)
             if not target:
                 return []
-            earlier = self.read(source, symbol, native, end=target[0].time - 1, limit=buffer)
+            earlier = self.read(
+                source,
+                symbol,
+                native,
+                end=target[0].time - 1,
+                limit=buffer,
+                revision=target[0].revision,
+            )
             rows = earlier + target
         else:
             target = self.aggregated(source, symbol, iv, start, end, limit, native=native)
             if not target:
                 return []
             earlier = self.aggregated(
-                source, symbol, iv, end=target[0].time - 1, limit=buffer, native=native
+                source,
+                symbol,
+                iv,
+                end=target[0].time - 1,
+                limit=buffer,
+                native=native,
+                revision=target[0].revision,
             )
             rows = earlier + target
         if len({r.revision for r in rows}) > 1:
