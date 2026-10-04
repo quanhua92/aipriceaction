@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 901 active objects, 69 handoff certificates, 34 recoveries and
+  The S3 index has 896 active objects, 71 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 700 tests; lint/format checks pass.
+- The latest complete API suite passes 706 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -45,11 +45,14 @@ history through `eb814ab`; they are not additional current open tasks.
   dates. Fresh oldest/middle/latest controls match all 12,000 sampled candles.
   Candidate completion flags certify observed reference coverage, not full
   exchange calendars or permission to publish. Canonical OHLCV stays intact.
-- [ ] Finish and license coherent candidate publication across SQLite/S3 with
+- [x] Publish and license the verified local FPT/TPB minute candidates across SQLite/S3 with
   immutable before-images, source witnesses and cold/recent boundary checks.
-  FPT/TPB have corroborated isolated 200/900-share repair proposals; VPS/legacy
-  daily-volume coverage still needs explicit treatment. Preserve existing dates and prove
-  completed OHLCV corrections instead of silently choosing legacy or scaling.
+  their corroborated 200/900-share corrections. FPT has 66,198 total rows and
+  TPB 59,512; all existing observed timestamps survive. Verify fresh 2,000-row
+  native handoffs, successful 40-row refreshes and all 36 minute-derived boundary
+  queries. Preserve a whole SQLite backup and immutable S3 before/after images.
+  VPS/legacy daily-volume coverage remains a separate unresolved convention;
+  minute totals match VNDirect/DNSE peers without scaling prices or volume.
 - [x] Add atomic frozen VN minute snapshot activation. Verify immutable hot
   before/after images, original archive objects and a prepared receipt before
   changing SQLite. Replace retained candles, archive pointers and series state
@@ -57,14 +60,15 @@ history through `eb814ab`; they are not additional current open tasks.
   attempts. Preserve cancelled-job staging. Rehearse actual FPT/TPB originals
   and corrected captures in isolated SQLite/RustFS, then restore exact row
   versions and pass all 36 boundary queries. Source licensing, native handoff
-  and canonical execution remain open; storage activation is not a market proof.
+  and canonical execution are now verified for FPT/TPB locally; storage activation
+  is not a market proof for other symbols or missing exchange sessions.
 - [x] License same-provider refresh of a coherent native VCI snapshot with a
   replayable exact completed overlap. Require at least 1,000 candles across
   five observed sessions through the published completed tail, preserving every
   overlap timestamp and exact OHLCV. Guard concurrent changes/workers, preserve
   explicit volume normalization proofs and retain legacy snapshot freeze rules.
   Verify real FPT/TPB 2,000-row handoffs, 40-row worker refreshes and restored
-  native certificates in isolated RustFS. Canonical activation remains open.
+  native certificates in isolated RustFS, followed by verified local activation.
 - [x] Reject VCI consecutive-minute volume contradictions when cumulative
   totals are supplied. Captured FPT/TPB regressions reproduce both defects;
   sparse minutes and VN daily resets never trigger guessed allocation.
@@ -93,7 +97,8 @@ history through `eb814ab`; they are not additional current open tasks.
   timestamps; verify full OHLCV/provider/revision readback and 36 query cases
   across the retention boundary against all-SQLite references, including SMA
   and EMA. Keep source correction licensing, evidence publication, race-safe
-  canonical replacement and live refresh adoption open.
+  canonical replacement and live refresh adoption were subsequently verified
+  for these two local series; broader coverage and production cutover remain open.
 - [x] Diagnose same-feed minute/hour differences for all selected VN tickers.
   VNDirect excludes late-session observations in 12 captured hours; legacy does
   so in three. Other observed aggregation disagreements remain explicit. Captured

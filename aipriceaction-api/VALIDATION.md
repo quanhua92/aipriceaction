@@ -6,6 +6,80 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Verified local FPT/TPB minute activation — 2026-10-04 ICT
+
+The following checkpoint supersedes the earlier isolated-candidate status for
+FPT/TPB minutes only. The corrected snapshots are now active in the local main
+SQLite database and `archive-v2` RustFS index. Production remains unchanged.
+
+`scripts/activate_verified_vci_minutes.py` defaults to a read-only preview. Its
+execution preflights both candidates, checks every observed minute session
+against separate native daily price/volume witnesses, and repeats fresh exact
+VCI overlaps before mutation. It preserves a whole SQLite backup, the previous
+manifest pointer, immutable original hot/archive images and new hot/cold images.
+Hot rows, archive pointers and series revision change atomically per ticker;
+native overlap certificates then license pinned VCI updates. The explicit proof
+catalog supplies only the two replayable, peer-corroborated volume corrections.
+
+| Series | Total candles | SQLite candles | S3 candles/objects | Observed daily witnesses | Fresh native overlap |
+| --- | ---: | ---: | --- | --- | --- |
+| FPT minute | 66,198 | 55,801 | 10,397 / 4 | 293 dates: prices within 0.5 VND of retained VNDirect, exact daily volumes | 2,000 candles / 9 sessions |
+| TPB minute | 59,512 | 54,332 | 5,180 / 2 | 270 dates: prices within 0.99 VND of retained VPS; exact volumes against VNDirect and DNSE | 2,000 candles / 10 sessions |
+
+Every existing observed hot and cold timestamp survives. Each ticker's real
+native worker refresh updates 40 observations successfully. All 36 raw/SMA/EMA
+minute-derived queries span both storage tiers and match all-SQLite references.
+The API retains its existing native hourly routing. The initial verifier caught
+that distinction after FPT activation; a guarded `--resume` checkpoint finished
+verification without republishing FPT, then activated TPB. A captured regression
+proves verification of minute-derived hours cannot change native hourly routing.
+
+Daily witness disagreements remain explicit. TPB's captured VNDirect close on
+October 29, 2025 is 14,518 versus a minute-derived 14,509.92; a fresh four-feed
+daily recheck reproduces the disagreement. DNSE daily price quantization differs
+by up to 9.56 VND across this window. These feeds are exact volume witnesses here,
+not a claim of exact daily price identity. Retained native daily prices and VCI
+minute prices corroborate the candidate basis without scaling any source values.
+VPS/legacy daily totals still include small additional volumes on 269 of 270
+observed TPB dates; their vendor coverage convention remains unproven.
+
+The local API restarted on current code at PID 81152, with its existing loopback
+address `127.0.0.1:3001`. The VN worker restarted at PID 81190 with its same 57
+selected stocks and archive policy, explicit VCI fallback and
+`data/vci-volume-proofs-20261004.json`. Indices remain excluded. Crypto/Yahoo
+workers continued. No `.env` credentials, provider preference order, production
+routing or non-target VN OHLCV/provider basis changed.
+
+`scripts/check_vci_local_activation.py` verifies 56 real HTTP cases: minute,
+15-minute and native-hourly recent/boundary raw/SMA/EMA reads, plus corrected-date
+volume profiles. Minute results match corrected all-SQLite references; hourly
+results match the preserved original native series. Two-series restoration
+reproduces all 125,710 candles, six cold objects and exact hot-image write versions
+from S3 with valid native certificates. Original hot and archive before-images
+remain readable. A bidirectional SQLite comparison verifies all other VN series'
+OHLCV/provider/revision values are unchanged, excluding routine refresh metadata.
+Both minute source checks report `succeeded`, provider `vci`.
+
+Evidence and recovery paths:
+
+- `data/verified-vci-local-activation-20261004/report.json`, including each
+  immutable S3 prepared-receipt key, before/after objects and source overlaps;
+- `data/verified-vci-local-activation-20261004/before.sqlite3` and
+  `before-LATEST.json` for the pre-activation checkpoint;
+- `data/verified-vci-local-http-restoration-20261004/report.json` and its fresh
+  `restored.sqlite3` for scoped HTTP/recovery checks;
+- `data/tpb-daily-preflight-disagreement-20261004/` for the fresh four-feed
+  daily disagreement. Legacy is a comparison feed, never an accuracy oracle.
+
+The active local index now has 896 objects, 71 retained handoff certificates,
+34 recovery receipts and eight protected invalid-history markers. Superseded
+metadata and immutable original objects remain available. Whole-system rollback
+must coordinate writers and use the full SQLite backup; do not overwrite the
+manifest pointer blindly over later unrelated ingestion. This checkpoint proves
+these two series' observed data, storage, refresh and interface behavior, not
+independent exchange-calendar completeness, other tickers' accuracy or readiness
+to replace production. The full suite passes 706 tests; lint and formatting pass.
+
 ## Approved VCI minute fallback and coherent candidates — 2026-10-04 ICT
 
 The newer goal permits a verified historical-minute fallback. Two initial VCI
