@@ -6,6 +6,60 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Four VN feeds compared as peers — 2026-10-04 ICT
+
+The user clarified that legacy data can be incorrect. It is a fourth comparison
+feed alongside VPS, VNDirect and DNSE, not the correctness baseline. Existing
+legacy-match evidence below measures preservation/compatibility, not market
+truth. Interface compatibility does not require retaining erroneous candle
+values. Exact-overlap publication guards protect against accidental changes;
+verified coherent corrections can supersede legacy values with rollback evidence.
+
+A fresh read-only audit captures all 59 selected VN tickers, including indices,
+on all three native intervals. Daily dates cover September 7–October 2; hourly
+and minute dates cover October 1–2. All 708 requests finish with no network or
+parsing errors. Checksummed native raw replies, legacy response bodies and
+normalized per-feed rows are under `data/four-feed-selected-vn-20261004/`.
+`report.json` records the capture-run comparisons; `analysis.json` recomputes
+all six pairs from the same captures with symmetric relative-price magnitudes.
+No canonical records or archives are published by this audit.
+
+| Interval | Four-feed OHLCV agreement | Value disagreement | Incomplete four-feed timestamp coverage |
+| --- | ---: | ---: | ---: |
+| Daily | 980 | 200 | 0 |
+| Hourly | 354 | 236 | 4 |
+| Minute | 22,031 | 1,677 | 44 |
+
+Across shared timestamps, prices agree on 24,849 observations and differ on
+629; volumes agree on 23,806 and differ on 1,672. These overlap and must not be
+summed as unique defects. Floating representation noise alone is ignored;
+provider rounding and adjusted-volume differences remain visible. Timestamp
+coverage is the observed union, not independent exchange-calendar completeness.
+
+Three feeds agree while the fourth differs on 766 VNDirect, 455 DNSE, seven VPS
+and nine legacy observations. This is an outlier classification, not proof that
+the dissenting feed is wrong: feeds can share upstreams or adjustment semantics.
+All nine legacy outliers are VIB daily volumes. For September 10, all three
+native feeds report volume 2,869,000 versus legacy 2,885,384, with identical
+prices. SQLite already matches all nine three-native-feed values; no correction
+is needed there. This directly demonstrates why legacy agreement cannot be the
+sole quality criterion.
+
+At the existing 1% material-price review threshold, seven ticker/interval cases
+need investigation: VNINDEX daily (one observation), TPB hourly (five) and minute
+(224), IDC hourly/minute (one each), HCM hourly (one) and HAG hourly (one).
+The percentage denominator is the larger absolute price; it is a review measure,
+not a correction rule. Remaining smaller differences also need source-policy
+interpretation; they are not automatically incorrect candles. No majority vote
+licenses splicing sources or changing the protected index snapshots.
+
+Reusable runner: `scripts/compare_vn_feeds.py`, committed as `8783d02`.
+Six regressions cover legacy as the outlier, two-against-two ambiguity, missing
+feeds/timestamps, floating representation noise and empty observations. The full
+suite passes 594 tests with one existing warning; final metric changes also pass
+the six targeted regressions. Whole-project lint/format checks pass. This audit
+is bounded recent evidence, not full retained-history accuracy certification.
+
 ## Flexible indicator context — 2026-10-04 ICT
 
 The user revised acceptance to prioritize OHLCV, exact full-period SMA and
