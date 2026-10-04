@@ -206,7 +206,12 @@ async def adopt_snapshot(
     corroborate=None,
     source="vn",
     iv="1m",
+    yahoo_hourly_range=None,
 ):
+    if yahoo_hourly_range is not None and (
+        source != "yahoo" or iv != "1h" or yahoo_hourly_range != "5d"
+    ):
+        raise DataError("Yahoo range policy supports only hourly adoption", 400)
     if iv not in {"1m", "1h"} or source not in {"vn", "yahoo"}:
         raise DataError("Intraday adoption supports VN/Yahoo minute and hourly snapshots", 400)
     if iv != "1m" and (complete_sessions or corroborate is not None):
@@ -245,7 +250,15 @@ async def adopt_snapshot(
     # five date partitions required below even when the full overlap is exact.
     count = 10000 if source == "yahoo" and iv == "1m" and symbol.endswith("=F") else minimum * 2
     page = await asyncio.wait_for(
-        providers.page(source, symbol, iv, count=count, provider=provider), timeout=90
+        providers.page(
+            source,
+            symbol,
+            iv,
+            count=count,
+            provider=provider,
+            **({"yahoo_hourly_range": yahoo_hourly_range} if yahoo_hourly_range else {}),
+        ),
+        timeout=90,
     )
     if page.provider != provider or any(
         (r.source, r.symbol, r.interval, r.provider) != (source, symbol, iv, provider)
@@ -303,6 +316,8 @@ async def adopt_snapshot(
         "scope": "Exact observed overlap permits append; no inferred historical scaling",
     }
     if source == "yahoo":
+        if yahoo_hourly_range:
+            evidence["yahoo_hourly_range"] = yahoo_hourly_range
         evidence["completed_before"] = completed
         evidence["scope"] = (
             "Exact observed overlap across five completed UTC date partitions permits append; no inferred historical scaling or complete trading-calendar certification"

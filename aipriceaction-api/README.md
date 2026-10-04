@@ -492,6 +492,24 @@ handoff enables `1h` in its watchlist entry and packaged default. Other global
 hourly snapshots still require independent verification. Certificates permit
 observed provider continuity, not lifetime calendar or adjustment guarantees.
 
+Yahoo responses can change with the request window. To verify the legacy
+worker's fixed five-day hourly policy explicitly:
+
+```sh
+uv run python scripts/check_yahoo_minute_query_shapes.py --symbol 'GC=F' --interval 1h --date 2026-09-30 --output data/gold-hourly-request-check
+uv run aipa-api adopt-snapshot --source yahoo --symbol 'GC=F' --interval 1h --provider yahoo --yahoo-hourly-range 5d
+```
+
+Add `--execute` after reviewing a passing proof. The minimum 100 matching bars,
+five completed date partitions, tail, race and preservation checks still apply.
+The certificate pins `range=5d&interval=1h` for ordinary updates and archive-head
+verification, and survives manifest restoration. Existing certificates keep
+their dated policy. Relative ranges cannot be used with explicit historical
+bounds; dated backfills remain separately checked. A five-day outage that loses
+the stored overlap queues recovery. It does not silently switch request policy.
+The diagnostic preserves raw/null fields and flags appended quotes outside
+requested dates; replaying Rust null defaults does not license inferred candles.
+
 After an outage, Yahoo updates expand the recent request once, up to 1,000
 candles within the retained window, using the current provider. Daily replies
 must overlap the exact stored tail. Intraday replies may instead match its

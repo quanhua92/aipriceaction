@@ -332,6 +332,8 @@ class Worker:
                 self.repo.finding(source, symbol, iv, "provider_handoff_pending", reason)
                 return 0
             latest = self.repo.read(source, symbol, iv, limit=50)
+            hourly_range = self.repo.snapshot_hourly_range(state)
+            request_policy = {"yahoo_hourly_range": hourly_range} if hourly_range else {}
             overlap = latest
             count = 40
             step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
@@ -346,7 +348,7 @@ class Worker:
             # silently stitch a different provider's adjustment basis into it.
             try:
                 page = await self.providers.page(
-                    source, symbol, iv, count=count, provider=state["provider"]
+                    source, symbol, iv, count=count, provider=state["provider"], **request_policy
                 )
             except DataError:
                 if source != "vn":
@@ -387,7 +389,8 @@ class Worker:
                         iv,
                         count=count,
                         provider=state["provider"],
-                        start=self.floor(entry, iv),
+                        start=None if hourly_range else self.floor(entry, iv),
+                        **request_policy,
                     )
                     if not page.rows:
                         market = "VN" if source == "vn" else "Yahoo"
@@ -550,13 +553,15 @@ class Worker:
         retained = self.repo.read(
             obj["source"], obj["symbol"], obj["interval"], end=completed - 1, limit=40
         )
+        hourly_range = self.repo.snapshot_hourly_range(state)
         head = await self.providers.page(
             obj["source"],
             obj["symbol"],
             obj["interval"],
-            completed,
+            None if hourly_range else completed,
             count=40,
             provider=state["provider"],
+            **({"yahoo_hourly_range": hourly_range} if hourly_range else {}),
         )
         latest = {r.time: r for r in retained}
         matched = [r for r in head.rows if r.time in latest]

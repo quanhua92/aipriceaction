@@ -217,6 +217,16 @@ class Repository:
             )
 
     def snapshot_provider(self, state):
+        record = self.snapshot_adoption(state)
+        return record["snapshot_provider"] if record else None
+
+    def snapshot_hourly_range(self, state):
+        if state["source"] != "yahoo" or state["interval"] != "1h":
+            return None
+        record = self.snapshot_adoption(state)
+        return json.loads(record["evidence"]).get("yahoo_hourly_range") if record else None
+
+    def snapshot_adoption(self, state):
         with self.connect() as con:
             record = con.execute(
                 "SELECT * FROM snapshot_adoptions WHERE source=? AND symbol=? AND interval=? AND revision=? AND provider=?",
@@ -231,7 +241,7 @@ class Repository:
         if not record:
             return None
         self.validate_adoption(dict(record))
-        return record["snapshot_provider"]
+        return dict(record)
 
     @staticmethod
     def validate_adoption(record):
@@ -242,6 +252,11 @@ class Repository:
                 validate_daily_adoption(record)
                 return
             evidence = json.loads(record["evidence"])
+            hourly_range = evidence.get("yahoo_hourly_range")
+            if hourly_range is not None and (
+                hourly_range != "5d" or record["source"] != "yahoo" or record["interval"] != "1h"
+            ):
+                raise DataError("Invalid Yahoo hourly request policy")
             valid = (
                 (
                     (record["source"] == "vn" and record["provider"] in {"vps", "vndirect", "dnse"})

@@ -74,6 +74,85 @@ class Provider:
 
 
 @pytest.mark.asyncio
+async def test_five_day_policy_is_verified_pinned_for_live_and_archive_heads_and_restored(
+    system, tmp_path
+):
+    repo, archive, settings = system
+    before = repo.read("yahoo", "SPY", "1h")
+    requests = []
+
+    class RangeProvider(Provider):
+        async def page(self, *args, **kwargs):
+            requests.append((args, kwargs.copy()))
+            assert kwargs["yahoo_hourly_range"] == "5d"
+            assert kwargs.get("start") is None
+            assert args[:3] == ("yahoo", "SPY", "1h")
+            return Page(self.rows, "yahoo")
+
+    proof = await adopt_snapshot(
+        repo,
+        RangeProvider(before),
+        "SPY",
+        "yahoo",
+        source="yahoo",
+        iv="1h",
+        yahoo_hourly_range="5d",
+    )
+    assert proof["evidence"]["yahoo_hourly_range"] == "5d"
+    assert not repo.adoptions()
+    await adopt_snapshot(
+        repo,
+        RangeProvider(before),
+        "SPY",
+        "yahoo",
+        True,
+        source="yahoo",
+        iv="1h",
+        yahoo_hourly_range="5d",
+    )
+    assert repo.read("yahoo", "SPY", "1h") == before
+    state = repo.state("yahoo", "SPY", "1h")
+    assert repo.snapshot_hourly_range(state) == "5d"
+    extra = replace(before[-1], time=before[-1].time + 3600)
+    worker = Worker(repo, settings, RangeProvider(before[-39:] + [extra]), archive)
+    assert await worker.sync({"source": "yahoo", "symbol": "SPY"}, "1h") == 40
+    await worker.verify_archive_head({"source": "yahoo", "symbol": "SPY", "interval": "1h"}, state)
+    assert requests[-1][0][-1] is None  # A relative range never receives historical bounds.
+    for provider in ("legacy-api", "yahoo"):
+        archive.publish(
+            [r for r in repo.read("yahoo", "SPY", "1h") if r.provider == provider], prune=True
+        )
+    fresh = Repository(tmp_path / "range-restored")
+    fresh.initialize()
+    restored = Archive(fresh, settings)
+    assert restored.restore_index() == 3
+    assert fresh.snapshot_hourly_range(state) == "5d"
+    assert fresh.adoptions() == repo.adoptions()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("changes", [{"source": "vn"}, {"iv": "1m"}, {"yahoo_hourly_range": "1mo"}])
+async def test_range_adoption_rejects_other_markets_intervals_or_windows(system, changes):
+    repo, _, _ = system
+    before = repo.read("yahoo", "SPY", "1h")
+    args = {"source": "yahoo", "iv": "1h", "yahoo_hourly_range": "5d"} | changes
+    with pytest.raises(DataError, match="range policy"):
+        await adopt_snapshot(repo, Provider(before), "SPY", "yahoo", True, **args)
+    assert not repo.adoptions() and repo.read("yahoo", "SPY", "1h") == before
+
+
+@pytest.mark.asyncio
+async def test_certificate_rejects_unknown_range_policy(system):
+    repo, _, _ = system
+    before = repo.read("yahoo", "SPY", "1h")
+    await adopt_snapshot(repo, Provider(before), "SPY", "yahoo", True, source="yahoo", iv="1h")
+    record = repo.adoptions()[0]
+    evidence = json.loads(record["evidence"]) | {"yahoo_hourly_range": "1mo"}
+    with pytest.raises(DataError, match="hourly request policy"):
+        repo.validate_adoption(record | {"evidence": json.dumps(evidence)})
+
+
+@pytest.mark.asyncio
 async def test_hourly_handoff_preserves_old_dates_appends_and_restores(system, tmp_path):
     repo, archive, settings = system
     history = History(repo, archive, settings)

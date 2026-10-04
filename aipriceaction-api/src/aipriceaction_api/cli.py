@@ -146,6 +146,11 @@ def parser():
     adopt.add_argument("--interval", choices=("1m", "1h", "1D"), default="1m")
     adopt.add_argument("--provider", choices=("vps", "vndirect", "dnse", "yahoo"), required=True)
     adopt.add_argument(
+        "--yahoo-hourly-range",
+        choices=("5d",),
+        help="Verify and pin the legacy five-day Yahoo hourly request policy",
+    )
+    adopt.add_argument(
         "--complete-sessions",
         action="store_true",
         help="Verify every snapshot timestamp in five completed sessions against minute and daily OHLCV; preserve replayable evidence",
@@ -401,7 +406,10 @@ async def execute(args, settings):
             await providers.close()
     elif args.command == "adopt-snapshot":
         if args.interval == "1D" and (
-            args.source != "vn" or args.complete_sessions or args.corroborate_provider
+            args.source != "vn"
+            or args.complete_sessions
+            or args.corroborate_provider
+            or args.yahoo_hourly_range
         ):
             raise DataError(
                 "Daily adoption supports VN exact overlap without minute correction options", 400
@@ -426,6 +434,7 @@ async def execute(args, settings):
                     corroborate=args.corroborate_provider,
                     source=args.source,
                     iv=args.interval,
+                    yahoo_hourly_range=args.yahoo_hourly_range,
                 )
             )
         finally:

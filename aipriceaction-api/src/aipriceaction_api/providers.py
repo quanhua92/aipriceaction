@@ -322,8 +322,10 @@ class Providers:
         ]
         return self.normalize(rows, before, count, "binance")
 
-    async def yahoo_page(self, symbol, iv, before, count, start=None):
+    async def yahoo_page(self, symbol, iv, before, count, start=None, hourly_range=None):
         wire = symbol.removesuffix(":US")
+        if hourly_range is not None and (hourly_range != "5d" or iv != "1h" or start is not None):
+            raise DataError("Yahoo range policy supports only current hourly reads")
         duration = {
             "1D": count * 3 * 86400,
             "1h": min(729 * 86400, count * 86400),
@@ -332,12 +334,21 @@ class Providers:
         payload = await self.request(
             "yahoo",
             f"https://query1.finance.yahoo.com/v8/finance/chart/{quote(wire, safe='')}",
-            {
-                "period1": max(0, before - duration, start or 0),
-                "period2": before,
-                "interval": {"1D": "1d", "1h": "60m", "1m": "1m"}[iv],
-                "events": "div,splits",
-            },
+            (
+                {
+                    "range": "5d",
+                    "interval": "1h",
+                    "events": "div|split|capitalGains",
+                    "symbol": wire,
+                }
+                if hourly_range
+                else {
+                    "period1": max(0, before - duration, start or 0),
+                    "period2": before,
+                    "interval": {"1D": "1d", "1h": "60m", "1m": "1m"}[iv],
+                    "events": "div,splits",
+                }
+            ),
         )
         chart = payload.get("chart", {})
         if chart.get("error") or not chart.get("result"):
@@ -421,7 +432,25 @@ class Providers:
         rows = [replace(r, open=rows[i - 1].close) if i else r for i, r in enumerate(rows)]
         return self.normalize(rows, before, count, "sjc-quote")
 
-    async def page(self, source, symbol, iv, before=None, count=500, provider=None, start=None):
+    async def page(
+        self,
+        source,
+        symbol,
+        iv,
+        before=None,
+        count=500,
+        provider=None,
+        start=None,
+        yahoo_hourly_range=None,
+    ):
+        if yahoo_hourly_range is not None and (
+            source != "yahoo"
+            or iv != "1h"
+            or yahoo_hourly_range != "5d"
+            or before is not None
+            or start is not None
+        ):
+            raise DataError("Yahoo range policy supports only current hourly reads")
         before = before or int(time.time()) + 1
         if source == "vn":
             errors = []
@@ -444,7 +473,14 @@ class Providers:
         if method is None:
             raise DataError("Unknown market source")
         return (
-            await method(symbol, iv, before, count, start=start)
+            await method(
+                symbol,
+                iv,
+                before,
+                count,
+                start=start,
+                **({"hourly_range": yahoo_hourly_range} if yahoo_hourly_range else {}),
+            )
             if source == "yahoo"
             else await method(symbol, iv, before, count)
         )
