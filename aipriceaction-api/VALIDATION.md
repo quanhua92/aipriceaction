@@ -29,6 +29,21 @@ Starlette/httpx deprecation remains. The new delayed-transfer test uses the
 filesystem backend and real SQLite/Parquet; it does not simulate a production
 cloud outage or prove multi-day supervised uptime.
 
+All three local workers now load `26bd316`, after their previous processes exit
+cleanly: VN PID 38579, crypto PID 38581 and Yahoo PID 38512. The API remains
+PID 35486. The read-only restart verifier passes on consistent before/after
+SQLite images: 57 VN, four crypto and four Yahoo minute series refresh on their
+existing provider/revision, with zero formerly completed values changed. Archive
+metadata, adoption certificates, imports, frozen/index versions and all three
+sources' series states remain exact. Both VN indices remain excluded.
+
+Evidence is retained in `data/nonblocking-worker-archive-restart-20261004/`;
+the after-image SHA-256 is
+`45eae972ec4646620d30dd4f958fae571681066f81755ec754b74e29851f67b7`.
+Each worker logs a same-day maintenance batch with zero objects/rows due. This
+proves the deployed local restart and scheduling path; the blocked-transfer
+concurrency proof remains the deterministic regression above.
+
 ## Analysis and integer-query compatibility — 2026-10-04 ICT
 
 The Rust analysis query structs use unsigned 64-bit limits/counts, an unsigned

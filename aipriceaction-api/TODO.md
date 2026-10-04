@@ -71,6 +71,12 @@ history through `eb814ab`; they are not additional current open tasks.
   Provide a reusable read-only verifier and reject stale/wrong-frame successes
   and changed protected records. API PID 16546 remains running. This verifies
   one restart; real supervisor recovery and multi-day operation remain open.
+- [x] Roll out nonblocking archive maintenance (`26bd316`) to all three local
+  workers and verify another populated restart. All 65 targeted minute series
+  refresh; completed values, frozen/index versions and archive/series metadata
+  remain exact. API PID 35486 continues running. Same-day maintenance has no
+  objects due; slow-transfer concurrency is covered by the SQLite/Parquet
+  regression, with multi-day supervised operation still open.
 - [x] Prepare Linux host supervisor examples for the API and the three current
   native worker scopes. Require per-source argument files, keep both indices
   excluded from VN, and preserve RustFS-only Compose. Parse the argument files
