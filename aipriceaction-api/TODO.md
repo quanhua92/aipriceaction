@@ -98,11 +98,26 @@ history through `eb814ab`; they are not additional current open tasks.
   completed records. Add a resumable universe runner with at most four symbols
   in memory per batch, a default 2 GiB cap and reserved status-report space.
   Pass 25 focused budget/pagination/comparison/pipeline tests.
-- [ ] Complete the launched full-year minute universe comparison across all 59
+- [x] Complete the full-year minute universe comparison across all 59
   selected symbols under the 2 GiB cap. Artifacts/checkpoints are under
   `data/vn-minute-year-universe-20261004`; the run uses verified candidate VCI
-  proofs and makes no canonical writes. Diagnose missing/bad source rows automatically;
-  preserve strict ingestion and require evidence before licensing corrections.
+  proofs and makes no canonical writes. All 236 windows finish explicitly;
+  152 do not reach the boundary and 93 contain errors. Capture 51,253 shared
+  four-feed agreements, 3,157 value disagreements and 2,174,108 incomplete
+  observations. Evidence uses 1,503,844,875 bytes, with no database copies.
+- [x] Review all 59 symbols against receipt-aware SQLite with bounded samples
+  and complete timestamp counts. No conflicts/missing timestamps against
+  unanimous providers; preserve 220 SQLite/provider difference categories.
+  Complete calendar review: VPS observes five dates for every symbol, VNDirect
+  127, DNSE 62 for stocks/89 for indices; 25 VCI series observe all 247 reference
+  dates. No unexpected dates; date presence is not full-minute accuracy proof.
+- [ ] Resolve the 34 VCI cumulative-volume refusals automatically. Offline
+  replay of full-universe captures proposes 30 proofs on 26 symbols and blocks
+  11 observations under existing rules; one GAS proposal predates the requested
+  year. Keep the candidate catalog separate from active workers and recheck fresh
+  daily witnesses before retrying the failed minute windows. Diagnose missing/bad
+  source rows automatically; preserve strict ingestion and require evidence
+  before licensing corrections.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

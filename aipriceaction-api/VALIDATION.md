@@ -3,6 +3,52 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Full selected-universe minute comparison — 2026-10-04 ICT
+
+The resumable comparison completed all 59 selected VN symbols and 236 native
+provider windows for October 4, 2025–October 2, 2026 in four-symbol batches.
+It retained 1,503,844,875 bytes of source captures, normalized checkpoints and
+reports, under its shared 2 GiB cap. There are no SQLite copies. Final local
+data is approximately 7.1 GiB and RustFS data is 2.604 GB; the comparison itself
+does not write RustFS or canonical market data.
+
+The observed union has 51,253 four-feed agreements, 3,157 value disagreements
+and 2,174,108 incomplete observations. Of 236 windows, 152 do not traverse the
+requested boundary and 93 contain errors: 59 DNSE responses and 34 VCI
+cumulative-volume contradictions. These are explicit refusals, not accepted
+partial-history certificates. Provider agreement remains limited to the shared
+timestamps and cannot establish independent market truth.
+
+`scripts.audit_vn_provider_dates` verifies 2025/2026 HOSE/HNX primary sources and
+amendments, requiring equal announced schedules. The reference window contains
+247 dates. Every VPS series observes five dates, every VNDirect series 127,
+and DNSE stocks 62 (indices 89). Twenty-five VCI series observe all 247 dates;
+the other VCI collections stop at volume validation. None has unexpected dates.
+This identifies missing-date candidates, not missing exchange sessions or
+complete per-minute coverage. Issuer-specific exceptions remain separate gates.
+
+`scripts.review_vn_minute_universe` checks the collected evidence against
+receipt-aware SQLite in bounded batches and keeps complete counts with at most
+20 samples per category. There are no conflicts or missing timestamps against
+unanimous providers, but 220 SQLite/provider difference categories remain.
+The existing MWG receipt participates in the comparison. Report sizes are
+560,066 bytes for local comparisons and 1,028,276 for calendar review.
+
+Evidence is under `data/vn-minute-year-universe-20261004`,
+`data/vn-minute-year-complete-date-review-20261004.json` and
+`data/vn-minute-year-complete-local-review-20261004/report.json`.
+The new compact-review safeguards pass three tests; nineteen focused
+review/budget/calendar/pipeline tests pass together. Collection is complete;
+data-accuracy acceptance remains open.
+
+Offline proof discovery over the frozen captures proposes 30 additional bounded
+volume proofs on 26 symbols and retains 11 blocked observations. One GAS target
+is before the requested minute-year window. The resulting 53-entry catalog is
+a candidate only, stored in `data/vn-minute-year-volume-proposals-20261004`
+(4,336,057 bytes). Fresh daily corroboration and failed-window replay must precede
+any active-catalog or canonical change.
+
+
 ## Full-year MWG minute-volume proof control — 2026-10-04 ICT
 
 Local activation is complete. The API and VN/Yahoo/crypto workers restarted on
