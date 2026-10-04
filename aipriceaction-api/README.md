@@ -510,6 +510,12 @@ the stored overlap queues recovery. It does not silently switch request policy.
 The diagnostic preserves raw/null fields and flags appended quotes outside
 requested dates; replaying Rust null defaults does not license inferred candles.
 
+Gold's local hourly handoff passes 109 exact bars across five completed date
+partitions. An ordinary update succeeds with all 10,288 stored timestamps and
+OHLCV unchanged. Its watchlist enables daily and hourly updates; minute updates
+remain frozen. Full hourly/four-hourly HTTP parity, backup and 890-object RustFS
+restoration evidence are recorded in `VALIDATION.md`.
+
 After an outage, Yahoo updates expand the recent request once, up to 1,000
 candles within the retained window, using the current provider. Daily replies
 must overlap the exact stored tail. Intraday replies may instead match its

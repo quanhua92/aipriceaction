@@ -10,15 +10,16 @@ history through `eb814ab`; they are not additional current open tasks.
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The main local database has 6,019,512 candle/quote records. The current S3 index has 890
-  active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
+  active objects, 69 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
   SPY also has a verified native hourly handoff; five other current stock/index
-  hourly snapshots remain frozen. Gold hourly history is now current as a
-  complete public snapshot, with 279 legacy quote events preserved explicitly.
+  hourly snapshots remain frozen. Gold hourly history has a verified native
+  handoff pinned to the legacy five-day request policy, with all 279 legacy
+  quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 451 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 469 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -28,6 +29,15 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Enable gold's verified native hourly updates using the legacy five-day
+  request policy. Keep the 100-bar/five-date/tail/race guards, pin the policy in
+  restorable certificates and use it for live/expanded/archive-head checks.
+  Populated rehearsal and canonical publication preserve all 10,288 timestamps
+  and OHLCV values, every unrelated candle version/table and full HTTP output.
+  The ordinary update succeeds; all 890 objects/69 certificates restore from
+  RustFS. The watchlist now has 199 configured states. Multi-day operation and
+  other global handoffs remain separate gates.
 
 - [x] Confirm public `/tickers` JSON exports work without a legacy PostgreSQL
   connection; a fresh bounded VCB request returns HTTP 200.

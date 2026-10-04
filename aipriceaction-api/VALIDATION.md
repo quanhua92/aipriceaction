@@ -6,6 +6,63 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Verified gold hourly request policy and native handoff — 2026-10-04 ICT
+
+The legacy Rust hourly worker uses `range=5d&interval=1h`. Captured comparisons
+show that Yahoo's dated/wider requests can return different historical fields
+from that fixed range. The legacy range matches S&P, Dow and NVDA in its current
+36 returned observations within the existing absolute price tolerance; AAPL and
+MSFT still have one material opening-price difference each. Gold's range matches
+all 109 returned observations exactly, while its dated day has two differences
+and its forty-day request has 25. Original HTTP bodies and normalized diagnostic
+replays are under `data/{aapl,nvda,sp500,dow,msft,gold}-hourly-query-shapes-20261004/`.
+The NVDA 200-bar frozen replay separately identifies two opening-price conflicts,
+on September 16 and September 25. Other series are not licensed by these checks.
+Some dated responses append the current closing quote outside the requested
+dates; diagnostics now flag those timestamps without discarding raw evidence.
+
+The explicit five-day policy is recorded in a verified handoff certificate,
+validated on restoration, and reused by ordinary/expanded live reads and archive
+head checks. Explicit historical bounds cannot use a relative range. Existing
+certificates keep their dated behavior; historical backfills remain separately
+validated. The existing minimum 100 bars, five completed UTC date partitions,
+published tail, identity, exact volume, price tolerance and race/lease guards
+remain unchanged. No correction, volume scaling, null defaults or proof-window
+trimming is licensed. A disjoint range queues recovery rather than switching
+request shape. Gold remains excluded from native minute updates.
+
+The full application suite passes **469 tests**, including policy propagation,
+forged/invalid policy rejection, raw/null preservation, out-of-range quotes,
+whole-hour labels, certificate restoration and range catch-up/recovery guards. Lint/format and offline builds
+pass. Early test-double/restoration-fixture assumptions were corrected before
+the final complete run; the known Starlette/httpx warning remains.
+
+Both populated rehearsal and canonical adoption match **109 hourly bars across
+five completed date partitions**. Adoption preserves every existing record;
+the subsequent ordinary 40-bar update preserves all **10,288** timestamps and
+OHLCV, changing recent provider/update provenance only. All **6,009,224** candle
+versions outside the gold hourly series and unrelated table rows are exact,
+including all other jobs, staging, archives and sync data. Epoch advances
+**3526 → 3528**; **seven** jobs remain pending. Hourly watchlist scheduling is
+enabled, giving **199** configured states. Actual multi-day supervision remains
+unproven.
+
+Current-code HTTP responses are byte-identical across full 2024/2025/2026 hourly
+and four-hourly history: **10,288 hourly** and **2,707 four-hour bars**, plus four
+latest 50-row SMA/EMA cases. The manifest restores all **890** verified Parquet
+objects, **69** adoption certificates, **34** recoveries and one history-gap
+record to an isolated SQLite index. Canonical epoch remains unchanged during
+restoration, the gold certificate retains its five-day policy, and SQLite
+`quick_check` passes.
+
+Evidence is `data/gold-hourly-range-rehearsal-20261004/report.json`,
+`data/gold-hourly-range-canonical-20261004/report.json` and
+`data/gold-hourly-range-restoration-20261004/report.json`, with raw provider/HTTP
+captures and immutable before-images. The current canonical backup is
+`data/gold-hourly-range-canonical-20261004/after.sqlite3`, SHA-256
+`e819017b2ed99c2d8252148d71a7bff38eba62f613837bbc6dfdb152bc02dfbd`.
+No production routing or rejected VN index replacement is changed.
+
 ## Public migration and hourly request-window evidence — 2026-10-04 ICT
 
 A direct public `/tickers?symbol=VCB&source=vn&interval=1D&limit=2&format=json`

@@ -153,6 +153,50 @@ async def test_certificate_rejects_unknown_range_policy(system):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("has_overlap", [False, True])
+async def test_range_catchup_keeps_policy_and_queues_recovery_for_disjoint_pages(
+    system, has_overlap
+):
+    repo, archive, settings = system
+    before = repo.read("yahoo", "SPY", "1h")
+    await adopt_snapshot(
+        repo,
+        Provider(before),
+        "SPY",
+        "yahoo",
+        True,
+        source="yahoo",
+        iv="1h",
+        yahoo_hourly_range="5d",
+    )
+    incoming = replace(
+        before[-1], time=before[-1].time + 50 * 3600, provider="yahoo", revision="initial"
+    )
+    calls = []
+
+    class Catchup:
+        async def page(self, source, symbol, iv, **kwargs):
+            calls.append(kwargs.copy())
+            assert kwargs["yahoo_hourly_range"] == "5d" and kwargs.get("start") is None
+            rows = (
+                [replace(r, provider="yahoo", revision="initial") for r in before[-2:]]
+                if len(calls) > 1 and has_overlap
+                else []
+            )
+            return Page(rows + [incoming], "yahoo")
+
+    result = await Worker(repo, settings, Catchup(), archive).sync(
+        {"source": "yahoo", "symbol": "SPY"}, "1h"
+    )
+    assert len(calls) == 2 and calls[0]["count"] == 40 and calls[1]["count"] > 40
+    if has_overlap:
+        assert result == 3 and len(repo.read("yahoo", "SPY", "1h")) == len(before) + 1
+    else:
+        assert result == 0 and repo.read("yahoo", "SPY", "1h") == before
+        assert repo.status()["jobs"][0]["kind"] == "repair"
+
+
+@pytest.mark.asyncio
 async def test_hourly_handoff_preserves_old_dates_appends_and_restores(system, tmp_path):
     repo, archive, settings = system
     history = History(repo, archive, settings)
