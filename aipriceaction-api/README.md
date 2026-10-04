@@ -44,6 +44,7 @@ uv run python -m scripts.validate_ohlcv --interval 1m \
 Choose completed dates and a new output directory. With no `--symbol`, every
 selected VN ticker is checked. The runner inventories retained storage and jobs,
 streams every SQLite candle through structural validation, compares
+active cold objects against checksums and index metadata, compares
 VPS/VNDirect/DNSE/VCI, then compares returned candles with SQLite. Its
 `report.json` lists provider errors, absent observations, timestamp coverage and
 price/volume discrepancies; detail and original captures remain alongside it.
@@ -63,6 +64,19 @@ numeric values, OHLC range and timestamp alignment. Errors retain bounded row
 samples, including non-finite values as text. SJC quote and Yahoo futures
 exceptions follow the same rules as ingestion. It creates no database copy;
 valid structure does not prove market accuracy or complete trading coverage.
+
+To check only the active historical Parquet objects:
+
+```sh
+uv run python -m scripts.audit_archive_ohlcv --report data/archive-structure-review.json
+```
+
+This captures the active archive index read-only, verifies each downloaded
+checksum, validates OHLCV/identity/timestamp uniqueness and checks row counts and
+bounds against the index. Its bounded temporary cache is removed on exit; the
+runtime cache and stored objects stay intact. `pending_repair` remains explicit
+even when its object is structurally valid. Superseded/rollback objects and
+manifest parity are outside this check's scope.
 
 A read-only recent comparison captures all four feeds and reports all six pairs:
 

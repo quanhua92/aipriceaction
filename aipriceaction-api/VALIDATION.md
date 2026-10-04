@@ -6,6 +6,40 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Automated active cold archive structural audit — 2026-10-04 ICT
+
+`scripts.audit_archive_ohlcv` captures every active archive-index object in one
+read-only SQLite transaction. Each object is fetched into a temporary bounded
+cache and verified against its SHA256 before Parquet/domain validation. The
+audit checks schema version, identity/provider/revision, integer timestamps and
+volume, strict timestamp uniqueness, row count and first/last bounds. It never
+initializes SQLite, uploads data, changes archive status or uses the runtime
+cache. The temporary cache is removed on successful or exceptional exit.
+
+The actual local RustFS run checked **888 objects** and **438,268 rows**, with
+**zero failures**. Their maximum indexed row count was **4,814**; status counts
+were 881 published, six historical snapshots and **one pending repair**. The
+pending repair remains visible even though its structure passes. This pass
+does not resolve its quality problem or certify trading-session completeness,
+market truth, superseded/rollback dependencies or remote manifest parity.
+
+The final status-aware report is
+`data/automated-active-archive-structure-status-20261004.json` (**429,798 bytes**),
+completed in **12.718 seconds**. An earlier structural-only report remains
+separately recorded. Neither run created databases or remote objects; total
+`data/` remains approximately 5.6 GiB. The combined `validate_ohlcv` command now
+emits `archive-structure.json` and separate archive failure/pending-repair
+exceptions alongside SQLite and provider findings.
+
+Eighteen focused archive/SQLite/pipeline/comparison tests pass. The new archive
+fixtures detect corrupt bytes, wrong indexed counts, identity mismatch and wrong
+bounds, preserve database/object bytes and runtime cache contents, and expose
+pending repair independently of structural validity. Lint/format checks pass.
+
+The complete current API suite also passed **895 tests** in **56.89 seconds**,
+with the existing Starlette/httpx deprecation warning. This covers the final
+combined audit integration; production and data-quality acceptance remain open.
+
 ## Automated full SQLite OHLCV structural audit — 2026-10-04 ICT
 
 `scripts.audit_sqlite_ohlcv` streams every current candle in one `mode=ro`

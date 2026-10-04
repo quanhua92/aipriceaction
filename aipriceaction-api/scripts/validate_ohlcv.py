@@ -15,6 +15,7 @@ from types import SimpleNamespace
 
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import date_bounds
+from scripts.audit_archive_ohlcv import audit as audit_archives
 from scripts.audit_sqlite_ohlcv import audit
 from scripts.compare_vn_feeds import FIELDS, NATIVE_FEEDS, same
 from scripts.compare_vn_feeds import run as compare_feeds
@@ -148,6 +149,10 @@ async def run(args):
     (args.output / "sqlite-structure.json").write_text(
         json.dumps(structural, indent=2, allow_nan=False) + "\n"
     )
+    cold = audit_archives(settings)
+    (args.output / "archive-structure.json").write_text(
+        json.dumps(cold, indent=2, allow_nan=False) + "\n"
+    )
     comparison = await compare_feeds(
         SimpleNamespace(
             output=args.output / "providers",
@@ -170,6 +175,12 @@ async def run(args):
                 "sqlite_quick_check": structural["sqlite_quick_check"],
             }
         )
+    if cold["failed_objects"]:
+        issues.append(
+            {"kind": "archive_structural_invalidity", "failed_objects": cold["failed_objects"]}
+        )
+    if cold["pending_repair_objects"]:
+        issues.append({"kind": "archive_pending_repair", "objects": cold["pending_repair_objects"]})
     report = {
         "checked_at": datetime.now(UTC).isoformat(),
         "read_only": True,
@@ -177,6 +188,8 @@ async def run(args):
         "perfect_data_proven": False,
         "structural_checked_rows": structural["checked_rows"],
         "structural_invalid_rows": structural["invalid_rows"],
+        "archive_checked_objects": cold["checked_objects"],
+        "archive_failed_objects": cold["failed_objects"],
         "symbols": comparison["symbols"],
         "intervals": comparison["intervals"],
         "providers": comparison["feeds"],
