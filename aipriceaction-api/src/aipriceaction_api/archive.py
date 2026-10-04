@@ -294,6 +294,7 @@ class Archive:
                 "objects": objects,
                 "adoptions": self.repo.adoptions(),
                 "recoveries": self.repo.recoveries(),
+                "volume_corrections": self.repo.volume_corrections(),
                 "history_gaps": self.repo.history_gaps(),
             },
             sort_keys=True,
@@ -447,8 +448,16 @@ class Archive:
 
         for record in manifest.get("recoveries", []):
             validate_recovery(self, record)
+        from .volume_corrections import validate_record
+
+        corrections = manifest.get("volume_corrections", [])
+        if type(corrections) is not list:
+            raise DataError("Volume correction records must be a list")
+        for record in corrections:
+            validate_record(record, self)
         self.repo.restore_adoptions(manifest.get("adoptions", []))
         self.repo.restore_recoveries(manifest.get("recoveries", []))
+        self.repo.restore_volume_corrections(corrections)
         self.repo.restore_history_gaps(gaps)
         for obj in manifest["objects"]:
             self.repo.publish_archive(obj)

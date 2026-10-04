@@ -74,6 +74,10 @@ CREATE TABLE IF NOT EXISTS source_checks(
  completed_start INTEGER,completed_end INTEGER,completed_rows INTEGER,
  provisional_rows INTEGER,
  PRIMARY KEY(source,symbol,interval));
+CREATE TABLE IF NOT EXISTS volume_corrections(
+ id TEXT PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL,
+ interval TEXT NOT NULL, time INTEGER NOT NULL, revision TEXT NOT NULL,
+ evidence TEXT NOT NULL, UNIQUE(source,symbol,interval,time,revision));
 PRAGMA user_version=2;
 """
 COLUMNS = tuple(f.name for f in fields(Candle))
@@ -193,6 +197,94 @@ class Repository:
                     "SELECT * FROM legacy_imports WHERE json_extract(result,'$.kind')='legacy_daily_timestamp_recovery' ORDER BY id"
                 )
             ]
+
+    def volume_corrections(self, source=None, symbol=None, interval=None, start=None, end=None):
+        where, args = [], []
+        for key, value in (("source", source), ("symbol", symbol), ("interval", interval)):
+            if value is not None:
+                where.append(f"{key}=?")
+                args.append(value)
+        for expression, value in (("time>=?", start), ("time<=?", end)):
+            if value is not None:
+                where.append(expression)
+                args.append(value)
+        with self.connect() as con:
+            return [
+                dict(row)
+                for row in con.execute(
+                    "SELECT * FROM volume_corrections"
+                    + (" WHERE " + " AND ".join(where) if where else "")
+                    + " ORDER BY time,id",
+                    args,
+                )
+            ]
+
+    def restore_volume_corrections(self, records):
+        from .volume_corrections import validate_record
+
+        for record in records:
+            validate_record(record)
+        with self.connect() as con:
+            for record in records:
+                existing = con.execute(
+                    "SELECT * FROM volume_corrections WHERE source=? AND symbol=? AND interval=? AND time=? AND revision=?",
+                    tuple(record[k] for k in ("source", "symbol", "interval", "time", "revision")),
+                ).fetchone()
+                if existing and dict(existing) != record:
+                    raise DataError("Conflicting volume correction receipt")
+                con.execute(
+                    "INSERT OR IGNORE INTO volume_corrections VALUES (?,?,?,?,?,?,?)",
+                    tuple(
+                        record[k]
+                        for k in (
+                            "id",
+                            "source",
+                            "symbol",
+                            "interval",
+                            "time",
+                            "revision",
+                            "evidence",
+                        )
+                    ),
+                )
+            if records:
+                self.bump(con)
+
+    def record_volume_correction(self, record, expected):
+        from .volume_corrections import validate_record
+
+        validate_record(record)
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            current = [
+                Candle(**dict(row))
+                for row in con.execute(
+                    "SELECT * FROM candles WHERE source=? AND symbol=? AND interval=? AND time>=? AND time<? ORDER BY time",
+                    (
+                        record["source"],
+                        record["symbol"],
+                        record["interval"],
+                        expected[0].time // 86400 * 86400,
+                        (expected[0].time // 86400 + 1) * 86400,
+                    ),
+                )
+            ]
+            if current != expected:
+                raise DataError("Volume correction snapshot changed before publication")
+            state = con.execute(
+                "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
+                tuple(record[k] for k in ("source", "symbol", "interval")),
+            ).fetchone()
+            if not state or state["status"] != "ready" or state["revision"] != record["revision"]:
+                raise DataError("Volume correction series basis changed")
+            con.execute(
+                "INSERT INTO volume_corrections VALUES (?,?,?,?,?,?,?)",
+                tuple(
+                    record[k]
+                    for k in ("id", "source", "symbol", "interval", "time", "revision", "evidence")
+                ),
+            )
+            self.bump(con)
 
     def restore_recoveries(self, records):
         with self.connect() as con:

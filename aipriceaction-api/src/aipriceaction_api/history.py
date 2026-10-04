@@ -168,6 +168,13 @@ class History:
         if len({r.revision for r in result}) > 1:
             raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
         self.repo.validate_basis(result)
+        if source == "vn" and iv == "1m" and result:
+            from .volume_corrections import apply_records
+
+            result = apply_records(
+                result,
+                self.repo.volume_corrections(source, symbol, iv, result[0].time, result[-1].time),
+            )
         return result
 
     def native_interval(self, source, symbol, iv):

@@ -5,6 +5,27 @@ full data coverage and production cutover acceptance.
 
 ## Full-year MWG minute-volume proof control — 2026-10-04 ICT
 
+Receipt-aware publication is now implemented and tested. A `volume_corrections`
+ledger stores the narrowly scoped proof and exact frozen originals. Publication
+claims archive/series leases, freezes and reads back source captures and original
+Parquet, and rechecks the entire day in a SQLite transaction before inserting
+the receipt. It leaves raw candles and existing snapshot-adoption evidence
+unchanged. History applies validated receipts after merging native observations
+and before aggregation. An unexpected target change fails explicitly.
+
+Manifests include correction receipts. Restore verifies both immutable originals
+and the native source capture, replays the proof, and restores receipts before
+serving cold history. Five focused tests cover warm/cold parity, idempotent
+publication, snapshot races, changed targets, tampered captures and busy leases;
+the complete API suite passes **925 tests** with the existing dependency warning.
+Seventeen projection/receipt tests also pass after the idempotency refinement.
+
+The real MWG preview in `data/mwg-volume-correction-preview-20261004` stages the
+225-row day, 700-to-800 target change and 2,969,500 total without writing a receipt.
+Local runtime activation remains pending. All API/worker processes must use
+receipt-aware code first; older processes can publish manifests that omit this
+metadata. No live endpoint or local canonical receipt was changed in this step.
+
 The follow-up `scripts.check_legacy_volume_projection` rehearsal verifies that
 the complete 225-row legacy day has exactly the source timestamps and original
 volumes. It stages only the verified volume change, preserving every existing

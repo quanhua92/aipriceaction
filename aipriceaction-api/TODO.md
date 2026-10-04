@@ -51,9 +51,17 @@ history through `eb814ab`; they are not additional current open tasks.
   reconciles to the two daily witnesses after one correction. Original/staged
   Parquet round trips preserve all fields; temporary objects and fixture SQLite
   are removed on success/failure. Retain only the small rehearsal report.
-- [ ] Add guarded canonical volume-only publication with persisted correction
+- [x] Add guarded volume-only publication with persisted correction
   provenance, immutable original evidence, race/lease checks and replayable
-  archive-index restoration. The staged projection is not a publication license.
+  archive-index restoration. Keep raw legacy candles immutable; apply replayed
+  receipts in History before aggregation so handoff checks preserve their frozen
+  originals. Freeze source captures and original-day Parquet; reject changed
+  snapshots/targets and conflicting receipts. Pass five receipt tests plus the
+  925-test full suite. The real MWG preview passes without publication.
+- [ ] Restart all local API/worker processes on receipt-aware code before local
+  MWG activation; older manifest writers would omit the receipt metadata.
+  Publish the verified receipt, check live API aggregates and isolated RustFS
+  restore, and remove all temporary restore databases/objects afterward.
 
 - [x] Automatically summarize observed dates and candle counts per date for
   every compared feed, exposing missing days and partial sessions independently
