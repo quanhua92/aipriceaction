@@ -169,7 +169,8 @@ async def test_uncorroborated_or_inconsistent_minute_corrections_preserve_snapsh
         provider.daily[0] = replace(provider.daily[0], volume=601)
     else:
         provider.on_witness = lambda: repo.put([replace(original[-1], volume=301)])
-    with pytest.raises(DataError):
+    match = "not independently corroborated" if failure == "disagree" else None
+    with pytest.raises(DataError, match=match):
         await adopt_snapshot(
             repo, provider, "GEG", "vps", True, complete_sessions=True, corroborate="dnse"
         )
@@ -224,7 +225,10 @@ async def test_correction_receipt_restores_mixed_provenance_and_rejects_changed_
     evidence = json.loads(record["evidence"])
     evidence["complete_session_proof"]["corroborating_minute"][0]["volume"] += 1
     record["evidence"] = json.dumps(evidence)
-    with pytest.raises(DataError, match="Invalid snapshot adoption"):
+    with pytest.raises(
+        DataError,
+        match="Invalid snapshot adoption evidence: Minute correction is not independently corroborated",
+    ):
         repo.validate_adoption(record)
 
 

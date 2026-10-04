@@ -328,7 +328,9 @@ class Repository:
                 from .adoption import validate_complete_sessions
 
                 validate_complete_sessions(record, evidence)
-        except (KeyError, TypeError, ValueError, OverflowError, DataError):
+        except DataError as exc:
+            raise DataError(f"Invalid snapshot adoption evidence: {exc}") from exc
+        except (KeyError, TypeError, ValueError, OverflowError):
             valid = False
         if not valid:
             raise DataError("Invalid snapshot adoption evidence")
