@@ -56,7 +56,12 @@ def check(
             )
             response.raise_for_status()
             rows = response.json().get(symbol, [])
-            assert len(frame) == len(rows) == 20, (interval, ema, len(frame), len(rows))
+            if start_date is not None:
+                # Match the SDK's backward request and local lower-bound
+                # filtering, including short VN aggregated sessions. Changing
+                # to a forward HTTP request would change indicator context.
+                rows = [row for row in rows if row["time"][:10] >= start_date]
+            assert 0 < len(frame) == len(rows) <= 20, (interval, ema, len(frame), len(rows))
             differences = {
                 field: sum(
                     not (pd.isna(a) and b.get(field) is None) and a != b.get(field)
@@ -87,7 +92,7 @@ def check(
                 reference = complete.json().get(symbol, [])
                 assert len(reference) < 10000, "Historical reference may be truncated"
                 tail = reference[-20:]
-                assert len(tail) == 20, "Historical range has fewer than 20 records"
+                assert len(tail) == len(rows), "SDK result differs from the complete range size"
                 assert all(
                     a.get(field) == b.get(field)
                     for a, b in zip(rows, tail, strict=True)
