@@ -6,6 +6,53 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Verified VPL hourly listing boundary — 2026-10-04 ICT
+
+The [regulator's listing notice](https://ssc.gov.vn/webcenter/portal/ubck/pages_r/l/chitit?dDocName=APPSSCGOVVN1620154820)
+and [HOSE's May 13 trading report](https://staticfile.hsx.vn/Uploads/UploadDocuments/2374107/20250513%20Tong%20hop%20thong%20tin%20giao%20dich.pdf)
+confirm VPL's first trading day as May 13, 2025. Its configured floor is midnight
+UTC that day; the earliest staged/published native hourly bar is 02:00 UTC.
+A dated DNSE request returns the two first-day bars. The request ending before
+the earliest bar returns all six explicit empty arrays and integer `nextTime=0`,
+without TradingView's status field. The old adapter incorrectly reports that
+well-formed response as invalid/missing arrays. Original bodies are retained in
+`data/vpl-listing-boundary-probe-20261004/`.
+
+The adapter now recognizes that exact empty DNSE shape. It continues rejecting
+missing arrays, nonzero/boolean hints, error fields and the same undocumented
+shape on other providers. The worker can finish a VN hourly bootstrap's empty
+listing-day prefix only when its linked configured date equals the current
+floor, cursor equals the earliest staged/published bar on that same day, and
+the pinned provider/current ready revision match. Ordinary no-data exhaustion,
+later-day gaps, repairs and unsourced dates remain incomplete. Existing observed
+daily-date and atomic record-preservation guards still apply. No timestamp,
+price or volume is invented and no adjustment factor is applied.
+
+The full suite passes **451 tests**, including **18 new regression cases**;
+focused provider/worker tests pass **142 tests**. Lint, formatting and offline
+package builds pass. The known Starlette/httpx deprecation warning remains.
+
+Populated rehearsal and canonical completion preserve every version of all
+**6,019,512** candle records, indexed in logical primary-key order. Only VPL's
+job/staging/schedule, related resolved findings and epoch change. Other jobs,
+staging, tickers, quality records, providers, revisions, archives, handoffs,
+recoveries and sync data are exact. Its **1,733** staged rows are cleared after
+successful publication, preserving identical served records. Full **1,733-bar**
+hourly and **697-bar** four-hourly HTTP responses are byte-identical before and
+after. Canonical epoch advances **3525 → 3526**; pending jobs fall **8 → 7**.
+Observed-date completion is not proof of every exchange-calendar slot.
+
+Evidence is `data/vpl-listing-completion-rehearsal-20261004/report.json` and
+`data/vpl-listing-completion-canonical-20261004/report.json`, with original
+checksummed HTTP/provider responses. The consistent before-image is the
+rehearsal's `before.sqlite3`. The checked canonical after-backup is
+`data/vpl-listing-completion-canonical-20261004/after.sqlite3`, SHA-256
+`c75448cb85868013cfba7e43f99c56ff9a9f13b3647bf8796a3cc1aa590a5291`.
+SQLite `quick_check` returns `ok`; four stock hourly jobs and three other jobs
+remain pending. The first canonical script invocation stopped at a syntax
+error before execution; the corrected script was compiled before its successful
+run. The previously rejected index replacement remains untouched.
+
 ## Inherited bootstrap placeholder cancellation — 2026-10-04 ICT
 
 PLX and SSI had never-started minute bootstrap jobs created before their

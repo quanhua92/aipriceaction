@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 433 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 451 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Finish VPL's hourly bootstrap at its verified listing-day prefix:
+  recognize DNSE's explicit empty arrays/zero timestamp marker, bind the empty
+  prefix to the configured sourced listing date and earliest current/staged bar,
+  and preserve existing observed-session/revision/record guards. Eighteen new
+  regression cases pass; populated rehearsal and canonical application preserve
+  every candle and full hourly/four-hourly HTTP output. Seven jobs remain; this
+  does not certify every exchange slot or remove unrelated history findings.
 - [x] Retire inherited unstarted PLX/SSI minute bootstrap placeholders after
   their already verified snapshot handoffs. Match the current revision/provider
   certificate and rolling floor, reject started/newer/staged jobs, and preserve
@@ -116,8 +123,9 @@ history through `eb814ab`; they are not additional current open tasks.
   representative SDK historical ranges and actual ACB web controls pass.
 - [ ] Complete selected VN hourly backfills and reconcile public-only dates.
   FPT's bootstrap job is complete after the guarded rolling-floor transition;
-  three public timestamps remain absent from its native window. Five stock
-  hourly jobs remain pending: IDC, GEE, VGI, VPL and VTP. Completed bootstrap
+  three public timestamps remain absent from its native window. Four stock
+  hourly jobs remain pending: IDC, GEE, VGI and VTP. VPL completed at its verified
+  listing-day prefix. Completed bootstrap
   jobs do not certify complete coverage or close the quality findings. All 53 stock
   hourly prefixes now reach their applicable retention/listing date; VNINDEX
   and VN30 still begin after that date. Session completeness remains unproven.
@@ -152,8 +160,8 @@ history through `eb814ab`; they are not additional current open tasks.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
   were 58 series with pending work at that inventory checkpoint; the current
-  database has eight pending jobs after rolling-floor completion and guarded
-  cancellation of two obsolete placeholders. Readiness alone
+  database has seven pending jobs after rolling-floor completion, guarded
+  cancellation of two obsolete placeholders and VPL listing-boundary completion. Readiness alone
   does not prove coverage.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
