@@ -66,6 +66,12 @@ history through `eb814ab`; they are not additional current open tasks.
   FPT January has a different primary price basis, while the newer frozen
   public snapshot matches VCI and minute-derived daily prices/volumes agree
   with the retained daily reference. Preserve these originals during migration.
+- [x] Rehearse coherent corrected FPT/TPB minute snapshots across SQLite and
+  actual local RustFS using isolated storage. Preserve all observed canonical
+  timestamps; verify full OHLCV/provider/revision readback and 36 query cases
+  across the retention boundary against all-SQLite references, including SMA
+  and EMA. Keep source correction licensing, evidence publication, race-safe
+  canonical replacement and live refresh adoption open.
 - [x] Diagnose same-feed minute/hour differences for all selected VN tickers.
   VNDirect excludes late-session observations in 12 captured hours; legacy does
   so in three. Other observed aggregation disagreements remain explicit. Captured

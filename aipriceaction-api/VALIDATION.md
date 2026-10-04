@@ -149,6 +149,47 @@ pagination and inconsistent repeated candles. The intended invocation is
 `python -m scripts.audit_vci_archive_overlap --symbol FPT --symbol TPB
 --output data/NEW_DIRECTORY --allow-direct` from the API project environment.
 
+## Coherent VCI SQLite/RustFS rehearsal — 2026-10-04 ICT
+
+`scripts/rehearse_vci_minute_storage.py` builds isolated corrected FPT/TPB
+snapshots from the captured candidates, volume proposals and successful archive
+window reads. It validates each proposal preserves every price and timestamp,
+changes exactly one volume, and matches the receipt's candle identity/values.
+Archive candidate JSON is checksum-verified; overlapping source observations
+must agree. Every current hot and primary-archive timestamp must survive.
+
+The rehearsal uses a separate SQLite database and a UUID-based RustFS prefix.
+It keeps only the retained year in that SQLite and publishes older monthly
+Parquet partitions to the isolated prefix. Canonical indexes/manifests are not
+modified. The all-SQLite reference database independently exercises the same
+query engine without an archive boundary.
+
+| Ticker | Whole snapshot | SQLite rows | RustFS rows | Cold objects |
+| --- | ---: | ---: | ---: | ---: |
+| FPT | 66,198 | 55,801 | 10,397 | 4 |
+| TPB | 59,512 | 54,332 | 5,180 | 2 |
+
+Full chronological readback matches timestamps, OHLCV, provider and revision.
+All 36 bounded query cases match the all-SQLite reference exactly: minute,
+15-minute and hourly reads, two retention-boundary windows, and raw/SMA/EMA
+modes for each ticker. Original primary archive metadata remains unchanged.
+The final receipt is `data/vci-minute-storage-boundary-rehearsal-20261004/report.json`.
+Minute queries request enough rows to cross retention instead of testing only
+one side. Every explicitly dated case requires observations from both sides;
+the receipt records the actual boundary coverage for each query.
+Seven proposal-validation regressions reject changed prices/timestamps,
+missing rows, multiple volume corrections, mismatched receipt timestamps and
+previously published proposals.
+
+The full 641-test suite passes with the existing warning; whole-project lint
+and format checks pass. After strengthening actual boundary coverage, the
+14 audit/proposal regressions and the live isolated RustFS rehearsal pass again.
+
+This proves selected storage/query behavior, not market truth, full exchange
+calendar coverage, correction licensing, source-evidence publication, atomic
+canonical migration or a valid live-provider handoff. These remain explicit
+acceptance gates; the isolated prefix must not be promoted automatically.
+
 ## Intraday feed omission diagnostics — 2026-10-04 ICT
 
 A read-only replay of the same four-feed captures compares each native hourly
