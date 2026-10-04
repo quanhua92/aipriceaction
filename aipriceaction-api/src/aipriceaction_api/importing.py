@@ -4,6 +4,8 @@ import csv
 import io
 import json
 import math
+import time
+from dataclasses import replace
 from pathlib import Path
 
 from .domain import Candle, DataError, parse_time
@@ -112,6 +114,42 @@ def csv_rows(
 def import_csv(repo, path, source, symbol, iv, provider="legacy", revision="legacy-snapshot"):
     rows = csv_rows(Path(path).read_text(), source, symbol, iv, provider, revision)
     return repo.put(rows)
+
+
+def import_historical_snapshot(
+    repo, archive, path, source, symbol, iv, revision, captured_at, execute=False, format="json"
+):
+    """Publish a captured public response without writing or replacing primary candles."""
+    if not revision or not 0 < captured_at <= int(time.time()):
+        raise DataError("A named revision and past positive capture timestamp are required", 400)
+    reader = {"json": json_rows, "csv": csv_rows}.get(format)
+    if reader is None:
+        raise DataError("Historical snapshot format must be json or csv", 400)
+    text = Path(path).read_text()
+    rows = [
+        replace(row, updated_at=captured_at * 1_000_000_000)
+        for row in reader(text, source, symbol, iv, "legacy-api", revision)
+    ]
+    archive.validate_historical_snapshot(rows)
+    state = repo.state(source, symbol, iv)
+    if state and revision == state["revision"]:
+        raise DataError("Historical snapshot revision must differ from the active series", 400)
+    repo.validate_basis(rows)
+    archive.validate_historical_capture(rows)
+    report = {
+        "execute": execute,
+        "source": source,
+        "symbol": symbol,
+        "interval": iv,
+        "revision": revision,
+        "captured_at": captured_at,
+        "rows": len(rows),
+        "start": rows[0].time,
+        "end": rows[-1].time,
+    }
+    if execute:
+        report["object"] = archive.publish(rows, historical_snapshot=True)
+    return report
 
 
 def import_bundle(

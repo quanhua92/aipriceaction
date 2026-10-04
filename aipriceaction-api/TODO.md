@@ -19,7 +19,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 480 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 492 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,14 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Provide a supported operational command for frozen public history:
+  `import-history` reads single-symbol JSON/CSV captures, requires an explicit
+  revision/capture time, defaults to a validated dry run and publishes only cold
+  data. Reject primary revision reuse, different captures and conflicting values;
+  repeat capture checks under the archive writer lease. Twelve CLI regression
+  cases cover publication, restoration, idempotence and rejection. An isolated
+  dry run plans all 678 records in the captured FPT historical response.
 
 - [x] Serve explicitly bounded expired FPT minute history from a separate,
   coherent public snapshot in S3. Four frozen objects preserve 10,397 candles,

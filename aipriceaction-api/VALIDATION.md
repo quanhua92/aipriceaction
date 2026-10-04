@@ -6,6 +6,32 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Supported public history CLI — 2026-10-04 ICT
+
+`aipa-api import-history` accepts a captured single-symbol public `/tickers`
+JSON response or CSV, with an explicit revision and UTC capture timestamp. It
+validates the entire export before publication and rejects candles within the
+configured retention window. Capture versions use the existing nanosecond
+representation. It preserves primary SQLite candles and objects; the default
+is a plan, and `--execute` publishes one immutable object plus the manifest.
+
+Reuse of active or primary history revisions, different capture versions and
+conflicting overlapping values is rejected. Capture checks repeat inside the
+archive writer lease before preparation/publication. Exact repeated publication
+is idempotent. Twelve new CLI regression cases cover JSON/CSV plans, execution,
+preserved primary versions, isolated manifest restoration and rejection paths.
+The first full run caught a test setup that attempted to change a ready series
+revision through ordinary ingestion; the fixture now creates a separate older
+primary object without bypassing the staged-recovery guard.
+
+The complete suite passes **492 tests** in 25.53 seconds, with the known
+Starlette/httpx warning. Lint, formatting and offline source/wheel builds pass.
+An actual installed CLI dry run against the recorded public FPT response
+`data/fpt-historical-snapshot-canonical-20261004/reference-historical-1m-none.json`
+and an isolated temporary SQLite file reports all **678 candles**, from epoch
+1759284900 to 1759477500, with `execute=false`. No new canonical publication or
+production routing change is part of this CLI work.
+
 ## Frozen public history and current local checkpoint — 2026-10-04 ICT
 
 Commit `4a0cb68` adds an explicitly bounded expired-history view from immutable

@@ -14,7 +14,7 @@ from .catalog import Catalog
 from .config import Settings
 from .daily_adoption import adopt_daily_snapshot
 from .domain import DataError, cutoff, interval, parse_time
-from .importing import import_bundle, import_csv
+from .importing import import_bundle, import_csv, import_historical_snapshot
 from .migration import LegacyImporter
 from .providers import Providers
 from .recovery import recover_daily
@@ -77,6 +77,19 @@ def parser():
         action="store_true",
         help="Write older rows to Parquet and recent rows to SQLite",
     )
+    historical = commands.add_parser(
+        "import-history", help="Plan/publish a frozen public export wholly outside retention"
+    )
+    historical.add_argument("path", type=Path)
+    historical.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"), required=True)
+    historical.add_argument("--symbol", required=True)
+    historical.add_argument("--interval", default="1D")
+    historical.add_argument("--format", choices=("json", "csv"), default="json")
+    historical.add_argument("--revision", required=True, help="Separate captured public revision")
+    historical.add_argument(
+        "--captured-at", required=True, help="UTC timestamp of the public capture"
+    )
+    historical.add_argument("--execute", action="store_true", help="Default is a dry run")
     legacy = commands.add_parser(
         "import-legacy",
         help="Resume explicit yearly/daily CSV imports from the existing public archive",
@@ -355,6 +368,22 @@ async def execute(args, settings):
                     )
                 }
             )
+    elif args.command == "import-history":
+        emit(
+            await asyncio.to_thread(
+                import_historical_snapshot,
+                repo,
+                archive,
+                args.path,
+                args.source,
+                args.symbol.upper(),
+                native_interval(args.interval),
+                args.revision,
+                parse_time(args.captured_at),
+                args.execute,
+                args.format,
+            )
+        )
     elif args.command == "import-legacy":
         iv = native_interval(args.interval)
         years = [int(y) for y in args.years.split(",")] if args.years else None

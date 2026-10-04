@@ -597,6 +597,19 @@ crossing local coverage continue using the primary history. Insufficient context
 that would require another primary basis still raises the existing guard.
 Snapshots preserve primary records/objects and are verified during restoration.
 
+Use `import-history` for an already captured, single-symbol `/tickers` JSON
+response (or `--format csv` for a CSV export). Supply its actual UTC capture time
+and a separate revision; every input candle must be outside retention. The
+default reports the validated plan without uploading. Add `--execute` to publish
+one immutable object and the manifest, preserving primary records and archives:
+
+```bash
+uv run aipa-api import-history /path/FPT-old.json --source vn --symbol FPT --interval 1m --revision public-fpt-capture-20261004 --captured-at 2026-10-04T00:00:00Z
+```
+
+Use a coherent capture for the requested range and its indicator lookback;
+publication does not prove provider compatibility or fill missing timestamps.
+
 Check an isolated filesystem-backed public snapshot against retained raw
 records and historical indicator reads before proposing its publication:
 

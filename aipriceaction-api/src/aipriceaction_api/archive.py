@@ -354,6 +354,10 @@ class Archive:
         if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
             raise DataError("Another archive writer is active")
         try:
+            if historical_snapshot:
+                # Recheck under the writer lease so simultaneous imports cannot
+                # combine different public captures in one frozen revision.
+                self.validate_historical_capture(candles)
             obj = self.prepare(candles)
             if historical_snapshot:
                 obj["status"] = "historical_snapshot"
@@ -370,6 +374,23 @@ class Archive:
             return obj
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
+
+    def validate_historical_capture(self, candles):
+        first = candles[0]
+        incoming = {row.time: row for row in candles}
+        versions = {row.updated_at for row in candles}
+        for obj in self.repo.archives(first.source, first.symbol, first.interval):
+            if obj["revision"] != first.revision:
+                continue
+            if obj["status"] != "historical_snapshot":
+                raise DataError(
+                    "Historical snapshot revision already belongs to primary history", 400
+                )
+            previous = self.read(obj)
+            if {row.updated_at for row in previous} != versions:
+                raise DataError("Use a new revision for a different public capture", 400)
+            if any(row.time in incoming and row != incoming[row.time] for row in previous):
+                raise DataError("Conflicting candles in the same frozen public revision", 400)
 
     def publish_metadata(self):
         """Persist observations without uploading a candle object or pruning."""
