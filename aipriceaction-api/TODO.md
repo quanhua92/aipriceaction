@@ -10,7 +10,7 @@ history through `eb814ab`; they are not additional current open tasks.
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The latest verified populated backup has 6,019,974 candle/quote records; the
-  scoped VN/crypto workers now advance the live database. The S3 index has 894
+  scoped VN/crypto/global workers now advance the live database. The S3 index has 894
   active objects, 69 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -30,6 +30,15 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Rehearse all 13 configured native global series and enable their scoped
+  continuous worker. Seven daily, two hourly and four minute checks pass with
+  exact protected data. Three fresh gold daily windows corroborate one completed
+  volume correction without price changes or missing retained dates; keep the
+  original before-image and captures. Actual ingestion preserves every original
+  timestamp and frozen global version; all 34 dated SDK cases pass. Reuse one
+  native rehearsal script for VN/global, preserving the previous VN entry point.
+  Multi-day supervision and unconfigured/frozen handoffs remain open.
 
 - [x] Rehearse every eligible native VN refresh on a populated isolated copy:
   all 170 checks succeed (59 daily, 53 hourly, 58 minute), with 218 captured

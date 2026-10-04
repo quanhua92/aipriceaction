@@ -6,6 +6,52 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Native global refresh and continuous worker — 2026-10-04 ICT
+
+The populated isolated Yahoo rehearsal passes all thirteen configured native
+series: seven daily, SPY/GC=F hourly and AAPL/SPY/S&P/Dow minute. It runs from
+02:41:59 to 02:42:42 UTC, preserves protected other-market record versions,
+archives/certificates/imports and canonical Yahoo versions, and passes SQLite
+`quick_check`. The candidate has 6,020,046 records. Evidence:
+`data/yahoo-native-refresh-rehearsal-20261004/report.json`.
+The native rehearsal implementation is shared in `scripts/check_native_refresh`;
+the existing VN module remains an entry point defaulting to VN. Configured
+intervals and source-specific native providers determine eligibility, with the
+existing disputed VN index exclusions retained. Strict canonical version
+comparison requires that same-source writers be stopped during rehearsal.
+
+One completed Yahoo value differs from the before-image: GC=F daily volume for
+September 25 is now 140,092 instead of 164,814. All prices are identical. Three
+fresh request shapes agree on the new value: the ordinary forty-row request,
+the complete retained window (755 dates), and a September-start request (23
+dates). Across the full retained comparison, this is the only OHLCV difference
+and no original retained dates are missing. This is recorded as a current native
+volume correction, without inferring a dividend, scaling volumes, or changing
+prices. The original before-image remains preserved. Raw request bodies and
+comparisons are under `data/gold-daily-volume-shapes-20261004/`.
+
+After those checks pass, `aipa-api worker --source yahoo --archive-daily` starts
+as PID 97068 alongside the existing API, VN and crypto workers. All thirteen
+configured native series have successful checks after startup. Comparing actual
+canonical global records against the before-image verifies exactly that one
+volume correction, no missing original timestamps and exact frozen legacy-api
+record versions. Gold hourly keeps its verified five-day policy; unconfigured
+hourly and unlicensed minute snapshots receive no update. Evidence:
+`data/yahoo-native-refresh-rehearsal-20261004/continuous-observation.json` and
+its adjacent `continuous-worker.log`. The first maintenance pass has zero due
+partitions.
+
+During ingestion, the installed SDK passes 34 dated SMA/EMA cases for all seven
+global tickers, covering every configured native interval and derived fifteen-
+minute controls. All 540 returned rows match HTTP selection and use the API;
+complete-range OHLCV tail selection also matches. Longer-range indicator
+warmup differences remain recorded. Evidence:
+`data/yahoo-continuous-worker-sdk-20261004/`. Lint, formatting and CLI help pass
+for the shared diagnostic; application code is unchanged, and the last full
+suite remains 492 passing tests. SJC native availability, remaining frozen
+handoffs, full-year global minutes, actual multi-day supervision and production
+cutover remain open.
+
 ## Full native VN refresh rehearsal and stock worker — 2026-10-04 ICT
 
 `scripts.check_vn_refresh` creates populated before/candidate SQLite files,

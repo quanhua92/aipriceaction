@@ -201,7 +201,8 @@ Rehearse configured native VN refreshes on an isolated populated copy before
 expanding a live worker:
 
 ```sh
-uv run python -m scripts.check_vn_refresh --allow-direct --output data/vn-refresh-review
+uv run python -m scripts.check_native_refresh --source vn --allow-direct --output data/vn-refresh-review
+uv run python -m scripts.check_native_refresh --source yahoo --output data/global-refresh-review
 ```
 
 This captures VPS/VNDirect/DNSE responses, checks native daily/hourly/minute
@@ -210,6 +211,9 @@ candidate or process queued repairs. Frozen snapshots and both disputed index
 hourly series remain excluded; nonconfigured intervals are reported separately.
 Inspect recorded outcomes and queued quality findings before treating a recent
 refresh as proof of complete historical coverage.
+Run while the same-source worker is stopped for the strict canonical version
+comparison; other source workers can continue. The previous `check_vn_refresh`
+entry point remains available and defaults to VN.
 
 For bounded runs and focused recovery:
 
