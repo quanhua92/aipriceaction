@@ -6,6 +6,44 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## GAS/MWG native minute attribution probes — 2026-10-04 ICT
+
+`2f27af2` adds closed-day native probing and offline peer-volume proposal tools.
+Eighteen requests cover GAS July 10 and MWG September 16/November 10 across VPS,
+VNDirect, DNSE and three VCI page sizes. Immutable captures and parsed controls
+are in `data/gas-mwg-four-provider-minute-controls-20261004/report.json`.
+Canonical data and running services are unchanged by these probes.
+
+The earlier GAS cumulative-gap diagnosis did not establish a missing traded
+candle. All three available native minute sources have the same 181 timestamps,
+including the absence of 09:01 UTC. At the existing 09:00 UTC candle, VNDirect
+and DNSE both report 1,300 shares while VCI reports 1,100. Every other observed
+minute volume agrees. VNDirect's target OHLC is also exactly the VCI target's
+OHLC; DNSE retains its own price precision. Whole-day peer prices differ at
+other observations, so this evidence does not license wholesale price substitution.
+All three VCI page sizes retain the same discrepancy.
+
+The proposed correction changes only that existing target's volume. It takes the
+VCI observed-day sum from 512,500 to 512,700, exactly matching both native daily
+witnesses and VCI's final cumulative total. Offline replay verifies the complete
+minute controls and both daily response captures before proposing the change.
+The proposal is `data/gas-peer-volume-proposal-20261004/report.json`; it explicitly
+sets both runtime licensing and main publication to false. Existing cumulative
+proof rules correctly cannot license this distinct case: the target's own
+cumulative increment is 1,100, with the later gap accounting for the residual.
+Durable peer-minute proof validation and runtime replay remain required before
+GAS can be re-staged and activated. No missing candle or price is synthesized.
+Ten focused tests verify the actual proposal and reject missing peer timestamps,
+partial-day controls, peer disagreement, a second changed minute, altered target
+prices, invalid daily corroboration and changed final cumulative totals.
+
+The preferred sources do not supply usable minute witnesses on the two MWG
+dates in these controls. VCI retains the same observed-day totals for all three
+page sizes: 8,925,100 on September 16 and 7,273,600 on November 10. These still
+differ from the daily peers and remain unresolved; no forced corrections are
+proposed. Native agreement can reflect shared upstreams and is corroboration,
+not an exchange-level completeness or accuracy guarantee.
+
 ## GEE verified local minute activation — 2026-10-04 ICT
 
 GEE now joins the seven previously licensed local VCI minute series. The

@@ -69,8 +69,19 @@ history through `eb814ab`; they are not additional current open tasks.
   overlap, guarded local activation, 40-row refresh, 18 boundary queries, 28 HTTP
   cases and exact two-object S3 restoration. Keep 16 curated volume proofs for
   eight licensed VCI series; GAS/MWG/SHB/VN30/VNINDEX remain unresolved.
-- [ ] Reconcile GAS's
-  observed minute gap, MWG's two full-day volume differences, and SHB's observed binary32 rounding equivalence.
+- [x] Reprobe GAS and both discrepant MWG dates across all four native providers,
+  using three VCI page sizes and preserving all raw captures. Replay source
+  responses offline and independently verify a single peer-backed GAS volume
+  proposal. Both minute peers place the extra 200 shares on an existing minute;
+  they do not supply the apparently missing timestamp. Ten focused regression
+  tests pass. The proposal cannot license runtime publication.
+- [ ] Add durable, replayable peer-minute volume proofs distinct from cumulative
+  correction proofs, then re-stage/review/activate GAS only if every gate passes.
+  GAS's July 10 target is 09:00 UTC: native peers report 1,300 versus VCI's 1,100,
+  with 181 identical timestamps and all other volumes matching. Corrected totals
+  match both daily peers and final cumulative volume. Never synthesize the absent
+  09:01 candle or move volume to 09:02 to force reconciliation.
+- [ ] Reconcile MWG's two full-day volume differences and SHB's observed binary32 rounding equivalence.
   Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.
   Keep the three preferred providers and daily/hourly sourcing unchanged; append
