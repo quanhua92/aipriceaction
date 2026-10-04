@@ -17,6 +17,7 @@ from .domain import DataError, cutoff, interval, parse_time
 from .importing import import_bundle, import_csv, import_historical_snapshot
 from .migration import LegacyImporter
 from .providers import Providers
+from .public_history import recover_public_year
 from .recovery import recover_daily
 from .storage import Repository
 from .workers import Worker, audit
@@ -90,6 +91,19 @@ def parser():
         "--captured-at", required=True, help="UTC timestamp of the public capture"
     )
     historical.add_argument("--execute", action="store_true", help="Default is a dry run")
+    partition = commands.add_parser(
+        "recover-public-year",
+        help="Plan/publish valid public daily rows with explicit invalid-day gaps",
+    )
+    partition.add_argument("path", type=Path, help="Complete captured public JSON year")
+    partition.add_argument(
+        "--original", type=Path, required=True, help="Original invalid six-column CSV"
+    )
+    partition.add_argument("--symbol", required=True)
+    partition.add_argument("--year", type=int, required=True)
+    partition.add_argument("--revision", required=True)
+    partition.add_argument("--captured-at", required=True)
+    partition.add_argument("--execute", action="store_true", help="Default is a dry run")
     legacy = commands.add_parser(
         "import-legacy",
         help="Resume explicit yearly/daily CSV imports from the existing public archive",
@@ -382,6 +396,21 @@ async def execute(args, settings):
                 parse_time(args.captured_at),
                 args.execute,
                 args.format,
+            )
+        )
+    elif args.command == "recover-public-year":
+        emit(
+            await asyncio.to_thread(
+                recover_public_year,
+                repo,
+                archive,
+                args.path,
+                args.original,
+                args.symbol.upper(),
+                args.year,
+                args.revision,
+                parse_time(args.captured_at) * 1_000_000_000,
+                args.execute,
             )
         )
     elif args.command == "import-legacy":

@@ -569,6 +569,71 @@ class Repository:
                 )
             self.bump(con)
 
+    def publish_partitioned_history(self, obj, parent, gaps):
+        """Atomically refine a coarse marker; retain the unresolved invalid dates."""
+        parent_detail = self.validate_history_gap(parent)
+        details = [self.validate_history_gap(gap) for gap in gaps]
+        identity = (parent["source"], parent["symbol"], parent["interval"])
+
+        def valid_partition(gap):
+            shared = (
+                (gap["source"], gap["symbol"], gap["interval"]) == identity
+                and parent["start"] <= gap["start"] <= gap["end"] <= parent["end"]
+                and gap["evidence"].get("original_gap") == parent
+                and gap["evidence"].get("snapshot_id") == obj["id"]
+            )
+            if gap["evidence"].get("kind") == "public_year_partition_basis":
+                return shared and (
+                    (gap["start"], gap["end"]) == (parent["start"], parent["end"])
+                    and gap["evidence"].get("revision") == obj["revision"]
+                )
+            return shared and (
+                gap["evidence"].get("kind") == "partitioned_public_year"
+                and gap["start"] % 86400 == 0
+                and gap["end"] == gap["start"] + 86399
+            )
+
+        if (
+            len(gaps) < 2
+            or sum(gap["evidence"].get("kind") == "public_year_partition_basis" for gap in gaps)
+            != 1
+            or obj["status"] != "historical_snapshot"
+            or obj["provider"] != "legacy-api"
+            or obj["interval"] != "1D"
+            or (obj["source"], obj["symbol"], obj["interval"]) != identity
+            or not parent["start"] <= obj["start"] <= obj["end"] <= parent["end"]
+            or any(not valid_partition(gap) for gap in gaps)
+        ):
+            raise DataError("Invalid public history partition")
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            marker = con.execute(
+                "SELECT id FROM quality WHERE source=? AND symbol=? AND interval=? AND kind='history_unavailable' AND detail=? AND resolved=0",
+                (*identity, parent_detail),
+            ).fetchone()
+            if not marker:
+                raise DataError("Original unavailable-history marker changed")
+            state = con.execute(
+                "SELECT revision FROM series WHERE source=? AND symbol=? AND interval=?", identity
+            ).fetchone()
+            if state and state["revision"] == obj["revision"]:
+                raise DataError("Public recovery cannot reuse the active revision")
+            cols = tuple(obj)
+            con.execute("INSERT OR IGNORE INTO tickers(source,symbol) VALUES (?,?)", identity[:2])
+            con.execute(
+                f"INSERT INTO archives({','.join(cols)}) VALUES ({','.join('?' for _ in cols)})",
+                tuple(obj.values()),
+            )
+            # The coarse observation is retained as evidence. Its replacement
+            # markers remain active: this does not certify a healed full year.
+            con.execute("UPDATE quality SET resolved=1 WHERE id=?", (marker["id"],))
+            stamp = int(time.time())
+            con.executemany(
+                "INSERT INTO quality(source,symbol,interval,kind,detail,first_seen,last_seen) VALUES (?,?,?,'history_unavailable',?,?,?)",
+                [(*identity, detail, stamp, stamp) for detail in details],
+            )
+            self.bump(con)
+
     def replace_archive(self, old_id, obj):
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")

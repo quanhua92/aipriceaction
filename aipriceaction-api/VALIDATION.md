@@ -6,6 +6,45 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Public daily-year recovery with preserved invalid dates — 2026-10-04 ICT
+
+The public `/tickers` response for VND's complete 2020 daily year returns HTTP
+200 and 252 records. Exactly 251 validate; February 19 has close 2,760.51 above
+high 2,711.91. Every timestamp and OHLCV value, including that invalid record,
+matches the preserved original six-column CSV. PostgreSQL access is unnecessary
+for this capture. Evidence: `data/vnd-public-year-validation-20261004/report.json`;
+response SHA-256 is
+`be2db6e478d1a8abca61a547857461d72e324e4558ece93f330984a92282021d`.
+
+`recover-public-year` validates without publishing by default. Execution writes
+verified valid rows to a separate immutable public snapshot, reads back both
+original files, and atomically preserves the original observation with an
+invalid-day marker and a full-year basis marker. Only the exact frozen snapshot
+can waive the basis marker. Native/mixed reads retain the year-wide gate; invalid
+dates and affected context remain guarded. No price is guessed, no retained
+candle is rewritten, and no native provider adoption is implied. Manifest retry
+and fresh restoration preserve both active markers and invalid-record evidence.
+
+The populated isolated rehearsal publishes all 251 valid records to its own
+filesystem archive and passes SQLite `quick_check`. All candle record versions
+and every table except archives, quality and metadata are identical. Twelve
+recent VND daily/hourly/minute/15-minute raw/SMA/EMA HTTP responses remain exact.
+Four bounded historical controls return HTTP 200 and match the public OHLCV,
+including a December SMA query. Invalid-day, full-year and mixed-window errors
+remain byte-identical HTTP 503 responses. A March SMA query remains HTTP 503 but
+now reports incompatible adjustment context instead of the coarse year gap;
+older context on another basis is still refused. Both the initial diagnostic
+expectation and this verified result are retained under
+`data/vnd-public-partition-rehearsal-20261004/` and
+`data/vnd-public-partition-rehearsal-20261004-verified/report.json`.
+This rehearsal does not publish to canonical SQLite or RustFS.
+
+All 509 tests pass, including seventeen new cases covering capture identity,
+coverage, race rollback, readback failure, manifest retry/restoration, retained
+records, primary/mixed guards and CLI dry runs. Lint, formatting and the offline
+wheel/source build pass. The suite reports the existing Starlette/httpx
+deprecation warning.
+
 ## Native global refresh and continuous worker — 2026-10-04 ICT
 
 The populated isolated Yahoo rehearsal passes all thirteen configured native

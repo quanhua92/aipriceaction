@@ -628,6 +628,22 @@ uv run aipa-api import-history /path/FPT-old.json --source vn --symbol FPT --int
 Use a coherent capture for the requested range and its indicator lookback;
 publication does not prove provider compatibility or fill missing timestamps.
 
+For a complete expired daily year whose original CSV failed validation, use
+`recover-public-year`. It requires every public timestamp and OHLCV value to
+match that original CSV, including the invalid records. It archives valid rows
+under a separate frozen revision and preserves both original files and explicit
+invalid-date evidence. The default only validates the plan:
+
+```bash
+uv run aipa-api recover-public-year /path/VND-2020.json --original /path/VND-1D-2020.csv --symbol VND --year 2020 --revision public-vnd-2020-capture --captured-at 2026-10-04T02:55:19Z
+```
+
+Add `--execute` to publish after validation. Bounded expired requests can use the
+valid dates when their lookback also avoids invalid dates. Invalid dates and
+affected indicators remain unavailable. Native and mixed-window requests retain
+the full-year guard; this operation cannot certify a complete continuous year,
+change retained candles, or hand the frozen snapshot to a native provider.
+
 Check an isolated filesystem-backed public snapshot against retained raw
 records and historical indicator reads before proposing its publication:
 

@@ -719,6 +719,12 @@ charts and indicators never silently join incompatible adjustment revisions.
   disagree with retained data; wider VND candidates remain incomplete. See the
   October 4 daily archive evidence in `VALIDATION.md`; PostgreSQL is not blocking
   these public imports.
+- [x] Add `recover-public-year` for exact public/original CSV daily-year captures:
+  preserve invalid records and immutable originals, publish valid dates on a
+  separate frozen revision, and retain full-year native/mixed-window guards.
+  Test atomic publication, failed readback, manifest retries/restoration,
+  unchanged retained records, explicit invalid-date and indicator-context gates.
+  Complete coherent recovery of the invalid VND date remains open.
 - [x] Provide dry-run plans for migration/pruning and test interruption at every
   publication stage. No production writes/deletion in development.
 

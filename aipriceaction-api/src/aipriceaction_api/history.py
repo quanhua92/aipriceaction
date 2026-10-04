@@ -89,6 +89,20 @@ class History:
         if upper is None:
             upper = int(time.time())
         gaps = self.repo.history_gaps(source, symbol, iv, lower, upper)
+        gaps = [
+            gap
+            for gap in gaps
+            if not (
+                gap["evidence"].get("kind") == "public_year_partition_basis"
+                and gap["evidence"].get("revision") == revision
+                and any(
+                    obj["status"] == "historical_snapshot"
+                    and obj["revision"] == revision
+                    and obj["id"] == gap["evidence"].get("snapshot_id")
+                    for obj in objects
+                )
+            )
+        ]
         if gaps:
             raise DataError(f"Historical data unavailable for {symbol} {iv}: {gaps[0]['reason']}")
         if len({r.revision for r in result}) > 1:
