@@ -5,6 +5,18 @@ full data coverage and production cutover acceptance.
 
 ## Full-year MWG minute-volume proof control — 2026-10-04 ICT
 
+The follow-up `scripts.check_legacy_volume_projection` rehearsal verifies that
+the complete 225-row legacy day has exactly the source timestamps and original
+volumes. It stages only the verified volume change, preserving every existing
+OHLC price, provider, revision and timestamp. The corrected day sums to the two
+daily witnesses. Temporary Parquet round trips preserve both original and
+candidate records exactly; the original is re-read after staging to prove it
+remains available for rollback within the rehearsal. All temporary objects and
+the small fixture SQLite are removed. Only
+`data/mwg-volume-only-rehearsal-20261004/report.json` remains. Publication still
+requires a persisted correction receipt, immutable original evidence and
+guarded canonical/archive restoration; no runtime write path was enabled.
+
 The automated full-year comparison rejected a VCI page at Unix 1780382460
 because its minute volume was 700 while consecutive cumulative totals increased
 by 800. The existing proof builder proposed a correction scoped to this minute.

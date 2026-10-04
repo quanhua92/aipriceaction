@@ -44,9 +44,16 @@ history through `eb814ab`; they are not additional current open tasks.
   10,000 rows with one scoped proof. A candidate-only full-year VCI probe returns
   55,262 candles across 247 observed dates. Keep VNINDEX's failed proposal blocked.
   Preserve small captures/reports; no database copies or canonical changes.
-- [ ] Rehearse canonical volume-only recovery for MWG Unix 1780382460 (700 to
+- [x] Rehearse a volume-only candidate for MWG Unix 1780382460 (700 to
   800), preserving legacy OHLC prices, original provenance and archive rollback.
   Do not adopt VCI's different adjusted price basis through a volume license.
+  The complete 225-row legacy day has the same source timestamps/volumes and
+  reconciles to the two daily witnesses after one correction. Original/staged
+  Parquet round trips preserve all fields; temporary objects and fixture SQLite
+  are removed on success/failure. Retain only the small rehearsal report.
+- [ ] Add guarded canonical volume-only publication with persisted correction
+  provenance, immutable original evidence, race/lease checks and replayable
+  archive-index restoration. The staged projection is not a publication license.
 
 - [x] Automatically summarize observed dates and candle counts per date for
   every compared feed, exposing missing days and partial sessions independently
