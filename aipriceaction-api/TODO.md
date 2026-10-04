@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 830 tests; lint/format checks pass.
+- The latest complete API suite passes 851 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -38,6 +38,17 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Extend the source-backed index schedule audit across the entire retained
+  three-year daily/hourly and one-year minute windows. Visually verify 2023/2024/
+  2026 annual notices and required 2024/2026 amendments, preserving mirror versus
+  official distribution metadata. Require every amendment source with exact byte
+  binding. Both indices have all 746 scheduled retained daily dates and all 247
+  scheduled retained minute dates. Check the actual SQLite/S3 history reader:
+  native hourly coverage is only 138/746 dates per index, with no primary hourly
+  archive to fill the 608 absent dates. Isolated hourly candidates cover all 746
+  dates but still omit 45 current timestamps and remain unlicensed for publication.
+  Pass 851 API tests and preserve 26 artifacts in local RustFS with exact readback.
+  Date presence does not certify prices, volumes or complete intraday timestamps.
 - [x] Establish a source-backed announced-calendar audit independent of provider
   observations. Download and visually verify HOSE's signed 2025 notice, bind its
   bytes to the declaration, and check both indices in one read-only SQLite

@@ -6,6 +6,83 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Retained index schedules, amendments and intraday date coverage — 2026-10-04 ICT
+
+`284a9ed` extends the independent announced-calendar checker to all calendar
+years intersecting the configured three-year daily/hourly and one-year minute
+windows. Downloaded HOSE notices were rendered and checked visually: the signed
+2023 notice image, 2024 annual notice and amendment, and both pages of the 2026
+annual notice plus its amendment. The 2023/2024 and 2026 annual copies are
+distributed by mirrors; the 2026 amendment was downloaded directly from HOSE.
+Each declaration records that distinction, the notice identifier, exact byte
+length/hash and the limits of manual transcription/signature verification.
+
+The 2024 amendment adds April 29 to the April 30–May 1 closure and excludes the
+May 4 makeup Saturday. The 2026 amendment adds January 2 to the New Year
+closure and excludes the January 10 makeup Saturday; the annual notice already
+excludes the August 22 makeup Saturday. These additions require every declared
+amendment source file, in order, with exact source-byte checks. Omitting or
+swapping a source cannot silently revert to the unamended annual schedule.
+
+The populated daily audit covers **October 4, 2023 through October 2, 2026**:
+
+| Calendar partition | Scheduled dates | VNINDEX daily dates | VN30 daily dates |
+| --- | ---: | ---: | ---: |
+| 2023 retained tail | 63 | 63 | 63 |
+| 2024 | 250 | 250 | 250 |
+| 2025 | 249 | 249 | 249 |
+| 2026 through October 2 | 184 | 184 | 184 |
+| Total | 746 | 746 | 746 |
+
+All eight daily checks pass with no missing scheduled dates, unexpected
+holiday/weekend dates or shifted timestamps. This proves date presence against
+the independently announced schedules; it does not establish OHLCV accuracy
+or certify that every scheduled exchange session actually took place.
+
+Intraday checks compare observed date partitions without guessing per-minute
+trades. Both index minute series contain all **247 scheduled dates** in the
+retained year: 63 dates in the 2025 tail and 184 in 2026. The actual merged
+SQLite/S3 `History.read` returns **56,295 VNINDEX / 56,296 VN30 minute candles**
+and confirms those date counts. A single candle can establish date presence;
+complete minute timestamps, auction semantics and source accuracy remain
+unproven by this check. Existing index price/volume discrepancies remain open.
+
+The native hourly view fails this same date gate. Each index has **766 candles
+on 138 of 746 scheduled dates**, leaving **608 scheduled dates absent** from
+the served native basis. Read-only inspection confirms that neither index has
+a primary hourly archive; the actual SQLite/S3 history reader reproduces the
+SQLite result. This avoids labeling cold-storage coverage as a missing-date
+finding. The series still report `ready` on VNDirect; readiness is not coverage
+certification.
+
+The existing isolated public hourly candidates contain all 746 scheduled dates
+in the same retained window, with no unexpected dates. These are comparisons,
+not a legacy-data oracle or publication license. Each still omits 45 current
+native timestamps. The previous automatic approval rejection of canonical
+replacement remains in force, and no candidate is copied into the main database.
+An announced-date pass cannot resolve candle-label/value disagreements.
+
+The complete API suite passes **851 tests** with one known Starlette/httpx
+deprecation warning. All 21 calendar regressions also pass after the console
+output was reduced to counts; full missing-date details remain in JSON.
+Lint/format checks pass. Tests cover mandatory amendment binding, changed and
+swapped source bytes, JPEG notice integrity, makeup-weekend exclusions, and
+intraday date presence without falsely certifying timestamp completeness.
+
+Twenty-six source/declaration/audit artifacts have content-addressed local
+RustFS copies and exact byte readbacks. They change no canonical candle,
+archive pointer, manifest or provider basis. Evidence:
+
+- `data/hose-calendar-extended-sources-20261004/`
+- `data/hose-retained-index-date-audits-20261004/report.json`
+- `data/hose-retained-intraday-date-audits-20261004/report.json`
+- `data/hose-index-merged-storage-date-audit-20261004/report.json`
+- `data/hose-index-hourly-candidate-date-audits-20261004/report.json`
+- `data/hose-retained-calendar-evidence-20261004.json`
+
+The overall data-completeness gate remains open for stock-specific listing,
+suspension/no-trade evidence, other exchanges and all unresolved provider values.
+
 ## Independent announced HOSE date audit — 2026-10-04 ICT
 
 `7c4c288` adds a read-only SQLite date checker backed by HOSE's signed official
