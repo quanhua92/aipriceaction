@@ -325,6 +325,14 @@ date observed for that ticker against staged or published hourly observations.
 Absent dates remain review findings without an automatic provider switch. This
 checks observed dates, not a complete exchange calendar or every hourly slot.
 
+At bootstrap, the worker also retires an untouched placeholder left behind by
+an adopted snapshot. Cancellation requires a ready current revision, its valid
+provider handoff certificate, a snapshot beginning before the requested floor,
+and a job created in an earlier second than that verification. Jobs with a
+provider, attempts, cursor, lease or staging remain untouched. The cancelled job
+keeps its original identity and a reason; candles and coverage findings stay
+intact. This prevents obsolete retries and does not certify complete coverage.
+
 For a stalled VN hourly bootstrap, verified older staged rows can be made
 readable without marking the job complete:
 

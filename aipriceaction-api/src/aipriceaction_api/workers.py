@@ -63,7 +63,11 @@ class Worker:
         for entry in self.configuration or self.load_watchlist():
             for iv in entry["intervals"]:
                 state = self.repo.state(entry["source"], entry["symbol"], iv)
-                if not state:
+                if state:
+                    self.repo.cancel_superseded_bootstrap(
+                        entry["source"], entry["symbol"], iv, self.floor(entry, iv)
+                    )
+                else:
                     jobs.append(
                         self.repo.queue(
                             entry["source"], entry["symbol"], iv, "bootstrap", self.floor(entry, iv)

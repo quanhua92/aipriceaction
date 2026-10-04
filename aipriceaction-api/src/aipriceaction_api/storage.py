@@ -878,6 +878,58 @@ class Repository:
             self.bump(con)
             return job_id
 
+    def cancel_superseded_bootstrap(self, source, symbol, interval, floor):
+        """Retire an untouched placeholder predating a verified snapshot handoff.
+
+        This is cancellation, not certification of complete session coverage.
+        Preserve started jobs and every staged/published record for review.
+        """
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            job = con.execute(
+                """SELECT * FROM jobs WHERE source=? AND symbol=? AND interval=?
+                AND kind='bootstrap' AND status='pending' AND provider IS NULL
+                AND cursor IS NULL AND attempts=0 AND lease_owner IS NULL
+                AND lease_until=0 AND NOT EXISTS
+                (SELECT 1 FROM staging s WHERE s.job_id=jobs.id)""",
+                (source, symbol, interval),
+            ).fetchone()
+            state = con.execute(
+                "SELECT * FROM series WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            if (
+                not job
+                or not state
+                or state["status"] != "ready"
+                or job["revision"] == state["revision"]
+            ):
+                return False
+            record = con.execute(
+                """SELECT * FROM snapshot_adoptions WHERE source=? AND symbol=?
+                AND interval=? AND revision=? AND provider=?""",
+                (source, symbol, interval, state["revision"], state["provider"]),
+            ).fetchone()
+            if not record:
+                return False
+            self.validate_adoption(dict(record))
+            evidence = json.loads(record["evidence"])
+            if (
+                job["created_at"] >= evidence["verified_at_ns"] // 1_000_000_000
+                or evidence["snapshot_start"] > floor
+            ):
+                return False
+            con.execute(
+                """UPDATE jobs SET status='cancelled',updated_at=?,error=? WHERE id=?""",
+                (
+                    time.time_ns(),
+                    "Unstarted bootstrap superseded by verified snapshot adoption",
+                    job["id"],
+                ),
+            )
+            self.bump(con)
+            return True
+
     def claim_job(self, owner, lease=120, allowed=None):
         now = int(time.time())
         if allowed is not None and not allowed:

@@ -395,3 +395,109 @@ async def test_global_receipt_rejects_wrong_market_or_invalid_utc_finality(syste
     record["evidence"] = json.dumps(evidence)
     with pytest.raises(DataError, match="adoption evidence"):
         repo.validate_adoption(record)
+
+
+async def inherited_bootstrap(system):
+    """Model a copied adopted snapshot that leaves an older placeholder behind."""
+    import json
+
+    repo, _, _, _ = system
+    job_id = repo.queue("vn", "FPT", "1m", "bootstrap", 0)
+    await adopt_snapshot(repo, Provider(repo), "FPT", "vps", True)
+    verified = json.loads(repo.adoptions()[0]["evidence"])["verified_at_ns"] // 1_000_000_000
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE jobs SET status='pending',created_at=?,error=NULL WHERE id=?",
+            (verified - 60, job_id),
+        )
+    floor = repo.read("vn", "FPT", "1m")[0].time + 86400
+    return job_id, verified, floor
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_retires_only_inherited_untouched_placeholder(system):
+    repo, _, _, settings = system
+    job_id, _, floor = await inherited_bootstrap(system)
+    rows, receipts, epoch = repo.read("vn", "FPT", "1m"), repo.adoptions(), repo.epoch()
+    worker = Worker(repo, settings, Provider(repo))
+    worker.configuration = [
+        {
+            "source": "vn",
+            "symbol": "FPT",
+            "intervals": ["1m"],
+            "history_start": datetime.fromtimestamp(floor, UTC).isoformat(),
+        }
+    ]
+    assert worker.bootstrap() == []
+    with repo.connect() as con:
+        job = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone())
+    assert job["status"] == "cancelled" and "verified snapshot adoption" in job["error"]
+    assert repo.read("vn", "FPT", "1m") == rows and repo.adoptions() == receipts
+    assert repo.epoch() == epoch + 1
+    assert worker.bootstrap() == [] and repo.epoch() == epoch + 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "protected",
+    [
+        "running",
+        "attempted",
+        "cursor",
+        "provider",
+        "leased",
+        "same_revision",
+        "same_second",
+        "post_adoption",
+        "staged",
+        "missing_certificate",
+        "repairing",
+        "floor_uncovered",
+    ],
+)
+async def test_bootstrap_cleanup_preserves_started_or_unverified_work(system, protected):
+    from aipriceaction_api.storage import COLUMNS
+
+    repo, _, _, _ = system
+    job_id, verified, floor = await inherited_bootstrap(system)
+    with repo.connect() as con:
+        if protected == "running":
+            con.execute("UPDATE jobs SET status='running' WHERE id=?", (job_id,))
+        elif protected == "attempted":
+            con.execute("UPDATE jobs SET attempts=1 WHERE id=?", (job_id,))
+        elif protected == "cursor":
+            con.execute("UPDATE jobs SET cursor=? WHERE id=?", (floor, job_id))
+        elif protected == "provider":
+            con.execute("UPDATE jobs SET provider='vps' WHERE id=?", (job_id,))
+        elif protected == "leased":
+            con.execute(
+                "UPDATE jobs SET lease_owner='other',lease_until=? WHERE id=?",
+                (verified + 60, job_id),
+            )
+        elif protected == "same_revision":
+            con.execute("UPDATE jobs SET revision='captured' WHERE id=?", (job_id,))
+        elif protected in {"same_second", "post_adoption"}:
+            con.execute(
+                "UPDATE jobs SET created_at=? WHERE id=?",
+                (verified + int(protected == "post_adoption"), job_id),
+            )
+        elif protected == "staged":
+            row = repo.read("vn", "FPT", "1m")[0].record()
+            con.execute(
+                f"INSERT INTO staging(job_id,{','.join(COLUMNS)}) VALUES ({','.join('?' for _ in range(len(COLUMNS) + 1))})",
+                (job_id, *(row[key] for key in COLUMNS)),
+            )
+        elif protected == "missing_certificate":
+            con.execute("DELETE FROM snapshot_adoptions")
+        elif protected == "repairing":
+            con.execute("UPDATE series SET status='repairing' WHERE interval='1m'")
+        else:
+            floor = repo.read("vn", "FPT", "1m")[0].time - 1
+        before = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone())
+        staged = con.execute("SELECT * FROM staging").fetchall()
+    epoch = repo.epoch()
+    assert not repo.cancel_superseded_bootstrap("vn", "FPT", "1m", floor)
+    with repo.connect() as con:
+        assert dict(con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()) == before
+        assert con.execute("SELECT * FROM staging").fetchall() == staged
+    assert repo.epoch() == epoch
