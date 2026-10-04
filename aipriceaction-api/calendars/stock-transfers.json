@@ -31,6 +31,36 @@
           "transcription_verification": "Signed one-page notice visually checked. GEE official first trading date is August 14, 2024; July 2 is the listing-effective date and is not used as a trading boundary."
         }
       ]
+    },
+    {
+      "symbol": "NAB",
+      "kind": "venue_transfer",
+      "from_venue": "UPCOM",
+      "to_venue": "HOSE",
+      "last_trading_date": "2024-02-28",
+      "first_trading_date": "2024-03-08",
+      "sources": [
+        {
+          "role": "last_trading_day",
+          "notice": "75/QD-SGDHN",
+          "published": "2024-02-16",
+          "url": "https://www.namabank.com.vn/Data/Sites/1/userfiles/33/2024/qd-75.qd.sgdhn-huy-dang-ky-gd-co-phieu-nab.pdf",
+          "distribution": "Issuer-hosted copy of the signed HNX decision; includes incoming-document stamp dated February 20.",
+          "sha256": "a1184b425c852e5167537a696f0378070d0019135c313836305e8c5a1ef454e8",
+          "bytes": 1005539,
+          "transcription_verification": "Both pages visually checked. Page 1 names February 29 cancellation; page 2 explicitly names February 28 as the final UPCoM trading session."
+        },
+        {
+          "role": "first_trading_day",
+          "notice": "355/TB-SGDHCM",
+          "published": "2024-03-01",
+          "url": "https://cafef1.mediacdn.vn/download/010324/nab-thong-bao-ve-viec-niem-yet-va-ngay-giao-dich-dau-tien-0.pdf",
+          "distribution": "CafeF mirror of the signed HOSE notice.",
+          "sha256": "8c196357351f82447fce70bdd9240dc7cd2578e9b2f10863b00b39bfacb5f0b0",
+          "bytes": 241994,
+          "transcription_verification": "Signed one-page notice visually checked. March 8, 2024 is the official first trading session; December 21, 2023 listing-effective date is not used as the trading boundary."
+        }
+      ]
     }
   ],
   "limitations": [

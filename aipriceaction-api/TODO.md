@@ -38,6 +38,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Verify NAB transfer boundaries against signed HNX/HOSE notices. Annotate
+  its six absent 2024 daily dates as the transfer interval, keep both boundary
+  sessions expected and preserve every original stock candidate date list.
+  Recheck the current live database read-only, retain five small evidence objects
+  in local RustFS with exact readback, and pass 46 calendar review tests.
+  This explains dates only; VTP/BSR event boundaries and OHLCV accuracy remain open.
+
 - [x] Remove completed test databases, including unnecessary compressed copies.
   Preserve live data, current rollback image, pending index candidates and source
   captures. Add mandatory `AGENTS.md` lifecycle rules and automatic temporary

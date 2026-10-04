@@ -6,6 +6,39 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Source-bound NAB transfer interval review — 2026-10-04 ICT
+
+The transfer catalog now includes NAB. Signed HNX decision **75/QD-SGDHN**,
+issued February 16, 2024, explicitly names **February 28** as the final UPCoM
+session and February 29 as cancellation. The issuer-hosted PDF's incoming stamp
+is February 20; neither cancellation nor the stamp date replaces the trading
+boundary. Signed HOSE notice **355/TB-SGDHCM**, issued March 1 and distributed
+through CafeF, names **March 8, 2024** as the first official session. The earlier
+December 21, 2023 listing-effective date is not a trading boundary. Both HNX
+pages and the HOSE page were visually checked before the storage cleanup;
+current source sizes and SHA256 hashes were reverified against the declaration.
+
+A current read-only review of all 57 selected stock daily series for 2024
+preserves every original candidate date list. NAB has 244 observed dates out
+of 250 common scheduled weekdays. All six absences—February 29, March 1 and
+March 4–7—fall strictly between the signed transfer boundaries. Both February 28
+and March 8 have one stored daily candle; no NAB candle conflicts with the
+declared transfer interval. This resolves NAB's transfer-date explanation,
+not per-candle OHLCV accuracy or universal actual-session completeness.
+
+The source catalog requires both document pairs in event order: GEE then NAB.
+The synthetic single-event test fixture now explicitly selects its own event,
+remaining independent of catalog growth. All 46 calendar/transfer review tests
+and relevant lint checks pass. No runtime exclusions, market writes, or full
+database copies were introduced.
+
+Five small artifacts (two NAB PDFs, the updated catalog, current all-stock review
+and boundary summary) totaling **1,289,759 bytes** were preserved in local RustFS
+under content-addressed evidence keys with exact readback. The canonical
+`LATEST.json` bytes stayed unchanged. Receipts are in
+`data/nab-transfer-evidence-20261004.json`; the review is
+`data/nab-transfer-reviewed-dates-20261004/1D-2024-current.json`.
+
 ## Completed test database removal — 2026-10-04 ICT
 
 The user clarified that disposable testing databases must be removed when tests

@@ -143,6 +143,8 @@ def transfer_args(args):
         (Path(__file__).parents[1] / "calendars/stock-transfers.json").read_text()
     )
     event = declaration["events"][0]
+    # Synthetic single-event fixture is independent of the live reviewed catalog.
+    declaration["events"] = [event]
     event.update(symbol="FPT", last_trading_date="2026-01-05", first_trading_date="2026-01-07")
     sources = []
     for i, source in enumerate(event["sources"]):

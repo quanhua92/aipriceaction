@@ -133,13 +133,24 @@ documents were downloaded and all pages visually checked; the HOSE copy is
 explicitly identified as a Vietstock mirror. The source roles and byte hashes
 are retained in the declaration.
 
-For GEE's 2024 review, add these arguments to the corresponding 2024 exchange
-calendar inputs:
+The catalog also includes NAB: signed HNX decision 75/QD-SGDHN explicitly names
+February 28, 2024 as its last UPCoM session and February 29 as cancellation.
+Signed HOSE notice 355/TB-SGDHCM names March 8 as its first official session;
+the earlier December 21, 2023 listing-effective date is not a trading boundary.
+The HNX copy is issuer-hosted; the HOSE copy is distributed by CafeF. Both were
+visually checked in full. The issuer press article's conflicting February 29
+last-session reference is not used as the declaration's boundary.
+
+For the 2024 review, supply all source pairs in current catalog order, even if
+only one stock is requested. Add these arguments to the corresponding 2024
+exchange calendar inputs:
 
 ```sh
   --transfers calendars/stock-transfers.json \
   --transfer-source data/vn-stock-transfer-sources-20261004/gee-upcom-cancellation.pdf \
-  --transfer-source data/vn-stock-transfer-sources-20261004/gee-hose-first-notice.pdf
+  --transfer-source data/vn-stock-transfer-sources-20261004/gee-hose-first-notice.pdf \
+  --transfer-source data/vn-stock-transfer-sources-20261004/nab-upcom-cancellation.pdf \
+  --transfer-source data/vn-stock-transfer-sources-20261004/nab-hose-first-notice.pdf
 ```
 
 The opt-in annotation requires both sources per event in declaration order.
