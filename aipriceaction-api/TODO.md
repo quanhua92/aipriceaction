@@ -609,6 +609,11 @@ charts and indicators never silently join incompatible adjustment revisions.
   Preserve measured legacy value disagreements as an open quality finding.
 - [ ] Validate wider provider/adjustment revisions across imported legacy history
   and newly fetched recent windows before publishing them as continuous series.
+  The isolated October 4 FPT public minute candidate supplies missing August
+  warmup and makes the older 15-minute EMA query readable, preserving every
+  retained timestamp. It changes 459 existing candles and fails native VPS
+  handoff on six recent candles; it is not published. Preserve both snapshots
+  and obtain adjustment/correction witnesses before accepting a replacement.
 - [ ] Recover the remaining VND 2020 unavailable range and VNINDEX 2020 pending
   partition through complete coherent validated history. Preserve invalid public
   originals and reject guessed corrections or partial incompatible splices.

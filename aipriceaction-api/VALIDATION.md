@@ -6,6 +6,41 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Extended FPT public minute candidate — 2026-10-04 ICT
+
+Bounded database-backed JSON requests to the public `/tickers` API produce an
+isolated new revision, `legacy-api-fpt-extended-20261004`. PostgreSQL is not used.
+The candidate contains **66,198 records**, with **55,801** in SQLite and **10,397**
+in four filesystem Parquet objects. It preserves every canonical timestamp and
+adds **4,746** August 2025 records. All records pass normal candle validation.
+The original capture report stops at its mixed-revision comparison guard; its
+downloads remain intact. The subsequent raw-inventory verification uses the
+normal History reader for candidate calculations and preserves the original
+failed report.
+
+`scripts/check_staged_public_history.py` verifies four historical requests:
+minute/15-minute SMA and EMA, each returning 20 records through October 3, 2025.
+The canonical 15-minute EMA request fails with incompatible adjustment revisions;
+the extended candidate returns all 20 records with sufficient coherent warmup.
+The other three reads succeed on both stores. This is a data-layer check, not a
+completed HTTP/web/SDK replacement rehearsal.
+
+The full retained comparison reports **459 changed candles**: **453** on
+January 2–3, 2025 and six on September 28/30 and October 1, 2026. A fresh VPS
+response covers **1,130** records across five completed sessions with no missing
+timestamps. It agrees with canonical OHLCV within the existing absolute price
+tolerance of `1e-8` and exact volume checks. The new public candidate has six
+material mismatches against that native response; the provider adoption dry run
+rejects it. Raw exact differences, including floating-point representation, are
+preserved separately. No native values are rounded or overwritten.
+
+Evidence is retained in `data/fpt-extended-public-snapshot-20261004/`,
+`data/fpt-extended-public-verification-20261004/report.json` and
+`data/fpt-extended-native-verification-20261004/report.json`, with original
+checksummed response bodies. Canonical epoch remains **3523** and the canonical
+FPT record/provenance digest is unchanged. The candidate remains unpublished;
+historical adjustment and recent correction witnesses still need verification.
+
 ## Opt-in worker daily retention maintenance — 2026-10-04 ICT
 
 `worker --archive-daily` runs the existing verified archive publication and
