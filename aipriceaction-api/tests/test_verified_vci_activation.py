@@ -2,8 +2,12 @@ from dataclasses import replace
 
 import pytest
 
+from aipriceaction_api.archive import Archive
+from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError
-from scripts.activate_verified_vci_minutes import daily_check
+from aipriceaction_api.history import History
+from aipriceaction_api.storage import Repository
+from scripts.activate_verified_vci_minutes import MinuteVerificationHistory, daily_check
 
 
 @pytest.fixture
@@ -47,3 +51,33 @@ def test_daily_check_rejects_missing_reference_date(session, missing):
             [] if missing == "price" else [daily],
             {"peer": [] if missing == "volume" else [daily]},
         )
+
+
+def test_boundary_verification_does_not_replace_native_hourly_api_routing(tmp_path, session):
+    rows, _ = session
+    settings = replace(
+        Settings(),
+        database=tmp_path / "db",
+        cache_dir=tmp_path / "cache",
+        archive_backend="filesystem",
+        object_dir=tmp_path / "objects",
+    )
+    repo = Repository(settings.database)
+    repo.initialize()
+    repo.put(rows)
+    hour = replace(
+        rows[0],
+        interval="1h",
+        time=rows[0].time // 3600 * 3600,
+        high=130,
+        close=125,
+        volume=40,
+        provider="vps",
+    )
+    repo.put([hour])
+    archive = Archive(repo, settings)
+    api = History(repo, archive, settings)
+    verification = MinuteVerificationHistory(repo, archive, settings)
+    assert api.query("vn", "TPB", "1h", ma=False)[0]["close"] == 125
+    assert verification.query("vn", "TPB", "1h", ma=False)[0]["close"] == 115
+    assert repo.read("vn", "TPB", "1h")[0].close == 125

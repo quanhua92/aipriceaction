@@ -25,6 +25,13 @@ from aipriceaction_api.workers import Worker
 from scripts.stage_yahoo_daily_history import RecordingTransport
 
 
+class MinuteVerificationHistory(History):
+    """Exercise minute-derived storage buckets without changing API routing."""
+
+    def native_interval(self, source, symbol, iv):
+        return "1m" if iv == "1h" else super().native_interval(source, symbol, iv)
+
+
 def daily_check(rows, price_reference, volume_references):
     """Check every observed minute session without scaling any source values."""
     groups = defaultdict(list)
@@ -81,7 +88,9 @@ async def run(args):
     rehearsal = json.loads((args.rehearsal / "report.json").read_text())
     if not rehearsal["passed"] or rehearsal["main_publication"]:
         raise DataError("A successful isolated storage rehearsal is required")
-    args.output.mkdir(parents=True, exist_ok=False)
+    if args.resume and not args.execute:
+        raise ValueError("Resume requires --execute and an existing incomplete report")
+    args.output.mkdir(parents=True, exist_ok=args.resume)
     settings = replace(
         base,
         vci_history_fallback=True,
@@ -98,6 +107,10 @@ async def run(args):
     )
     report = {"execute": args.execute, "passed": False, "symbols": [], "database": str(main.path)}
     path = args.output / "report.json"
+    if args.resume:
+        report = json.loads(path.read_text())
+        if report["passed"] or not report["execute"] or report["database"] != str(main.path):
+            raise DataError("Resume requires the incomplete execution report for this database")
 
     def save():
         path.write_text(json.dumps(report, indent=2) + "\n")
@@ -138,18 +151,32 @@ async def run(args):
                 replace(r, revision="verified-vci-" + symbol.lower() + "-" + args.output.name)
                 for r in rows
             ]
-            plan = publish(main, archive, original, replacement, floor)
-            entry = {
+            previous = (
+                next((e for e in report["symbols"] if e["symbol"] == symbol), None)
+                if args.resume
+                else None
+            )
+            if previous and previous.get("activation", {}).get("published"):
+                if (original.state["provider"], original.state["revision"]) != (
+                    "vci",
+                    replacement[0].revision,
+                ):
+                    raise DataError("Activated checkpoint changed before resume")
+                plan = previous["plan"]
+            else:
+                plan = publish(main, archive, original, replacement, floor)
+            entry = previous or {
                 "symbol": symbol,
                 "plan": plan,
                 "daily_checks": checks,
                 "fresh_native_overlap": native,
                 "candidate_checksum": checksum(rows),
             }
-            report["symbols"].append(entry)
+            if not previous:
+                report["symbols"].append(entry)
             plans.append((entry, original, replacement))
             save()
-        if args.execute:
+        if args.execute and not args.resume:
             backup = args.output / "before.sqlite3"
             main.backup(backup)
             report["backup"] = str(backup)
@@ -163,7 +190,16 @@ async def run(args):
             symbol = entry["symbol"]
             if not args.execute:
                 continue
-            entry["activation"] = publish(main, archive, original, replacement, floor, execute=True)
+            if not entry.get("activation", {}).get("published"):
+                entry["activation"] = publish(
+                    main, archive, original, replacement, floor, execute=True
+                )
+            else:
+                current = History(main, archive, settings).read("vn", symbol, "1m")
+                if [(r.time, r.open, r.high, r.low, r.close, r.volume) for r in current] != [
+                    (r.time, r.open, r.high, r.low, r.close, r.volume) for r in replacement
+                ]:
+                    raise DataError("Activated checkpoint OHLCV changed before resume")
             save()
             entry["handoff"] = await adopt_native_snapshot(main, providers, symbol, execute=True)
             main.record_volume_proofs(
@@ -187,7 +223,7 @@ async def run(args):
             golden.initialize()
             golden.put(replacement)
             reference = History(golden, Archive(golden, settings), settings)
-            history = History(main, archive, settings)
+            history = MinuteVerificationHistory(main, archive, settings)
             cases = []
             for interval in ("1m", "15m", "1h"):
                 limit = 3000 if interval == "1m" else 200
@@ -246,4 +282,9 @@ if __name__ == "__main__":
     parser.add_argument("--volume-proofs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Continue an incomplete execution checkpoint without republishing activated snapshots",
+    )
     asyncio.run(run(parser.parse_args()))
