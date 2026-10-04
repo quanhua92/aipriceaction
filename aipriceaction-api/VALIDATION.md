@@ -6,6 +6,104 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Approved VCI minute fallback and coherent candidates — 2026-10-04 ICT
+
+The newer goal permits a verified historical-minute fallback. Two initial VCI
+probe attempts were rejected by automatic review because it still applied the
+original exclusion. The user then explicitly answered “Allow VCI historical-minute
+probes and a verified fallback”; subsequent scoped VCI probes were approved.
+The earlier exclusion is superseded for this use, not for daily/hourly or
+fundamental fetching. VPS, VNDirect and DNSE remain the preferred providers.
+
+VCI is opt-in via `VCI_HISTORY_FALLBACK` or `--vci-history-fallback`. Automatic
+selection appends it last only for minute requests older than seven days.
+Explicit reads support recent proof windows. The adapter validates the single
+symbol envelope, equal arrays, numeric volumes, exact minute labels, duplicates
+and OHLC bounds; captured prices are already VND. JSON POST protocol references
+include [Vnstock's VCI quote implementation](https://github.com/thinh-vu/vnstock/blob/main/vnstock/explorer/vci/quote.py)
+and the existing Rust provider. Live 2,000-row requests confirm the protocol.
+
+Worker backfill can stage VCI but cannot publish an unverified initial bootstrap
+or finish an unverified replacement. Normal VCI refresh likewise requires a
+valid per-series snapshot certificate. Opt-in alone does not license publication.
+The existing overlap/session/revision/correction guards remain active. A captured
+2,000-row regression licenses a matching isolated legacy snapshot and preserves
+all original record versions; unverified bootstrap and repair regressions leave
+canonical data unchanged. Storage certificates permit VCI only on VN minutes.
+
+Preferred-source rechecks under `data/preferred-old-minute-recheck-20261004/`
+find 226 FPT minutes at VNDirect for August 29, 2025, while VPS is empty and
+DNSE has invalid/missing arrays. October 3 is unavailable from all three.
+VCI returns every requested minute for August 29 and October 1–3 and matches
+legacy on all 226/678 records. Five recent sessions also match all 1,130 records.
+This is agreement, not proof that legacy or VCI is universally correct.
+Evidence: `data/vci-old-minute-fallback-probe-20261004/` and
+`data/vci-verified-minute-adapter-20261004/`. A real operational CLI probe uses
+an isolated SQLite file (`data/vci-cli-smoke-20261004.*`), never the main database.
+
+Full single-provider pagination then stages these isolated candidates:
+
+| Ticker | Scope | Candidate rows | Original hot timestamps preserved | Daily-price reference checks |
+| --- | --- | ---: | ---: | --- |
+| FPT | August 2025–October 2, 2026 | 65,745 | 55,801, with 9,944 older additions | All 291 observed dates within 0.5 VND |
+| TPB | Retained year through October 2, 2026 | 54,332 | All 54,332 | All 247 observed dates within 0.99 VND |
+
+Their observed daily/minute date sets agree. Fresh oldest/middle/latest
+2,000-minute controls reproduce all 12,000 sampled candidate candles exactly,
+with raw readback under each candidate's `reverification/` directory. This is
+sampled stability, not upstream transactional snapshot isolation. Original main
+OHLCV and provider/revisions remain unchanged during the captures; the normal
+worker refresh updates 40 record timestamps per ticker. `source-recheck.json`
+distinguishes metadata updates from candle changes.
+
+FPT differs from the original hot reference on one price and six volume records,
+all below the 1% price review threshold. Minute daily volumes match the daily
+reference on 290 of 291 dates. On September 26, 2025, the minute sum is 8,080,600
+versus 8,080,800 reported independently by VNDirect and DNSE. Exactly one captured
+VCI minute contradicts its own cumulative field: at 02:55 UTC, volume is 4,900
+but the cumulative increment from 02:54 is 5,100. An isolated corroborated repair
+proposal changes only that volume to 5,100, preserves all prices/timestamps and
+makes the daily total 8,080,800. Its separate SQLite file and receipt are under
+`volume-repair-proposal/`; the source candidate/raw replies remain intact.
+No repair proposal is published to canonical storage.
+
+TPB differs from the original minute reference on 883 prices, all materially
+changed, and zero volumes. The candidate aligns prices with daily/hourly history.
+Daily and minute volumes agree on only one of 247 dates; the source conventions
+need explicit interpretation, not guessed volume scaling. A separate recent VCI
+probe supports the VNDirect/DNSE price frame and preserves all observed minute
+volumes. Native/reference agreement is evidence, not an independent market oracle.
+
+Candidate roots: `data/fpt-coherent-vci-minute-candidate-20261004/` and
+`data/tpb-coherent-vci-minute-candidate-20261004/`. `report.json` completion means
+pagination crossed the floor while preserving observed hot timestamps and daily
+reference dates. It does not certify a complete exchange calendar, legacy cold
+coverage, correct volume conventions or publication/handoff approval. Coherent
+SQLite/S3 publication and broader selected-universe accuracy remain open.
+
+All 620 tests pass with one existing warning; whole-project lint/format and
+offline wheel/source builds pass. The runtime configuration is not changed by
+these probes or staging commands. No new dependency or Compose service is added.
+
+## Intraday feed omission diagnostics — 2026-10-04 ICT
+
+A read-only replay of the same four-feed captures compares each native hourly
+bar with that feed's observed minute aggregation. VPS matches all 594 compared
+hours. VNDirect matches 580 but exactly excludes late-session observations in
+12 hours, with two other disagreements. DNSE matches 576 with 14 other
+aggregation disagreements. Legacy matches 581, excludes late observations in
+three hours, disagrees otherwise in eight and has two hours without observed
+minute buckets. These are findings about captured inputs, not independently
+complete exchange sessions.
+
+For HCM/HAG on October 2 at 07:00 UTC, VNDirect hourly OHLCV exactly reproduces
+only its minutes before 07:30. Its own 07:45 minute supplies the missing closing
+observation. VPS/DNSE/legacy hourly bars include it and match their own minute
+aggregates. The reusable `scripts/diagnose_vn_feed_audit.py` records this precise
+omission rather than labeling every difference incorrect. Five regressions,
+including two captured HCM/HAG cases, pass. The complete selected-universe
+result is `data/four-feed-selected-vn-20261004/interval-diagnostics.json`.
+
 ## Four VN feeds compared as peers — 2026-10-04 ICT
 
 The user clarified that legacy data can be incorrect. It is a fourth comparison

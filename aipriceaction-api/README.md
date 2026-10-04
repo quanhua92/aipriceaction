@@ -29,6 +29,36 @@ with the configured native provider rate limits, changes no market data and
 records errors or unavailable coverage rather than choosing a winning feed.
 Its single-page bounds suit recent windows, not a full-history certification.
 
+VCI is an optional minute-history fallback, enabled only with
+`VCI_HISTORY_FALLBACK=true` or the global CLI flag `--vci-history-fallback`.
+The preferred providers remain VPS, VNDirect and DNSE. Automatic VCI selection
+is last in the fallback order for minute requests ending more than seven days
+ago; it does not supply daily/hourly data or displace working preferred sources.
+Explicit VCI reads also support recent overlap verification. VCI prices are
+already VND and are not multiplied by 1,000. Unverified worker candidates remain
+staged; verified per-series adoption is required before publication or updates.
+
+```sh
+uv run aipa-api --allow-direct --vci-history-fallback probe FPT \
+  --provider vci --interval 1m --before 2025-10-04 --count 20
+uv run python -m scripts.stage_vci_minute_history --symbol FPT \
+  --start-date 2025-08-01 --end-date 2026-10-02 --allow-direct \
+  --output data/fpt-vci-candidate
+```
+
+Staging uses an isolated SQLite file and preserves raw replies and original
+references. It never publishes canonical data. Its completion flag means that
+pagination crossed the requested floor and preserves observed reference dates
+and timestamps; it does not certify exchange-calendar completeness or source
+accuracy. A provider change still needs coherent price/volume interpretation
+and verified history boundaries. Diagnose same-feed minute/hour behavior from
+an existing four-feed audit without another network fetch:
+
+```sh
+uv run python -m scripts.diagnose_vn_feed_audit \
+  --audit-directory data/four-feed-audit --output data/interval-diagnostics.json
+```
+
 ## Start locally
 
 Use Python 3.13 or newer. From this directory:

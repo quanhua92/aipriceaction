@@ -7,7 +7,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Current verified checkpoint — 2026-10-04 ICT
 
-- FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
+- FastAPI, SQLite retention, Parquet/DuckDB history, three preferred VN adapters plus opt-in VCI minute fallback,
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 594 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 620 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -31,6 +31,29 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Implement the explicitly approved opt-in VCI minute-history fallback.
+  Keep the three preferred providers and daily/hourly sourcing unchanged; append
+  VCI only for older minute requests. Validate units, symbol, arrays, timestamps,
+  duplicates and volume; stage unverified fallback work without publication.
+  Existing per-series snapshot proof licenses VCI reads/updates. Preserve
+  certificates through storage validation and retain the normal correction guards.
+- [x] Capture coherent isolated FPT/TPB VCI minute candidates, preserving every
+  original hot timestamp. FPT spans August 2025–October 2026 with 65,745 rows;
+  TPB covers the retained year with 54,332. Their minute-derived daily prices
+  agree with retained daily references within one VND on all 291/247 observed
+  dates. Fresh oldest/middle/latest controls match all 12,000 sampled candles.
+  Candidate completion flags certify observed reference coverage, not full
+  exchange calendars or permission to publish. Canonical OHLCV stays intact.
+- [ ] Finish and license coherent candidate publication across SQLite/S3 with
+  immutable before-images, source witnesses and cold/recent boundary checks.
+  FPT has one corroborated isolated 200-share repair proposal; TPB's volume
+  convention still needs explicit treatment. Preserve existing dates and prove
+  completed OHLCV corrections instead of silently choosing legacy or scaling.
+- [x] Diagnose same-feed minute/hour differences for all selected VN tickers.
+  VNDirect excludes late-session observations in 12 captured hours; legacy does
+  so in three. Other observed aggregation disagreements remain explicit. Captured
+  HCM/HAG regressions reproduce the exclusions without inventing trades.
 
 - [x] Compare VPS, VNDirect, DNSE and legacy as peers for all 59 selected VN
   tickers: September 7–October 2 daily and October 1–2 hourly/minute. Capture
@@ -437,7 +460,9 @@ history through `eb814ab`; they are not additional current open tasks.
 - Favor coverage and freshness across more selected tickers over automatic
   full-history rebuilds. Corporate-action repairs are bounded by retained windows
   plus required lookback, but archived/local adjustment consistency is mandatory.
-- Exclude VCI completely from new providers, fallback chains, and workers.
+- Prefer VPS, VNDirect and DNSE. The newer explicit user approval permits VCI
+  historical-minute probes and a verified fallback. VCI is opt-in, minute-only
+  and last in older-window fallback order; unverified candidates stay staged.
 - Keep the existing Python `aipa` CLI and SDK; adapt compatibility where needed.
 - Compose runs RustFS only. API and workers initially run locally. SQLite and
   DuckDB are libraries/files, not network services.
@@ -676,7 +701,8 @@ overwrite data. Authorized refresh requests schedule the correct workers.
 - [ ] After provider selection, probe coverage/reliability for daily, hourly,
   minute, index, adjusted-price, cursor, proxy, and timestamp behavior.
 - [x] Implement exactly the selected VN adapters with per-interval primary and
-  fallback rules based on evidence. Never use VCI.
+  fallback rules based on evidence. The original VCI exclusion is superseded
+  by the explicit minute-history fallback approval; preferred providers stay unchanged.
 - [x] Implement required Binance, Yahoo, and SJC adapters for the active universe.
 - [x] Add retries, backoff, rate limits, timeouts, and cursor-progress guards.
 - [x] Reject conflicting duplicate timestamps inside requested provider pages,
@@ -741,7 +767,8 @@ backup/restore is tested; no synthetic candles or automatic historical wipe.
   compare matching completed dates, require corroborating historical changes,
   keep replacement history on a consistent provider, validate newest coverage,
   publish atomically, invalidate caches, and resume repair after interruption.
-  These are design references, not permission to use VCI.
+  These remain design references. VCI use is now authorized only for the
+  explicitly approved minute-history probes and verified fallback.
 - [ ] Treat price revisions as suspected adjustments/corrections, not proof of a
   dividend. Detect changes in either direction; distinguish provider switches,
   rounding, normal live updates, and isolated corrections from series-wide changes.
