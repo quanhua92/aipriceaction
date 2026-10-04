@@ -25,6 +25,44 @@ records. These checks neither obtain production sync credentials nor export
 private production data. Reference: the repository's Rust sync handlers and
 [the uuid parser](https://docs.rs/uuid/1.23.1/src/uuid/parser.rs.html).
 
+The local API reloads `8a9b5d3` as PID 32428, session 65913 after PID 16546
+is confirmed terminal. All three native workers continue as PIDs 27785, 27790
+and 27795. Nine completed-date daily controls for FPT, VND and VNINDEX with
+raw/SMA/EMA output remain byte-exact; SQLite health is HTTP 200 and the existing
+unauthorized sync response is unchanged. Evidence is under
+`data/sync-uuid-contract-runtime-20261004/`. Authorized UUID behavior is covered
+by isolated endpoint regressions, not by writing test records to the live database.
+
+## Remaining native-gap recheck — 2026-10-04 ICT
+
+Thirty narrow daily/hourly requests to the three allowed VN providers recheck
+the five dates holding IDC, GEE, VGI and VTP's hourly bootstraps. Twenty-four
+additional seven-/thirty-day hourly requests recheck the four traded/ambiguous
+dates. None provides the missing hourly observations. Correct single-symbol,
+database-backed public exports reproduce five bars each for IDC May 15, 2025
+and VGI/VTP October 13, 2023; both GEE dates remain empty. Earlier public probes
+using unsupported `symbols`/`source` aliases are explicitly marked invalid and
+excluded from the targeted proof. No candidate is spliced into native data.
+
+GEE's November 28, 2024 VNDirect daily observation has volume zero while the
+retained VPS daily observation has volume one; this cross-provider difference
+does not license changing the retained value or certifying a no-trade policy.
+VNDirect's `vnmarket_prices` endpoint returns September 28–30, 2020 index daily
+records, but September 29 still has close 903.98 below low 904.69. Its
+`index_prices` probe is HTTP 404 and `stock_prices` has zero VNINDEX records.
+The alternative endpoint therefore cannot repair the pending native partition.
+
+All valid new captures/reports are preserved as 48 checksum-named objects under
+`archive-v2/evidence/remaining-provider-gaps/`, with byte-exact RustFS readback.
+Receipt: `data/remaining-provider-gap-evidence-20261004.json`. The hourly session,
+wider-window, verified public and index endpoint reports are respectively under
+`data/vn-hourly-session-probe-20261004/`,
+`data/vn-hourly-window-probe-20261004/`,
+`data/vn-hourly-session-public-probe-20261004-verified/` and
+`data/vndirect-index-daily-endpoint-probe-20261004/`. These probes/evidence uploads
+do not change canonical candles or the archive index. Missing native sessions,
+invalid historical rows and incompatible frames remain open acceptance gates.
+
 ## Cooperative worker termination and restartability — 2026-10-04 ICT
 
 Prepared Linux units under `ops/systemd/` supervise the existing host API and

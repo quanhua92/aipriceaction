@@ -38,6 +38,12 @@ history through `eb814ab`; they are not additional current open tasks.
   forms retain one canonical record, creation time and secret protection.
   Twelve new endpoint regressions pass. Private production sync inventory and
   data export remain separate, unfulfilled migration gates.
+- [x] Recheck the remaining five stock-hourly session gaps with narrow and
+  wider requests to all three native sources and exact public exports. Preserve
+  their continued absence, public candidate bars and GEE's cross-provider volume
+  difference without fabricating sessions. VNDirect's market-price endpoint
+  repeats the invalid VNINDEX 2020 range. Store 48 immutable evidence objects
+  with exact RustFS readback; this closes the probe, not the unresolved data gates.
 
 - [x] Verify cooperative termination and real local restart of all three scoped
   native workers with the latest shutdown correction. Confirm old processes are
