@@ -5,7 +5,19 @@ only the stated checks, not full data coverage or production readiness. Earlier
 staging narratives and superseded checklists remain in `VALIDATION.md` and Git
 history through `eb814ab`; they are not additional current open tasks.
 
-## Current verified checkpoint — 2026-10-04 ICT
+## Current verified checkpoint — 2026-10-05 ICT
+
+- The default Compose stack now builds and runs the Python FastAPI service,
+  Python worker, one-shot initializer and RustFS. SQLite/catalog/cache data is a
+  host bind mount; no legacy Rust API service is present.
+- Compose initialization refreshes the authoritative live ticker groups. The
+  isolated acceptance run matched the live API byte-for-byte for 404 VN, 60
+  crypto and 134 Yahoo-mode symbols, registering all 598 distinct source
+  identities. Catalog mode scheduled 1,528 source/interval bootstrap jobs.
+- A catalog-sized worker exposed and then passed a SQLite scheduler-depth fix.
+  The rebuilt container remained healthy and ingested 500 recent AAA rows for
+  each of daily, hourly and minute intervals. FastAPI served the resulting row,
+  every mounted legacy route, and the complete explorer/static bundle.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three preferred VN adapters plus opt-in VCI minute fallback,
   workers, operational CLI and web/SDK interfaces are implemented locally.
@@ -27,7 +39,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,111 tests; lint/format checks pass.
+- The latest complete API suite passes 1,115 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),

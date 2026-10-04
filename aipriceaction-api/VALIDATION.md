@@ -8730,6 +8730,39 @@ remain separate acceptance checks. The complete request/result evidence is
   closes. A completed-date recheck later matched both algorithms. The new
   reader computes all dependent values from the same verified candle history.
 
+## Complete-catalog Compose acceptance — 2026-10-05 ICT
+
+An isolated Compose project used a temporary SQLite bind mount and alternate
+loopback ports. The Python 3.13 image built successfully. RustFS became healthy,
+the one-shot initializer exited zero, FastAPI became healthy, and the Python
+worker stayed running after the catalog-scale scheduler fix. Docker inspection
+confirmed `/data` is a read/write bind mount and the API image command is
+`aipa-api serve`; the service list is `rustfs`, `initialize`, `api`, `worker`,
+with no legacy Rust API container.
+
+Initialization fetched the live `/tickers/group` responses and recorded 404 VN,
+60 crypto, and 134 Yahoo-mode symbols. Local FastAPI group responses had the
+same SHA-256 bytes as all three live responses. SQLite registered 598 active
+source identities. The full worker scheduled 1,528 bootstrap jobs: 1,208 VN,
+180 crypto, 139 Yahoo and one SJC job; by interval this is 598 daily, 462 hourly
+and 468 minute jobs. The totals reflect explicit watchlist interval overrides
+while every catalog symbol receives at least daily ingestion.
+
+The first full-universe run found SQLite's expression-depth limit in job
+eligibility SQL. Eligibility now uses a connection-local temporary table, with
+a 1,501-identity regression. After rebuilding, the worker ingested 500 AAA rows
+for each native interval and FastAPI returned the latest real daily OHLCV.
+
+Runtime requests verified `/health`, `/tickers`, all three metadata endpoints,
+all four analysis endpoints, protected refresh/sync behavior, `/explorer`, and
+bundled JavaScript. The explorer HTML was 76,558 bytes and its application
+script 444 bytes. Empty-data analysis calls returned their defined envelopes or
+explicit missing-data responses; once ingestion advanced, `/tickers` served the
+published SQLite row. The smoke worker was stopped after verification; this did
+not touch the existing local database, existing RustFS container, or production.
+The complete repository suite passes 1,115 tests in 63.17 seconds; Ruff lint and
+format checks pass. The sole warning is the existing Starlette/httpx deprecation.
+
 ## Remaining acceptance work
 
 1. Populate intraday/other-market series and audit the configured universe. Prove complete trading-session

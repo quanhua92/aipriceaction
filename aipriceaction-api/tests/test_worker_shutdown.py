@@ -51,6 +51,19 @@ def test_release_preserves_other_owners_sentinels_and_job_progress(system):
     assert repo.claim_job("replacement", allowed=[("vn", "FPT", "1D")])["id"] == job["id"]
 
 
+def test_catalog_sized_allowed_set_does_not_exceed_sqlite_expression_depth(system):
+    repo, _ = system
+    repo.queue("vn", "FPT", "1D", "bootstrap", cutoff(3), "vps")
+    allowed = [("vn", f"S{i:04d}", "1D") for i in range(1500)]
+    allowed.append(("vn", "FPT", "1D"))
+    claimed = repo.claim_job("catalog-worker", allowed=allowed)
+    assert (claimed["source"], claimed["symbol"], claimed["interval"]) == (
+        "vn",
+        "FPT",
+        "1D",
+    )
+
+
 @pytest.mark.asyncio
 async def test_cancelled_worker_closes_provider_and_immediately_resumes_staged_repair(system):
     repo, settings = system

@@ -206,6 +206,31 @@ def test_metadata_static_and_health(client):
     assert client.get("/public/js/app.js").headers["cache-control"] == "max-age=300, public"
 
 
+def test_fastapi_exposes_every_active_legacy_http_route(client):
+    routes = {
+        (method, route.path)
+        for route in client.app.routes
+        for method in getattr(route, "methods", ())
+    }
+    assert {
+        ("GET", "/tickers"),
+        ("GET", "/health"),
+        ("GET", "/tickers/group"),
+        ("GET", "/tickers/name"),
+        ("GET", "/tickers/info"),
+        ("POST", "/tickers/refresh"),
+        ("GET", "/sync/{key}"),
+        ("POST", "/sync/{key}"),
+        ("GET", "/analysis/top-performers"),
+        ("GET", "/analysis/ma-scores-by-sector"),
+        ("GET", "/analysis/volume-profile"),
+        ("GET", "/analysis/rrg"),
+        ("GET", "/explorer"),
+    } <= routes
+    public = next(route for route in client.app.routes if route.path == "/public")
+    assert public.name == "public"
+
+
 def test_archive_only_ticker_discovery_survives_index_reconstruction(client, tmp_path):
     app = client.app_instance
     repo = app.state.repo

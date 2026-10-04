@@ -166,26 +166,39 @@ uv run python -m scripts.diagnose_vn_feed_audit \
 
 ## Start locally
 
-Use Python 3.13 or newer. From this directory:
+The complete local service runs in Compose. From this directory:
 
 ```sh
-uv sync
-docker compose up -d rustfs
-uv run aipa-api init --s3
-uv run aipa-api serve
+cp .env.example .env
+docker compose up --build -d
 ```
 
 API: `http://127.0.0.1:3001`; explorer: `/explorer`; OpenAPI: `/docs`.
 RustFS S3: `http://127.0.0.1:9100`; console:
 `http://127.0.0.1:9101/rustfs/console/`. Local credentials are `aipa-local` and
 `aipa-local-development-only`. The image digest is pinned to the tested build.
-Compose contains RustFS only, with project-scoped named volumes and loopback
-ports. SQLite, DuckDB, the API, and workers need no additional service.
+Compose builds the Python 3.13 image and runs FastAPI, the Python ingestion
+worker, and RustFS. It contains no legacy Rust API service. SQLite is bind-mounted
+at `./data/aipriceaction.sqlite3`; the live ticker-catalog snapshot and bounded
+archive cache use the same `./data` mount. DuckDB remains embedded in Python.
 
-Copy `.env.example` to `.env` to customize settings. Relative application paths
-resolve inside this project. The API process starts independently of ingestion.
+Initialization refreshes VN, crypto, and Yahoo ticker groups from
+`api.aipriceaction.com`, creates the RustFS bucket, and enables every catalog
+symbol before API and worker startup. A failed catalog refresh stops startup
+instead of silently claiming an outdated universe. Follow ingestion with
+`docker compose logs -f worker`; `docker compose stop` preserves SQLite and
+RustFS data. Set `AIPA_DATA_DIR` to change the host SQLite/data directory.
 
-## Maintain selected tickers
+For host-only development, use Python 3.13 or newer:
+
+```sh
+uv sync
+docker compose up -d rustfs
+uv run aipa-api init --s3 --sync-catalog
+uv run aipa-api serve
+```
+
+## Maintain the ticker universe
 
 Inspect actual retained windows and pending backfill work without changing data:
 
@@ -200,8 +213,11 @@ coverage. A later first date or pending job is an observation requiring review,
 not proof of a missing trading session. Use a new report path to preserve prior
 inventories.
 
-`watchlist.json` selects 59 Vietnamese tickers/indexes, four cryptocurrencies,
-seven global daily series, and SJC daily quotes. Ticker `VCI` is a stock symbol;
+Compose uses `INGEST_UNIVERSE=catalog`: every ticker returned by the live VN,
+crypto, and Yahoo group endpoints is scheduled. `watchlist.json` supplies
+verified listing dates and additional interval choices for known exceptions;
+it does not narrow the Compose universe. Host workflows can retain the smaller
+selection with `INGEST_UNIVERSE=watchlist`. Ticker `VCI` is a stock symbol;
 the optional VCI **data provider** is a separate historical-minute fallback.
 VPS, VNDirect, and DNSE remain preferred. Daily/minute bootstrap starts with VPS; hourly starts
 with DNSE because the live probe found deeper hourly coverage there. Additional

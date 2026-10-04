@@ -1162,22 +1162,25 @@ class Repository:
         now = int(time.time())
         if allowed is not None and not allowed:
             return None
-        extra = ""
-        args = [now, now]
-        if allowed is not None:
-            extra = (
-                " AND ("
-                + " OR ".join("(source=? AND symbol=? AND interval=?)" for _ in allowed)
-                + ")"
-            )
-            args.extend(value for identity in allowed for value in identity)
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
+            extra = ""
+            if allowed is not None:
+                # A catalog-wide worker can have more than SQLite's expression
+                # depth or host-parameter limit. A connection-local table keeps
+                # eligibility bounded and does not publish scheduler state.
+                con.execute(
+                    "CREATE TEMP TABLE allowed_jobs(source TEXT,symbol TEXT,interval TEXT,PRIMARY KEY(source,symbol,interval)) WITHOUT ROWID"
+                )
+                con.executemany(
+                    "INSERT OR IGNORE INTO allowed_jobs VALUES (?,?,?)", sorted(set(allowed))
+                )
+                extra = " AND EXISTS (SELECT 1 FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval)"
             row = con.execute(
                 "SELECT * FROM jobs WHERE status IN ('pending','running') AND kind NOT LIKE 'archive_repair%' AND retry_at<=? AND lease_until<=?"
                 + extra
                 + " ORDER BY updated_at,created_at LIMIT 1",
-                args,
+                (now, now),
             ).fetchone()
             if not row:
                 return None

@@ -1,12 +1,53 @@
 name: aipriceaction-api
 
-# Local object storage only. FastAPI and workers run on the host;
-# SQLite is a local file and DuckDB is an embedded Python library.
+x-api-environment: &api-environment
+  AIPA_API_HOME: /app
+  SQLITE_PATH: /data/aipriceaction.sqlite3
+  ARCHIVE_CACHE_PATH: /data/archive-cache
+  ARCHIVE_OBJECT_PATH: /data/objects
+  ARCHIVE_BACKEND: s3
+  S3_ENDPOINT: http://rustfs:9000
+  S3_BUCKET: ${S3_BUCKET:-aipriceaction-api-local}
+  S3_PREFIX: ${S3_PREFIX:-archive-v2}
+  S3_FORCE_PATH_STYLE: "true"
+  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-aipa-local}
+  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-aipa-local-development-only}
+  AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+  CATALOG_BASE_URL: ${CATALOG_BASE_URL:-https://api.aipriceaction.com}
+  CATALOG_SNAPSHOT_PATH: /data/catalog-snapshot.json
+  INGEST_UNIVERSE: catalog
+  WATCHLIST_PATH: /app/watchlist.json
+  ALLOW_DIRECT: ${ALLOW_DIRECT:-true}
+  HTTP_PROXIES: ${HTTP_PROXIES:-}
+  VN_PROVIDERS: ${VN_PROVIDERS:-vps,vndirect,dnse}
+  VCI_HISTORY_FALLBACK: ${VCI_HISTORY_FALLBACK:-false}
+  PROVIDER_RPM: ${PROVIDER_RPM:-30}
+  WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-3}
+  DAILY_RETENTION_YEARS: ${DAILY_RETENTION_YEARS:-3}
+  HOURLY_RETENTION_YEARS: ${HOURLY_RETENTION_YEARS:-3}
+  MINUTE_RETENTION_YEARS: ${MINUTE_RETENTION_YEARS:-1}
+  SYNC_TOKEN: ${SYNC_TOKEN:-}
+  REFRESH_SECRET: ${REFRESH_SECRET:-}
+  CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com,http://localhost:3001,http://127.0.0.1:3001}
+
+x-api-service: &api-service
+  build:
+    context: .
+  image: aipriceaction-api:local
+  environment: *api-environment
+  volumes:
+    - ${AIPA_DATA_DIR:-./data}:/data
+  depends_on:
+    initialize:
+      condition: service_completed_successfully
+  security_opt:
+    - no-new-privileges:true
+  init: true
+
 services:
   rustfs:
     image: ${RUSTFS_IMAGE:-rustfs/rustfs@sha256:8cc9801755448b71a786705ce76692c77e14936cccd87cf2fc31842e58f4d1ff}
     ports:
-      # Separate from the legacy stack's 9000/9001; local access only.
       - "127.0.0.1:${RUSTFS_API_PORT:-9100}:9000"
       - "127.0.0.1:${RUSTFS_CONSOLE_PORT:-9101}:9001"
     environment:
@@ -26,10 +67,50 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "--show-error", "http://127.0.0.1:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  initialize:
+    build:
+      context: .
+    image: aipriceaction-api:local
+    command: ["aipa-api", "init", "--s3", "--sync-catalog"]
+    environment: *api-environment
+    volumes:
+      - ${AIPA_DATA_DIR:-./data}:/data
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: "no"
+
+  api:
+    <<: *api-service
+    command: ["aipa-api", "serve", "--host", "0.0.0.0", "--port", "3001"]
+    ports:
+      - "127.0.0.1:${AIPA_API_PORT:-3001}:3001"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3001/health', timeout=5).read()",
+        ]
+      interval: 10s
+      timeout: 6s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    <<: *api-service
+    command: ["aipa-api", "worker", "--archive-daily"]
+    restart: unless-stopped
 
 volumes:
   rustfs_data:

@@ -20,6 +20,11 @@ The external production web application's source is outside this repository.
 | `GET /analysis/rrg` | JDK/mascore, dates, source, EMA, benchmark, period, trails, volume threshold |
 | `/explorer`, `/public/...` | Existing explorer/static files and caching/security headers |
 
+The active Rust router is the route authority. Its legacy GitHub-proxy module is
+not mounted by that router, so the explorer's deprecated `/raw/*` note does not
+describe a live API endpoint. FastAPI preserves every mounted route above and
+serves the same explorer assets without starting the Rust server.
+
 Sync keys follow Rust's UUID parser: simple hexadecimal, standard hyphenated,
 braced hyphenated, or `urn:uuid:` plus hyphenated. Hexadecimal case can vary;
 valid forms share one canonical key and secret. Malformed prefixes, extra
