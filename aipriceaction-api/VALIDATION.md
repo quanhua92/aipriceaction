@@ -33,6 +33,25 @@ The complete suite passes 1,087 tests in 63.04 seconds, with the existing
 Starlette/httpx deprecation warning; focused replay/coherence checks and lint
 also pass.
 
+The combined `--all-series --daily-valid-subsets ... --replay-native-daily`
+run completes all 59 symbols in one read-only SQLite snapshot. It records 169
+verified successful controls and eight verified native valid subsets. Exact
+source-record hashes match the prior checkpoint, and every symbol's price
+classes, daily-coherence counts and comparison summary remain unchanged. The
+2,699,606 accepted native minutes still include 41 nonuniform price differences
+and 41,497 uniform-ratio differences. The same eight VCI histories remain
+incomplete: VNINDEX, VN30, CEO, TCH, IDC, SHS, HPG and VGI. This proves that the
+previous control values survive native replay; it does not resolve those data
+disagreements or claim complete source histories.
+
+`data/vn-minute-daily-native-replayed-20261004/report.json` is 2,274,064 bytes;
+its source-bound `comparison-with-prior.json` adds 966 bytes, both under the
+8 MiB cap. Total retained replay receipts, including the standalone daily report,
+are 2,376,040 bytes. No SQLite copies or S3 writes are produced. The live SQLite
+WAL is absent after the audit exits. Post-run `data/` occupies 7,627,924 KiB;
+RustFS `/data` remains 2,701,576 KiB, with 158,264 KiB of logs. Active operational
+rollback and unresolved candidates remain preserved.
+
 ## Official HNX volume-scope diagnostic — 2026-10-04 ICT
 
 The current public HNX listed-equity scale page is

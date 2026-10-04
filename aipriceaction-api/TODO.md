@@ -44,6 +44,11 @@ history through `eb814ab`; they are not additional current open tasks.
   Keep eight rejected full responses excluded and preserve the separate malformed
   subset evidence. Add `--replay-native-daily` to compact universe diagnostics,
   retaining hashes/counts rather than duplicate candles or database copies.
+- [x] Complete the integrated 59-series audit with successful native control
+  replay plus rejected-response valid subsets. All source record hashes and
+  per-symbol price/coherence summaries match the previous checkpoint. Retain
+  2,376,040 bytes of replay receipts; close SQLite and verify the WAL disappears.
+  The same eight incomplete VCI traversals and other data disputes remain open.
 
 - [x] Check recent official HNX scale totals against dated native controls and
   preserve bounded, offline replayable query evidence. Adjacent SHS sessions
