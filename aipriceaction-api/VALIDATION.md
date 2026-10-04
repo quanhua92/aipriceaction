@@ -117,6 +117,52 @@ All 620 tests pass with one existing warning; whole-project lint/format and
 offline wheel/source builds pass. The runtime configuration is not changed by
 these probes or staging commands. No new dependency or Compose service is added.
 
+## Atomic frozen minute snapshot activation — 2026-10-04 ICT
+
+`coherent_snapshot.py` replaces a complete observed VN minute snapshot in one
+SQLite transaction instead of making older archives unavailable after a hot
+revision switch. All incoming candles must share a new VCI revision and retain
+every original hot and active cold timestamp, including frozen public snapshots.
+Preparation uploads verified hot before/after images, monthly cold partitions
+and a content-addressed receipt. Original S3 objects remain readable; superseded
+archive records remain in SQLite for inspection and rollback.
+
+Immediately before activation, the transaction compares the entire captured
+hot row versions, state and active archive metadata. Active minute live/job
+leases and unresolved history markers prevent activation. The same transaction
+replaces hot candles, activates cold pointers, supersedes old archive pointers
+and updates the series state. Idle jobs are cancelled while their staging
+records survive. Old source-check attempts are invalidated and stale freshness
+fields cleared. SQL failures roll back all primary changes. A later manifest
+failure returns `published=true`, `manifest_published=false` and the error;
+operators can retry the checkpoint without treating the data change as absent.
+
+This is a storage primitive, not source-correction authorization or a live
+provider certificate. VCI refresh stays blocked without its independent handoff
+proof. The prepared receipt records a pending operation; the returned activation
+result and current archive index establish whether the transaction/checkpoint
+completed. Whole-database operational rollback still requires the ordinary
+SQLite backup; preserved Parquet images retain the exact candle versions.
+
+The executable `scripts/rehearse_coherent_vci_activation.py` copies actual
+FPT/TPB original hot versions, archive pointers and existing certificates into
+an isolated database, then activates the verified captures in a new RustFS
+prefix. It activates 66,198 FPT and 59,512 TPB rows and passes all 36 raw/SMA/EMA
+minute/15-minute/hourly queries that actually span both storage tiers. Main
+OHLCV, provider/revisions and archive metadata remain unchanged. A second
+database restores all six cold objects and hot images, reproducing every exact
+published row version; preserved original hot images and prepared receipts
+remain readable. Evidence is under
+`data/coherent-vci-activation-rehearsal-20261004/`, particularly `report.json`
+and `restoration-proof.json`.
+
+Sixteen regressions cover complete activation/readback, missing/ambiguous
+replacements, stale hot/archive captures, live/job leases, retained staging,
+history markers, stale source attempts, transactional rollback and honest
+manifest failure reporting. The full suite passes 683 tests with its existing
+warning; lint and format checks pass. Canonical activation and provider handoff
+remain acceptance gates, along with wider selected-universe OHLCV accuracy.
+
 ## Replayable corroborated VCI volume corrections — 2026-10-04 ICT
 
 `vci_volume.py` validates a separate, narrow volume proof. It replays the entire

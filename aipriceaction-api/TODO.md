@@ -21,7 +21,7 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 620 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 683 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -50,6 +50,14 @@ history through `eb814ab`; they are not additional current open tasks.
   FPT/TPB have corroborated isolated 200/900-share repair proposals; VPS/legacy
   daily-volume coverage still needs explicit treatment. Preserve existing dates and prove
   completed OHLCV corrections instead of silently choosing legacy or scaling.
+- [x] Add atomic frozen VN minute snapshot activation. Verify immutable hot
+  before/after images, original archive objects and a prepared receipt before
+  changing SQLite. Replace retained candles, archive pointers and series state
+  together; guard stale captures, active workers, history markers and old source
+  attempts. Preserve cancelled-job staging. Rehearse actual FPT/TPB originals
+  and corrected captures in isolated SQLite/RustFS, then restore exact row
+  versions and pass all 36 boundary queries. Source licensing, native handoff
+  and canonical execution remain open; storage activation is not a market proof.
 - [x] Reject VCI consecutive-minute volume contradictions when cumulative
   totals are supplied. Captured FPT/TPB regressions reproduce both defects;
   sparse minutes and VN daily resets never trigger guessed allocation.
