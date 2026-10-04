@@ -184,7 +184,18 @@ in another terminal:
 
 ```sh
 uv run aipa-api --allow-direct worker
+uv run aipa-api --allow-direct worker --archive-daily
 ```
+
+`--archive-daily` opts into retention maintenance after ingestion cycles. It
+publishes and verifies expired rows, then prunes matching exported versions once
+per UTC day. `--source`, repeated `--symbol`, and `--interval` also scope archival
+selection; within those filters, archival includes stored series while ingestion
+remains watchlist-driven. Failed publication or concurrent corrections leave
+local rows available and retry attempts are spaced at least 60 seconds apart.
+Successful-day tracking is in memory; restarting harmlessly rechecks SQLite.
+This needs no additional service. Keep the worker under your existing process
+supervisor for continuous operation.
 
 For bounded runs and focused recovery:
 
@@ -852,14 +863,16 @@ float precision, 64-bit integers and quoted metadata. Temporary files are remove
 after the write. The full gold snapshot reproduces the previous Parquet bytes
 exactly while writing substantially faster; temporary-space and observed memory
 costs are recorded in `VALIDATION.md`.
-Run archival maintenance daily using your existing scheduler. The worker itself
-does not prune. Interrupted uploads retain local data. Older objects remain
+Run archival maintenance with `worker --archive-daily` or schedule the explicit
+`archive --execute --prune` command. Without the flag, the worker does not prune.
+Interrupted uploads retain local data. Older objects remain
 available while their replacements are being checked.
 
 To verify recurring crypto updates against the populated database:
 
 ```sh
 uv run python scripts/check_crypto_worker.py --cycles 75 --output ./data/crypto-worker-review
+uv run python scripts/check_crypto_worker.py --cycles 75 --archive-daily --output ./data/crypto-worker-maintenance-review
 uv run python scripts/check_crypto_worker.py --verify-only --output ./data/crypto-worker-review
 ```
 
@@ -871,7 +884,9 @@ candle parity, preserved completed history and other-market candles, and
 unchanged series, jobs, handoffs, import receipts and archive index. Daily series
 whose cooldown has not expired remain scheduled. The second command rechecks
 the saved evidence without running ingestion. A bounded run does not install a
-supervisor or perform retention pruning.
+supervisor. Retention pruning occurs only with the explicit `--archive-daily`
+option; the checker verifies its existing archive metadata stays unchanged when
+no rows are expired.
 
 If manifest publication fails, the verified local object/index and local candles
 remain available. A retry can finish publication and pruning. A candidate rejected

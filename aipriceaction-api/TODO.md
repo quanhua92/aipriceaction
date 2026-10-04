@@ -9,7 +9,7 @@ history through `eb814ab`; they are not additional current open tasks.
 
 - FastAPI, SQLite retention, Parquet/DuckDB history, three non-VCI VN adapters,
   workers, operational CLI and web/SDK interfaces are implemented locally.
-- The main local database has 6,019,434 candle/quote records. The current S3 index has 890
+- The main local database has 6,019,512 candle/quote records. The current S3 index has 890
   active objects, 68 handoff certificates, 34 recoveries and one unavailable range.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -18,7 +18,7 @@ history through `eb814ab`; they are not additional current open tasks.
   complete public snapshot, with 279 legacy quote events preserved explicitly.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- The latest complete API suite passes 416 tests; lint/format/offline builds pass.
+- The latest complete API suite passes 420 tests; lint/format/offline builds pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -29,6 +29,12 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Add opt-in daily maintenance to the worker without another service:
+  scoped verified publication/pruning, once-per-UTC-day tracking, retry cooldown,
+  restart idempotence and concurrent-correction retention/re-export. Test outage
+  recovery and ingestion progress. Verify a real 75-cycle run and a populated
+  simulated next-day S3 rollover/902-object restore. Actual multi-day supervised
+  operation remains unproven.
 - [x] Execute the remaining-market rollover: 12,387 rows in 177 partitions,
   exact cold readback and all surviving candle versions, 890-object manifest
   restoration, and 177 HTTP boundary queries covering 24,980 records. No expired

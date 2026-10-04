@@ -6,6 +6,51 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Opt-in worker daily retention maintenance — 2026-10-04 ICT
+
+`worker --archive-daily` runs the existing verified archive publication and
+exact-version pruning after ingestion cycles, once per captured UTC date.
+Market/ticker/interval flags scope its stored-series selection. An unavailable
+object store defers maintenance while subsequent ingestion cycles continue;
+retry attempts are spaced at least 60 seconds apart. Concurrent corrections
+remain local and keep maintenance incomplete until a later export/prune succeeds.
+Restarting rechecks the database and does not duplicate existing objects.
+The default worker behavior and HTTP API interfaces remain unchanged.
+
+The full suite passes **420 tests**, including actual filesystem Parquet rollover,
+partial object-store failure/recovery, same-day/restart idempotence, preserved
+concurrent corrections and continued worker cycles during archive failure. Lint,
+formatting, CLI option discovery and offline package builds pass.
+
+A real populated crypto worker runs **75 cycles** with the opt-in flag from
+October 4 **00:28:58 to 00:30:28 UTC**. All **12 scheduled updates** succeed: two
+minute attempts and one hourly attempt per ticker; daily cooldowns are honored.
+It adds **78 minute candles**, bringing the main database to **6,019,512 records**.
+BTC/ETH minute tails reach **00:29 UTC**, BNB/SOL **00:30 UTC**. All stored crypto
+series remain continuous. **547 completed native candle observations** match
+captured Binance responses exactly. Completed crypto OHLCV/provenance, all
+noncrypto candle fields/versions, series, jobs, archive index, handoffs and import
+receipts stay unchanged. No rows were expired during this run, so canonical
+maintenance publishes no objects.
+
+A populated isolated rehearsal exercises the scheduler's simulated **October 5
+UTC** tick. It publishes and prunes **12 crypto partitions / 5,860 expired rows**
+only in the copy, preserves exact storage-boundary reads and every surviving
+candle/update version, and passes `quick_check`. Same-day calls skip further
+work; a restarted scheduler rechecks and publishes zero objects. A fresh
+database restores **902 objects** from its unique rehearsal manifest and reads
+all moved records exactly. The canonical epoch remains **3523** throughout.
+This proves populated scheduled-retention mechanics, not an actual overnight
+or multi-day supervised daemon.
+
+Backups, native responses and reports remain under
+`data/crypto-worker-daily-maintenance-20261004/` and
+`data/crypto-daily-maintenance-rehearsal-20261004/`. Immutable RustFS receipt:
+`data/worker-daily-maintenance-evidence-20261004.json`. Latest canonical backup
+SHA-256: `522496c1ef13a2d9ac32d5ca900925ead85504a1bad6d68ed9af28e5f29dd92c`.
+Historical/provider coverage, actual multi-day supervision and production
+cutover gates remain open.
+
 ## Executed remaining-market rollover — 2026-10-04 ICT
 
 The due Vietnam/global/gold rollover publishes **177 immutable Parquet objects /
