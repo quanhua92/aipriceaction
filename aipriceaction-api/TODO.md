@@ -103,6 +103,14 @@ history through `eb814ab`; they are not additional current open tasks.
   `data/vn-minute-year-universe-20261004`; the run uses verified candidate VCI
   proofs and makes no canonical writes. Diagnose missing/bad source rows automatically;
   preserve strict ingestion and require evidence before licensing corrections.
+- [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
+  calendars and amendments, requiring the exchange schedules to agree. Reference
+  window has 247 dates. Preserve per-provider missing/unexpected date candidates,
+  calendar/catalog hashes and partial-collection status; never infer actual
+  sessions or market accuracy from date presence. Pass five source/partial-audit
+  tests. A partial 28-symbol replay finds VPS has five dates and VNDirect 127
+  for every checked symbol; 12 VCI series observe all reference dates. Complete
+  collection and full-scope date review remain open.
 
 - [x] Automatically replay captured daily failures through the unchanged parser,
   preserving rejected dates while comparing their valid subsets. All ten failed
