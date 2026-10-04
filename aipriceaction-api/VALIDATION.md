@@ -6,6 +6,62 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## SHB verified local minute activation with explicit precision witnesses — 2026-10-04 ICT
+
+SHB now joins the nine previously licensed local VCI stock minute histories.
+`18b6c03` adds an explicitly declared representation-equivalence witness policy.
+It changes neither source nor canonical values. Fresh full-window daily responses
+from all four comparison feeds reproduce the earlier pattern: 48 DNSE daily
+volumes equal the binary32 conversion of the exact VCI minute sum, with a maximum
+eight-share representation difference. All 48 dates also match exact VNDirect
+daily volume and the final captured VCI cumulative total. Thirty-eight dates
+previously lacked a second exact native daily volume witness.
+
+The policy requires immutable source bytes, correct native endpoint/symbol/window,
+valid integer daily timestamps/volumes, exact VNDirect corroboration and complete
+observed cumulative prefixes. Every representation difference must satisfy the
+specific binary32 conversion; arbitrary numeric tolerances are not allowed.
+An explicit declaration lists every affected date and records that DNSE's
+implementation storage type is unverified. Without it, the usual exact-volume
+gate remains active. Replay rejects changed declarations, invented datatype
+guarantees, altered captures, wrong source bindings, missing exact peers and
+changed cumulative prefixes. Activation reports label exact and rounded feeds
+separately. DNSE's reported integers remain untouched.
+
+Fresh minute controls cover September 5, November 20, December 3, April 2 and
+September 16. Three VCI page sizes reproduce each observed-day total. Preferred
+minute providers do not recover usable older controls; on September 16, DNSE
+and VCI totals match while VNDirect returns a different total. That separate
+source difference is retained, not explained as rounding. The public chart
+datatype remains an inference from numerical equivalence; the reviewed official
+[DNSE OHLC documentation](https://developers.dnse.com.vn/docs/dnse/get-ohlc-history/)
+does not establish the internal type of the public chart endpoint used here.
+
+The complete 60,985-candle candidate passes all 270 observed dates. All 31 minute
+pages and three native daily captures are replayed before mutation; a fresh
+2,000-candle overlap matches across nine observed sessions. Maximum retained
+native daily price disagreement is 0.96 VND. Guarded publication preserves every
+existing timestamp, a whole SQLite backup and immutable original images.
+Canonical SHB contains 55,787 SQLite candles and 5,198 S3 candles in two objects.
+Forty native refresh rows succeed, all 18 boundary queries match references and
+all 28 actual HTTP cases pass. Scoped restoration reproduces all 60,985 candles
+and exact hot versions from S3, validates its native certificate and reads old
+before-images. Unrelated VN OHLCV/provider basis remains unchanged.
+
+Reports are `data/shb-fresh-four-provider-daily-20261004/report.json`,
+`data/vn-daily-precision-scoped-evidence-20261004/report.json`,
+`data/shb-local-activation-20261004/report.json` and
+`data/shb-local-http-restoration-20261004/report.json`. Fifty-eight immutable input
+objects include the explicit precision declaration and its native source captures.
+The restarted local worker uses the activation directory's
+`active-volume-proofs.json`, containing 22 correction proofs for ten licensed
+VCI series; the precision policy itself is corroboration, not a correction.
+The current manifest has 888 objects, 79 handoff certificates, 34 recoveries and
+eight protected history markers. The refreshed audit removes SHB's old basis
+finding; MWG/VN30/VNINDEX remain open. All 797 tests pass; lint and formatting pass.
+Independent session completeness, remaining cross-market quality/coverage and
+production readiness are still unproven.
+
 ## GAS verified local minute activation — 2026-10-04 ICT
 
 GAS now joins the eight previously licensed local VCI stock minute histories.

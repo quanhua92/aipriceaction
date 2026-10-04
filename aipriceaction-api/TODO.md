@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 889 active objects, 78 handoff certificates, 34 recoveries and
+  The S3 index has 888 active objects, 79 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,9 +21,9 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- Nine licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
-  GEE, TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
-- The latest complete API suite passes 781 tests; lint/format checks pass.
+- Ten licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, GAS,
+  GEE, SHB, TCB, VHM and VND. The three preferred providers remain unchanged for other sources/windows.
+- The latest complete API suite passes 797 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -88,7 +88,18 @@ history through `eb814ab`; they are not additional current open tasks.
   Retain all four minute/daily witness captures behind the peer proof in S3,
   plus the original VCI capture. Curate 20 proofs for nine licensed VCI series;
   MWG/SHB/VN30/VNINDEX interval-basis findings remain open.
-- [ ] Reconcile MWG's two full-day volume differences and SHB's observed binary32 rounding equivalence.
+- [x] Recheck all four daily feeds and five native minute dates for SHB.
+  Fresh responses reproduce all 48 observed DNSE binary32-equivalent volume
+  differences, with exact VNDirect and captured cumulative corroboration.
+  Add explicitly declared rounded witnesses, preserving every raw and canonical
+  value and keeping provider storage type unverified. Default gates stay exact;
+  edited declarations, source bindings, missing exact peers and changed cumulative
+  prefixes reject the scoped policy. Full source replay, fresh 2,000-candle overlap,
+  guarded activation, 40-row refresh, 18 boundary queries, 28 HTTP cases and exact
+  S3 restoration pass for all 60,985 observed SHB candles. Retain the declaration
+  and all input captures in immutable S3 evidence. Curate 22 correction proofs for
+  ten licensed VCI series; MWG/VN30/VNINDEX interval-basis findings remain open.
+- [ ] Reconcile MWG's two full-day volume differences.
   Do not assign missing volume to an adjacent candle or silently normalize peers.
 - [x] Implement the explicitly approved opt-in VCI minute-history fallback.
   Keep the three preferred providers and daily/hourly sourcing unchanged; append
