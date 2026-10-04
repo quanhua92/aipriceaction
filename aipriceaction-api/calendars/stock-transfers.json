@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "source": "vn",
+  "events": [
+    {
+      "symbol": "GEE",
+      "kind": "venue_transfer",
+      "from_venue": "UPCOM",
+      "to_venue": "HOSE",
+      "last_trading_date": "2024-07-18",
+      "first_trading_date": "2024-08-14",
+      "sources": [
+        {
+          "role": "last_trading_day",
+          "notice": "806/QD-SGDHN",
+          "published": "2024-07-10",
+          "url": "https://owa.hnx.vn/ftp/cims/2024/7_W2/000000013925919_806qd_0001.pdf",
+          "distribution": "Official HNX attachment.",
+          "sha256": "7e5ad99129d51a512bc3434a711e08731fc8087a13eb8afaf4e077224dce6b8b",
+          "bytes": 435659,
+          "transcription_verification": "Both signed decision pages visually checked. Page 1 names GEE, cancellation on July 19 and last UPCoM trading on July 18, 2024."
+        },
+        {
+          "role": "first_trading_day",
+          "notice": "1444/TB-SGDHCM",
+          "published": "2024-08-07",
+          "url": "https://static2.vietstock.vn/vietstock/2024/8/8/20240808_20240807___gee___tb_so_1444_vv_niem_yet_va_ngay_giao_dich_dau_tien.pdf",
+          "distribution": "Vietstock mirror of the signed HOSE notice, linked by PHS.",
+          "sha256": "d00f19dc99b52a61cc82cd1b2cfa56d4eab381602c90f547d92a1474498aed88",
+          "bytes": 243806,
+          "transcription_verification": "Signed one-page notice visually checked. GEE official first trading date is August 14, 2024; July 2 is the listing-effective date and is not used as a trading boundary."
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Reviewed transfer boundaries explain only intervening scheduled-date absences; they do not validate OHLCV values.",
+    "The last old-venue session and first new-venue session remain expected trading dates.",
+    "Observed candles inside a declared transfer interval remain visible as conflicts; no row is removed or fabricated.",
+    "Source-byte binding does not automate transcription or cryptographically authenticate signatures.",
+    "This file supports review annotations only, not canonical publication, provider corrections or runtime data exclusion."
+  ]
+}

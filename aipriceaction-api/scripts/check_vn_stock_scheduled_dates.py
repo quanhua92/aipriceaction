@@ -11,6 +11,7 @@ from pathlib import Path
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import DataError
 from scripts.check_hose_scheduled_dates import dates_between, load_reference_calendar
+from scripts.stock_transfer_evidence import load_transfers
 
 
 def shared_schedule(hose, hnx, first, last):
@@ -45,6 +46,9 @@ def run(args):
     hnx = load_reference_calendar(args.hnx_calendar, args.hnx_source, args.hnx_amendment)
     first, last = date.fromisoformat(args.start_date), date.fromisoformat(args.end_date)
     expected = shared_schedule(hose, hnx, first, last)
+    transfers, transfer_dates = load_transfers(
+        getattr(args, "transfers", None), getattr(args, "transfer_source", [])
+    )
     start = int(datetime.combine(first, datetime.min.time(), UTC).timestamp())
     before = int(datetime.combine(last + timedelta(days=1), datetime.min.time(), UTC).timestamp())
     report = {
@@ -68,7 +72,7 @@ def run(args):
         ],
         "limitations": [
             "Absent dates are review candidates, not verified missing stock sessions.",
-            "Listings, historical venue transfers, suspensions and no-trade dates are unverified.",
+            "Listings, transfers outside explicit reviewed evidence, suspensions and no-trade dates are unverified.",
             "SQLite absence does not establish absence from merged SQLite/S3 API history.",
             "Date presence does not certify OHLCV values or complete intraday timestamps.",
             "Equal announced weekday schedules do not establish actual exchange operations.",
@@ -77,6 +81,12 @@ def run(args):
         "actual_session_completeness_proven": False,
         "series": [],
     }
+    if transfers is not None:
+        report["transfer_evidence"] = {
+            "declaration_sha256": hashlib.sha256(args.transfers.read_bytes()).hexdigest(),
+            "events": transfers["events"],
+            "limitations": transfers["limitations"],
+        }
     with sqlite3.connect(args.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
         con.execute("BEGIN")
         for symbol in args.symbol:
@@ -97,6 +107,16 @@ def run(args):
                 ],
                 "unexpected_dates": [d.isoformat() for d in sorted(observed - expected)],
             }
+            if transfers is not None:
+                absent = expected - observed
+                reviewed = transfer_dates.get(symbol, set())
+                entry["explained_transfer_dates"] = [
+                    d.isoformat() for d in sorted(absent & reviewed)
+                ]
+                entry["remaining_absent_dates"] = [d.isoformat() for d in sorted(absent - reviewed)]
+                entry["observed_transfer_dates"] = [
+                    d.isoformat() for d in sorted(observed & reviewed)
+                ]
             if args.interval == "1D":
                 entry["non_midnight_daily_timestamps"] = [t for t in timestamps if t % 86400]
             report["series"].append(entry)
@@ -128,4 +148,6 @@ if __name__ == "__main__":
     parser.add_argument("--start-date", required=True)
     parser.add_argument("--end-date", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--transfers", type=Path)
+    parser.add_argument("--transfer-source", type=Path, action="append", default=[])
     run(parser.parse_args())

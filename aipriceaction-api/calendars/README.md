@@ -122,3 +122,34 @@ timestamp.
 stock sessions. The report makes no completeness pass claim, does not infer
 listing or transfer dates, and cannot publish candles. Before treating SQLite
 absence as served-data absence, verify the API's merged SQLite/S3 history reader.
+
+## Reviewed stock transfers
+
+`stock-transfers.json` records manually verified old-venue and new-venue trading
+boundaries. GEE's signed HNX decision 806/QD-SGDHN names July 18, 2024 as its
+last UPCoM session. Signed HOSE notice 1444/TB-SGDHCM names August 14 as its
+official first session, distinct from the July 2 listing-effective date. Both
+documents were downloaded and all pages visually checked; the HOSE copy is
+explicitly identified as a Vietstock mirror. The source roles and byte hashes
+are retained in the declaration.
+
+For GEE's 2024 review, add these arguments to the corresponding 2024 exchange
+calendar inputs:
+
+```sh
+  --transfers calendars/stock-transfers.json \
+  --transfer-source data/vn-stock-transfer-sources-20261004/gee-upcom-cancellation.pdf \
+  --transfer-source data/vn-stock-transfer-sources-20261004/gee-hose-first-notice.pdf
+```
+
+The opt-in annotation requires both sources per event in declaration order.
+Missing, extra, altered or swapped source files reject the review. Boundaries
+must be ordered weekday dates with a bounded transfer interval, and overlapping
+events reject. The old final and new first sessions are never excluded.
+
+`absent_shared_schedule_dates` remains intact. Separate `explained_transfer_dates`
+and `remaining_absent_dates` identify only the intervening scheduled weekdays.
+Observed candles inside the transfer interval, including weekend observations,
+remain visible in `observed_transfer_dates`; no rows are deleted or synthesized.
+These annotations do not license source corrections or runtime exclusions and
+do not turn the review into an OHLCV accuracy or full-completeness certificate.
