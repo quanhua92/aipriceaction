@@ -29,6 +29,7 @@ x-api-environment: &api-environment
   SYNC_TOKEN: ${SYNC_TOKEN:-}
   REFRESH_SECRET: ${REFRESH_SECRET:-}
   CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com,http://localhost:3001,http://127.0.0.1:3001,http://0.0.0.0:3001}
+  AIPA_LOG_LEVEL: ${AIPA_LOG_LEVEL:-INFO}
 
 x-api-service: &api-service
   build:

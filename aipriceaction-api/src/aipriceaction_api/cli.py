@@ -17,6 +17,7 @@ from .config import Settings
 from .daily_adoption import adopt_daily_snapshot
 from .domain import DataError, cutoff, interval, parse_time
 from .importing import import_bundle, import_csv, import_historical_snapshot
+from .logging_config import configure_logging
 from .migration import LegacyImporter
 from .providers import Providers
 from .public_history import recover_public_year
@@ -324,9 +325,15 @@ async def execute(args, settings):
 
         from .app import create_app
 
-        # Access log URLs can contain sync secrets: omit raw URL logging.
+        # The application middleware logs safe paths without query-string secrets.
         server = uvicorn.Server(
-            uvicorn.Config(create_app(settings), host=args.host, port=args.port, access_log=False)
+            uvicorn.Config(
+                create_app(settings),
+                host=args.host,
+                port=args.port,
+                access_log=False,
+                log_config=None,
+            )
         )
         await server.serve()
         return
@@ -751,8 +758,7 @@ async def execute_with_shutdown(args, settings, *, restore_signal=True):
 
 def main(argv=None):
     args = parser().parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    logging.getLogger("httpx").setLevel(logging.WARNING)
+    configure_logging()
     handles_shutdown = args.command in ("worker", "bootstrap")
     previous = signal.getsignal(signal.SIGTERM) if handles_shutdown else None
     try:

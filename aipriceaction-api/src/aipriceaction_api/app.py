@@ -96,16 +96,25 @@ def create_app(settings: Settings | None = None):
     @asynccontextmanager
     async def lifespan(app):
         nonlocal executor
+        log.info(
+            "api startup database=%s archive_backend=%s read_concurrency=%s",
+            settings.database,
+            settings.archive_backend,
+            settings.read_concurrency,
+        )
         executor = ThreadPoolExecutor(
             max_workers=settings.read_concurrency, thread_name_prefix="aipa-read"
         )
         try:
             await background(repo.initialize)
             await background(catalog.initialize, repo)
+            log.info("api ready")
             yield
         finally:
+            log.info("api shutdown requested")
             responses.clear()
             executor.shutdown(wait=False, cancel_futures=True)
+            log.info("api stopped")
 
     app = FastAPI(title="AIPriceAction API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
@@ -117,19 +126,54 @@ def create_app(settings: Settings | None = None):
 
     @app.middleware("http")
     async def limits_and_headers(request: Request, call_next):
+        request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+        request_id = request_id[:64].replace("\n", "").replace("\r", "")
+        forwarded = request.headers.get("x-forwarded-for")
+        client_ip = (
+            forwarded.split(",", 1)[0].strip()[:64]
+            if forwarded
+            else request.client.host
+            if request.client
+            else "-"
+        )
+        began = time.monotonic()
+
+        def finish(response):
+            elapsed_ms = (time.monotonic() - began) * 1000
+            status = response.status_code
+            level = (
+                logging.ERROR
+                if status >= 500
+                else logging.WARNING
+                if status >= 400
+                else logging.INFO
+            )
+            log.log(
+                level,
+                "http response request_id=%s method=%s path=%s client_ip=%s status=%s latency_ms=%.1f",
+                request_id,
+                request.method,
+                request.url.path,
+                client_ip,
+                status,
+                elapsed_ms,
+            )
+            response.headers["x-request-id"] = request_id
+            return response
+
         try:
             size = int(request.headers.get("content-length", "0"))
         except ValueError:
-            return JSONResponse({"error": "Invalid content-length"}, 400)
+            return finish(JSONResponse({"error": "Invalid content-length"}, 400))
         if size > settings.body_limit:
-            return JSONResponse({"error": "Request body exceeds limit"}, 413)
+            return finish(JSONResponse({"error": "Request body exceeds limit"}, 413))
         # Bound actual bytes even for chunked/misreported requests; don't buffer
         # an unbounded request body before checking it.
         body = bytearray()
         async for chunk in request.stream():
             body.extend(chunk)
             if len(body) > settings.body_limit:
-                return JSONResponse({"error": "Request body exceeds limit"}, 413)
+                return finish(JSONResponse({"error": "Request body exceeds limit"}, 413))
         request._body = bytes(body)
         try:
             async with asyncio.timeout(settings.query_timeout):
@@ -146,7 +190,7 @@ def create_app(settings: Settings | None = None):
                 "css": "max-age=3600, public",
                 "html": "no-cache, no-store, must-revalidate",
             }.get(suffix, "max-age=86400, public")
-        return response
+        return finish(response)
 
     @app.exception_handler(DataError)
     async def data_error(request, exc):
@@ -171,7 +215,7 @@ def create_app(settings: Settings | None = None):
     @app.exception_handler(Exception)
     async def unexpected_error(request, exc):
         # Log exception class and path, not SQL/boto credentials or query strings.
-        log.error("request failed path=%s kind=%s", request.url.path, type(exc).__name__)
+        log.exception("request exception path=%s kind=%s", request.url.path, type(exc).__name__)
         payload = {"error": "Internal server error"}
         if request.url.path.startswith("/sync/"):
             payload["success"] = False

@@ -104,6 +104,13 @@ class Worker:
             return await asyncio.wait_for(self._repair_page(job), timeout=self.deadline)
         except TimeoutError:
             reason = "Provider page exceeded worker time budget"
+            log.warning(
+                "recovery timeout source=%s symbol=%s interval=%s provider=%s",
+                job["source"],
+                job["symbol"],
+                job["interval"],
+                job["provider"],
+            )
             self.repo.finding(
                 job["source"], job["symbol"], job["interval"], "incomplete_repair", reason
             )
@@ -196,6 +203,19 @@ class Worker:
             return len(prepared)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+            log.log(
+                logging.WARNING if isinstance(exc, DataError) else logging.ERROR,
+                "recovery failed source=%s symbol=%s interval=%s provider=%s kind=%s reason=%s",
+                job["source"],
+                job["symbol"],
+                job["interval"],
+                job["provider"],
+                type(exc).__name__,
+                reason,
+                exc_info=(type(exc), exc, exc.__traceback__)
+                if not isinstance(exc, DataError)
+                else None,
+            )
             self.repo.finding(
                 job["source"], job["symbol"], job["interval"], "incomplete_repair", reason
             )
@@ -333,6 +353,12 @@ class Worker:
         try:
             return await asyncio.wait_for(self._sync(entry, iv), timeout=self.deadline)
         except TimeoutError:
+            log.warning(
+                "update timeout source=%s symbol=%s interval=%s",
+                entry["source"],
+                entry["symbol"],
+                iv,
+            )
             self.repo.finding(
                 entry["source"],
                 entry["symbol"],
@@ -542,6 +568,18 @@ class Worker:
             return len(rows)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+            log.log(
+                logging.WARNING if isinstance(exc, DataError) else logging.ERROR,
+                "update failed source=%s symbol=%s interval=%s kind=%s reason=%s",
+                source,
+                symbol,
+                iv,
+                type(exc).__name__,
+                reason,
+                exc_info=(type(exc), exc, exc.__traceback__)
+                if not isinstance(exc, DataError)
+                else None,
+            )
             if attempt is not None:
                 self.repo.fail_source_check(source, symbol, iv, attempt, reason)
             self.repo.finding(source, symbol, iv, "provider_failure", reason)
@@ -901,6 +939,15 @@ class Worker:
             self.configuration = [entry for entry in self.configuration if entry["intervals"]]
             if not self.configuration:
                 raise DataError("No configured watchlist entries match worker filters", 400)
+            log.info(
+                "worker started owner=%s series=%s source=%s symbols=%s interval=%s archive_daily=%s",
+                self.owner,
+                sum(len(entry["intervals"]) for entry in self.configuration),
+                source or "all",
+                len(symbols) if symbols else "all",
+                interval or "all",
+                archive_daily,
+            )
             self.bootstrap()
             maintenance = None
             if archive_daily:
@@ -936,3 +983,4 @@ class Worker:
                         await asyncio.shield(maintenance_task)
                 finally:
                     self.repo.release_worker_leases(self.owner)
+                    log.info("worker stopped owner=%s", self.owner)
