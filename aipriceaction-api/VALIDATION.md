@@ -6,6 +6,49 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Automated selected-universe minute OHLCV validation — 2026-10-04 ICT
+
+`scripts.validate_ohlcv` connects the retained-storage inventory, native-provider
+comparison and live SQLite comparison into one read-only command. It selects
+the configured VN universe automatically, captures original provider responses,
+and writes exceptions for provider failures, absent observations, timestamp
+coverage, value disagreement and disagreement with served SQLite values. It also
+identifies timestamps where all four providers agree but SQLite differs or lacks
+the row. Provider agreement remains evidence rather than a truth oracle; no
+winner, correction or automatic publication is licensed by this check.
+
+The actual October 2, 2026 minute run covered **59 symbols** and **236 provider
+windows** across VPS, VNDirect, DNSE and the explicitly enabled VCI minute probe.
+All returned without request errors. The observed union contained **11,311**
+four-provider agreements, **810** value disagreements and **26** timestamps
+without all four providers present. The exception report contains six series
+with provider coverage differences, 57 with value disagreement, and 89
+SQLite/provider comparison records. These are exception categories, not 152
+incorrect candles or independently proven trading gaps.
+
+Reprocessing the same saved provider captures with the current read-only SQLite
+reader found **zero** conflicts against unanimous provider values and **zero**
+missing timestamps unanimously supported by the four feeds. Other source
+disagreements remain visible: indices account for 221 VNINDEX and 194 VN30
+value-disagreement timestamps; their unresolved basis is not overwritten.
+This completed-session sample does not certify all retained years, actual
+exchange sessions or cold objects. VCI's runtime adapter remains minute-only;
+unsupported intervals are explicit errors rather than silently accepted coverage.
+
+Ten focused comparison/pipeline tests pass, including an end-to-end fake-provider
+run proving all four adapters are requested, source disagreement and unanimous
+SQLite conflicts are distinguished, SQLite bytes stay unchanged, and no test
+database is created. Empty/error feeds cannot certify data; zero-price raw
+comparisons no longer divide by zero. Lint and format checks pass.
+
+Reports and original captures occupy approximately **24 MiB** in
+`data/automated-vn-minute-validation-20261004`, with no SQLite copies or remote
+object writes. `report.json` records the original run;
+`report-current.json` and `sqlite-comparison-current.json` record reprocessing
+of those same provider captures with unanimous-conflict classification. The
+normal command emits that classification directly. Total `data/` remains
+approximately **5.6 GiB**. Full retained-window automation remains open.
+
 ## Source-bound NAB transfer interval review — 2026-10-04 ICT
 
 The transfer catalog now includes NAB. Signed HNX decision **75/QD-SGDHN**,

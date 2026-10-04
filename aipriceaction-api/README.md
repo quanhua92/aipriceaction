@@ -33,6 +33,24 @@ interface does not require preserving erroneous candle values. Compare prices,
 volumes and coverage separately; shared upstreams make agreement dependent.
 Verified coherent corrections preserve original evidence and rollback versions.
 
+Run the automated selected-universe minute OHLCV check with one command:
+
+```sh
+uv run python -m scripts.validate_ohlcv --interval 1m \
+  --daily-start 2026-09-21 --intraday-start 2026-10-02 --end-date 2026-10-02 \
+  --output data/automated-vn-minute-review
+```
+
+Choose completed dates and a new output directory. With no `--symbol`, every
+selected VN ticker is checked. The runner inventories retained storage and jobs,
+compares VPS/VNDirect/DNSE/VCI, then compares returned candles with SQLite. Its
+`report.json` lists provider errors, absent observations, timestamp coverage and
+price/volume discrepancies; detail and original captures remain alongside it.
+No candle is changed and no database copy is created. VCI probing is minute-only;
+use the existing four-feed comparison below for daily/hourly checks. Agreement
+is not a market-truth oracle, and this bounded recent run does not certify the
+whole retained window or cold archive. Only exceptions need further investigation.
+
 A read-only recent comparison captures all four feeds and reports all six pairs:
 
 ```sh

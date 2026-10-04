@@ -19,6 +19,7 @@ from aipriceaction_api.providers import Providers
 from scripts.stage_yahoo_daily_history import RecordingTransport
 
 FEEDS = ("vps", "vndirect", "dnse", "legacy")
+NATIVE_FEEDS = ("vps", "vndirect", "dnse", "vci")
 FIELDS = ("open", "high", "low", "close", "volume")
 
 
@@ -40,7 +41,7 @@ def compare(feeds):
         shared = sorted(left.keys() & right.keys())
         differences = {
             t: max(
-                100 * abs(left[t][f] - right[t][f]) / max(abs(left[t][f]), abs(right[t][f]))
+                100 * abs(left[t][f] - right[t][f]) / max(abs(left[t][f]), abs(right[t][f]), 1e-300)
                 for f in FIELDS[:4]
             )
             for t in shared
@@ -82,7 +83,15 @@ def compare(feeds):
 
 
 async def run(args):
-    settings = replace(Settings.from_env(), proxies=(), allow_direct=True)
+    native = getattr(args, "native_providers", False)
+    selected_feeds = NATIVE_FEEDS if native else FEEDS
+    base = Settings.from_env()
+    settings = replace(
+        base,
+        proxies=(),
+        allow_direct=True,
+        vci_history_fallback=native or base.vci_history_fallback,
+    )
     entries = json.loads(settings.watchlist.read_text())["vn"]
     symbols = args.symbol or [e if isinstance(e, str) else e["symbol"] for e in entries]
     if len(set(symbols)) != len(symbols):
@@ -190,7 +199,7 @@ async def run(args):
             if providers:
                 await providers.close()
 
-    await asyncio.gather(*(collect(feed) for feed in FEEDS))
+    await asyncio.gather(*(collect(feed) for feed in selected_feeds))
     comparisons = []
     errors = []
     total_counts, total_outliers = Counter(), Counter()
@@ -207,7 +216,7 @@ async def run(args):
         comparisons.append({"symbol": symbol, "interval": iv, **comparison})
     report = {
         "checked_at": datetime.now(UTC).isoformat(),
-        "feeds": FEEDS,
+        "feeds": selected_feeds,
         "symbols": symbols,
         "intervals": intervals,
         "requests": completed,
@@ -235,6 +244,7 @@ async def run(args):
         ),
         flush=True,
     )
+    return report
 
 
 if __name__ == "__main__":
@@ -245,4 +255,9 @@ if __name__ == "__main__":
     parser.add_argument("--daily-start", required=True)
     parser.add_argument("--intraday-start", required=True)
     parser.add_argument("--end-date", required=True)
+    parser.add_argument(
+        "--native-providers",
+        action="store_true",
+        help="Compare VPS/VNDirect/DNSE/VCI directly instead of using legacy as the fourth feed",
+    )
     asyncio.run(run(parser.parse_args()))

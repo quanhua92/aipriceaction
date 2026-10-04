@@ -38,6 +38,17 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Add one automated OHLCV review command that inventories selected storage,
+  compares all four native VN minute providers and checks SQLite against them.
+  Run it across all 59 selected VN symbols for October 2, 2026: 236 provider
+  windows, no request errors, no conflicts against unanimous provider values
+  and no missing unanimously supported timestamps. Report all other differences
+  as exceptions; never select a winner or mutate candles. No database copies.
+- [ ] Extend automated cross-provider checks to bounded pages spanning the full
+  retained daily/minute windows and cold archive boundaries. Keep unsupported
+  ranges and provider-basis disagreements explicit, prioritize material OHLCV
+  exceptions, and avoid making routine progress depend on manual ticker research.
+
 - [x] Verify NAB transfer boundaries against signed HNX/HOSE notices. Annotate
   its six absent 2024 daily dates as the transfer interval, keep both boundary
   sessions expected and preserve every original stock candidate date list.
