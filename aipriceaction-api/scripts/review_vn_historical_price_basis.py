@@ -14,6 +14,7 @@ from statistics import median
 
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError, date_bounds
+from aipriceaction_api.providers import Providers
 from aipriceaction_api.volume_corrections import apply_records
 from scripts.artifact_budget import ArtifactBudget
 from scripts.compare_vn_feeds import FEEDS, FIELDS
@@ -21,6 +22,7 @@ from scripts.ohlcv_disagreements import price_class
 from scripts.probe_vn_minute_basis import session
 from scripts.replay_daily_feed_failures import replay_native
 from scripts.replay_vci_candidate_pages import replay_record
+from scripts.verify_native_daily_controls import verify_record
 from scripts.vn_daily_volume_evidence import captured
 
 
@@ -302,6 +304,31 @@ async def verified_daily_subsets(settings, daily_root, subset_root, daily_report
     return records, identities, hashlib.sha256(raw_report).hexdigest()
 
 
+async def verified_successful_daily_controls(settings, daily_root, daily_report, symbols):
+    identities = {}
+    for symbol in symbols:
+        for feed in Providers.VN:
+            path = daily_root / feed / f"{symbol}-1D.json"
+            raw = path.read_bytes()
+            record = json.loads(raw)
+            if "error" in record and "rows" not in record:
+                continue
+            result = await verify_record(
+                settings,
+                daily_root,
+                symbol,
+                feed,
+                record,
+                daily_report["daily_start"],
+                daily_report["end_date"],
+            )
+            identities[(symbol, feed)] = {
+                **result,
+                "original_record_sha256": hashlib.sha256(raw).hexdigest(),
+            }
+    return identities
+
+
 async def run(args):
     raw_review = (args.review / "report.json").read_bytes()
     reviewed = json.loads(raw_review)
@@ -335,6 +362,14 @@ async def run(args):
     settings = replace(
         Settings.from_env(), vci_history_fallback=True, vci_volume_proofs=args.proofs
     )
+    native_replay = getattr(args, "replay_native_daily", False)
+    if native_replay and not all_series:
+        raise DataError("Native daily replay requires the compact diagnostic-only review")
+    native_identities = (
+        await verified_successful_daily_controls(settings, args.daily, daily_report, candidates)
+        if native_replay
+        else {}
+    )
     subset_root = getattr(args, "daily_valid_subsets", None)
     subsets, subset_identities, subset_sha = {}, {}, None
     if subset_root is not None:
@@ -358,12 +393,17 @@ async def run(args):
         "compact_diagnostic_only": all_series,
         "daily_valid_subsets_sha256": subset_sha,
         "replayed_native_daily_subsets": len(subsets),
+        "replayed_successful_native_daily_controls": len(native_identities),
         "selected_symbols": candidates,
         "series": [],
         "completed": False,
         "limitations": [
             "Observed ratios and transition dates are descriptions, not inferred adjustment factors or corporate-action proof.",
-            "Successful daily references are saved normalized observations with original errors retained; only explicitly supplied rejected native subsets are reparsed here.",
+            (
+                "Successful native daily references are reparsed from bound captures; legacy remains a saved observation and original native errors remain attached."
+                if native_replay
+                else "Successful daily references are saved normalized observations with original errors retained; only explicitly supplied rejected native subsets are reparsed here."
+            ),
             "Minute session aggregates cover observed candles, not independently proven complete market sessions.",
             "Contiguous regimes follow observed dates; they do not prove trading or listing on absent dates.",
             "Price agreement within one VND is a reported comparison, not a publication license.",
@@ -418,6 +458,20 @@ async def run(args):
                 raw_daily = path.read_bytes()
                 daily_record = json.loads(raw_daily)
                 key = (symbol, feed)
+                native_identity = native_identities.get(key)
+                if (
+                    native_replay
+                    and feed in Providers.VN
+                    and "rows" in daily_record
+                    and not native_identity
+                ):
+                    raise DataError("Successful daily record was not verified by native replay")
+                if (
+                    native_identity
+                    and native_identity["original_record_sha256"]
+                    != hashlib.sha256(raw_daily).hexdigest()
+                ):
+                    raise DataError("Original daily record changed after native verification")
                 subset_identity = subset_identities.get(key)
                 if (
                     subset_identity
@@ -434,6 +488,7 @@ async def run(args):
                     "sha256": hashlib.sha256(raw_daily).hexdigest(),
                     "original_error": daily_record.get("error"),
                     "verified_valid_subset": subset_identity,
+                    "verified_native_control": native_identity,
                 }
             detail = timeline(local, source, daily)
             result["series"].append(
@@ -476,6 +531,11 @@ if __name__ == "__main__":
         "--daily-valid-subsets",
         type=Path,
         help="Replay saved diagnostic subsets of rejected native daily responses",
+    )
+    parser.add_argument(
+        "--replay-native-daily",
+        action="store_true",
+        help="Reparse successful native daily references and verify original request bindings",
     )
     parser.add_argument(
         "--all-series",

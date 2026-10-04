@@ -3,6 +3,36 @@
 The replacement runs locally. This report separates implementation checks from
 full data coverage and production cutover acceptance.
 
+## Successful native daily controls replayed — 2026-10-04 ICT
+
+`scripts.verify_native_daily_controls` verifies every successful VPS, VNDirect
+and DNSE daily record in the selected 59-symbol comparison directly from its
+captured raw response. It checks capture length/SHA256, confines the capture to
+its source directory, and matches its recorded URL against the request generated
+by the unchanged runtime adapter. This includes the native stock/index endpoint,
+symbol, resolution, range and countback. Saved timestamps and all OHLCV fields
+must equal the replayed normalized rows, including numeric representation.
+Provider clients close after success and failure. No live network requests occur.
+
+All 169 successful controls pass, covering 124,764 native daily observations:
+41,327 VPS, 39,866 VNDirect and 43,571 DNSE. The eight previously rejected
+responses remain rejected. The separate valid-subset diagnostics retain their
+original malformed dates. Legacy is excluded from native verification.
+The standalone receipt is
+`data/vn-native-daily-control-replay-20261004/report.json` (101,010 bytes),
+under a 512 KiB artifact cap. It stores counts and hashes instead of duplicate
+OHLCV rows or databases. Parser/provenance agreement does not prove market
+accuracy, adjustment semantics or complete trading-session coverage.
+
+The compact universe review supports `--replay-native-daily` to require this
+verification before opening its read-only SQLite transaction. It attaches each
+verified native control and rechecks the original record hash before comparison;
+new or changed successful records cannot silently become unverified witnesses.
+This option is restricted to diagnostic reports and cannot license publication.
+The complete suite passes 1,087 tests in 63.04 seconds, with the existing
+Starlette/httpx deprecation warning; focused replay/coherence checks and lint
+also pass.
+
 ## Official HNX volume-scope diagnostic — 2026-10-04 ICT
 
 The current public HNX listed-equity scale page is

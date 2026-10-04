@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 1,057 tests; lint/format checks pass.
+- The latest complete API suite passes 1,087 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -37,6 +37,13 @@ history through `eb814ab`; they are not additional current open tasks.
   do not imply those exact titles were all committed separately.
 
 ## Remaining acceptance gates
+
+- [x] Reparse all 169 successful native daily controls in the saved selected
+  universe through the current runtime adapters; verify recorded request source,
+  symbol, interval, date window and capture hashes. All 124,764 rows match exactly.
+  Keep eight rejected full responses excluded and preserve the separate malformed
+  subset evidence. Add `--replay-native-daily` to compact universe diagnostics,
+  retaining hashes/counts rather than duplicate candles or database copies.
 
 - [x] Check recent official HNX scale totals against dated native controls and
   preserve bounded, offline replayable query evidence. Adjacent SHS sessions
