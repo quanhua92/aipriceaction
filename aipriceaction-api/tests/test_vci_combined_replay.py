@@ -162,6 +162,7 @@ def test_combined_review_uses_corrected_captures_and_readonly_sqlite_without_cop
                 proofs=settings.vci_volume_proofs,
                 calendar_catalog=calendar,
                 output=output,
+                diagnose_disagreements=True,
             )
         )
     )
@@ -171,6 +172,12 @@ def test_combined_review_uses_corrected_captures_and_readonly_sqlite_without_cop
     assert checked["missing_reference_date_candidates"] == []
     assert checked["sqlite_comparison"]["unanimous_provider_conflicts"]["count"] == 1
     assert checked["sqlite_comparison"]["providers"]["vci"]["counts"]["volume_disagreements"] == 1
+    diagnosis = checked["sqlite_comparison"]["providers"]["vci"]["diagnostics"]
+    assert diagnosis["volume_disagreements"] == 1
+    assert diagnosis["volume_days"][0]["timestamps_match"]
+    assert diagnosis["price_classes"] == {}
+    assert result["diagnostic_totals"]["volume_disagreements"] == 1
+    assert result["diagnostic_totals"]["matching_timestamp_volume_days"] == 1
     assert settings.database.read_bytes() == before
     assert not list(output.rglob("*.sqlite*"))
     assert json.loads((output / f"{symbol}-record.json").read_text())["rows"] == []
@@ -193,6 +200,7 @@ def test_combined_review_uses_corrected_captures_and_readonly_sqlite_without_cop
         proofs=settings.vci_volume_proofs,
         calendar_catalog=calendar,
         output=tmp_path / "review2",
+        diagnose_disagreements=True,
     )
     reviewed = asyncio.run(module.run(next_args))
     assert reviewed["accepted_rows"] == result["accepted_rows"]

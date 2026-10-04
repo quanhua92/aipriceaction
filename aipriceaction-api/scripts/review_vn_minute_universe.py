@@ -21,6 +21,8 @@ def compact_local(row, samples=20):
         for kind in ("provider_only", "sqlite_only", "price_disagreements", "volume_disagreements"):
             result["providers"][feed]["counts"][kind] = len(peer[kind])
             result["providers"][feed]["samples"][kind] = peer[kind][:samples]
+        if "diagnostics" in peer:
+            result["providers"][feed]["diagnostics"] = peer["diagnostics"]
     for kind in ("unanimous_provider_conflicts", "missing_unanimous_provider_timestamps"):
         result[kind] = {"count": len(row[kind]), "samples": row[kind][:samples]}
     return result

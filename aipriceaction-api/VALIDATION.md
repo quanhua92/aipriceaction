@@ -5,6 +5,45 @@ full data coverage and production cutover acceptance.
 
 ## Full selected-universe minute comparison — 2026-10-04 ICT
 
+Automatic post-activation classification explains the scope of the remaining
+VCI/SQLite discrepancies without changing any value or ingestion guard.
+`scripts.ohlcv_disagreements` separates observed two-decimal/integer rounding,
+uniform OHLC ratios and nonuniform price differences; it counts every shared
+timestamp while retaining at most 20 examples per category/day. Price bands use
+the maximum symmetric difference across OHLC fields. Volume day totals include
+all observed bars on each side, not only shared timestamps. Day counts, price
+classes/bands and volume classifications must reconcile with strict comparison
+counts. These descriptions do not grant publication or identify a dividend.
+
+Full-watchlist replay retains the same 2,699,606 accepted candles, 51 complete
+reference-date windows and eight refusals. Of 81,274 price differences, 81,233
+are uniform OHLC ratios on VCB (39,736 rows, maximum symmetric difference 0.83%)
+and MWG (41,497 rows, maximum 1.53%). There are 41 nonuniform observations across
+September 28–October 2, 2026, affecting the remaining comparisons on 20 symbols
+including those two. No discrepancy matches the tested two-decimal or integer
+rounding patterns. There are 39,777 differences between 0.01% and 1%, and 41,497
+at or above 1%. These observed scales require price-basis evidence, not a blanket
+rewrite of all historical candles or an inferred adjustment factor.
+
+All 145 volume discrepancies occur during those same five recent sessions,
+across 38 ticker/date pairs. Every such day has matching observed timestamps
+and equal full observed day totals. Individual minute allocations still differ;
+opposing errors can cancel in a day total, so neither total equality nor a
+provider majority licenses correction. All native comparison counts remain
+visible alongside the VCI diagnosis; the remaining differences are not declared
+canonical errors or dismissed as harmless.
+
+The read-only diagnostic report/source references and reconciled aggregate
+summary occupy 1,143,308 bytes under an 8 MiB cap at
+`data/vn-minute-year-vci-disagreement-diagnosis-20261004`. Twenty-four focused
+tests pass, covering rounding/ratio distinctions, partial-day totals, offsetting
+volume differences, bounded examples with complete counts, native/receipt-aware
+integration and rejection of inconsistent class/band/day totals. No database
+copies, canonical writes or RustFS data writes occur. Local data grows from
+7,603,104 to 7,604,312 KiB; observed RustFS data stays 2,642,856 KiB during the
+run (logs increase 44 KiB). Price basis and recent source allocation semantics
+remain acceptance gates; no source winner or corporate-action cause is assumed.
+
 The 55 available single-volume corrections are now active on the local API.
 `publish_corrections` checks every native capture against its full proof, claims
 the archive writer and all 27 series leases, verifies every frozen day before

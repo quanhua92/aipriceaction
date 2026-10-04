@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+from collections import Counter
 from dataclasses import asdict, replace
 from datetime import date
 from pathlib import Path
@@ -16,6 +17,36 @@ from scripts.continue_vci_candidate_pages import page_identity
 from scripts.replay_vci_candidate_pages import replay_record
 from scripts.review_vn_minute_universe import compact_local
 from scripts.validate_ohlcv import local_comparisons
+
+
+def summarize_diagnostics(series):
+    prices, bands = Counter(), Counter()
+    volume_rows, volume_days, matching_days = 0, 0, 0
+    for row in series:
+        peer = row["sqlite_comparison"]["providers"]["vci"]
+        detail = peer["diagnostics"]
+        if (
+            sum(detail["price_classes"].values()) != peer["counts"]["price_disagreements"]
+            or sum(detail["price_difference_bands"].values())
+            != peer["counts"]["price_disagreements"]
+            or detail["volume_disagreements"] != peer["counts"]["volume_disagreements"]
+            or sum(day["differing_shared_rows"] for day in detail["volume_days"])
+            != detail["volume_disagreements"]
+        ):
+            raise DataError("Disagreement classification does not reconcile with exact counts")
+        prices.update(detail["price_classes"])
+        bands.update(detail["price_difference_bands"])
+        volume_rows += detail["volume_disagreements"]
+        volume_days += len(detail["volume_days"])
+        matching_days += sum(day["timestamps_match"] for day in detail["volume_days"])
+    return {
+        "price_classes": dict(prices),
+        "price_difference_bands": dict(bands),
+        "volume_disagreements": volume_rows,
+        "volume_days": volume_days,
+        "matching_timestamp_volume_days": matching_days,
+        "publication_license": False,
+    }
 
 
 async def combined_record(settings, symbol, original, continuation):
@@ -159,6 +190,7 @@ async def run(args):
                 root,
                 one,
                 records={("vci", symbol, "1m"): {"rows": [asdict(row) for row in rows]}},
+                diagnose_feed="vci" if getattr(args, "diagnose_disagreements", False) else None,
             )
             replay["sqlite_comparison"] = compact_local(local[0])
             # Keep only references/metadata; never duplicate native captures or DBs.
@@ -178,6 +210,8 @@ async def run(args):
         boundary_series=sum(row["boundary_reached"] for row in result["series"]),
         blocked_series=sum(not row["captured_pages_passed"] for row in result["series"]),
     )
+    if getattr(args, "diagnose_disagreements", False):
+        result["diagnostic_totals"] = summarize_diagnostics(result["series"])
     budget.write(args.output / "report.json", (json.dumps(result, indent=2) + "\n").encode())
     print(
         json.dumps(
@@ -203,4 +237,9 @@ if __name__ == "__main__":
     parser.add_argument("--proofs", type=Path, required=True)
     parser.add_argument("--calendar-catalog", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--diagnose-disagreements",
+        action="store_true",
+        help="Classify VCI/SQLite price and volume differences without changing guards",
+    )
     asyncio.run(run(parser.parse_args()))

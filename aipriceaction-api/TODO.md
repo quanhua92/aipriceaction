@@ -185,10 +185,20 @@ history through `eb814ab`; they are not additional current open tasks.
   post-activation projection audit recognizes 56 already applied, with prior
   refusals/exclusion unchanged. Full source replay reduces shared VCI/SQLite volume
   disagreements from 200 to 145; 81,274 price disagreements remain unchanged.
-- [ ] Verify coherent source/SQLite adjustment basis and resolve the remaining
-  145 volume differences and 81,274 price differences before provider adoption
-  or price changes. Reference-date presence does not certify every minute or
-  OHLCV accuracy; keep the eight unsupported refusals explicit.
+- [x] Automatically classify all remaining VCI/SQLite disagreements without
+  changing strict comparisons or publication guards. Of 81,274 price differences,
+  81,233 have uniform OHLC ratios (39,736 VCB and 41,497 MWG); 41 are nonuniform
+  differences in September 28–October 2. None is two-decimal/integer rounding.
+  All 145 volume differences are in those same five days across 38 ticker/date
+  pairs with identical observed timestamps and equal day totals. Preserve both
+  sides' counts/totals and bounded examples, with no source winner or inferred
+  dividend. Reconcile classification/band/day counts against exact comparisons;
+  pass 24 focused tests. Keep 1,143,308 bytes of reports/references, no DB copies.
+- [ ] Verify the VCB/MWG historical price basis with source evidence. Investigate
+  the 41 recent OHLC differences and 145 minute-volume allocations across all
+  native providers before provider adoption or price changes. Equal day totals
+  cannot license changing individual minute values. Reference-date presence does
+  not certify every minute or OHLCV accuracy; keep eight unsupported refusals.
 - [x] Add automatic provider-date review against checksummed 2025/2026 HOSE/HNX
   calendars and amendments, requiring the exchange schedules to agree. Reference
   window has 247 dates. Preserve per-provider missing/unexpected date candidates,

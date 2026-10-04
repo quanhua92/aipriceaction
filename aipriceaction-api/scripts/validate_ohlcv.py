@@ -22,10 +22,11 @@ from scripts.audit_sqlite_ohlcv import audit
 from scripts.compare_vn_feeds import FIELDS, same
 from scripts.compare_vn_feeds import run as compare_feeds
 from scripts.inventory_retained_windows import inventory
+from scripts.ohlcv_disagreements import diagnose
 from scripts.replay_daily_feed_failures import run as replay_daily_failures
 
 
-def local_comparisons(settings, root, comparison, *, records=None):
+def local_comparisons(settings, root, comparison, *, records=None, diagnose_feed=None):
     results = []
     feeds = comparison["feeds"]
     with sqlite3.connect(settings.database.resolve().as_uri() + "?mode=ro", uri=True) as con:
@@ -79,6 +80,8 @@ def local_comparisons(settings, root, comparison, *, records=None):
                             t for t in shared if local[t]["volume"] != rows[t]["volume"]
                         ],
                     }
+                    if feed == diagnose_feed:
+                        peers[feed]["diagnostics"] = diagnose(local, rows)
                 agreed = []
                 if len(returned) == len(feeds):
                     shared_peers = set.intersection(*(set(rows) for rows in returned.values()))
