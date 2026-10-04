@@ -134,6 +134,40 @@ def test_public_partition_dry_run_has_no_publication_or_gap_mutation(system):
     assert repo.history_gaps() == before
 
 
+def test_multiple_invalid_dates_remain_individually_guarded_after_restoration(system, tmp_path):
+    _, archive, _, public, original = system
+    payload = json.loads(public.read_text())
+    payload["VND"].append(dict(time="2020-02-20", open=100, high=101, low=99, close=103, volume=10))
+    public.write_text(json.dumps(payload))
+    with original.open("a") as handle:
+        handle.write("2020-02-20,100,101,99,103,10\n")
+    result = apply(system)
+    assert len(result["invalid_rows"]) == 2
+    fresh = Repository(tmp_path / "restored-multiple")
+    fresh.initialize()
+    restored = Archive(fresh, archive.settings)
+    assert restored.restore_index() == 1
+    assert fresh.history_gaps() == result["remaining_gaps"]
+    assert len(fresh.history_gaps()) == 3
+    history = History(fresh, restored, archive.settings)
+    for day in ("2020-02-19", "2020-02-20"):
+        with pytest.raises(DataError, match="unavailable"):
+            history.read("vn", "VND", "1D", start=parse_time(day), end=parse_time(day))
+    assert (
+        len(
+            history.query(
+                "vn",
+                "VND",
+                "1D",
+                start=parse_time("2020-12-31"),
+                end=parse_time("2020-12-31"),
+                ma=False,
+            )
+        )
+        == 1
+    )
+
+
 @pytest.mark.parametrize(
     "problem", ["missing", "changed", "duplicate", "wrong_symbol", "future_capture"]
 )

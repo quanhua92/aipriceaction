@@ -6,6 +6,45 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## VNINDEX 2015–2018 archival rehearsal — 2026-10-04 ICT
+
+All four legacy yearly CSVs are accessible without PostgreSQL and exactly match
+the corresponding fresh public JSON timestamps and OHLCV. Of 999 original rows,
+995 validate; May 11–13, 2015 and October 24, 2016 fail OHLC validation. Originals,
+checksums and per-record findings remain under
+`data/vnindex-pre2019-source-capture-20261004/`.
+
+VNDirect returns only 339 older records when 500 are requested, beginning August
+24, 2017. Its 2018 subset has 248 versus 250 original dates, missing January
+23–24 and changing 158 records. A 2015–2016 request has missing OHLCV arrays.
+The forty-row retained head matches current native OHLCV exactly. The final
+200 older rows contain every original timestamp in that narrower span and can
+supply native SMA/raw context without asserting complete native years. Captures
+and comparisons: `data/vnindex-pre2019-native-probe-20261004/`.
+
+The migration rehearsal stages those 200 native context rows and all 995 valid
+public rows as five immutable Parquet objects. Public years share one capture
+revision/version. Invalid years preserve original CSV/JSON bytes, active basis
+markers and four individual invalid-date markers, using the existing recovery
+command. No primary candle/series version changes; only archives, quality and
+metadata change. Twelve recent index responses remain exact. Six older controls
+pass with exact public OHLCV; all four invalid dates and the 2018 EMA lookback
+remain guarded. Native 2019 raw/SMA keep their dates/OHLCV and HTTP 200 while
+acquiring actual earlier context, so their derived fields are compared separately.
+The preserved 2020 twenty-row tail remains readable.
+Evidence: `data/vnindex-pre2019-rehearsal-20261004-verified/report.json`; the
+initial failed diagnostic remains in the directory without the `-verified` suffix.
+No rehearsal publishes to canonical SQLite/RustFS.
+
+This finds two snapshot-selection bugs. A newly imported older capture must not
+displace a later requested tail; a snapshot's preceding context row must not
+displace a primary request beginning earlier. Selection now checks known primary
+timestamps and ranks eligible snapshots by covered end before capture recency.
+Indicator context stays pinned and existing missing/bad archive guards remain.
+Three selection cases and a multi-invalid-date restoration case bring the full
+suite to 516 passing tests. Lint/format and offline package builds pass; the
+existing Starlette/httpx warning remains.
+
 ## VNINDEX frozen daily history and pending-archive coverage — 2026-10-04 ICT
 
 A fresh 2014–October 3, 2023 public daily request returns 2,186 records starting

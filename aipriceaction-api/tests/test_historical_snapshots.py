@@ -90,6 +90,24 @@ def test_complete_frozen_snapshot_can_cover_a_valid_pending_primary_archive(syst
         history.read("vn", "FPT", "1D")
 
 
+def test_newly_imported_older_snapshot_does_not_displace_a_later_bounded_tail(system):
+    repo, archive, history, cold, _, _, current = setup(system)
+    older = archive.publish(
+        rows(30, revision="older-public", provider="legacy-api", close=300),
+        historical_snapshot=True,
+    )
+    with repo.connect() as con:
+        con.execute("UPDATE archives SET created_at=100 WHERE id=?", (current["id"],))
+        con.execute("UPDATE archives SET created_at=200 WHERE id=?", (older["id"],))
+    result = history.query("vn", "FPT", "1D", end=cold[-1].time, limit=20, ema=True)
+    assert len(result) == 20
+    assert all(row["close"] == 200 for row in result)
+    assert result[-1]["time"] == "2020-10-11"
+    earlier = history.query("vn", "FPT", "1D", end=rows(30)[-1].time, limit=20, ma=False)
+    assert len(earlier) == 20
+    assert all(row["close"] == 300 for row in earlier)
+
+
 def test_frozen_snapshot_cannot_hide_a_missing_pending_primary_timestamp(system):
     repo, archive, history = system
     cold = rows(30)
@@ -100,6 +118,23 @@ def test_frozen_snapshot_cannot_hide_a_missing_pending_primary_timestamp(system)
     archive.publish(frozen, historical_snapshot=True)
     with pytest.raises(DataError, match="repair pending"):
         history.read("vn", "FPT", "1D", end=cold[-1].time, limit=10000)
+
+
+@pytest.mark.parametrize("start", [None, "2019-01-01"])
+def test_snapshot_context_row_does_not_displace_a_longer_primary_request(system, start):
+    repo, archive, history = system
+    cold = rows(650)
+    archive.publish(cold)
+    repo.put(rows(30, start=650))
+    archive.publish(
+        rows(1, start=649, revision="context-only", provider="legacy-api", close=200),
+        historical_snapshot=True,
+    )
+    result = history.query(
+        "vn", "FPT", "1D", start=parse_time(start) if start else None, end=cold[-1].time, limit=20
+    )
+    assert len(result) == 20
+    assert all(row["close"] == 100 for row in result)
 
 
 def test_frozen_snapshot_preserves_pending_guard_when_archive_cannot_be_verified(

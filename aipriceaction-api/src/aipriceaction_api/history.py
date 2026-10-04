@@ -31,7 +31,37 @@ class History:
         # Frozen public snapshots can serve wholly expired, explicitly bounded
         # history. They never replace local candles or enter live/default reads.
         if revision is None and not local and end is not None and end < cutoff(years) and snapshots:
-            revision = max(snapshots, key=lambda obj: obj["created_at"])["revision"]
+            # A preceding context row must not displace a longer primary request.
+            known = set()
+            for obj in primary:
+                try:
+                    known.update(
+                        row.time
+                        for row in self.archive.read(
+                            obj, start, end, limit or 1, forward=start is not None or limit is None
+                        )
+                    )
+                except DataError:
+                    # The ordinary read/coverage checks retain unreadable-object guards.
+                    continue
+                if len(known) > self.settings.archive_max_rows:
+                    raise DataError("Historical request exceeds resource limit", 400)
+            if known:
+                needed = (
+                    sorted(known)[-limit]
+                    if start is None and limit and len(known) >= limit
+                    else min(known)
+                )
+                beginnings = {}
+                for obj in snapshots:
+                    beginnings[obj["revision"]] = min(
+                        obj["start"], beginnings.get(obj["revision"], obj["start"])
+                    )
+                snapshots = [obj for obj in snapshots if beginnings[obj["revision"]] <= needed]
+            if snapshots:
+                revision = max(
+                    snapshots, key=lambda obj: (min(obj["end"], end), obj["created_at"])
+                )["revision"]
         if revision is None:
             objects = primary
         other_objects = [
