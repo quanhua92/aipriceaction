@@ -6,6 +6,48 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Dated selected-universe web query coverage — 2026-10-04 ICT
+
+The read-only web query matrix now accepts `--start-date`/`--end-date`, verifies
+response bounds, and distinguishes empty history from wrong-symbol responses.
+It uses the existing quote rules for SJC's previous-midpoint open and Yahoo's
+daily futures settlement close, while retaining strict traded ranges for stocks
+and intraday futures. Finite negative futures prices remain valid. Explicit
+quote/settlement/negative-price and invalid traded-range smoke checks, lint and
+formatting pass; API source code is unchanged by this verifier extension.
+
+For **September 28–October 2, 2026**, all **633 requests** pass across the
+configured **71 tickers**: **531 VN**, **36 crypto**, **63 Yahoo** and **3 SJC**.
+Daily, 15-minute and hourly controls are tested with no indicators, SMA and EMA;
+SJC remains daily-only. The responses contain **9,465 records**, ordered inside
+the requested dates. A newly started current-code API on loopback port 3003
+passes the same 633 requests, byte-identical to the older local process on 3001.
+The isolated current-code server shuts down cleanly after verification.
+This proves the sampled dates/schema and local version parity, not every
+exchange session, live freshness, full-year coverage or numerical legacy parity.
+
+For **October 1–3, 2025**, **584** of **633 requests** pass; **48** return HTTP 200
+with `{}` and the historical FPT 15-minute EMA case returns its existing revision
+guard with HTTP 503. The empty responses represent 14 global intraday/hourly
+ranges and two index hourly ranges, each with three indicator settings.
+Bounded database-backed public JSON checks return no candles for all 14 global
+ranges, matching local availability for that capture. Both VNINDEX and VN30
+public hourly ranges return **15 records each** and are genuine local coverage
+gaps covered by the already staged index replacements. This investigation does
+not authorize the previously rejected canonical index replacement.
+
+Evidence: `data/web-historical-retention-matrix-20261004.json`,
+`data/web-historical-empty-public-probe-20261004/report.json`,
+`data/web-recent-session-matrix-20261004.json`,
+`data/web-current-code-session-matrix-20261004.json` and
+`data/web-current-code-session-parity-20261004.json`, with checksummed original
+responses. Canonical epoch remains **3523**. The unchanged-state guard compares
+all VN daily record versions, total candle counts and operational tables,
+including epoch; it does not individually hash other candle versions.
+There are **10 pending jobs**, including five stock hourly jobs; FPT's earlier
+bootstrap job completed under the rolling-floor guard. Its three public-only
+hourly timestamps and the wider quality findings remain separate open work.
+
 ## Extended FPT public minute candidate — 2026-10-04 ICT
 
 Bounded database-backed JSON requests to the public `/tickers` API produce an

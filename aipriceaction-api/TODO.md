@@ -29,6 +29,13 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Exercise dated recent web requests across all 71 selected tickers:
+  633 requests for daily/15-minute/hourly controls, without indicators and with
+  SMA/EMA, through October 2, 2026. All pass nonempty ordered OHLCV/date-bound
+  checks. The corresponding October 1–3, 2025 audit has 584 passes, 48 empty
+  responses and one FPT EMA guard. Public checks reproduce the 14 empty global
+  ranges, but both missing index hourly ranges have public candles. Exact wider
+  numerical parity, freshness and full-year coverage remain separate gates.
 - [x] Add opt-in daily maintenance to the worker without another service:
   scoped verified publication/pruning, once-per-UTC-day tracking, retry cooldown,
   restart idempotence and concurrent-correction retention/re-export. Test outage
@@ -102,9 +109,10 @@ history through `eb814ab`; they are not additional current open tasks.
   HTTP checks cover all 191,510 native hourly and 76,788 derived four-hour bars;
   representative SDK historical ranges and actual ACB web controls pass.
 - [ ] Complete selected VN hourly backfills and reconcile public-only dates.
-  FPT's bootstrap job remains pending at the retention boundary; three public
-  timestamps remain absent from its native window. Partial publication does
-  not certify complete coverage or close the quality findings. All 53 stock
+  FPT's bootstrap job is complete after the guarded rolling-floor transition;
+  three public timestamps remain absent from its native window. Five stock
+  hourly jobs remain pending: IDC, GEE, VGI, VPL and VTP. Completed bootstrap
+  jobs do not certify complete coverage or close the quality findings. All 53 stock
   hourly prefixes now reach their applicable retention/listing date; VNINDEX
   and VN30 still begin after that date. Session completeness remains unproven.
 - [x] Diagnose index hourly internal gaps independently of prefix bounds:
@@ -137,7 +145,9 @@ history through `eb814ab`; they are not additional current open tasks.
   restoration pass; main data and the original candidates remain unchanged.
 - [x] Inventory all 71 selected tickers and 207 published series, including
   all 198 configured ingestion states, archive bounds and pending jobs. There
-  are 58 series with pending work; readiness alone does not prove coverage.
+  were 58 series with pending work at that inventory checkpoint; the current
+  database has 10 pending jobs after rolling-floor completion. Readiness alone
+  does not prove coverage.
 - [ ] Verify complete coherent VND/VNINDEX older daily history; their public
   invalid rows persist and two archived-history gates remain open.
 - [ ] Reconcile VNINDEX minute auction/timestamp/aggregate differences and the
