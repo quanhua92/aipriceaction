@@ -24,6 +24,22 @@ class Worker:
 
     def load_watchlist(self):
         raw = json.loads(self.settings.watchlist.read_text())
+        if self.settings.ingest_universe == "catalog":
+            from .catalog import Catalog
+
+            overrides = {}
+            for source, items in raw.items():
+                for item in items:
+                    entry = {"symbol": item} if isinstance(item, str) else dict(item)
+                    overrides[(source, entry["symbol"].upper())] = entry
+            expanded = {}
+            catalog = Catalog(self.settings)
+            for source, groups in catalog.groups_by_source.items():
+                symbols = sorted({symbol for values in groups.values() for symbol in values})
+                expanded[source] = [
+                    {"symbol": symbol} | overrides.get((source, symbol), {}) for symbol in symbols
+                ]
+            raw = expanded
         entries = []
         for source, items in raw.items():
             if source not in ("vn", "crypto", "yahoo", "sjc"):

@@ -62,6 +62,9 @@ class Settings:
         if (ROOT / "watchlist.json").exists()
         else Path(__file__).parent / "data/watchlist.json"
     )
+    ingest_universe: str = "watchlist"
+    catalog_snapshot: Path = ROOT / "data/catalog-snapshot.json"
+    catalog_base_url: str = "https://api.aipriceaction.com"
     catalog_dir: Path = field(default_factory=lambda: Path(__file__).parent / "data")
     public_dir: Path = field(default_factory=lambda: Path(__file__).parent / "public")
     company_info: Path | None = None
@@ -108,6 +111,9 @@ class Settings:
             "worker_concurrency": "WORKER_CONCURRENCY",
             "requests_per_minute": "PROVIDER_RPM",
             "watchlist": "WATCHLIST_PATH",
+            "ingest_universe": "INGEST_UNIVERSE",
+            "catalog_snapshot": "CATALOG_SNAPSHOT_PATH",
+            "catalog_base_url": "CATALOG_BASE_URL",
             "company_info": "COMPANY_INFO_PATH",
             "read_concurrency": "API_READ_CONCURRENCY",
             "archive_max_rows": "ARCHIVE_MAX_ROWS",
@@ -138,6 +144,8 @@ class Settings:
         result = cls(**values)
         if result.archive_backend not in ("s3", "filesystem"):
             raise ValueError("ARCHIVE_BACKEND must be s3 or filesystem")
+        if result.ingest_universe not in ("watchlist", "catalog"):
+            raise ValueError("INGEST_UNIVERSE must be watchlist or catalog")
         if not result.vn_providers or set(result.vn_providers) - {"vps", "vndirect", "dnse"}:
             raise ValueError("VN_PROVIDERS must contain only vps, vndirect, dnse")
         for attr in (
