@@ -255,6 +255,9 @@ def test_real_cli_sigterm_waits_for_verified_archive_transfer_before_exiting(tmp
         while not closed.exists() and process.poll() is None and time.monotonic() < deadline:
             time.sleep(0.01)
         assert closed.exists() and process.poll() is None
+        process.send_signal(signal.SIGTERM)
+        time.sleep(0.05)
+        assert process.poll() is None
         assert repo.read("crypto", "BTCUSDT", "1D") == original
         release.write_text("resume transfer")
         stdout, stderr = process.communicate(timeout=10)

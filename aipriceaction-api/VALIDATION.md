@@ -28,6 +28,11 @@ job. The archival subprocess blocks a real filesystem Parquet transfer, then
 receives SIGTERM: rows remain available while transfer is blocked, the process
 waits, verified publication/pruning completes after release, and the archive
 writer lease is cleared. Exact stored record versions survive Parquet readback.
+The archival test also sends a second SIGTERM after provider cleanup while the
+executor thread is still transferring. It reproduced premature process exit
+with the earlier handler restoration. The CLI now retains its shutdown handler
+through `asyncio.run` executor draining and restores it only afterward; both
+signals allow the verified transfer to finish.
 
 All 523 tests pass, plus lint/format and the offline wheel/source build. The
 existing Starlette/httpx deprecation warning remains. These deterministic

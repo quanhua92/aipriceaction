@@ -647,7 +647,7 @@ async def execute(args, settings):
         emit({"restored": str(args.destination)})
 
 
-async def execute_with_shutdown(args, settings):
+async def execute_with_shutdown(args, settings, *, restore_signal=True):
     if args.command not in ("worker", "bootstrap"):
         return await execute(args, settings)
     loop, task = asyncio.get_running_loop(), asyncio.current_task()
@@ -661,20 +661,28 @@ async def execute_with_shutdown(args, settings):
             task.cancel()
 
     previous = signal.getsignal(signal.SIGTERM)
-    signal.signal(signal.SIGTERM, lambda *_: loop.call_soon_threadsafe(stop))
+
+    def handle_signal(*_):
+        if not loop.is_closed():
+            loop.call_soon_threadsafe(stop)
+
+    signal.signal(signal.SIGTERM, handle_signal)
     try:
         await execute(args, settings)
     except asyncio.CancelledError:
         if not stopping:
             raise
     finally:
-        signal.signal(signal.SIGTERM, previous)
+        if restore_signal:
+            signal.signal(signal.SIGTERM, previous)
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    handles_shutdown = args.command in ("worker", "bootstrap")
+    previous = signal.getsignal(signal.SIGTERM) if handles_shutdown else None
     try:
         settings = Settings.from_env()
         overrides = {}
@@ -684,12 +692,17 @@ def main(argv=None):
             overrides["archive_backend"] = args.archive_backend
         if args.allow_direct:
             overrides["allow_direct"] = True
-        asyncio.run(execute_with_shutdown(args, replace(settings, **overrides)))
+        asyncio.run(
+            execute_with_shutdown(args, replace(settings, **overrides), restore_signal=False)
+        )
     except KeyboardInterrupt:
         pass
     except (DataError, ValueError, OSError) as exc:
         emit({"error": str(exc)})
         return 1
+    finally:
+        if handles_shutdown:
+            signal.signal(signal.SIGTERM, previous)
     return 0
 
 

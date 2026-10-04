@@ -201,7 +201,8 @@ supervisor for continuous operation.
 close, the exiting worker's live/job claims are released, and staged candles,
 cursor progress and retry history stay intact. Other workers' leases and daily
 sentinel leases remain owned. Wait for the process to exit before restarting:
-an active archive transfer finishes its verified publication/pruning first.
+an active archive transfer finishes its verified publication/pruning first,
+including when another SIGTERM arrives during that wait.
 Forceful termination continues to rely on durable lease expiry.
 
 Rehearse configured native VN refreshes on an isolated populated copy before
