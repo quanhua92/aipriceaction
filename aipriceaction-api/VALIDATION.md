@@ -6,6 +6,53 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## Source-bound GEE transfer interval review — 2026-10-04 ICT
+
+`03170b4` adds opt-in transfer annotations to the source-backed stock date
+review. The GEE declaration binds two signed exchange documents: official HNX
+decision **806/QD-SGDHN**, July 10, 2024, and HOSE notice **1444/TB-SGDHCM**,
+August 7, 2024, distributed through a Vietstock mirror linked by PHS. Both HNX
+pages and the single HOSE page were rendered and visually checked.
+
+The HNX decision names **July 18, 2024** as GEE's last UPCoM trading session;
+the HOSE notice names **August 14, 2024** as its official first session. HOSE's
+**July 2** listing-effective date is explicitly not substituted for the first
+trading date. These documents explain the 18 scheduled weekdays absent from
+GEE's daily history, **July 19–August 13, 2024**. The earlier merged SQLite/S3
+check confirmed the absences. Re-running the populated 2024 reviews preserves
+the original candidate lists: all 18 daily candidates receive the transfer
+annotation, while hourly candidates still include the unrelated **April 17**
+and **November 28** absences. No observed GEE candle falls inside the reviewed
+transfer interval in either review.
+
+The opt-in path requires both source files per event in declaration order,
+verifies every byte/hash, and rejects missing, extra, changed or swapped sources,
+invalid trading boundaries and overlapping intervals. Only intervening dates
+are annotated; the old final and new first sessions remain expected. Original
+absent-date findings remain intact, and observed rows inside a transfer interval
+are exposed as conflicts, including weekend rows. The checker does not delete,
+fabricate or publish candles and retains false OHLCV/full-completeness flags.
+Default reviews without event evidence retain their existing date behavior.
+
+The complete API suite passes **876 tests**, including **46 calendar/transfer
+tests**, with one known Starlette/httpx deprecation warning. Lint and formatting
+pass. Five source/declaration/populated-review artifacts have content-addressed
+local RustFS copies with exact byte readbacks. No canonical OHLCV, provider basis,
+archive pointer or manifest changes. Evidence:
+
+- `calendars/stock-transfers.json`
+- `data/vn-stock-transfer-sources-20261004/`
+- `data/vn-stock-transfer-reviewed-dates-20261004/`
+- `data/vn-stock-transfer-evidence-20261004.json`
+
+Other stock event boundaries remain open. In particular, the
+[NAB issuer article](https://www.namabank.com.vn/co-phieu-nab-chinh-thuc-giao-dich-tren-hose)
+describes February 29 as the final UPCoM session, while the populated date review
+includes February 29 among absent dates. That inconsistency remains explicit;
+an official cancellation decision is still needed, and no NAB date exclusion is
+derived from the article or absent bars. GEE's two remaining hourly candidates,
+unresolved source prices/volumes and full per-candle coverage remain open.
+
 ## Retained stock date review against both exchanges — 2026-10-04 ICT
 
 `23da063` adds a read-only stock date-candidate review backed by independently

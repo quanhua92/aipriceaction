@@ -27,7 +27,7 @@ history through `eb814ab`; they are not additional current open tasks.
   native OHLCV. Fresh index comparisons still show source price/volume
   disagreements; VCI daily/minute coherence is verified only on the recorded
   controls, not a license to replace unresolved index history.
-- The latest complete API suite passes 863 tests; lint/format checks pass.
+- The latest complete API suite passes 876 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -38,6 +38,15 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Remaining acceptance gates
 
+- [x] Verify GEE's last UPCoM and first HOSE trading sessions from signed
+  exchange notices. Add opt-in, source-bound transfer annotations to the stock
+  date review, retaining original absences and observed conflicting rows. Both
+  boundary sessions remain expected. All 18 GEE daily absences are explained by
+  the July 19–August 13, 2024 transfer interval; the two separate hourly absences
+  remain open. Preserve five source/declaration/review artifacts in local RustFS
+  with exact readback and pass 876 API tests. Other stocks' event boundaries and
+  individual OHLCV values still require evidence; no runtime exclusions or
+  candle publication are licensed by this annotation.
 - [x] Verify signed HNX schedules across 2023–2026, including the required 2024/
   2026 amendments. Bind every source byte and record official versus mirror
   distribution. Both exchanges have equal scheduled weekdays across retained
