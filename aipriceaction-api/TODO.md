@@ -11,7 +11,7 @@ history through `eb814ab`; they are not additional current open tasks.
   workers, operational CLI and web/SDK interfaces are implemented locally.
 - The scoped VN/crypto/global workers advance the live database; populated
   backup images and their exact scope are recorded in `VALIDATION.md`.
-  The S3 index has 892 active objects, 75 handoff certificates, 34 recoveries and
+  The S3 index has 891 active objects, 76 handoff certificates, 34 recoveries and
   eight invalid-date/basis markers preserving VND and older VNINDEX observations.
 - There are 58 VN minute handoffs and four Yahoo minute handoffs (AAPL, SPY,
   S&P and Dow). VNINDEX, MSFT/NVDA and gold minute snapshots remain frozen.
@@ -21,9 +21,9 @@ history through `eb814ab`; they are not additional current open tasks.
   quote events preserved explicitly and `1h` enabled in its watchlist entry.
   Gold minute history is also current as a public snapshot, with all 241 legacy
   quote-event seconds preserved; native gold minute ingestion remains frozen.
-- Six licensed VN stock minute series now use VCI: FPT, TPB, BSR, TCB, VHM and
-  VND. The three preferred providers remain unchanged for other sources/windows.
-- The latest complete API suite passes 714 tests; lint/format checks pass.
+- Seven licensed VN stock minute series now use VCI: FPT, TPB, BSR, CTG, TCB,
+  VHM and VND. The three preferred providers remain unchanged for other sources/windows.
+- The latest complete API suite passes 727 tests; lint/format checks pass.
   Real worker, HTTP, SDK, public-web and populated restoration evidence is
   recorded with its scope and limits in `VALIDATION.md`.
 - Actual scoped Git commits include `c037c53` (storage), `23fc706` (workers/CLI),
@@ -53,8 +53,15 @@ history through `eb814ab`; they are not additional current open tasks.
   existing observed timestamps and all unrelated VN OHLCV/provider basis.
   Curate ten replayable proofs for the six active VCI series; broader proposals
   remain isolated. Current audit leaves CTG/GAS/GEE/MWG/SHB/VN30/VNINDEX open.
-- [ ] Finish CTG's closed-day proof with two separate contradictory minutes;
-  the existing single-correction proof intentionally rejects it. Reconcile GAS's
+- [x] Prove CTG's two separate closed-day volume contradictions with explicit,
+  bounded multi-correction evidence. Each proof corrects only its exact target;
+  all contradictions must reconcile with cumulative totals and two native peers.
+  Stage all 60,723 candles, replay 31 source pages and three native daily captures,
+  and verify all 270 observed dates. Activate locally after a fresh 2,000-candle
+  handoff, preserving every timestamp and immutable before-images. Verify a real
+  40-row refresh, 18 boundary queries, 28 HTTP cases and exact two-object S3
+  restoration. Keep 15 curated proofs for seven active VCI series.
+- [ ] Reconcile GAS's
   observed minute gap, MWG's two full-day volume differences, GEE's invalid
   VNDirect daily response, and SHB's observed binary32 rounding equivalence.
   Do not assign missing volume to an adjacent candle or silently normalize peers.

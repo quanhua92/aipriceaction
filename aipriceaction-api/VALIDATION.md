@@ -6,6 +6,45 @@ Earlier snapshot parity checks describe their recorded fixtures. The current
 provider comparisons below record remaining price/volume differences
 explicitly and do not claim exact numerical identity with the legacy API.
 
+## CTG verified local minute activation — 2026-10-04 ICT
+
+CTG now joins the six previously licensed VCI stock minute histories locally.
+The implementation is committed as `122e823`. Schema 1 still requires exactly
+one consecutive-minute contradiction. Explicit schema 2 allows two through ten
+declared corrections in a closed observed day, reconciles every correction with
+cumulative volume and exact VNDirect/DNSE daily totals, and licenses only the
+declared target candle. Each target needs its own proof. Missing-minute volume
+allocation, incomplete declarations and changed source candles remain rejected.
+
+The actual April 7 capture contains 225 candles. Correcting 8,400 to 11,400 and
+23,000 to 27,000 reconciles the day to 4,955,000 shares in both native daily
+witnesses. A subsequently encountered January contradiction also reconciles
+exactly with both peers. The full CTG candidate contains 60,723 candles across
+270 observed dates. Every date has two exact native volume witnesses; its
+maximum retained native daily price difference is 0.99 VND. VPS daily volume
+differences are preserved as separate evidence, not forced to match.
+
+Activation replays all 31 captured minute pages and three native daily responses,
+then verifies a fresh 2,000-candle overlap across nine observed sessions.
+Guarded publication preserves every previous timestamp, a whole SQLite backup
+and immutable hot/cold before-images. The result has 55,560 SQLite candles and
+5,163 S3 candles in two objects. Forty native refresh rows succeed, all 18
+boundary queries match the reference, and all 28 actual HTTP cases pass.
+Scoped S3 restoration reproduces the entire series and exact hot write versions;
+old before-images remain readable and unrelated VN OHLCV/provider basis is
+unchanged. Forty-five immutable input-evidence objects have verified readbacks.
+
+Evidence is in `data/ctg-local-activation-20261004/report.json`,
+`data/ctg-local-http-restoration-20261004/report.json`, and
+`data/vn-vci-candidate-review-with-ctg-20261004/report.json`. The restarted local
+VN worker uses `data/ctg-local-activation-20261004/active-volume-proofs.json`:
+15 proofs for the seven licensed series, including five CTG targets. The current
+manifest has 891 objects, 76 handoff certificates, 34 recoveries and eight
+protected history markers. The refreshed audit removes CTG's old interval-basis
+finding; GAS/GEE/MWG/SHB/VN30/VNINDEX remain open. This proves the stated observed
+history and recovery scope, not calendar completeness or production readiness.
+The complete suite passes 727 tests; lint and formatting pass.
+
 ## Four further verified local VN minute activations — 2026-10-04 ICT
 
 BSR, TCB, VHM and VND now join FPT/TPB as active, licensed VCI minute histories
