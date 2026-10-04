@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "exchange": "HOSE",
+  "year": 2023,
+  "symbols": ["VNINDEX", "VN30"],
+  "weekdays": [0, 1, 2, 3, 4],
+  "closed_ranges": [
+    ["2023-01-02", "2023-01-02"],
+    ["2023-01-20", "2023-01-26"],
+    ["2023-05-01", "2023-05-03"],
+    ["2023-09-01", "2023-09-04"]
+  ],
+  "explicit_closed_weekends": [],
+  "source": {
+    "notice": "2208/TB-SGDHCM",
+    "published": "2022-12-13",
+    "url": "https://cdn.thuvienphapluat.vn/phap-luat/2022-2/HQ/lich-nghi-hose.jpg",
+    "distribution": "Mirror of the signed HOSE notice image",
+    "format": "jpeg",
+    "sha256": "81b5e5914da3e720e83486ebb4c59aff2ec1b1a95a1ca5124c5d21929107523d",
+    "bytes": 137890,
+    "transcription_verification": "Visually checked against the complete displayed signed annual HOSE notice."
+  },
+  "limitations": [
+    "This is the announced schedule, not proof that every scheduled session actually took place.",
+    "Ticker listing dates, suspensions and no-trade days are not inferred.",
+    "This declaration licenses date checks only for the two named HOSE indices and only in 2023.",
+    "Source hash verification preserves the mirrored notice; it does not cryptographically authenticate its signature or automate verification of the manual transcription."
+  ]
+}

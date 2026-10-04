@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "exchange": "HOSE",
+  "year": 2026,
+  "symbols": ["VNINDEX", "VN30"],
+  "weekdays": [0, 1, 2, 3, 4],
+  "closed_ranges": [
+    ["2026-01-01", "2026-01-01"],
+    ["2026-02-16", "2026-02-20"],
+    ["2026-04-27", "2026-04-27"],
+    ["2026-04-30", "2026-05-01"],
+    ["2026-08-31", "2026-09-02"]
+  ],
+  "explicit_closed_weekends": ["2026-08-22"],
+  "source": {
+    "notice": "2294/TB-SGDHCM",
+    "published": "2025-12-09",
+    "url": "https://cafef1.mediacdn.vn/download/240426/hose-thong-bao-lich-nghi-giao-dich-nam-2026-1.pdf",
+    "distribution": "Mirror of the signed HOSE annual PDF",
+    "sha256": "7197a28764962f760a96bca0e46f1670c925716c53c8f43303194c25eea95d0b",
+    "bytes": 1089386,
+    "transcription_verification": "Visually checked both pages of the downloaded signed annual HOSE notice."
+  },
+  "amendments": [
+    {
+      "closed_ranges": [["2026-01-02", "2026-01-02"]],
+      "explicit_closed_weekends": ["2026-01-10"],
+      "source": {
+        "notice": "2410/TB-SGDHCM",
+        "published": "2025-12-25",
+        "url": "https://staticfile.hsx.vn/Uploads/UploadDocuments/2426350/20251225_Thong%20bao%20%20ve%20%20viec%20cap%20nhat%20lich%20nghi%20giao%20dich%20Tet%20Duong%20lich%202026%20toan%20thi%20truong.pdf",
+        "distribution": "Official HOSE PDF",
+        "sha256": "ef798ee1078b1895b026dfea5652630f408f6772dcdc59a07690b833241aed2c",
+        "bytes": 194413,
+        "transcription_verification": "Visually checked: adds January 2 to the New Year closure and excludes the January 10 makeup Saturday."
+      }
+    }
+  ],
+  "limitations": [
+    "This is the announced schedule including the recorded amendment, not proof that every scheduled session actually took place.",
+    "Ticker listing dates, suspensions and no-trade days are not inferred.",
+    "This declaration licenses date checks only for the two named HOSE indices and only in 2026.",
+    "Source hash verification preserves the notices; it does not cryptographically authenticate signatures or automate verification of the manual transcription."
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "exchange": "HOSE",
+  "year": 2024,
+  "symbols": ["VNINDEX", "VN30"],
+  "weekdays": [0, 1, 2, 3, 4],
+  "closed_ranges": [
+    ["2024-01-01", "2024-01-01"],
+    ["2024-02-08", "2024-02-14"],
+    ["2024-04-18", "2024-04-18"],
+    ["2024-04-30", "2024-05-01"],
+    ["2024-09-02", "2024-09-03"]
+  ],
+  "explicit_closed_weekends": [],
+  "source": {
+    "notice": "1943/TB-SGDHCM",
+    "published": "2023-12-07",
+    "url": "https://static2.vietstock.vn/vietstock/2023/12/7/20231207_lich_nghi_giao_dich_2024.pdf",
+    "distribution": "Mirror of the signed HOSE PDF",
+    "sha256": "5eed6fc6524061ebad9a545e87027d5004cbf71272e79b8ea6bba4458b6f5c2d",
+    "bytes": 343833,
+    "transcription_verification": "Visually checked against the downloaded signed annual HOSE notice."
+  },
+  "amendments": [
+    {
+      "closed_ranges": [["2024-04-29", "2024-04-29"]],
+      "explicit_closed_weekends": ["2024-05-04"],
+      "source": {
+        "notice": "803/TB-SGDHCM",
+        "published": "2024-04-19",
+        "url": "https://static2.vietstock.vn/vietstock/2024/4/19/20240419_19042024___cap_nhat_lich_nghi_giao_dich_2024_.pdf",
+        "distribution": "Mirror of the signed HOSE PDF",
+        "sha256": "0c579efbaf9acd12c7c7559290c05b82d6e3a1885184737b239ea9dc306374d5",
+        "bytes": 654225,
+        "transcription_verification": "Visually checked: extends the April 30-May 1 closure to April 29 and excludes the May 4 makeup Saturday."
+      }
+    }
+  ],
+  "limitations": [
+    "This is the announced schedule including the recorded amendment, not proof that every scheduled session actually took place.",
+    "Ticker listing dates, suspensions and no-trade days are not inferred.",
+    "This declaration licenses date checks only for the two named HOSE indices and only in 2024.",
+    "Source hash verification preserves the mirrored notices; it does not cryptographically authenticate signatures or automate verification of the manual transcription."
+  ]
+}
