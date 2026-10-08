@@ -22,6 +22,7 @@ class Worker:
         self.configuration = []
         self.deadline = 90  # Keep network operations shorter than durable leases.
         self.recovery_turn = 0
+        self.live_turn = 0
 
     def load_watchlist(self):
         raw = json.loads(self.settings.watchlist.read_text())
@@ -92,6 +93,21 @@ class Worker:
                     self.repo.cancel_superseded_bootstrap(
                         entry["source"], entry["symbol"], iv, self.floor(entry, iv)
                     )
+                    if entry["source"] == "vn" and iv == "1D" and state["provider"] == "vndirect":
+                        preferred = vn_provider_order(
+                            self.settings, "1D", int(time.time()) + 1, entry["symbol"]
+                        )[0]
+                        if preferred != state["provider"]:
+                            jobs.append(
+                                self.repo.queue(
+                                    "vn",
+                                    entry["symbol"],
+                                    "1D",
+                                    "repair",
+                                    self.floor(entry, iv),
+                                    preferred,
+                                )
+                            )
                 else:
                     jobs.append(
                         self.repo.queue(
@@ -880,19 +896,36 @@ class Worker:
             for priority, entry in enumerate(self.configuration)
         }
         interval_priority = {"1m": 0, "1h": 1, "1D": 2}
-        # Oldest deadlines remain fair after startup. When a catalog is first
-        # enabled and every deadline is zero, initialize the most time-sensitive
-        # tails first and preserve curated/configuration order within an interval.
-        due.sort(
-            key=lambda item: (
+        def live_priority(item):
+            return (
                 item[0],
                 interval_priority[item[2]],
                 configured[(item[1]["source"], item[1]["symbol"])],
             )
+
+        scheduled = sorted((item for item in due if item[0] > 0), key=live_priority)
+        never = sorted(
+            (item for item in due if item[0] == 0),
+            key=lambda item: (
+                interval_priority[item[2]],
+                configured[(item[1]["source"], item[1]["symbol"])],
+            ),
         )
+        capacity = self.settings.worker_concurrency
+        if scheduled and never and capacity == 1:
+            selected = (scheduled if self.live_turn % 2 == 0 else never)[:1]
+            self.live_turn += 1
+        elif scheduled and never:
+            scheduled_count = min(len(scheduled), capacity - 1)
+            selected = scheduled[:scheduled_count]
+            selected.extend(never[: capacity - scheduled_count])
+            if len(selected) < capacity:
+                selected.extend(scheduled[scheduled_count:capacity])
+        else:
+            selected = (scheduled or never)[:capacity]
         # Ordinary updates get a turn before one bounded recovery page.
         values = await asyncio.gather(
-            *(self.sync(entry, iv) for _, entry, iv in due[: self.settings.worker_concurrency])
+            *(self.sync(entry, iv) for _, entry, iv in selected)
         )
         allowed = [
             (entry["source"], entry["symbol"], iv)

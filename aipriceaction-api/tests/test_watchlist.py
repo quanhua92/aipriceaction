@@ -128,3 +128,64 @@ async def test_stale_minute_sweep_reserves_three_of_four_recovery_turns(
     for _ in range(4):
         assert await worker.cycle() == 0
     assert len(claims) == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("concurrency", "expected"),
+    [
+        (3, ["VPL", "VCB", "AAA"]),
+        (2, ["VPL", "AAA"]),
+    ],
+)
+async def test_overdue_live_retries_share_cycle_with_zero_catalog_tail(
+    tmp_path, monkeypatch, concurrency, expected
+):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": "vn", "symbol": symbol, "intervals": ["1m"]}
+        for symbol in ("AAA", "AAS", "VPL", "VCB")
+    ]
+    repo.activate_watchlist(entries)
+    repo.schedule("vn", "VPL", "1m", 10)
+    repo.schedule("vn", "VCB", "1m", 20)
+    worker = Worker(repo, replace(Settings(), worker_concurrency=concurrency))
+    worker.configuration = entries
+    observed = []
+
+    async def record(entry, interval):
+        observed.append(entry["symbol"])
+        return 0
+
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: 100)
+    monkeypatch.setattr(worker, "sync", record)
+    monkeypatch.setattr(repo, "claim_job", lambda *args, **kwargs: None)
+    assert await worker.cycle() == 0
+    assert observed == expected
+
+
+@pytest.mark.asyncio
+async def test_single_live_slot_alternates_overdue_and_zero_catalog_work(tmp_path, monkeypatch):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": "vn", "symbol": "AAA", "intervals": ["1m"]},
+        {"source": "vn", "symbol": "VPL", "intervals": ["1m"]},
+    ]
+    repo.activate_watchlist(entries)
+    repo.schedule("vn", "VPL", "1m", 10)
+    worker = Worker(repo, replace(Settings(), worker_concurrency=1))
+    worker.configuration = entries
+    observed = []
+
+    async def record(entry, interval):
+        observed.append(entry["symbol"])
+        return 0
+
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: 100)
+    monkeypatch.setattr(worker, "sync", record)
+    monkeypatch.setattr(repo, "claim_job", lambda *args, **kwargs: None)
+    assert await worker.cycle() == 0
+    assert await worker.cycle() == 0
+    assert observed == ["VPL", "AAA"]

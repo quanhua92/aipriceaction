@@ -1720,6 +1720,50 @@ async def test_newest_candles_remain_available_during_incomplete_bootstrap(syste
     assert any(f["kind"] == "coverage_pending" for f in repo.findings())
 
 
+@pytest.mark.parametrize(("symbol", "preferred"), [("FPT", "vps"), ("VNINDEX", "dnse")])
+def test_bootstrap_self_heals_vndirect_daily_series(system, monkeypatch, symbol, preferred):
+    repo, archive, settings = system
+    floor = candle(1).time
+    published = replace(candle(5, provider="vndirect", symbol=symbol), revision="published")
+    repo.put([published])
+    worker = Worker(repo, settings, archive=archive)
+    worker.configuration = [{"source": "vn", "symbol": symbol, "intervals": ["1D"]}]
+    monkeypatch.setattr(worker, "floor", lambda entry, interval: floor)
+
+    jobs = worker.bootstrap()
+    assert len(jobs) == 1
+    state = repo.state("vn", symbol, "1D")
+    assert state["provider"] == "vndirect" and state["status"] == "repairing"
+    assert repo.read("vn", symbol, "1D")[-1].provider == "vndirect"
+    job = repo.claim_job(worker.owner)
+    assert job["id"] == jobs[0]
+    assert job["provider"] == preferred and job["floor"] == floor
+
+
+def test_vndirect_daily_self_heal_resumes_same_staged_repair(system, monkeypatch):
+    repo, archive, settings = system
+    floor = candle(1).time
+    published = replace(candle(5, provider="vndirect"), revision="published")
+    repo.put([published])
+    worker = Worker(repo, settings, archive=archive)
+    worker.configuration = [{"source": "vn", "symbol": "FPT", "intervals": ["1D"]}]
+    monkeypatch.setattr(worker, "floor", lambda entry, interval: floor)
+    repair_id = worker.bootstrap()[0]
+    job = repo.claim_job(worker.owner)
+    staged = replace(candle(5), revision=job["revision"])
+    repo.stage(job, [staged], staged.time, "vps")
+    with repo.connect() as con:
+        before_job = dict(con.execute("SELECT * FROM jobs WHERE id=?", (repair_id,)).fetchone())
+        before_staging = [tuple(row) for row in con.execute("SELECT * FROM staging")]
+
+    assert worker.bootstrap() == [repair_id]
+    with repo.connect() as con:
+        after_job = dict(con.execute("SELECT * FROM jobs WHERE id=?", (repair_id,)).fetchone())
+        after_staging = [tuple(row) for row in con.execute("SELECT * FROM staging")]
+    assert after_job == before_job
+    assert after_staging == before_staging
+
+
 def test_adjustment_cancels_bootstrap_without_reviving_stale_jobs(system):
     repo, _, _ = system
     repo.queue("vn", "FPT", "1D", "bootstrap", candle(1).time)
