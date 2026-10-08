@@ -389,6 +389,29 @@ def test_certified_minutes_make_recent_vn_intervals_exact(system):
     ) == expected
 
 
+def test_cash_index_uses_regular_minutes_as_served_daily_and_hourly_truth(system):
+    repo, _, history = system
+    day = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "VNINDEX", "1D", day, 90, 110, 80, 99, 999, "vps"),
+            Candle("vn", "VNINDEX", "1h", day + 2 * 3600, 90, 110, 80, 99, 999, "vndirect"),
+            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10, "vps"),
+            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20, "vps"),
+            Candle("vn", "VNINDEX", "1m", day + 8 * 3600 + 5 * 60, 103, 103, 90, 90, 500, "vps"),
+        ]
+    )
+
+    minute = history.query("vn", "VNINDEX", "1m", limit=10, ma=False)
+    daily = history.query("vn", "VNINDEX", "1D", limit=1, ma=False)[0]
+    hourly = history.query("vn", "VNINDEX", "1h", limit=1, ma=False)[0]
+    expected = (100, 104, 99, 103, 30)
+
+    assert len(minute) == 2
+    assert tuple(daily[field] for field in ("open", "high", "low", "close", "volume")) == expected
+    assert tuple(hourly[field] for field in ("open", "high", "low", "close", "volume")) == expected
+
+
 @pytest.mark.parametrize("ema", [False, True])
 def test_recent_vnd_daily_ma_context_uses_certified_minutes(system, ema):
     repo, _, history = system

@@ -212,6 +212,10 @@ def test_stock_minute_keeps_vps_primary_and_dnse_before_vndirect():
     ]
 
 
+def test_futures_minute_does_not_use_cash_index_preference():
+    assert vn_provider_order(settings(), "1m", STAMP, "VN30F1M")[0] == "vps"
+
+
 @pytest.mark.asyncio
 async def test_vci_does_not_displace_a_working_preferred_source():
     seen = []

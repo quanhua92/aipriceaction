@@ -41,7 +41,8 @@ class RateLimiter:
 
 def vn_provider_order(settings, iv, before, symbol=None):
     selected = list(settings.vn_providers)
-    if (iv == "1h" or symbol in INDEXES and iv in {"1m", "1D"}) and "dnse" in selected:
+    cash_index = symbol in INDEXES and symbol != "VN30F1M"
+    if (iv == "1h" or cash_index and iv in {"1m", "1D"}) and "dnse" in selected:
         # DNSE is the only index feed with clean exchange-session timestamps.
         # VPS appends a large post-close index bar and VNDirect mixes indicative
         # quotes into minute OHLC, so keep one coherent provider across all

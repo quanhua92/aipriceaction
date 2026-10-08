@@ -3,7 +3,7 @@ import time
 from dataclasses import replace
 
 from .calculations import aggregate, enhance
-from .domain import DataError, base_interval, bucket, completed_vn_sessions, cutoff
+from .domain import INDEXES, DataError, base_interval, bucket, completed_vn_sessions, cutoff
 
 
 class History:
@@ -210,6 +210,28 @@ class History:
             and sum(row.volume for row in rows) == daily.volume
         )
 
+    @staticmethod
+    def vn_cash_index_minutes(symbol, rows):
+        """Remove synthetic quotes outside the cash-index trading session."""
+        if symbol not in INDEXES or symbol == "VN30F1M":
+            return rows
+        morning_open = 2 * 3600 + (15 * 60 if symbol in {"VNINDEX", "VN30"} else 0)
+        return [
+            row
+            for row in rows
+            if morning_open <= row.time % 86400 <= 4 * 3600 + 30 * 60
+            or 6 * 3600 <= row.time % 86400 <= 7 * 3600 + 45 * 60
+        ]
+
+    def vn_minute_target(self, symbol, start, end, limit, forward=False):
+        if symbol not in INDEXES or symbol == "VN30F1M":
+            return self.read("vn", symbol, "1m", start, end, limit, forward=forward)
+        # Read a few extra native rows so removing synthetic pre/post-session
+        # quotes does not shorten a normal limit-only API response.
+        rows = self.read("vn", symbol, "1m", start, end, limit + 16, forward=forward)
+        rows = self.vn_cash_index_minutes(symbol, rows)
+        return rows[:limit] if forward else rows[-limit:]
+
     def vn_daily_target(self, symbol, start, end, limit=None, forward=False, revision=None):
         """Overlay completed recent VND daily candles from certified local minutes."""
         native = self.read(
@@ -220,13 +242,16 @@ class History:
         minute_state = self.repo.state("vn", symbol, "1m")
         if not minute_state or minute_state["provider"] not in {"vps", "dnse"}:
             return native
+        cash_index = symbol in INDEXES and symbol != "VN30F1M"
         minute_cutoff = cutoff(self.settings.minute_years)
         completed_before = completed_vn_sessions()
         first = max(native[0].time, minute_cutoff)
         last = min(native[-1].time + 86399, completed_before - 1)
         if first > last:
             return native
-        minutes = self.repo.read("vn", symbol, "1m", first, last)
+        minutes = self.vn_cash_index_minutes(
+            symbol, self.repo.read("vn", symbol, "1m", first, last)
+        )
         groups = {}
         for row in minutes:
             groups.setdefault(row.time // 86400 * 86400, []).append(row)
@@ -234,7 +259,7 @@ class History:
         for row in native:
             observed = groups.get(row.time)
             if (
-                row.provider != "vndirect"
+                (row.provider != "vndirect" and not cash_index)
                 or not observed
                 or row.time >= completed_before
                 or any(item.provider not in {"vps", "dnse"} for item in observed)
@@ -354,6 +379,8 @@ class History:
             rows = self.read(
                 source, symbol, native, lower, end, count, forward=forward, revision=revision
             )
+            if source == "vn" and native == "1m":
+                rows = self.vn_cash_index_minutes(symbol, rows)
             if not rows:
                 return []
             bars = aggregate(rows, iv, source, self.repo.validate_basis)
@@ -410,6 +437,8 @@ class History:
                 if source == "vn" and iv == "1h"
                 else self.vn_daily_target(symbol, start, end, limit, forward=start is not None)
                 if source == "vn" and iv == "1D"
+                else self.vn_minute_target(symbol, start, end, limit, forward=start is not None)
+                if source == "vn" and iv == "1m"
                 else self.read(source, symbol, native, start, end, limit, forward=start is not None)
             )
             if not target:
