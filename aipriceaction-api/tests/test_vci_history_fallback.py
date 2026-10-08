@@ -199,6 +199,19 @@ async def test_vci_is_last_resort_and_only_for_older_minutes():
     assert "vci" not in vn_provider_order(settings(), "1m", 10**12)
 
 
+@pytest.mark.parametrize("interval", ["1m", "1h", "1D"])
+def test_indexes_use_dnse_consistently_across_native_intervals(interval):
+    assert vn_provider_order(settings(), interval, STAMP, "VNINDEX")[0] == "dnse"
+
+
+def test_stock_minute_keeps_vps_primary_and_dnse_before_vndirect():
+    assert vn_provider_order(settings(), "1m", STAMP, "FPT")[:3] == [
+        "vps",
+        "dnse",
+        "vndirect",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_vci_does_not_displace_a_working_preferred_source():
     seen = []
