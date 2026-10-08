@@ -94,4 +94,6 @@ def test_latest_vn_interval_audit_exposes_hour_bucket_drift(tmp_path):
     assert row["native_hourly_vs_minutes"] == [
         {"time": "07:00:00", "kind": "ohlcv", "fields": ["close"]}
     ]
-    assert row["daily_vs_hours"] == ["close"]
+    # Keep the native-provider finding, while modeling the API's replacement
+    # from a completed minute session that exactly matches the daily candle.
+    assert row["daily_vs_hours"] == []

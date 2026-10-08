@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import INDEXES, cutoff
+from aipriceaction_api.domain import INDEXES, completed_vn_sessions, cutoff
 
 FIELDS = ("open", "high", "low", "close", "volume")
 INTERVALS = ("1D", "1h", "1m")
@@ -72,7 +72,7 @@ def compare_hours(minutes, hours):
     return issues
 
 
-def effective_hours(minutes, hours, active_hourly=True):
+def effective_hours(minutes, hours, dailies=(), active_hourly=True):
     """Mirror the API's conservative recent minute overlay."""
     minute_groups = defaultdict(list)
     for row in minutes:
@@ -86,6 +86,17 @@ def effective_hours(minutes, hours, active_hourly=True):
     native = {row["time"]: dict(row) for row in hours}
     if not native:
         return []
+    daily_by_time = {row["time"]: row for row in dailies}
+    derived_by_day = defaultdict(list)
+    for row in derived.values():
+        derived_by_day[row["time"] // 86400 * 86400].append(row)
+    corroborated = {
+        day
+        for day, rows in derived_by_day.items()
+        if day < completed_vn_sessions()
+        and day in daily_by_time
+        and not differences(dict(daily_by_time[day]), aggregate(sorted(rows, key=lambda row: row["time"])))
+    }
     # Spell out the OHLC comparison rather than allowing a volume difference
     # to block the exact substitution the API is meant to make.
     overlaps = {
@@ -100,7 +111,12 @@ def effective_hours(minutes, hours, active_hourly=True):
     latest_native = max(native)
     anchored = bool(overlaps)
     for timestamp, row in derived.items():
-        if timestamp in overlaps or (timestamp > latest_native and anchored):
+        day = timestamp // 86400 * 86400
+        if (
+            timestamp in overlaps
+            or day in corroborated
+            or (timestamp > latest_native and anchored)
+        ):
             native[timestamp] = row
     return [native[timestamp] for timestamp in sorted(native)]
 
@@ -171,11 +187,18 @@ def audit(database, symbols=()):
                 "AND time>=? AND time<? ORDER BY time",
                 (symbol, recent_start, session_day + 86400),
             ).fetchall()
+            recent_dailies = con.execute(
+                "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1D' "
+                "AND time>=? AND time<? ORDER BY time",
+                (symbol, recent_start, session_day + 86400),
+            ).fetchall()
             active_hourly = con.execute(
                 "SELECT 1 FROM series WHERE source='vn' AND symbol=? AND interval='1h'",
                 (symbol,),
             ).fetchone() is not None
-            served_hours = effective_hours(recent_minutes, recent_hours, active_hourly)
+            served_hours = effective_hours(
+                recent_minutes, recent_hours, recent_dailies, active_hourly
+            )
             served = dict(latest)
             if served_hours:
                 served["1h"] = served_hours[-1]["time"]
