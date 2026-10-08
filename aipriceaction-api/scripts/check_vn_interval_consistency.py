@@ -75,6 +75,29 @@ def compare_hours(minutes, hours):
     return issues
 
 
+def effective_dailies(minutes, dailies, minute_provider):
+    """Mirror completed-session daily replacement from certified minutes."""
+    if minute_provider not in {"vps", "dnse"}:
+        return [dict(row) for row in dailies]
+    minute_groups = defaultdict(list)
+    for row in minutes:
+        minute_groups[row["time"] // 86400 * 86400].append(row)
+    completed_before = completed_vn_sessions()
+    result = []
+    for daily in dailies:
+        row = dict(daily)
+        observed = minute_groups.get(row["time"], [])
+        if (
+            row["provider"] == "vndirect"
+            and row["time"] < completed_before
+            and observed
+            and all(item["provider"] in {"vps", "dnse"} for item in observed)
+        ):
+            row.update(aggregate(observed))
+        result.append(row)
+    return result
+
+
 def effective_hours(minutes, hours, dailies=(), active_hourly=True):
     """Mirror the API's conservative recent minute overlay."""
     minute_groups = defaultdict(list)
@@ -195,12 +218,21 @@ def audit(database, symbols=()):
                 "AND time>=? AND time<? ORDER BY time",
                 (symbol, recent_start, session_day + 86400),
             ).fetchall()
+            minute_state = con.execute(
+                "SELECT provider FROM series WHERE source='vn' AND symbol=? AND interval='1m'",
+                (symbol,),
+            ).fetchone()
+            served_dailies = effective_dailies(
+                recent_minutes,
+                recent_dailies,
+                minute_state["provider"] if minute_state else None,
+            )
             active_hourly = con.execute(
                 "SELECT 1 FROM series WHERE source='vn' AND symbol=? AND interval='1h'",
                 (symbol,),
             ).fetchone() is not None
             served_hours = effective_hours(
-                recent_minutes, recent_hours, recent_dailies, active_hourly
+                recent_minutes, recent_hours, served_dailies, active_hourly
             )
             served = dict(latest)
             if served_hours:
@@ -245,10 +277,13 @@ def audit(database, symbols=()):
             else:
                 totals["index_session_extensions"] += bool(outside)
 
-            daily = con.execute(
+            native_daily = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1D' AND time=?",
                 (symbol, session_day),
             ).fetchone()
+            daily = next(
+                (row for row in served_dailies if row["time"] == session_day), native_daily
+            )
             hours = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1h' "
                 "AND time>=? AND time<? ORDER BY time",
@@ -257,6 +292,10 @@ def audit(database, symbols=()):
             hourly_issues = compare_hours(minute_rows, hours) if hours else []
             record["native_hourly_vs_minutes"] = hourly_issues
             totals["native_hourly_minute_bucket_mismatches"] += bool(hourly_issues)
+            if native_daily is not None:
+                native_daily_diff = differences(dict(native_daily), aggregate(minute_rows))
+                record["native_daily_vs_minutes"] = native_daily_diff
+                totals["native_daily_minute_ohlcv_mismatches"] += bool(native_daily_diff)
             if daily is not None:
                 expected = dict(daily)
                 minute_diff = differences(expected, aggregate(minute_rows))

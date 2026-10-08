@@ -13,6 +13,8 @@ def build(
     tmp_path,
     *,
     opening_offset=15 * 60,
+    minute_provider="import",
+    daily_provider="import",
     stale_hour=False,
     missing_hour=False,
     bad_hour=False,
@@ -24,7 +26,18 @@ def build(
     repo.initialize()
     day = stamp("2026-10-08")
     minutes = [
-        Candle("vn", "VCB", "1m", day + 2 * 3600 + opening_offset, 100, 102, 99, 101, 10),
+        Candle(
+            "vn",
+            "VCB",
+            "1m",
+            day + 2 * 3600 + opening_offset,
+            100,
+            102,
+            99,
+            101,
+            10,
+            minute_provider,
+        ),
         Candle(
             "vn",
             "VCB",
@@ -35,6 +48,7 @@ def build(
             100,
             103,
             20,
+            minute_provider,
         ),
     ]
     hour_day = day - 86400 if stale_hour else day
@@ -42,7 +56,9 @@ def build(
         Candle("vn", "VCB", "1h", hour_day + 2 * 3600, 100, 102, 99, 101, 10),
         Candle("vn", "VCB", "1h", hour_day + 7 * 3600, 101, 104, 100, 102 if bad_hour else 103, 20),
     ]
-    daily = Candle("vn", "VCB", "1D", day, 100, 104, 99, 102 if bad_close else 103, 30)
+    daily = Candle(
+        "vn", "VCB", "1D", day, 100, 104, 99, 102 if bad_close else 103, 30, daily_provider
+    )
     repo.put([*minutes, *([] if missing_hour else hours), daily])
     return path
 
@@ -105,3 +121,13 @@ def test_hnx_nine_oclock_observation_is_inside_vn_session(tmp_path):
     assert row["minute_session"]["first"] == "02:00:00"
     assert row["minute_session"]["outside_regular_session"] == 0
     assert row["minute_session"]["regular_boundary"]
+
+
+def test_audit_models_certified_minute_replacement_of_vnd_daily(tmp_path):
+    row = audit(
+        build(tmp_path, bad_close=True, minute_provider="vps", daily_provider="vndirect"),
+        ["VCB"],
+    )["series"][0]
+    assert row["native_daily_vs_minutes"] == ["close"]
+    assert row["daily_vs_minutes"] == []
+    assert row["daily_vs_hours"] == []
