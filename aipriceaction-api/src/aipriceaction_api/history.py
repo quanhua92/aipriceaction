@@ -1,5 +1,6 @@
 import math
 import time
+from dataclasses import replace
 
 from .calculations import aggregate, enhance
 from .domain import DataError, base_interval, bucket, cutoff
@@ -186,6 +187,73 @@ class History:
                 return "1m"
         return native
 
+    @staticmethod
+    def same_ohlc(left, right):
+        return all(
+            math.isclose(getattr(left, name), getattr(right, name), rel_tol=1e-12, abs_tol=1e-9)
+            for name in ("open", "high", "low", "close")
+        )
+
+    def vn_hourly_target(self, symbol, start, end, limit):
+        """Overlay recent minute-derived buckets without shortening native history."""
+        native = self.read("vn", symbol, "1h", start, end, limit, forward=start is not None)
+        minute_cutoff = cutoff(self.settings.minute_years)
+        if end is not None and end < minute_cutoff:
+            return native
+        if not self.repo.state("vn", symbol, "1m"):
+            return native
+        try:
+            derived = self.aggregated(
+                "vn",
+                symbol,
+                "1h",
+                max(start, minute_cutoff) if start is not None else None,
+                end,
+                min(limit + 1, self.settings.archive_max_rows),
+                native="1m",
+            )
+        except DataError:
+            return native
+        if not derived or derived[-1].time < minute_cutoff:
+            return native
+        # An archive-only hourly identity has no active adjustment basis to
+        # merge with. Recent reads use the verified minute series by itself;
+        # explicitly old reads above already remain on native hourly history.
+        if not self.repo.state("vn", symbol, "1h"):
+            return derived[:limit] if start is not None else derived[-limit:]
+        if not native:
+            return derived[:limit] if start is not None else derived[-limit:]
+
+        merged = {row.time: row for row in native}
+        overlaps = {
+            row.time
+            for row in derived
+            if row.time in merged and self.same_ohlc(merged[row.time], row)
+        }
+        latest_native = native[-1]
+        anchored = bool(overlaps)
+        for row in derived:
+            basis = merged.get(row.time)
+            if basis is not None:
+                if row.time not in overlaps:
+                    continue
+            elif row.time <= latest_native.time or not anchored:
+                continue
+            else:
+                basis = latest_native
+            # Query-only rows inherit the verified hourly adjustment identity.
+            # OHLC equality on overlap proves that only the finer-grained
+            # volume/session representation is being substituted.
+            merged[row.time] = replace(
+                row,
+                interval="1h",
+                provider=basis.provider,
+                revision=basis.revision,
+                updated_at=max(row.updated_at, basis.updated_at),
+            )
+        rows = sorted(merged.values(), key=lambda row: row.time)
+        return rows[:limit] if start is not None else rows[-limit:]
+
     def aggregated(
         self, source, symbol, iv, start=None, end=None, limit=252, native=None, revision=None
     ):
@@ -256,20 +324,38 @@ class History:
         # Fetch native bars before aggregation, then acquire enough *aggregated*
         # lookback buckets. This avoids a calendar-day approximation for MA200.
         if native == iv:
-            target = self.read(source, symbol, native, start, end, limit, forward=start is not None)
+            target = (
+                self.vn_hourly_target(symbol, start, end, limit)
+                if source == "vn" and iv == "1h"
+                else self.read(source, symbol, native, start, end, limit, forward=start is not None)
+            )
             if not target:
                 return []
-            earlier = self.warmup(
-                lambda count: self.read(
-                    source,
-                    symbol,
-                    native,
-                    end=target[0].time - 1,
-                    limit=count,
-                    revision=target[0].revision,
-                ),
-                buffer,
-            )
+            if iv == "1h" and target[0].interval == "1m":
+                earlier = self.warmup(
+                    lambda count: self.aggregated(
+                        source,
+                        symbol,
+                        iv,
+                        end=target[0].time - 1,
+                        limit=count,
+                        native="1m",
+                        revision=target[0].revision,
+                    ),
+                    buffer,
+                )
+            else:
+                earlier = self.warmup(
+                    lambda count: self.read(
+                        source,
+                        symbol,
+                        native,
+                        end=target[0].time - 1,
+                        limit=count,
+                        revision=target[0].revision,
+                    ),
+                    buffer,
+                )
             rows = earlier + target
         else:
             target = self.aggregated(source, symbol, iv, start, end, limit, native=native)

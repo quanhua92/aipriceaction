@@ -115,6 +115,160 @@ def minute_hour_fixture(repo):
     )
 
 
+def test_recent_vn_hourly_query_prefers_fresh_minute_aggregate(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    minute_rows = [
+        Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+        Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+    ]
+    repo.put(minute_rows + [Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 104, 99, 103, 999)])
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["time"].endswith("T02:00:00")
+    assert result[0]["volume"] == 30
+
+
+def test_recent_vn_hourly_query_appends_newer_minute_bucket_after_ohlc_anchor(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 104, 99, 103, 999),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+            Candle("vn", "FPT", "1m", recent + 3 * 3600 + 15 * 60, 103, 106, 102, 105, 40),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["time"].endswith("T03:00:00")
+    assert result[0]["close"] == 105 and result[0]["volume"] == 40
+
+
+def test_recent_forward_hourly_range_without_native_rows_honors_limit(system):
+    repo, _, history = system
+    old = cutoff(1) - 30 * 86400
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1h", old + 2 * 3600, 90, 91, 89, 90, 900),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 3 * 3600 + 15 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", start=recent, limit=1, ma=False)
+
+    assert len(result) == 1
+    assert result[0]["time"].endswith("T02:00:00")
+
+
+def test_recent_vn_hourly_query_keeps_native_bucket_when_minute_ohlc_disagrees(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 104, 99, 103, 999),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 102, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["close"] == 103 and result[0]["volume"] == 999
+
+
+def test_recent_vn_hourly_overlay_preserves_full_native_limit(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    native = [
+        Candle("vn", "FPT", "1h", recent + i * 3600, 100 + i, 101 + i, 99 + i, 100 + i, 999)
+        for i in range(252)
+    ]
+    minutes = [
+        Candle(
+            "vn",
+            "FPT",
+            "1m",
+            row.time + 15 * 60,
+            row.open,
+            row.high,
+            row.low,
+            row.close,
+            index + 1,
+        )
+        for index, row in enumerate(native[-5:])
+    ]
+    repo.put(native + minutes)
+
+    result = history.query("vn", "FPT", "1h", limit=252, ma=False)
+
+    assert len(result) == 252
+    assert [row["volume"] for row in result[:247]] == [999] * 247
+    assert [row["volume"] for row in result[-5:]] == [1, 2, 3, 4, 5]
+
+
+def test_archive_only_hourly_identity_uses_recent_minutes_but_preserves_old_end(system):
+    repo, archive, history = system
+    old = cutoff(1) - 30 * 86400
+    recent = cutoff(1) + 30 * 86400
+    archive.publish([Candle("vn", "FPT", "1h", old + 2 * 3600, 90, 91, 89, 90, 900)])
+    repo.put(
+        [
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    latest = history.query("vn", "FPT", "1h", limit=1, ma=False)
+    historical = history.query("vn", "FPT", "1h", end=old + 86399, limit=1, ma=False)
+
+    assert latest[0]["close"] == 103 and latest[0]["volume"] == 30
+    assert historical[0]["close"] == 90 and historical[0]["volume"] == 900
+
+
+@pytest.mark.parametrize("archived", [False, True])
+def test_old_end_date_preserves_native_vn_hourly_history(system, archived):
+    repo, archive, history = system
+    old = cutoff(1) - 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1m", old + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", old + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+            Candle("vn", "FPT", "1h", old + 2 * 3600, 100, 104, 99, 103, 999),
+        ]
+    )
+    if archived:
+        archive.publish(repo.read("vn", "FPT", "1h"), prune=True)
+
+    result = history.query("vn", "FPT", "1h", end=old + 86399, limit=1, ma=False)
+
+    assert result[0]["time"].endswith("T02:00:00")
+    assert result[0]["volume"] == 999
+
+
+def test_long_vn_hourly_range_preserves_old_native_and_overlays_recent_minutes(system):
+    repo, _, history = system
+    old = cutoff(1) - 30 * 86400
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1h", old + 2 * 3600, 90, 91, 89, 90, 900),
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 104, 99, 103, 999),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", start=old, end=recent + 86399, limit=10, ma=False)
+
+    assert [row["volume"] for row in result] == [900, 30]
+
+
 @pytest.mark.parametrize("archived", [False, True])
 def test_minute_only_hourly_queries_preserve_complete_boundary_buckets(system, archived):
     repo, archive, history = system
