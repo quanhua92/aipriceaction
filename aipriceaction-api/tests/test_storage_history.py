@@ -8,7 +8,7 @@ import pytest
 
 from aipriceaction_api.archive import Archive
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import Candle, DataError, cutoff, parse_time
+from aipriceaction_api.domain import Candle, DataError, completed_vn_sessions, cutoff, parse_time
 from aipriceaction_api.history import History
 from aipriceaction_api.storage import Repository
 
@@ -180,6 +180,84 @@ def test_recent_vn_hourly_query_keeps_native_bucket_when_minute_ohlc_disagrees(s
     result = history.query("vn", "FPT", "1h", limit=1, ma=False)
 
     assert result[0]["close"] == 103 and result[0]["volume"] == 999
+
+
+def test_completed_daily_corroboration_replaces_native_hourly_ohlc(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 104, 99, 103, 30),
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 105, 98, 102, 999),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert tuple(result[0][field] for field in ("open", "high", "low", "close", "volume")) == (
+        100,
+        104,
+        99,
+        103,
+        30,
+    )
+
+
+def test_daily_disagreement_keeps_conservative_native_hour(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 104, 99, 103, 31),
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 105, 98, 102, 999),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["high"] == 105 and result[0]["close"] == 102
+    assert result[0]["volume"] == 999
+
+
+def test_unfinished_daily_session_keeps_conservative_native_hour(system):
+    repo, _, history = system
+    unfinished = completed_vn_sessions()
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", unfinished, 100, 104, 99, 103, 30),
+            Candle("vn", "FPT", "1h", unfinished + 2 * 3600, 100, 105, 98, 102, 999),
+            Candle("vn", "FPT", "1m", unfinished + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", unfinished + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["high"] == 105 and result[0]["close"] == 102
+    assert result[0]["volume"] == 999
+
+
+def test_completed_daily_corroboration_appends_newer_minute_session(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    newer = recent + 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 90, 91, 89, 90, 900),
+            Candle("vn", "FPT", "1D", newer, 100, 104, 99, 103, 30),
+            Candle("vn", "FPT", "1m", newer + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+            Candle("vn", "FPT", "1m", newer + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1h", limit=1, ma=False)
+
+    assert result[0]["time"].startswith(datetime.fromtimestamp(newer, UTC).strftime("%Y-%m-%d"))
+    assert result[0]["close"] == 103 and result[0]["volume"] == 30
 
 
 def test_recent_vn_hourly_overlay_preserves_full_native_limit(system):

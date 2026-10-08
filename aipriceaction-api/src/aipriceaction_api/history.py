@@ -3,7 +3,7 @@ import time
 from dataclasses import replace
 
 from .calculations import aggregate, enhance
-from .domain import DataError, base_interval, bucket, cutoff
+from .domain import DataError, base_interval, bucket, completed_vn_sessions, cutoff
 
 
 class History:
@@ -194,6 +194,22 @@ class History:
             for name in ("open", "high", "low", "close")
         )
 
+    @classmethod
+    def same_session(cls, rows, daily):
+        return (
+            bool(rows)
+            and cls.same_ohlc(
+                replace(
+                    rows[0],
+                    high=max(row.high for row in rows),
+                    low=min(row.low for row in rows),
+                    close=rows[-1].close,
+                ),
+                daily,
+            )
+            and sum(row.volume for row in rows) == daily.volume
+        )
+
     def vn_hourly_target(self, symbol, start, end, limit):
         """Overlay recent minute-derived buckets without shortening native history."""
         native = self.read("vn", symbol, "1h", start, end, limit, forward=start is not None)
@@ -209,7 +225,9 @@ class History:
                 "1h",
                 max(start, minute_cutoff) if start is not None else None,
                 end,
-                min(limit + 1, self.settings.archive_max_rows),
+                # Include a complete VN session around a small latest limit so
+                # daily corroboration can prove every hourly replacement.
+                min(limit + 8, self.settings.archive_max_rows),
                 native="1m",
             )
         except DataError:
@@ -225,6 +243,24 @@ class History:
             return derived[:limit] if start is not None else derived[-limit:]
 
         merged = {row.time: row for row in native}
+        groups = {}
+        for row in derived:
+            groups.setdefault(row.time // 86400 * 86400, []).append(row)
+        corroborated = set()
+        completed_before = completed_vn_sessions()
+        if groups:
+            try:
+                daily = self.read("vn", symbol, "1D", min(groups), max(groups))
+            except DataError:
+                daily = []
+            daily_by_time = {row.time: row for row in daily}
+            corroborated = {
+                day
+                for day, rows in groups.items()
+                if day < completed_before
+                and day in daily_by_time
+                and self.same_session(rows, daily_by_time[day])
+            }
         overlaps = {
             row.time
             for row in derived
@@ -234,12 +270,13 @@ class History:
         anchored = bool(overlaps)
         for row in derived:
             basis = merged.get(row.time)
+            day = row.time // 86400 * 86400
             if basis is not None:
-                if row.time not in overlaps:
+                if row.time not in overlaps and day not in corroborated:
                     continue
-            elif row.time <= latest_native.time or not anchored:
-                continue
             else:
+                if day not in corroborated and (row.time <= latest_native.time or not anchored):
+                    continue
                 basis = latest_native
             # Query-only rows inherit the verified hourly adjustment identity.
             # OHLC equality on overlap proves that only the finer-grained
