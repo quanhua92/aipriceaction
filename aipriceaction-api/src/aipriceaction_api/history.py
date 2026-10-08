@@ -210,6 +210,50 @@ class History:
             and sum(row.volume for row in rows) == daily.volume
         )
 
+    def vn_daily_target(self, symbol, start, end, limit=None, forward=False, revision=None):
+        """Overlay completed recent VND daily candles from certified local minutes."""
+        native = self.read(
+            "vn", symbol, "1D", start, end, limit, forward=forward, revision=revision
+        )
+        if not native:
+            return []
+        minute_state = self.repo.state("vn", symbol, "1m")
+        if not minute_state or minute_state["provider"] not in {"vps", "dnse"}:
+            return native
+        minute_cutoff = cutoff(self.settings.minute_years)
+        completed_before = completed_vn_sessions()
+        first = max(native[0].time, minute_cutoff)
+        last = min(native[-1].time + 86399, completed_before - 1)
+        if first > last:
+            return native
+        minutes = self.repo.read("vn", symbol, "1m", first, last)
+        groups = {}
+        for row in minutes:
+            groups.setdefault(row.time // 86400 * 86400, []).append(row)
+        result = []
+        for row in native:
+            observed = groups.get(row.time)
+            if (
+                row.provider != "vndirect"
+                or not observed
+                or row.time >= completed_before
+                or any(item.provider not in {"vps", "dnse"} for item in observed)
+            ):
+                result.append(row)
+                continue
+            result.append(
+                replace(
+                    row,
+                    open=observed[0].open,
+                    high=max(item.high for item in observed),
+                    low=min(item.low for item in observed),
+                    close=observed[-1].close,
+                    volume=sum(item.volume for item in observed),
+                    updated_at=max(row.updated_at, *(item.updated_at for item in observed)),
+                )
+            )
+        return result
+
     def vn_hourly_target(self, symbol, start, end, limit):
         """Overlay recent minute-derived buckets without shortening native history."""
         native = self.read("vn", symbol, "1h", start, end, limit, forward=start is not None)
@@ -250,7 +294,7 @@ class History:
         completed_before = completed_vn_sessions()
         if groups:
             try:
-                daily = self.read("vn", symbol, "1D", min(groups), max(groups))
+                daily = self.vn_daily_target(symbol, min(groups), max(groups))
             except DataError:
                 daily = []
             daily_by_time = {row.time: row for row in daily}
@@ -364,6 +408,8 @@ class History:
             target = (
                 self.vn_hourly_target(symbol, start, end, limit)
                 if source == "vn" and iv == "1h"
+                else self.vn_daily_target(symbol, start, end, limit, forward=start is not None)
+                if source == "vn" and iv == "1D"
                 else self.read(source, symbol, native, start, end, limit, forward=start is not None)
             )
             if not target:
@@ -382,17 +428,29 @@ class History:
                     buffer,
                 )
             else:
-                earlier = self.warmup(
-                    lambda count: self.read(
-                        source,
-                        symbol,
-                        native,
-                        end=target[0].time - 1,
-                        limit=count,
-                        revision=target[0].revision,
-                    ),
-                    buffer,
-                )
+                if source == "vn" and iv == "1D":
+                    earlier = self.warmup(
+                        lambda count: self.vn_daily_target(
+                            symbol,
+                            None,
+                            target[0].time - 1,
+                            count,
+                            revision=target[0].revision,
+                        ),
+                        buffer,
+                    )
+                else:
+                    earlier = self.warmup(
+                        lambda count: self.read(
+                            source,
+                            symbol,
+                            native,
+                            end=target[0].time - 1,
+                            limit=count,
+                            revision=target[0].revision,
+                        ),
+                        buffer,
+                    )
             rows = earlier + target
         else:
             target = self.aggregated(source, symbol, iv, start, end, limit, native=native)

@@ -260,6 +260,178 @@ def test_completed_daily_corroboration_appends_newer_minute_session(system):
     assert result[0]["close"] == 103 and result[0]["volume"] == 30
 
 
+@pytest.mark.parametrize("minute_provider", ["vps", "dnse"])
+def test_recent_vnd_daily_uses_certified_local_minute_session(system, minute_provider):
+    repo, archive, history = system
+    old = cutoff(1) - 30 * 86400
+    recent = cutoff(1) + 30 * 86400
+    repo.put([Candle("vn", "FPT", "1D", old, 90, 91, 89, 90, 900, "vndirect")])
+    archive.publish(repo.read("vn", "FPT", "1D"), prune=True)
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 105, 98, 102, 999, "vndirect"),
+            Candle(
+                "vn",
+                "FPT",
+                "1m",
+                recent + 2 * 3600 + 15 * 60,
+                100,
+                102,
+                99,
+                101,
+                10,
+                minute_provider,
+            ),
+            Candle(
+                "vn",
+                "FPT",
+                "1m",
+                recent + 2 * 3600 + 45 * 60,
+                101,
+                104,
+                100,
+                103,
+                20,
+                minute_provider,
+            ),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1D", limit=2, ma=False)
+
+    assert [(row["close"], row["volume"]) for row in result] == [(90, 900), (103, 30)]
+    assert result[-1]["high"] == 104 and result[-1]["low"] == 99
+
+
+def test_recent_vnd_daily_without_minute_observations_preserves_native(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 105, 98, 102, 999, "vndirect"),
+            # Establish an allowed minute series without observations on the
+            # native daily candle's zero-trade/carry-forward session.
+            Candle(
+                "vn",
+                "FPT",
+                "1m",
+                recent - 86400 + 2 * 3600 + 15 * 60,
+                90,
+                90,
+                90,
+                90,
+                1,
+                "vps",
+            ),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1D", limit=1, ma=False)
+
+    assert result[0]["close"] == 102 and result[0]["volume"] == 999
+
+
+def test_recent_vnd_daily_rejects_uncertified_minute_provider(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 105, 98, 102, 999, "vndirect"),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600, 100, 104, 99, 103, 30, "vci"),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1D", limit=1, ma=False)
+
+    assert result[0]["close"] == 102 and result[0]["volume"] == 999
+
+
+def test_unfinished_vnd_daily_preserves_native_even_with_certified_minutes(system):
+    repo, _, history = system
+    unfinished = completed_vn_sessions()
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", unfinished, 100, 105, 98, 102, 999, "vndirect"),
+            Candle("vn", "FPT", "1m", unfinished + 2 * 3600, 100, 104, 99, 103, 30, "vps"),
+        ]
+    )
+
+    result = history.query("vn", "FPT", "1D", limit=1, ma=False)
+
+    assert result[0]["close"] == 102 and result[0]["volume"] == 999
+
+
+def test_certified_minutes_make_recent_vn_intervals_exact(system):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    repo.put(
+        [
+            Candle("vn", "FPT", "1D", recent, 100, 105, 98, 102, 999, "vndirect"),
+            Candle("vn", "FPT", "1h", recent + 2 * 3600, 100, 105, 98, 102, 999, "vndirect"),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10, "vps"),
+            Candle("vn", "FPT", "1m", recent + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20, "vps"),
+        ]
+    )
+
+    daily = history.query("vn", "FPT", "1D", limit=1, ma=False)[0]
+    hourly = history.query("vn", "FPT", "1h", limit=1, ma=False)[0]
+    minute = history.query("vn", "FPT", "1m", limit=2, ma=False)
+    expected = (100, 104, 99, 103, 30)
+
+    assert tuple(daily[field] for field in ("open", "high", "low", "close", "volume")) == expected
+    assert tuple(hourly[field] for field in ("open", "high", "low", "close", "volume")) == expected
+    assert (
+        minute[0]["open"],
+        max(row["high"] for row in minute),
+        min(row["low"] for row in minute),
+        minute[-1]["close"],
+        sum(row["volume"] for row in minute),
+    ) == expected
+
+
+@pytest.mark.parametrize("ema", [False, True])
+def test_recent_vnd_daily_ma_context_uses_certified_minutes(system, ema):
+    repo, _, history = system
+    recent = cutoff(1) + 30 * 86400
+    rows = []
+    for index in range(10):
+        day = recent + index * 86400
+        rows.extend(
+            [
+                Candle(
+                    "vn",
+                    "FPT",
+                    "1D",
+                    day,
+                    200 + index,
+                    201 + index,
+                    199 + index,
+                    200 + index,
+                    999,
+                    "vndirect",
+                ),
+                Candle(
+                    "vn",
+                    "FPT",
+                    "1m",
+                    day + 2 * 3600 + 15 * 60,
+                    100 + index,
+                    101 + index,
+                    99 + index,
+                    100 + index,
+                    10,
+                    "vps",
+                ),
+            ]
+        )
+    repo.put(rows)
+
+    result = history.query("vn", "FPT", "1D", limit=1, ema=ema)
+
+    assert result[0]["close"] == 109
+    assert result[0]["ma10"] == 104.5
+
+
 def test_recent_vn_hourly_overlay_preserves_full_native_limit(system):
     repo, _, history = system
     recent = cutoff(1) + 30 * 86400
