@@ -1218,7 +1218,11 @@ class Repository:
                     [(*identity, priority) for priority, identity in enumerate(ordered)],
                 )
                 extra = " AND EXISTS (SELECT 1 FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval)"
-                order = " ORDER BY (SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
+                # Give every configured series one recent page before resuming
+                # deep pagination. Otherwise a catalog worker exhausts years of
+                # one high-priority ticker while hundreds of public tails have
+                # never been initialized.
+                order = " ORDER BY (cursor IS NOT NULL),(SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
             else:
                 order = " ORDER BY updated_at,created_at LIMIT 1"
             row = con.execute(
@@ -1422,6 +1426,25 @@ class Repository:
             con.execute(
                 f"UPDATE tickers SET {col}=? WHERE source=? AND symbol=?", (when, source, symbol)
             )
+
+    def live_check_backlog(self, source, interval, since_ns):
+        """Count enabled published series without a recent successful upstream check."""
+        with self.connect() as con:
+            return con.execute(
+                """SELECT COUNT(*) FROM series s JOIN tickers t
+                ON t.source=s.source AND t.symbol=s.symbol
+                WHERE s.source=? AND s.interval=? AND t.enabled=1
+                AND s.status IN ('ready','repairing')
+                AND NOT EXISTS (SELECT 1 FROM source_checks c
+                    WHERE c.source=s.source AND c.symbol=s.symbol
+                    AND c.interval=s.interval AND c.outcome='succeeded'
+                    AND c.successful_at_ns>=?)
+                AND NOT EXISTS (SELECT 1 FROM jobs j
+                    WHERE j.source=s.source AND j.symbol=s.symbol
+                    AND j.interval=s.interval AND j.kind='bootstrap'
+                    AND j.updated_at>=?)""",
+                (source, interval, since_ns, since_ns),
+            ).fetchone()[0]
 
     def live_claim(self, source, symbol, interval, owner, lease=120):
         now = int(time.time())

@@ -72,6 +72,22 @@ def test_allowed_order_prioritizes_curated_jobs_over_catalog_tail(system):
     assert claimed["symbol"] == "VCB"
 
 
+def test_catalog_claims_every_unstarted_tail_before_resuming_deep_history(system):
+    repo, _ = system
+    first = repo.queue("vn", "VCB", "1m", "bootstrap", cutoff(1), "vps")
+    second = repo.queue("vn", "FPT", "1m", "bootstrap", cutoff(1), "vps")
+    job = repo.claim_job("worker", allowed=[("vn", "VCB", "1m"), ("vn", "FPT", "1m")])
+    assert job["id"] == first
+    stamp = int(time.time()) // 60 * 60
+    row = Candle("vn", "VCB", "1m", stamp, 100, 101, 99, 100, 10, "vps", job["revision"])
+    repo.stage(job, [row], stamp, "vps")
+
+    next_job = repo.claim_job(
+        "worker", allowed=[("vn", "VCB", "1m"), ("vn", "FPT", "1m")]
+    )
+    assert next_job["id"] == second
+
+
 @pytest.mark.asyncio
 async def test_cancelled_worker_closes_provider_and_immediately_resumes_staged_repair(system):
     repo, settings = system

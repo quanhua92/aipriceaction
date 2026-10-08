@@ -1,4 +1,5 @@
 import asyncio
+import time
 from dataclasses import replace
 
 import pytest
@@ -70,6 +71,21 @@ async def test_provisional_tail_requires_completed_provider_recheck(system, monk
     assert check["completed_rows"] == 2 and check["provisional_rows"] == 0
     assert check["completed_start"] == rows[0].time
     assert check["completed_end"] == rows[-1].time
+
+
+def test_live_check_backlog_counts_missing_and_failed_checks(system):
+    repo, _ = system
+    rows = bars()
+    repo.put(rows)
+    repo.register("crypto", "BTCUSDT", enabled=True)
+    since = time.time_ns() - 60 * 1_000_000_000
+
+    assert repo.live_check_backlog("crypto", "1m", since) == 1
+    attempt = repo.start_source_check("crypto", "BTCUSDT", "1m")
+    repo.put(rows, verification={"attempt_ns": attempt, "completed_before": rows[-1].time + 60})
+    assert repo.live_check_backlog("crypto", "1m", since) == 0
+    repo.fail_source_check("crypto", "BTCUSDT", "1m", attempt, "upstream failed")
+    assert repo.live_check_backlog("crypto", "1m", since) == 1
 
 
 @pytest.mark.asyncio

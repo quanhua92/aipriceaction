@@ -71,3 +71,60 @@ async def test_running_worker_skips_removed_ticker_and_its_pending_job(tmp_path,
     monkeypatch.setattr(worker, "repair_page", no_fetch)
     assert await worker.cycle() == 0
     assert repo.status()["jobs"][0]["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_zero_deadline_catalog_prioritizes_minute_tail_and_curated_order(
+    tmp_path, monkeypatch
+):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": "vn", "symbol": "VCB", "intervals": ["1D", "1h", "1m"]},
+        {"source": "vn", "symbol": "AAA", "intervals": ["1D", "1h", "1m"]},
+    ]
+    repo.activate_watchlist(entries)
+    worker = Worker(repo, replace(Settings(), worker_concurrency=1))
+    worker.configuration = entries
+    observed = []
+
+    async def record(entry, interval):
+        observed.append((entry["symbol"], interval))
+        repo.schedule(entry["source"], entry["symbol"], interval, 1)
+        return 0
+
+    monkeypatch.setattr(worker, "sync", record)
+    monkeypatch.setattr(repo, "claim_job", lambda *args, **kwargs: None)
+    assert await worker.cycle() == 0
+    assert observed == [("VCB", "1m")]
+
+
+@pytest.mark.asyncio
+async def test_stale_minute_sweep_reserves_three_of_four_recovery_turns(
+    tmp_path, monkeypatch
+):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = []
+    for symbol in ("FPT", "VCB"):
+        entries.append({"source": "vn", "symbol": symbol, "intervals": ["1m"]})
+        repo.put(
+            [Candle("vn", symbol, "1m", parse_time("2026-10-02T07:45:00Z"), 100, 101, 99, 100, 10)]
+        )
+    repo.activate_watchlist(entries)
+    worker = Worker(repo, replace(Settings(), worker_concurrency=1))
+    worker.configuration = entries
+    claims = []
+
+    async def no_update(*args):
+        return 0
+
+    def claim(*args, **kwargs):
+        claims.append(True)
+        return None
+
+    monkeypatch.setattr(worker, "sync", no_update)
+    monkeypatch.setattr(repo, "claim_job", claim)
+    for _ in range(4):
+        assert await worker.cycle() == 0
+    assert len(claims) == 1

@@ -21,6 +21,7 @@ class Worker:
         self.owner = uuid.uuid4().hex
         self.configuration = []
         self.deadline = 90  # Keep network operations shorter than durable leases.
+        self.recovery_turn = 0
 
     def load_watchlist(self):
         raw = json.loads(self.settings.watchlist.read_text())
@@ -454,7 +455,7 @@ class Worker:
                 if source != "vn":
                     raise
                 page = None
-                for alternate in self.settings.vn_providers:
+                for alternate in vn_provider_order(self.settings, iv, int(time.time()) + 1):
                     if alternate == state["provider"]:
                         continue
                     try:
@@ -870,18 +871,44 @@ class Worker:
                 due_at = ticker[{"1D": "next_1d", "1h": "next_1h", "1m": "next_1m"}[iv]]
                 if due_at <= now:
                     due.append((due_at, entry, iv))
-        due.sort(key=lambda item: (item[0], item[2] != "1D", item[1]["symbol"]))
+        configured = {
+            (entry["source"], entry["symbol"]): priority
+            for priority, entry in enumerate(self.configuration)
+        }
+        interval_priority = {"1m": 0, "1h": 1, "1D": 2}
+        # Oldest deadlines remain fair after startup. When a catalog is first
+        # enabled and every deadline is zero, initialize the most time-sensitive
+        # tails first and preserve curated/configuration order within an interval.
+        due.sort(
+            key=lambda item: (
+                item[0],
+                interval_priority[item[2]],
+                configured[(item[1]["source"], item[1]["symbol"])],
+            )
+        )
         # Ordinary updates get a turn before one bounded recovery page.
         values = await asyncio.gather(
             *(self.sync(entry, iv) for _, entry, iv in due[: self.settings.worker_concurrency])
         )
         allowed = [
             (entry["source"], entry["symbol"], iv)
+            for iv in ("1m", "1h", "1D")
             for entry in self.configuration
-            for iv in entry["intervals"]
-            if (entry["source"], entry["symbol"]) in available
+            if iv in entry["intervals"]
+            and (entry["source"], entry["symbol"]) in available
         ]
-        job = self.repo.claim_job(self.owner, allowed=allowed)
+        # During a restart/outage, hundreds of stale one-minute tails can need
+        # two requests each to regain overlap. Reserve most of the provider
+        # budget for those checks, while still giving durable history one turn
+        # in four so backfills cannot starve indefinitely.
+        live_backlog = self.repo.live_check_backlog(
+            "vn", "1m", time.time_ns() - 15 * 60 * 1_000_000_000
+        )
+        run_recovery = live_backlog <= self.settings.worker_concurrency or not (
+            self.recovery_turn % 4
+        )
+        self.recovery_turn += 1
+        job = self.repo.claim_job(self.owner, allowed=allowed) if run_recovery else None
         if job:
             values.append(await self.repair_page(job))
             log.info(
