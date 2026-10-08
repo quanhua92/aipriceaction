@@ -929,7 +929,10 @@ class Worker:
         )
         allowed = [
             (entry["source"], entry["symbol"], iv)
-            for iv in ("1m", "1h", "1D")
+            # Establish the primary three-year OHLCV API first for every new
+            # ticker, then its recent minute tail, before the secondary hourly
+            # history. Live refresh has separate overdue/zero-slot budgeting.
+            for iv in ("1D", "1m", "1h")
             for entry in self.configuration
             if iv in entry["intervals"]
             and (entry["source"], entry["symbol"]) in available

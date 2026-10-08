@@ -189,3 +189,25 @@ async def test_single_live_slot_alternates_overdue_and_zero_catalog_work(tmp_pat
     assert await worker.cycle() == 0
     assert await worker.cycle() == 0
     assert observed == ["VPL", "AAA"]
+
+
+@pytest.mark.asyncio
+async def test_new_catalog_recovery_establishes_daily_before_intraday(tmp_path, monkeypatch):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entry = {"source": "vn", "symbol": "NEW", "intervals": ["1D", "1h", "1m"]}
+    repo.activate_watchlist([entry])
+    for interval in ("1m", "1h", "1D"):
+        repo.queue("vn", "NEW", interval, "bootstrap", parse_time("2025-10-01"), "vps")
+        repo.schedule("vn", "NEW", interval, 10**12)
+    worker = Worker(repo, replace(Settings(), worker_concurrency=3))
+    worker.configuration = [entry]
+    recovered = []
+
+    async def record(job):
+        recovered.append(job["interval"])
+        return 0
+
+    monkeypatch.setattr(worker, "repair_page", record)
+    assert await worker.cycle() == 0
+    assert recovered == ["1D"]
