@@ -189,8 +189,8 @@ async def test_vci_is_last_resort_and_only_for_older_minutes():
     assert result.provider == "vci"
     assert seen == [
         "histdatafeed.vps.com.vn",
-        "dchart-api.vndirect.com.vn",
         "api.dnse.com.vn",
+        "dchart-api.vndirect.com.vn",
         "trading.vietcap.com.vn",
     ]
     assert "vci" not in vn_provider_order(settings(), "1D", STAMP)

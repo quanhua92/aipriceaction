@@ -660,16 +660,17 @@ async def test_vn_outage_fallback_queues_basis_recovery_without_expanding_altern
     original = Candle("vn", "FPT", iv, parse_time("2026-01-05"), 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
     original_rows = repo.read("vn", "FPT", iv)
+    fallback = "dnse" if iv == "1m" else "vndirect"
     incoming = replace(
-        original, provider="vndirect", time=original.time + 100 * (86400 if iv == "1D" else 60)
+        original, provider=fallback, time=original.time + 100 * (86400 if iv == "1D" else 60)
     )
-    providers = Pages(DataError("VPS unavailable"), Page([incoming], "vndirect"))
+    providers = Pages(DataError("VPS unavailable"), Page([incoming], fallback))
     worker = Worker(repo, settings, providers=providers, archive=archive)
     assert await worker.sync({"source": "vn", "symbol": "FPT"}, iv) == 0
-    assert providers.calls == ["vps", "vndirect"]
+    assert providers.calls == ["vps", fallback]
     assert repo.read("vn", "FPT", iv) == original_rows
     jobs = repo.status()["jobs"]
-    assert len(jobs) == 1 and repo.claim_job(worker.owner)["provider"] == "vndirect"
+    assert len(jobs) == 1 and repo.claim_job(worker.owner)["provider"] == fallback
     assert repo.status()["series"][0]["outcome"] == "repair_queued"
 
 
@@ -1784,9 +1785,9 @@ async def test_provider_switch_requires_alternate_coverage_near_floor(
             self.calls.append((provider, before, start))
             if provider == "vps":
                 raise DataError("historical VPS page unavailable")
-            if provider == "vndirect" and before > floor + 31 * 86400:
+            if provider == "dnse" and before > floor + 31 * 86400:
                 return Page([replace(published, time=before - 60, provider=provider)], provider)
-            if provider == "vndirect" and floor_available:
+            if provider == "dnse" and floor_available:
                 return Page([replace(published, time=floor + 60, provider=provider)], provider)
             return Page([], provider, True)
 
@@ -1804,15 +1805,15 @@ async def test_provider_switch_requires_alternate_coverage_near_floor(
         pending = con.execute(
             "SELECT provider,cursor FROM jobs WHERE symbol='VCB' AND interval='1m'"
         ).fetchone()
-    assert pending["provider"] == ("vndirect" if floor_available else "vps")
+    assert pending["provider"] == ("dnse" if floor_available else "vps")
     assert pending["cursor"] is None if floor_available else pending["cursor"] == current
     assert providers.calls[:3] == [
         ("vps", current, floor),
-        ("vndirect", current, None),
-        ("vndirect", floor + 31 * 86400, floor),
+        ("dnse", current, None),
+        ("dnse", floor + 31 * 86400, floor),
     ]
     if not floor_available:
-        assert providers.calls[3] == ("dnse", current, None)
+        assert providers.calls[3] == ("vndirect", current, None)
     assert f"before={current} cursor={current} floor={floor}" in caplog.text
 
 

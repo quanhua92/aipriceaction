@@ -44,6 +44,13 @@ def vn_provider_order(settings, iv, before):
     if iv == "1h" and "dnse" in selected:
         selected.remove("dnse")
         selected.insert(0, "dnse")
+    if iv == "1m" and "dnse" in selected and "vndirect" in selected:
+        # Repeated native controls show DNSE minute OHLCV agreeing exactly
+        # with VPS and native daily totals while VNDirect can disagree on
+        # isolated prices and per-session volume. Preserve VPS as the preferred
+        # source, but try the corroborated DNSE feed before VNDirect fallback.
+        selected.remove("dnse")
+        selected.insert(selected.index("vndirect"), "dnse")
     if settings.vci_history_fallback and iv == "1m" and before < time.time() - 7 * 86400:
         selected.append("vci")
     return selected

@@ -149,6 +149,38 @@ def test_fixed_interval_basis_and_rounding_resolve_only_the_audit_finding(tmp_pa
     assert {row["kind"] for row in audit(repo, day + 9 * 3600)} == {"historical_revision"}
 
 
+def test_interval_basis_audit_reports_volume_only_disagreement(tmp_path):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    repo.register("vn", "VCB", enabled=True)
+    day = parse_time("2026-10-02")
+    repo.put([bar("vn", "VCB", "1D", day)])
+    repo.put(
+        [
+            replace(bar("vn", "VCB", "1m", day + 2 * 3600 + 15 * 60), volume=400),
+            replace(bar("vn", "VCB", "1m", day + 7 * 3600 + 45 * 60), volume=700),
+        ]
+    )
+
+    findings = audit(repo, day + 9 * 3600)
+    basis = next(row for row in findings if row["kind"] == "audit_interval_basis")
+    detail = json.loads(basis["detail"])
+    assert detail["scope"] == "completed local minute sessions versus observed daily OHLCV"
+    assert detail["sessions"] == [
+        {
+            "date": "2026-10-02",
+            "minute_rows": 2,
+            "minute_ohlc": [100.0, 101.0, 99.0, 100.0],
+            "daily_ohlc": [100.0, 101.0, 99.0, 100.0],
+            "daily_provider": "import",
+            "max_relative_difference": 0.0,
+            "minute_volume": 1100,
+            "daily_volume": 1000,
+            "volume_difference": 100,
+        }
+    ]
+
+
 def test_high_low_basis_disagreement_is_visible_even_with_matching_closes(tmp_path):
     repo = Repository(tmp_path / "db")
     repo.initialize()

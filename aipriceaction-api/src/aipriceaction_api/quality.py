@@ -27,13 +27,14 @@ def interval_basis_findings(con, completed):
         """WITH minute AS MATERIALIZED (
             SELECT c.symbol,c.time/86400*86400 AS day,MIN(c.time) AS first,
                 MAX(c.time) AS last,MAX(c.high) AS high,MIN(c.low) AS low,
-                COUNT(*) AS minute_rows
+                COUNT(*) AS minute_rows,SUM(c.volume) AS minute_volume
             FROM candles c JOIN tickers t USING(source,symbol)
             WHERE c.source='vn' AND c.interval='1m' AND c.time<? AND t.enabled=1
             GROUP BY c.symbol,c.time/86400*86400
         ), compared AS MATERIALIZED (
             SELECT m.*,a.open,z.close,d.open AS daily_open,d.high AS daily_high,
                 d.low AS daily_low,d.close AS daily_close,d.provider AS daily_provider,
+                d.volume AS daily_volume,
                 MAX(ABS(a.open/d.open-1),ABS(m.high/d.high-1),
                     ABS(m.low/d.low-1),ABS(z.close/d.close-1)) AS difference
             FROM minute m
@@ -43,7 +44,8 @@ def interval_basis_findings(con, completed):
                 AND z.interval='1m' AND z.time=m.last
             CROSS JOIN candles d ON d.source='vn' AND d.symbol=m.symbol
                 AND d.interval='1D' AND d.time=m.day
-        ) SELECT * FROM compared WHERE difference>0.01 ORDER BY symbol,day""",
+        ) SELECT * FROM compared
+        WHERE difference>0.01 OR minute_volume<>daily_volume ORDER BY symbol,day""",
         (completed,),
     )
     by_symbol = {}
@@ -56,6 +58,9 @@ def interval_basis_findings(con, completed):
                 "daily_ohlc": [row["daily_" + key] for key in ("open", "high", "low", "close")],
                 "daily_provider": row["daily_provider"],
                 "max_relative_difference": row["difference"],
+                "minute_volume": row["minute_volume"],
+                "daily_volume": row["daily_volume"],
+                "volume_difference": row["minute_volume"] - row["daily_volume"],
             }
         )
     return [
@@ -66,10 +71,10 @@ def interval_basis_findings(con, completed):
             "audit_interval_basis",
             json.dumps(
                 {
-                    "scope": "completed local minute sessions versus observed daily prices",
+                    "scope": "completed local minute sessions versus observed daily OHLCV",
                     "relative_threshold": 0.01,
                     "sessions": sessions,
-                    "review": "Verify upstream adjustment conventions and session coverage; do not infer a factor or overwrite candles from this comparison",
+                    "review": "Verify upstream price adjustment, volume semantics, and session coverage; do not infer a factor or overwrite candles from this comparison",
                 },
                 sort_keys=True,
             ),
