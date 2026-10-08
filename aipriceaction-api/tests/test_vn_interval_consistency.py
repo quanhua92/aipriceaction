@@ -131,3 +131,23 @@ def test_audit_models_certified_minute_replacement_of_vnd_daily(tmp_path):
     assert row["native_daily_vs_minutes"] == ["close"]
     assert row["daily_vs_minutes"] == []
     assert row["daily_vs_hours"] == []
+
+
+def test_cash_index_audit_models_served_session_normalization(tmp_path):
+    path = build(tmp_path, minute_provider="vps", daily_provider="vps")
+    repo = Repository(path)
+    with repo.connect() as con:
+        con.execute("UPDATE tickers SET symbol='VNINDEX' WHERE symbol='VCB'")
+        con.execute("UPDATE series SET symbol='VNINDEX' WHERE symbol='VCB'")
+        con.execute("UPDATE candles SET symbol='VNINDEX' WHERE symbol='VCB'")
+    day = stamp("2026-10-08")
+    repo.put(
+        [Candle("vn", "VNINDEX", "1m", day + 8 * 3600 + 5 * 60, 103, 103, 90, 90, 500, "vps")]
+    )
+
+    row = audit(path, ["VNINDEX"])["series"][0]
+
+    assert row["minute_session"]["last"] == "07:45:00"
+    assert row["minute_session"]["native_outside_regular_session"] == 1
+    assert row["daily_vs_minutes"] == []
+    assert row["daily_vs_hours"] == []

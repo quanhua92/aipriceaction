@@ -75,7 +75,19 @@ def compare_hours(minutes, hours):
     return issues
 
 
-def effective_dailies(minutes, dailies, minute_provider):
+def cash_index_minutes(symbol, rows):
+    if symbol not in INDEXES or symbol == "VN30F1M":
+        return rows
+    morning_open = 2 * 3600 + (15 * 60 if symbol in {"VNINDEX", "VN30"} else 0)
+    return [
+        row
+        for row in rows
+        if morning_open <= row["time"] % 86400 <= 4 * 3600 + 30 * 60
+        or 6 * 3600 <= row["time"] % 86400 <= 7 * 3600 + 45 * 60
+    ]
+
+
+def effective_dailies(symbol, minutes, dailies, minute_provider):
     """Mirror completed-session daily replacement from certified minutes."""
     if minute_provider not in {"vps", "dnse"}:
         return [dict(row) for row in dailies]
@@ -88,7 +100,7 @@ def effective_dailies(minutes, dailies, minute_provider):
         row = dict(daily)
         observed = minute_groups.get(row["time"], [])
         if (
-            row["provider"] == "vndirect"
+            (row["provider"] == "vndirect" or symbol in INDEXES and symbol != "VN30F1M")
             and row["time"] < completed_before
             and observed
             and all(item["provider"] in {"vps", "dnse"} for item in observed)
@@ -203,11 +215,12 @@ def audit(database, symbols=()):
                 continue
             session_day = latest["1m"] // 86400 * 86400
             recent_start = max(minute_cutoff, session_day - 14 * 86400)
-            recent_minutes = con.execute(
+            native_recent_minutes = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1m' "
                 "AND time>=? AND time<? ORDER BY time",
                 (symbol, recent_start, session_day + 86400),
             ).fetchall()
+            recent_minutes = cash_index_minutes(symbol, native_recent_minutes)
             recent_hours = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1h' "
                 "AND time>=? AND time<? ORDER BY time",
@@ -223,6 +236,7 @@ def audit(database, symbols=()):
                 (symbol,),
             ).fetchone()
             served_dailies = effective_dailies(
+                symbol,
                 recent_minutes,
                 recent_dailies,
                 minute_state["provider"] if minute_state else None,
@@ -235,6 +249,8 @@ def audit(database, symbols=()):
                 recent_minutes, recent_hours, served_dailies, active_hourly
             )
             served = dict(latest)
+            if recent_minutes:
+                served["1m"] = recent_minutes[-1]["time"]
             if served_hours:
                 served["1h"] = served_hours[-1]["time"]
             elif not active_hourly:
@@ -247,11 +263,12 @@ def audit(database, symbols=()):
             record["latest_dates_aligned"] = aligned
             totals["missing_served_intervals"] += bool(missing_served)
             totals["latest_date_mismatches"] += not missing_served and not aligned
-            minute_rows = con.execute(
+            native_minute_rows = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1m' "
                 "AND time>=? AND time<? ORDER BY time",
                 (symbol, session_day, session_day + 86400),
             ).fetchall()
+            minute_rows = cash_index_minutes(symbol, native_minute_rows)
             record["minute_session"] = {
                 "date": day(session_day),
                 "first": clock(minute_rows[0]["time"]),
@@ -275,7 +292,9 @@ def audit(database, symbols=()):
                 record["minute_session"]["regular_boundary"] = boundary_ok
                 totals["stock_session_boundary_mismatches"] += not boundary_ok
             else:
-                totals["index_session_extensions"] += bool(outside)
+                native_outside = len(native_minute_rows) - len(minute_rows)
+                record["minute_session"]["native_outside_regular_session"] = native_outside
+                totals["native_index_session_extensions"] += bool(native_outside)
 
             native_daily = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1D' AND time=?",
