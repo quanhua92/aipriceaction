@@ -217,11 +217,20 @@ coverage. A later first date or pending job is an observation requiring review,
 not proof of a missing trading session. Use a new report path to preserve prior
 inventories.
 
-Compose uses `INGEST_UNIVERSE=catalog`: every ticker returned by the live VN,
-crypto, and Yahoo group endpoints is scheduled. `watchlist.json` supplies
-verified listing dates and additional interval choices for known exceptions;
-it does not narrow the Compose universe. Host workflows can retain the smaller
-selection with `INGEST_UNIVERSE=watchlist`. Ticker `VCI` is a stock symbol;
+Compose uses `INGEST_UNIVERSE=catalog`: initialization registers every ticker
+returned by the live VN, crypto, and Yahoo group endpoints. For Vietnam it also
+adds every `type=stock` identity from the packaged exchange directory. The
+single Compose worker filters ingestion to Vietnam so coverage is not delayed
+by other markets. It retains three years of daily data for the complete stock
+directory. After at least 80% of those daily series are ready, stocks with at
+least ten observations in the latest 45-day window and a trade within fourteen
+days are ranked by average daily traded value; the most liquid 80% receive
+one-year minute and three-year hourly ingestion. The original curated catalog
+continues receiving every native interval while discovery is incomplete.
+`watchlist.json` supplies verified listing dates and interval choices for known
+exceptions. Run a separate filtered worker explicitly when another market needs
+refreshing. Host workflows can retain the smaller selection with
+`INGEST_UNIVERSE=watchlist`. Ticker `VCI` is a stock symbol;
 the optional VCI **data provider** is a separate historical-minute fallback.
 VPS, VNDirect, and DNSE remain preferred. Daily/minute bootstrap starts with VPS; hourly starts
 with DNSE because the live probe found deeper hourly coverage there. Additional

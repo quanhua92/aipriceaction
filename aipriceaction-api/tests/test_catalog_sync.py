@@ -56,7 +56,10 @@ async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_pa
         ingest_universe="catalog",
     )
     catalog = Catalog(settings)
-    assert catalog.groups("vn") == live_groups()["vn"]
+    vn_groups = catalog.groups("vn")
+    assert {group: symbols for group, symbols in vn_groups.items() if group != "ALL_STOCKS"} == live_groups()["vn"]
+    assert len(vn_groups["ALL_STOCKS"]) > 1_500
+    assert {"VCB", "TCB"} <= set(vn_groups["ALL_STOCKS"])
     assert catalog.groups("crypto") == live_groups()["crypto"]
     assert catalog.groups("yahoo") == live_groups()["yahoo"]
     assert catalog.groups_by_source["sjc"] == {"Commodity": ["SJC-GOLD"]}
@@ -69,7 +72,7 @@ async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_pa
     repo.initialize()
     entries = Worker(repo, settings).load_watchlist()
     identities = {(row["source"], row["symbol"]) for row in entries}
-    assert identities == {
+    assert {
         ("vn", "VNINDEX"),
         ("vn", "VCB"),
         ("vn", "TCB"),
@@ -79,17 +82,16 @@ async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_pa
         ("yahoo", "AAPL"),
         ("yahoo", "MSFT"),
         ("sjc", "SJC-GOLD"),
-    }
+    } <= identities
+    assert len({symbol for source, symbol in identities if source == "vn"}) > 1_500
     vcb = next(row for row in entries if row["source"] == "vn" and row["symbol"] == "VCB")
     aapl = next(row for row in entries if row["source"] == "yahoo" and row["symbol"] == "AAPL")
     assert vcb["history_start"] == "2020-01-01"
     assert vcb["intervals"] == ["1D", "1h", "1m"]
     assert aapl["intervals"] == ["1D", "1m"]
-    assert [row["symbol"] for row in entries if row["source"] == "vn"] == [
-        "VCB",
-        "TCB",
-        "VNINDEX",
-    ]
+    vn_entries = [row for row in entries if row["source"] == "vn"]
+    assert vn_entries[0]["symbol"] == "VCB"
+    assert next(row for row in vn_entries if row["symbol"] == "AAA")["intervals"] == ["1D"]
     assert [row["symbol"] for row in entries if row["source"] == "yahoo"] == [
         "AAPL",
         "GC=F",

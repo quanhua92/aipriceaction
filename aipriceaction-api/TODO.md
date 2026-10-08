@@ -7,6 +7,14 @@ history through `eb814ab`; they are not additional current open tasks.
 
 ## Current verified checkpoint — 2026-10-05 ICT
 
+- [x] Expand operational ingestion beyond the legacy 404-symbol Vietnamese
+  catalog. The packaged exchange directory contains 1,544 stock identities
+  (403 HOSE, 302 HNX and 839 UPCoM). Compose dedicates its single worker to VN,
+  retains three daily years for the complete directory, and promotes the top
+  80% of recently active stocks by average traded value to minute/hourly
+  ingestion after at least 80% of daily discovery is ready. This replaces a
+  subjective blacklist with a reproducible activity and liquidity rule.
+
 - The default Compose stack now builds and runs the Python FastAPI service,
   Python worker, one-shot initializer and RustFS. SQLite/catalog/cache data is a
   host bind mount; no legacy Rust API service is present.

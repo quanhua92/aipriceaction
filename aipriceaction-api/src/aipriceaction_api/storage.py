@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import math
 import sqlite3
 import time
 import uuid
@@ -179,6 +180,47 @@ class Repository:
                     sources,
                 )
             ]
+
+    def liquid_vn_symbols(self, stock_symbols, coverage=0.8, keep=0.8):
+        """Return the most liquid share names after broad daily discovery.
+
+        A stock is active when it has at least ten daily observations in the
+        latest 45-day market window and traded within fourteen days of the
+        newest stored VN stock candle. Selection stays dormant until daily
+        series exist for ``coverage`` of the complete stock directory, then
+        retains the top ``keep`` fraction by average daily traded value.
+        """
+        symbols = sorted(set(stock_symbols))
+        if not symbols:
+            return set()
+        with self.connect() as con:
+            con.execute(
+                "CREATE TEMP TABLE requested_vn_stocks(symbol TEXT PRIMARY KEY) WITHOUT ROWID"
+            )
+            con.executemany("INSERT INTO requested_vn_stocks VALUES (?)", ((s,) for s in symbols))
+            ready = con.execute(
+                """SELECT COUNT(*) FROM series s JOIN requested_vn_stocks r USING(symbol)
+                WHERE s.source='vn' AND s.interval='1D' AND s.status='ready'"""
+            ).fetchone()[0]
+            if ready < math.ceil(len(symbols) * coverage):
+                return set()
+            latest = con.execute(
+                """SELECT MAX(c.time) FROM candles c JOIN requested_vn_stocks r USING(symbol)
+                WHERE c.source='vn' AND c.interval='1D'"""
+            ).fetchone()[0]
+            if latest is None:
+                return set()
+            rows = con.execute(
+                """SELECT c.symbol,COUNT(*) observations,MAX(c.time) latest,
+                AVG(c.close*c.volume) turnover
+                FROM candles c JOIN requested_vn_stocks r USING(symbol)
+                WHERE c.source='vn' AND c.interval='1D' AND c.time>=?
+                GROUP BY c.symbol HAVING observations>=10 AND latest>=?
+                ORDER BY turnover DESC,c.symbol""",
+                (latest - 45 * 86400, latest - 14 * 86400),
+            ).fetchall()
+        count = math.ceil(len(rows) * keep)
+        return {row["symbol"] for row in rows[:count]}
 
     def adoptions(self):
         with self.connect() as con:

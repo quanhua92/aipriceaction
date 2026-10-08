@@ -110,7 +110,10 @@ services:
 
   worker:
     <<: *api-service
-    command: ["aipa-api", "worker", "--archive-daily"]
+    # Keep the single operational worker focused on the curated live VN catalog.
+    # Other markets remain queryable from retained data and can be refreshed
+    # explicitly without delaying initial VN daily/minute coverage.
+    command: ["aipa-api", "worker", "--source", "vn", "--archive-daily"]
     restart: unless-stopped
 
 volumes:

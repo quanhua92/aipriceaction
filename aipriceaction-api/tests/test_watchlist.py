@@ -54,6 +54,31 @@ def test_starting_worker_never_exposes_partially_disabled_watchlist(tmp_path, mo
     assert len(repo.read("vn", "OLD", "1D")) == 1
 
 
+def test_liquid_vn_selection_waits_for_broad_daily_coverage_and_keeps_top_80_percent(
+    tmp_path,
+):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    symbols = [f"S{i}" for i in range(10)]
+    start = parse_time("2026-08-24")
+    for rank, symbol in enumerate(symbols[:7]):
+        repo.put(
+            [
+                Candle("vn", symbol, "1D", start + day * 86400, 10, 10, 10, 10, rank + 1)
+                for day in range(20)
+            ]
+        )
+    assert repo.liquid_vn_symbols(symbols) == set()
+
+    repo.put(
+        [
+            Candle("vn", "S7", "1D", start + day * 86400, 10, 10, 10, 10, 8)
+            for day in range(20)
+        ]
+    )
+    assert repo.liquid_vn_symbols(symbols) == {f"S{i}" for i in range(1, 8)}
+
+
 @pytest.mark.asyncio
 async def test_running_worker_skips_removed_ticker_and_its_pending_job(tmp_path, monkeypatch):
     repo = Repository(tmp_path / "db")

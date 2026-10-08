@@ -28,13 +28,17 @@ class Catalog:
     @cached_property
     def groups_by_source(self):
         if self.snapshot:
-            vn = self.snapshot["groups"]["vn"]
+            vn = {group: list(symbols) for group, symbols in self.snapshot["groups"]["vn"].items()}
             crypto = self.snapshot["groups"]["crypto"]
         else:
-            vn = self.load("ticker_group.json")
+            vn = {group: list(symbols) for group, symbols in self.load("ticker_group.json").items()}
             crypto = {
                 "CRYPTO_TOP_100": [r["symbol"] for r in self.load("binance_tickers.json")["data"]]
             }
+        # Sector groups are intentionally curated and omit most listed shares.
+        # Keep a complete stock directory alongside them so daily discovery is
+        # not limited by the legacy web catalog.
+        vn["ALL_STOCKS"] = self.vn_stock_symbols
         result = {"vn": vn, "crypto": crypto}
         for source, file in (("yahoo", "global_tickers.json"), ("sjc", "sjc_tickers.json")):
             groups = {}
@@ -52,8 +56,17 @@ class Catalog:
             }
         return result
 
+    @cached_property
+    def vn_stock_symbols(self):
+        return sorted(symbol for symbol, row in self.vn_info.items() if row["type"] == "stock")
+
+    @cached_property
+    def curated_vn_symbols(self):
+        groups = self.snapshot["groups"]["vn"] if self.snapshot else self.load("ticker_group.json")
+        return {symbol for symbols in groups.values() for symbol in symbols}
+
     def groups(self, mode):
-        if self.snapshot and mode in self.snapshot["groups"]:
+        if self.snapshot and mode in self.snapshot["groups"] and mode != "vn":
             return self.snapshot["groups"][mode]
         sources = (
             ("vn", "yahoo", "sjc", "crypto")

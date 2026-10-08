@@ -40,15 +40,27 @@ class Worker:
                     preferred[source].append(symbol)
             expanded = {}
             catalog = Catalog(self.settings)
+            liquid_vn = self.repo.liquid_vn_symbols(catalog.vn_stock_symbols)
             for source, groups in catalog.groups_by_source.items():
                 catalog_symbols = {symbol for values in groups.values() for symbol in values}
                 priority = [
                     symbol for symbol in preferred.get(source, ()) if symbol in catalog_symbols
                 ]
                 symbols = priority + sorted(catalog_symbols - set(priority))
-                expanded[source] = [
-                    {"symbol": symbol} | overrides.get((source, symbol), {}) for symbol in symbols
-                ]
+                expanded[source] = []
+                for symbol in symbols:
+                    entry = {"symbol": symbol} | overrides.get((source, symbol), {})
+                    if (
+                        source == "vn"
+                        and symbol not in catalog.curated_vn_symbols
+                        and symbol not in liquid_vn
+                        and "intervals" not in entry
+                    ):
+                        # Probe and retain three years of daily data for every
+                        # listed share. Minute/hourly history is promoted only
+                        # after broad daily discovery ranks it in the liquid 80%.
+                        entry["intervals"] = ["1D"]
+                    expanded[source].append(entry)
             raw = expanded
         entries = []
         for source, items in raw.items():
@@ -1027,15 +1039,22 @@ class Worker:
     ):
         maintenance_task = None
         try:
-            self.load_watchlist()
-            self.configuration = [
-                entry
-                | {"intervals": [iv for iv in entry["intervals"] if not interval or iv == interval]}
-                for entry in self.configuration
-                if (not source or entry["source"] == source)
-                and (not symbols or entry["symbol"] in symbols)
-            ]
-            self.configuration = [entry for entry in self.configuration if entry["intervals"]]
+            def configure():
+                self.load_watchlist()
+                self.configuration = [
+                    entry
+                    | {
+                        "intervals": [
+                            iv for iv in entry["intervals"] if not interval or iv == interval
+                        ]
+                    }
+                    for entry in self.configuration
+                    if (not source or entry["source"] == source)
+                    and (not symbols or entry["symbol"] in symbols)
+                ]
+                self.configuration = [entry for entry in self.configuration if entry["intervals"]]
+
+            configure()
             if not self.configuration:
                 raise DataError("No configured watchlist entries match worker filters", 400)
             log.info(
@@ -1048,6 +1067,7 @@ class Worker:
                 archive_daily,
             )
             self.bootstrap()
+            next_configuration_refresh = time.monotonic() + 15 * 60
             maintenance = None
             if archive_daily:
                 from .archive import Archive
@@ -1058,6 +1078,10 @@ class Worker:
                 )
             completed_cycles = 0
             while True:
+                if time.monotonic() >= next_configuration_refresh:
+                    configure()
+                    self.bootstrap()
+                    next_configuration_refresh = time.monotonic() + 15 * 60
                 await self.cycle()
                 if maintenance is not None:
                     # One transfer batch at a time, independent of live ingestion.
