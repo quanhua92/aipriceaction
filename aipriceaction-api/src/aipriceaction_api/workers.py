@@ -231,7 +231,9 @@ class Worker:
                 and job["provider"]
                 and job["attempts"] >= 2
             ):
-                for alternate in vn_provider_order(self.settings, job["interval"], before):
+                for alternate in vn_provider_order(
+                    self.settings, job["interval"], before, job["symbol"]
+                ):
                     if alternate == job["provider"]:
                         continue
                     try:
@@ -455,7 +457,9 @@ class Worker:
                 if source != "vn":
                     raise
                 page = None
-                for alternate in vn_provider_order(self.settings, iv, int(time.time()) + 1):
+                for alternate in vn_provider_order(
+                    self.settings, iv, int(time.time()) + 1, symbol
+                ):
                     if alternate == state["provider"]:
                         continue
                     try:

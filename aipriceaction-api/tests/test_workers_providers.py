@@ -660,7 +660,7 @@ async def test_vn_outage_fallback_queues_basis_recovery_without_expanding_altern
     original = Candle("vn", "FPT", iv, parse_time("2026-01-05"), 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
     original_rows = repo.read("vn", "FPT", iv)
-    fallback = "dnse" if iv == "1m" else "vndirect"
+    fallback = "dnse"
     incoming = replace(
         original, provider=fallback, time=original.time + 100 * (86400 if iv == "1D" else 60)
     )
@@ -1031,14 +1031,14 @@ async def test_provider_switch_queues_rebuild_instead_of_appending(system):
     repo, archive, settings = system
     repo.put([candle(1)])
     repo.register("vn", "FPT", enabled=True)
-    provider = Pages(DataError("VPS unavailable"), Page([candle(2, 90, "vndirect")], "vndirect"))
+    provider = Pages(DataError("VPS unavailable"), Page([candle(2, 90, "dnse")], "dnse"))
     worker = Worker(repo, settings, provider, archive)
     assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 0
     assert repo.read("vn", "FPT", "1D")[0].close == 100
     assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
     job = repo.claim_job(worker.owner)
-    assert job["provider"] == "vndirect"
-    assert provider.calls == ["vps", "vndirect"]
+    assert job["provider"] == "dnse"
+    assert provider.calls == ["vps", "dnse"]
 
 
 @pytest.mark.asyncio
@@ -1740,8 +1740,8 @@ async def test_repeated_midway_failure_restarts_on_one_fallback_basis(system):
         Pages(
             Page([candle(5, 90)], "vps"),
             DataError("upstream unavailable"),
-            Page([candle(3, 80, "vndirect")], "vndirect"),
-            Page([candle(d, 80, "vndirect") for d in range(1, 6)], "vndirect"),
+            Page([candle(3, 80, "dnse")], "dnse"),
+            Page([candle(d, 80, "dnse") for d in range(1, 6)], "dnse"),
         ),
         archive,
     )
@@ -1751,12 +1751,12 @@ async def test_repeated_midway_failure_restarts_on_one_fallback_basis(system):
         con.execute("UPDATE jobs SET attempts=2")
     assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
     replacement = repo.claim_job(worker.owner)
-    assert replacement["provider"] == "vndirect"
+    assert replacement["provider"] == "dnse"
     assert replacement["cursor"] is None
     assert replacement["revision"] != first["revision"]
     assert all(r.close == 100 for r in repo.read("vn", "FPT", "1D"))
     assert await worker.repair_page(replacement) == 5
-    assert {(r.provider, r.close) for r in repo.read("vn", "FPT", "1D")} == {("vndirect", 80)}
+    assert {(r.provider, r.close) for r in repo.read("vn", "FPT", "1D")} == {("dnse", 80)}
 
 
 @pytest.mark.asyncio
@@ -1846,10 +1846,38 @@ async def test_initial_no_data_tries_other_configured_sources(system):
     providers = Providers(settings, httpx.MockTransport(response))
     try:
         page = await providers.page("vn", "FPT", "1D", before=candle(2).time)
-        assert page.provider == "vndirect"
+        assert page.provider == "dnse"
         assert len(page.rows) == 1
     finally:
         await providers.close()
+
+
+@pytest.mark.asyncio
+async def test_index_daily_prefers_dnse_native_interval_consistency(system):
+    _, _, settings = system
+    seen = []
+
+    def response(request):
+        seen.append(request.url.host)
+        return httpx.Response(
+            200,
+            json={
+                "t": [candle(1).time + 2 * 3600],
+                "o": [100],
+                "h": [101],
+                "l": [99],
+                "c": [100],
+                "v": [1000],
+            },
+        )
+
+    providers = Providers(settings, httpx.MockTransport(response))
+    try:
+        page = await providers.page("vn", "HNX30", "1D", before=candle(2).time)
+    finally:
+        await providers.close()
+    assert page.provider == "dnse"
+    assert seen == ["api.dnse.com.vn"]
 
 
 @pytest.mark.asyncio
