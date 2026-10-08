@@ -63,7 +63,8 @@ def test_latest_vn_intervals_align_and_reconcile(tmp_path):
     }
     assert row["daily_vs_minutes"] == []
     assert row["daily_vs_hours"] == []
-    assert row["hourly_vs_minutes"] == []
+    assert row["hour_basis"] == "recent-minute-overlay"
+    assert row["native_hourly_vs_minutes"] == []
 
 
 def test_latest_vn_interval_audit_exposes_date_boundary_and_ohlcv_drift(tmp_path):
@@ -74,7 +75,7 @@ def test_latest_vn_interval_audit_exposes_date_boundary_and_ohlcv_drift(tmp_path
     assert row["daily_vs_minutes"] == ["close"]
     assert row["daily_vs_hours"] is None
     assert row["hour_basis"] == "native-missing-latest-session"
-    assert row["hourly_vs_minutes"] == []
+    assert row["native_hourly_vs_minutes"] == []
 
 
 def test_latest_vn_interval_audit_models_public_hour_fallback(tmp_path):
@@ -84,10 +85,13 @@ def test_latest_vn_interval_audit_models_public_hour_fallback(tmp_path):
     assert row["missing_served_intervals"] == []
     assert row["latest_dates_aligned"]
     assert row["daily_vs_hours"] == []
-    assert row["hour_basis"] == "derived-1m"
-    assert row["hourly_vs_minutes"] == []
+    assert row["hour_basis"] == "recent-minute-overlay"
+    assert row["native_hourly_vs_minutes"] == []
 
 
 def test_latest_vn_interval_audit_exposes_hour_bucket_drift(tmp_path):
     row = audit(build(tmp_path, bad_hour=True), ["VCB"])["series"][0]
-    assert row["hourly_vs_minutes"] == [{"time": "07:00:00", "kind": "ohlcv", "fields": ["close"]}]
+    assert row["native_hourly_vs_minutes"] == [
+        {"time": "07:00:00", "kind": "ohlcv", "fields": ["close"]}
+    ]
+    assert row["daily_vs_hours"] == ["close"]

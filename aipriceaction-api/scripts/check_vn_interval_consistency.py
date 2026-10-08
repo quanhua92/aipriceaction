@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import INDEXES
+from aipriceaction_api.domain import INDEXES, cutoff
 
 FIELDS = ("open", "high", "low", "close", "volume")
 INTERVALS = ("1D", "1h", "1m")
@@ -72,8 +72,42 @@ def compare_hours(minutes, hours):
     return issues
 
 
+def effective_hours(minutes, hours, active_hourly=True):
+    """Mirror the API's conservative recent minute overlay."""
+    minute_groups = defaultdict(list)
+    for row in minutes:
+        minute_groups[row["time"] // 3600 * 3600].append(row)
+    derived = {
+        timestamp: {"time": timestamp, **aggregate(rows)}
+        for timestamp, rows in minute_groups.items()
+    }
+    if not active_hourly:
+        return [derived[timestamp] for timestamp in sorted(derived)]
+    native = {row["time"]: dict(row) for row in hours}
+    if not native:
+        return []
+    # Spell out the OHLC comparison rather than allowing a volume difference
+    # to block the exact substitution the API is meant to make.
+    overlaps = {
+        timestamp
+        for timestamp, row in derived.items()
+        if timestamp in native
+        and all(
+            math.isclose(native[timestamp][name], row[name], rel_tol=1e-12, abs_tol=1e-9)
+            for name in FIELDS[:-1]
+        )
+    }
+    latest_native = max(native)
+    anchored = bool(overlaps)
+    for timestamp, row in derived.items():
+        if timestamp in overlaps or (timestamp > latest_native and anchored):
+            native[timestamp] = row
+    return [native[timestamp] for timestamp in sorted(native)]
+
+
 def audit(database, symbols=()):
     database = Path(database)
+    minute_cutoff = cutoff(Settings.from_env().minute_years)
     selected = tuple(dict.fromkeys(symbol.upper() for symbol in symbols))
     with sqlite3.connect(f"file:{database.resolve()}?mode=ro", uri=True) as con:
         con.row_factory = sqlite3.Row
@@ -109,32 +143,52 @@ def audit(database, symbols=()):
                 )
             }
             native_dates = {iv: day(latest[iv]) for iv in INTERVALS if iv in latest}
-            # History.native_interval serves 1h from 1m when no native hourly
-            # state exists. Audit the public behavior as well as native storage.
-            served = dict(latest)
-            if "1h" not in served and "1m" in served:
-                served["1h"] = served["1m"]
-            served_dates = {iv: day(served[iv]) for iv in INTERVALS if iv in served}
             missing_native = [iv for iv in INTERVALS if iv not in latest]
-            missing_served = [iv for iv in INTERVALS if iv not in served]
-            aligned = not missing_served and len(set(served_dates.values())) == 1
             record = {
                 "symbol": symbol,
-                "latest_dates": served_dates,
                 "native_latest_dates": native_dates,
                 "missing_native_intervals": missing_native,
-                "missing_served_intervals": missing_served,
-                "latest_dates_aligned": aligned,
             }
             totals["symbols"] += 1
             totals["native_interval_gaps"] += bool(missing_native)
-            totals["missing_served_intervals"] += bool(missing_served)
-            totals["latest_date_mismatches"] += not missing_served and not aligned
 
             if "1m" not in latest:
+                record["latest_dates"] = native_dates
+                record["missing_served_intervals"] = missing_native
+                record["latest_dates_aligned"] = False
+                totals["missing_served_intervals"] += bool(missing_native)
                 records.append(record)
                 continue
             session_day = latest["1m"] // 86400 * 86400
+            recent_start = max(minute_cutoff, session_day - 14 * 86400)
+            recent_minutes = con.execute(
+                "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1m' "
+                "AND time>=? AND time<? ORDER BY time",
+                (symbol, recent_start, session_day + 86400),
+            ).fetchall()
+            recent_hours = con.execute(
+                "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1h' "
+                "AND time>=? AND time<? ORDER BY time",
+                (symbol, recent_start, session_day + 86400),
+            ).fetchall()
+            active_hourly = con.execute(
+                "SELECT 1 FROM series WHERE source='vn' AND symbol=? AND interval='1h'",
+                (symbol,),
+            ).fetchone() is not None
+            served_hours = effective_hours(recent_minutes, recent_hours, active_hourly)
+            served = dict(latest)
+            if served_hours:
+                served["1h"] = served_hours[-1]["time"]
+            elif not active_hourly:
+                served.pop("1h", None)
+            served_dates = {iv: day(served[iv]) for iv in INTERVALS if iv in served}
+            missing_served = [iv for iv in INTERVALS if iv not in served]
+            aligned = not missing_served and len(set(served_dates.values())) == 1
+            record["latest_dates"] = served_dates
+            record["missing_served_intervals"] = missing_served
+            record["latest_dates_aligned"] = aligned
+            totals["missing_served_intervals"] += bool(missing_served)
+            totals["latest_date_mismatches"] += not missing_served and not aligned
             minute_rows = con.execute(
                 "SELECT * FROM candles WHERE source='vn' AND symbol=? AND interval='1m' "
                 "AND time>=? AND time<? ORDER BY time",
@@ -175,20 +229,20 @@ def audit(database, symbols=()):
                 (symbol, session_day, session_day + 86400),
             ).fetchall()
             hourly_issues = compare_hours(minute_rows, hours) if hours else []
-            record["hourly_vs_minutes"] = hourly_issues
-            totals["hourly_minute_bucket_mismatches"] += bool(hourly_issues)
+            record["native_hourly_vs_minutes"] = hourly_issues
+            totals["native_hourly_minute_bucket_mismatches"] += bool(hourly_issues)
             if daily is not None:
                 expected = dict(daily)
                 minute_diff = differences(expected, aggregate(minute_rows))
-                hour_rows = hours or minute_rows if "1h" not in latest else hours
+                hour_rows = [
+                    row for row in served_hours if session_day <= row["time"] < session_day + 86400
+                ]
                 hour_diff = differences(expected, aggregate(hour_rows)) if hour_rows else None
                 record["daily_vs_minutes"] = minute_diff
                 record["daily_vs_hours"] = hour_diff
                 record["hour_basis"] = (
-                    "native"
-                    if hours
-                    else "derived-1m"
-                    if "1h" not in latest
+                    "recent-minute-overlay"
+                    if hour_rows
                     else "native-missing-latest-session"
                 )
                 totals["daily_minute_ohlcv_mismatches"] += bool(minute_diff)
