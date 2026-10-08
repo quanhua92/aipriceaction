@@ -1221,8 +1221,9 @@ class Repository:
                 # Give every configured series one recent page before resuming
                 # deep pagination. Otherwise a catalog worker exhausts years of
                 # one high-priority ticker while hundreds of public tails have
-                # never been initialized.
-                order = " ORDER BY (cursor IS NOT NULL),(SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
+                # never been initialized. Likewise, a curated no-data ticker's
+                # retry must not jump ahead of untouched catalog tails.
+                order = " ORDER BY (cursor IS NOT NULL),(attempts<>0),(SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
             else:
                 order = " ORDER BY updated_at,created_at LIMIT 1"
             row = con.execute(

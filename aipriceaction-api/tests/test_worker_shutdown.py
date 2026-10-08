@@ -88,6 +88,20 @@ def test_catalog_claims_every_unstarted_tail_before_resuming_deep_history(system
     assert next_job["id"] == second
 
 
+def test_catalog_claims_untouched_tail_before_retrying_curated_no_data(system):
+    repo, _ = system
+    curated = repo.queue("vn", "STH", "1m", "bootstrap", cutoff(1), "vps")
+    untouched = repo.queue("vn", "VCB", "1m", "bootstrap", cutoff(1), "vps")
+    allowed = [("vn", "STH", "1m"), ("vn", "VCB", "1m")]
+    failed = repo.claim_job("worker", allowed=allowed)
+    assert failed["id"] == curated
+    repo.fail_job(failed, "All configured VN providers returned no data")
+    with repo.connect() as con:
+        con.execute("UPDATE jobs SET retry_at=0 WHERE id=?", (curated,))
+
+    assert repo.claim_job("worker", allowed=allowed)["id"] == untouched
+
+
 @pytest.mark.asyncio
 async def test_cancelled_worker_closes_provider_and_immediately_resumes_staged_repair(system):
     repo, settings = system
