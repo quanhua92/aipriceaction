@@ -89,21 +89,23 @@ def cash_index_minutes(symbol, rows):
 
 def effective_dailies(symbol, minutes, dailies, minute_provider):
     """Mirror completed-session daily replacement from certified minutes."""
-    if minute_provider not in {"vps", "dnse"}:
+    cash_index = symbol in INDEXES and symbol != "VN30F1M"
+    if not cash_index and minute_provider not in {"vps", "dnse"}:
         return [dict(row) for row in dailies]
     minute_groups = defaultdict(list)
     for row in minutes:
         minute_groups[row["time"] // 86400 * 86400].append(row)
     completed_before = completed_vn_sessions()
+    minute_providers = {"vps", "dnse", "vndirect"} if cash_index else {"vps", "dnse"}
     result = []
     for daily in dailies:
         row = dict(daily)
         observed = minute_groups.get(row["time"], [])
         if (
-            (row["provider"] == "vndirect" or symbol in INDEXES and symbol != "VN30F1M")
+            (row["provider"] == "vndirect" or cash_index)
             and row["time"] < completed_before
             and observed
-            and all(item["provider"] in {"vps", "dnse"} for item in observed)
+            and all(item["provider"] in minute_providers for item in observed)
         ):
             row.update(aggregate(observed))
         result.append(row)

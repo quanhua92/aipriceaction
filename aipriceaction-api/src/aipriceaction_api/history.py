@@ -240,9 +240,11 @@ class History:
         if not native:
             return []
         minute_state = self.repo.state("vn", symbol, "1m")
-        if not minute_state or minute_state["provider"] not in {"vps", "dnse"}:
-            return native
         cash_index = symbol in INDEXES and symbol != "VN30F1M"
+        if not minute_state or (
+            not cash_index and minute_state["provider"] not in {"vps", "dnse"}
+        ):
+            return native
         minute_cutoff = cutoff(self.settings.minute_years)
         completed_before = completed_vn_sessions()
         first = max(native[0].time, minute_cutoff)
@@ -255,6 +257,7 @@ class History:
         groups = {}
         for row in minutes:
             groups.setdefault(row.time // 86400 * 86400, []).append(row)
+        minute_providers = {"vps", "dnse", "vndirect"} if cash_index else {"vps", "dnse"}
         result = []
         for row in native:
             observed = groups.get(row.time)
@@ -262,7 +265,7 @@ class History:
                 (row.provider != "vndirect" and not cash_index)
                 or not observed
                 or row.time >= completed_before
-                or any(item.provider not in {"vps", "dnse"} for item in observed)
+                or any(item.provider not in minute_providers for item in observed)
             ):
                 result.append(row)
                 continue

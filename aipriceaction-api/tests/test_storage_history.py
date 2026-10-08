@@ -389,16 +389,19 @@ def test_certified_minutes_make_recent_vn_intervals_exact(system):
     ) == expected
 
 
-def test_cash_index_uses_regular_minutes_as_served_daily_and_hourly_truth(system):
+@pytest.mark.parametrize("minute_provider", ["vps", "vndirect"])
+def test_cash_index_uses_regular_minutes_as_served_daily_and_hourly_truth(
+    system, minute_provider
+):
     repo, _, history = system
     day = cutoff(1) + 30 * 86400
     repo.put(
         [
             Candle("vn", "VNINDEX", "1D", day, 90, 110, 80, 99, 999, "vps"),
             Candle("vn", "VNINDEX", "1h", day + 2 * 3600, 90, 110, 80, 99, 999, "vndirect"),
-            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10, "vps"),
-            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20, "vps"),
-            Candle("vn", "VNINDEX", "1m", day + 8 * 3600 + 5 * 60, 103, 103, 90, 90, 500, "vps"),
+            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10, minute_provider),
+            Candle("vn", "VNINDEX", "1m", day + 2 * 3600 + 45 * 60, 101, 104, 100, 103, 20, minute_provider),
+            Candle("vn", "VNINDEX", "1m", day + 8 * 3600 + 5 * 60, 103, 103, 90, 90, 500, minute_provider),
         ]
     )
 
