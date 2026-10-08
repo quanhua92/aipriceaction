@@ -18,8 +18,11 @@ from aipriceaction_api.domain import INDEXES, completed_vn_sessions, cutoff
 
 FIELDS = ("open", "high", "low", "close", "volume")
 INTERVALS = ("1D", "1h", "1m")
-REGULAR_SESSION_WINDOWS = (
-    (2 * 3600 + 15 * 60, 4 * 3600 + 30 * 60),
+# Union of legal continuous/auction observations across HOSE, HNX and UPCOM.
+# Without exchange metadata, 09:00 ICT must be accepted for HNX/UPCOM even
+# though ordinary HOSE symbols begin with a 09:00-09:15 opening auction.
+VN_SESSION_WINDOWS = (
+    (2 * 3600, 4 * 3600 + 30 * 60),
     (6 * 3600, 7 * 3600 + 45 * 60),
 )
 
@@ -228,7 +231,7 @@ def audit(database, symbols=()):
                 for row in minute_rows
                 if not any(
                     lower <= row["time"] - session_day <= upper
-                    for lower, upper in REGULAR_SESSION_WINDOWS
+                    for lower, upper in VN_SESSION_WINDOWS
                 )
             ]
             record["minute_session"]["outside_regular_session"] = len(outside)

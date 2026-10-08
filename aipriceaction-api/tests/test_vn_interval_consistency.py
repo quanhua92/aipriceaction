@@ -12,6 +12,7 @@ def stamp(value):
 def build(
     tmp_path,
     *,
+    opening_offset=15 * 60,
     stale_hour=False,
     missing_hour=False,
     bad_hour=False,
@@ -23,7 +24,7 @@ def build(
     repo.initialize()
     day = stamp("2026-10-08")
     minutes = [
-        Candle("vn", "VCB", "1m", day + 2 * 3600 + 15 * 60, 100, 102, 99, 101, 10),
+        Candle("vn", "VCB", "1m", day + 2 * 3600 + opening_offset, 100, 102, 99, 101, 10),
         Candle(
             "vn",
             "VCB",
@@ -97,3 +98,10 @@ def test_latest_vn_interval_audit_exposes_hour_bucket_drift(tmp_path):
     # Keep the native-provider finding, while modeling the API's replacement
     # from a completed minute session that exactly matches the daily candle.
     assert row["daily_vs_hours"] == []
+
+
+def test_hnx_nine_oclock_observation_is_inside_vn_session(tmp_path):
+    row = audit(build(tmp_path, opening_offset=0), ["VCB"])["series"][0]
+    assert row["minute_session"]["first"] == "02:00:00"
+    assert row["minute_session"]["outside_regular_session"] == 0
+    assert row["minute_session"]["regular_boundary"]
