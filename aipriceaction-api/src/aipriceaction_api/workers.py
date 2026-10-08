@@ -205,12 +205,16 @@ class Worker:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
             log.log(
                 logging.WARNING if isinstance(exc, DataError) else logging.ERROR,
-                "recovery failed source=%s symbol=%s interval=%s provider=%s kind=%s reason=%s",
+                "recovery failed source=%s symbol=%s interval=%s provider=%s kind=%s "
+                "before=%s cursor=%s floor=%s reason=%s",
                 job["source"],
                 job["symbol"],
                 job["interval"],
                 job["provider"],
                 type(exc).__name__,
+                before,
+                job["cursor"],
+                job["floor"],
                 reason,
                 exc_info=(type(exc), exc, exc.__traceback__)
                 if not isinstance(exc, DataError)
@@ -239,6 +243,29 @@ class Worker:
                             provider=alternate,
                         )
                         if not sample.rows or sample.rows[0].time >= before:
+                            continue
+                        # A current-only alternate can answer this cursor yet be
+                        # unable to rebuild the configured retained window. Do
+                        # not discard staged progress and bounce between such
+                        # providers. Require independently parsed candles near
+                        # the durable floor before restarting from the head.
+                        floor_probe_before = min(before, job["floor"] + 31 * 86400)
+                        if floor_probe_before < before:
+                            floor_sample = await self.providers.page(
+                                job["source"],
+                                job["symbol"],
+                                job["interval"],
+                                floor_probe_before,
+                                count=3,
+                                provider=alternate,
+                                start=job["floor"],
+                            )
+                            if not floor_sample.rows or not any(
+                                job["floor"] <= row.time < floor_probe_before
+                                for row in floor_sample.rows
+                            ):
+                                continue
+                        elif not any(job["floor"] <= row.time < before for row in sample.rows):
                             continue
                         kind = (
                             "repair"
@@ -379,7 +406,10 @@ class Worker:
             if not state:
                 self.repo.queue(source, symbol, iv, "bootstrap", self.floor(entry, iv))
                 return 0
-            if state["status"] != "ready":
+            if state["status"] != "ready" and not (
+                state["status"] == "repairing"
+                and self.repo.active_repair(source, symbol, iv)
+            ):
                 return 0
             attempt = self.repo.start_source_check(source, symbol, iv)
             imported_snapshot = (
@@ -883,7 +913,9 @@ class Worker:
                 ident = (source, entry["symbol"], interval)
                 state = self.repo.state(*ident)
                 result = dict(source=source, symbol=entry["symbol"], interval=interval, rows=0)
-                if not state or state["status"] != "ready":
+                if not state or state["status"] != "ready" and not (
+                    state["status"] == "repairing" and self.repo.active_repair(*ident)
+                ):
                     results.append(result | {"outcome": "not_ready"})
                     continue
                 with self.repo.connect() as con:

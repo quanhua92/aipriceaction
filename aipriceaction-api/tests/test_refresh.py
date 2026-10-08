@@ -102,12 +102,13 @@ async def test_refresh_respects_frozen_minute_handoff_gate(system):
 
 
 @pytest.mark.asyncio
-async def test_refresh_does_not_initialize_a_missing_series_or_resume_an_active_repair(system):
+async def test_refresh_updates_public_tail_without_processing_active_repair(system):
     repo, settings, rows = system
     repo.queue("crypto", "ETHUSDT", "1m", "repair", 0, "binance")
     provider = Provider(rows)
     result = await Worker(repo, settings, providers=provider).refresh("crypto", ["ETHUSDT"], "1m")
-    assert result[0]["outcome"] == "not_ready" and provider.calls == []
+    assert result[0]["outcome"] == "succeeded" and provider.calls == ["ETHUSDT"]
+    assert result[0]["rows"] == 2
     provider = Provider(rows)
     result = await Worker(repo, settings, providers=provider).refresh("crypto", None, "1D")
     assert len(result) == 2 and all(r["outcome"] == "not_ready" for r in result)

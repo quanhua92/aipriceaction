@@ -909,6 +909,123 @@ async def test_interrupted_repair_preserves_old_revision_and_resumes(system):
 
 
 @pytest.mark.asyncio
+async def test_same_provider_repair_keeps_verified_minute_tail_live(system, monkeypatch):
+    repo, archive, settings = system
+    first = parse_time("2026-10-08T07:43:00Z")
+    original = [
+        replace(candle(1), interval="1m", time=first + offset, symbol="VCB")
+        for offset in (0, 60)
+    ]
+    repo.put(original)
+    repo.queue("vn", "VCB", "1m", "repair", first, "vps")
+    job = repo.claim_job("backfill")
+    repo.stage(
+        job,
+        [replace(row, revision=job["revision"]) for row in original],
+        first,
+        "vps",
+    )
+
+    recent = original + [replace(original[-1], time=first + 120, close=101)]
+    worker = Worker(repo, settings, Pages(Page(recent, "vps")), archive)
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
+
+    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 3
+    assert repo.state("vn", "VCB", "1m")["status"] == "repairing"
+    assert repo.read("vn", "VCB", "1m")[-1].time == first + 120
+    with repo.connect() as con:
+        staged = con.execute(
+            "SELECT time,provider,revision FROM staging WHERE job_id=? ORDER BY time", (job["id"],)
+        ).fetchall()
+    assert [row["time"] for row in staged] == [first, first + 60, first + 120]
+    assert {row["provider"] for row in staged} == {"vps"}
+    assert {row["revision"] for row in staged} == {job["revision"]}
+
+
+@pytest.mark.asyncio
+async def test_different_provider_repair_keeps_public_tail_without_mixing_staging(
+    system, monkeypatch
+):
+    repo, archive, settings = system
+    first = parse_time("2026-10-08T07:43:00Z")
+    row = replace(candle(1), interval="1m", time=first, symbol="VCB")
+    repo.put([row])
+    repo.queue("vn", "VCB", "1m", "repair", first, "dnse")
+    providers = Pages(Page([row, replace(row, time=first + 60)], "vps"))
+    worker = Worker(repo, settings, providers, archive)
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
+
+    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 2
+    assert providers.calls == ["vps"]
+    stored = repo.read("vn", "VCB", "1m")
+    assert [(item.time, item.provider, item.revision) for item in stored] == [
+        (first, "vps", "initial"),
+        (first + 60, "vps", "initial"),
+    ]
+    with repo.connect() as con:
+        assert not con.execute(
+            "SELECT 1 FROM staging WHERE job_id=(SELECT id FROM jobs WHERE kind='repair')"
+        ).fetchone()
+
+
+@pytest.mark.asyncio
+async def test_alternate_provider_repair_still_expands_published_provider_overlap(
+    system, monkeypatch
+):
+    repo, archive, settings = system
+    first, step, elapsed = parse_time("2026-10-02T07:45:00Z"), 60, 100
+    row = replace(candle(1), interval="1m", time=first, symbol="VCB")
+    repo.put([row])
+    repo.queue("vn", "VCB", "1m", "repair", first, "vndirect")
+    calls = []
+
+    class Live:
+        async def page(self, source, symbol, interval, count=40, provider=None, start=None):
+            calls.append((count, provider, start))
+            return Page(
+                [
+                    replace(row, time=first + offset * step)
+                    for offset in range(max(0, elapsed - count + 1), elapsed + 1)
+                ],
+                "vps",
+            )
+
+    worker = Worker(repo, settings, Live(), archive)
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + elapsed * step)
+
+    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == elapsed + 1
+    assert calls == [(40, "vps", None), (elapsed + 40, "vps", first)]
+    assert repo.read("vn", "VCB", "1m")[-1].time == first + elapsed * step
+    with repo.connect() as con:
+        assert not con.execute(
+            "SELECT 1 FROM staging WHERE job_id=(SELECT id FROM jobs WHERE kind='repair')"
+        ).fetchone()
+
+
+@pytest.mark.asyncio
+async def test_same_provider_live_tail_cannot_overwrite_staged_revision(system, monkeypatch):
+    repo, archive, settings = system
+    first = parse_time("2026-10-08T07:43:00Z")
+    row = replace(candle(1), interval="1m", time=first, symbol="VCB")
+    repo.put([row])
+    repo.queue("vn", "VCB", "1m", "repair", first, "vps")
+    job = repo.claim_job("backfill")
+    revised = replace(row, close=100.5, revision=job["revision"])
+    repo.stage(job, [revised], first, "vps")
+    worker = Worker(repo, settings, Pages(Page([row, replace(row, time=first + 60)], "vps")), archive)
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
+
+    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 0
+    assert repo.read("vn", "VCB", "1m")[-1].time == first
+    with repo.connect() as con:
+        staged = con.execute(
+            "SELECT close,revision FROM staging WHERE job_id=? AND time=?", (job["id"], first)
+        ).fetchone()
+    assert staged["close"] == 100.5 and staged["revision"] == job["revision"]
+
+
+@pytest.mark.asyncio
 async def test_provider_switch_queues_rebuild_instead_of_appending(system):
     repo, archive, settings = system
     repo.put([candle(1)])
@@ -1639,6 +1756,64 @@ async def test_repeated_midway_failure_restarts_on_one_fallback_basis(system):
     assert all(r.close == 100 for r in repo.read("vn", "FPT", "1D"))
     assert await worker.repair_page(replacement) == 5
     assert {(r.provider, r.close) for r in repo.read("vn", "FPT", "1D")} == {("vndirect", 80)}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("floor_available", [False, True])
+async def test_provider_switch_requires_alternate_coverage_near_floor(
+    system, floor_available, caplog
+):
+    repo, archive, settings = system
+    floor = parse_time("2025-10-08")
+    current = parse_time("2026-10-08T08:00:00Z")
+    published = replace(
+        candle(1), interval="1m", time=current - 60, symbol="VCB", provider="vps"
+    )
+    repo.put([published])
+    repo.queue("vn", "VCB", "1m", "repair", floor, "vps")
+    with repo.connect() as con:
+        con.execute("UPDATE jobs SET attempts=2 WHERE symbol='VCB' AND interval='1m'")
+
+    class BoundaryAware:
+        def __init__(self):
+            self.calls = []
+
+        async def page(
+            self, source, symbol, iv, before=None, count=500, provider=None, start=None
+        ):
+            self.calls.append((provider, before, start))
+            if provider == "vps":
+                raise DataError("historical VPS page unavailable")
+            if provider == "vndirect" and before > floor + 31 * 86400:
+                return Page([replace(published, time=before - 60, provider=provider)], provider)
+            if provider == "vndirect" and floor_available:
+                return Page([replace(published, time=floor + 60, provider=provider)], provider)
+            return Page([], provider, True)
+
+    providers = BoundaryAware()
+    worker = Worker(repo, settings, providers=providers, archive=archive)
+    caplog.set_level("WARNING")
+    job = repo.claim_job(worker.owner)
+    # Use a stable historical failure cursor rather than wall-clock time.
+    with repo.connect() as con:
+        con.execute("UPDATE jobs SET cursor=? WHERE id=?", (current, job["id"]))
+    job = dict(job) | {"cursor": current}
+
+    assert await worker.repair_page(job) == 0
+    with repo.connect() as con:
+        pending = con.execute(
+            "SELECT provider,cursor FROM jobs WHERE symbol='VCB' AND interval='1m'"
+        ).fetchone()
+    assert pending["provider"] == ("vndirect" if floor_available else "vps")
+    assert pending["cursor"] is None if floor_available else pending["cursor"] == current
+    assert providers.calls[:3] == [
+        ("vps", current, floor),
+        ("vndirect", current, None),
+        ("vndirect", floor + 31 * 86400, floor),
+    ]
+    if not floor_available:
+        assert providers.calls[3] == ("dnse", current, None)
+    assert f"before={current} cursor={current} floor={floor}" in caplog.text
 
 
 def test_filtered_workers_only_claim_requested_tickers(system):

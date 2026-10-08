@@ -591,15 +591,41 @@ class Repository:
                     "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
                     (c.source, c.symbol, c.interval),
                 ).fetchone()
+                repair = None
+                if state and state["status"] == "repairing" and verification:
+                    repair = con.execute(
+                        """SELECT id,provider,revision FROM jobs WHERE source=? AND symbol=?
+                        AND interval=? AND kind='repair' AND status IN ('pending','running')""",
+                        (c.source, c.symbol, c.interval),
+                    ).fetchone()
                 if (
                     state["revision"] != c.revision
                     or state["provider"] != c.provider
-                    or state["status"] != "ready"
+                    or state["status"] not in ("ready", "repairing")
+                    or state["status"] == "repairing" and not repair
                 ):
                     raise DataError("Provider/revision change requires staged recovery")
                 record = c.record()
                 record["updated_at"] = stamp
                 written += con.execute(statement, tuple(record[k] for k in COLUMNS)).rowcount
+                if repair and repair["provider"] == state["provider"]:
+                    # A long same-provider backfill must not freeze the public
+                    # tail. Mirror each independently verified live candle into
+                    # the replacement revision so atomic activation cannot drop
+                    # observations that arrived while historical pages ran.
+                    existing = con.execute(
+                        f"SELECT {','.join(COLUMNS[4:10])} FROM staging "
+                        "WHERE job_id=? AND time=?",
+                        (repair["id"], c.time),
+                    ).fetchone()
+                    if existing and tuple(existing) != tuple(record[key] for key in COLUMNS[4:10]):
+                        raise DataError("Verified live candle conflicts with staged repair")
+                    staged = record | {"revision": repair["revision"]}
+                    con.execute(
+                        f"INSERT OR REPLACE INTO staging(job_id,{','.join(COLUMNS)}) "
+                        f"VALUES ({','.join('?' for _ in range(len(COLUMNS) + 1))})",
+                        (repair["id"], *(staged[k] for k in COLUMNS)),
+                    )
             if written:
                 self.bump(con)
             if verification:
@@ -626,6 +652,20 @@ class Repository:
                     ident,
                 )
         return written
+
+    def active_repair(self, source, symbol, interval):
+        """Whether this series has a durable staged repair in progress."""
+        with self.connect() as con:
+            return bool(
+                con.execute(
+                    """SELECT 1 FROM series s JOIN jobs j
+                    ON j.source=s.source AND j.symbol=s.symbol AND j.interval=s.interval
+                    WHERE s.source=? AND s.symbol=? AND s.interval=?
+                    AND s.status='repairing' AND j.kind='repair'
+                    AND j.status IN ('pending','running')""",
+                    (source, symbol, interval),
+                ).fetchone()
+            )
 
     def read(self, source, symbol, interval, start=None, end=None, limit=None, forward=False):
         where = "source=? AND symbol=? AND interval=?"
