@@ -492,7 +492,7 @@ async def adopt_snapshot(
             con.execute(
                 f"UPDATE tickers SET {schedule}=0 WHERE source=? AND symbol=?", (source, symbol)
             )
-            repo.bump(con)
+            repo.bump(con, market=True)
     return {
         "dry_run": not execute,
         "provider": provider,

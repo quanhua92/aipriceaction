@@ -183,7 +183,7 @@ async def adopt_daily_snapshot(repo, providers, symbol, provider, execute=False)
                     (job["id"],),
                 )
             con.execute("UPDATE tickers SET next_1d=0 WHERE source='vn' AND symbol=?", (symbol,))
-            repo.bump(con)
+            repo.bump(con, market=True)
     return {
         "dry_run": not execute,
         "provider": provider,

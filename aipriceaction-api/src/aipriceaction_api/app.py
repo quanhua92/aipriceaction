@@ -31,7 +31,7 @@ from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.routing import Match
 
-from .analysis import Analysis
+from .analysis import Analysis, _jdk_lookback_limit
 from .archive import Archive
 from .catalog import Catalog
 from .config import Settings, trim_rust_whitespace
@@ -1831,7 +1831,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             await asyncio.sleep(HEALTH_SNAPSHOT_REFRESH_SECONDS)
 
     def prewarm_market_read_cache():
-        """Prime recent EMA tails so the first web page read avoids a cold scan."""
+        """Prime the native SQLite shapes used by homepage and analysis reads."""
         for source in ("vn", "yahoo", "crypto", "sjc"):
             symbols = [row["symbol"] for row in repo.tickers([source])]
             if symbols:
@@ -1842,6 +1842,55 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     limit=601,
                     compact_tail=True,
                 )
+
+        if redis_client is not None:
+            return
+
+        current_date = datetime.now(UTC).strftime("%Y-%m-%d")
+        current_end = date_bounds(current_date, True)
+        current_start = date_bounds(current_date)
+        rrg_groups = analysis._rrg_groups_by_source()
+        rrg_symbols = sorted(
+            {
+                ticker["symbol"]
+                for ticker in analysis._rrg_universe("vn", rrg_groups)
+                if ticker["source"] == "vn"
+            }
+        )
+        jdk_limit = _jdk_lookback_limit(10, 5, True)
+        history.data_loader.load_many(
+            "vn",
+            rrg_symbols,
+            "1D",
+            end=current_end,
+            limit=jdk_limit,
+        )
+        history.data_loader.load_many(
+            "vn",
+            ["VNINDEX"],
+            "1D",
+            end=current_end,
+            limit=jdk_limit,
+        )
+        history.data_loader.load_many(
+            "vn",
+            rrg_symbols,
+            "1D",
+            end=current_end,
+            limit=605,
+        )
+        history.data_loader.load_many(
+            "vn",
+            ["VNINDEX"],
+            "1m",
+            start=current_start,
+            end=current_end,
+        )
+        log.info(
+            "market read cache warmup complete entries=%d cached_mb=%.1f",
+            len(history.data_loader._cache),
+            history.data_loader._cache_bytes / (1024 * 1024),
+        )
 
     @asynccontextmanager
     async def lifespan(app):
@@ -3024,12 +3073,12 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
 
     @app.get("/tickers/info")
     async def info(ticker: OptionalString = None):
-        rows = await background(lambda: sort_json_value_keys(catalog.info))
         if ticker is None:
-            return rows
-        for row in rows:
-            if row["ticker"].upper() == ticker.upper():
-                return row
+            body = await background(lambda: catalog.info_json)
+            return Response(body, media_type="application/json")
+        row = await background(lambda: catalog.info_by_ticker.get(ticker.upper()))
+        if row is not None:
+            return row
         raise DataError(f"Ticker '{ticker}' not found", 404)
 
     @app.post("/tickers/refresh")

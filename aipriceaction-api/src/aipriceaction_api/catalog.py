@@ -4,6 +4,7 @@ import json
 from functools import cached_property
 
 from .config import trim_rust_whitespace
+from .responses import RustJSONResponse, sort_json_value_keys
 
 RUST_TICKER_LIST_KEY = "meta:ticker_list"
 
@@ -218,6 +219,20 @@ class Catalog:
             ),
             key=lambda r: r["ticker"],
         )
+
+    @cached_property
+    def sorted_info(self):
+        """Cache Rust-compatible field ordering for the immutable company catalog."""
+        return sort_json_value_keys(self.info)
+
+    @cached_property
+    def info_by_ticker(self):
+        return {row["ticker"].upper(): row for row in self.sorted_info}
+
+    @cached_property
+    def info_json(self):
+        """Render the large static info response once instead of per request."""
+        return RustJSONResponse(self.sorted_info).body
 
     def sector(self, source, symbol):
         for sector, symbols in sorted(self.groups_by_source[source].items()):

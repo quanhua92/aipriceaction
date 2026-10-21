@@ -112,9 +112,9 @@ def test_sparse_numpy_trails_match_ordered_scalar_moving_averages(ema):
     symbol = "SPARSE"
     rows = [candle(symbol, index) for index in range(601)]
     indices = list(range(596, 601))
-    actual = enhance_many_selected(
-        {symbol: rows}, {symbol: indices}, "1D", ma=True, ema=ema
-    )[symbol]
+    actual = enhance_many_selected({symbol: rows}, {symbol: indices}, "1D", ma=True, ema=ema)[
+        symbol
+    ]
     references = {
         period: moving_average([row.close for row in rows], period, ema)
         for period in (10, 20, 50, 100, 200)
@@ -125,9 +125,9 @@ def test_sparse_numpy_trails_match_ordered_scalar_moving_averages(ema):
             expected = values[index]
             if expected > 0:
                 assert result[f"ma{period}"] == expected
-                assert result[f"ma{period}_score"] == (
-                    (rows[index].close - expected) / expected
-                ) * 100
+                assert (
+                    result[f"ma{period}_score"] == ((rows[index].close - expected) / expected) * 100
+                )
 
 
 def test_read_many_matches_single_reads_for_local_and_archived_series(system):
@@ -241,12 +241,15 @@ def test_repository_connections_enable_large_sqlite_read_cache(system):
         assert con.execute("PRAGMA mmap_size").fetchone()[0] >= 256 * 1024 * 1024
 
 
-def test_loader_lru_ignores_job_epoch_bumps_and_invalidates_market_writes(system, monkeypatch):
+def test_loader_lru_ignores_epoch_bumps_until_one_minute_ttl(system, monkeypatch):
     repo, history = system
     repo.put([candle("FPT", index) for index in range(3)])
     loader = history.data_loader
+    now = [100.0]
     real_read_tails = loader._read_compact_tails
     reads = 0
+
+    monkeypatch.setattr("aipriceaction_api.data_loading.time.monotonic", lambda: now[0])
 
     def count_reads(*args):
         nonlocal reads
@@ -275,9 +278,113 @@ def test_loader_lru_ignores_job_epoch_bumps_and_invalidates_market_writes(system
     repo.put([candle("FPT", 3)])
     fourth = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
 
-    assert reads == 2
+    assert reads == 1
     assert fourth.compact_tails["FPT"].closes.tolist() == [
+        candle("FPT", index).close for index in range(3)
+    ]
+
+    now[0] += 60.01
+    fifth = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
+
+    assert reads == 2
+    assert fifth.compact_tails["FPT"].closes.tolist() == [
         candle("FPT", index).close for index in range(1, 4)
+    ]
+
+
+def test_loader_reuses_wider_compact_tail_for_smaller_symbol_subset(system, monkeypatch):
+    repo, history = system
+    repo.put(
+        [
+            candle(symbol, index)
+            for symbol, length in (("FPT", 17), ("VCB", 8), ("VIC", 5))
+            for index in range(length)
+        ]
+    )
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["FPT", "VCB", "VIC"], "1D", limit=11, compact_tail=True)
+    subset = loader.load_many("vn", ["VCB"], "1D", limit=3, compact_tail=True)
+
+    expected = repo.read("vn", "VCB", "1D", limit=3)
+    assert loads == 1
+    assert subset.local["VCB"] == expected[-2:]
+    assert subset.compact_tails["VCB"].closes.tolist() == [row.close for row in expected]
+    assert subset.compact_tails["VCB"].times.tolist() == [row.time for row in expected]
+    assert subset.compact_tails["VCB"].oldest_time == expected[0].time
+    assert set(subset.local) == {"VCB"}
+
+
+def test_loader_reuses_compact_latest_rows_for_noncompact_two_bar_request(system, monkeypatch):
+    repo, history = system
+    repo.put([candle("FPT", index) for index in range(6)])
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["FPT"], "1D", limit=6, compact_tail=True)
+    latest = loader.load_many("vn", ["FPT"], "1D", limit=2)
+
+    assert loads == 1
+    assert latest.local["FPT"] == repo.read("vn", "FPT", "1D", limit=2)
+
+
+def test_empty_startup_warmup_does_not_hide_first_market_rows(system):
+    repo, history = system
+    loader = history.data_loader
+
+    empty = loader.load_many("vn", ["FPT"], "1D", limit=601, compact_tail=True)
+    assert empty.compact_tails == {}
+    assert not loader._cache
+
+    repo.put([candle("FPT", index) for index in range(3)])
+    populated = loader.load_many("vn", ["FPT"], "1D", limit=601, compact_tail=True)
+
+    assert populated.compact_tails["FPT"].closes.tolist() == [
+        candle("FPT", index).close for index in range(3)
+    ]
+
+
+def test_compatible_loader_hits_do_not_extend_original_cache_ttl(system, monkeypatch):
+    repo, history = system
+    repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(4)])
+    loader = history.data_loader
+    now = [100.0]
+    real_load = loader._load_many
+    loads = 0
+
+    monkeypatch.setattr("aipriceaction_api.data_loading.time.monotonic", lambda: now[0])
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["FPT", "VCB"], "1D", limit=4, compact_tail=True)
+    now[0] = 159.0
+    loader.load_many("vn", ["FPT"], "1D", limit=2, compact_tail=True)
+    repo.put([candle("FPT", 4)])
+    now[0] = 160.01
+    refreshed = loader.load_many("vn", ["FPT"], "1D", limit=2, compact_tail=True)
+
+    assert loads == 2
+    assert refreshed.compact_tails["FPT"].closes.tolist() == [
+        candle("FPT", index).close for index in (3, 4)
     ]
 
 
@@ -292,28 +399,6 @@ def test_loader_cache_copy_isolates_nested_history_evidence(system):
 
     assert original.gaps["FPT"][0]["evidence"]["sources"] == ["capture"]
     assert loader._estimated_size(original) > 0
-
-
-def test_loader_cache_expires_within_one_minute(system, monkeypatch):
-    _repo, history = system
-    loader = history.data_loader
-    now = [100.0]
-    reads = 0
-    real_read_tails = loader._read_compact_tails
-
-    def count_reads(*args):
-        nonlocal reads
-        reads += 1
-        return real_read_tails(*args)
-
-    monkeypatch.setattr("aipriceaction_api.data_loading.time.monotonic", lambda: now[0])
-    monkeypatch.setattr(loader, "_read_compact_tails", count_reads)
-    loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
-    loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
-    now[0] += 60.01
-    loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
-
-    assert reads == 2
 
 
 def test_loader_coalesces_identical_concurrent_reads(system, monkeypatch):

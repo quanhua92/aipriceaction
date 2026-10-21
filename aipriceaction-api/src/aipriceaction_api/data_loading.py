@@ -21,6 +21,7 @@ from .domain import Candle
 @dataclass
 class CompactTail:
     closes: Any
+    times: Any
     oldest_time: int
     mixed_revision: bool
     mixed_provider: bool
@@ -39,12 +40,11 @@ class LoadedHistory:
 class SQLiteDataLoader:
     """Load native candle tails and associated validation metadata."""
 
-    # Raw market tails are invalidated by market_epoch when candle data changes.
-    # Keep the bounded in-process LRU for a minute so adjacent endpoints and
-    # page reloads reuse the same SQLite materialization. This is separate from
-    # the shorter HTTP response cache, so cached values still follow writes.
+    # The data loader has a one-minute LRU, separate from the shorter HTTP
+    # response cache. A global market epoch is too broad here: background
+    # ingestion would evict unrelated source/interval tails on every batch.
     _CACHE_TTL_SECONDS = 60
-    _CACHE_MAX_BYTES = 64 * 1024 * 1024
+    _CACHE_MAX_BYTES = 256 * 1024 * 1024
 
     def __init__(self, repository):
         self.repository = repository
@@ -69,6 +69,7 @@ class SQLiteDataLoader:
             compact_tails={
                 symbol: CompactTail(
                     closes=tail.closes.copy(),
+                    times=tail.times.copy(),
                     oldest_time=tail.oldest_time,
                     mixed_revision=tail.mixed_revision,
                     mixed_provider=tail.mixed_provider,
@@ -82,7 +83,9 @@ class SQLiteDataLoader:
         """Bound retained results, including nested archive and gap evidence."""
         size = 1024 + 128 * len(result.local)
         size += sum(len(rows) * 320 for rows in result.local.values())
-        size += sum(getsizeof(tail.closes) for tail in result.compact_tails.values())
+        size += sum(
+            getsizeof(tail.closes) + getsizeof(tail.times) for tail in result.compact_tails.values()
+        )
         pending = [
             result.archives,
             result.gaps,
@@ -110,7 +113,7 @@ class SQLiteDataLoader:
             if cached is None:
                 return None
             expires_at, size, value = cached
-            if expires_at < now:
+            if expires_at <= now:
                 self._cache.pop(key)
                 self._cache_bytes -= size
                 return None
@@ -120,7 +123,128 @@ class SQLiteDataLoader:
         # metadata result does not serialize unrelated cache hits.
         return self._copy_loaded(value)
 
+    def _cache_get_compatible(self, key, now):
+        """Reuse a wider cached batch for a symbol subset and shorter tail.
+
+        Startup warming loads the full source universe so ticker and analysis
+        routes can share the same SQLite snapshot. A request can safely reuse
+        that read when its symbol set is a subset and its time bounds and sort
+        direction match. The cache continues to expire from the original read
+        time, even when smaller requests hit it repeatedly.
+        """
+        cached = self._cache_get(key, now)
+        if cached is not None:
+            return cached
+
+        source, symbols, interval, start, end, limit, forward, compact_tail = key
+        if not isinstance(limit, int) or limit <= 0:
+            return None
+        requested_symbols = set(symbols)
+        with self._cache_lock:
+            expired = [cached_key for cached_key, entry in self._cache.items() if entry[0] <= now]
+            for cached_key in expired:
+                entry = self._cache.pop(cached_key)
+                self._cache_bytes -= entry[1]
+
+            candidates = []
+            for cached_key, entry in self._cache.items():
+                (
+                    cached_source,
+                    cached_symbols,
+                    cached_interval,
+                    cached_start,
+                    cached_end,
+                    cached_limit,
+                    cached_forward,
+                    cached_compact_tail,
+                ) = cached_key
+                if (
+                    cached_source != source
+                    or cached_interval != interval
+                    or cached_start != start
+                    or cached_end != end
+                    or cached_forward != forward
+                    or not isinstance(cached_limit, int)
+                    or cached_limit < limit
+                    or not requested_symbols.issubset(cached_symbols)
+                ):
+                    continue
+                if cached_compact_tail != compact_tail and not (
+                    cached_compact_tail and not compact_tail and not forward and limit <= 2
+                ):
+                    continue
+                value = entry[2]
+                if cached_compact_tail and compact_tail:
+                    if any(symbol not in value.compact_tails for symbol in symbols):
+                        # An empty warmed identity can acquire its first row
+                        # after startup; do not pin that absence for a minute.
+                        continue
+                elif any(not value.local.get(symbol) for symbol in symbols):
+                    continue
+                score = (
+                    cached_compact_tail != compact_tail,
+                    len(cached_symbols) - len(requested_symbols),
+                    cached_limit - limit,
+                    -entry[0],
+                )
+                candidates.append((score, cached_key, value))
+            if not candidates:
+                return None
+            _score, cached_key, value = min(candidates, key=lambda item: item[0])
+            self._cache.move_to_end(cached_key)
+
+        return self._slice_cached(value, symbols, limit, forward, compact_tail)
+
+    @staticmethod
+    def _slice_cached(value, symbols, limit, forward, compact_tail):
+        """Return an isolated subset with the same shape as the requested read."""
+        result = LoadedHistory()
+        for symbol in symbols:
+            rows = value.local.get(symbol, [])
+            if compact_tail:
+                tail = value.compact_tails.get(symbol)
+                result.local[symbol] = list(rows[-2:])
+                if tail is not None:
+                    start = max(0, len(tail.closes) - limit)
+                    closes = tail.closes[start:].copy()
+                    times = tail.times[start:].copy()
+                    result.compact_tails[symbol] = CompactTail(
+                        closes=closes,
+                        times=times,
+                        oldest_time=int(times[0]) if len(times) else tail.oldest_time,
+                        # The wider tail's flags are conservative for every
+                        # shorter suffix and preserve the established fallback.
+                        mixed_revision=tail.mixed_revision,
+                        mixed_provider=tail.mixed_provider,
+                    )
+            else:
+                selected = rows[:limit] if forward else rows[-limit:]
+                result.local[symbol] = list(selected)
+
+            result.archives[symbol] = copy.deepcopy(value.archives.get(symbol, []))
+            result.gaps[symbol] = copy.deepcopy(value.gaps.get(symbol, []))
+            result.adoptions[symbol] = copy.deepcopy(value.adoptions.get(symbol, {}))
+            result.volume_corrections[symbol] = copy.deepcopy(
+                value.volume_corrections.get(symbol, [])
+            )
+        return result
+
     def _cache_put(self, key, value, now):
+        has_history = bool(value.compact_tails) or any(value.local.values())
+        has_history = has_history or any(
+            records
+            for collection in (
+                value.archives,
+                value.gaps,
+                value.adoptions,
+                value.volume_corrections,
+            )
+            for records in collection.values()
+        )
+        if not has_history:
+            # Startup can run before the worker's first successful fetch. An
+            # empty warmup must not pin a newly populated source as empty.
+            return
         size = self._estimated_size(value)
         if size > self._CACHE_MAX_BYTES:
             return
@@ -195,9 +319,7 @@ class SQLiteDataLoader:
             if limit is not None:
                 args.append(limit)
             rows = cursor.execute(sql, args).fetchall()
-            result[symbol].extend(
-                Candle(*row) for row in (rows if forward else reversed(rows))
-            )
+            result[symbol].extend(Candle(*row) for row in (rows if forward else reversed(rows)))
 
     @classmethod
     def _read_compact_tails(cls, con, source, symbols, interval, limit, result):
@@ -237,9 +359,11 @@ class SQLiteDataLoader:
             tail_symbols.append(symbol)
             first_provider = rows["provider"][0]
             first_revision = rows["revision"][0]
+            chronological_times = rows["time"][::-1].copy()
             result.compact_tails[symbol] = CompactTail(
                 closes=rows["close"][::-1].copy(),
-                oldest_time=int(rows["time"][-1]),
+                times=chronological_times,
+                oldest_time=int(chronological_times[0]),
                 mixed_revision=bool(np.any(rows["revision"] != first_revision)),
                 mixed_provider=bool(np.any(rows["provider"] != first_provider)),
             )
@@ -279,7 +403,6 @@ class SQLiteDataLoader:
         if not symbols:
             return LoadedHistory()
         key = (
-            self.repository.market_epoch(),
             source,
             tuple(sorted(symbols)),
             interval,
@@ -299,16 +422,18 @@ class SQLiteDataLoader:
             return self._copy_loaded(future.result())
 
         try:
-            result = self._load_many(
-                source,
-                symbols,
-                interval,
-                start=start,
-                end=end,
-                limit=limit,
-                forward=forward,
-                compact_tail=compact_tail,
-            )
+            result = self._cache_get_compatible(key, time.monotonic())
+            if result is None:
+                result = self._load_many(
+                    source,
+                    symbols,
+                    interval,
+                    start=start,
+                    end=end,
+                    limit=limit,
+                    forward=forward,
+                    compact_tail=compact_tail,
+                )
             future.set_result(result)
             return result
         except BaseException as exc:
@@ -372,10 +497,7 @@ class SQLiteDataLoader:
         with self.repository.connect() as con:
             # Keep all tables on the same SQLite snapshot during a bulk read.
             con.execute("BEGIN")
-            epoch_row = con.execute("SELECT value FROM meta WHERE key='market_epoch'").fetchone()
-            epoch = epoch_row[0] if epoch_row else 0
             cache_key = (
-                epoch,
                 source,
                 tuple(sorted(symbols)),
                 interval,

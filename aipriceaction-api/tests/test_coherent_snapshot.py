@@ -185,7 +185,7 @@ def test_sql_failure_rolls_back_hot_rows_state_and_archive_pointers(system, monk
     repo, archive, rows = system
     snapshot = capture(repo, archive, "FPT")
 
-    def fail(con):
+    def fail(con, **_kwargs):
         raise DataError("injected SQL failure")
 
     monkeypatch.setattr(repo, "bump", fail)

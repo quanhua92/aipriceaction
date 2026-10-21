@@ -230,7 +230,7 @@ def publish(repo, archive, snapshot, replacement, floor, *, execute=False):
                 "INSERT INTO quality(source,symbol,interval,kind,detail,first_seen,last_seen,resolved) VALUES ('vn',?,'1m','coherent_snapshot_activation',?,?,?,1)",
                 (symbol, detail, now, now),
             )
-            repo.bump(con)
+            repo.bump(con, market=True)
         # If remote publication fails, local data and rollback images survive;
         # the receipt explicitly identifies the missing restore checkpoint.
         try:

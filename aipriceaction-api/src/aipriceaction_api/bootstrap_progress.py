@@ -159,7 +159,7 @@ async def publish_bootstrap_progress(repo, providers, archive, symbol, execute=F
                 f"INSERT INTO candles({','.join(COLUMNS)}) VALUES ({','.join('?' for _ in COLUMNS)})",
                 [tuple(row.record()[key] for key in COLUMNS) for row in older],
             )
-            repo.bump(con)
+            repo.bump(con, market=True)
         report["published"] = True
         return report
     finally:

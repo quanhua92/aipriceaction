@@ -67,7 +67,9 @@ def _serde_json_text(value):
             elif isinstance(key, float):
                 key_text = _serde_float_text(key)
             else:
-                raise TypeError(f"keys must be str, int, float, bool or None, not {type(key).__name__}")
+                raise TypeError(
+                    f"keys must be str, int, float, bool or None, not {type(key).__name__}"
+                )
             items.append(
                 json.dumps(key_text, ensure_ascii=False, separators=(",", ":"))
                 + ":"
@@ -82,6 +84,7 @@ class RustJSONResponse(JSONResponse):
 
     def render(self, content):
         return _serde_json_text(content).encode("utf-8")
+
 
 _LEGACY_INDEXES = frozenset(
     {
@@ -124,6 +127,8 @@ CSV_COLUMNS = (
     "volume_changed",
     "total_money_changed",
 )
+_CSV_PRICE_FIELDS = frozenset(("open", "high", "low", "close", *(f"ma{p}" for p in PERIODS)))
+_CSV_STRING_FIELDS = frozenset(("symbol", "time", "volume"))
 
 TICKER_JSON_FIELDS = (
     "time",
@@ -186,15 +191,14 @@ def csv_response(data):
                 if close < 1
                 else 3
             )
-            price_fields = {"open", "high", "low", "close", *(f"ma{p}" for p in PERIODS)}
             values = []
             for name in CSV_COLUMNS:
                 value = row.get(name)
                 if value is None:
                     values.append("")
-                elif name in price_fields:
+                elif name in _CSV_PRICE_FIELDS:
                     values.append(f"{value:.{decimals}f}")
-                elif name in ("symbol", "time", "volume"):
+                elif name in _CSV_STRING_FIELDS:
                     values.append(value)
                 else:
                     values.append(f"{value:.4f}".rstrip("0").rstrip("."))

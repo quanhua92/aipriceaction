@@ -212,7 +212,7 @@ async def adopt_native_snapshot(repo, providers, symbol, *, execute=False):
                 "UPDATE quality SET resolved=1 WHERE source='vn' AND symbol=? AND interval='1m' AND kind IN ('vci_verification_pending','provider_handoff_pending')",
                 (symbol,),
             )
-            repo.bump(con)
+            repo.bump(con, market=True)
         repo.record_volume_proofs(page.volume_proofs)
     return {
         "dry_run": not execute,

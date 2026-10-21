@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from aipriceaction_api.analysis import Analysis, _jdk_lookback_limit
 from aipriceaction_api.app import create_app
 from aipriceaction_api.calculations import (
+    aggregate,
     enhance,
     jdk,
     jdk_many,
@@ -23,6 +24,7 @@ from aipriceaction_api.domain import (
     PERIODS,
     Candle,
     DataError,
+    bucket,
     date_bounds,
     format_chrono_date,
     parse_time,
@@ -870,6 +872,58 @@ def test_jdk_recent_trails_match_full_history_with_finite_lookback(period, trail
         jdk(security[-limit:], benchmark[-limit:], period)[-max(1, trails) :]
         == full[-max(1, trails) :]
     )
+
+
+@pytest.mark.parametrize(
+    "iv,source,step",
+    [
+        ("5m", "vn", 60),
+        ("15m", "vn", 60),
+        ("30m", "vn", 60),
+        ("1h", "vn", 60),
+        ("4h", "vn", 60),
+        ("1W", "vn", 86400),
+        ("2W", "vn", 86400),
+        ("1M", "vn", 86400),
+        ("4h", "yahoo", 60),
+    ],
+)
+def test_numpy_ohlcv_aggregation_matches_ordered_scalar_groups(iv, source, step):
+    start = datetime(2024, 12, 20, tzinfo=UTC)
+    native_interval = "1m" if step == 60 else "1D"
+    rows = []
+    for index in range(512):
+        close = 100 + index / 10
+        rows.append(
+            Candle(
+                source,
+                "FPT",
+                native_interval,
+                int((start + timedelta(seconds=index * step)).timestamp()),
+                close - 0.5,
+                close + 2,
+                close - 2,
+                close,
+                10_000 + index,
+            )
+        )
+    rows = rows[::2] + rows[1::2]
+    groups = {}
+    for row in rows:
+        groups.setdefault(bucket(row.time, iv, source), []).append(row)
+    expected = [
+        replace(
+            bars[0],
+            time=time,
+            high=max(row.high for row in bars),
+            low=min(row.low for row in bars),
+            close=bars[-1].close,
+            volume=sum(row.volume for row in bars),
+        )
+        for time, bars in sorted(groups.items())
+    ]
+
+    assert aggregate(rows, iv, source) == expected
 
 
 @pytest.mark.parametrize("period", [4, 10, 20, 50])

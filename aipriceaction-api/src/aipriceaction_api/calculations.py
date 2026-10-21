@@ -43,7 +43,97 @@ def _rust_sum(values):
     return total
 
 
+def _numpy_bucket_times(times, iv, source):
+    """Vectorize the timestamp-to-bucket mapping used for OHLCV aggregation."""
+    import numpy as np
+
+    values = np.asarray(times, dtype=np.int64)
+    fixed_sizes = {"5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "4h": 14400}
+    size = fixed_sizes.get(iv)
+    if size is not None:
+        offset = 7200 if iv == "4h" and source == "vn" else 0
+        return np.floor_divide(values - offset, size) * size + offset
+
+    days = np.floor_divide(values, 86400)
+    dates = days.astype("datetime64[D]")
+    monday = days - np.mod(days + 3, 7)
+    if iv == "1W":
+        return monday * 86400
+    if iv == "1M":
+        month_start = dates.astype("datetime64[M]").astype("datetime64[D]").astype(np.int64)
+        return month_start * 86400
+    if iv == "2W":
+        # Rust anchors pairs to ISO week parity. The Thursday in each ISO week
+        # identifies its ISO year, including the late-December/early-January
+        # weeks that belong to an adjacent Gregorian year.
+        iso_years = (monday + 3).astype("datetime64[D]").astype("datetime64[Y]").astype(
+            np.int64
+        ) + 1970
+        previous_year = iso_years - 1
+        era = np.floor_divide(previous_year, 400)
+        year_of_era = previous_year - era * 400
+        jan4_day_of_era = (
+            year_of_era * 365
+            + np.floor_divide(year_of_era, 4)
+            - np.floor_divide(year_of_era, 100)
+            + 309
+        )
+        jan4 = era * 146097 + jan4_day_of_era - 719468
+        week_one = jan4 - np.mod(jan4 + 3, 7)
+        iso_week = np.floor_divide(monday - week_one, 7) + 1
+        pair_start = monday - np.where(iso_week % 2 == 1, 7, 0)
+        return pair_start * 86400
+    return values
+
+
 def aggregate(rows, iv, source, validate_basis=None):
+    if len(rows) >= 64:
+        import numpy as np
+
+        bucket_times = _numpy_bucket_times([row.time for row in rows], iv, source)
+        order = np.argsort(bucket_times, kind="stable")
+        sorted_buckets = bucket_times[order]
+        starts = np.r_[0, np.flatnonzero(sorted_buckets[1:] != sorted_buckets[:-1]) + 1]
+        ends = np.r_[starts[1:], len(order)]
+        counts = ends - starts
+        if int(counts.max()) * max(row.volume for row in rows) <= np.iinfo(np.int64).max:
+            highs = np.fromiter((row.high for row in rows), dtype=np.float64, count=len(rows))
+            lows = np.fromiter((row.low for row in rows), dtype=np.float64, count=len(rows))
+            volumes = np.fromiter((row.volume for row in rows), dtype=np.int64, count=len(rows))
+            first_indices = order[starts]
+            last_indices = order[ends - 1]
+            high_by_group = np.maximum.reduceat(highs[order], starts)
+            low_by_group = np.minimum.reduceat(lows[order], starts)
+            volume_by_group = np.add.reduceat(volumes[order], starts, dtype=np.int64)
+            result = []
+            for group_index, (start, end) in enumerate(zip(starts, ends, strict=True)):
+                indices = order[start:end]
+                first, last = (
+                    rows[int(first_indices[group_index])],
+                    rows[int(last_indices[group_index])],
+                )
+                if counts[group_index] > 1:
+                    revisions = {
+                        (rows[int(index)].revision, rows[int(index)].provider) for index in indices
+                    }
+                    if len(revisions) > 1:
+                        if validate_basis is None:
+                            raise DataError(
+                                "Incompatible adjustment revisions within an aggregation bucket"
+                            )
+                        validate_basis([rows[int(index)] for index in indices])
+                result.append(
+                    replace(
+                        first,
+                        time=int(sorted_buckets[start]),
+                        high=float(high_by_group[group_index]),
+                        low=float(low_by_group[group_index]),
+                        close=last.close,
+                        volume=int(volume_by_group[group_index]),
+                    )
+                )
+            return result
+
     groups = defaultdict(list)
     for row in rows:
         groups[bucket(row.time, iv, source)].append(row)
@@ -142,30 +232,36 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
 
     averages = {}
     if ma:
-        for period in PERIODS:
-            state = np.zeros(len(symbols), dtype=np.float64)
-            if ema:
-                seed_count = np.minimum(lengths, period)
-                totals = np.zeros(len(symbols), dtype=np.float64)
-                multiplier = 2 / (period + 1)
-                decay = 1 - multiplier
-                for position in range(max_length):
-                    seeding = seed_count > position
-                    totals[seeding] += closes[seeding, position]
-                    seeded = seed_count == position + 1
-                    state[seeded] = totals[seeded] / seed_count[seeded]
-                    recurring = (lengths > position) & (seed_count <= position)
-                    state[recurring] = (
-                        closes[recurring, position] * multiplier + state[recurring] * decay
-                    )
-            else:
-                starts = np.maximum(0, lengths - period)
-                totals = np.zeros(len(symbols), dtype=np.float64)
-                for position in range(max_length):
-                    included = (position >= starts) & (position < lengths)
-                    totals[included] += closes[included, position]
-                state = totals / np.minimum(lengths, period)
-            averages[period] = state
+        if ema:
+            periods = np.asarray(PERIODS, dtype=np.int64)
+            seed_counts = np.minimum(lengths[:, None], periods[None, :])
+            totals = np.zeros((len(symbols), len(PERIODS)), dtype=np.float64)
+            states = np.zeros_like(totals)
+            multipliers = 2 / (periods + 1)
+            decays = 1 - multipliers
+            positions = np.arange(max_length, dtype=np.int64)
+            for position in positions:
+                # Keep each ticker/period's seed and recurrence additions in
+                # the same left-to-right order as Rust, while updating all five
+                # EMA periods in one NumPy pass over the symbol matrix.
+                totals += closes[:, position, None] * (seed_counts > position)
+                seeded = seed_counts == position + 1
+                states[seeded] = (totals / seed_counts)[seeded]
+                recurring = (lengths[:, None] > position) & (seed_counts <= position)
+                next_states = closes[:, position, None] * multipliers + states * decays
+                states[recurring] = next_states[recurring]
+            averages = {period: states[:, index] for index, period in enumerate(PERIODS)}
+        else:
+            for period in PERIODS:
+                counts = np.minimum(lengths, period)
+                starts = lengths - counts
+                offsets = np.arange(int(counts.max()), dtype=np.int64)
+                valid = offsets[None, :] < counts[:, None]
+                indices = np.where(valid, starts[:, None] + offsets[None, :], 0)
+                windows = np.take_along_axis(closes, indices, axis=1)
+                windows = np.where(valid, windows, 0.0)
+                totals = np.add.accumulate(windows, axis=1)[:, -1]
+                averages[period] = totals / counts
 
     result = {}
     for index, symbol in enumerate(symbols):
