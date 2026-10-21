@@ -1,8 +1,8 @@
 """Reusable, indexed SQLite history loading for one or many ticker identities.
 
 The loader keeps one read transaction and one SQLite connection for candle and
-history metadata reads. Multi-symbol candle tails are selected in indexed SQL
-batches so Python does not issue and materialize one query per ticker.
+history metadata reads. Bounded per-symbol primary-key seeks read only the bars
+needed by indicator and analysis requests.
 """
 
 import copy
@@ -37,15 +37,8 @@ class LoadedHistory:
 
 
 class SQLiteDataLoader:
-    """Load native candle tails and associated validation metadata in batches."""
+    """Load native candle tails and associated validation metadata."""
 
-    # Stay below SQLite builds that still use the historical 999-variable
-    # limit. Each requested ticker contributes two bound values.
-    _CANDLE_SYMBOL_BATCH_SIZE = 400
-    # The batch join shape is intended for longer indicator lookbacks. On
-    # SQLite 3.46, SQLite can choose an automatic index for very short tails;
-    # a reused indexed point lookup is substantially cheaper for these.
-    _CANDLE_SHORT_TAIL_LIMIT = 16
     # Raw market tails are invalidated by market_epoch when candle data changes.
     # Keep the bounded in-process LRU for a minute so adjacent endpoints and
     # page reloads reuse the same SQLite materialization. This is separate from
@@ -161,7 +154,10 @@ class SQLiteDataLoader:
         if end is not None:
             where += " AND time<=?"
             args.append(end)
-        sql = f"SELECT * FROM candles WHERE {where} ORDER BY time {'ASC' if forward else 'DESC'}"
+        sql = (
+            "SELECT * FROM candles INDEXED BY sqlite_autoindex_candles_1 WHERE "
+            f"{where} ORDER BY time {'ASC' if forward else 'DESC'}"
+        )
         if limit is not None:
             sql += " LIMIT ?"
             args.append(limit)
@@ -180,68 +176,28 @@ class SQLiteDataLoader:
         forward,
         result,
     ):
-        """Read indexed tails for symbol chunks and append chronologically.
+        """Read bounded per-symbol primary-key ranges and append chronologically.
 
-        The correlated inner lookup uses the candles primary key to seek each
-        ticker's newest (or oldest) timestamps. The outer lookup then fetches
-        just those complete rows. This avoids scanning a whole interval and
-        avoids Python/SQLite round trips per ticker.
+        Local benchmarks show that these indexed seeks outperform a multi-symbol
+        CTE for both short tails and long indicator warmup windows. Keeping the
+        result in tuples until ``Candle`` construction also avoids SQLite Row
+        wrappers and name-based field conversion for every historical bar.
         """
-        if limit is not None and limit <= cls._CANDLE_SHORT_TAIL_LIMIT:
-            # Latest/no-MA requests need only two candles (the requested row
-            # plus its change-calculation predecessor). SQLite's prepared
-            # primary-key seeks are faster than the VALUES join for this tiny
-            # tail and avoid materializing any discarded history.
-            sql, _ = cls._candle_query(source, "", interval, start, end, limit, forward)
-            for symbol in symbols:
-                args = [source, symbol, interval]
-                if start is not None:
-                    args.append(start)
-                if end is not None:
-                    args.append(end)
-                args.append(limit)
-                rows = con.execute(sql, args).fetchall()
-                result[symbol].extend(
-                    Candle(**dict(row)) for row in (rows if forward else reversed(rows))
-                )
-            return
-        direction = "ASC" if forward else "DESC"
-        for offset in range(0, len(symbols), cls._CANDLE_SYMBOL_BATCH_SIZE):
-            chunk = symbols[offset : offset + cls._CANDLE_SYMBOL_BATCH_SIZE]
-            requested = ",".join("(?,?)" for _ in chunk)
-            where = ["c2.source=?", "c2.symbol=r.symbol", "c2.interval=?"]
-            args = [
-                value for index, symbol in enumerate(chunk, offset) for value in (index, symbol)
-            ]
-            args.extend((source, interval))
+        sql, _ = cls._candle_query(source, "", interval, start, end, limit, forward)
+        cursor = con.cursor()
+        cursor.row_factory = None
+        for symbol in symbols:
+            args = [source, symbol, interval]
             if start is not None:
-                where.append("c2.time>=?")
                 args.append(start)
             if end is not None:
-                where.append("c2.time<=?")
                 args.append(end)
-            inner = (
-                "SELECT c2.time FROM candles AS c2 WHERE "
-                + " AND ".join(where)
-                + f" ORDER BY c2.time {direction}"
-            )
             if limit is not None:
-                inner += " LIMIT ?"
                 args.append(limit)
-            sql = f"""
-                WITH requested(ord,symbol) AS (VALUES {requested})
-                SELECT c.*
-                FROM requested AS r
-                CROSS JOIN candles AS c INDEXED BY sqlite_autoindex_candles_1
-                  ON c.source=? AND c.symbol=r.symbol AND c.interval=?
-                 AND c.time IN ({inner})
-                ORDER BY r.ord,c.time ASC
-            """
-            # The source/interval placeholders occur in the outer query before
-            # the subquery placeholders in SQL text.
-            batch_args = args[: 2 * len(chunk)] + [source, interval] + args[2 * len(chunk) :]
-            for row in con.execute(sql, batch_args):
-                result[row["symbol"]].append(Candle(**dict(row)))
+            rows = cursor.execute(sql, args).fetchall()
+            result[symbol].extend(
+                Candle(*row) for row in (rows if forward else reversed(rows))
+            )
 
     @classmethod
     def _read_compact_tails(cls, con, source, symbols, interval, limit, result):
