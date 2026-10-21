@@ -96,7 +96,7 @@ class Settings:
     # emulation used by tests and offline development.
     redis_url: str | None = None
     cache_bytes: int = 512 * 1024 * 1024
-    # Match Rust's five-second in-process /tickers response cache.
+    # Match Rust's in-process /tickers response cache lifetime.
     cache_ttl: float = 5
     sync_tokens: tuple[str, ...] = ()
     # None means the variable is unset. An explicitly empty value matches Rust's

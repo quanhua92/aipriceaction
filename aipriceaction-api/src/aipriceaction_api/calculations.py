@@ -89,115 +89,27 @@ def moving_average(values, period, ema=False):
 
 
 def enhance(rows, iv, ma=True, ema=False):
-    averages = {p: moving_average([r.close for r in rows], p, ema) for p in PERIODS} if ma else {}
-    result = []
-    for i, row in enumerate(rows):
-        dt = datetime.fromtimestamp(row.time, UTC)
-        out = {
-            "symbol": row.symbol,
-            "time": dt.strftime(
-                "%Y-%m-%d" if iv in ("1D", "1W", "2W", "1M") else "%Y-%m-%dT%H:%M:%S"
-            ),
-            "open": row.open,
-            "high": row.high,
-            "low": row.low,
-            "close": row.close,
-            "volume": row.volume,
-        }
-        for p, values in averages.items():
-            if values[i] > 0:
-                out[f"ma{p}"] = values[i]
-                out[f"ma{p}_score"] = ((row.close - values[i]) / values[i]) * 100
-        if i:
-            prev = rows[i - 1]
-            if prev.close > 0:
-                out["close_changed"] = ((row.close - prev.close) / prev.close) * 100
-            current_volume = float(row.volume)
-            previous_volume = float(prev.volume)
-            if previous_volume > 0:
-                out["volume_changed"] = ((current_volume - previous_volume) / previous_volume) * 100
-            if prev.close > 0:
-                out["total_money_changed"] = (row.close - prev.close) * current_volume
-        result.append(out)
-    return result
+    return enhance_selected(rows, iv, range(len(rows)), ma=ma, ema=ema)
 
 
 def enhance_selected(rows, iv, indices, ma=True, ema=False, periods=None):
-    """Enhance selected row positions without materializing discarded outputs.
+    """Enhance selected positions using the shared NumPy indicator kernel.
 
-    Indicator seeds and recurrence use the same ordered floating-point
-    operations as ``enhance``. This is especially useful for latest-row APIs,
-    which need hundreds of warm-up candles but return only the final candle.
+    This avoids materializing discarded outputs. It is useful for latest-row
+    APIs, which need hundreds of warm-up candles but return only the final one.
     """
     if not rows or not indices:
         return []
     indices = list(indices)
-    unique_indices = sorted(set(indices))
-    if any(index < 0 or index >= len(rows) for index in unique_indices):
-        raise IndexError("enhancement index is outside the candle rows")
-
-    averages = {}
-    if ma:
-        closes = [row.close for row in rows]
-        selected_periods = PERIODS if periods is None else tuple(periods)
-        for period in selected_periods:
-            selected = {}
-            if ema:
-                seed_count = min(period, len(closes))
-                seed_index = seed_count - 1
-                if seed_index in unique_indices:
-                    selected[seed_index] = _rust_sum(closes[:seed_count]) / seed_count
-                if unique_indices and unique_indices[-1] > seed_index:
-                    value = _rust_sum(closes[:seed_count]) / seed_count
-                    multiplier = 2 / (period + 1)
-                    for index in range(seed_count, unique_indices[-1] + 1):
-                        value = closes[index] * multiplier + value * (1 - multiplier)
-                        if index in unique_indices:
-                            selected[index] = value
-            else:
-                for index in unique_indices:
-                    if index >= period - 1:
-                        selected[index] = (
-                            _rust_sum(closes[index + 1 - period : index + 1]) / period
-                        )
-                    elif len(closes) < period:
-                        selected[index] = _rust_sum(closes[: index + 1]) / (index + 1)
-            averages[period] = selected
-
-    result_by_index = {}
-    for index in unique_indices:
-        row = rows[index]
-        dt = datetime.fromtimestamp(row.time, UTC)
-        out = {
-            "symbol": row.symbol,
-            "time": dt.strftime(
-                "%Y-%m-%d" if iv in ("1D", "1W", "2W", "1M") else "%Y-%m-%dT%H:%M:%S"
-            ),
-            "open": row.open,
-            "high": row.high,
-            "low": row.low,
-            "close": row.close,
-            "volume": row.volume,
-        }
-        for period, values in averages.items():
-            value = values.get(index, 0.0)
-            if value > 0:
-                out[f"ma{period}"] = value
-                out[f"ma{period}_score"] = ((row.close - value) / value) * 100
-        if index:
-            previous = rows[index - 1]
-            if previous.close > 0:
-                out["close_changed"] = ((row.close - previous.close) / previous.close) * 100
-            current_volume = float(row.volume)
-            previous_volume = float(previous.volume)
-            if previous_volume > 0:
-                out["volume_changed"] = (
-                    (current_volume - previous_volume) / previous_volume
-                ) * 100
-            if previous.close > 0:
-                out["total_money_changed"] = (row.close - previous.close) * current_volume
-        result_by_index[index] = out
-    return [result_by_index[index] for index in indices]
+    symbol = rows[0].symbol
+    return enhance_many_selected(
+        {symbol: rows},
+        {symbol: indices},
+        iv,
+        ma=ma,
+        ema=ema,
+        periods=periods,
+    )[symbol]
 
 
 def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
@@ -210,7 +122,11 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
     """
     import numpy as np
 
-    symbols = [symbol for symbol, rows in contexts.items() if rows and closes_by_symbol.get(symbol)]
+    symbols = [
+        symbol
+        for symbol, rows in contexts.items()
+        if rows and len(closes_by_symbol.get(symbol, ())) > 0
+    ]
     if not symbols:
         return {}
     lengths = np.fromiter(
@@ -240,8 +156,7 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
                     state[seeded] = totals[seeded] / seed_count[seeded]
                     recurring = (lengths > position) & (seed_count <= position)
                     state[recurring] = (
-                        closes[recurring, position] * multiplier
-                        + state[recurring] * decay
+                        closes[recurring, position] * multiplier + state[recurring] * decay
                     )
             else:
                 starts = np.maximum(0, lengths - period)
@@ -284,11 +199,142 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
                     (current_volume - previous_volume) / previous_volume
                 ) * 100
             if previous.close > 0:
-                output["total_money_changed"] = (
-                    (current.close - previous.close) * current_volume
-                )
+                output["total_money_changed"] = (current.close - previous.close) * current_volume
         result[symbol] = [output]
     return result
+
+
+def enhance_many_selected(contexts, indices_by_symbol, iv, ma=True, ema=False, periods=None):
+    """Enhance selected rows for many symbols with NumPy indicator batches.
+
+    Histories are grouped by length and processed in small symbol batches. The
+    per-window accumulation follows the scalar Rust summation order, while EMA
+    recurrence runs once per bar across all symbols in a batch.
+    """
+    import numpy as np
+
+    selected = {}
+    groups = defaultdict(list)
+    for symbol, rows in contexts.items():
+        indices = list(indices_by_symbol.get(symbol, ()))
+        if not rows or not indices:
+            selected[symbol] = []
+            continue
+        unique = sorted(set(indices))
+        if any(index < 0 or index >= len(rows) for index in unique):
+            raise IndexError("enhancement index is outside the candle rows")
+        groups[len(rows)].append((symbol, rows, indices, unique))
+
+    requested_periods = tuple(PERIODS if periods is None else periods) if ma else ()
+    for length, members in groups.items():
+        for offset in range(0, len(members), 8):
+            batch = members[offset : offset + 8]
+            closes = np.asarray(
+                [[row.close for row in item[1]] for item in batch], dtype=np.float64
+            )
+            wanted_at_index = defaultdict(list)
+            values_by_member = [{} for _ in batch]
+            for member_index, (_symbol, _rows, _indices, unique) in enumerate(batch):
+                for index in unique:
+                    wanted_at_index[index].append(member_index)
+
+            for period in requested_periods:
+                if ema:
+                    seed_count = min(period, length)
+                    seed = np.add.accumulate(closes[:, :seed_count], axis=1)[:, -1] / seed_count
+                    state = seed.copy()
+                    seed_index = seed_count - 1
+                    for member_index in wanted_at_index.get(seed_index, ()):
+                        values_by_member[member_index][seed_index, period] = float(
+                            state[member_index]
+                        )
+                    multiplier = 2 / (period + 1)
+                    decay = 1 - multiplier
+                    for index in range(seed_count, length):
+                        state = closes[:, index] * multiplier + state * decay
+                        for member_index in wanted_at_index.get(index, ()):
+                            values_by_member[member_index][index, period] = float(
+                                state[member_index]
+                            )
+                elif length >= period:
+                    selected_windows = [
+                        index for index in wanted_at_index if index >= period - 1
+                    ]
+                    if len(selected_windows) >= max(1, length // 4):
+                        windows = np.lib.stride_tricks.sliding_window_view(
+                            closes, period, axis=1
+                        )
+                        cumulative = np.add.accumulate(windows, axis=2)[:, :, -1]
+                        for index in selected_windows:
+                            ma_values = cumulative[:, index - period + 1] / period
+                            for member_index in wanted_at_index[index]:
+                                values_by_member[member_index][index, period] = float(
+                                    ma_values[member_index]
+                                )
+                    else:
+                        # Short RRG trails and latest-row requests need only a
+                        # few windows. Summing those selected windows avoids
+                        # building cumulative values for every historical bar.
+                        for index in selected_windows:
+                            members_at_index = wanted_at_index[index]
+                            member_positions = np.asarray(members_at_index, dtype=np.intp)
+                            window = closes[
+                                member_positions, index - period + 1 : index + 1
+                            ]
+                            ma_values = np.add.accumulate(window, axis=1)[:, -1] / period
+                            for row_index, member_index in enumerate(members_at_index):
+                                values_by_member[member_index][index, period] = float(
+                                    ma_values[row_index]
+                                )
+                else:
+                    cumulative = np.add.accumulate(closes, axis=1)
+                    for index, member_indices in wanted_at_index.items():
+                        ma_values = cumulative[:, index] / (index + 1)
+                        for member_index in member_indices:
+                            values_by_member[member_index][index, period] = float(
+                                ma_values[member_index]
+                            )
+
+            for member_index, (symbol, rows, indices, _unique) in enumerate(batch):
+                output = []
+                for index in indices:
+                    row = rows[index]
+                    dt = datetime.fromtimestamp(row.time, UTC)
+                    record = {
+                        "symbol": row.symbol,
+                        "time": dt.strftime(
+                            "%Y-%m-%d" if iv in ("1D", "1W", "2W", "1M") else "%Y-%m-%dT%H:%M:%S"
+                        ),
+                        "open": row.open,
+                        "high": row.high,
+                        "low": row.low,
+                        "close": row.close,
+                        "volume": row.volume,
+                    }
+                    for period in requested_periods:
+                        value = values_by_member[member_index].get((index, period), 0.0)
+                        if value > 0:
+                            record[f"ma{period}"] = value
+                            record[f"ma{period}_score"] = ((row.close - value) / value) * 100
+                    if index:
+                        previous = rows[index - 1]
+                        if previous.close > 0:
+                            record["close_changed"] = (
+                                (row.close - previous.close) / previous.close
+                            ) * 100
+                        current_volume = float(row.volume)
+                        previous_volume = float(previous.volume)
+                        if previous_volume > 0:
+                            record["volume_changed"] = (
+                                (current_volume - previous_volume) / previous_volume
+                            ) * 100
+                        if previous.close > 0:
+                            record["total_money_changed"] = (
+                                row.close - previous.close
+                            ) * current_volume
+                    output.append(record)
+                selected[symbol] = output
+    return selected
 
 
 def wma(values, p):
@@ -325,6 +371,81 @@ def jdk(security, benchmark, p):
     return [(x[i + 1], y[i]) for i in range(p - 1, len(y))]
 
 
+def jdk_many(series, p):
+    """Calculate JdK RRG points across equal-length ticker arrays in NumPy.
+
+    RRG securities often share the same benchmark dates. Grouping by aligned
+    length lets NumPy process ticker rows together while the per-window
+    ``add.accumulate`` keeps the scalar Rust summation order.
+    """
+    if len(series) < 8:
+        return [jdk(security, benchmark, p) for security, benchmark in series]
+
+    import numpy as np
+
+    groups = defaultdict(list)
+    results = [None] * len(series)
+    for index, (security, benchmark) in enumerate(series):
+        if len(security) != len(benchmark) or len(security) < 3 * p + 1:
+            continue
+        groups[len(security)].append((index, security, benchmark))
+
+    def weighted_average(values):
+        output = np.zeros_like(values)
+        if values.shape[1] < p:
+            return output
+        windows = np.lib.stride_tricks.sliding_window_view(values, p, axis=1)
+        weights = np.arange(1, p + 1, dtype=np.float64)
+        weighted = windows * weights
+        totals = np.add.accumulate(weighted, axis=2)[:, :, -1]
+        output[:, p - 1 :] = totals / (p * (p + 1) / 2)
+        return output
+
+    def normalized(values):
+        output = np.full_like(values, 100.0)
+        if values.shape[1] < p:
+            return output
+        windows = np.lib.stride_tricks.sliding_window_view(values, p, axis=1)
+        means = np.add.accumulate(windows, axis=2)[:, :, -1] / p
+        differences = windows - means[:, :, None]
+        variance = np.add.accumulate(differences * differences, axis=2)[:, :, -1] / p
+        deviations = np.sqrt(variance)
+        target = output[:, p - 1 :]
+        valid = deviations != 0
+        current = values[:, p - 1 :]
+        target[valid] = 100 + 10 * (current[valid] - means[valid]) / deviations[valid]
+        return output
+
+    for members in groups.values():
+        for offset in range(0, len(members), 32):
+            chunk = members[offset : offset + 32]
+            securities = np.asarray([item[1] for item in chunk], dtype=np.float64)
+            benchmarks = np.asarray([item[2] for item in chunk], dtype=np.float64)
+            relative = np.zeros_like(securities)
+            np.divide(securities, benchmarks, out=relative, where=benchmarks != 0)
+            ratio = weighted_average(weighted_average(relative))
+            previous = ratio[:, :-1]
+            momentum = np.zeros_like(previous)
+            np.divide(
+                ratio[:, 1:] - previous,
+                previous,
+                out=momentum,
+                where=previous != 0,
+            )
+            ratio_norm = normalized(ratio)
+            momentum_norm = normalized(momentum)
+            for row_index, (original_index, _security, _benchmark) in enumerate(chunk):
+                results[original_index] = [
+                    (float(x), float(y))
+                    for x, y in zip(
+                        ratio_norm[row_index, p:],
+                        momentum_norm[row_index, p - 1 :],
+                        strict=True,
+                    )
+                ]
+    return results
+
+
 def volume_profile(rows, symbol, source, bins=50, value_area=70):
     from .domain import DataError
 
@@ -348,7 +469,10 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
     else:
         tick = 0.0001 if avg < 1 else 0.01 if avg < 100 else 0.1 if avg < 1000 else 1
     # Rust rounds half away from zero, unlike Python's round.
-    distribution = defaultdict(float)
+    tick_ranges = []
+    expanded_ticks = 0
+    minimum_tick = None
+    maximum_tick = None
     for row in rows:
         if not row.volume:
             continue
@@ -360,14 +484,34 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
             continue
         if hi - lo + 1 > 1_000_000:
             raise DataError("Minute price range exceeds volume-profile resource limit", 400)
-        vol = row.volume / (hi - lo + 1)
-        for i in range(lo, hi + 1):
+        tick_ranges.append((lo, hi, row.volume / (hi - lo + 1)))
+        expanded_ticks += hi - lo + 1
+        minimum_tick = lo if minimum_tick is None else min(minimum_tick, lo)
+        maximum_tick = hi if maximum_tick is None else max(maximum_tick, hi)
+    if not tick_ranges:
+        return None
+    span = maximum_tick - minimum_tick + 1
+    if expanded_ticks >= 8192 and span <= 2_000_000:
+        # Dense NumPy slice updates replace the inner per-price Python loop on
+        # long minute histories. Each candle still updates levels in newest-
+        # first order, so every level keeps Rust's sequential f64 addition.
+        import numpy as np
+
+        distribution = np.zeros(span, dtype=np.float64)
+        for lo, hi, volume in tick_ranges:
+            distribution[lo - minimum_tick : hi - minimum_tick + 1] += volume
+        indices = np.flatnonzero(distribution)
+        profile = [
+            (int(index + minimum_tick) * tick, float(distribution[index])) for index in indices
+        ]
+    else:
+        distribution = defaultdict(float)
+        for lo, hi, volume in tick_ranges:
             # Rust aggregates by integer tick index, then converts each price
             # to f64 after all per-index volume additions are complete.
-            distribution[i] += vol
-    if not distribution:
-        return None
-    profile = sorted((index * tick, volume) for index, volume in distribution.items())
+            for index in range(lo, hi + 1):
+                distribution[index] += volume
+        profile = sorted((index * tick, volume) for index, volume in distribution.items())
     # Rust sums the sorted integer-tick profile before aggregating display bins;
     # preserve that denominator even when bin accumulation rounds differently.
     total = _rust_sum(v for _, v in profile)
@@ -421,7 +565,7 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
                 "price": float(price),
                 "volume": vol,
                 "percentage": percentage,
-                    "cumulative_percentage": cumulative_percentage,
+                "cumulative_percentage": cumulative_percentage,
             }
         )
     low = min(r.low for r in rows if r.volume)

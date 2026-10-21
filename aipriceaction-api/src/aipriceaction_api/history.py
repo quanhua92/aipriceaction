@@ -7,7 +7,13 @@ from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 
-from .calculations import aggregate, enhance, enhance_latest_many, enhance_selected
+from .calculations import (
+    aggregate,
+    enhance,
+    enhance_latest_many,
+    enhance_many_selected,
+    enhance_selected,
+)
 from .data_loading import SQLiteDataLoader
 from .domain import (
     INDEXES,
@@ -940,11 +946,7 @@ class History:
                         if lookback == 0:
                             context = tail  # ZREVRANGE 0 -1 returns all members.
                         elif lookback < 0:
-                            context = (
-                                tail
-                                if self.redis_client is not None
-                                else tail[-lookback:]
-                            )
+                            context = tail if self.redis_client is not None else tail[-lookback:]
                         else:
                             context = (
                                 tail[-lookback:]
@@ -1416,8 +1418,7 @@ class History:
                         needs_fallback = True
                         break
                 if any(
-                    (lower is None or gap["end"] >= lower)
-                    and gap["start"] <= latest_read_upper
+                    (lower is None or gap["end"] >= lower) and gap["start"] <= latest_read_upper
                     for gap in loaded.gaps[symbol]
                 ):
                     needs_fallback = True
@@ -1428,9 +1429,7 @@ class History:
             safe_contexts[symbol] = local
             safe_closes[symbol] = tail.closes
 
-        results.update(
-            enhance_latest_many(safe_contexts, safe_closes, iv, ma=True, ema=ema)
-        )
+        results.update(enhance_latest_many(safe_contexts, safe_closes, iv, ma=True, ema=ema))
         if fallback_symbols:
             try:
                 fallback_contexts = self.read_many(
@@ -1563,11 +1562,7 @@ class History:
 
         buffer = 600 if ma and ema else 200 if ma else 1
         raw_limit = limit + buffer if ma else limit + 1
-        context_limit = (
-            min(retained, max(1, raw_limit))
-            if redis and retained > 0
-            else raw_limit
-        )
+        context_limit = min(retained, max(1, raw_limit)) if redis and retained > 0 else raw_limit
         if limit == 1 and ma:
             return self._query_many_latest_ma(
                 source,
@@ -1603,6 +1598,8 @@ class History:
                 ma=ma,
                 ema=ema,
             )
+        batch_contexts = {}
+        selected_indices = {}
         for symbol in symbols:
             context = contexts[symbol]
             if isinstance(context, Exception):
@@ -1630,9 +1627,23 @@ class History:
                 results[symbol] = vectorized_latest[symbol]
             else:
                 first = max(0, len(context) - limit)
-                results[symbol] = enhance_selected(
-                    context, iv, range(first, len(context)), ma=ma, ema=ema
+                if ma:
+                    batch_contexts[symbol] = context
+                    selected_indices[symbol] = range(first, len(context))
+                else:
+                    results[symbol] = enhance_selected(
+                        context, iv, range(first, len(context)), ma=False, ema=ema
+                    )
+        if batch_contexts:
+            results.update(
+                enhance_many_selected(
+                    batch_contexts,
+                    selected_indices,
+                    iv,
+                    ma=True,
+                    ema=ema,
                 )
+            )
         return results
 
     def _read_merged_source(

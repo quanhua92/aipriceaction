@@ -28,10 +28,13 @@ MAJOR_OFF_HOURS = (
 )
 
 _ADOPTION_NOT_LOADED = object()
+_SQLITE_CACHE_SIZE_KIB = 32 * 1024
+_SQLITE_MMAP_SIZE_BYTES = 256 * 1024 * 1024
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT OR IGNORE INTO meta VALUES ('epoch', 0);
+INSERT OR IGNORE INTO meta VALUES ('market_epoch', 0);
 INSERT OR IGNORE INTO meta VALUES ('health_stats_version', 0);
 CREATE TABLE IF NOT EXISTS tickers(
  source TEXT NOT NULL, symbol TEXT NOT NULL, name TEXT, enabled INTEGER NOT NULL DEFAULT 0,
@@ -138,6 +141,11 @@ class Repository:
         con.row_factory = sqlite3.Row
         con.execute("PRAGMA foreign_keys=ON")
         con.execute("PRAGMA busy_timeout=30000")
+        # Latest multi-ticker reads seek hundreds of candles for many symbols.
+        # Give each bounded read connection enough page cache to avoid thrash
+        # and let SQLite mmap the local database where the platform supports it.
+        con.execute(f"PRAGMA cache_size=-{_SQLITE_CACHE_SIZE_KIB}")
+        con.execute(f"PRAGMA mmap_size={_SQLITE_MMAP_SIZE_BYTES}")
         try:
             with con:
                 yield con
@@ -204,12 +212,18 @@ class Repository:
                 con.execute("UPDATE meta SET value=3 WHERE key='health_stats_version'")
 
     @staticmethod
-    def bump(con):
+    def bump(con, *, market=False):
         con.execute("UPDATE meta SET value=value+1 WHERE key='epoch'")
+        if market:
+            con.execute("UPDATE meta SET value=value+1 WHERE key='market_epoch'")
 
     def epoch(self):
         with self.connect() as con:
             return con.execute("SELECT value FROM meta WHERE key='epoch'").fetchone()[0]
+
+    def market_epoch(self):
+        with self.connect() as con:
+            return con.execute("SELECT value FROM meta WHERE key='market_epoch'").fetchone()[0]
 
     def register(self, source, symbol, name=None, enabled=False):
         with self.connect() as con:
@@ -381,7 +395,7 @@ class Repository:
                     ),
                 )
             if records:
-                self.bump(con)
+                self.bump(con, market=True)
 
     def record_volume_correction(self, record, expected):
         self.record_volume_corrections([(record, expected)])
@@ -445,7 +459,7 @@ class Repository:
                         )
                     ),
                 )
-            self.bump(con)
+            self.bump(con, market=True)
 
     def restore_recoveries(self, records):
         with self.connect() as con:
@@ -638,7 +652,7 @@ class Repository:
                 ],
             )
             if records:
-                self.bump(con)
+                self.bump(con, market=True)
 
     def validate_basis(self, candles, adoption=_ADOPTION_NOT_LOADED):
         if not candles:
@@ -764,7 +778,7 @@ class Repository:
                         (repair["id"], *(staged[k] for k in COLUMNS)),
                     )
             if written:
-                self.bump(con)
+                self.bump(con, market=True)
             if verification:
                 completed = [c.time for c in candles if c.time < verification["completed_before"]]
                 con.execute(
@@ -886,7 +900,7 @@ class Repository:
                     f"DELETE FROM candles WHERE {predicate}",
                     [tuple(c.record()[k] for k in COLUMNS) for c in snapshot],
                 )
-            self.bump(con)
+            self.bump(con, market=True)
 
     def publish_partitioned_history(self, obj, parent, gaps):
         """Atomically refine a coarse marker; retain the unresolved invalid dates."""
@@ -951,7 +965,7 @@ class Repository:
                 "INSERT INTO quality(source,symbol,interval,kind,detail,first_seen,last_seen) VALUES (?,?,?,'history_unavailable',?,?,?)",
                 [(*identity, detail, stamp, stamp) for detail in details],
             )
-            self.bump(con)
+            self.bump(con, market=True)
 
     def replace_archive(self, old_id, obj):
         with self.connect() as con:
@@ -994,7 +1008,7 @@ class Repository:
             con.execute(
                 "UPDATE archives SET status='superseded' WHERE id=? AND id<>?", (old_id, obj["id"])
             )
-            self.bump(con)
+            self.bump(con, market=True)
 
     def retire_archive_jobs(self, source=None, symbol=None, interval=None):
         """Cancel only unleased work whose immutable target is no longer active."""
@@ -1046,7 +1060,7 @@ class Repository:
                 (source, symbol, interval, state["provider"], snapshot_provider, state["revision"]),
             ).rowcount
             if count:
-                self.bump(con)
+                self.bump(con, market=True)
             if not con.execute(
                 "SELECT 1 FROM archives WHERE source=? AND symbol=? AND interval=? AND status IN ('published','pending_repair') AND (status='pending_repair' OR (provider<>? AND provider<>?) OR revision<>?)",
                 (source, symbol, interval, state["provider"], snapshot_provider, state["revision"]),
@@ -1086,7 +1100,7 @@ class Repository:
                 f"UPDATE archives SET status='superseded' WHERE id IN ({placeholders}) AND id<>?",
                 [*identifiers, obj["id"]],
             )
-            self.bump(con)
+            self.bump(con, market=True)
 
     def finding(self, source, symbol, interval, kind, detail, *, resolved=False):
         now = int(time.time())
@@ -1204,7 +1218,7 @@ class Repository:
                 ],
             )
             if encoded:
-                self.bump(con)
+                self.bump(con, market=True)
 
     def record_history_gap(self, source, symbol, interval, start, end, reason, evidence):
         self.restore_history_gaps(
@@ -1230,7 +1244,7 @@ class Repository:
             (source, symbol, interval, start, end),
         ).rowcount
         if changed:
-            self.bump(con)
+            self.bump(con, market=True)
 
     def queue(self, source, symbol, interval, kind, floor, provider=None, expected=None):
         now = int(time.time())
@@ -1545,7 +1559,7 @@ class Repository:
                 "UPDATE jobs SET status='complete',lease_owner=NULL,lease_until=0,updated_at=? WHERE id=?",
                 (time.time_ns(), job["id"]),
             )
-            self.bump(con)
+            self.bump(con, market=True)
             con.execute(
                 "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('coverage_pending','incomplete_repair','provider_failure','historical_revision','provider_switch')",
                 ident,

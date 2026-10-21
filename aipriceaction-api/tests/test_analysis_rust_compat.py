@@ -1,4 +1,5 @@
 import json
+import math
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -8,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from aipriceaction_api.analysis import Analysis, _jdk_lookback_limit
 from aipriceaction_api.app import create_app
-from aipriceaction_api.calculations import enhance, jdk, moving_average, volume_profile
+from aipriceaction_api.calculations import enhance, jdk, jdk_many, moving_average, volume_profile
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import (
     Candle,
@@ -720,9 +721,28 @@ def test_jdk_recent_trails_match_full_history_with_finite_lookback(period, trail
     full = jdk(security, benchmark, period)
     limit = _jdk_lookback_limit(period, trails, ema=True)
 
-    assert jdk(security[-limit:], benchmark[-limit:], period)[-max(1, trails) :] == full[
-        -max(1, trails) :
-    ]
+    assert (
+        jdk(security[-limit:], benchmark[-limit:], period)[-max(1, trails) :]
+        == full[-max(1, trails) :]
+    )
+
+
+@pytest.mark.parametrize("period", [4, 10, 20, 50])
+def test_jdk_numpy_batch_matches_scalar_window_sums(period):
+    series = []
+    for index in range(24):
+        length = 3 * period + 20 if index < 16 else 3 * period + 27
+        security = [
+            100 + position * 0.11 + (position % (7 + index % 3)) * 0.23
+            for position in range(length)
+        ]
+        benchmark = [1000 + position * 0.37 + (position % 11) * 0.19 for position in range(length)]
+        benchmark[0] = 0
+        series.append((security, benchmark))
+
+    actual = jdk_many(series, period)
+
+    assert actual == [jdk(security, benchmark, period) for security, benchmark in series]
 
 
 def test_jdk_sparse_symbol_expands_both_security_and_benchmark_history():
@@ -768,9 +788,7 @@ def test_jdk_sparse_symbol_expands_both_security_and_benchmark_history():
                     result[symbol] = exc
             return result
 
-    history = ReadManyHistory(
-        {("vn", "VCB", "1D"): security, ("vn", "VNINDEX", "1D"): benchmark}
-    )
+    history = ReadManyHistory({("vn", "VCB", "1D"): security, ("vn", "VNINDEX", "1D"): benchmark})
     response = Analysis(history, rrg_catalog()).rrg(
         mode="vn",
         algorithm="jdk",
@@ -1111,6 +1129,40 @@ def test_volume_profile_uses_rust_vn_index_tick_list():
 
     assert ordinary_alias["profile"][0]["price"] == 1000
     assert rust_index["profile"][0]["price"] == 1002
+
+
+def test_volume_profile_numpy_path_matches_sequential_integer_tick_sums():
+    origin = parse_time("2024-02-01T02:30:00Z")
+    rows = []
+    for index in range(2500):
+        center = 1000 + (index % 13) * 0.01
+        rows.append(
+            Candle(
+                "vn",
+                "VNINDEX",
+                "1m",
+                origin + index * 60,
+                center,
+                center + 0.03,
+                center - 0.03,
+                center,
+                100 + index % 7,
+            )
+        )
+
+    result = volume_profile(rows, "VNINDEX", "vn", bins=200)
+
+    expected = {}
+    for row in sorted(rows, key=lambda item: item.time, reverse=True):
+        low = math.floor(row.low / 0.01 + 0.5)
+        high = math.floor(row.high / 0.01 + 0.5)
+        share = row.volume / (high - low + 1)
+        for index in range(low, high + 1):
+            expected[index] = expected.get(index, 0.0) + share
+    actual = {
+        math.floor(level["price"] / 0.01 + 0.5): level["volume"] for level in result["profile"]
+    }
+    assert actual == expected
 
 
 @pytest.fixture

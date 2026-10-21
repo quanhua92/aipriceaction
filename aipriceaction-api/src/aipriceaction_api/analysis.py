@@ -1,7 +1,14 @@
 import math
 from datetime import UTC, datetime
 
-from .calculations import _rust_sum, enhance_selected, jdk, volume_profile
+from .calculations import (
+    _rust_sum,
+    enhance_latest_many,
+    enhance_many_selected,
+    enhance_selected,
+    jdk_many,
+    volume_profile,
+)
 from .domain import PERIODS, DataError, date_bounds, format_chrono_date, parse_time
 from .redis_snapshots import (
     joined_snapshot_record,
@@ -253,13 +260,26 @@ class Analysis:
                         limit=redis_limit,
                         return_exceptions=True,
                     )
+                    valid_contexts = {
+                        symbol: raw_rows
+                        for symbol, raw_rows in loaded.items()
+                        if not isinstance(raw_rows, Exception) and raw_rows
+                    }
+                    enhanced = enhance_latest_many(
+                        valid_contexts,
+                        {
+                            symbol: [row.close for row in raw_rows]
+                            for symbol, raw_rows in valid_contexts.items()
+                        },
+                        "1D",
+                        True,
+                        ema,
+                    )
                     for symbol, raw_rows in loaded.items():
                         fetched_by_identity[(source, symbol)] = (
                             []
                             if isinstance(raw_rows, Exception) or not raw_rows
-                            else enhance_selected(
-                                raw_rows, "1D", [len(raw_rows) - 1], True, ema
-                            )
+                            else enhanced[symbol]
                         )
                 else:
                     loaded = self.history.query_many(
@@ -277,7 +297,11 @@ class Analysis:
                             [] if isinstance(rows, Exception) else rows
                         )
             fetched = [
-                (ticker["source"], ticker["symbol"], fetched_by_identity.get((ticker["source"], ticker["symbol"]), []))
+                (
+                    ticker["source"],
+                    ticker["symbol"],
+                    fetched_by_identity.get((ticker["source"], ticker["symbol"]), []),
+                )
                 for ticker in universe
             ]
         else:
@@ -630,9 +654,7 @@ class Analysis:
             benchmark_found = False
             compact_jdk_history = redis_client is None and hasattr(self.history, "read_many")
             jdk_limit = (
-                _jdk_lookback_limit(period, trails, ema)
-                if compact_jdk_history
-                else jdk_full_limit
+                _jdk_lookback_limit(period, trails, ema) if compact_jdk_history else jdk_full_limit
             )
             source_order = _RRG_SOURCE_ORDER.get(mode, ())
             active_sources = [
@@ -684,9 +706,7 @@ class Analysis:
                     limit=batch_limit,
                     return_exceptions=True,
                 )
-                batch_raw_rows.update(
-                    {(source, symbol): rows for symbol, rows in loaded.items()}
-                )
+                batch_raw_rows.update({(source, symbol): rows for symbol, rows in loaded.items()})
 
             if algorithm == "jdk":
                 # The last RRG trail points use finite rolling windows, so the
@@ -718,11 +738,7 @@ class Analysis:
                     ).get(benchmark)
                     if expanded_benchmark and not isinstance(expanded_benchmark, Exception):
                         batch_raw_rows[(jdk_source, benchmark)] = expanded_benchmark
-                        bench = {
-                            row.time: row.close
-                            for row in expanded_benchmark
-                            if row.close
-                        }
+                        bench = {row.time: row.close for row in expanded_benchmark if row.close}
                 for source, symbols in fallback_by_source.items():
                     expanded = self.history.read_many(
                         source,
@@ -736,11 +752,80 @@ class Analysis:
                         {(source, symbol): rows for symbol, rows in expanded.items()}
                     )
 
+        mascore_selected = {}
+        if algorithm == "mascore" and not fast_mascore and batch_raw_rows:
+            selected_count = max(1, trails)
+            for source, symbols in symbols_by_source.items():
+                contexts = {
+                    symbol: rows
+                    for symbol in dict.fromkeys(symbols)
+                    if isinstance((rows := batch_raw_rows.get((source, symbol))), list) and rows
+                }
+                if not contexts:
+                    continue
+                selected_indices = {
+                    symbol: range(max(0, len(rows) - selected_count), len(rows))
+                    for symbol, rows in contexts.items()
+                }
+                enhanced = enhance_many_selected(
+                    contexts,
+                    selected_indices,
+                    "1D",
+                    ma=True,
+                    ema=ema,
+                    periods=(20, 100),
+                )
+                mascore_selected.update(
+                    {(source, symbol): rows for symbol, rows in enhanced.items()}
+                )
+
+        jdk_prepared = {}
+        if algorithm == "jdk":
+            unique_tickers = {}
+            for ticker in universe:
+                unique_tickers.setdefault((ticker["source"], ticker["symbol"]), ticker)
+
+            def prepare_jdk(ticker):
+                source, symbol = ticker["source"], ticker["symbol"]
+                if symbol.upper() in _RRG_INDEXES or symbol == benchmark:
+                    return None
+                try:
+                    rows = read_raw(source, symbol, jdk_limit)
+                except DataError:
+                    # Preserve per-ticker isolation for gaps and pending repairs.
+                    return None
+                if not rows or rows[-1].volume < min_volume:
+                    return None
+                aligned = [row for row in rows if row.time in bench]
+                if len(aligned) < 3 * period + 1:
+                    return None
+                security = [row.close for row in aligned]
+                benchmark_values = [bench[row.time] for row in aligned]
+                return (source, symbol), rows, aligned, security, benchmark_values
+
+            prepared = [
+                item
+                for item in self.parallel_map(list(unique_tickers.values()), prepare_jdk)
+                if item is not None
+            ]
+            computed = jdk_many(
+                [(item[3], item[4]) for item in prepared],
+                period,
+            )
+            for item, points in zip(prepared, computed, strict=True):
+                if points:
+                    jdk_prepared[item[0]] = (item[1], item[2], points)
+
         def analyze_ticker(ticker):
             symbol, source = ticker["symbol"], ticker["source"]
             if symbol.upper() in _RRG_INDEXES or symbol == benchmark and algorithm == "jdk":
                 return None
-            if fast_mascore:
+            if algorithm == "jdk":
+                prepared = jdk_prepared.get((source, symbol))
+                if prepared is None:
+                    return None
+                rows, aligned, computed = prepared
+            elif fast_mascore:
                 latest = fast_latest.get((source, symbol))
                 if latest is None and source == "sjc":
                     # Rust's mode=all MASCORE fast path intentionally asks
@@ -752,9 +837,9 @@ class Analysis:
                         return None
                     if not latest_rows:
                         return None
-                    latest = enhance_selected(
-                        latest_rows, "1D", [len(latest_rows) - 1], True, ema
-                    )[0]
+                    latest = enhance_selected(latest_rows, "1D", [len(latest_rows) - 1], True, ema)[
+                        0
+                    ]
                 if latest is None:
                     return None
                 if latest["volume"] < min_volume:
@@ -778,7 +863,11 @@ class Analysis:
                     # The Rust batch path continues with rows from other symbols
                     # when a series has a gap or pending repair.
                     return None
-            if not fast_mascore and (not rows or rows[-1].volume < min_volume):
+            if (
+                algorithm == "mascore"
+                and not fast_mascore
+                and (not rows or rows[-1].volume < min_volume)
+            ):
                 return None
             if algorithm == "mascore":
                 if fast_mascore:
@@ -790,14 +879,16 @@ class Analysis:
                 else:
                     selected_count = max(1, trails)
                     first_selected = max(0, len(rows) - selected_count)
-                    selected = enhance_selected(
-                        rows,
-                        "1D",
-                        range(first_selected, len(rows)),
-                        True,
-                        ema,
-                        periods=(20, 100),
-                    )
+                    selected = mascore_selected.get((source, symbol))
+                    if selected is None:
+                        selected = enhance_selected(
+                            rows,
+                            "1D",
+                            range(first_selected, len(rows)),
+                            True,
+                            ema,
+                            periods=(20, 100),
+                        )
                     latest_enhanced = selected[-1]
                     x = latest_enhanced.get("ma20_score")
                     y = latest_enhanced.get("ma100_score")
@@ -847,8 +938,6 @@ class Analysis:
                     return None
                 raw = 0.0
             else:
-                aligned = [r for r in rows if r.time in bench]
-                computed = jdk([r.close for r in aligned], [bench[r.time] for r in aligned], period)
                 if not computed:
                     return None
                 relevant = aligned[-len(computed) :]

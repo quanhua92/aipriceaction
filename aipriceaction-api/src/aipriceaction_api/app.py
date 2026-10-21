@@ -610,9 +610,7 @@ def _consume_typed_json_field(kind, data, position, field):
         )
         return position, _normalize_json_number_values(parsed)
     if first == 0x22:
-        position, parsed = _consume_json_string(
-            data, position, validate_utf8=True, field=field
-        )
+        position, parsed = _consume_json_string(data, position, validate_utf8=True, field=field)
         if kind == "mode" and parsed not in _RUST_REFRESH_MODES:
             variants = "`stock`, `stocks`, `vn`, `crypto`, `cryptos`, `yahoo`, `all`"
             _serde_data(
@@ -1156,12 +1154,7 @@ def rust_route_allow_header(routes, scope, *, include_public_root=False):
         segments = raw_path.removeprefix(b"/uploads/").split(b"/")
         if len(segments) == 1 and segments[0]:
             return "DELETE"
-        if (
-            len(segments) == 3
-            and segments[0]
-            and segments[1] == b"markdown"
-            and segments[2]
-        ):
+        if len(segments) == 3 and segments[0] and segments[1] == b"markdown" and segments[2]:
             return "GET,HEAD"
         return None
 
@@ -1837,6 +1830,19 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 health_snapshot.update(current)
             await asyncio.sleep(HEALTH_SNAPSHOT_REFRESH_SECONDS)
 
+    def prewarm_market_read_cache():
+        """Prime recent EMA tails so the first web page read avoids a cold scan."""
+        for source in ("vn", "yahoo", "crypto", "sjc"):
+            symbols = [row["symbol"] for row in repo.tickers([source])]
+            if symbols:
+                history.data_loader.load_many(
+                    source,
+                    symbols,
+                    "1D",
+                    limit=601,
+                    compact_tail=True,
+                )
+
     @asynccontextmanager
     async def lifespan(app):
         nonlocal executor, health_executor, market_executor, read_slots, health_slots
@@ -1859,6 +1865,12 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         try:
             await background(repo.initialize)
             await background(catalog.initialize, repo)
+            try:
+                await background(prewarm_market_read_cache)
+            except Exception:
+                # Cache warmup is an optimization. Keep API startup available
+                # if a damaged or inaccessible market history prevents it.
+                log.exception("market read cache warmup failed")
             try:
                 health_snapshot.update(await background(repo.health_summary, priority=True))
             except Exception:
@@ -2009,9 +2021,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             )
             if b"%2f" in raw_session:
                 return finish(
-                    JSONResponse(
-                        {"success": False, "error": "Invalid session_id format"}, 400
-                    )
+                    JSONResponse({"success": False, "error": "Invalid session_id format"}, 400)
                 )
         json_body_route = request_method == "POST" and (
             request.url.path == "/tickers/refresh" or _raw_sync_key(request) is not None
@@ -2030,14 +2040,12 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     top_level = content_type[:slash]
                     position = slash + 1
                     subtype_start = position
-                    while position < len(content_type) and content_type[position] in _MIME_TOKEN_CHARS:
+                    while (
+                        position < len(content_type) and content_type[position] in _MIME_TOKEN_CHARS
+                    ):
                         position += 1
                     subtype = content_type[subtype_start:position]
-                    if (
-                        subtype
-                        and position < len(content_type)
-                        and content_type[position] == ";"
-                    ):
+                    if subtype and position < len(content_type) and content_type[position] == ";":
                         parameters = content_type[position + 1 :]
                         position = 0
                         boundary_seen = False
@@ -2048,9 +2056,16 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             if position == len(parameters):
                                 break
                             name_start = position
-                            while position < len(parameters) and parameters[position] in _MIME_TOKEN_CHARS:
+                            while (
+                                position < len(parameters)
+                                and parameters[position] in _MIME_TOKEN_CHARS
+                            ):
                                 position += 1
-                            if position == name_start or position == len(parameters) or parameters[position] != "=":
+                            if (
+                                position == name_start
+                                or position == len(parameters)
+                                or parameters[position] != "="
+                            ):
                                 valid = False
                                 break
                             name = parameters[name_start:position]
@@ -2060,11 +2075,18 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                                 position += 1
                                 value_start = position
                                 while position < len(parameters) and parameters[position] != '"':
-                                    if ord(parameters[position]) <= 31 or ord(parameters[position]) == 127:
+                                    if (
+                                        ord(parameters[position]) <= 31
+                                        or ord(parameters[position]) == 127
+                                    ):
                                         valid = False
                                         break
                                     position += 1
-                                if not valid or position == value_start or position == len(parameters):
+                                if (
+                                    not valid
+                                    or position == value_start
+                                    or position == len(parameters)
+                                ):
                                     valid = False
                                     break
                                 position += 1
@@ -2074,7 +2096,10 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                                     valid = False
                                     break
                             else:
-                                while position < len(parameters) and parameters[position] in _MIME_TOKEN_CHARS:
+                                while (
+                                    position < len(parameters)
+                                    and parameters[position] in _MIME_TOKEN_CHARS
+                                ):
                                     position += 1
                                 if position < len(parameters) and parameters[position] != ";":
                                     valid = False
@@ -2094,9 +2119,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                         )
             if not has_boundary:
                 return finish(
-                    PlainTextResponse(
-                        "Invalid `boundary` for `multipart/form-data` request", 400
-                    )
+                    PlainTextResponse("Invalid `boundary` for `multipart/form-data` request", 400)
                 )
 
             session_id = request.query_params.get("session_id")
@@ -2104,9 +2127,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 uuid.UUID(session_id)
             except (ValueError, TypeError, AttributeError):
                 return finish(
-                    JSONResponse(
-                        {"success": False, "error": "Invalid session_id format"}, 400
-                    )
+                    JSONResponse({"success": False, "error": "Invalid session_id format"}, 400)
                 )
             secret = request.query_params.get("secret", "")
             if len(secret) < 8:
@@ -2386,9 +2407,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 redis_requested = (
                     source_mode == "all" or params.redis
                 ) and redis_client is not None
-                redis_by_source = {
-                    src: redis_requested for src in selected_sources(source_mode)
-                }
+                redis_by_source = {src: redis_requested for src in selected_sources(source_mode)}
                 redis_covered_by_source = {}
                 if source_mode == "yahoo" and base_interval(iv) != iv:
                     # Rust's aggregated Yahoo request includes SJC as an extra
@@ -2584,8 +2603,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             False,
                             False,
                         )
-                        if (pair[0] if source_mode == "all" else source_mode)
-                        in batch_sql_errors
+                        if (pair[0] if source_mode == "all" else source_mode) in batch_sql_errors
                         and not item[4]
                         else item
                         for pair, item in zip(pairs, items, strict=True)
@@ -2630,9 +2648,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                         except sqlite3.Error as exc:
                             batch_key = src if source_mode == "all" else source_mode
                             batch_sql_errors.add(batch_key)
-                            log.warning(
-                                "ticker database batch read failed source=%s: %s", src, exc
-                            )
+                            log.warning("ticker database batch read failed source=%s: %s", src, exc)
                             loaded_by_source[src] = None
                     items = []
                     for src, sym in pairs:
@@ -2645,9 +2661,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             continue
                         rows = loaded.get(sym, [])
                         if isinstance(rows, Exception):
-                            pending_repair = (
-                                f"Historical adjustment repair pending for {sym} {base_interval(iv)}"
-                            )
+                            pending_repair = f"Historical adjustment repair pending for {sym} {base_interval(iv)}"
                             if (
                                 isinstance(rows, DataError)
                                 and rows.status == 503
@@ -2723,7 +2737,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     for key in empty_redis_batches
                     if not any(
                         rows
-                        for pair, (_, rows, _, _, _, _) in zip(ordered_tickers, fetched, strict=True)
+                        for pair, (_, rows, _, _, _, _) in zip(
+                            ordered_tickers, fetched, strict=True
+                        )
                         if batch_keys[pair] == key
                     )
                 }
@@ -2763,10 +2779,14 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 # merged Yahoo/SJC query from PostgreSQL. `redis_by_source`
                 # still reflects the initial attempt, so include that fallback
                 # here as well as the explicitly Redis-disabled path.
-                if source_mode == "yahoo" and not batch_sql_errors and (
-                    not any(redis_by_source.values())
-                    or source_mode in empty_redis_batches
-                    or snapshot_sql_fallback_symbols
+                if (
+                    source_mode == "yahoo"
+                    and not batch_sql_errors
+                    and (
+                        not any(redis_by_source.values())
+                        or source_mode in empty_redis_batches
+                        or snapshot_sql_fallback_symbols
+                    )
                 ):
                     sources_by_symbol = {}
                     for source, symbol in ordered_tickers:
@@ -2816,7 +2836,14 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 snapshot_read_succeeded = any(item[5] for item in successful)
                 snapshot_read_symbols = {item[0] for item in fetched if item[3]}
                 if snapshot_eligible and redis_client is not None:
-                    for sym, rows, _, _snapshot_read_attempted, _snapshot_hit, _snapshot_read_ok in successful:
+                    for (
+                        sym,
+                        rows,
+                        _,
+                        _snapshot_read_attempted,
+                        _snapshot_hit,
+                        _snapshot_read_ok,
+                    ) in successful:
                         if sym in snapshot_read_symbols and sym not in snapshot_hits:
                             try:
                                 write_redis_snapshot(

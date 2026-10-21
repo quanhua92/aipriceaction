@@ -270,7 +270,7 @@ async def benchmark(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default="http://127.0.0.1:3001")
+    parser.add_argument("--url", default="http://127.0.0.1:8899")
     parser.add_argument("--date", required=True, help="RRG date in YYYY-MM-DD format")
     parser.add_argument("--mode", choices=("vn", "crypto", "yahoo", "all"), default="vn")
     parser.add_argument("--workers", type=int, default=1)
