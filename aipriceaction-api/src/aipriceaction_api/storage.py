@@ -27,6 +27,8 @@ MAJOR_OFF_HOURS = (
     "TONUSDT",
 )
 
+_ADOPTION_NOT_LOADED = object()
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT OR IGNORE INTO meta VALUES ('epoch', 0);
@@ -638,17 +640,21 @@ class Repository:
             if records:
                 self.bump(con)
 
-    def validate_basis(self, candles):
+    def validate_basis(self, candles, adoption=_ADOPTION_NOT_LOADED):
         if not candles:
             return
         if len({c.revision for c in candles}) > 1:
             raise DataError("Incompatible adjustment revisions")
         first = candles[0]
-        with self.connect() as con:
-            record = con.execute(
-                "SELECT * FROM snapshot_adoptions WHERE source=? AND symbol=? AND interval=? AND revision=?",
-                (first.source, first.symbol, first.interval, first.revision),
-            ).fetchone()
+        if adoption is _ADOPTION_NOT_LOADED:
+            with self.connect() as con:
+                record = con.execute(
+                    "SELECT * FROM snapshot_adoptions WHERE source=? AND symbol=? AND interval=? AND revision=?",
+                    (first.source, first.symbol, first.interval, first.revision),
+                ).fetchone()
+            record = dict(record) if record else None
+        else:
+            record = adoption
         providers = {c.provider for c in candles}
         if (len(providers) > 1 and not record) or (
             record and not providers <= {record["snapshot_provider"], record["provider"]}
@@ -799,21 +805,29 @@ class Repository:
             )
 
     def read(self, source, symbol, interval, start=None, end=None, limit=None, forward=False):
-        where = "source=? AND symbol=? AND interval=?"
-        args = [source, symbol, interval]
-        if start is not None:
-            where += " AND time>=?"
-            args.append(start)
-        if end is not None:
-            where += " AND time<=?"
-            args.append(end)
-        sql = f"SELECT * FROM candles WHERE {where} ORDER BY time {'ASC' if forward else 'DESC'}"
-        if limit is not None:
-            sql += " LIMIT ?"
-            args.append(limit)
-        with self.connect() as con:
-            rows = con.execute(sql, args).fetchall()
-            return [Candle(**dict(r)) for r in (rows if forward else reversed(rows))]
+        return self.read_many(
+            source,
+            [symbol],
+            interval,
+            start=start,
+            end=end,
+            limit=limit,
+            forward=forward,
+        )[symbol]
+
+    def read_many(self, source, symbols, interval, start=None, end=None, limit=None, forward=False):
+        """Read raw native candle rows for one or many symbols via the shared loader."""
+        from .data_loading import SQLiteDataLoader
+
+        return SQLiteDataLoader(self).read_candles_many(
+            source,
+            symbols,
+            interval,
+            start=start,
+            end=end,
+            limit=limit,
+            forward=forward,
+        )
 
     def archives(self, source=None, symbol=None, interval=None, start=None, end=None):
         where, args = ["status IN ('published','pending_repair','historical_snapshot')"], []

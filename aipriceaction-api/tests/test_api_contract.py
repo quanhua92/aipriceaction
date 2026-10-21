@@ -21,6 +21,7 @@ import pytest
 from fastapi.responses import Response
 from fastapi.testclient import TestClient
 
+import aipriceaction_api.config as config_module
 import aipriceaction_api.app as app_module
 from aipriceaction_api.app import RUST_QUERY_FIELDS, RustCompatibleStaticFiles, create_app
 from aipriceaction_api.archive import Archive
@@ -286,6 +287,7 @@ def test_latest_tickers_omit_a_series_with_pending_history_repair(client):
     history = client.app_instance.state.history
     repo = client.app_instance.state.repo
     original_query = history.query
+    original_query_many = history.query_many
     repo.register("vn", "VTH")
     errors = {"VTH": "Historical adjustment repair pending for VTH 1D"}
 
@@ -295,6 +297,15 @@ def test_latest_tickers_omit_a_series_with_pending_history_repair(client):
         return original_query(source, symbol, interval, *args, **kwargs)
 
     history.query = query
+
+    def query_many(source, symbols, interval, *args, **kwargs):
+        rows = original_query_many(source, symbols, interval, *args, **kwargs)
+        for symbol in symbols:
+            if symbol in errors:
+                rows[symbol] = DataError(errors[symbol])
+        return rows
+
+    history.query_many = query_many
 
     latest_batch = client.get("/tickers?mode=vn&limit=1&ma=false&redis=false&cache=false")
     explicit_latest = client.get("/tickers?symbol=VTH&limit=1&ma=false&redis=false&cache=false")
@@ -843,14 +854,14 @@ def test_health_stays_responsive_while_read_worker_is_blocked(client, monkeypatc
     app = client.app_instance
     entered = threading.Event()
     release = threading.Event()
-    original = app.state.history.query
+    original = app.state.history.query_many
 
     def blocked_query(*args, **kwargs):
         entered.set()
         release.wait(5)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(app.state.history, "query", blocked_query)
+    monkeypatch.setattr(app.state.history, "query_many", blocked_query)
     with ThreadPoolExecutor(max_workers=1) as caller:
         request = caller.submit(client.get, "/tickers?symbol=FPT&limit=1")
         try:
@@ -1156,7 +1167,7 @@ async def test_body_and_handler_share_one_request_deadline(tmp_path):
     assert response.content == b""
 
 
-def test_market_wide_reads_use_bounded_parallel_history_queries(tmp_path, monkeypatch):
+def test_market_wide_reads_use_one_shared_history_batch(tmp_path, monkeypatch):
     settings = replace(
         __import__("aipriceaction_api.config", fromlist=["Settings"]).Settings(),
         database=tmp_path / "bounded.sqlite3",
@@ -1174,7 +1185,7 @@ def test_market_wide_reads_use_bounded_parallel_history_queries(tmp_path, monkey
         app.state.repo.put(rows)
         active = maximum = 0
         lock = threading.Lock()
-        original = app.state.history.query
+        original = app.state.history.query_many
 
         def delayed_query(*args, **kwargs):
             nonlocal active, maximum
@@ -1188,12 +1199,12 @@ def test_market_wide_reads_use_bounded_parallel_history_queries(tmp_path, monkey
                 with lock:
                     active -= 1
 
-        monkeypatch.setattr(app.state.history, "query", delayed_query)
+        monkeypatch.setattr(app.state.history, "query_many", delayed_query)
         response = client.get("/tickers?mode=vn&limit=1&ma=false&cache=false")
 
     assert response.status_code == 200
     assert set(response.json()) == {"AAA", "BBB", "CCC"}
-    assert maximum == 2
+    assert maximum == 1
 
 
 def test_ticker_sql_errors_discard_rust_equivalent_source_batches(client, monkeypatch):
@@ -1203,14 +1214,14 @@ def test_ticker_sql_errors_discard_rust_equivalent_source_batches(client, monkey
     app.state.repo.put(
         [Candle("yahoo", "AAPL", "1D", stamp, 200, 202, 198, 201, 2000, "fixture")]
     )
-    original_query = app.state.history.query
+    original_query_many = app.state.history.query_many
 
-    def fail_fpt(source, symbol, *args, **kwargs):
-        if symbol == "FPT":
+    def fail_fpt(source, symbols, *args, **kwargs):
+        if "FPT" in symbols:
             raise sqlite3.OperationalError("injected ticker read failure")
-        return original_query(source, symbol, *args, **kwargs)
+        return original_query_many(source, symbols, *args, **kwargs)
 
-    monkeypatch.setattr(app.state.history, "query", fail_fpt)
+    monkeypatch.setattr(app.state.history, "query_many", fail_fpt)
 
     single_source = client.get(
         "/tickers?symbol=FPT&symbol=VCB&mode=vn&limit=1&ma=false"
@@ -1313,7 +1324,7 @@ def test_cancelled_read_keeps_capacity_until_worker_finishes(tmp_path, monkeypat
         app.state.repo.put(
             [Candle("vn", "FPT", "1D", parse_time("2024-01-01"), 100, 101, 99, 100, 1000)]
         )
-        original = app.state.history.query
+        original = app.state.history.query_many
 
         def blocked_query(*args, **kwargs):
             nonlocal calls
@@ -1326,7 +1337,7 @@ def test_cancelled_read_keeps_capacity_until_worker_finishes(tmp_path, monkeypat
             finally:
                 worker_finished.set()
 
-        monkeypatch.setattr(app.state.history, "query", blocked_query)
+        monkeypatch.setattr(app.state.history, "query_many", blocked_query)
         with ThreadPoolExecutor(max_workers=2) as caller:
             first = caller.submit(client.get, "/tickers?symbol=FPT&limit=1")
             second = None
@@ -1865,7 +1876,11 @@ def test_refresh_secret_unset_and_blank_match_rust(tmp_path, secret, body, statu
     assert response.status_code == status
 
 
-def test_refresh_secret_environment_distinguishes_unset_from_empty(monkeypatch):
+def test_refresh_secret_environment_distinguishes_unset_from_empty(monkeypatch, tmp_path):
+    # Settings.from_env loads this project's .env. Use an empty temporary root
+    # so the test verifies process-environment semantics without reading a
+    # developer's local secrets.
+    monkeypatch.setattr(config_module, "ROOT", tmp_path)
     monkeypatch.delenv("REFRESH_SECRET", raising=False)
     assert Settings.from_env().refresh_secret is None
 
@@ -2864,7 +2879,8 @@ def test_explorer_and_public_assets_match_rust_bundle(client):
 
 
 def test_openapi_documents_mode_algorithm_and_integer_query_bounds(client):
-    paths = client.app_instance.openapi()["paths"]
+    openapi_document = client.app_instance.openapi()
+    paths = openapi_document["paths"]
 
     def parameters(path):
         return {parameter["name"]: parameter for parameter in paths[path]["get"]["parameters"]}
@@ -2959,9 +2975,86 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
             closing += 1
         assert depth == 0, (source_path, struct_name)
         body = source[opening + 1 : closing - 1]
-        return set(re.findall(r"^\s*pub\s+([A-Za-z_][A-Za-z0-9_]*)\s*:", body, re.MULTILINE))
+        fields = {}
+        previous_end = 0
+        field_pattern = re.compile(
+            r"^\s*pub\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^,\n]+?)\s*,?\s*$",
+            re.MULTILINE,
+        )
+        for field in field_pattern.finditer(body):
+            attributes = body[previous_end : field.start()]
+            serde_attributes = re.findall(
+                r"#\s*\[\s*serde\(([^]]*)\)\s*\]",
+                attributes,
+                re.DOTALL,
+            )
+            rename = None
+            aliases = []
+            has_default = False
+            for serde_attribute in serde_attributes:
+                rename_match = re.search(r'\brename\s*=\s*"([^"]+)"', serde_attribute)
+                if rename_match:
+                    rename = rename_match.group(1)
+                aliases.extend(re.findall(r'\balias\s*=\s*"([^"]+)"', serde_attribute))
+                has_default = has_default or bool(
+                    re.search(r"(?:^|,)\s*default(?:\s*=|,|$)", serde_attribute)
+                )
+            fields[field.group(1)] = {
+                "type": re.sub(r"\s+", "", field.group(2)),
+                "default": has_default,
+                "name": rename or field.group(1),
+                "aliases": tuple(aliases),
+            }
+            previous_end = field.end()
+        return fields
 
-    paths = client.app_instance.openapi()["paths"]
+    def rust_query_kind(field_type, has_default):
+        optional = field_type.startswith("Option<") and field_type.endswith(">")
+        base_type = field_type[7:-1] if optional else field_type
+        if base_type == "Vec<String>":
+            assert optional
+            return "list_string"
+        if base_type == "String":
+            return "optional_string" if optional else "string" if has_default else "required_string"
+        if base_type in {"Mode", "RrgAlgorithm"}:
+            return "mode" if base_type == "Mode" else "rrg_algorithm"
+        if base_type == "bool":
+            assert not optional
+            return "bool"
+        if base_type in {"i64", "u64", "usize", "u32", "f64"}:
+            return f"optional_{base_type}" if optional else base_type
+        raise AssertionError(f"unmapped Rust query field type: {field_type}")
+
+    def rust_openapi_shape(field_type):
+        base_type = field_type[7:-1] if field_type.startswith("Option<") else field_type
+        if base_type == "Vec<String>":
+            return "array", "string"
+        primitive_types = {
+            "String": "string",
+            "Mode": "string",
+            "RrgAlgorithm": "string",
+            "bool": "boolean",
+            "i64": "integer",
+            "u64": "integer",
+            "usize": "integer",
+            "u32": "integer",
+            "f64": "number",
+        }
+        assert base_type in primitive_types, field_type
+        return primitive_types[base_type], None
+
+    def resolve_openapi_schema(schema):
+        while "$ref" in schema:
+            schema = schema_components[schema["$ref"].rsplit("/", 1)[-1]]
+        if "anyOf" in schema:
+            variants = [variant for variant in schema["anyOf"] if variant.get("type") != "null"]
+            assert len(variants) == 1, schema
+            return resolve_openapi_schema(variants[0])
+        return schema
+
+    openapi_document = client.app_instance.openapi()
+    paths = openapi_document["paths"]
+    schema_components = openapi_document.get("components", {}).get("schemas", {})
     mapped_query_structs = {
         struct_name for _source_path, _handler_name, struct_name in query_routes.values()
     }
@@ -3028,14 +3121,34 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
                 closing += 1
             assert depth == 0, (route_path, method, handler_name)
             signature = handler_source[opening + 1 : closing - 1]
-            query_match = re.search(
-                r"\b(?:AxumQuery|Query)\s*<\s*([A-Za-z_]\w*)\s*>",
-                signature,
+            query_aliases = {"Query", "AxumQuery"}
+            query_aliases.update(
+                re.findall(r"\bQuery\s+as\s+([A-Za-z_]\w*)", handler_source)
             )
-            if query_match:
+            query_types = []
+            for query_alias in query_aliases:
+                extractor_start = re.compile(
+                    rf"\b{re.escape(query_alias)}\s*<"
+                )
+                for extractor in extractor_start.finditer(signature):
+                    type_start = extractor.end()
+                    depth = 1
+                    type_end = type_start
+                    while depth and type_end < len(signature):
+                        depth += (signature[type_end] == "<") - (signature[type_end] == ">")
+                        type_end += 1
+                    assert depth == 0, (route_path, method, handler_name, query_alias)
+                    query_type = signature[type_start : type_end - 1].strip()
+                    assert re.fullmatch(
+                        r"(?:[A-Za-z_]\w*::)*[A-Za-z_]\w*",
+                        query_type,
+                    ), (route_path, method, handler_name, query_type)
+                    query_types.append(query_type.rsplit("::", 1)[-1])
+            assert len(query_types) <= 1, (route_path, method, handler_name, query_types)
+            if query_types:
                 route_key = (route_path, method)
                 assert route_key not in discovered_query_routes, route_key
-                discovered_query_routes[route_key] = (handler_name, query_match.group(1))
+                discovered_query_routes[route_key] = (handler_name, query_types[0])
 
     expected_query_routes = {
         route: (handler_name, struct_name)
@@ -3082,13 +3195,43 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
         declaration_path = rust_query_structs[struct_name].relative_to(rust_root).as_posix()
         rust_fields = rust_struct_fields(declaration_path, struct_name)
         if route_path in RUST_QUERY_FIELDS:
-            assert set(RUST_QUERY_FIELDS[route_path]) == rust_fields, route_path
-        documented_fields = {
-            parameter["name"]
+            assert set(RUST_QUERY_FIELDS[route_path]) == set(rust_fields), route_path
+        query_parameters = {
+            parameter["name"]: parameter
             for parameter in paths[route_path][method].get("parameters", ())
             if parameter["in"] == "query"
         }
-        assert documented_fields == rust_fields, (route_path, method)
+        expected_names = {field["name"] for field in rust_fields.values()}
+        assert set(query_parameters) == expected_names, (route_path, method)
+        for rust_name, field in rust_fields.items():
+            assert not field["aliases"], (
+                "Rust query aliases need explicit compatibility coverage",
+                route_path,
+                rust_name,
+                field["aliases"],
+            )
+            if route_path in RUST_QUERY_FIELDS:
+                assert RUST_QUERY_FIELDS[route_path][rust_name] == rust_query_kind(
+                    field["type"], field["default"]
+                ), (route_path, rust_name, field)
+            parameter = query_parameters[field["name"]]
+            expected_type, item_type = rust_openapi_shape(field["type"])
+            schema = resolve_openapi_schema(parameter["schema"])
+            assert schema["type"] == expected_type, (
+                route_path,
+                field["name"],
+                field["type"],
+                schema,
+            )
+            if item_type:
+                assert schema["items"]["type"] == item_type, (route_path, field["name"], schema)
+            expected_required = not field["type"].startswith("Option<") and not field["default"]
+            assert parameter["required"] is expected_required, (
+                route_path,
+                field["name"],
+                field,
+                parameter,
+            )
 
     refresh_source = (rust_root / "api" / "mod.rs").read_text(encoding="utf-8")
     refresh_match = re.search(r"\bpub\s+async\s+fn\s+tickers_refresh\s*\(", refresh_source)

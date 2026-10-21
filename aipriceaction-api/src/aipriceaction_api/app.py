@@ -2575,8 +2575,84 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                         for pair, item in zip(pairs, items, strict=True)
                     ]
 
+                def batch_latest_queries(pairs):
+                    """Use the shared loader for undated native SQL batches."""
+                    if (
+                        redis_client is not None
+                        or start is not None
+                        or end is not None
+                        or base_interval(iv) != iv
+                        or limit <= 0
+                    ):
+                        return None
+                    by_source = {}
+                    for src, sym in pairs:
+                        if sym:
+                            by_source.setdefault(src, []).append(sym)
+                    futures = {
+                        src: market_executor.submit(
+                            history.query_many,
+                            src,
+                            list(dict.fromkeys(src_symbols)),
+                            iv,
+                            start=start,
+                            end=end,
+                            limit=limit,
+                            ma=params.ma,
+                            ema=params.ema,
+                            redis=redis_by_source.get(src, False),
+                            strict_source_intervals=True,
+                            ignore_pending_repairs=True,
+                            return_exceptions=True,
+                        )
+                        for src, src_symbols in by_source.items()
+                    }
+                    loaded_by_source = {}
+                    for src, future in futures.items():
+                        try:
+                            loaded_by_source[src] = future.result()
+                        except sqlite3.Error as exc:
+                            batch_key = src if source_mode == "all" else source_mode
+                            batch_sql_errors.add(batch_key)
+                            log.warning(
+                                "ticker database batch read failed source=%s: %s", src, exc
+                            )
+                            loaded_by_source[src] = None
+                    items = []
+                    for src, sym in pairs:
+                        if not sym:
+                            items.append((sym, None, None, False, False, False))
+                            continue
+                        loaded = loaded_by_source.get(src)
+                        if loaded is None:
+                            items.append((sym, None, None, False, False, False))
+                            continue
+                        rows = loaded.get(sym, [])
+                        if isinstance(rows, Exception):
+                            pending_repair = (
+                                f"Historical adjustment repair pending for {sym} {base_interval(iv)}"
+                            )
+                            if (
+                                isinstance(rows, DataError)
+                                and rows.status == 503
+                                and str(rows) == pending_repair
+                                and not repo.read(src, sym, base_interval(iv), limit=1)
+                            ):
+                                log.warning(
+                                    "omitting ticker %s from latest response with pending repair and no live candles",
+                                    sym,
+                                )
+                                items.append((sym, None, None, False, False, False))
+                                continue
+                            raise rows
+                        else:
+                            items.append((sym, rows, None, False, False, False))
+                    return items
+
+                batched = batch_latest_queries(ordered_tickers)
                 fetched = discard_failed_sql_batches(
-                    ordered_tickers, parallel_market(ordered_tickers, fetch)
+                    ordered_tickers,
+                    batched if batched is not None else parallel_market(ordered_tickers, fetch),
                 )
                 snapshot_miss_symbols = {
                     pair[1]

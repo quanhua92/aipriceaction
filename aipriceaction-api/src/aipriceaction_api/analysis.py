@@ -1,7 +1,7 @@
 import math
 from datetime import UTC, datetime
 
-from .calculations import _rust_sum, enhance, jdk, volume_profile
+from .calculations import _rust_sum, enhance, enhance_selected, jdk, volume_profile
 from .domain import PERIODS, DataError, date_bounds, format_chrono_date, parse_time
 from .redis_snapshots import (
     joined_snapshot_record,
@@ -205,7 +205,11 @@ class Analysis:
                         )
                     except DataError:
                         raw_rows = []
-                rows = enhance(raw_rows, "1D", True, ema)[-1:] if raw_rows else []
+                rows = (
+                    enhance_selected(raw_rows, "1D", [len(raw_rows) - 1], True, ema)
+                    if raw_rows
+                    else []
+                )
                 return source, symbol, rows
             try:
                 rows = self.history.query(
@@ -225,7 +229,46 @@ class Analysis:
                 rows = []
             return source, symbol, rows
 
-        fetched = self.parallel_map(universe, fetch)
+        if redis_client is None and hasattr(self.history, "query_many"):
+            fetched_by_identity = {}
+            for source, symbols in symbols_by_source.items():
+                if raw_limit is not None:
+                    loaded = self.history.read_many(
+                        source,
+                        symbols,
+                        "1D",
+                        limit=redis_limit,
+                        return_exceptions=True,
+                    )
+                    for symbol, raw_rows in loaded.items():
+                        fetched_by_identity[(source, symbol)] = (
+                            []
+                            if isinstance(raw_rows, Exception) or not raw_rows
+                            else enhance_selected(
+                                raw_rows, "1D", [len(raw_rows) - 1], True, ema
+                            )
+                        )
+                else:
+                    loaded = self.history.query_many(
+                        source,
+                        symbols,
+                        "1D",
+                        end=None,
+                        limit=1,
+                        ema=ema,
+                        strict_source_intervals=True,
+                        return_exceptions=True,
+                    )
+                    for symbol, rows in loaded.items():
+                        fetched_by_identity[(source, symbol)] = (
+                            [] if isinstance(rows, Exception) else rows
+                        )
+            fetched = [
+                (ticker["source"], ticker["symbol"], fetched_by_identity.get((ticker["source"], ticker["symbol"]), []))
+                for ticker in universe
+            ]
+        else:
+            fetched = self.parallel_map(universe, fetch)
         if redis_client is not None:
             for source, symbol, rows in fetched:
                 if rows and source not in snapshot_complete_sources:
@@ -540,9 +583,15 @@ class Analysis:
                 unique_universe.setdefault((ticker["source"], ticker["symbol"]), ticker)
             universe = list(unique_universe.values())
         redis_client = getattr(self.history, "redis_client", None)
+        batch_raw_rows = {}
 
         def read_raw(source, symbol, limit):
             """Read the Rust Redis tail first, then fall back to durable history."""
+            batched = batch_raw_rows.get((source, symbol))
+            if batched is not None:
+                if isinstance(batched, Exception):
+                    raise batched
+                return batched
             cache_tail = getattr(self.history, "cache_tail", None)
             sjc_postgres_only = algorithm == "mascore" and mode == "all" and source == "sjc"
             if redis_client is not None and cache_tail is not None and not sjc_postgres_only:
@@ -593,6 +642,31 @@ class Analysis:
             else {}
         )
 
+        if redis_client is None and hasattr(self.history, "read_many"):
+            if algorithm == "jdk":
+                batch_limit = jdk_limit
+            elif fast_mascore:
+                batch_limit = 1 + 100
+            else:
+                batch_limit = (1 if trails == 0 else trails) + (600 if ema else 200)
+            symbols_by_source = {}
+            for ticker in universe:
+                if fast_mascore and ticker["source"] != "sjc":
+                    continue
+                symbols_by_source.setdefault(ticker["source"], []).append(ticker["symbol"])
+            for source, symbols in symbols_by_source.items():
+                loaded = self.history.read_many(
+                    source,
+                    list(dict.fromkeys(symbols)),
+                    "1D",
+                    end=end,
+                    limit=batch_limit,
+                    return_exceptions=True,
+                )
+                batch_raw_rows.update(
+                    {(source, symbol): rows for symbol, rows in loaded.items()}
+                )
+
         def analyze_ticker(ticker):
             symbol, source = ticker["symbol"], ticker["source"]
             if symbol.upper() in _RRG_INDEXES or symbol == benchmark and algorithm == "jdk":
@@ -609,7 +683,9 @@ class Analysis:
                         return None
                     if not latest_rows:
                         return None
-                    latest = enhance(latest_rows, "1D", True, ema)[-1]
+                    latest = enhance_selected(
+                        latest_rows, "1D", [len(latest_rows) - 1], True, ema
+                    )[0]
                 if latest is None:
                     return None
                 if latest["volume"] < min_volume:

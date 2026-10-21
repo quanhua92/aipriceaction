@@ -122,6 +122,83 @@ def enhance(rows, iv, ma=True, ema=False):
     return result
 
 
+def enhance_selected(rows, iv, indices, ma=True, ema=False):
+    """Enhance selected row positions without materializing discarded outputs.
+
+    Indicator seeds and recurrence use the same ordered floating-point
+    operations as ``enhance``. This is especially useful for latest-row APIs,
+    which need hundreds of warm-up candles but return only the final candle.
+    """
+    if not rows or not indices:
+        return []
+    indices = list(indices)
+    unique_indices = sorted(set(indices))
+    if any(index < 0 or index >= len(rows) for index in unique_indices):
+        raise IndexError("enhancement index is outside the candle rows")
+
+    averages = {}
+    if ma:
+        closes = [row.close for row in rows]
+        for period in PERIODS:
+            selected = {}
+            if ema:
+                seed_count = min(period, len(closes))
+                seed_index = seed_count - 1
+                if seed_index in unique_indices:
+                    selected[seed_index] = _rust_sum(closes[:seed_count]) / seed_count
+                if unique_indices and unique_indices[-1] > seed_index:
+                    value = _rust_sum(closes[:seed_count]) / seed_count
+                    multiplier = 2 / (period + 1)
+                    for index in range(seed_count, unique_indices[-1] + 1):
+                        value = closes[index] * multiplier + value * (1 - multiplier)
+                        if index in unique_indices:
+                            selected[index] = value
+            else:
+                for index in unique_indices:
+                    if index >= period - 1:
+                        selected[index] = (
+                            _rust_sum(closes[index + 1 - period : index + 1]) / period
+                        )
+                    elif len(closes) < period:
+                        selected[index] = _rust_sum(closes[: index + 1]) / (index + 1)
+            averages[period] = selected
+
+    result_by_index = {}
+    for index in unique_indices:
+        row = rows[index]
+        dt = datetime.fromtimestamp(row.time, UTC)
+        out = {
+            "symbol": row.symbol,
+            "time": dt.strftime(
+                "%Y-%m-%d" if iv in ("1D", "1W", "2W", "1M") else "%Y-%m-%dT%H:%M:%S"
+            ),
+            "open": row.open,
+            "high": row.high,
+            "low": row.low,
+            "close": row.close,
+            "volume": row.volume,
+        }
+        for period, values in averages.items():
+            value = values.get(index, 0.0)
+            if value > 0:
+                out[f"ma{period}"] = value
+                out[f"ma{period}_score"] = ((row.close - value) / value) * 100
+        if index:
+            previous = rows[index - 1]
+            if previous.close > 0:
+                out["close_changed"] = ((row.close - previous.close) / previous.close) * 100
+            current_volume = float(row.volume)
+            previous_volume = float(previous.volume)
+            if previous_volume > 0:
+                out["volume_changed"] = (
+                    (current_volume - previous_volume) / previous_volume
+                ) * 100
+            if previous.close > 0:
+                out["total_money_changed"] = (row.close - previous.close) * current_volume
+        result_by_index[index] = out
+    return [result_by_index[index] for index in indices]
+
+
 def wma(values, p):
     result = [0.0] * len(values)
     weights = p * (p + 1) / 2

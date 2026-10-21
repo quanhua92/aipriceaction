@@ -6,7 +6,8 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
-from .calculations import aggregate, enhance
+from .calculations import aggregate, enhance, enhance_selected
+from .data_loading import SQLiteDataLoader
 from .domain import (
     INDEXES,
     SOURCES,
@@ -74,6 +75,7 @@ def load_rust_ticker_identity_order(path):
 class History:
     def __init__(self, repo, archive, settings, redis_client=None):
         self.repo, self.archive, self.settings = repo, archive, settings
+        self.data_loader = SQLiteDataLoader(repo)
         self.redis_client = redis_client
         self.redis_reader = RedisZsetReader(redis_client)
         self._cache_read_state = threading.local()
@@ -81,11 +83,14 @@ class History:
             getattr(settings, "rust_ticker_identity_order", None)
         )
 
-    def validate_basis(self, candles):
+    def validate_basis(self, candles, adoption=None, adoption_loaded=False):
         """Validate durable rows while accepting values read from Rust Redis."""
         if candles and all(row.provider == "redis-cache" for row in candles):
             return
-        self.repo.validate_basis(candles)
+        if adoption_loaded:
+            self.repo.validate_basis(candles, adoption=adoption)
+        else:
+            self.repo.validate_basis(candles)
 
     def clear_cache_read_metadata(self):
         self._cache_read_state.result = None
@@ -242,8 +247,80 @@ class History:
         ignore_pending_repairs=False,
         ignore_history_gaps=False,
     ):
+        return self.read_many(
+            source,
+            [symbol],
+            iv,
+            start=start,
+            end=end,
+            limit=limit,
+            forward=forward,
+            revision=revision,
+            ignore_pending_repairs=ignore_pending_repairs,
+            ignore_history_gaps=ignore_history_gaps,
+        )[symbol]
+
+    def read_many(
+        self,
+        source,
+        symbols,
+        iv,
+        start=None,
+        end=None,
+        limit=None,
+        forward=False,
+        revision=None,
+        ignore_pending_repairs=False,
+        ignore_history_gaps=False,
+        return_exceptions=False,
+    ):
+        """Read one or many identities through the shared SQLite batch loader."""
+        symbols = list(dict.fromkeys(symbols))
+        loaded = self.data_loader.load_many(
+            source, symbols, iv, start=start, end=end, limit=limit, forward=forward
+        )
+        results = {}
+        for symbol in symbols:
+            try:
+                results[symbol] = self._read_loaded(
+                    source,
+                    symbol,
+                    iv,
+                    start=start,
+                    end=end,
+                    limit=limit,
+                    forward=forward,
+                    revision=revision,
+                    ignore_pending_repairs=ignore_pending_repairs,
+                    ignore_history_gaps=ignore_history_gaps,
+                    loaded=loaded,
+                )
+            except Exception as exc:
+                if not return_exceptions:
+                    raise
+                results[symbol] = exc
+        return results
+
+    def _read_loaded(
+        self,
+        source,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=None,
+        forward=False,
+        revision=None,
+        ignore_pending_repairs=False,
+        ignore_history_gaps=False,
+        loaded=None,
+    ):
         """Return chronological native candles; consult only required objects."""
-        local = self.repo.read(source, symbol, iv, start, end, limit, forward=forward)
+        local = (
+            loaded.local[symbol]
+            if loaded is not None
+            else self.repo.read(source, symbol, iv, start, end, limit, forward=forward)
+        )
         other_local = [r for r in local if revision is not None and r.revision != revision]
         if revision is not None:
             local = [r for r in local if r.revision == revision]
@@ -251,7 +328,11 @@ class History:
         merged = {r.time: r for r in local}
         if len(merged) > self.settings.archive_max_rows:
             raise DataError("Historical request exceeds resource limit", 400)
-        objects = self.repo.archives(source, symbol, iv, start, end)
+        objects = (
+            loaded.archives[symbol]
+            if loaded is not None
+            else self.repo.archives(source, symbol, iv, start, end)
+        )
         if ignore_pending_repairs:
             # Latest row endpoints match Rust's durable PostgreSQL reads, which
             # do not consult Python's pending archive-repair ledger. Keep
@@ -402,7 +483,15 @@ class History:
                 lower = result[0].time
         if upper is None:
             upper = int(time.time())
-        gaps = self.repo.history_gaps(source, symbol, iv, lower, upper)
+        if loaded is None:
+            gaps = self.repo.history_gaps(source, symbol, iv, lower, upper)
+        else:
+            gaps = [
+                gap
+                for gap in loaded.gaps[symbol]
+                if (lower is None or gap["end"] >= lower)
+                and (upper is None or gap["start"] <= upper)
+            ]
         gaps = [
             gap
             for gap in gaps
@@ -421,13 +510,27 @@ class History:
             raise DataError(f"Historical data unavailable for {symbol} {iv}: {gaps[0]['reason']}")
         if len({r.revision for r in result}) > 1:
             raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
-        self.validate_basis(result)
+        if loaded is None:
+            self.validate_basis(result)
+        else:
+            adoption = loaded.adoptions[symbol].get(result[0].revision) if result else None
+            self.validate_basis(result, adoption=adoption, adoption_loaded=True)
         if source == "vn" and iv == "1m" and result:
             from .volume_corrections import apply_records
 
             result = apply_records(
                 result,
-                self.repo.volume_corrections(source, symbol, iv, result[0].time, result[-1].time),
+                (
+                    [
+                        record
+                        for record in loaded.volume_corrections[symbol]
+                        if result[0].time <= record["time"] <= result[-1].time
+                    ]
+                    if loaded is not None
+                    else self.repo.volume_corrections(
+                        source, symbol, iv, result[0].time, result[-1].time
+                    )
+                ),
             )
         return result
 
@@ -1249,6 +1352,113 @@ class History:
         self.validate_basis(rows)
         result = enhance(rows, iv, ma, ema)
         return result[-len(target) :]
+
+    def query_many(
+        self,
+        source,
+        symbols,
+        iv,
+        start=None,
+        end=None,
+        limit=252,
+        ma=True,
+        ema=False,
+        redis=True,
+        strict_source_intervals=False,
+        ignore_pending_repairs=False,
+        return_exceptions=False,
+    ):
+        """Query many symbols through one native latest-tail SQLite load.
+
+        Redis, dated, aggregated, and non-native requests retain the established
+        per-symbol query implementation. The common DB-backed latest request
+        shares one SQLite snapshot and only enhances the rows it returns.
+        """
+        symbols = list(dict.fromkeys(symbols))
+        native = base_interval(iv) if strict_source_intervals else iv
+        retained = {
+            "1D": self.settings.redis_daily_max_size,
+            "1h": self.settings.redis_hourly_max_size,
+            "1m": self.settings.redis_minute_max_size,
+        }.get(native, 0)
+        fast = (
+            bool(symbols)
+            and self.redis_client is None
+            and strict_source_intervals
+            and native == iv
+            and start is None
+            and end is None
+            and limit > 0
+        )
+        if not fast:
+            results = {}
+            for symbol in symbols:
+                try:
+                    results[symbol] = self.query(
+                        source,
+                        symbol,
+                        iv,
+                        start=start,
+                        end=end,
+                        limit=limit,
+                        ma=ma,
+                        ema=ema,
+                        redis=redis,
+                        strict_source_intervals=strict_source_intervals,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                    )
+                except Exception as exc:
+                    if not return_exceptions:
+                        raise
+                    results[symbol] = exc
+            return results
+
+        buffer = 600 if ma and ema else 200 if ma else 1
+        raw_limit = limit + buffer if ma else limit + 1
+        context_limit = (
+            min(retained, max(1, raw_limit))
+            if redis and retained > 0
+            else raw_limit
+        )
+        contexts = self.read_many(
+            source,
+            symbols,
+            iv,
+            limit=context_limit,
+            forward=False,
+            ignore_pending_repairs=ignore_pending_repairs,
+            return_exceptions=True,
+        )
+        results = {}
+        for symbol in symbols:
+            context = contexts[symbol]
+            if isinstance(context, Exception):
+                try:
+                    results[symbol] = self.query(
+                        source,
+                        symbol,
+                        iv,
+                        start=start,
+                        end=end,
+                        limit=limit,
+                        ma=ma,
+                        ema=ema,
+                        redis=redis,
+                        strict_source_intervals=strict_source_intervals,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                    )
+                except Exception as exc:
+                    if not return_exceptions:
+                        raise
+                    results[symbol] = exc
+            elif not context:
+                results[symbol] = []
+            else:
+                first = max(0, len(context) - limit)
+                results[symbol] = enhance_selected(
+                    context, iv, range(first, len(context)), ma=ma, ema=ema
+                )
+        return results
 
     def _read_merged_source(
         self,
