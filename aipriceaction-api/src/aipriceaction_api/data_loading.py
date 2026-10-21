@@ -46,11 +46,11 @@ class SQLiteDataLoader:
     # SQLite 3.46, SQLite can choose an automatic index for very short tails;
     # a reused indexed point lookup is substantially cheaper for these.
     _CANDLE_SHORT_TAIL_LIMIT = 16
-    # Raw market tails are cheap to invalidate through market_epoch but too
-    # expensive to reload on every adjacent page endpoint. Keep them for at
-    # most 15 seconds; the externally visible response cache remains Rust's
-    # 5-second lifetime.
-    _CACHE_TTL_SECONDS = 15
+    # Raw market tails are invalidated by market_epoch when candle data changes.
+    # Keep the bounded in-process LRU for a minute so adjacent endpoints and
+    # page reloads reuse the same SQLite materialization. This is separate from
+    # the shorter HTTP response cache, so cached values still follow writes.
+    _CACHE_TTL_SECONDS = 60
     _CACHE_MAX_BYTES = 64 * 1024 * 1024
 
     def __init__(self, repository):

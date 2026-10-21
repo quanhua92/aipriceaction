@@ -294,7 +294,7 @@ def test_loader_cache_copy_isolates_nested_history_evidence(system):
     assert loader._estimated_size(original) > 0
 
 
-def test_loader_cache_expires_within_fifteen_seconds(system, monkeypatch):
+def test_loader_cache_expires_within_one_minute(system, monkeypatch):
     _repo, history = system
     loader = history.data_loader
     now = [100.0]
@@ -310,7 +310,7 @@ def test_loader_cache_expires_within_fifteen_seconds(system, monkeypatch):
     monkeypatch.setattr(loader, "_read_compact_tails", count_reads)
     loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
     loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
-    now[0] += 15.01
+    now[0] += 60.01
     loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
 
     assert reads == 2
