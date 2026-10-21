@@ -81,6 +81,37 @@ def test_enhance_latest_many_matches_scalar_calculation(ema):
 
 
 @pytest.mark.parametrize("ema", [False, True])
+def test_enhance_latest_many_can_limit_requested_periods(ema):
+    contexts = {}
+    closes = {}
+    all_rows = {}
+    for length in (20, 75, 250, 601):
+        symbol = f"S{length}"
+        rows = [candle(symbol, index) for index in range(length)]
+        all_rows[symbol] = rows
+        contexts[symbol] = rows[-2:]
+        closes[symbol] = [row.close for row in rows]
+
+    actual = enhance_latest_many(
+        contexts,
+        closes,
+        "1D",
+        ma=True,
+        ema=ema,
+        periods=(20, 100),
+    )
+    for symbol, rows in all_rows.items():
+        expected = enhance(rows, "1D", ma=True, ema=ema)[-1]
+        selected = actual[symbol][0]
+        requested_keys = {"ma20", "ma20_score", "ma100", "ma100_score"}
+        for key, value in expected.items():
+            if key.startswith("ma") and key not in requested_keys:
+                assert key not in selected
+            else:
+                assert selected[key] == value
+
+
+@pytest.mark.parametrize("ema", [False, True])
 def test_enhance_many_selected_matches_scalar_histories_across_batches(ema):
     contexts = {
         f"B{index}": [candle(f"B{index}", position) for position in range(601)]
@@ -551,6 +582,42 @@ def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, e
             strict_source_intervals=True,
             ignore_pending_repairs=True,
         )
+
+
+@pytest.mark.parametrize("ema", [False, True])
+def test_query_many_can_calculate_only_requested_ma_periods(system, ema):
+    repo, history = system
+    repo.put(
+        [candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(260)]
+    )
+
+    full = history.query_many(
+        "vn",
+        ["FPT", "VCB"],
+        "1D",
+        limit=1,
+        ma=True,
+        ema=ema,
+        strict_source_intervals=True,
+    )
+    selected = history.query_many(
+        "vn",
+        ["FPT", "VCB"],
+        "1D",
+        limit=1,
+        ma=True,
+        ema=ema,
+        strict_source_intervals=True,
+        periods=(20,),
+    )
+
+    for symbol in ("FPT", "VCB"):
+        expected = {
+            key: value
+            for key, value in full[symbol][0].items()
+            if not key.startswith("ma") or key in {"ma20", "ma20_score"}
+        }
+        assert selected[symbol] == [expected]
 
 
 @pytest.mark.parametrize("ema", [False, True])

@@ -74,6 +74,7 @@ class FakeHistory:
         ma=True,
         ema=False,
         strict_source_intervals=False,
+        periods=None,
     ):
         self.query_calls.append(
             (source, symbol, interval, start, end, limit, ema, strict_source_intervals)
@@ -86,7 +87,7 @@ class FakeHistory:
         rows.sort(key=lambda row: row.time)
         if limit is not None:
             rows = rows[-limit:]
-        return enhance(rows, interval, ma, ema)
+        return enhance(rows, interval, ma, ema, periods=periods)
 
 
 class FakeCatalog:

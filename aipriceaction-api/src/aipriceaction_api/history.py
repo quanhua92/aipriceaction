@@ -896,6 +896,7 @@ class History:
         strict_source_intervals=False,
         redis_covered=None,
         ignore_pending_repairs=False,
+        periods=None,
     ):
         native = (
             base_interval(iv)
@@ -993,7 +994,7 @@ class History:
                         raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
                     self.validate_basis(context)
                     bars = aggregate(context, iv, source, self.validate_basis)
-                    computed = enhance(bars, iv, ma, ema)
+                    computed = enhance(bars, iv, ma, ema, periods=periods)
                     selected = [
                         result
                         for bar, result in zip(bars, computed, strict=True)
@@ -1031,7 +1032,7 @@ class History:
                 raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
             self.validate_basis(context)
             bars = aggregate(context, iv, source, self.validate_basis)
-            computed = enhance(bars, iv, ma, ema)
+            computed = enhance(bars, iv, ma, ema, periods=periods)
             if start is not None:
                 if start_range_covered:
                     selected = [
@@ -1080,7 +1081,7 @@ class History:
                         raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
                     self.validate_basis(context)
                     selected_times = {row.time for row in selected}
-                    computed = enhance(context, iv, ma, ema)
+                    computed = enhance(context, iv, ma, ema, periods=periods)
                     return [
                         result
                         for row, result in zip(context, computed, strict=True)
@@ -1121,7 +1122,7 @@ class History:
                     raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
                 self.validate_basis(context)
                 selected_times = {row.time for row in selected}
-                computed = enhance(context, iv, ma, ema)
+                computed = enhance(context, iv, ma, ema, periods=periods)
                 return [
                     result
                     for row, result in zip(context, computed, strict=True)
@@ -1216,7 +1217,7 @@ class History:
             if len({row.revision for row in context}) > 1:
                 raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
             self.validate_basis(context)
-            return enhance(context, iv, ma, ema)
+            return enhance(context, iv, ma, ema, periods=periods)
         if strict_source_intervals and redis and native == iv and start is None and limit >= 0:
             retained = {
                 "1D": self.settings.redis_daily_max_size,
@@ -1253,7 +1254,7 @@ class History:
                     if len({row.revision for row in context}) > 1:
                         raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
                     self.validate_basis(context)
-                    computed = enhance(context, iv, ma, ema)
+                    computed = enhance(context, iv, ma, ema, periods=periods)
                     return computed[-limit:] if limit > 0 else []
                 if redis_covered is True:
                     return []
@@ -1291,7 +1292,7 @@ class History:
                     raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
                 self.validate_basis(context)
                 selected_times = {row.time for row in selected}
-                computed = enhance(context, iv, ma, ema)
+                computed = enhance(context, iv, ma, ema, periods=periods)
                 return [
                     result
                     for row, result in zip(context, computed, strict=True)
@@ -1381,7 +1382,7 @@ class History:
         if len({r.revision for r in rows}) > 1:
             raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
         self.validate_basis(rows)
-        result = enhance(rows, iv, ma, ema)
+        result = enhance(rows, iv, ma, ema, periods=periods)
         return result[-len(target) :]
 
     def _query_many_latest_ma(
@@ -1394,6 +1395,7 @@ class History:
         redis,
         ignore_pending_repairs,
         return_exceptions,
+        periods=None,
     ):
         """Fast latest MA rows while retaining archive and data-quality policy."""
         loaded = self.data_loader.load_many(
@@ -1455,7 +1457,16 @@ class History:
             safe_contexts[symbol] = local
             safe_closes[symbol] = tail.closes
 
-        results.update(enhance_latest_many(safe_contexts, safe_closes, iv, ma=True, ema=ema))
+        results.update(
+            enhance_latest_many(
+                safe_contexts,
+                safe_closes,
+                iv,
+                ma=True,
+                ema=ema,
+                periods=periods,
+            )
+        )
         if fallback_symbols:
             try:
                 fallback_contexts = self.read_many(
@@ -1486,6 +1497,7 @@ class History:
                             redis=redis,
                             strict_source_intervals=True,
                             ignore_pending_repairs=ignore_pending_repairs,
+                            periods=periods,
                         )
                     except Exception as exc:
                         if not return_exceptions:
@@ -1513,6 +1525,7 @@ class History:
                             redis=redis,
                             strict_source_intervals=True,
                             ignore_pending_repairs=ignore_pending_repairs,
+                            periods=periods,
                         )
                     except Exception as exc:
                         if not return_exceptions:
@@ -1520,7 +1533,12 @@ class History:
                         results[symbol] = exc
                 elif context:
                     results[symbol] = enhance_selected(
-                        context, iv, [len(context) - 1], ma=True, ema=ema
+                        context,
+                        iv,
+                        [len(context) - 1],
+                        ma=True,
+                        ema=ema,
+                        periods=periods,
                     )
                 else:
                     results[symbol] = []
@@ -1540,6 +1558,7 @@ class History:
         strict_source_intervals=False,
         ignore_pending_repairs=False,
         return_exceptions=False,
+        periods=None,
     ):
         """Query many symbols through one native latest-tail SQLite load.
 
@@ -1579,6 +1598,7 @@ class History:
                         redis=redis,
                         strict_source_intervals=strict_source_intervals,
                         ignore_pending_repairs=ignore_pending_repairs,
+                        periods=periods,
                     )
                 except Exception as exc:
                     if not return_exceptions:
@@ -1599,6 +1619,7 @@ class History:
                 redis,
                 ignore_pending_repairs,
                 return_exceptions,
+                periods,
             )
         contexts = self.read_many(
             source,
@@ -1623,6 +1644,7 @@ class History:
                 iv,
                 ma=ma,
                 ema=ema,
+                periods=periods,
             )
         batch_contexts = {}
         selected_indices = {}
@@ -1642,6 +1664,7 @@ class History:
                         redis=redis,
                         strict_source_intervals=strict_source_intervals,
                         ignore_pending_repairs=ignore_pending_repairs,
+                        periods=periods,
                     )
                 except Exception as exc:
                     if not return_exceptions:
@@ -1668,6 +1691,7 @@ class History:
                     iv,
                     ma=True,
                     ema=ema,
+                    periods=periods,
                 )
             )
         return results

@@ -177,13 +177,17 @@ class Analysis:
     def _rrg_sector(source, symbol, groups_by_source):
         return Analysis._sector_for_symbol(groups_by_source[source], symbol)
 
-    def latest(self, mode, date=None, ema=False, snap=True, raw_limit=None):
+    def latest(self, mode, date=None, ema=False, snap=True, raw_limit=None, periods=None):
         universe = self.universe(mode)
         symbols_by_source = {}
+        seen_by_source = {}
         for ticker in universe:
-            symbols = symbols_by_source.setdefault(ticker["source"], [])
-            if ticker["symbol"] not in symbols:
+            source = ticker["source"]
+            symbols = symbols_by_source.setdefault(source, [])
+            seen = seen_by_source.setdefault(source, set())
+            if ticker["symbol"] not in seen:
                 symbols.append(ticker["symbol"])
+                seen.add(ticker["symbol"])
 
         redis_client = getattr(self.history, "redis_client", None)
         redis_limit = raw_limit if raw_limit is not None else 1 + (600 if ema else 200)
@@ -237,7 +241,14 @@ class Analysis:
                     except DataError:
                         raw_rows = []
                 rows = (
-                    enhance_selected(raw_rows, "1D", [len(raw_rows) - 1], True, ema)
+                    enhance_selected(
+                        raw_rows,
+                        "1D",
+                        [len(raw_rows) - 1],
+                        True,
+                        ema,
+                        periods=periods,
+                    )
                     if raw_rows
                     else []
                 )
@@ -251,6 +262,7 @@ class Analysis:
                     limit=1,
                     ema=ema,
                     strict_source_intervals=True,
+                    periods=periods,
                 )
             except DataError:
                 # Rust's batch analysis fallback logs a failed PostgreSQL
@@ -285,6 +297,7 @@ class Analysis:
                         "1D",
                         True,
                         ema,
+                        periods=periods,
                     )
                     for symbol, raw_rows in loaded.items():
                         fetched_by_identity[(source, symbol)] = (
@@ -302,6 +315,7 @@ class Analysis:
                         ema=ema,
                         strict_source_intervals=True,
                         return_exceptions=True,
+                        periods=periods,
                     )
                     for symbol, rows in loaded.items():
                         fetched_by_identity[(source, symbol)] = (
@@ -449,7 +463,10 @@ class Analysis:
     ):
         if ma_period not in PERIODS:
             raise DataError("Invalid MA period. Must be one of: 10, 20, 50, 100, 200", 400)
-        latest = {(src, row["symbol"]): row for src, row in self.latest(mode, date, ema, snap)}
+        latest = {
+            (src, row["symbol"]): row
+            for src, row in self.latest(mode, date, ema, snap, None, (ma_period,))
+        }
         groups_by_source = self._rrg_groups_by_source()
         # Rust's MA-by-sector handler always uses VN sector definitions for
         # single-source modes; Yahoo/crypto sector definitions are appended
@@ -705,7 +722,14 @@ class Analysis:
         fast_latest = (
             {
                 (source, row["symbol"]): row
-                for source, row in self.latest(mode, date, ema, snap, raw_limit=1 + 100)
+                for source, row in self.latest(
+                    mode,
+                    date,
+                    ema,
+                    snap,
+                    raw_limit=1 + 100,
+                    periods=(20, 100),
+                )
             }
             if fast_mascore
             else {}

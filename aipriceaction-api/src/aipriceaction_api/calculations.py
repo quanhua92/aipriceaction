@@ -178,8 +178,8 @@ def moving_average(values, period, ema=False):
     return result
 
 
-def enhance(rows, iv, ma=True, ema=False):
-    return enhance_selected(rows, iv, range(len(rows)), ma=ma, ema=ema)
+def enhance(rows, iv, ma=True, ema=False, periods=None):
+    return enhance_selected(rows, iv, range(len(rows)), ma=ma, ema=ema, periods=periods)
 
 
 def enhance_selected(rows, iv, indices, ma=True, ema=False, periods=None):
@@ -202,7 +202,7 @@ def enhance_selected(rows, iv, indices, ma=True, ema=False, periods=None):
     )[symbol]
 
 
-def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
+def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False, periods=None):
     """Enhance one latest candle per symbol, vectorizing indicator work.
 
     The SQLite loader supplies only the latest candle pair plus compact close
@@ -230,14 +230,15 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
             raise ValueError(f"Close context length differs for {symbol}")
         closes[index, : len(values)] = values
 
+    requested_periods = tuple(PERIODS if periods is None else periods) if ma else ()
     averages = {}
-    if ma:
+    if requested_periods:
         if ema:
-            periods = np.asarray(PERIODS, dtype=np.int64)
-            seed_counts = np.minimum(lengths[:, None], periods[None, :])
-            totals = np.zeros((len(symbols), len(PERIODS)), dtype=np.float64)
+            period_values = np.asarray(requested_periods, dtype=np.int64)
+            seed_counts = np.minimum(lengths[:, None], period_values[None, :])
+            totals = np.zeros((len(symbols), len(requested_periods)), dtype=np.float64)
             states = np.zeros_like(totals)
-            multipliers = 2 / (periods + 1)
+            multipliers = 2 / (period_values + 1)
             decays = 1 - multipliers
             positions = np.arange(max_length, dtype=np.int64)
             for position in positions:
@@ -250,9 +251,11 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
                 recurring = (lengths[:, None] > position) & (seed_counts <= position)
                 next_states = closes[:, position, None] * multipliers + states * decays
                 states[recurring] = next_states[recurring]
-            averages = {period: states[:, index] for index, period in enumerate(PERIODS)}
+            averages = {
+                period: states[:, index] for index, period in enumerate(requested_periods)
+            }
         else:
-            for period in PERIODS:
+            for period in requested_periods:
                 counts = np.minimum(lengths, period)
                 starts = lengths - counts
                 offsets = np.arange(int(counts.max()), dtype=np.int64)
