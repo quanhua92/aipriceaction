@@ -7,6 +7,10 @@ from sys import getsizeof
 
 
 class TickersResponseCache:
+    # Large chart windows are rebuilt from the shared SQLite history LRU. Do
+    # not recursively size and retain their much larger response dictionaries.
+    _MAX_CACHED_ROWS = 20_000
+
     def __init__(
         self,
         ttl: float = 5,
@@ -63,6 +67,10 @@ class TickersResponseCache:
         for stored_key, entry in list(self.store.items()):
             if now - entry[0] > self.ttl:
                 self._remove(stored_key)
+        if isinstance(data, dict) and all(isinstance(rows, list) for rows in data.values()):
+            if sum(len(rows) for rows in data.values()) > self._MAX_CACHED_ROWS:
+                self._remove(key)
+                return
         size = self._size(data)
         self._remove(key)
         if size > self.max_bytes or self.max_entries <= 0:

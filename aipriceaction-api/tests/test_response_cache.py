@@ -64,3 +64,13 @@ def test_oversize_response_is_not_retained():
 
     assert cache.get("large") is None
     assert cache.stored_bytes == 0
+
+
+def test_large_ticker_windows_skip_recursive_response_cache_sizing():
+    cache = TickersResponseCache(ttl=60, max_bytes=20 * 1024 * 1024)
+    data = {"VNINDEX": [{}] * (cache._MAX_CACHED_ROWS + 1)}
+
+    cache.put("large-window", data)
+
+    assert cache.get("large-window") is None
+    assert cache.stored_bytes == 0
