@@ -35,15 +35,16 @@ class LoadedHistory:
     adoptions: dict[str, dict[str, dict]] = field(default_factory=dict)
     volume_corrections: dict[str, list[dict]] = field(default_factory=dict)
     compact_tails: dict[str, CompactTail] = field(default_factory=dict)
+    versions: dict[str, int] = field(default_factory=dict)
 
 
 class SQLiteDataLoader:
     """Load native candle tails and associated validation metadata."""
 
-    # The data loader has a one-minute LRU, separate from the shorter HTTP
-    # response cache. A global market epoch is too broad here: background
-    # ingestion would evict unrelated source/interval tails on every batch.
-    _CACHE_TTL_SECONDS = 60
+    # Keep hot history resident across ordinary page visits. Per-series SQLite
+    # versions below provide prompt freshness without expiring the whole market
+    # cache after one idle minute.
+    _CACHE_TTL_SECONDS = 900
     _CACHE_MAX_BYTES = 256 * 1024 * 1024
 
     def __init__(self, repository):
@@ -76,6 +77,7 @@ class SQLiteDataLoader:
                 )
                 for symbol, tail in result.compact_tails.items()
             },
+            versions=dict(result.versions),
         )
 
     @staticmethod
@@ -107,7 +109,7 @@ class SQLiteDataLoader:
                 pending.extend(value)
         return size
 
-    def _cache_get(self, key, now):
+    def _cache_get(self, key, now, copy_result=True):
         with self._cache_lock:
             cached = self._cache.get(key)
             if cached is None:
@@ -121,9 +123,9 @@ class SQLiteDataLoader:
         # Cached values are immutable by convention: they were copied on put,
         # and Candle is frozen. Clone containers outside the lock so a large
         # metadata result does not serialize unrelated cache hits.
-        return self._copy_loaded(value)
+        return self._copy_loaded(value) if copy_result else value
 
-    def _cache_get_compatible(self, key, now):
+    def _cache_get_compatible(self, key, now, versions, copy_result=True):
         """Reuse a wider cached batch for a symbol subset and shorter tail.
 
         Startup warming loads the full source universe so ticker and analysis
@@ -132,13 +134,26 @@ class SQLiteDataLoader:
         direction match. The cache continues to expire from the original read
         time, even when smaller requests hit it repeatedly.
         """
-        cached = self._cache_get(key, now)
+        cached = self._cache_get(key, now, copy_result=False)
         if cached is not None:
-            return cached
+            stale = [
+                symbol
+                for symbol in key[1]
+                if cached.versions.get(symbol, 0) != versions.get(symbol, 0)
+            ]
+            if not stale:
+                result = self._copy_loaded(cached) if copy_result else cached
+                return result, []
+            fresh = [symbol for symbol in key[1] if symbol not in set(stale)]
+            result = self._slice_cached(
+                cached, fresh, key[5], key[6], key[7], copy_metadata=copy_result
+            )
+            result.versions = {symbol: versions[symbol] for symbol in fresh}
+            return result, stale
 
         source, symbols, interval, start, end, limit, forward, compact_tail = key
         if not isinstance(limit, int) or limit <= 0:
-            return None
+            return LoadedHistory(), list(symbols)
         requested_symbols = set(symbols)
         with self._cache_lock:
             expired = [cached_key for cached_key, entry in self._cache.items() if entry[0] <= now]
@@ -189,14 +204,29 @@ class SQLiteDataLoader:
                 )
                 candidates.append((score, cached_key, value))
             if not candidates:
-                return None
+                return LoadedHistory(), list(symbols)
             _score, cached_key, value = min(candidates, key=lambda item: item[0])
             self._cache.move_to_end(cached_key)
 
-        return self._slice_cached(value, symbols, limit, forward, compact_tail)
+        stale = [
+            symbol
+            for symbol in symbols
+            if value.versions.get(symbol, 0) != versions.get(symbol, 0)
+        ]
+        fresh = [symbol for symbol in symbols if symbol not in set(stale)]
+        result = self._slice_cached(
+            value,
+            fresh,
+            limit,
+            forward,
+            compact_tail,
+            copy_metadata=copy_result,
+        )
+        result.versions = {symbol: versions[symbol] for symbol in fresh}
+        return result, stale
 
     @staticmethod
-    def _slice_cached(value, symbols, limit, forward, compact_tail):
+    def _slice_cached(value, symbols, limit, forward, compact_tail, copy_metadata=True):
         """Return an isolated subset with the same shape as the requested read."""
         result = LoadedHistory()
         for symbol in symbols:
@@ -206,8 +236,11 @@ class SQLiteDataLoader:
                 result.local[symbol] = list(rows[-2:])
                 if tail is not None:
                     start = max(0, len(tail.closes) - limit)
-                    closes = tail.closes[start:].copy()
-                    times = tail.times[start:].copy()
+                    closes = tail.closes[start:]
+                    times = tail.times[start:]
+                    if copy_metadata:
+                        closes = closes.copy()
+                        times = times.copy()
                     result.compact_tails[symbol] = CompactTail(
                         closes=closes,
                         times=times,
@@ -221,12 +254,45 @@ class SQLiteDataLoader:
                 selected = rows[:limit] if forward else rows[-limit:]
                 result.local[symbol] = list(selected)
 
-            result.archives[symbol] = copy.deepcopy(value.archives.get(symbol, []))
-            result.gaps[symbol] = copy.deepcopy(value.gaps.get(symbol, []))
-            result.adoptions[symbol] = copy.deepcopy(value.adoptions.get(symbol, {}))
-            result.volume_corrections[symbol] = copy.deepcopy(
-                value.volume_corrections.get(symbol, [])
-            )
+            if copy_metadata:
+                result.archives[symbol] = copy.deepcopy(value.archives.get(symbol, []))
+                result.gaps[symbol] = copy.deepcopy(value.gaps.get(symbol, []))
+                result.adoptions[symbol] = copy.deepcopy(value.adoptions.get(symbol, {}))
+                result.volume_corrections[symbol] = copy.deepcopy(
+                    value.volume_corrections.get(symbol, [])
+                )
+            else:
+                result.archives[symbol] = value.archives.get(symbol, [])
+                result.gaps[symbol] = value.gaps.get(symbol, [])
+                result.adoptions[symbol] = value.adoptions.get(symbol, {})
+                result.volume_corrections[symbol] = value.volume_corrections.get(symbol, [])
+            if symbol in value.versions:
+                result.versions[symbol] = value.versions[symbol]
+        return result
+
+    @staticmethod
+    def _merge_loaded(left, right, symbols):
+        """Combine an unchanged cached subset with freshly loaded identities."""
+        result = LoadedHistory()
+        for field_name in (
+            "local",
+            "archives",
+            "gaps",
+            "adoptions",
+            "volume_corrections",
+            "compact_tails",
+            "versions",
+        ):
+            target = getattr(result, field_name)
+            target.update(getattr(left, field_name))
+            target.update(getattr(right, field_name))
+        # Keep every requested symbol represented, including a fresh empty read.
+        for symbol in symbols:
+            result.local.setdefault(symbol, [])
+            result.archives.setdefault(symbol, [])
+            result.gaps.setdefault(symbol, [])
+            result.adoptions.setdefault(symbol, {})
+            result.volume_corrections.setdefault(symbol, [])
         return result
 
     def _cache_put(self, key, value, now):
@@ -397,8 +463,15 @@ class SQLiteDataLoader:
         limit=None,
         forward=False,
         compact_tail=False,
+        copy_result=True,
     ):
-        """Share identical in-flight reads before consulting the SQLite LRU."""
+        """Share identical in-flight reads before consulting the SQLite LRU.
+
+        ``copy_result=False`` is for internal read-only consumers. Candle rows
+        are frozen and the history reader only inspects evidence metadata, so
+        those callers can share cached objects without copying every ticker's
+        full warmup tail. Keep the safe, isolated-copy behavior as the default.
+        """
         symbols = list(dict.fromkeys(symbols))
         if not symbols:
             return LoadedHistory()
@@ -412,28 +485,39 @@ class SQLiteDataLoader:
             bool(forward),
             bool(compact_tail),
         )
+        versions = self.repository.history_versions(source, symbols, interval)
+        flight_key = (key, tuple(sorted(versions.items())))
         with self._cache_lock:
-            future = self._inflight.get(key)
+            future = self._inflight.get(flight_key)
             owner = future is None
             if owner:
                 future = Future()
-                self._inflight[key] = future
+                self._inflight[flight_key] = future
         if not owner:
-            return self._copy_loaded(future.result())
+            value = future.result()
+            return self._copy_loaded(value) if copy_result else value
 
         try:
-            result = self._cache_get_compatible(key, time.monotonic())
-            if result is None:
-                result = self._load_many(
+            cached, stale = self._cache_get_compatible(
+                key, time.monotonic(), versions, copy_result=copy_result
+            )
+            if not stale:
+                result = cached
+            else:
+                fresh = self._load_many(
                     source,
-                    symbols,
+                    stale,
                     interval,
                     start=start,
                     end=end,
                     limit=limit,
                     forward=forward,
                     compact_tail=compact_tail,
+                    copy_result=copy_result,
+                    versions={symbol: versions[symbol] for symbol in stale},
                 )
+                result = self._merge_loaded(cached, fresh, symbols)
+                self._cache_put(key, result, time.monotonic())
             future.set_result(result)
             return result
         except BaseException as exc:
@@ -441,8 +525,8 @@ class SQLiteDataLoader:
             raise
         finally:
             with self._cache_lock:
-                if self._inflight.get(key) is future:
-                    del self._inflight[key]
+                if self._inflight.get(flight_key) is future:
+                    del self._inflight[flight_key]
 
     def _load_many(
         self,
@@ -454,6 +538,8 @@ class SQLiteDataLoader:
         limit=None,
         forward=False,
         compact_tail=False,
+        copy_result=True,
+        versions=None,
     ):
         """Read matching rows and metadata for symbols using a single connection."""
         symbols = list(dict.fromkeys(symbols))
@@ -463,6 +549,7 @@ class SQLiteDataLoader:
             gaps={symbol: [] for symbol in symbols},
             adoptions={symbol: {} for symbol in symbols},
             volume_corrections={symbol: [] for symbol in symbols},
+            versions=dict(versions or {}),
         )
         if not symbols:
             return result
@@ -497,19 +584,6 @@ class SQLiteDataLoader:
         with self.repository.connect() as con:
             # Keep all tables on the same SQLite snapshot during a bulk read.
             con.execute("BEGIN")
-            cache_key = (
-                source,
-                tuple(sorted(symbols)),
-                interval,
-                start,
-                end,
-                limit,
-                bool(forward),
-                bool(compact_tail),
-            )
-            cached = self._cache_get(cache_key, time.monotonic())
-            if cached is not None:
-                return cached
             for chunk in self._chunks(symbols):
                 placeholders = ",".join("?" for _ in chunk)
                 args = [*archive_args, *chunk]
@@ -594,5 +668,4 @@ class SQLiteDataLoader:
                     row["reason"],
                 )
             )
-        self._cache_put(cache_key, result, time.monotonic())
         return result

@@ -114,7 +114,88 @@ CREATE TABLE IF NOT EXISTS volume_corrections(
  id TEXT PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL,
  interval TEXT NOT NULL, time INTEGER NOT NULL, revision TEXT NOT NULL,
  evidence TEXT NOT NULL, UNIQUE(source,symbol,interval,time,revision));
-PRAGMA user_version=2;
+CREATE TABLE IF NOT EXISTS history_versions(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
+ version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source,symbol,interval));
+CREATE TRIGGER IF NOT EXISTS candles_version_insert AFTER INSERT ON candles BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS candles_version_update AFTER UPDATE ON candles BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS candles_version_delete AFTER DELETE ON candles BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_version_insert AFTER INSERT ON archives BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_version_update AFTER UPDATE ON archives BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_version_delete AFTER DELETE ON archives BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_version_insert AFTER INSERT ON quality
+WHEN NEW.kind='history_unavailable' BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_version_update AFTER UPDATE ON quality
+WHEN OLD.kind='history_unavailable' OR NEW.kind='history_unavailable' BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_version_delete AFTER DELETE ON quality
+WHEN OLD.kind='history_unavailable' BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_version_insert AFTER INSERT ON snapshot_adoptions BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_version_update AFTER UPDATE ON snapshot_adoptions BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_version_delete AFTER DELETE ON snapshot_adoptions BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_version_insert AFTER INSERT ON volume_corrections BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_version_update AFTER UPDATE ON volume_corrections BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_version_delete AFTER DELETE ON volume_corrections BEGIN
+ INSERT INTO history_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+PRAGMA user_version=3;
 """
 COLUMNS = tuple(f.name for f in fields(Candle))
 INSERT = (
@@ -155,7 +236,7 @@ class Repository:
     def initialize(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as con:
-            if con.execute("PRAGMA user_version").fetchone()[0] > 2:
+            if con.execute("PRAGMA user_version").fetchone()[0] > 3:
                 raise DataError("Database schema is newer than this application")
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
@@ -224,6 +305,24 @@ class Repository:
     def market_epoch(self):
         with self.connect() as con:
             return con.execute("SELECT value FROM meta WHERE key='market_epoch'").fetchone()[0]
+
+    def history_versions(self, source, symbols, interval):
+        """Return per-series data versions for precise in-process cache checks."""
+        symbols = list(dict.fromkeys(symbols))
+        versions = {symbol: 0 for symbol in symbols}
+        if not symbols:
+            return versions
+        with self.connect() as con:
+            for offset in range(0, len(symbols), 400):
+                chunk = symbols[offset : offset + 400]
+                placeholders = ",".join("?" for _ in chunk)
+                rows = con.execute(
+                    "SELECT symbol,version FROM history_versions "
+                    f"WHERE source=? AND interval=? AND symbol IN ({placeholders})",
+                    (source, interval, *chunk),
+                )
+                versions.update({row["symbol"]: row["version"] for row in rows})
+        return versions
 
     def register(self, source, symbol, name=None, enabled=False):
         with self.connect() as con:

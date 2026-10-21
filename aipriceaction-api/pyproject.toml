@@ -14,6 +14,7 @@ dependencies = [
   "python-dotenv>=1,<2",
   "redis>=5,<9",
   "numpy>=2.2,<3",
+  "orjson>=3.10,<4",
 ]
 
 [project.scripts]

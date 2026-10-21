@@ -1,6 +1,7 @@
 import json
 import math
 
+import orjson
 from fastapi.responses import JSONResponse
 
 from .domain import PERIODS
@@ -79,10 +80,40 @@ def _serde_json_text(value):
     raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
+def _orjson_compatible(value):
+    """Check whether the native encoder can preserve this response's contract."""
+    pending = [value]
+    while pending:
+        current = pending.pop()
+        if current is None or isinstance(current, (str, bool)):
+            continue
+        if isinstance(current, int):
+            # orjson follows JSON's signed/unsigned 64-bit integer range.
+            if current < -(1 << 63) or current > (1 << 64) - 1:
+                return False
+            continue
+        if isinstance(current, float):
+            if not math.isfinite(current):
+                raise ValueError("Out of range float values are not JSON compliant")
+            continue
+        if isinstance(current, dict):
+            if any(not isinstance(key, str) for key in current):
+                return False
+            pending.extend(current.values())
+            continue
+        if isinstance(current, (list, tuple)):
+            pending.extend(current)
+            continue
+        return False
+    return True
+
+
 class RustJSONResponse(JSONResponse):
     """JSON response using serde_json-compatible finite float formatting."""
 
     def render(self, content):
+        if _orjson_compatible(content):
+            return orjson.dumps(content)
         return _serde_json_text(content).encode("utf-8")
 
 

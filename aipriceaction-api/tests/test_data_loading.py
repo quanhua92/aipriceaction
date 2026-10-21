@@ -241,7 +241,7 @@ def test_repository_connections_enable_large_sqlite_read_cache(system):
         assert con.execute("PRAGMA mmap_size").fetchone()[0] >= 256 * 1024 * 1024
 
 
-def test_loader_lru_ignores_epoch_bumps_until_one_minute_ttl(system, monkeypatch):
+def test_loader_lru_refreshes_changed_series_and_keeps_epoch_cache(system, monkeypatch):
     repo, history = system
     repo.put([candle("FPT", index) for index in range(3)])
     loader = history.data_loader
@@ -278,17 +278,42 @@ def test_loader_lru_ignores_epoch_bumps_until_one_minute_ttl(system, monkeypatch
     repo.put([candle("FPT", 3)])
     fourth = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
 
-    assert reads == 1
+    assert reads == 2
     assert fourth.compact_tails["FPT"].closes.tolist() == [
-        candle("FPT", index).close for index in range(3)
+        candle("FPT", index).close for index in range(1, 4)
     ]
 
-    now[0] += 60.01
+    now[0] += loader._CACHE_TTL_SECONDS + 0.01
     fifth = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
 
-    assert reads == 2
+    assert reads == 3
     assert fifth.compact_tails["FPT"].closes.tolist() == [
         candle("FPT", index).close for index in range(1, 4)
+    ]
+
+
+def test_wide_loader_cache_reloads_only_series_with_new_version(system, monkeypatch):
+    repo, history = system
+    repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(4)])
+    loader = history.data_loader
+    real_load = loader._load_many
+    loaded_symbols = []
+
+    def count_loads(source, symbols, interval, **kwargs):
+        loaded_symbols.append(tuple(symbols))
+        return real_load(source, symbols, interval, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["FPT", "VCB"], "1D", limit=4, compact_tail=True)
+    repo.put([candle("FPT", 4)])
+
+    refreshed = loader.load_many("vn", ["FPT", "VCB"], "1D", limit=4, compact_tail=True)
+    assert loaded_symbols == [("FPT", "VCB"), ("FPT",)]
+    assert refreshed.compact_tails["FPT"].closes.tolist() == [
+        candle("FPT", index).close for index in range(1, 5)
+    ]
+    assert refreshed.compact_tails["VCB"].closes.tolist() == [
+        candle("VCB", index).close for index in range(4)
     ]
 
 
@@ -399,6 +424,39 @@ def test_loader_cache_copy_isolates_nested_history_evidence(system):
 
     assert original.gaps["FPT"][0]["evidence"]["sources"] == ["capture"]
     assert loader._estimated_size(original) > 0
+
+
+def test_readonly_loader_reuses_cached_result_without_copying(system):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(4)]
+    repo.put(rows)
+    loader = history.data_loader
+
+    # Prime the LRU, then query the exact same read through the internal
+    # read-only path used by History and the analysis endpoints.
+    loader.load_many("vn", ["FPT"], "1D", limit=4)
+    first = loader.load_many("vn", ["FPT"], "1D", limit=4, copy_result=False)
+    second = loader.load_many("vn", ["FPT"], "1D", limit=4, copy_result=False)
+
+    assert first is second
+    assert first.local["FPT"] == repo.read("vn", "FPT", "1D", limit=4)
+
+    isolated = loader.load_many("vn", ["FPT"], "1D", limit=4)
+    assert isolated is not first
+    isolated.local["FPT"].clear()
+    assert len(loader.load_many("vn", ["FPT"], "1D", limit=4).local["FPT"]) == 4
+
+
+def test_read_many_returns_detached_candle_list_for_local_fast_path(system):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(4)]
+    repo.put(rows)
+
+    first = history.read_many("vn", ["FPT"], "1D", limit=3)["FPT"]
+    first.clear()
+    second = history.read_many("vn", ["FPT"], "1D", limit=3)["FPT"]
+
+    assert second == repo.read("vn", "FPT", "1D", limit=3)
 
 
 def test_loader_coalesces_identical_concurrent_reads(system, monkeypatch):

@@ -284,7 +284,14 @@ class History:
         """Read one or many identities through the shared SQLite batch loader."""
         symbols = list(dict.fromkeys(symbols))
         loaded = self.data_loader.load_many(
-            source, symbols, iv, start=start, end=end, limit=limit, forward=forward
+            source,
+            symbols,
+            iv,
+            start=start,
+            end=end,
+            limit=limit,
+            forward=forward,
+            copy_result=False,
         )
         results = {}
         read_session = getattr(self.archive, "read_session", None)
@@ -331,6 +338,24 @@ class History:
             if loaded is not None
             else self.repo.read(source, symbol, iv, start, end, limit, forward=forward)
         )
+        if (
+            loaded is not None
+            and revision is None
+            and not loaded.archives[symbol]
+            and not loaded.gaps[symbol]
+            and not loaded.adoptions[symbol]
+            and not loaded.volume_corrections[symbol]
+        ):
+            # The normal live-history case has already been bounded and sorted
+            # by the indexed SQLite query. Avoid rebuilding a timestamp map,
+            # sorting it, and rescanning empty evidence tables for every
+            # ticker in a multi-symbol analysis request.
+            if len(local) > self.settings.archive_max_rows:
+                raise DataError("Historical request exceeds resource limit", 400)
+            if len({row.revision for row in local}) > 1:
+                raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
+            self.validate_basis(local, adoption=None, adoption_loaded=True)
+            return list(local)
         other_local = [r for r in local if revision is not None and r.revision != revision]
         if revision is not None:
             local = [r for r in local if r.revision == revision]
@@ -1378,6 +1403,7 @@ class History:
             limit=context_limit,
             forward=False,
             compact_tail=True,
+            copy_result=False,
         )
         safe_contexts = {}
         safe_closes = {}
