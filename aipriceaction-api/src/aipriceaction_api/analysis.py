@@ -7,6 +7,8 @@ from .calculations import (
     enhance_many_selected,
     enhance_selected,
     jdk_many,
+    numpy_numeric_orders,
+    numpy_sequential_sum,
     volume_profile,
 )
 from .domain import PERIODS, DataError, date_bounds, format_chrono_date, parse_time
@@ -83,6 +85,15 @@ def _jdk_lookback_limit(period, trails, ema):
     rust_limit = 250 + (600 if ema else 200)
     required = max(3 * period + 1, 3 * period + max(0, trails) - 2)
     return min(rust_limit, required)
+
+
+def _sector_lookup(groups):
+    """Build Rust's lexicographically first sector label for each symbol."""
+    result = {}
+    for group in sorted(groups):
+        for symbol in groups[group]:
+            result.setdefault(symbol, group)
+    return result
 
 
 class Analysis:
@@ -369,6 +380,7 @@ class Analysis:
         if cutoff is None:
             cutoff = int(datetime.now(UTC).timestamp())
         vn_groups = self.catalog.load("ticker_group.json")
+        sector_by_symbol = _sector_lookup(vn_groups)
         sector_symbols = set(vn_groups.get(sector, ())) if sector is not None else None
 
         # Rust's source batch returns a map keyed by ticker, so a symbol listed
@@ -387,7 +399,7 @@ class Analysis:
                 continue
             if _is_vn_ticker(row["symbol"]) and row["volume"] < min_volume:
                 continue
-            group = self._sector_for_symbol(vn_groups, row["symbol"])
+            group = sector_by_symbol.get(row["symbol"])
             out = (
                 {k: row[k] for k in ("symbol", "close", "volume")}
                 | {k: row.get(k) for k in keys}
@@ -405,10 +417,16 @@ class Analysis:
         def metric(row):
             return row.get(sort_by) is not None, row.get(sort_by) or 0
 
-        desc = sorted(result, key=tie_breaker)
-        desc.sort(key=metric, reverse=True)
-        asc = sorted(result, key=tie_breaker)
-        asc.sort(key=metric)
+        orders = numpy_numeric_orders(result, sort_by)
+        if orders is None:
+            desc = sorted(result, key=tie_breaker)
+            desc.sort(key=metric, reverse=True)
+            asc = sorted(result, key=tie_breaker)
+            asc.sort(key=metric)
+        else:
+            desc_order, asc_order = orders
+            desc = [result[index] for index in desc_order]
+            asc = [result[index] for index in asc_order]
         n = max(1, min(100, limit))
         top, worst = (asc[:n], desc[:n]) if direction == "asc" else (desc[:n], asc[:n])
         return envelope(
@@ -474,22 +492,30 @@ class Analysis:
                     stocks.append(stock)
                 if stocks:
                     total += len(stocks)
+                    scores = [row["ma_score"] for row in stocks]
+                    score_sum = numpy_sequential_sum(scores)
+                    if score_sum is None:
+                        score_sum = _rust_sum(scores)
+                    stock_orders = numpy_numeric_orders(stocks, "ma_score")
+                    if stock_orders is None:
+                        top_stocks = sorted(
+                            stocks,
+                            key=lambda r: (
+                                -r["ma_score"],
+                                r["symbol"],
+                                r.get("source", ""),
+                            ),
+                        )
+                    else:
+                        top_stocks = [stocks[index] for index in stock_orders[0]]
                     sector_entries.append(
                         (
                             {
                                 "sector_name": name,
                                 "total_stocks": len(stocks),
                                 "stocks_above_threshold": above,
-                                "average_score": _rust_sum(r["ma_score"] for r in stocks)
-                                / len(stocks),
-                                "top_stocks": sorted(
-                                    stocks,
-                                    key=lambda r: (
-                                        -r["ma_score"],
-                                        r["symbol"],
-                                        r.get("source", ""),
-                                    ),
-                                )[: max(0, min(50, top_per_sector))],
+                                "average_score": score_sum / len(stocks),
+                                "top_stocks": top_stocks[: max(0, min(50, top_per_sector))],
                             },
                             src,
                         )

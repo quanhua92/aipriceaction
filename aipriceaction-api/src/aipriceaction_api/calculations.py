@@ -257,13 +257,9 @@ def enhance_many_selected(contexts, indices_by_symbol, iv, ma=True, ema=False, p
                                 state[member_index]
                             )
                 elif length >= period:
-                    selected_windows = [
-                        index for index in wanted_at_index if index >= period - 1
-                    ]
+                    selected_windows = [index for index in wanted_at_index if index >= period - 1]
                     if len(selected_windows) >= max(1, length // 4):
-                        windows = np.lib.stride_tricks.sliding_window_view(
-                            closes, period, axis=1
-                        )
+                        windows = np.lib.stride_tricks.sliding_window_view(closes, period, axis=1)
                         cumulative = np.add.accumulate(windows, axis=2)[:, :, -1]
                         for index in selected_windows:
                             ma_values = cumulative[:, index - period + 1] / period
@@ -278,9 +274,7 @@ def enhance_many_selected(contexts, indices_by_symbol, iv, ma=True, ema=False, p
                         for index in selected_windows:
                             members_at_index = wanted_at_index[index]
                             member_positions = np.asarray(members_at_index, dtype=np.intp)
-                            window = closes[
-                                member_positions, index - period + 1 : index + 1
-                            ]
+                            window = closes[member_positions, index - period + 1 : index + 1]
                             ma_values = np.add.accumulate(window, axis=1)[:, -1] / period
                             for row_index, member_index in enumerate(members_at_index):
                                 values_by_member[member_index][index, period] = float(
@@ -337,6 +331,60 @@ def enhance_many_selected(contexts, indices_by_symbol, iv, ma=True, ema=False, p
     return selected
 
 
+def numpy_numeric_orders(rows, metric_key, tie_keys=("symbol", "source")):
+    """Return stable ascending/descending row orders for large numeric results.
+
+    Analysis endpoints need metric order first and symbol/source order for ties.
+    NumPy's compiled lexsort handles large universes efficiently. Small inputs,
+    non-finite values, and integers that float64 cannot represent exactly return
+    ``None`` so callers can use Python's exact comparison semantics.
+    """
+    if len(rows) < 64:
+        return None
+
+    import numpy as np
+
+    metrics = []
+    valid = []
+    for row in rows:
+        value = row.get(metric_key)
+        if value is None:
+            metrics.append(0.0)
+            valid.append(False)
+            continue
+        if isinstance(value, int) and abs(value) > 2**53:
+            return None
+        try:
+            number = float(value or 0)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if math.isnan(number):
+            return None
+        metrics.append(number)
+        valid.append(True)
+
+    tie_columns = [
+        np.asarray([str(row.get(key, "") or "") for row in rows], dtype=np.str_) for key in tie_keys
+    ]
+    values = np.asarray(metrics, dtype=np.float64)
+    is_valid = np.asarray(valid, dtype=np.bool_)
+    descending = np.lexsort((*tie_columns[::-1], -values, ~is_valid)).tolist()
+    ascending = np.lexsort((*tie_columns[::-1], values, is_valid)).tolist()
+    return descending, ascending
+
+
+def numpy_sequential_sum(values):
+    """Sum many finite float values in left-to-right Rust-compatible order."""
+    if len(values) < 64:
+        return None
+    import numpy as np
+
+    array = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(array)):
+        return None
+    return float(np.add.accumulate(array, dtype=np.float64)[-1])
+
+
 def wma(values, p):
     result = [0.0] * len(values)
     weights = p * (p + 1) / 2
@@ -378,8 +426,8 @@ def jdk_many(series, p):
     length lets NumPy process ticker rows together while the per-window
     ``add.accumulate`` keeps the scalar Rust summation order.
     """
-    if len(series) < 8:
-        return [jdk(security, benchmark, p) for security, benchmark in series]
+    if not series:
+        return []
 
     import numpy as np
 
@@ -491,6 +539,8 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
     if not tick_ranges:
         return None
     span = maximum_tick - minimum_tick + 1
+    dense_profile = None
+    dense_total = None
     if expanded_ticks >= 8192 and span <= 2_000_000:
         # Dense NumPy slice updates replace the inner per-price Python loop on
         # long minute histories. Each candle still updates levels in newest-
@@ -501,9 +551,39 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
         for lo, hi, volume in tick_ranges:
             distribution[lo - minimum_tick : hi - minimum_tick + 1] += volume
         indices = np.flatnonzero(distribution)
-        profile = [
-            (int(index + minimum_tick) * tick, float(distribution[index])) for index in indices
-        ]
+        if np.iinfo(np.int64).min <= minimum_tick <= maximum_tick <= np.iinfo(np.int64).max:
+            prices = (indices + minimum_tick).astype(np.float64) * tick
+        else:
+            prices = np.fromiter(
+                (int(index + minimum_tick) * tick for index in indices),
+                dtype=np.float64,
+                count=len(indices),
+            )
+        volumes = distribution[indices]
+        # The legacy scalar path reduces sorted raw levels before display-bin
+        # aggregation. NumPy's cumulative operation follows the same sequential
+        # f64 addition order while avoiding Python tuple creation for up to two
+        # million occupied ticks.
+        dense_total = float(np.add.accumulate(volumes, dtype=np.float64)[-1])
+        bins = max(2, min(200, bins))
+        if len(indices) > bins:
+            low_price, high_price = float(prices[0]), float(prices[-1])
+            size = (high_price - low_price) / bins
+            bin_ids = np.minimum(
+                bins - 1,
+                ((prices - low_price) / size).astype(np.intp),
+            )
+            binned = np.zeros(bins, dtype=np.float64)
+            # add.at is unbuffered and retains the ascending-level accumulation
+            # order used by the previous Python loop.
+            np.add.at(binned, bin_ids, volumes)
+            centers = low_price + (np.arange(bins, dtype=np.float64) + 0.5) * size
+            nonzero = np.flatnonzero(binned)
+            dense_profile = [(float(centers[index]), float(binned[index])) for index in nonzero]
+        else:
+            dense_profile = [
+                (float(price), float(volume)) for price, volume in zip(prices, volumes, strict=True)
+            ]
     else:
         distribution = defaultdict(float)
         for lo, hi, volume in tick_ranges:
@@ -514,9 +594,10 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
         profile = sorted((index * tick, volume) for index, volume in distribution.items())
     # Rust sums the sorted integer-tick profile before aggregating display bins;
     # preserve that denominator even when bin accumulation rounds differently.
-    total = _rust_sum(v for _, v in profile)
+    profile = dense_profile if dense_profile is not None else profile
+    total = dense_total if dense_total is not None else _rust_sum(v for _, v in profile)
     bins = max(2, min(200, bins))
-    if len(profile) > bins:
+    if dense_profile is None and len(profile) > bins:
         lo, hi = profile[0][0], profile[-1][0]
         size = (hi - lo) / bins
         volumes = [0.0] * bins

@@ -9,9 +9,18 @@ from fastapi.testclient import TestClient
 
 from aipriceaction_api.analysis import Analysis, _jdk_lookback_limit
 from aipriceaction_api.app import create_app
-from aipriceaction_api.calculations import enhance, jdk, jdk_many, moving_average, volume_profile
+from aipriceaction_api.calculations import (
+    enhance,
+    jdk,
+    jdk_many,
+    moving_average,
+    numpy_numeric_orders,
+    numpy_sequential_sum,
+    volume_profile,
+)
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import (
+    PERIODS,
     Candle,
     DataError,
     date_bounds,
@@ -571,6 +580,142 @@ def test_top_performer_ties_preserve_input_order_in_both_directions():
     assert [row["symbol"] for row in response["data"]["worst_performers"]] == ["FPT", "VCB"]
 
 
+def test_numpy_analysis_order_matches_python_for_large_tied_and_missing_metrics():
+    rows = [
+        {
+            "symbol": f"S{index % 17:02d}",
+            "source": ("vn", "yahoo", "crypto")[index % 3],
+            "metric": None if index % 11 == 0 else float((index % 7) - 3),
+        }
+        for index in range(200)
+    ]
+    orders = numpy_numeric_orders(rows, "metric")
+
+    assert orders is not None
+    expected_desc = sorted(
+        range(len(rows)), key=lambda index: (rows[index]["symbol"], rows[index]["source"])
+    )
+    expected_desc.sort(
+        key=lambda index: (
+            rows[index]["metric"] is not None,
+            rows[index]["metric"] or 0,
+        ),
+        reverse=True,
+    )
+    expected_asc = sorted(
+        range(len(rows)), key=lambda index: (rows[index]["symbol"], rows[index]["source"])
+    )
+    expected_asc.sort(
+        key=lambda index: (
+            rows[index]["metric"] is not None,
+            rows[index]["metric"] or 0,
+        )
+    )
+
+    assert orders == (expected_desc, expected_asc)
+
+
+def test_numpy_performers_order_matches_python_for_large_universe():
+    analysis = Analysis(FakeHistory({}), rrg_catalog())
+    rows = [
+        (
+            ("vn", "yahoo", "crypto")[index % 3],
+            {
+                "symbol": f"SYM{index:04d}",
+                "time": "2024-01-01",
+                "close": 100 + index,
+                "volume": 1000,
+                "close_changed": None if index % 13 == 0 else float((index % 19) - 9),
+            },
+        )
+        for index in range(200)
+    ]
+    analysis.latest = lambda *_args: rows
+
+    response = analysis.performers(mode="all", min_volume=0, limit=10)
+
+    converted = []
+    for source, row in rows:
+        converted.append(
+            {
+                "symbol": row["symbol"],
+                "close": row["close"],
+                "volume": row["volume"],
+                "close_changed": row["close_changed"],
+                "volume_changed": None,
+                **{f"ma{period}": None for period in PERIODS},
+                **{f"ma{period}_score": None for period in PERIODS},
+                "sector": None,
+                "total_money_changed": None,
+                "source": source,
+            }
+        )
+
+    def tie_breaker(row):
+        return row["symbol"], row.get("source", "")
+
+    def metric(row):
+        return row["close_changed"] is not None, row["close_changed"] or 0
+
+    expected_desc = sorted(converted, key=tie_breaker)
+    expected_desc.sort(key=metric, reverse=True)
+    expected_asc = sorted(converted, key=tie_breaker)
+    expected_asc.sort(key=metric)
+
+    assert response["data"]["performers"] == expected_desc[:10]
+    assert response["data"]["worst_performers"] == expected_asc[:10]
+
+
+def test_numpy_sector_aggregation_matches_rust_sequential_mean_and_ties():
+    catalog = rrg_catalog()
+    symbols = [f"S{index:03d}" for index in range(100)]
+    catalog.files["ticker_group.json"] = {"Large": symbols}
+    catalog.groups_by_source["vn"] = {"Large": symbols}
+    history = FakeHistory({})
+    analysis = Analysis(history, catalog)
+    rows = [
+        (
+            "vn",
+            {
+                "symbol": symbol,
+                "close": 100 + index,
+                "volume": 1000,
+                "ma20": 90 + index,
+                "ma20_score": float((index % 9) - 4),
+                "close_changed": None,
+                "volume_changed": None,
+            },
+        )
+        for index, symbol in enumerate(symbols)
+    ]
+    analysis.latest = lambda *_args: rows
+
+    response = analysis.sectors(mode="vn", ma_period=20, top_per_sector=10)
+    sector = response["data"]["sectors"][0]
+    expected_sum = 0.0
+    for _source, row in rows:
+        expected_sum += row["ma20_score"]
+
+    assert sector["average_score"] == expected_sum / len(rows)
+    expected_top = sorted(
+        (row for _source, row in rows),
+        key=lambda row: (-row["ma20_score"], row["symbol"], ""),
+    )[:10]
+    assert [row["symbol"] for row in sector["top_stocks"]] == [
+        row["symbol"] for row in expected_top
+    ]
+
+
+def test_numpy_sequential_sum_matches_left_to_right_float_sum():
+    values = [(-1.0) ** index * (10.0 ** (index % 11)) for index in range(1000)]
+    actual = numpy_sequential_sum(values)
+
+    expected = 0.0
+    for value in values:
+        expected += value
+    assert actual == expected
+
+
 def test_indicator_arithmetic_matches_rust_operation_order():
     earlier_close = 84743.37369372326
     later_close = 13436.424411240123
@@ -743,6 +888,17 @@ def test_jdk_numpy_batch_matches_scalar_window_sums(period):
     actual = jdk_many(series, period)
 
     assert actual == [jdk(security, benchmark, period) for security, benchmark in series]
+
+
+@pytest.mark.parametrize("count", [1, 2, 7])
+def test_jdk_numpy_batch_uses_vector_kernel_for_small_universes(count):
+    series = []
+    for _index in range(count):
+        security = [100 + position * 0.13 + (position % 5) * 0.07 for position in range(90)]
+        benchmark = [1000 + position * 0.37 + (position % 11) * 0.19 for position in range(90)]
+        series.append((security, benchmark))
+
+    assert jdk_many(series, 10) == [jdk(security, benchmark, 10) for security, benchmark in series]
 
 
 def test_jdk_sparse_symbol_expands_both_security_and_benchmark_history():
@@ -1163,6 +1319,47 @@ def test_volume_profile_numpy_path_matches_sequential_integer_tick_sums():
         math.floor(level["price"] / 0.01 + 0.5): level["volume"] for level in result["profile"]
     }
     assert actual == expected
+
+
+def test_volume_profile_numpy_bins_match_sequential_python_bins():
+    origin = parse_time("2024-02-01T02:30:00Z")
+    rows = []
+    for index in range(2500):
+        center = 1000 + index * 0.1
+        rows.append(
+            Candle(
+                "vn",
+                "VNINDEX",
+                "1m",
+                origin + index * 60,
+                center,
+                center + 0.03,
+                center - 0.03,
+                center,
+                100 + index % 7,
+            )
+        )
+
+    actual = volume_profile(rows, "VNINDEX", "vn", bins=20)
+
+    distribution = {}
+    for row in sorted(rows, key=lambda item: item.time, reverse=True):
+        low = math.floor(row.low / 0.01 + 0.5)
+        high = math.floor(row.high / 0.01 + 0.5)
+        share = row.volume / (high - low + 1)
+        for index in range(low, high + 1):
+            distribution[index] = distribution.get(index, 0.0) + share
+    raw_profile = sorted((index * 0.01, volume) for index, volume in distribution.items())
+    low_price, high_price = raw_profile[0][0], raw_profile[-1][0]
+    size = (high_price - low_price) / 20
+    binned = [0.0] * 20
+    for price, volume in raw_profile:
+        binned[min(19, int((price - low_price) / size))] += volume
+    expected = [
+        (low_price + (index + 0.5) * size, volume) for index, volume in enumerate(binned) if volume
+    ]
+
+    assert [(level["price"], level["volume"]) for level in actual["profile"]] == expected
 
 
 @pytest.fixture

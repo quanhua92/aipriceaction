@@ -21,7 +21,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 
-HOME_PAGE_URLS = (
+CORE_HOME_PAGE_URLS = (
     "/tickers?limit=1&ma=true&ema=true&mode=vn&format=csv",
     "/tickers?limit=1&ma=true&ema=true&mode=crypto&format=csv",
     "/tickers?limit=1&ma=true&ema=true&mode=yahoo&format=csv",
@@ -50,6 +50,7 @@ EXTRA_BROWSER_URLS = (
     "/tickers?symbol=VIC&interval=1D&limit=512&mode=all&ema=true&format=csv",
     "/analysis/volume-profile?symbol=VNINDEX&date=2026-10-21&bins=10&mode=all",
 )
+HOME_PAGE_URLS = CORE_HOME_PAGE_URLS + EXTRA_BROWSER_URLS
 TICKER_CASES = tuple(
     f"/tickers?limit=1&ma={ma}&ema={ema}&mode={source}&format=csv"
     for source in ("vn", "crypto", "yahoo")
@@ -81,11 +82,16 @@ ANALYSIS_CASES = (
     "/analysis/rrg?algorithm=mascore&mode=vn&trails=5&min_volume=1000&date=2026-10-21&ema=true&snap=false",
     "/analysis/volume-profile?symbol=VNINDEX&date=2026-10-21&bins=10&mode=vn",
 )
-READ_ENDPOINT_CASES = TICKER_CASES + HOME_PAGE_URLS + EXTRA_BROWSER_URLS + ANALYSIS_CASES + (
-    "/tickers/info?ticker=VCB",
-    "/tickers/info",
-    "/tickers/group?mode=all",
-    "/tickers/name?mode=all",
+READ_ENDPOINT_CASES = (
+    TICKER_CASES
+    + HOME_PAGE_URLS
+    + ANALYSIS_CASES
+    + (
+        "/tickers/info?ticker=VCB",
+        "/tickers/info",
+        "/tickers/group?mode=all",
+        "/tickers/name?mode=all",
+    )
 )
 
 
@@ -179,6 +185,7 @@ async def benchmark(args):
     async with httpx.AsyncClient(
         timeout=timeout,
         limits=limits,
+        headers={"accept-encoding": args.accept_encoding},
         trust_env=False,
         follow_redirects=False,
     ) as client:
@@ -229,6 +236,7 @@ async def benchmark(args):
         "base_url": base_url,
         "request_count": len(requests),
         "concurrency": args.concurrency,
+        "accept_encoding": args.accept_encoding,
         "response_cache_bypassed": args.bypass_response_cache,
         "instant_target_ms": args.instant_ms,
         "page_wall_ms": wall_ms,
@@ -256,6 +264,11 @@ if __name__ == "__main__":
         help="Local API origin and optional Vite proxy prefix",
     )
     parser.add_argument("--concurrency", type=int, default=len(HOME_PAGE_URLS))
+    parser.add_argument(
+        "--accept-encoding",
+        default="gzip, deflate, br",
+        help="Request compression encoding; use identity to isolate server compression cost",
+    )
     parser.add_argument("--timeout", type=int, default=45)
     parser.add_argument(
         "--instant-ms",
