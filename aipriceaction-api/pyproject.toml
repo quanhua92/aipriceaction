@@ -13,6 +13,7 @@ dependencies = [
   "boto3>=1.35,<2",
   "python-dotenv>=1,<2",
   "redis>=5,<9",
+  "numpy>=2.2,<3",
 ]
 
 [project.scripts]

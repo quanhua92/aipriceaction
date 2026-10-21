@@ -156,6 +156,50 @@ def test_reads_for_distinct_checksums_can_overlap(tmp_path, monkeypatch):
     assert eviction_calls == 1
 
 
+def test_read_session_reuses_one_duckdb_connection_for_archive_objects(tmp_path, monkeypatch):
+    import aipriceaction_api.archive as archive_module
+
+    cache_dir = tmp_path / "cache"
+    object_dir = tmp_path / "objects"
+    object_dir.mkdir()
+    settings = _cache_settings(cache_dir)
+    writer = Archive(None, settings, store=object())
+    objects = []
+    for index, symbol in enumerate(("AAA", "BBB"), start=1):
+        object_path = object_dir / f"{symbol}.parquet"
+        row = Candle(
+            "vn", symbol, "1D", index * 86400, 10, 11, 9, 10, 100, "fixture", "revision", 1
+        )
+        writer._write([row], object_path)
+        objects.append(
+            {
+                "checksum": sha256(object_path),
+                "object_key": object_path.name,
+                "source": "vn",
+                "symbol": symbol,
+                "interval": "1D",
+                "revision": "revision",
+                "provider": "fixture",
+            }
+        )
+
+    archive = Archive(None, settings, store=FileStore(object_dir))
+    original_connect = archive_module.duckdb.connect
+    connection_count = 0
+
+    def counted_connect(**kwargs):
+        nonlocal connection_count
+        connection_count += 1
+        return original_connect(**kwargs)
+
+    monkeypatch.setattr(archive_module.duckdb, "connect", counted_connect)
+    with archive.read_session():
+        rows = [archive.read(obj) for obj in objects]
+
+    assert [result[0].symbol for result in rows] == ["AAA", "BBB"]
+    assert connection_count == 1
+
+
 def test_eviction_skips_an_object_during_archive_read_in_another_process(tmp_path, monkeypatch):
     import aipriceaction_api.archive as archive_module
 

@@ -1,7 +1,7 @@
 import math
 from datetime import UTC, datetime
 
-from .calculations import _rust_sum, enhance, enhance_selected, jdk, volume_profile
+from .calculations import _rust_sum, enhance_selected, jdk, volume_profile
 from .domain import PERIODS, DataError, date_bounds, format_chrono_date, parse_time
 from .redis_snapshots import (
     joined_snapshot_record,
@@ -63,6 +63,19 @@ def _is_vn_ticker(symbol):
         and symbol.isascii()
         and all("A" <= character <= "Z" for character in symbol)
     )
+
+
+def _jdk_lookback_limit(period, trails, ema):
+    """Return enough raw bars for JDK's requested recent points.
+
+    JDK uses finite rolling windows. Its last ``trails`` points depend only on
+    the latest ``3 * period + trails - 2`` aligned closes, with a minimum of
+    ``3 * period + 1`` bars for the algorithm's existing validity check.
+    Keep Rust's larger limit as the cap for sparse histories and fallback reads.
+    """
+    rust_limit = 250 + (600 if ema else 200)
+    required = max(3 * period + 1, 3 * period + max(0, trails) - 2)
+    return min(rust_limit, required)
 
 
 class Analysis:
@@ -611,9 +624,16 @@ class Analysis:
                 for ticker in self.history.repo.tickers(["sjc"])
             )
         bench = None
+        jdk_full_limit = 250 + (600 if ema else 200)
+        jdk_source = None
         if algorithm == "jdk":
             benchmark_found = False
-            jdk_limit = 250 + (600 if ema else 200)
+            compact_jdk_history = redis_client is None and hasattr(self.history, "read_many")
+            jdk_limit = (
+                _jdk_lookback_limit(period, trails, ema)
+                if compact_jdk_history
+                else jdk_full_limit
+            )
             source_order = _RRG_SOURCE_ORDER.get(mode, ())
             active_sources = [
                 source
@@ -627,6 +647,7 @@ class Analysis:
                     continue
                 if candidate:
                     benchmark_found = True
+                    jdk_source = src
                     bench = {r.time: r.close for r in candidate if r.close}
                     break
             if not benchmark_found:
@@ -666,6 +687,54 @@ class Analysis:
                 batch_raw_rows.update(
                     {(source, symbol): rows for symbol, rows in loaded.items()}
                 )
+
+            if algorithm == "jdk":
+                # The last RRG trail points use finite rolling windows, so the
+                # common case needs only a short tail. If missing sessions or
+                # sparse sources leave too few benchmark-aligned bars, retain
+                # the full Rust lookback for just those symbols.
+                required_aligned = _jdk_lookback_limit(period, trails, ema)
+                fallback_by_source = {}
+                for ticker in universe:
+                    source, symbol = ticker["source"], ticker["symbol"]
+                    if symbol == benchmark or symbol.upper() in _RRG_INDEXES:
+                        continue
+                    rows = batch_raw_rows.get((source, symbol))
+                    if isinstance(rows, Exception) or not rows:
+                        continue
+                    if sum(row.time in bench for row in rows) < required_aligned:
+                        fallback_by_source.setdefault(source, []).append(symbol)
+                if fallback_by_source and jdk_source is not None:
+                    # A sparse security may need earlier aligned dates than
+                    # the short benchmark tail contains. Expand both sides so
+                    # those symbols can retain the full Rust lookback parity.
+                    expanded_benchmark = self.history.read_many(
+                        jdk_source,
+                        [benchmark],
+                        "1D",
+                        end=end,
+                        limit=jdk_full_limit,
+                        return_exceptions=True,
+                    ).get(benchmark)
+                    if expanded_benchmark and not isinstance(expanded_benchmark, Exception):
+                        batch_raw_rows[(jdk_source, benchmark)] = expanded_benchmark
+                        bench = {
+                            row.time: row.close
+                            for row in expanded_benchmark
+                            if row.close
+                        }
+                for source, symbols in fallback_by_source.items():
+                    expanded = self.history.read_many(
+                        source,
+                        list(dict.fromkeys(symbols)),
+                        "1D",
+                        end=end,
+                        limit=jdk_full_limit,
+                        return_exceptions=True,
+                    )
+                    batch_raw_rows.update(
+                        {(source, symbol): rows for symbol, rows in expanded.items()}
+                    )
 
         def analyze_ticker(ticker):
             symbol, source = ticker["symbol"], ticker["source"]
@@ -719,30 +788,58 @@ class Analysis:
                     latest_volume = latest["volume"]
                     points = [{"date": latest["time"], "rs_ratio": x, "rs_momentum": y}]
                 else:
-                    enhanced = enhance(rows, "1D", True, ema)
-                    x = next(
-                        (
-                            row.get("ma20_score")
-                            for row in reversed(enhanced)
-                            if row.get("ma20_score") is not None
-                        ),
-                        None,
+                    selected_count = max(1, trails)
+                    first_selected = max(0, len(rows) - selected_count)
+                    selected = enhance_selected(
+                        rows,
+                        "1D",
+                        range(first_selected, len(rows)),
+                        True,
+                        ema,
+                        periods=(20, 100),
                     )
-                    y = next(
-                        (
-                            row.get("ma100_score")
-                            for row in reversed(enhanced)
-                            if row.get("ma100_score") is not None
-                        ),
-                        None,
-                    )
+                    latest_enhanced = selected[-1]
+                    x = latest_enhanced.get("ma20_score")
+                    y = latest_enhanced.get("ma100_score")
+                    if x is None or y is None:
+                        # Preserve Rust-compatible fallback for instruments
+                        # whose latest MA is absent (for example a futures
+                        # series with non-positive prices). This is uncommon;
+                        # ordinary positive-price histories need only enhance
+                        # the requested trail window.
+                        full = enhance_selected(
+                            rows,
+                            "1D",
+                            range(len(rows)),
+                            True,
+                            ema,
+                            periods=(20, 100),
+                        )
+                        if x is None:
+                            x = next(
+                                (
+                                    row.get("ma20_score")
+                                    for row in reversed(full)
+                                    if row.get("ma20_score") is not None
+                                ),
+                                None,
+                            )
+                        if y is None:
+                            y = next(
+                                (
+                                    row.get("ma100_score")
+                                    for row in reversed(full)
+                                    if row.get("ma100_score") is not None
+                                ),
+                                None,
+                            )
                     points = [
                         {
                             "date": r["time"],
                             "rs_ratio": r.get("ma20_score", x),
                             "rs_momentum": r.get("ma100_score", y),
                         }
-                        for r in enhanced
+                        for r in selected
                     ]
                     latest_close = rows[-1].close
                     latest_volume = rows[-1].volume

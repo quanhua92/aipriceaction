@@ -3,10 +3,11 @@ import logging
 import math
 import threading
 import time
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 
-from .calculations import aggregate, enhance, enhance_selected
+from .calculations import aggregate, enhance, enhance_latest_many, enhance_selected
 from .data_loading import SQLiteDataLoader
 from .domain import (
     INDEXES,
@@ -280,25 +281,28 @@ class History:
             source, symbols, iv, start=start, end=end, limit=limit, forward=forward
         )
         results = {}
-        for symbol in symbols:
-            try:
-                results[symbol] = self._read_loaded(
-                    source,
-                    symbol,
-                    iv,
-                    start=start,
-                    end=end,
-                    limit=limit,
-                    forward=forward,
-                    revision=revision,
-                    ignore_pending_repairs=ignore_pending_repairs,
-                    ignore_history_gaps=ignore_history_gaps,
-                    loaded=loaded,
-                )
-            except Exception as exc:
-                if not return_exceptions:
-                    raise
-                results[symbol] = exc
+        read_session = getattr(self.archive, "read_session", None)
+        session = read_session() if callable(read_session) else nullcontext()
+        with session:
+            for symbol in symbols:
+                try:
+                    results[symbol] = self._read_loaded(
+                        source,
+                        symbol,
+                        iv,
+                        start=start,
+                        end=end,
+                        limit=limit,
+                        forward=forward,
+                        revision=revision,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                        ignore_history_gaps=ignore_history_gaps,
+                        loaded=loaded,
+                    )
+                except Exception as exc:
+                    if not return_exceptions:
+                        raise
+                    results[symbol] = exc
         return results
 
     def _read_loaded(
@@ -1353,6 +1357,150 @@ class History:
         result = enhance(rows, iv, ma, ema)
         return result[-len(target) :]
 
+    def _query_many_latest_ma(
+        self,
+        source,
+        symbols,
+        iv,
+        context_limit,
+        ema,
+        redis,
+        ignore_pending_repairs,
+        return_exceptions,
+    ):
+        """Fast latest MA rows while retaining archive and data-quality policy."""
+        loaded = self.data_loader.load_many(
+            source,
+            symbols,
+            iv,
+            limit=context_limit,
+            forward=False,
+            compact_tail=True,
+        )
+        safe_contexts = {}
+        safe_closes = {}
+        fallback_symbols = []
+        results = {}
+        latest_read_upper = int(time.time())
+
+        for symbol in symbols:
+            tail = loaded.compact_tails.get(symbol)
+            if tail is None:
+                if loaded.archives[symbol] or loaded.gaps[symbol] or loaded.adoptions[symbol]:
+                    fallback_symbols.append(symbol)
+                else:
+                    results[symbol] = []
+                continue
+
+            local = loaded.local[symbol]
+            primary_archives = [
+                record
+                for record in loaded.archives[symbol]
+                if record["status"] != "historical_snapshot"
+            ]
+            needs_fallback = bool(loaded.adoptions[symbol] or loaded.volume_corrections[symbol])
+            if not local:
+                needs_fallback |= bool(primary_archives or loaded.gaps[symbol])
+            else:
+                latest_time = local[-1].time
+                complete_context = len(tail.closes) >= context_limit
+                lower = tail.oldest_time if complete_context else None
+                for record in primary_archives:
+                    if (
+                        ignore_pending_repairs
+                        and record["status"] == "pending_repair"
+                        and record["end"] < latest_time
+                    ):
+                        continue
+                    if not complete_context or record["end"] >= lower:
+                        needs_fallback = True
+                        break
+                if any(
+                    (lower is None or gap["end"] >= lower)
+                    and gap["start"] <= latest_read_upper
+                    for gap in loaded.gaps[symbol]
+                ):
+                    needs_fallback = True
+
+            if needs_fallback or tail.mixed_revision or tail.mixed_provider:
+                fallback_symbols.append(symbol)
+                continue
+            safe_contexts[symbol] = local
+            safe_closes[symbol] = tail.closes
+
+        results.update(
+            enhance_latest_many(safe_contexts, safe_closes, iv, ma=True, ema=ema)
+        )
+        if fallback_symbols:
+            try:
+                fallback_contexts = self.read_many(
+                    source,
+                    fallback_symbols,
+                    iv,
+                    limit=context_limit,
+                    forward=False,
+                    ignore_pending_repairs=ignore_pending_repairs,
+                    return_exceptions=True,
+                )
+            except Exception:
+                # If batch metadata itself is invalid, preserve per-symbol
+                # isolation by using the established query path for this rare
+                # malformed-state case.
+                fallback_contexts = {}
+                for symbol in fallback_symbols:
+                    try:
+                        results[symbol] = self.query(
+                            source,
+                            symbol,
+                            iv,
+                            start=None,
+                            end=None,
+                            limit=1,
+                            ma=True,
+                            ema=ema,
+                            redis=redis,
+                            strict_source_intervals=True,
+                            ignore_pending_repairs=ignore_pending_repairs,
+                        )
+                    except Exception as exc:
+                        if not return_exceptions:
+                            raise
+                        results[symbol] = exc
+            for symbol in fallback_symbols:
+                if symbol not in fallback_contexts:
+                    continue
+                context = fallback_contexts[symbol]
+                if isinstance(context, Exception):
+                    # The established per-symbol path can shorten MA warmup
+                    # around a history gap. A bulk read cannot make that
+                    # choice independently for each symbol, so retry this
+                    # exceptional identity through the compatibility path.
+                    try:
+                        results[symbol] = self.query(
+                            source,
+                            symbol,
+                            iv,
+                            start=None,
+                            end=None,
+                            limit=1,
+                            ma=True,
+                            ema=ema,
+                            redis=redis,
+                            strict_source_intervals=True,
+                            ignore_pending_repairs=ignore_pending_repairs,
+                        )
+                    except Exception as exc:
+                        if not return_exceptions:
+                            raise
+                        results[symbol] = exc
+                elif context:
+                    results[symbol] = enhance_selected(
+                        context, iv, [len(context) - 1], ma=True, ema=ema
+                    )
+                else:
+                    results[symbol] = []
+        return results
+
     def query_many(
         self,
         source,
@@ -1420,6 +1568,17 @@ class History:
             if redis and retained > 0
             else raw_limit
         )
+        if limit == 1 and ma:
+            return self._query_many_latest_ma(
+                source,
+                symbols,
+                iv,
+                context_limit,
+                ema,
+                redis,
+                ignore_pending_repairs,
+                return_exceptions,
+            )
         contexts = self.read_many(
             source,
             symbols,
@@ -1430,6 +1589,20 @@ class History:
             return_exceptions=True,
         )
         results = {}
+        vectorized_latest = {}
+        if limit == 1:
+            safe_contexts = {
+                symbol: context
+                for symbol, context in contexts.items()
+                if isinstance(context, list) and context
+            }
+            vectorized_latest = enhance_latest_many(
+                safe_contexts,
+                {symbol: [row.close for row in rows] for symbol, rows in safe_contexts.items()},
+                iv,
+                ma=ma,
+                ema=ema,
+            )
         for symbol in symbols:
             context = contexts[symbol]
             if isinstance(context, Exception):
@@ -1453,6 +1626,8 @@ class History:
                     results[symbol] = exc
             elif not context:
                 results[symbol] = []
+            elif limit == 1:
+                results[symbol] = vectorized_latest[symbol]
             else:
                 first = max(0, len(context) - limit)
                 results[symbol] = enhance_selected(

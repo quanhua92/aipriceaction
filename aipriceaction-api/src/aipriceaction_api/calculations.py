@@ -122,7 +122,7 @@ def enhance(rows, iv, ma=True, ema=False):
     return result
 
 
-def enhance_selected(rows, iv, indices, ma=True, ema=False):
+def enhance_selected(rows, iv, indices, ma=True, ema=False, periods=None):
     """Enhance selected row positions without materializing discarded outputs.
 
     Indicator seeds and recurrence use the same ordered floating-point
@@ -139,7 +139,8 @@ def enhance_selected(rows, iv, indices, ma=True, ema=False):
     averages = {}
     if ma:
         closes = [row.close for row in rows]
-        for period in PERIODS:
+        selected_periods = PERIODS if periods is None else tuple(periods)
+        for period in selected_periods:
             selected = {}
             if ema:
                 seed_count = min(period, len(closes))
@@ -197,6 +198,97 @@ def enhance_selected(rows, iv, indices, ma=True, ema=False):
                 out["total_money_changed"] = (row.close - previous.close) * current_volume
         result_by_index[index] = out
     return [result_by_index[index] for index in indices]
+
+
+def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False):
+    """Enhance one latest candle per symbol, vectorizing indicator work.
+
+    The SQLite loader supplies only the latest candle pair plus compact close
+    histories. NumPy processes the same time-ordered floating-point recurrence
+    across ticker columns, avoiding a Python Candle object and result dict for
+    every warmup bar.
+    """
+    import numpy as np
+
+    symbols = [symbol for symbol, rows in contexts.items() if rows and closes_by_symbol.get(symbol)]
+    if not symbols:
+        return {}
+    lengths = np.fromiter(
+        (len(closes_by_symbol[symbol]) for symbol in symbols), dtype=np.int64, count=len(symbols)
+    )
+    max_length = int(lengths.max())
+    closes = np.zeros((len(symbols), max_length), dtype=np.float64)
+    for index, symbol in enumerate(symbols):
+        values = closes_by_symbol[symbol]
+        if len(values) != lengths[index]:
+            raise ValueError(f"Close context length differs for {symbol}")
+        closes[index, : len(values)] = values
+
+    averages = {}
+    if ma:
+        for period in PERIODS:
+            state = np.zeros(len(symbols), dtype=np.float64)
+            if ema:
+                seed_count = np.minimum(lengths, period)
+                totals = np.zeros(len(symbols), dtype=np.float64)
+                multiplier = 2 / (period + 1)
+                decay = 1 - multiplier
+                for position in range(max_length):
+                    seeding = seed_count > position
+                    totals[seeding] += closes[seeding, position]
+                    seeded = seed_count == position + 1
+                    state[seeded] = totals[seeded] / seed_count[seeded]
+                    recurring = (lengths > position) & (seed_count <= position)
+                    state[recurring] = (
+                        closes[recurring, position] * multiplier
+                        + state[recurring] * decay
+                    )
+            else:
+                starts = np.maximum(0, lengths - period)
+                totals = np.zeros(len(symbols), dtype=np.float64)
+                for position in range(max_length):
+                    included = (position >= starts) & (position < lengths)
+                    totals[included] += closes[included, position]
+                state = totals / np.minimum(lengths, period)
+            averages[period] = state
+
+    result = {}
+    for index, symbol in enumerate(symbols):
+        rows = contexts[symbol]
+        current = rows[-1]
+        dt = datetime.fromtimestamp(current.time, UTC)
+        output = {
+            "symbol": current.symbol,
+            "time": dt.strftime(
+                "%Y-%m-%d" if iv in ("1D", "1W", "2W", "1M") else "%Y-%m-%dT%H:%M:%S"
+            ),
+            "open": current.open,
+            "high": current.high,
+            "low": current.low,
+            "close": current.close,
+            "volume": current.volume,
+        }
+        for period, values in averages.items():
+            value = float(values[index])
+            if value > 0:
+                output[f"ma{period}"] = value
+                output[f"ma{period}_score"] = ((current.close - value) / value) * 100
+        if len(rows) > 1:
+            previous = rows[-2]
+            if previous.close > 0:
+                output["close_changed"] = ((current.close - previous.close) / previous.close) * 100
+            current_volume = float(current.volume)
+            previous_volume = float(previous.volume)
+            if previous_volume > 0:
+                output["volume_changed"] = (
+                    (current_volume - previous_volume) / previous_volume
+                ) * 100
+            if previous.close > 0:
+                output["total_money_changed"] = (
+                    (current.close - previous.close) * current_volume
+                )
+        result[symbol] = [output]
+    return result
 
 
 def wma(values, p):

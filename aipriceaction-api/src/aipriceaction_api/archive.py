@@ -177,8 +177,35 @@ class Archive:
             if settings.archive_backend == "filesystem"
             else S3Store(settings)
         )
+        self._duckdb_local = threading.local()
         self._cache_eviction_guard = threading.Lock()
         self._cache_needs_check = True
+
+    @contextmanager
+    def read_session(self):
+        """Reuse one DuckDB connection across a synchronous history batch."""
+        existing = getattr(self._duckdb_local, "connection", None)
+        if existing is not None:
+            yield existing
+            return
+
+        connection = duckdb.connect(config={"threads": 1, "memory_limit": "256MB"})
+        self._duckdb_local.connection = connection
+        try:
+            yield connection
+        finally:
+            del self._duckdb_local.connection
+            connection.close()
+
+    @contextmanager
+    def _read_connection(self):
+        """Use the active batch connection or own a one-object connection."""
+        current = getattr(self._duckdb_local, "connection", None)
+        if current is not None:
+            yield current
+            return
+        with duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as connection:
+            yield connection
 
     @contextmanager
     def _cache_lock(self, name, blocking=True):
@@ -374,7 +401,7 @@ class Archive:
                     query += " LIMIT ?"
                     args.append(limit)
                 try:
-                    with duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as con:
+                    with self._read_connection() as con:
                         cursor = con.execute(query, args)
                         columns = [c[0] for c in cursor.description]
                         fetched = cursor.fetchall()
@@ -399,6 +426,12 @@ class Archive:
                 ):
                     raise DataError("Archive identity/revision mismatch")
         except BaseException:
+            connection = getattr(self._duckdb_local, "connection", None)
+            if connection is not None:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
             # Keep the original read error if eviction also fails. The shared
             # marker remains available for the next cache operation to retry.
             try:

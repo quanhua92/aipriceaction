@@ -43,6 +43,7 @@ from .redis_snapshots import (
     validate_stock_data_rows,
     write_redis_snapshot,
 )
+from .request_coalescing import AsyncSingleFlight
 from .response_cache import TickersResponseCache
 from .responses import (
     TICKER_JSON_FIELDS,
@@ -1697,6 +1698,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
     catalog = Catalog(settings)
     analysis = Analysis(history, catalog)
     responses = TickersResponseCache(ttl=settings.cache_ttl)
+    in_flight_reads = AsyncSingleFlight()
     started = time.monotonic()
     health_snapshot = {"tickers": 0, "active_tickers": 0, "records": {}, "last_sync": {}}
     executor = None
@@ -1809,6 +1811,20 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
 
         future.add_done_callback(release)
         return await asyncio.wrap_future(future, loop=loop)
+
+    async def coalesced_background(key, func, *args, priority=False):
+        """Share active identical read work while keeping waiter cancellation local."""
+
+        async def execute():
+            # The shared worker must not inherit one request's disconnect event:
+            # other waiters may still need the same in-progress result.
+            token = request_cancelled.set(None)
+            try:
+                return await background(func, *args, priority=priority)
+            finally:
+                request_cancelled.reset(token)
+
+        return await in_flight_reads.run((key, priority), execute)
 
     async def refresh_health_snapshot():
         while True:
@@ -2861,7 +2877,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 return data, route_tag, first_meta
 
             try:
-                data, tag, redis_meta = await background(load)
+                data, tag, redis_meta = await coalesced_background(
+                    ("tickers", key, params.redis, params.snap), load
+                )
             except sqlite3.Error:
                 # Rust's ticker SQL helpers turn PostgreSQL query failures and
                 # timeouts during catalog resolution into an empty successful
@@ -2960,7 +2978,10 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             ),
         ] = "vn",
     ):
-        return sort_json_value_keys(await background(catalog.groups, mode(mode_value)))
+        # Catalog JSON is immutable for this process and cached after first
+        # access. Keep this tiny metadata read off the bounded market-data pool
+        # so multi-ticker bursts cannot queue it behind calculations.
+        return sort_json_value_keys(catalog.groups(mode(mode_value)))
 
     @app.get("/tickers/name")
     async def names(
@@ -2972,7 +2993,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             ),
         ] = "vn",
     ):
-        return sort_json_value_keys(await background(catalog.names, mode(mode_value)))
+        return sort_json_value_keys(catalog.names(mode(mode_value)))
 
     @app.get("/tickers/info")
     async def info(ticker: OptionalString = None):
@@ -3065,7 +3086,20 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         sector: str | None = None,
         snap: SnapBoolean = True,
     ):
-        return await background(
+        key = (
+            "analysis/top-performers",
+            mode(mode_value),
+            date,
+            ema,
+            sort_by,
+            direction,
+            10 if limit is None else limit,
+            10000 if min_volume is None else min_volume,
+            sector,
+            snap,
+        )
+        return await coalesced_background(
+            key,
             analysis.performers,
             mode(mode_value),
             date,
@@ -3095,7 +3129,19 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         top_per_sector: OptionalUnsigned64 = None,
         snap: SnapBoolean = True,
     ):
-        return await background(
+        key = (
+            "analysis/ma-scores-by-sector",
+            mode(mode_value),
+            date,
+            ema,
+            ma_period,
+            min_score,
+            above_threshold_only,
+            10 if top_per_sector is None else top_per_sector,
+            snap,
+        )
+        return await coalesced_background(
+            key,
             analysis.sectors,
             mode(mode_value),
             date,
@@ -3125,7 +3171,18 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         bins: OptionalUnsigned64 = None,
         value_area_pct: OptionalFloat = None,
     ):
-        return await background(
+        key = (
+            "analysis/volume-profile",
+            symbol,
+            mode_value,
+            date,
+            start_date,
+            end_date,
+            50 if bins is None else bins,
+            70 if value_area_pct is None else value_area_pct,
+        )
+        return await coalesced_background(
+            key,
             analysis.profile,
             symbol,
             mode_value,
@@ -3154,7 +3211,20 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         min_volume: Signed64 = 100000,
         snap: SnapBoolean = True,
     ):
-        return await background(
+        key = (
+            "analysis/rrg",
+            mode(mode_value),
+            date,
+            ema,
+            algorithm,
+            benchmark,
+            period,
+            trails,
+            min_volume,
+            snap,
+        )
+        return await coalesced_background(
+            key,
             analysis.rrg,
             mode(mode_value),
             date,

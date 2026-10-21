@@ -6,9 +6,9 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
-from aipriceaction_api.analysis import Analysis
+from aipriceaction_api.analysis import Analysis, _jdk_lookback_limit
 from aipriceaction_api.app import create_app
-from aipriceaction_api.calculations import enhance, moving_average, volume_profile
+from aipriceaction_api.calculations import enhance, jdk, moving_average, volume_profile
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import (
     Candle,
@@ -710,6 +710,100 @@ def test_rrg_jdk_defaults_vnindex_latest_and_last_aligned_close():
     assert response["data"]["benchmark"] == "VNINDEX"
     assert ticker["close"] == security[-2].close
     assert ticker["volume"] == security[-1].volume
+
+
+@pytest.mark.parametrize("period,trails", [(4, 0), (10, 5), (20, 20), (50, 120)])
+def test_jdk_recent_trails_match_full_history_with_finite_lookback(period, trails):
+    count = 900
+    benchmark = [1000 + i * 0.37 + (i % 11) * 0.19 for i in range(count)]
+    security = [100 + i * 0.11 + (i % 7) * 0.23 for i in range(count)]
+    full = jdk(security, benchmark, period)
+    limit = _jdk_lookback_limit(period, trails, ema=True)
+
+    assert jdk(security[-limit:], benchmark[-limit:], period)[-max(1, trails) :] == full[
+        -max(1, trails) :
+    ]
+
+
+def test_jdk_sparse_symbol_expands_both_security_and_benchmark_history():
+    benchmark = daily_rows("vn", "VNINDEX", count=100, start=1000)
+    security = [
+        row
+        for index, row in enumerate(daily_rows("vn", "VCB", count=100, start=100))
+        if index not in {95, 96, 97, 98, 99}
+    ]
+
+    class ReadManyHistory(FakeHistory):
+        def __init__(self, data):
+            super().__init__(data)
+            self.batch_limits = []
+
+        def read_many(
+            self,
+            source,
+            symbols,
+            interval,
+            start=None,
+            end=None,
+            limit=None,
+            forward=False,
+            return_exceptions=False,
+        ):
+            self.batch_limits.append((source, tuple(symbols), limit))
+            result = {}
+            for symbol in symbols:
+                try:
+                    result[symbol] = self.read(
+                        source,
+                        symbol,
+                        interval,
+                        start=start,
+                        end=end,
+                        limit=limit,
+                        forward=forward,
+                    )
+                except Exception as exc:
+                    if not return_exceptions:
+                        raise
+                    result[symbol] = exc
+            return result
+
+    history = ReadManyHistory(
+        {("vn", "VCB", "1D"): security, ("vn", "VNINDEX", "1D"): benchmark}
+    )
+    response = Analysis(history, rrg_catalog()).rrg(
+        mode="vn",
+        algorithm="jdk",
+        benchmark="VNINDEX",
+        period=10,
+        trails=5,
+        min_volume=0,
+    )
+
+    ticker = next(row for row in response["data"]["tickers"] if row["symbol"] == "VCB")
+    aligned = [row for row in security if row.time in {row.time for row in benchmark}]
+    expected = jdk(
+        [row.close for row in aligned],
+        [row.close for row in benchmark if row.time in {item.time for item in aligned}],
+        10,
+    )
+    assert ticker["trails"] == [
+        {
+            "date": datetime.fromtimestamp(row.time, UTC).strftime("%Y-%m-%d"),
+            "rs_ratio": x,
+            "rs_momentum": y,
+        }
+        for row, (x, y) in zip(aligned[-5:], expected[-5:], strict=True)
+    ]
+    full_rust_limit = 250 + 200
+    assert any(
+        symbols == ("VNINDEX",) and limit == full_rust_limit
+        for _, symbols, limit in history.batch_limits
+    ), history.batch_limits
+    assert any(
+        symbols == ("VCB",) and limit == full_rust_limit
+        for _, symbols, limit in history.batch_limits
+    )
 
 
 def test_rrg_benchmark_lookup_is_limited_to_requested_mode():

@@ -138,7 +138,11 @@ class RustCompatibleCompressionMiddleware:
                     elif encoding == "br":
                         import brotli
 
-                        state["compressor"] = brotli.Compressor()
+                        # tower-http explicitly overrides Brotli's library
+                        # default (quality 11) with quality 4. The library
+                        # maximum made large API responses take seconds to
+                        # compress and diverged from Rust's default behavior.
+                        state["compressor"] = brotli.Compressor(quality=4)
                 message = {**message, "headers": headers}
                 await send(message)
                 return

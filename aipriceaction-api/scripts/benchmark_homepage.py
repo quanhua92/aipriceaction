@@ -42,6 +42,51 @@ HOME_PAGE_URLS = (
     "/tickers?limit=1&ma=false&mode=crypto&format=csv",
     "/tickers?limit=1&ma=false&mode=yahoo&format=csv",
 )
+EXTRA_BROWSER_URLS = (
+    "/tickers?symbol=VNINDEX&interval=1D&mode=all&limit=1&ema=true&format=csv",
+    "/tickers?interval=1D&limit=110&mode=all&ma=false&format=csv",
+    "/tickers?symbol=VIC&interval=1D&limit=256&mode=all&ema=true&format=csv",
+    "/tickers?symbol=VNINDEX&interval=1D&limit=256&mode=all&ema=true&format=csv",
+    "/tickers?symbol=VIC&interval=1D&limit=512&mode=all&ema=true&format=csv",
+    "/analysis/volume-profile?symbol=VNINDEX&date=2026-10-21&bins=10&mode=all",
+)
+TICKER_CASES = tuple(
+    f"/tickers?limit=1&ma={ma}&ema={ema}&mode={source}&format=csv"
+    for source in ("vn", "crypto", "yahoo")
+    for ma, ema in (("true", "false"), ("true", "true"), ("false", "false"), ("false", "true"))
+) + (
+    "/tickers?limit=1&ma=true&mode=vn&format=csv",
+    "/tickers?limit=1&ma=true&mode=crypto&format=csv",
+    "/tickers?limit=1&ma=true&mode=yahoo&format=csv",
+    "/tickers?limit=1&ma=false&mode=vn&format=csv",
+    "/tickers?limit=1&ma=false&mode=crypto&format=csv",
+    "/tickers?limit=1&ma=false&mode=yahoo&format=csv",
+    "/tickers?interval=1D&limit=1&mode=vn&ema=true&format=csv",
+    "/tickers?symbol=VCB&interval=1D&limit=1&mode=vn&ma=false&format=csv",
+    "/tickers?symbol=VCB&interval=1D&limit=1&mode=vn&ma=true&ema=false&format=csv",
+    "/tickers?symbol=VCB&interval=1D&limit=1&mode=vn&ma=true&ema=true&format=csv",
+    "/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=1&mode=vn&ma=false&format=csv",
+    "/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=1&mode=vn&ma=true&ema=false&format=csv",
+    "/tickers?symbol=VCB&symbol=FPT&interval=1D&limit=1&mode=vn&ma=true&ema=true&format=csv",
+    "/tickers?symbol=VNINDEX&interval=1D&mode=all&limit=1&ema=true&format=csv",
+    "/tickers?interval=1D&limit=110&mode=all&ma=false&format=csv",
+    "/tickers?symbol=VIC&interval=1D&limit=256&mode=all&ema=true&format=csv",
+    "/tickers?symbol=VNINDEX&interval=1D&limit=256&mode=all&ema=true&format=csv",
+    "/tickers?symbol=VIC&interval=1D&limit=512&mode=all&ema=true&format=csv",
+)
+ANALYSIS_CASES = (
+    "/analysis/top-performers?mode=vn&date=2026-10-21&ema=true&limit=10&min_volume=0&snap=false",
+    "/analysis/ma-scores-by-sector?mode=vn&date=2026-10-21&ema=true&ma_period=20&snap=false",
+    "/analysis/rrg?algorithm=jdk&mode=vn&trails=5&min_volume=1000&benchmark=VNINDEX&period=10&date=2026-10-21&ema=true&snap=false",
+    "/analysis/rrg?algorithm=mascore&mode=vn&trails=5&min_volume=1000&date=2026-10-21&ema=true&snap=false",
+    "/analysis/volume-profile?symbol=VNINDEX&date=2026-10-21&bins=10&mode=vn",
+)
+READ_ENDPOINT_CASES = TICKER_CASES + HOME_PAGE_URLS + EXTRA_BROWSER_URLS + ANALYSIS_CASES + (
+    "/tickers/info?ticker=VCB",
+    "/tickers/info",
+    "/tickers/group?mode=all",
+    "/tickers/name?mode=all",
+)
 
 
 def validate_base_url(value):
@@ -63,7 +108,7 @@ def request_url(base_url, path, bypass_response_cache):
     parts = urlsplit(base_url + path)
     query = parse_qsl(parts.query, keep_blank_values=True)
     if bypass_response_cache and parts.path.endswith("/tickers"):
-        query.append(("cache", "false"))
+        query.extend((("cache", "false"), ("redis", "false"), ("snap", "false")))
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
 
 
@@ -77,11 +122,18 @@ def inspect_response(path, content_type, content):
         result["latest_time"] = max((row.get("time", "") for row in rows), default="")
     elif "json" in content_type:
         payload = json.loads(content)
-        if path.split("?", 1)[0].endswith("/analysis/rrg"):
-            tickers = payload.get("data", {}).get("tickers", [])
-            result["rows"] = len(tickers)
-            if not tickers:
-                raise ValueError("RRG response contains no ticker rows")
+        if path.split("?", 1)[0].startswith("/analysis/"):
+            data = payload.get("data", {})
+            row_key = next(
+                (key for key in ("tickers", "performers", "sectors", "profile") if key in data),
+                None,
+            )
+            rows = data.get(row_key, []) if row_key else []
+            result["rows"] = len(rows) if isinstance(rows, list) else 1
+            if "error" in payload:
+                raise ValueError(f"API returned an error body: {payload['error']}")
+            if row_key and not rows:
+                raise ValueError(f"{row_key} response contains no rows")
         elif isinstance(payload, dict):
             result["rows"] = len(payload)
     return result
@@ -98,13 +150,22 @@ async def benchmark(args):
     if not 1 <= args.concurrency <= 32:
         raise ValueError("Choose 1–32 concurrent requests")
 
+    if args.tickers_only and args.all_read_endpoints:
+        raise ValueError("Choose only one of --tickers-only or --all-read-endpoints")
+    paths = (
+        TICKER_CASES
+        if args.tickers_only
+        else READ_ENDPOINT_CASES
+        if args.all_read_endpoints
+        else HOME_PAGE_URLS
+    )
     requests = [
         {
             "index": index + 1,
             "path": path,
             "url": request_url(base_url, path, args.bypass_response_cache),
         }
-        for index, path in enumerate(HOME_PAGE_URLS)
+        for index, path in enumerate(paths)
     ]
     timeout = httpx.Timeout(args.timeout)
     limits = httpx.Limits(
@@ -113,6 +174,7 @@ async def benchmark(args):
     )
     results = []
     wall_started = time.perf_counter()
+    request_slots = asyncio.Semaphore(args.concurrency)
 
     async with httpx.AsyncClient(
         timeout=timeout,
@@ -122,16 +184,20 @@ async def benchmark(args):
     ) as client:
 
         async def fetch(request):
-            started = time.perf_counter()
+            started = None
             result = {
                 "index": request["index"],
                 "path": request["path"],
                 "url": request["url"],
             }
             try:
-                response = await client.get(request["url"])
+                async with request_slots:
+                    started = time.perf_counter()
+                    response = await client.get(request["url"])
+                    result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
                 result["status"] = response.status_code
-                result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
+                result["content_encoding"] = response.headers.get("content-encoding", "identity")
+                result["wire_bytes"] = response.num_bytes_downloaded
                 response.raise_for_status()
                 result.update(
                     inspect_response(
@@ -142,7 +208,9 @@ async def benchmark(args):
                 )
                 result["sha256"] = hashlib.sha256(response.content).hexdigest()
             except Exception as exc:
-                result["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
+                result["elapsed_ms"] = (
+                    round((time.perf_counter() - started) * 1000, 2) if started else 0
+                )
                 result["error"] = (
                     str(exc)
                     if isinstance(exc, (ValueError, httpx.HTTPStatusError))
@@ -199,6 +267,16 @@ if __name__ == "__main__":
         "--bypass-response-cache",
         action="store_true",
         help="Append cache=false to ticker requests to expose the uncached read cost",
+    )
+    parser.add_argument(
+        "--tickers-only",
+        action="store_true",
+        help="Run every source/MA/EMA combination plus single-, selected-multi-, and history-window ticker cases",
+    )
+    parser.add_argument(
+        "--all-read-endpoints",
+        action="store_true",
+        help="Run ticker, metadata, homepage, and analysis GET cases without mutation endpoints",
     )
     parser.add_argument(
         "--report",

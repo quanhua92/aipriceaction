@@ -12,7 +12,7 @@ def test_cache_keeps_entry_at_exact_ttl_and_expires_after_it():
     assert cache.get("query") is None
 
 
-def test_cache_hits_do_not_refresh_oldest_entry_order():
+def test_cache_hits_refresh_lru_order_without_refreshing_ttl():
     now = [0.0]
     cache = TickersResponseCache(ttl=5, max_entries=2, clock=lambda: now[0])
     cache.put("old", {"old": []})
@@ -23,12 +23,14 @@ def test_cache_hits_do_not_refresh_oldest_entry_order():
     now[0] = 2.0
     cache.put("third", {"third": []})
 
-    assert cache.get("old") is None
-    assert cache.get("new") == {"new": []}
+    assert cache.get("old") == {"old": []}
+    assert cache.get("new") is None
     assert cache.get("third") == {"third": []}
+    now[0] = 5.0001
+    assert cache.get("old") is None
 
 
-def test_duplicate_put_at_capacity_still_evicts_oldest_entry():
+def test_replacing_entry_at_capacity_preserves_other_lru_entry():
     now = [0.0]
     cache = TickersResponseCache(ttl=5, max_entries=2, clock=lambda: now[0])
     cache.put("old", {"old": []})
@@ -37,6 +39,28 @@ def test_duplicate_put_at_capacity_still_evicts_oldest_entry():
     now[0] = 2.0
     cache.put("kept", {"kept": [2]})
 
-    assert cache.get("old") is None
+    assert cache.get("old") == {"old": []}
     assert cache.get("kept") == {"kept": [2]}
-    assert len(cache.store) == 1
+    assert len(cache.store) == 2
+
+
+def test_cache_evicts_least_recent_entries_to_stay_within_memory_budget():
+    old = {"old": []}
+    kept = {"new": []}
+    cache = TickersResponseCache(
+        ttl=60, max_entries=4, max_bytes=2 * TickersResponseCache._size(old) - 1
+    )
+    cache.put("old", old)
+    cache.put("kept", kept)
+
+    assert cache.stored_bytes <= cache.max_bytes
+    assert cache.get("old") is None
+    assert cache.get("kept") == kept
+
+
+def test_oversize_response_is_not_retained():
+    cache = TickersResponseCache(ttl=60, max_bytes=256)
+    cache.put("large", {"body": "x" * 1024})
+
+    assert cache.get("large") is None
+    assert cache.stored_bytes == 0

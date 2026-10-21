@@ -12,12 +12,21 @@ from .domain import Candle
 
 
 @dataclass
+class CompactTail:
+    closes: list[float]
+    oldest_time: int
+    mixed_revision: bool
+    mixed_provider: bool
+
+
+@dataclass
 class LoadedHistory:
     local: dict[str, list[Candle]] = field(default_factory=dict)
     archives: dict[str, list[dict]] = field(default_factory=dict)
     gaps: dict[str, list[dict]] = field(default_factory=dict)
     adoptions: dict[str, dict[str, dict]] = field(default_factory=dict)
     volume_corrections: dict[str, list[dict]] = field(default_factory=dict)
+    compact_tails: dict[str, CompactTail] = field(default_factory=dict)
 
 
 class SQLiteDataLoader:
@@ -57,7 +66,16 @@ class SQLiteDataLoader:
 
     @classmethod
     def _read_candle_batch(
-        cls, con, source, symbols, interval, start, end, limit, forward, result
+        cls,
+        con,
+        source,
+        symbols,
+        interval,
+        start,
+        end,
+        limit,
+        forward,
+        result,
     ):
         """Read indexed tails for symbol chunks and append chronologically.
 
@@ -109,7 +127,7 @@ class SQLiteDataLoader:
                 WITH requested(ord,symbol) AS (VALUES {requested})
                 SELECT c.*
                 FROM requested AS r
-                CROSS JOIN candles AS c
+                CROSS JOIN candles AS c INDEXED BY sqlite_autoindex_candles_1
                   ON c.source=? AND c.symbol=r.symbol AND c.interval=?
                  AND c.time IN ({inner})
                 ORDER BY r.ord,c.time ASC
@@ -119,6 +137,47 @@ class SQLiteDataLoader:
             batch_args = args[: 2 * len(chunk)] + [source, interval] + args[2 * len(chunk) :]
             for row in con.execute(sql, batch_args):
                 result[row["symbol"]].append(Candle(**dict(row)))
+
+    @classmethod
+    def _read_compact_tails(cls, con, source, symbols, interval, limit, result):
+        """Load EMA warmup closes without constructing a Candle per bar."""
+        cursor = con.cursor()
+        cursor.row_factory = None
+        sql = """SELECT time,close,provider,revision FROM candles
+            WHERE source=? AND symbol=? AND interval=? ORDER BY time DESC LIMIT ?"""
+        latest_sql, _ = cls._candle_query(source, "", interval, None, None, 2, False)
+        for symbol in symbols:
+            descending_closes = []
+            first_revision = None
+            first_provider = None
+            mixed_revision = False
+            mixed_provider = False
+            oldest_time = None
+            for timestamp, close, provider, revision in cursor.execute(
+                sql, (source, symbol, interval, limit)
+            ):
+                descending_closes.append(close)
+                oldest_time = timestamp
+                if first_revision is None:
+                    first_revision = revision
+                    first_provider = provider
+                else:
+                    mixed_revision |= revision != first_revision
+                    mixed_provider |= provider != first_provider
+            if not descending_closes:
+                continue
+
+            descending_closes.reverse()
+            result.compact_tails[symbol] = CompactTail(
+                closes=descending_closes,
+                oldest_time=oldest_time,
+                mixed_revision=mixed_revision,
+                mixed_provider=mixed_provider,
+            )
+            latest_rows = con.execute(latest_sql, (source, symbol, interval, 2)).fetchall()
+            result.local[symbol] = [
+                Candle(**dict(row)) for row in reversed(latest_rows)
+            ]
 
     def read_candles_many(
         self, source, symbols, interval, start=None, end=None, limit=None, forward=False
@@ -144,6 +203,7 @@ class SQLiteDataLoader:
         end=None,
         limit=None,
         forward=False,
+        compact_tail=False,
     ):
         """Read matching rows and metadata for symbols using a single connection."""
         symbols = list(dict.fromkeys(symbols))
@@ -183,10 +243,6 @@ class SQLiteDataLoader:
         with self.repository.connect() as con:
             # Keep all tables on the same SQLite snapshot during a bulk read.
             con.execute("BEGIN")
-            self._read_candle_batch(
-                con, source, symbols, interval, start, end, limit, forward, result.local
-            )
-
             for chunk in self._chunks(symbols):
                 placeholders = ",".join("?" for _ in chunk)
                 args = [*archive_args, *chunk]
@@ -248,6 +304,15 @@ class SQLiteDataLoader:
                     rows = con.execute(correction_sql, correction_args_for_chunk).fetchall()
                     for row in rows:
                         result.volume_corrections[row["symbol"]].append(dict(row))
+
+            if compact_tail:
+                if start is not None or end is not None or forward or limit is None:
+                    raise ValueError("Compact tails require an undated backward limit")
+                self._read_compact_tails(con, source, symbols, interval, limit, result)
+            else:
+                self._read_candle_batch(
+                    con, source, symbols, interval, start, end, limit, forward, result.local
+                )
 
         for records in result.gaps.values():
             records.sort(

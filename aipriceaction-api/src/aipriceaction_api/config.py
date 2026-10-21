@@ -96,6 +96,7 @@ class Settings:
     # emulation used by tests and offline development.
     redis_url: str | None = None
     cache_bytes: int = 512 * 1024 * 1024
+    # Match Rust's five-second in-process /tickers response cache.
     cache_ttl: float = 5
     sync_tokens: tuple[str, ...] = ()
     # None means the variable is unset. An explicitly empty value matches Rust's
@@ -129,8 +130,8 @@ class Settings:
     # production environment does not override this: Rust fixes it at 180s.
     query_timeout: int = 180
     request_concurrency: int = 64
-    read_concurrency: int = 4
-    market_read_concurrency: int = 4
+    read_concurrency: int = 8
+    market_read_concurrency: int = 8
 
     @classmethod
     def from_env(cls):
