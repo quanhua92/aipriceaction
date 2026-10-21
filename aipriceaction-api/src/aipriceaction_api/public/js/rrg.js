@@ -36,6 +36,8 @@ function buildRrgUrl() {
 
   const algorithm = document.getElementById('rrg-algorithm').value;
   const mode = document.getElementById('rrg-mode').value;
+  const ema = document.getElementById('rrg-ema').checked;
+  const snap = document.getElementById('rrg-snap').checked;
 
   if (algorithm) params.algorithm = algorithm;
 
@@ -56,6 +58,8 @@ function buildRrgUrl() {
   if (date) params.date = date;
 
   if (mode && mode !== 'vn') params.mode = mode;
+  if (ema) params.ema = 'true';
+  if (!snap) params.snap = 'false';
 
   return buildApiUrl('/analysis/rrg', params);
 }

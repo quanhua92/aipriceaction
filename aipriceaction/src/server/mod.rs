@@ -1,6 +1,7 @@
 mod api;
 mod cache;
 mod sync;
+mod upload;
 pub mod types;
 pub mod analysis;
 
@@ -18,6 +19,7 @@ use fred::types::ConnectHandle;
 use axum::http::{HeaderValue, HeaderName, Method};
 use axum::response::Response;
 use axum::middleware::{self, Next};
+use axum::extract::DefaultBodyLimit;
 use axum::extract::Request;
 use std::time::Duration;
 
@@ -147,6 +149,28 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
         .fallback(api::not_found_handler)
         .layer(RequestBodyLimitLayer::new(5 * 1024 * 1024));
 
+    // The Notes endpoints are part of the web client contract. Keep their
+    // upload limit separate from ordinary API requests so a 5 MiB markdown
+    // file can include multipart framing, matching the Python API allowance.
+    let upload_routes = axum::Router::new()
+        .route(
+            "/upload/markdown",
+            axum::routing::post(upload::upload_markdown_handler),
+        )
+        .route(
+            "/uploads/{session_id}/markdown/{filename}",
+            axum::routing::get(upload::serve_markdown_handler),
+        )
+        .route(
+            "/uploads/{session_id}",
+            axum::routing::delete(upload::delete_session_handler),
+        )
+        // Multipart's extractor has a 2 MiB default independent of the outer
+        // request-size middleware. Keep it aligned with the 5 MiB file cap and
+        // leave room for the multipart boundary and headers.
+        .layer(DefaultBodyLimit::max(5 * 1024 * 1024 + 64 * 1024))
+        .layer(RequestBodyLimitLayer::new(5 * 1024 * 1024 + 64 * 1024));
+
     // Public static files with cache headers
     let public_dir = std::path::Path::new("public");
     let public_routes = axum::Router::new()
@@ -155,6 +179,7 @@ pub fn create_app(pool: PgPool, redis_client: Option<crate::redis::RedisClient>,
 
     let router = axum::Router::new()
         .merge(main_routes)
+        .merge(upload_routes)
         .merge(public_routes)
         .with_state(state)
         .layer(
@@ -250,6 +275,18 @@ fn build_cors_layer() -> CorsLayer {
     tracing::info!("CORS: allowed origins = {:?}", origins_str);
     CorsLayer::new()
         .allow_origin(origins)
+        .expose_headers([
+            HeaderName::from_static("x-data-source"),
+            HeaderName::from_static("x-redis-base"),
+            HeaderName::from_static("x-redis-raw-count"),
+            HeaderName::from_static("x-redis-aligned"),
+            HeaderName::from_static("x-redis-limit"),
+            HeaderName::from_static("cf-cache-status"),
+            HeaderName::from_static("cf-ray"),
+            HeaderName::from_static("x-ratelimit-limit"),
+            HeaderName::from_static("x-ratelimit-remaining"),
+            HeaderName::from_static("retry-after"),
+        ])
         .allow_methods([Method::GET, Method::POST, Method::DELETE, Method::OPTIONS])
         .allow_headers([
             HeaderName::from_static("content-type"),

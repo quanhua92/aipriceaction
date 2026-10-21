@@ -914,8 +914,7 @@ async def test_same_provider_repair_keeps_verified_minute_tail_live(system, monk
     repo, archive, settings = system
     first = parse_time("2026-10-08T07:43:00Z")
     original = [
-        replace(candle(1), interval="1m", time=first + offset, symbol="VCB")
-        for offset in (0, 60)
+        replace(candle(1), interval="1m", time=first + offset, symbol="VCB") for offset in (0, 60)
     ]
     repo.put(original)
     repo.queue("vn", "VCB", "1m", "repair", first, "vps")
@@ -1014,7 +1013,9 @@ async def test_same_provider_live_tail_cannot_overwrite_staged_revision(system, 
     job = repo.claim_job("backfill")
     revised = replace(row, close=100.5, revision=job["revision"])
     repo.stage(job, [revised], first, "vps")
-    worker = Worker(repo, settings, Pages(Page([row, replace(row, time=first + 60)], "vps")), archive)
+    worker = Worker(
+        repo, settings, Pages(Page([row, replace(row, time=first + 60)], "vps")), archive
+    )
     monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
 
     assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 0
@@ -1092,7 +1093,7 @@ def test_indicator_warmup_cannot_cross_revisions(system):
     history = History(repo, archive, settings)
     rows = history.query("vn", "FPT", "1D", limit=1)
     assert rows[0]["close"] == 90
-    assert "ma10" not in rows[0] and "close_changed" not in rows[0]
+    assert rows[0]["ma10"] == 90 and "close_changed" not in rows[0]
     with pytest.raises(DataError, match="adjustment revisions"):
         history.read("vn", "FPT", "1D")
 
@@ -1811,9 +1812,7 @@ async def test_provider_switch_requires_alternate_coverage_near_floor(
     repo, archive, settings = system
     floor = parse_time("2025-10-08")
     current = parse_time("2026-10-08T08:00:00Z")
-    published = replace(
-        candle(1), interval="1m", time=current - 60, symbol="VCB", provider="vps"
-    )
+    published = replace(candle(1), interval="1m", time=current - 60, symbol="VCB", provider="vps")
     repo.put([published])
     repo.queue("vn", "VCB", "1m", "repair", floor, "vps")
     with repo.connect() as con:
@@ -1823,9 +1822,7 @@ async def test_provider_switch_requires_alternate_coverage_near_floor(
         def __init__(self):
             self.calls = []
 
-        async def page(
-            self, source, symbol, iv, before=None, count=500, provider=None, start=None
-        ):
+        async def page(self, source, symbol, iv, before=None, count=500, provider=None, start=None):
             self.calls.append((provider, before, start))
             if provider == "vps":
                 raise DataError("historical VPS page unavailable")

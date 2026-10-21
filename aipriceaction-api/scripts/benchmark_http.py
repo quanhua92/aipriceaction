@@ -13,13 +13,74 @@ import math
 import statistics
 import time
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
 
 from aipriceaction_api.config import Settings
+
+HEALTH_INTEGER_FIELDS = {
+    "total_tickers_count",
+    "active_tickers_count",
+    "daily_records_count",
+    "hourly_records_count",
+    "minute_records_count",
+    "uptime_secs",
+    "crypto_last_sync",
+    "daily_iteration_count",
+    "slow_iteration_count",
+    "crypto_iteration_count",
+    "memory_usage_bytes",
+    "memory_limit_mb",
+    "disk_cache_entries",
+    "disk_cache_size_bytes",
+    "disk_cache_limit_mb",
+}
+HEALTH_FLOAT_FIELDS = {
+    "memory_usage_mb",
+    "memory_usage_percent",
+    "disk_cache_size_mb",
+    "disk_cache_usage_percent",
+}
+HEALTH_FIELDS = (
+    HEALTH_INTEGER_FIELDS
+    | HEALTH_FLOAT_FIELDS
+    | {
+        "daily_last_sync",
+        "hourly_last_sync",
+        "minute_last_sync",
+        "is_trading_hours",
+        "trading_hours_timezone",
+        "current_system_time",
+    }
+)
+
+
+def verify_health(payload):
+    assert isinstance(payload, dict), "Health response must be an object"
+    assert set(payload) == HEALTH_FIELDS, "Health response fields differ from the Rust contract"
+    assert all(type(payload[name]) is int for name in HEALTH_INTEGER_FIELDS), (
+        "Health integer fields have unexpected types"
+    )
+    assert all(
+        isinstance(payload[name], (int, float))
+        and not isinstance(payload[name], bool)
+        and math.isfinite(payload[name])
+        for name in HEALTH_FLOAT_FIELDS
+    ), "Health numeric fields have unexpected types"
+    assert type(payload["is_trading_hours"]) is bool, "Trading-hours field must be boolean"
+    assert payload["trading_hours_timezone"] == "Asia/Ho_Chi_Minh", "Unexpected timezone"
+    for name in ("daily_last_sync", "hourly_last_sync", "minute_last_sync"):
+        value = payload[name]
+        assert value is None or isinstance(value, str), f"Invalid {name} type"
+        if value is not None:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            assert parsed.utcoffset() == timedelta(0), f"Invalid {name} timezone"
+    assert isinstance(payload["current_system_time"], str), "Invalid current_system_time type"
+    current = datetime.fromisoformat(payload["current_system_time"].replace("Z", "+00:00"))
+    assert current.utcoffset() == timedelta(0), "current_system_time must be UTC"
 
 
 def percentile(values, quantile):
@@ -100,8 +161,7 @@ async def benchmark(args):
                 response.raise_for_status()
                 payload = response.json()
                 if case["label"] == "health":
-                    assert payload["storage"]["engine"] == "sqlite"
-                    assert payload["storage"]["series"]
+                    verify_health(payload)
                 else:
                     assert set(payload) == set(case["symbols"])
                     assert all(payload[symbol] for symbol in case["symbols"])

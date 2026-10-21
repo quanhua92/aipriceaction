@@ -1,14 +1,211 @@
+import csv
+import logging
 import math
+import threading
 import time
 from dataclasses import replace
+from pathlib import Path
 
 from .calculations import aggregate, enhance
-from .domain import INDEXES, DataError, base_interval, bucket, completed_vn_sessions, cutoff
+from .domain import (
+    INDEXES,
+    SOURCES,
+    Candle,
+    DataError,
+    base_interval,
+    bucket,
+    completed_vn_sessions,
+    cutoff,
+)
+from .redis_zset import RedisZsetReader
+
+log = logging.getLogger(__name__)
+
+
+def load_rust_ticker_identity_order(path):
+    """Load a validated Rust ticker identity export as ``(source, symbol) -> id``.
+
+    The export must have the exact ``id,source,symbol`` header and be strictly
+    ordered by positive integer ID. Rejecting malformed and duplicate rows is
+    safer than silently applying a partial order to public merged responses.
+    """
+    if path is None:
+        return {}
+
+    path = Path(path)
+    identities = {}
+    seen_ids = set()
+    previous_id = 0
+    try:
+        with path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.reader(handle, strict=True)
+            header = next(reader, None)
+            if header != ["id", "source", "symbol"]:
+                raise ValueError("expected the exact id,source,symbol header")
+            for row_number, row in enumerate(reader, start=2):
+                if len(row) != 3:
+                    raise ValueError(f"row {row_number} must contain exactly three columns")
+                raw_id, source, symbol = row
+                if not raw_id.isascii() or not raw_id.isdecimal():
+                    raise ValueError(f"row {row_number} has a non-decimal ticker ID")
+                ticker_id = int(raw_id)
+                if ticker_id <= 0:
+                    raise ValueError(f"row {row_number} has a non-positive ticker ID")
+                if ticker_id <= previous_id or ticker_id in seen_ids:
+                    raise ValueError("ticker IDs must be unique and strictly increasing")
+                if source not in SOURCES:
+                    raise ValueError(f"row {row_number} has an unsupported source")
+                if not symbol:
+                    raise ValueError(f"row {row_number} has an empty symbol")
+                identity = (source, symbol)
+                if identity in identities:
+                    raise ValueError(f"row {row_number} duplicates a source/symbol identity")
+                identities[identity] = ticker_id
+                seen_ids.add(ticker_id)
+                previous_id = ticker_id
+    except (OSError, UnicodeError, csv.Error) as exc:
+        raise ValueError(f"Unable to read Rust ticker identity order CSV: {exc}") from exc
+
+    if not identities:
+        raise ValueError("Rust ticker identity order CSV contains no identities")
+    return identities
 
 
 class History:
-    def __init__(self, repo, archive, settings):
+    def __init__(self, repo, archive, settings, redis_client=None):
         self.repo, self.archive, self.settings = repo, archive, settings
+        self.redis_client = redis_client
+        self.redis_reader = RedisZsetReader(redis_client)
+        self._cache_read_state = threading.local()
+        self.rust_ticker_identity_order = load_rust_ticker_identity_order(
+            getattr(settings, "rust_ticker_identity_order", None)
+        )
+
+    def validate_basis(self, candles):
+        """Validate durable rows while accepting values read from Rust Redis."""
+        if candles and all(row.provider == "redis-cache" for row in candles):
+            return
+        self.repo.validate_basis(candles)
+
+    def clear_cache_read_metadata(self):
+        self._cache_read_state.result = None
+
+    def take_cache_read_metadata(self):
+        result = getattr(self._cache_read_state, "result", None)
+        self._cache_read_state.result = None
+        return result
+
+    def ordered_merged_sources(self, sources, symbol):
+        """Use Rust's persisted ID order when every merged identity is known.
+
+        Partial exports cannot prove the relative order of all requested source
+        identities, so retain the caller's fixture/default order in that case.
+        """
+        sources = tuple(sources)
+        ticker_ids = [self.rust_ticker_identity_order.get((source, symbol)) for source in sources]
+        if any(ticker_id is None for ticker_id in ticker_ids):
+            return sources
+        return tuple(source for _, source in sorted(zip(ticker_ids, sources, strict=True)))
+
+    def cache_tail(self, source, symbol, iv, end=None, limit=252, ignore_pending_repairs=False):
+        """Read a simulated retained cache tail without applying DB gap policy."""
+        self.clear_cache_read_metadata()
+        if self.redis_client is not None:
+            if limit <= 0:
+                return []
+            result = self.redis_reader.read(
+                source,
+                symbol,
+                iv,
+                limit=limit,
+                max_score_ms=end * 1000 if end is not None else None,
+            )
+            if result is None:
+                return []
+            self._cache_read_state.result = result
+            rows = [
+                Candle(
+                    source=source,
+                    symbol=symbol,
+                    interval=iv,
+                    time=row.timestamp_ms // 1000,
+                    open=row.open,
+                    high=row.high,
+                    low=row.low,
+                    close=row.close,
+                    volume=row.volume,
+                    provider="redis-cache",
+                    revision="redis-cache",
+                )
+                for row in reversed(result.rows)
+            ]
+            return rows
+        try:
+            return self.read(
+                source,
+                symbol,
+                iv,
+                end=end,
+                limit=limit,
+                forward=False,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+        except DataError as exc:
+            # Rust's Redis ZSET has no history-gap metadata and can return the
+            # rows it has even when the DB's completeness ledger marks older
+            # history unresolved. Fall back to the live SQLite tail for this
+            # cache-only emulation; durable PostgreSQL reads still use read().
+            if exc.status != 503 or not str(exc).startswith("Historical data unavailable"):
+                raise
+            rows = self.repo.read(source, symbol, iv, end=end, limit=limit, forward=False)
+            if source == "vn" and iv == "1m" and rows:
+                from .volume_corrections import apply_records
+
+                rows = apply_records(
+                    rows,
+                    self.repo.volume_corrections(source, symbol, iv, rows[0].time, rows[-1].time),
+                )
+            self.validate_basis(rows)
+            return rows
+
+    def cache_raw_limit(self, source, symbol, iv, end=None, limit=0):
+        """Read Redis with Rust's signed raw-member limit semantics."""
+        self.clear_cache_read_metadata()
+        if self.redis_client is None:
+            return []
+        result = self.redis_reader.read_signed(
+            source,
+            symbol,
+            iv,
+            limit=limit,
+            max_score_ms=end * 1000 if end is not None else None,
+        )
+        if result is None:
+            return []
+        self._cache_read_state.result = result
+        return [
+            Candle(
+                source=source,
+                symbol=symbol,
+                interval=iv,
+                time=row.timestamp_ms // 1000,
+                open=row.open,
+                high=row.high,
+                low=row.low,
+                close=row.close,
+                volume=row.volume,
+                provider="redis-cache",
+                revision="redis-cache",
+            )
+            for row in reversed(result.rows)
+        ]
+
+    def redis_covers_start(self, source, symbol, iv, start):
+        """Check the actual Redis ZSET like Rust; durable rows are not cache coverage."""
+        native = base_interval(iv)
+        if self.redis_client is None:
+            return False
+        return self.redis_reader.covers_start(source, symbol, native, start * 1000)
 
     @staticmethod
     def warmup(load, limit):
@@ -33,7 +230,17 @@ class History:
         return earlier
 
     def read(
-        self, source, symbol, iv, start=None, end=None, limit=None, forward=False, revision=None
+        self,
+        source,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=None,
+        forward=False,
+        revision=None,
+        ignore_pending_repairs=False,
+        ignore_history_gaps=False,
     ):
         """Return chronological native candles; consult only required objects."""
         local = self.repo.read(source, symbol, iv, start, end, limit, forward=forward)
@@ -45,6 +252,52 @@ class History:
         if len(merged) > self.settings.archive_max_rows:
             raise DataError("Historical request exceeds resource limit", 400)
         objects = self.repo.archives(source, symbol, iv, start, end)
+        if ignore_pending_repairs:
+            # Latest row endpoints match Rust's durable PostgreSQL reads, which
+            # do not consult Python's pending archive-repair ledger. Keep
+            # explicit historical requests strict by enabling this only at the
+            # undated `/tickers` boundary.
+            pending = [obj for obj in objects if obj["status"] == "pending_repair"]
+            if pending:
+                if not local and start is None and end is None and revision is None:
+                    latest_published_end = max(
+                        (obj["end"] for obj in objects if obj["status"] == "published"),
+                        default=None,
+                    )
+                    latest_pending_end = max(obj["end"] for obj in pending)
+                    if latest_published_end is None or latest_pending_end >= latest_published_end:
+                        # A pending-only series has no durable candle for Rust
+                        # to return. Likewise, do not turn an older or same-time
+                        # published archive into a false latest value when a
+                        # repair could contain the newest value.
+                        log.warning(
+                            "omitting archived rows for latest ticker read with pending repair and no live candles %s %s %s",
+                            source,
+                            symbol,
+                            iv,
+                        )
+                        return []
+                pending_to_keep = []
+                if start is None and end is None and local:
+                    # A pending archive newer than the newest durable candle
+                    # could contain the actual latest value. Keep it strict
+                    # rather than returning a stale local row as a success.
+                    latest_local_time = max(row.time for row in local)
+                    pending_to_keep = [obj for obj in pending if obj["end"] >= latest_local_time]
+                ignored_count = len(pending) - len(pending_to_keep)
+                if ignored_count:
+                    log.warning(
+                        "ignoring %d older pending archive repair object(s) for latest ticker read %s %s %s",
+                        ignored_count,
+                        source,
+                        symbol,
+                        iv,
+                    )
+                objects = [
+                    obj
+                    for obj in objects
+                    if obj["status"] != "pending_repair" or obj in pending_to_keep
+                ]
         snapshots = [obj for obj in objects if obj["status"] == "historical_snapshot"]
         primary = [obj for obj in objects if obj["status"] != "historical_snapshot"]
         years = {
@@ -164,11 +417,11 @@ class History:
                 )
             )
         ]
-        if gaps:
+        if gaps and not ignore_history_gaps:
             raise DataError(f"Historical data unavailable for {symbol} {iv}: {gaps[0]['reason']}")
         if len({r.revision for r in result}) > 1:
             raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
-        self.repo.validate_basis(result)
+        self.validate_basis(result)
         if source == "vn" and iv == "1m" and result:
             from .volume_corrections import apply_records
 
@@ -181,11 +434,51 @@ class History:
     def native_interval(self, source, symbol, iv):
         native = base_interval(iv)
         if native == "1h" and not self.repo.state(source, symbol, native):
-            # Minute-only selections still serve hourly web controls. Preserve
-            # any existing hourly series/archives, including pending repairs.
+            # Internal history consumers can derive hourly candles from minute
+            # data. The public API bypasses this helper for Rust's native rules.
             if not self.repo.archives(source, symbol, native):
                 return "1m"
         return native
+
+    def _native_target(
+        self,
+        source,
+        symbol,
+        iv,
+        start,
+        end,
+        limit,
+        forward=False,
+        strict_source_intervals=False,
+        ignore_pending_repairs=False,
+    ):
+        if strict_source_intervals:
+            return self.read(
+                source,
+                symbol,
+                iv,
+                start,
+                end,
+                limit,
+                forward=forward,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+        if source == "vn" and iv == "1h":
+            return self.vn_hourly_target(symbol, start, end, limit)
+        if source == "vn" and iv == "1D":
+            return self.vn_daily_target(symbol, start, end, limit, forward=forward)
+        if source == "vn" and iv == "1m":
+            return self.vn_minute_target(symbol, start, end, limit, forward=forward)
+        return self.read(
+            source,
+            symbol,
+            iv,
+            start,
+            end,
+            limit,
+            forward=forward,
+            ignore_pending_repairs=ignore_pending_repairs,
+        )
 
     @staticmethod
     def same_ohlc(left, right):
@@ -241,9 +534,7 @@ class History:
             return []
         minute_state = self.repo.state("vn", symbol, "1m")
         cash_index = symbol in INDEXES and symbol != "VN30F1M"
-        if not minute_state or (
-            not cash_index and minute_state["provider"] not in {"vps", "dnse"}
-        ):
+        if not minute_state or (not cash_index and minute_state["provider"] not in {"vps", "dnse"}):
             return native
         minute_cutoff = cutoff(self.settings.minute_years)
         completed_before = completed_vn_sessions()
@@ -364,7 +655,16 @@ class History:
         return rows[:limit] if start is not None else rows[-limit:]
 
     def aggregated(
-        self, source, symbol, iv, start=None, end=None, limit=252, native=None, revision=None
+        self,
+        source,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=252,
+        native=None,
+        revision=None,
+        ignore_pending_repairs=False,
     ):
         """Expand recent native reads until enough complete output buckets exist."""
         native = native or self.native_interval(source, symbol, iv)
@@ -380,13 +680,21 @@ class History:
         forward = start is not None
         while True:
             rows = self.read(
-                source, symbol, native, lower, end, count, forward=forward, revision=revision
+                source,
+                symbol,
+                native,
+                lower,
+                end,
+                count,
+                forward=forward,
+                revision=revision,
+                ignore_pending_repairs=ignore_pending_repairs,
             )
             if source == "vn" and native == "1m":
                 rows = self.vn_cash_index_minutes(symbol, rows)
             if not rows:
                 return []
-            bars = aggregate(rows, iv, source, self.repo.validate_basis)
+            bars = aggregate(rows, iv, source, self.validate_basis)
             selected = bars
             if len(selected) > limit or len(rows) < count:
                 if forward:
@@ -402,22 +710,29 @@ class History:
                         max(last, start),
                         min(last + size, end) if end is not None else last + size,
                         revision=rows[0].revision,
+                        ignore_pending_repairs=ignore_pending_repairs,
                     )
                     tail = [r for r in tail if bucket(r.time, iv, source) == last]
                     completed = aggregate(
                         [r for r in rows if r.time < last] + tail,
                         iv,
                         source,
-                        self.repo.validate_basis,
+                        self.validate_basis,
                     )
                     return completed[:limit]
                 # The first fetched bucket may be partial. Read its complete
                 # native range before publishing any selected output candle.
                 first = bucket(rows[0].time, iv, source)
                 prefix = self.read(
-                    source, symbol, native, first, rows[0].time - 1, revision=rows[0].revision
+                    source,
+                    symbol,
+                    native,
+                    first,
+                    rows[0].time - 1,
+                    revision=rows[0].revision,
+                    ignore_pending_repairs=ignore_pending_repairs,
                 )
-                bars = aggregate(prefix + rows, iv, source, self.repo.validate_basis)
+                bars = aggregate(prefix + rows, iv, source, self.validate_basis)
                 return bars[-limit:]
             if count == self.settings.archive_max_rows:
                 raise DataError("Historical request exceeds resource limit", 400)
@@ -429,20 +744,436 @@ class History:
                 self.settings.archive_max_rows,
             )
 
-    def query(self, source, symbol, iv, start=None, end=None, limit=252, ma=True, ema=False):
-        native = self.native_interval(source, symbol, iv)
+    def query(
+        self,
+        source,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=252,
+        ma=True,
+        ema=False,
+        redis=True,
+        strict_source_intervals=False,
+        redis_covered=None,
+        ignore_pending_repairs=False,
+    ):
+        native = (
+            base_interval(iv)
+            if strict_source_intervals
+            else self.native_interval(source, symbol, iv)
+        )
         buffer = 600 if ma and ema else 200 if ma else 1
+        if strict_source_intervals and native != iv:
+            # Rust's aggregated route reads raw base candles first. For a
+            # dated range covered by Redis, both Redis and PostgreSQL paths use
+            # the retained native window, enhance the aggregates, then filter
+            # by output bucket timestamps. Older uncovered ranges use bounded
+            # historical SQL reads.
+            factor = {
+                "5m": 5,
+                "15m": 15,
+                "30m": 30,
+                "4h": 4,
+                "1W": 5,
+                "2W": 10,
+                "1M": 23,
+            }[iv]
+            agg_buffer = 5000 if ma else factor
+            lookback = limit * factor + agg_buffer
+            retained = {
+                "1D": self.settings.redis_daily_max_size,
+                "1h": self.settings.redis_hourly_max_size,
+                "1m": self.settings.redis_minute_max_size,
+            }.get(native, 0)
+            if redis and (retained > 0 or self.redis_client is not None):
+                # Rust applies end scores and raw limits in Redis before
+                # parsing. Start-date scans read the retained ZSET plus the
+                # indicator buffer; offline SQLite emulation first caps to the
+                # retained tail because it has no physical ZSET to query.
+                if self.redis_client is not None:
+                    if start is not None:
+                        tail_limit, tail_end = retained + agg_buffer, None
+                    elif lookback > 0:
+                        tail_limit, tail_end = lookback, end
+                    else:
+                        tail_limit, tail_end = retained, None
+                else:
+                    tail_limit, tail_end = retained, None
+                if self.redis_client is not None and start is None and lookback <= 0:
+                    # Rust forwards signed aggregate lookbacks to the raw ZSET
+                    # range. In particular, zero means ZREVRANGE 0 -1 (all
+                    # members), while an end-bounded zero count selects none.
+                    tail = self.cache_raw_limit(
+                        source,
+                        symbol,
+                        native,
+                        end=end,
+                        limit=lookback,
+                    )
+                else:
+                    tail = self.cache_tail(
+                        source,
+                        symbol,
+                        native,
+                        end=tail_end,
+                        limit=tail_limit,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                    )
+                context = []
+                if (
+                    start is not None
+                    and tail
+                    and (redis_covered is True or (redis_covered is None and start >= tail[0].time))
+                ):
+                    context = tail
+                elif start is None:
+                    if end is None:
+                        if lookback == 0:
+                            context = tail  # ZREVRANGE 0 -1 returns all members.
+                        elif lookback < 0:
+                            context = (
+                                tail
+                                if self.redis_client is not None
+                                else tail[-lookback:]
+                            )
+                        else:
+                            context = (
+                                tail[-lookback:]
+                                if self.redis_client is not None
+                                else tail[-min(retained, lookback) :]
+                            )
+                    elif tail and end >= tail[0].time:
+                        available = [row for row in tail if row.time <= end]
+                        if lookback < 0:
+                            context = available
+                        elif lookback > 0:
+                            context = (
+                                available[-lookback:]
+                                if self.redis_client is not None
+                                else available[-min(retained, lookback) :]
+                            )
+                if context:
+                    if len({row.revision for row in context}) > 1:
+                        raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+                    self.validate_basis(context)
+                    bars = aggregate(context, iv, source, self.validate_basis)
+                    computed = enhance(bars, iv, ma, ema)
+                    selected = [
+                        result
+                        for bar, result in zip(bars, computed, strict=True)
+                        if (start is None or bar.time >= start) and (end is None or bar.time <= end)
+                    ]
+                    if start is not None:
+                        return selected[:limit] if limit >= 0 else selected
+                    if limit == 0:
+                        return []
+                    return selected[-limit:] if limit > 0 else selected
+                if redis_covered is True:
+                    # Rust treats this as an empty per-symbol cache result. The
+                    # request layer retries the whole source batch from SQL
+                    # only when every symbol was empty.
+                    return []
+
+            if lookback <= 0:
+                return []
+                # Keep historical requests outside the retained cache window
+                # bounded to their requested raw-candle range.
+            start_range_covered = start is not None and redis_covered is True
+            context = self.read(
+                source,
+                symbol,
+                native,
+                None if start_range_covered else start,
+                None if start_range_covered else end,
+                retained if start_range_covered and retained > 0 else lookback,
+                forward=False if start_range_covered else start is not None,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+            if not context:
+                return []
+            if len({row.revision for row in context}) > 1:
+                raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+            self.validate_basis(context)
+            bars = aggregate(context, iv, source, self.validate_basis)
+            computed = enhance(bars, iv, ma, ema)
+            if start is not None:
+                if start_range_covered:
+                    selected = [
+                        result
+                        for bar, result in zip(bars, computed, strict=True)
+                        if bar.time >= start and (end is None or bar.time <= end)
+                    ]
+                    return selected[:limit] if limit >= 0 else selected
+                return computed[:limit] if limit >= 0 else computed
+            if limit == 0:
+                return []
+            return computed[-limit:] if limit > 0 else computed
+
+        if strict_source_intervals and redis and start is not None:
+            retained = {
+                "1D": self.settings.redis_daily_max_size,
+                "1h": self.settings.redis_hourly_max_size,
+                "1m": self.settings.redis_minute_max_size,
+            }.get(native, 0)
+            if retained > 0 or self.redis_client is not None:
+                # Rust scans the retained ZSET plus the indicator buffer
+                # before applying date filters. A configured Redis client
+                # needs that exact command limit for diagnostics; the local
+                # SQLite emulation remains capped to retained rows.
+                tail_limit = retained + buffer if self.redis_client is not None else retained
+                context = self.cache_tail(
+                    source,
+                    symbol,
+                    iv,
+                    limit=tail_limit,
+                    ignore_pending_repairs=ignore_pending_repairs,
+                )
+                if context and (
+                    redis_covered is True or (redis_covered is None and start >= context[0].time)
+                ):
+                    selected = [
+                        row
+                        for row in context
+                        if row.time >= start and (end is None or row.time <= end)
+                    ]
+                    if limit is not None and limit >= 0:
+                        selected = selected[:limit]
+                    if not selected:
+                        return []
+                    if len({row.revision for row in context}) > 1:
+                        raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+                    self.validate_basis(context)
+                    selected_times = {row.time for row in selected}
+                    computed = enhance(context, iv, ma, ema)
+                    return [
+                        result
+                        for row, result in zip(context, computed, strict=True)
+                        if row.time in selected_times
+                    ]
+                if redis_covered is True and not context:
+                    return []
+        if limit < 0 and native == iv:
+            raw_limit = limit + buffer if ma else limit + 1
+            retained = {
+                "1D": self.settings.redis_daily_max_size,
+                "1h": self.settings.redis_hourly_max_size,
+                "1m": self.settings.redis_minute_max_size,
+            }.get(native, 0)
+            if start is not None:
+                # PostgreSQL applies the duration-based warmup in SQL, caps
+                # the ascending input at limit+buffer, then filters start.
+                # A negative SQL LIMIT is an error and Rust returns an empty
+                # result map for this query.
+                if raw_limit <= 0:
+                    return []
+                duration_minutes = {"1m": 1, "1h": 60, "1D": 2016}[iv]
+                effective_start = start - (duration_minutes * buffer * 60 if ma else 0)
+                context = self._native_target(
+                    source,
+                    symbol,
+                    iv,
+                    effective_start,
+                    end,
+                    raw_limit,
+                    forward=True,
+                    strict_source_intervals=strict_source_intervals,
+                )
+                selected = [row for row in context if row.time >= start]
+                if not selected:
+                    return []
+                if len({row.revision for row in context}) > 1:
+                    raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+                self.validate_basis(context)
+                selected_times = {row.time for row in selected}
+                computed = enhance(context, iv, ma, ema)
+                return [
+                    result
+                    for row, result in zip(context, computed, strict=True)
+                    if row.time in selected_times
+                ]
+
+            if raw_limit <= 0:
+                if not redis:
+                    return []
+                if retained <= 0 and self.redis_client is None:
+                    return []
+                if self.redis_client is not None:
+                    # Rust applies signed limits to the raw ZSET members
+                    # before parsing and records that exact value in headers.
+                    context = self.cache_raw_limit(source, symbol, iv, end, raw_limit)
+                else:
+                    # SQLite-backed cache emulation contains only parsed rows,
+                    # so approximate the ZSET rank behavior on that retained
+                    # tail. A negative ZREVRANGE end omits oldest members;
+                    # a negative score-bounded count includes all matches.
+                    if end is not None and raw_limit == 0:
+                        return []
+                    context = self.cache_tail(
+                        source,
+                        symbol,
+                        iv,
+                        limit=retained,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                    )
+                    if end is not None:
+                        context = [row for row in context if row.time <= end]
+                    elif raw_limit < 0:
+                        context = context[min(-raw_limit, len(context)) :]
+                # Rust filters the parsed candle timestamp after Redis has
+                # selected members by score. Preserve the raw/aligned Redis
+                # metadata captured above before applying this request bound.
+                if end is not None:
+                    context = [row for row in context if row.time <= end]
+            else:
+                if redis:
+                    if retained <= 0 and self.redis_client is None:
+                        return []
+                    # Rust applies the score bound and raw limit before parsing.
+                    # Preserve the exact command limit for configured Redis;
+                    # offline emulation caps its SQLite tail to retention first.
+                    if end is not None and self.redis_client is not None:
+                        context = self.cache_tail(
+                            source,
+                            symbol,
+                            iv,
+                            end=end,
+                            limit=raw_limit,
+                            ignore_pending_repairs=ignore_pending_repairs,
+                        )
+                    else:
+                        context = self.cache_tail(
+                            source,
+                            symbol,
+                            iv,
+                            limit=raw_limit if self.redis_client is not None else retained,
+                            ignore_pending_repairs=ignore_pending_repairs,
+                        )
+                        if end is not None:
+                            context = [row for row in context if row.time <= end]
+                    # Redis bounds members by ZSET score, but Rust also filters
+                    # the parsed candle timestamp after the read. A malformed
+                    # or inconsistent score/member pair must not leak a candle
+                    # beyond the requested end date.
+                    if end is not None:
+                        context = [row for row in context if row.time <= end]
+                    context = context[-raw_limit:]
+                else:
+                    # A SQL LIMIT smaller than the available history is a
+                    # valid partial result. Ignore older gap markers that
+                    # fall outside the requested tail, as Postgres does.
+                    context = self.read(
+                        source,
+                        symbol,
+                        iv,
+                        end=end,
+                        limit=raw_limit,
+                        forward=False,
+                        ignore_pending_repairs=ignore_pending_repairs,
+                        # Rust's LIMIT-based latest SQL read has no history-gap
+                        # ledger. A gap older than the available tail must not
+                        # reject rows the query actually found, even when the
+                        # SQL warmup count exceeds the available row count.
+                        ignore_history_gaps=True,
+                    )
+            if not context:
+                return []
+            if len({row.revision for row in context}) > 1:
+                raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+            self.validate_basis(context)
+            return enhance(context, iv, ma, ema)
+        if strict_source_intervals and redis and native == iv and start is None and limit >= 0:
+            retained = {
+                "1D": self.settings.redis_daily_max_size,
+                "1h": self.settings.redis_hourly_max_size,
+                "1m": self.settings.redis_minute_max_size,
+            }.get(native, 0)
+            if retained > 0 or self.redis_client is not None:
+                # Rust's no-start native Redis path reads at most limit+buffer
+                # rows from the capped ZSET, optionally score-bounded by end.
+                raw_limit = limit + buffer
+                # Rust applies the score bound and limit before parsing. When
+                # Redis is configured, request exactly that bounded raw tail;
+                # otherwise cap the SQLite emulation to retained rows before
+                # applying the requested end date.
+                if end is not None and self.redis_client is not None:
+                    tail_limit, tail_end = raw_limit, end
+                elif end is not None:
+                    tail_limit, tail_end = retained, None
+                elif self.redis_client is not None:
+                    tail_limit, tail_end = raw_limit, None
+                else:
+                    tail_limit, tail_end = min(retained, max(1, raw_limit)), None
+                tail = self.cache_tail(
+                    source,
+                    symbol,
+                    iv,
+                    end=tail_end,
+                    limit=tail_limit,
+                    ignore_pending_repairs=ignore_pending_repairs,
+                )
+                available = [row for row in tail if end is None or row.time <= end]
+                context = available[-raw_limit:] if raw_limit > 0 else []
+                if context:
+                    if len({row.revision for row in context}) > 1:
+                        raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+                    self.validate_basis(context)
+                    computed = enhance(context, iv, ma, ema)
+                    return computed[-limit:] if limit > 0 else []
+                if redis_covered is True:
+                    return []
         # Fetch native bars before aggregation, then acquire enough *aggregated*
         # lookback buckets. This avoids a calendar-day approximation for MA200.
         if native == iv:
-            target = (
-                self.vn_hourly_target(symbol, start, end, limit)
-                if source == "vn" and iv == "1h"
-                else self.vn_daily_target(symbol, start, end, limit, forward=start is not None)
-                if source == "vn" and iv == "1D"
-                else self.vn_minute_target(symbol, start, end, limit, forward=start is not None)
-                if source == "vn" and iv == "1m"
-                else self.read(source, symbol, native, start, end, limit, forward=start is not None)
+            if strict_source_intervals and start is not None:
+                # Rust's PostgreSQL path shifts a dated query backward by its
+                # MA warmup duration, fetches up to limit + buffer rows in
+                # ascending order, computes indicators across that context,
+                # then returns the oldest requested rows from start_date.
+                # Without MA it still fetches limit + 1 rows, matching the
+                # shared query's change-indicator context.
+                raw_limit = limit + buffer if ma else limit + 1
+                if raw_limit <= 0:
+                    return []
+                duration_minutes = {"1m": 1, "1h": 60, "1D": 2016}[iv]
+                effective_start = start - (duration_minutes * buffer * 60 if ma else 0)
+                context = self._native_target(
+                    source,
+                    symbol,
+                    iv,
+                    effective_start,
+                    end,
+                    raw_limit,
+                    forward=True,
+                    strict_source_intervals=True,
+                )
+                selected = [row for row in context if row.time >= start]
+                if limit >= 0:
+                    selected = selected[:limit]
+                if not selected:
+                    return []
+                if len({row.revision for row in context}) > 1:
+                    raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
+                self.validate_basis(context)
+                selected_times = {row.time for row in selected}
+                computed = enhance(context, iv, ma, ema)
+                return [
+                    result
+                    for row, result in zip(context, computed, strict=True)
+                    if row.time in selected_times
+                ]
+
+            target = self._native_target(
+                source,
+                symbol,
+                iv,
+                start,
+                end,
+                limit,
+                forward=start is not None,
+                strict_source_intervals=strict_source_intervals,
+                ignore_pending_repairs=ignore_pending_repairs,
             )
             if not target:
                 return []
@@ -456,11 +1187,12 @@ class History:
                         limit=count,
                         native="1m",
                         revision=target[0].revision,
+                        ignore_pending_repairs=ignore_pending_repairs,
                     ),
                     buffer,
                 )
             else:
-                if source == "vn" and iv == "1D":
+                if source == "vn" and iv == "1D" and not strict_source_intervals:
                     earlier = self.warmup(
                         lambda count: self.vn_daily_target(
                             symbol,
@@ -480,12 +1212,22 @@ class History:
                             end=target[0].time - 1,
                             limit=count,
                             revision=target[0].revision,
+                            ignore_pending_repairs=ignore_pending_repairs,
                         ),
                         buffer,
                     )
             rows = earlier + target
         else:
-            target = self.aggregated(source, symbol, iv, start, end, limit, native=native)
+            target = self.aggregated(
+                source,
+                symbol,
+                iv,
+                start,
+                end,
+                limit,
+                native=native,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
             if not target:
                 return []
             earlier = self.warmup(
@@ -497,12 +1239,188 @@ class History:
                     limit=count,
                     native=native,
                     revision=target[0].revision,
+                    ignore_pending_repairs=ignore_pending_repairs,
                 ),
                 buffer,
             )
             rows = earlier + target
         if len({r.revision for r in rows}) > 1:
             raise DataError(f"Incompatible adjustment revisions for {symbol} {native}")
-        self.repo.validate_basis(rows)
+        self.validate_basis(rows)
         result = enhance(rows, iv, ma, ema)
         return result[-len(target) :]
+
+    def _read_merged_source(
+        self,
+        source,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=None,
+        forward=False,
+        skip_pending_empty=False,
+        ignore_pending_repairs=False,
+    ):
+        try:
+            return self.read(
+                source,
+                symbol,
+                iv,
+                start,
+                end,
+                limit,
+                forward=forward,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+        except DataError as exc:
+            expected = f"Historical adjustment repair pending for {symbol} {iv}"
+            if (
+                not skip_pending_empty
+                or exc.status != 503
+                or str(exc) != expected
+                or self.repo.read(source, symbol, iv, limit=1)
+            ):
+                raise
+            log.warning(
+                "omitting source %s for latest merged ticker %s with pending repair and no live candles",
+                source,
+                symbol,
+            )
+            return []
+
+    def query_merged_native_sources(
+        self,
+        sources,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=252,
+        ma=True,
+        ema=False,
+        skip_pending_empty=False,
+        ignore_pending_repairs=False,
+    ):
+        """Match Rust's SQL batch behavior when extra sources share a ticker name."""
+        if iv not in {"1m", "1h", "1D"}:
+            raise ValueError(f"Expected a native interval, got {iv!r}")
+        if limit == 0:
+            return []
+
+        buffer = 600 if ma and ema else 200 if ma else 1
+        raw_limit = limit + buffer if ma else limit + 1
+        if raw_limit <= 0:
+            return []
+
+        ordered_sources = self.ordered_merged_sources(sources, symbol)
+        if start is not None:
+            duration_minutes = {"1m": 1, "1h": 60, "1D": 2016}[iv]
+            effective_start = start - (duration_minutes * buffer * 60 if ma else 0)
+            context = [
+                row
+                for source in ordered_sources
+                for row in self._read_merged_source(
+                    source,
+                    symbol,
+                    iv,
+                    effective_start,
+                    end,
+                    raw_limit,
+                    forward=True,
+                    skip_pending_empty=skip_pending_empty,
+                    ignore_pending_repairs=ignore_pending_repairs,
+                )
+            ]
+            if not context:
+                return []
+            computed = enhance(context, iv, ma, ema)
+            selected = [
+                result for row, result in zip(context, computed, strict=True) if row.time >= start
+            ]
+            return selected[:limit] if limit > 0 else selected
+
+        # PostgreSQL orders a Yahoo batch by ticker identity, then by time
+        # descending. Rust reverses the combined list before enhancing it, so
+        # process source identities in reverse ID order on this no-start path.
+        context_by_source = {
+            source: self._read_merged_source(
+                source,
+                symbol,
+                iv,
+                end=end,
+                limit=raw_limit,
+                skip_pending_empty=skip_pending_empty,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+            for source in ordered_sources
+        }
+        context = [row for source in reversed(ordered_sources) for row in context_by_source[source]]
+        if not context:
+            return []
+        computed = enhance(context, iv, ma, ema)
+        return computed[-limit:] if limit > 0 else computed
+
+    def query_merged_aggregated_sources(
+        self,
+        sources,
+        symbol,
+        iv,
+        start=None,
+        end=None,
+        limit=252,
+        ma=True,
+        ema=False,
+        skip_pending_empty=False,
+        ignore_pending_repairs=False,
+    ):
+        """Aggregate duplicate source identities together, as Rust's extra-source SQL does."""
+        native = base_interval(iv)
+        if native == iv:
+            raise ValueError(f"Expected an aggregated interval, got {iv!r}")
+        factor = {
+            "5m": 5,
+            "15m": 15,
+            "30m": 30,
+            "4h": 4,
+            "1W": 5,
+            "2W": 10,
+            "1M": 23,
+        }[iv]
+        agg_buffer = 5000 if ma else factor
+        lookback = limit * factor + agg_buffer
+        if lookback <= 0:
+            return []
+
+        # Rust's extra-source query groups identities by persisted ticker ID,
+        # then Aggregator performs a stable time sort. Keep this identity order
+        # so equal-time rows have the same OHLC tie behavior.
+        ordered_sources = self.ordered_merged_sources(sources, symbol)
+        context = [
+            row
+            for source in ordered_sources
+            for row in self._read_merged_source(
+                source,
+                symbol,
+                native,
+                start,
+                end,
+                lookback,
+                forward=start is not None,
+                skip_pending_empty=skip_pending_empty,
+                ignore_pending_repairs=ignore_pending_repairs,
+            )
+        ]
+        if not context:
+            return []
+
+        # Rust's OHLCV table does not carry provider/revision identity, so two
+        # source records sharing a ticker name are aggregated even if their
+        # Python provenance differs.
+        bars = aggregate(context, iv, ordered_sources[0], lambda _rows: None)
+        computed = enhance(bars, iv, ma, ema)
+        if start is not None:
+            return computed[:limit] if limit >= 0 else computed
+        if limit == 0:
+            return []
+        return computed[-limit:] if limit > 0 else computed

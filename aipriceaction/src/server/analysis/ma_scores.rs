@@ -67,6 +67,28 @@ pub struct StockMaInfo {
     pub source: Option<String>,
 }
 
+fn sort_stock_ma_info(stocks: &mut [StockMaInfo]) {
+    stocks.sort_by(|left, right| {
+        right
+            .ma_score
+            .partial_cmp(&left.ma_score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| left.symbol.cmp(&right.symbol))
+            .then_with(|| left.source.cmp(&right.source))
+    });
+}
+
+fn sort_sector_analyses(sectors: &mut [(SectorMaAnalysis, String)]) {
+    sectors.sort_by(|(left, left_source), (right, right_source)| {
+        right
+            .average_score
+            .partial_cmp(&left.average_score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| left.sector_name.cmp(&right.sector_name))
+            .then_with(|| left_source.cmp(right_source))
+    });
+}
+
 #[tracing::instrument(skip(state))]
 pub async fn ma_scores_by_sector_handler(
     State(state): State<Arc<AppState>>,
@@ -125,10 +147,10 @@ pub async fn ma_scores_by_sector_handler(
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[0], &syms[0], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[1], &syms[1], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[2], &syms[2], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[3], &syms[3], "1D", redis_limit, "ma_scores", params.ema, !params.snap),
         );
         let mut merged = Vec::new();
         for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
@@ -140,7 +162,7 @@ pub async fn ma_scores_by_sector_handler(
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }, "ma_scores/single", params.ema, !params.snap).await;
+        let map = super::fetch_source_enhanced(&state.pool, &state.redis_client, source, &symbols, "1D", 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }, "ma_scores/single", params.ema, !params.snap).await;
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (_ticker, bars) in map {
             merged.extend(bars.into_iter().map(|row| (row, "")));
@@ -148,7 +170,15 @@ pub async fn ma_scores_by_sector_handler(
         if !merged.is_empty() {
             merged
         } else {
-            match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+            match ohlcv::get_latest_daily_per_ticker_with_ma_for_symbols(
+                &state.pool,
+                source,
+                Some(&symbols),
+                (if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }) as usize,
+                params.ema,
+            )
+            .await
+            {
                 Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
                 Err(e) => {
                     tracing::error!("Failed to fetch daily data: {}", e);
@@ -200,7 +230,9 @@ pub async fn ma_scores_by_sector_handler(
         }
     }
 
-    let mut sector_analyses = Vec::new();
+    // Retain group source internally to provide a deterministic tie-breaker
+    // when mode=all contains same-named sectors from multiple sources.
+    let mut sector_analyses: Vec<(SectorMaAnalysis, String)> = Vec::new();
     let mut total_analyzed = 0;
 
     for (sector_name, sector_tickers, is_vn_sector, preferred_source) in &all_sector_tickers {
@@ -281,28 +313,31 @@ pub async fn ma_scores_by_sector_handler(
                 0.0
             };
 
-            sector_stocks.sort_by(|a, b| {
-                b.ma_score.partial_cmp(&a.ma_score).unwrap_or(std::cmp::Ordering::Equal)
-            });
+            sort_stock_ma_info(&mut sector_stocks);
 
             let top_per_sector = params.top_per_sector.unwrap_or(10).min(50);
             let top_per_sector_len = top_per_sector.min(sector_stocks.len());
             sector_stocks.truncate(top_per_sector_len);
 
-            sector_analyses.push(SectorMaAnalysis {
-                sector_name: sector_name.clone(),
-                total_stocks: scores_count,
-                stocks_above_threshold: above_threshold_count,
-                average_score,
-                top_stocks: sector_stocks,
-            });
+            sector_analyses.push((
+                SectorMaAnalysis {
+                    sector_name: sector_name.clone(),
+                    total_stocks: scores_count,
+                    stocks_above_threshold: above_threshold_count,
+                    average_score,
+                    top_stocks: sector_stocks,
+                },
+                preferred_source.unwrap_or("unknown").to_string(),
+            ));
             total_analyzed += scores_count;
         }
     }
 
-    sector_analyses.sort_by(|a, b| {
-        b.average_score.partial_cmp(&a.average_score).unwrap_or(std::cmp::Ordering::Equal)
-    });
+    sort_sector_analyses(&mut sector_analyses);
+    let sectors = sector_analyses
+        .into_iter()
+        .map(|(sector, _source)| sector)
+        .collect();
 
     (
         StatusCode::OK,
@@ -311,10 +346,103 @@ pub async fn ma_scores_by_sector_handler(
             analysis_type: "ma_scores_by_sector".to_string(),
             total_analyzed,
             data: MaScoresBySectorResponse {
-                sectors: sector_analyses,
+                sectors,
                 ma_period: params.ma_period,
                 threshold: params.min_score,
             },
         }),
     ).into_response()
+}
+
+#[cfg(test)]
+mod ordering_tests {
+    use super::{sort_sector_analyses, sort_stock_ma_info, SectorMaAnalysis, StockMaInfo};
+
+    fn sector(name: &str, source: &str, average_score: f64) -> (SectorMaAnalysis, String) {
+        (
+            SectorMaAnalysis {
+                sector_name: name.to_string(),
+                total_stocks: 1,
+                stocks_above_threshold: 1,
+                average_score,
+                top_stocks: Vec::new(),
+            },
+            source.to_string(),
+        )
+    }
+
+    #[test]
+    fn equal_average_sectors_use_name_then_source_order() {
+        let mut sectors = vec![
+            sector("Zulu", "vn", 10.0),
+            sector("Alpha", "yahoo", 10.0),
+            sector("Alpha", "crypto", 10.0),
+            sector("Highest", "vn", 11.0),
+        ];
+
+        sort_sector_analyses(&mut sectors);
+
+        assert_eq!(
+            sectors
+                .iter()
+                .map(|(sector, source)| (sector.sector_name.as_str(), source.as_str()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("Highest", "vn"),
+                ("Alpha", "crypto"),
+                ("Alpha", "yahoo"),
+                ("Zulu", "vn"),
+            ]
+        );
+    }
+
+    #[test]
+    fn equal_score_stocks_use_symbol_then_source_order() {
+        let mut stocks = vec![
+            StockMaInfo {
+                symbol: "VCB".to_string(),
+                close: 10.0,
+                volume: 1,
+                ma_value: 9.0,
+                ma_score: 10.0,
+                close_changed: None,
+                volume_changed: None,
+                source: Some("vn".to_string()),
+            },
+            StockMaInfo {
+                symbol: "AAPL".to_string(),
+                close: 10.0,
+                volume: 1,
+                ma_value: 9.0,
+                ma_score: 10.0,
+                close_changed: None,
+                volume_changed: None,
+                source: Some("yahoo".to_string()),
+            },
+            StockMaInfo {
+                symbol: "AAPL".to_string(),
+                close: 10.0,
+                volume: 1,
+                ma_value: 9.0,
+                ma_score: 10.0,
+                close_changed: None,
+                volume_changed: None,
+                source: Some("crypto".to_string()),
+            },
+        ];
+
+        sort_stock_ma_info(&mut stocks);
+
+        assert_eq!(
+            stocks
+                .iter()
+                .map(|stock| (stock.symbol.as_str(), stock.source.as_deref()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("AAPL", Some("crypto")),
+                ("AAPL", Some("yahoo")),
+                ("VCB", Some("vn")),
+            ]
+        );
+    }
 }

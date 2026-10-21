@@ -11,11 +11,22 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::server::types::{
-    GroupQuery, Mode, NormalizedInterval, RefreshQuery, StockDataResponse,
-    TickersQuery,
+    GroupQuery, Mode, NormalizedInterval, RefreshQuery, StockDataResponse, TickersQuery,
+    expand_symbol_query,
 };
 
 use super::AppState;
+
+// `x-data-source` is a public, cross-implementation diagnostic. Expose the
+// logical source tier rather than naming the database engine so the Python
+// SQLite/S3 deployment and the Rust PostgreSQL deployment agree on cold reads.
+fn public_data_source_tag(tag: &'static str) -> &'static str {
+    match tag {
+        "postgres" => "database",
+        "redis" => "cache",
+        other => other,
+    }
+}
 
 // ── /health ──
 
@@ -29,9 +40,7 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
     let now = chrono::Utc::now();
     let weekday = now.weekday();
     let hour_utc = now.hour();
-    let is_trading_hours = weekday.num_days_from_monday() < 5
-        && hour_utc >= 2
-        && hour_utc < 8;
+    let is_trading_hours = weekday.num_days_from_monday() < 5 && hour_utc >= 2 && hour_utc < 8;
 
     (
         StatusCode::OK,
@@ -71,14 +80,12 @@ pub async fn health(State(state): State<Arc<AppState>>) -> Response {
 #[tracing::instrument(skip(state))]
 pub async fn tickers(
     State(state): State<Arc<AppState>>,
-    Query(params): Query<TickersQuery>,
+    Query(mut params): Query<TickersQuery>,
 ) -> Response {
     let t0 = std::time::Instant::now();
 
     // Validate interval first (needed for all modes)
-    let interval = match NormalizedInterval::parse(
-        params.interval.as_deref().unwrap_or("1D"),
-    ) {
+    let interval = match NormalizedInterval::parse(params.interval.as_deref().unwrap_or("1D")) {
         Some(iv) => iv,
         None => {
             return (
@@ -91,9 +98,41 @@ pub async fn tickers(
                     )
                 })),
             )
-                .into_response()
+                .into_response();
         }
     };
+
+    if let Some(symbols) = params.symbol.as_ref()
+        && symbols.iter().any(|symbol| symbol.contains(','))
+    {
+        // The web backtest client sends comma-joined names. Preserve a literal
+        // comma-containing ticker when it exists in this request's market.
+        let comma_symbols: Vec<String> = symbols
+            .iter()
+            .filter(|symbol| symbol.contains(','))
+            .cloned()
+            .collect();
+        let allowed_sources: Vec<String> = match params.mode {
+            Mode::Vn => vec!["vn".to_owned()],
+            Mode::Crypto => vec!["crypto".to_owned()],
+            Mode::Yahoo => std::iter::once("yahoo")
+                .chain(crate::constants::MERGE_WITH_YAHOO.iter().copied())
+                .map(str::to_owned)
+                .collect(),
+            Mode::All => ["vn", "yahoo", "sjc", "crypto"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+        };
+        let known_symbols = fetch::exact_symbols_in_sources(
+            &state.redis_client,
+            &state.pool,
+            &comma_symbols,
+            &allowed_sources,
+        )
+        .await;
+        params.symbol = expand_symbol_query(params.symbol, &known_symbols);
+    }
 
     // mode=all: query across all sources
     if params.mode == Mode::All {
@@ -109,7 +148,11 @@ pub async fn tickers(
     // Early return for empty or blank explicit symbol list
     if let Some(ref syms) = params.symbol {
         if syms.is_empty() || syms.iter().all(|s| s.is_empty()) {
-            return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response();
+            return (
+                StatusCode::OK,
+                Json(BTreeMap::<String, Vec<StockDataResponse>>::new()),
+            )
+                .into_response();
         }
     }
 
@@ -118,7 +161,7 @@ pub async fn tickers(
     let effective_limit = params.limit.unwrap_or_else(|| {
         if is_single_ticker {
             if params.start_date.is_some() {
-                crate::constants::api::SINGLE_TICKER_MAX_LIMIT  // don't truncate date ranges
+                crate::constants::api::SINGLE_TICKER_MAX_LIMIT // don't truncate date ranges
             } else {
                 crate::constants::api::DEFAULT_LIMIT
             }
@@ -126,19 +169,27 @@ pub async fn tickers(
             1
         }
     });
-    let effective_limit = if is_single_ticker { effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT) } else { effective_limit.min(crate::constants::api::max_limit()) };
+    let effective_limit = if is_single_ticker {
+        effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT)
+    } else {
+        effective_limit.min(crate::constants::api::max_limit())
+    };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
     // Build cache key with symbols available so far
     let cache_key_symbols = params.symbol.as_deref().unwrap_or(&[]);
-    let cache_key = fetch::build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
+    let cache_key =
+        fetch::build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
 
     // Try cache BEFORE any DB call
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
-            tracing::info!(step = "cache_hit", elapsed_ms = t0.elapsed().as_millis() as u64);
+            tracing::info!(
+                step = "cache_hit",
+                elapsed_ms = t0.elapsed().as_millis() as u64
+            );
             let mut resp = response::build_response(cached, params.legacy, params.mode, is_csv);
             resp.headers_mut().insert(
                 HeaderName::from_static("x-data-source"),
@@ -155,27 +206,42 @@ pub async fn tickers(
         None => {
             let source = params.mode.source_label();
             // Try Redis first (fast, no PG dependency)
-            if let Some(redis_tickers) = super::redis_reader::read_ticker_list_from_redis(&state.redis_client).await {
+            if let Some(redis_tickers) =
+                super::redis_reader::read_ticker_list_from_redis(&state.redis_client).await
+            {
                 let mut syms: Vec<String> = redis_tickers
                     .into_iter()
-                    .filter(|t| {
-                        t.source == source || extra_sources.contains(&t.source.as_str())
-                    })
+                    .filter(|t| t.source == source || extra_sources.contains(&t.source.as_str()))
                     .map(|t| t.ticker)
                     .collect();
                 syms.sort();
                 syms.dedup();
                 if !syms.is_empty() {
-                    tracing::info!(step = "resolve_symbols", src = "redis", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+                    tracing::info!(
+                        step = "resolve_symbols",
+                        src = "redis",
+                        tickers = syms.len(),
+                        elapsed_ms = t0.elapsed().as_millis() as u64
+                    );
                     syms
                 } else {
                     let syms = fetch::pg_list_tickers(&state.pool, source, extra_sources).await;
-                    tracing::info!(step = "resolve_symbols", src = "pg", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+                    tracing::info!(
+                        step = "resolve_symbols",
+                        src = "pg",
+                        tickers = syms.len(),
+                        elapsed_ms = t0.elapsed().as_millis() as u64
+                    );
                     syms
                 }
             } else {
                 let syms = fetch::pg_list_tickers(&state.pool, source, extra_sources).await;
-                tracing::info!(step = "resolve_symbols", src = "pg", tickers = syms.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+                tracing::info!(
+                    step = "resolve_symbols",
+                    src = "pg",
+                    tickers = syms.len(),
+                    elapsed_ms = t0.elapsed().as_millis() as u64
+                );
                 syms
             }
         }
@@ -188,47 +254,88 @@ pub async fn tickers(
     let (result, source_tag, redis_meta) = match interval {
         NormalizedInterval::Native(db_interval) => {
             fetch::fetch_native_tickers(
-                &state.pool, &state.redis_client, source, symbols,
-                db_interval, start_time, end_time,
-                Some(effective_limit), extra_sources, params.redis, params.ma, params.ema, !params.snap,
-            ).await
+                &state.pool,
+                &state.redis_client,
+                source,
+                symbols,
+                db_interval,
+                start_time,
+                end_time,
+                Some(effective_limit),
+                extra_sources,
+                params.redis,
+                params.ma,
+                params.ema,
+                !params.snap,
+            )
+            .await
         }
         NormalizedInterval::Aggregated(agg) => {
             fetch::fetch_aggregated_tickers(
-                &state.pool, &state.redis_client, source, symbols,
-                agg, start_time, end_time,
-                effective_limit, extra_sources, params.redis, params.ma, params.ema,
-            ).await
+                &state.pool,
+                &state.redis_client,
+                source,
+                symbols,
+                agg,
+                start_time,
+                end_time,
+                effective_limit,
+                extra_sources,
+                params.redis,
+                params.ma,
+                params.ema,
+            )
+            .await
         }
     };
 
-    tracing::info!(step = "fetch_done", path = source_tag, tickers = result.len(), elapsed_ms = t0.elapsed().as_millis() as u64);
+    tracing::info!(
+        step = "fetch_done",
+        path = source_tag,
+        tickers = result.len(),
+        elapsed_ms = t0.elapsed().as_millis() as u64
+    );
 
     // Store in cache
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         guard.put(cache_key, &result);
-        tracing::info!(step = "cache_store", elapsed_ms = t0.elapsed().as_millis() as u64);
+        tracing::info!(
+            step = "cache_store",
+            elapsed_ms = t0.elapsed().as_millis() as u64
+        );
     }
 
     let mut response = response::build_response(result, params.legacy, params.mode, is_csv);
-    tracing::info!(step = "build_response", is_csv, elapsed_ms = t0.elapsed().as_millis() as u64);
+    tracing::info!(
+        step = "build_response",
+        is_csv,
+        elapsed_ms = t0.elapsed().as_millis() as u64
+    );
     response.headers_mut().insert(
         HeaderName::from_static("x-data-source"),
-        HeaderValue::from_static(source_tag),
+        HeaderValue::from_static(public_data_source_tag(source_tag)),
     );
     if let Some(meta) = redis_meta {
         if let Ok(v) = HeaderValue::from_str(&meta.base_interval) {
-            response.headers_mut().insert(HeaderName::from_static("x-redis-base"), v);
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static("x-redis-base"), v);
         }
         if let Ok(v) = HeaderValue::from_str(&meta.raw_close_count.to_string()) {
-            response.headers_mut().insert(HeaderName::from_static("x-redis-raw-count"), v);
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static("x-redis-raw-count"), v);
         }
         if let Ok(v) = HeaderValue::from_str(&meta.aligned_count.to_string()) {
-            response.headers_mut().insert(HeaderName::from_static("x-redis-aligned"), v);
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static("x-redis-aligned"), v);
         }
         if let Ok(v) = HeaderValue::from_str(&meta.requested_limit.to_string()) {
-            response.headers_mut().insert(HeaderName::from_static("x-redis-limit"), v);
+            response
+                .headers_mut()
+                .insert(HeaderName::from_static("x-redis-limit"), v);
         }
     }
     response
@@ -245,17 +352,22 @@ async fn handle_mode_all(
     // Early return for empty or blank explicit symbol list
     if let Some(ref syms) = params.symbol {
         if syms.is_empty() || syms.iter().all(|s| s.is_empty()) {
-            return (StatusCode::OK, Json(BTreeMap::<String, Vec<StockDataResponse>>::new())).into_response();
+            return (
+                StatusCode::OK,
+                Json(BTreeMap::<String, Vec<StockDataResponse>>::new()),
+            )
+                .into_response();
         }
     }
 
     // Compute effective_limit and is_csv before any DB call
     let has_explicit_symbols = params.symbol.is_some();
-    let is_single_ticker = has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1);
+    let is_single_ticker =
+        has_explicit_symbols && params.symbol.as_ref().map(|s| s.len()) == Some(1);
     let effective_limit = params.limit.unwrap_or_else(|| {
         if is_single_ticker {
             if params.start_date.is_some() {
-                crate::constants::api::SINGLE_TICKER_MAX_LIMIT  // don't truncate date ranges
+                crate::constants::api::SINGLE_TICKER_MAX_LIMIT // don't truncate date ranges
             } else {
                 crate::constants::api::DEFAULT_LIMIT
             }
@@ -263,30 +375,35 @@ async fn handle_mode_all(
             1
         }
     });
-    let effective_limit = if is_single_ticker { effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT) } else { effective_limit.min(crate::constants::api::max_limit()) };
+    let effective_limit = if is_single_ticker {
+        effective_limit.min(crate::constants::api::SINGLE_TICKER_MAX_LIMIT)
+    } else {
+        effective_limit.min(crate::constants::api::max_limit())
+    };
 
     let is_csv = params.format.eq_ignore_ascii_case("csv");
 
     // Build cache key before any DB call
     let cache_key_symbols = params.symbol.as_deref().unwrap_or(&[]);
-    let cache_key = fetch::build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
+    let cache_key =
+        fetch::build_cache_key(&params, &interval, cache_key_symbols, Some(effective_limit));
 
     // Check cache BEFORE any DB call
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         if let Some(cached) = guard.get(&cache_key) {
-            tracing::info!(step = "cache_hit", elapsed_ms = t0.elapsed().as_millis() as u64);
+            tracing::info!(
+                step = "cache_hit",
+                elapsed_ms = t0.elapsed().as_millis() as u64
+            );
             return response::build_response(cached, params.legacy, params.mode, is_csv);
         }
         drop(guard);
     }
 
     // Resolve symbols → sources via shared fetch function
-    let source_map = fetch::resolve_source_map(
-        &state.redis_client,
-        &state.pool,
-        params.symbol.as_deref(),
-    ).await;
+    let source_map =
+        fetch::resolve_source_map(&state.redis_client, &state.pool, params.symbol.as_deref()).await;
     let sources: Vec<&str> = source_map.keys().map(|s| s.as_str()).collect();
     tracing::info!(step = "resolve_sources", sources = ?sources, tickers = source_map.values().map(|v| v.len()).sum::<usize>(), elapsed_ms = t0.elapsed().as_millis() as u64);
 
@@ -308,10 +425,21 @@ async fn handle_mode_all(
                 let db_interval = db_interval.to_string();
                 handles.push(tokio::spawn(async move {
                     let (data, tag, _meta) = fetch::fetch_native_tickers(
-                        &pool, &redis_client, &source, syms,
-                        &db_interval, start_time, end_time,
-                        Some(limit), &[], true, with_ma, use_ema, true,
-                    ).await;
+                        &pool,
+                        &redis_client,
+                        &source,
+                        syms,
+                        &db_interval,
+                        start_time,
+                        end_time,
+                        Some(limit),
+                        &[],
+                        true,
+                        with_ma,
+                        use_ema,
+                        true,
+                    )
+                    .await;
                     (source, data, tag)
                 }));
             }
@@ -319,10 +447,20 @@ async fn handle_mode_all(
                 let agg = *agg;
                 handles.push(tokio::spawn(async move {
                     let (data, tag, _meta) = fetch::fetch_aggregated_tickers(
-                        &pool, &redis_client, &source, syms,
-                        agg, start_time, end_time,
-                        limit, &[], true, with_ma, use_ema,
-                    ).await;
+                        &pool,
+                        &redis_client,
+                        &source,
+                        syms,
+                        agg,
+                        start_time,
+                        end_time,
+                        limit,
+                        &[],
+                        true,
+                        with_ma,
+                        use_ema,
+                    )
+                    .await;
                     (source, data, tag)
                 }));
             }
@@ -352,18 +490,33 @@ async fn handle_mode_all(
     if params.cache {
         let mut guard = state.tickers_cache.write().await;
         guard.put(cache_key, &merged);
-        tracing::info!(step = "cache_store", elapsed_ms = t0.elapsed().as_millis() as u64);
+        tracing::info!(
+            step = "cache_store",
+            elapsed_ms = t0.elapsed().as_millis() as u64
+        );
     }
 
     let all_redis = !source_tags.is_empty() && source_tags.iter().all(|&t| t == "redis");
     let any_redis = source_tags.contains("redis");
-    let source_tag = if merged.is_empty() { "empty" } else if all_redis { "redis" } else if any_redis { "mixed" } else { "postgres" };
+    let source_tag = if merged.is_empty() {
+        "empty"
+    } else if all_redis {
+        "redis"
+    } else if any_redis {
+        "mixed"
+    } else {
+        "postgres"
+    };
 
     let mut response = response::build_response(merged, params.legacy, params.mode, is_csv);
-    tracing::info!(step = "build_response", is_csv, elapsed_ms = t0.elapsed().as_millis() as u64);
+    tracing::info!(
+        step = "build_response",
+        is_csv,
+        elapsed_ms = t0.elapsed().as_millis() as u64
+    );
     response.headers_mut().insert(
         HeaderName::from_static("x-data-source"),
-        HeaderValue::from_static(source_tag),
+        HeaderValue::from_static(public_data_source_tag(source_tag)),
     );
     response
 }
@@ -415,7 +568,7 @@ pub async fn tickers_refresh(
                     "error": "Invalid interval. Must be one of: 1D, 1h, 1m"
                 })),
             )
-                .into_response()
+                .into_response();
         }
     };
 
@@ -462,12 +615,13 @@ pub async fn tickers_refresh(
 
 #[tracing::instrument]
 pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
-    let result: Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error + Send + Sync>> = match params.mode {
-        Mode::Vn => data_loader::load_vn_groups(),
-        Mode::Crypto => data_loader::load_crypto_groups(),
-        Mode::Yahoo => data_loader::load_yahoo_groups(),
-        Mode::All => data_loader::load_all_groups(),
-    };
+    let result: Result<BTreeMap<String, Vec<String>>, Box<dyn std::error::Error + Send + Sync>> =
+        match params.mode {
+            Mode::Vn => data_loader::load_vn_groups(),
+            Mode::Crypto => data_loader::load_crypto_groups(),
+            Mode::Yahoo => data_loader::load_yahoo_groups(),
+            Mode::All => data_loader::load_all_groups(),
+        };
 
     match result {
         Ok(groups) => (StatusCode::OK, Json(groups)).into_response(),
@@ -486,12 +640,13 @@ pub async fn tickers_group(Query(params): Query<GroupQuery>) -> Response {
 
 #[tracing::instrument]
 pub async fn tickers_name(Query(params): Query<GroupQuery>) -> Response {
-    let result: Result<BTreeMap<String, String>, Box<dyn std::error::Error + Send + Sync>> = match params.mode {
-        Mode::Vn => data_loader::load_vn_names(),
-        Mode::Crypto => data_loader::load_crypto_names(),
-        Mode::Yahoo => data_loader::load_yahoo_names(),
-        Mode::All => data_loader::load_all_names(),
-    };
+    let result: Result<BTreeMap<String, String>, Box<dyn std::error::Error + Send + Sync>> =
+        match params.mode {
+            Mode::Vn => data_loader::load_vn_names(),
+            Mode::Crypto => data_loader::load_crypto_names(),
+            Mode::Yahoo => data_loader::load_yahoo_names(),
+            Mode::All => data_loader::load_all_names(),
+        };
 
     match result {
         Ok(names) => (StatusCode::OK, Json(names)).into_response(),
@@ -515,7 +670,8 @@ pub struct InfoQuery {
 
 #[tracing::instrument]
 pub async fn tickers_info(Query(params): Query<InfoQuery>) -> Response {
-    let result: Result<Vec<serde_json::Value>, Box<dyn std::error::Error + Send + Sync>> = data_loader::load_merged_info();
+    let result: Result<Vec<serde_json::Value>, Box<dyn std::error::Error + Send + Sync>> =
+        data_loader::load_merged_info();
 
     match result {
         Ok(data) => {
@@ -562,11 +718,7 @@ pub async fn explorer_handler() -> Response {
             html,
         )
             .into_response(),
-        Err(_) => (
-            StatusCode::NOT_FOUND,
-            "Explorer not found",
-        )
-            .into_response(),
+        Err(_) => (StatusCode::NOT_FOUND, "Explorer not found").into_response(),
     }
 }
 

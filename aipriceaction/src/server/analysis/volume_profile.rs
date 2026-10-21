@@ -29,6 +29,13 @@ pub struct VolumeProfileQuery {
 
 fn default_mode() -> String { "vn".to_string() }
 
+const MAX_PRICE_STEPS_PER_BAR: i128 = 1_000_000;
+
+fn exceeds_price_step_limit(low_idx: i64, high_idx: i64) -> bool {
+    let price_steps = i128::from(high_idx) - i128::from(low_idx) + 1;
+    price_steps > MAX_PRICE_STEPS_PER_BAR
+}
+
 #[derive(Debug, Serialize)]
 pub struct VolumeProfileResponse {
     pub symbol: String,
@@ -185,6 +192,17 @@ pub async fn volume_profile_handler(
         ).await {
             Ok(r) => r,
             Err(e) => {
+                if matches!(&e, &sqlx::Error::RowNotFound) {
+                    let date_desc = if start_date_str == end_date_str {
+                        start_date_str.clone()
+                    } else {
+                        format!("{} to {}", start_date_str, end_date_str)
+                    };
+                    return (
+                        StatusCode::NOT_FOUND,
+                        Json(serde_json::json!({ "error": format!("No minute data found for {} on {}", params.symbol, date_desc) })),
+                    ).into_response();
+                }
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(serde_json::json!({ "error": format!("Failed to fetch data: {}", e) })),
@@ -248,8 +266,14 @@ pub async fn volume_profile_handler(
 
         let low_idx = (row.low / tick_size).round() as i64;
         let high_idx = (row.high / tick_size).round() as i64;
-        let num_steps = (high_idx - low_idx) + 1;
-        if num_steps <= 0 { continue; }
+        if high_idx < low_idx { continue; }
+        if exceeds_price_step_limit(low_idx, high_idx) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": "Minute price range exceeds volume-profile resource limit" })),
+            ).into_response();
+        }
+        let num_steps = (i128::from(high_idx) - i128::from(low_idx) + 1) as i64;
 
         let vol_per_step = row.volume as f64 / num_steps as f64;
         for idx in low_idx..=high_idx {
@@ -322,6 +346,18 @@ pub async fn volume_profile_handler(
         total_analyzed: filtered.len(),
         data: response,
     })).into_response()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::exceeds_price_step_limit;
+
+    #[test]
+    fn volume_profile_bounds_per_bar_price_expansion() {
+        assert!(!exceeds_price_step_limit(10, 1_000_009));
+        assert!(exceeds_price_step_limit(10, 1_000_010));
+        assert!(exceeds_price_step_limit(i64::MIN, i64::MAX));
+    }
 }
 
 // Helper to both compute POC and add percentages (single pass, returns final profile)

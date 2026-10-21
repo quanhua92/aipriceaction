@@ -1,4 +1,5 @@
 import math
+import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -54,14 +55,69 @@ def parse_time(value: str | int | float | datetime) -> int:
     return int((dt if dt.tzinfo else dt.replace(tzinfo=UTC)).timestamp())
 
 
+_CHRONO_DATE = re.compile(r"\s*([+-]?[0-9]+)-\s*([0-9]{1,2})-\s*([0-9]{1,2})\Z")
+_CHRONO_MIN_YEAR = -262143
+_CHRONO_MAX_YEAR = 262142
+
+
+def parse_chrono_date(value: str | None) -> tuple[int, int, int] | None:
+    """Parse the numeric date forms accepted by Chrono's ``%Y-%m-%d`` parser.
+
+    Chrono treats the format's numeric widths as maxima, so month and day may
+    contain one digit. It also accepts signed years and year zero. Keeping this
+    parser shared lets HTTP bounds and RRG's echoed analysis date agree with the
+    Rust handlers.
+    """
+    if value is None:
+        return None
+    match = _CHRONO_DATE.fullmatch(value)
+    if match is None:
+        return None
+    raw_year, raw_month, raw_day = match.groups()
+    year_digits = raw_year.lstrip("+-")
+    if raw_year[0] not in "+-" and len(year_digits) > 4:
+        return None
+    year, month, day = int(raw_year), int(raw_month), int(raw_day)
+    if not _CHRONO_MIN_YEAR <= year <= _CHRONO_MAX_YEAR:
+        return None
+    if not 1 <= month <= 12:
+        return None
+    leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+    month_lengths = (31, 29 if leap else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    if not 1 <= day <= month_lengths[month - 1]:
+        return None
+    return year, month, day
+
+
+def _days_from_civil(year: int, month: int, day: int) -> int:
+    """Return Gregorian days since 1970-01-01, including Chrono's year zero."""
+    adjusted_year = year - (1 if month <= 2 else 0)
+    era = adjusted_year // 400
+    year_of_era = adjusted_year - era * 400
+    shifted_month = month + (-3 if month > 2 else 9)
+    day_of_year = (153 * shifted_month + 2) // 5 + day - 1
+    day_of_era = year_of_era * 365 + year_of_era // 4 - year_of_era // 100 + day_of_year
+    return era * 146097 + day_of_era - 719468
+
+
+def format_chrono_date(value: str) -> str:
+    """Return the canonical ``%Y-%m-%d`` text Rust emits for a parsed date."""
+    parsed = parse_chrono_date(value)
+    if parsed is None:
+        raise DataError("Invalid date format. Use YYYY-MM-DD", 400)
+    year, month, day = parsed
+    year_text = f"{year:04d}" if 0 < year < 10_000 else f"{year:+05d}"
+    return f"{year_text}-{month:02d}-{day:02d}"
+
+
 def date_bounds(value: str | None, end=False) -> int | None:
     if value is None:
         return None
-    try:
-        dt = datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=UTC)
-    except ValueError as exc:
-        raise DataError("Invalid date format. Use YYYY-MM-DD", 400) from exc
-    return int((dt + (timedelta(days=1) if end else timedelta())).timestamp()) - int(end)
+    parsed = parse_chrono_date(value)
+    if parsed is None:
+        raise DataError("Invalid date format. Use YYYY-MM-DD", 400)
+    days = _days_from_civil(*parsed)
+    return days * 86400 + (86399 if end else 0)
 
 
 def cutoff(years: int, now: datetime | None = None) -> int:

@@ -1,9 +1,9 @@
 """Client-side OHLCV aggregation ported from aipriceaction/src/services/aggregator.rs.
 
-Supports aggregating base intervals into higher timeframes:
+Supports aggregating base intervals into these higher timeframes:
   1m  -> 5m, 15m, 30m  (minute alignment within hour)
   1h  -> 4h             (hour alignment with offset)
-  1D  -> 1W, 2W, 1M    (ISO week / calendar month)
+  1D  -> 1W, 2W        (ISO week)
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ def aggregate_ohlcv(
     Args:
         df: DataFrame with columns: time, open, high, low, close, volume.
             Must be for a single symbol (no 'symbol' column needed).
-        target_interval: Target interval (e.g. "5m", "15m", "4h", "1W", "1M").
+        target_interval: Target interval (e.g. "5m", "15m", "4h", "1W", "2W").
         source: Data source ("vn" or "crypto"). Affects hour alignment offset.
 
     Returns:

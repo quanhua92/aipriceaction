@@ -18,7 +18,7 @@ use crate::constants::api::{EMA_LOOKBACK, SMA_MAX_PERIOD};
 
 use super::{
     get_all_sources, get_ticker_sector, is_index_ticker, load_crypto_groups, load_ticker_groups,
-    load_yahoo_groups, try_redis_batch, AnalysisResponse,
+    load_yahoo_groups, try_redis_batch_until, AnalysisResponse,
 };
 
 // ---------------------------------------------------------------------------
@@ -322,6 +322,61 @@ pub async fn rrg_handler(
 /// Mascore algorithm only needs MA20 and MA100, so max_period=100.
 const MASCORE_MAX_MA_PERIOD: usize = 100;
 
+fn enhance_mascore_rows(
+    rows_by_symbol: HashMap<String, Vec<OhlcvRow>>,
+    limit: Option<i64>,
+    end_time: Option<DateTime<Utc>>,
+    use_ema: bool,
+) -> HashMap<String, Vec<OhlcvJoined>> {
+    rows_by_symbol
+        .into_iter()
+        .map(|(symbol, rows)| {
+            let rows = match end_time {
+                Some(end) => rows.into_iter().filter(|row| row.time <= end).collect(),
+                None => rows,
+            };
+            let enhanced = ohlcv::enhance_rows_selective(
+                &symbol,
+                rows,
+                limit,
+                None,
+                use_ema,
+                MASCORE_MAX_MA_PERIOD,
+            );
+            (symbol, enhanced)
+        })
+        .filter(|(_, rows)| !rows.is_empty())
+        .collect()
+}
+
+async fn fill_missing_mascore_from_postgres(
+    pool: &sqlx::PgPool,
+    source: &str,
+    requested: &[String],
+    joined: &mut HashMap<String, Vec<OhlcvJoined>>,
+    limit: Option<i64>,
+    end_time: Option<DateTime<Utc>>,
+    use_ema: bool,
+    include_all_when_request_empty: bool,
+) -> sqlx::Result<()> {
+    let Some(missing) = super::postgres_fallback_symbols(
+        requested,
+        joined,
+        include_all_when_request_empty,
+    ) else {
+        return Ok(());
+    };
+
+    let fallback = ohlcv::get_ohlcv_joined_batch(
+        pool, source, &missing, "1D", limit, None, end_time, true, use_ema,
+    )
+    .await?;
+    for (symbol, rows) in fallback {
+        joined.entry(symbol).or_insert(rows);
+    }
+    Ok(())
+}
+
 async fn handle_mascore(
     state: Arc<AppState>,
     params: &RrgQuery,
@@ -393,20 +448,45 @@ async fn handle_mascore(
                 .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
                 .collect();
             let (r1, r2, r3, r4) = tokio::join!(
-                super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
-                super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
-                super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
-                super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[0], &syms[0], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[1], &syms[1], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[2], &syms[2], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
+                super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[3], &syms[3], "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg", params.ema, !params.snap),
             );
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
-            for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
+            for (map, src, requested) in [
+                (r1, sources[0], &syms[0]),
+                (r2, sources[1], &syms[1]),
+                (r3, sources[2], &syms[2]),
+                (r4, sources[3], &syms[3]),
+            ] {
                 if !map.is_empty() {
                     for (_ticker, bars) in map {
                         merged.extend(bars.into_iter().map(|row| (row, src)));
                     }
                 } else {
                     // Redis/snapshots failed for this source — fall back to PG
-                    match ohlcv::get_latest_daily_per_ticker(&state.pool, src).await {
+                    let fallback = if src == "sjc" {
+                        // Python's mode=all MASCORE universe explicitly adds
+                        // all SJC database tickers, outside the curated Redis groups.
+                        ohlcv::get_latest_daily_per_ticker_with_ma(
+                            &state.pool,
+                            src,
+                            MASCORE_MAX_MA_PERIOD,
+                            params.ema,
+                        )
+                        .await
+                    } else {
+                        ohlcv::get_latest_daily_per_ticker_with_ma_for_symbols(
+                            &state.pool,
+                            src,
+                            Some(requested),
+                            MASCORE_MAX_MA_PERIOD,
+                            params.ema,
+                        )
+                        .await
+                    };
+                    match fallback {
                         Ok(v) => merged.extend(v.into_iter().map(|row| (row, src))),
                         Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
                     }
@@ -416,7 +496,7 @@ async fn handle_mascore(
         } else {
             let source = params.mode.source_label();
             let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-            let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single", params.ema, !params.snap).await;
+            let map = super::fetch_source_enhanced(&state.pool, &state.redis_client, source, &symbols, "1D", 1 + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD), "rrg/single", params.ema, !params.snap).await;
             let mut merged: Vec<(OhlcvJoined, &str)> = Vec::new();
             for (_ticker, bars) in map {
                 merged.extend(bars.into_iter().map(|row| (row, source)));
@@ -424,7 +504,15 @@ async fn handle_mascore(
             if !merged.is_empty() {
                 merged
             } else {
-                match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+                match ohlcv::get_latest_daily_per_ticker_with_ma_for_symbols(
+                    &state.pool,
+                    source,
+                    Some(&symbols),
+                    MASCORE_MAX_MA_PERIOD,
+                    params.ema,
+                )
+                .await
+                {
                     Ok(r) => r.into_iter().map(|row| (row, source)).collect(),
                     Err(e) => {
                         tracing::error!("Failed to fetch daily data: {}", e);
@@ -469,6 +557,11 @@ async fn handle_mascore(
                 trails: None,
             });
         }
+        snapshots.sort_by(|left, right| {
+            left.symbol
+                .cmp(&right.symbol)
+                .then_with(|| left.source.cmp(&right.source))
+        });
         let total_analyzed = snapshots.len();
         return (
             StatusCode::OK,
@@ -495,11 +588,20 @@ async fn handle_mascore(
         Some(params.trails.clamp(1, 120) as i64)
     };
 
-    let effective_trails = if params.trails == 0 { 0 } else { params.trails.clamp(1, 120) };
+    let effective_trails = if params.trails == 0 {
+        0
+    } else {
+        params.trails.clamp(1, 120)
+    };
 
     // Trails path: fetch historical rows per source
     let mut all_joined: Vec<(HashMap<String, Vec<OhlcvJoined>>, &str)> = Vec::new();
-    let redis_limit = effective_limit.unwrap_or(1) + crate::constants::api::sma_buffer_for(MASCORE_MAX_MA_PERIOD);
+    let ma_buffer = if params.ema {
+        crate::constants::api::EMA_LOOKBACK
+    } else {
+        crate::constants::api::SMA_MAX_PERIOD
+    };
+    let redis_limit = effective_limit.unwrap_or(1) + ma_buffer;
 
     if is_all {
         let sources = get_all_sources();
@@ -509,81 +611,75 @@ async fn handle_mascore(
         let syms: Vec<Vec<String>> = sources.iter()
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
+        let max_score = end_time.map(|dt| dt.timestamp_millis());
         let (r1, r2, r3, r4) = tokio::join!(
-            try_redis_batch(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "rrg"),
-            try_redis_batch(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "rrg"),
-            try_redis_batch(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "rrg"),
-            try_redis_batch(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "rrg"),
+            try_redis_batch_until(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "rrg", max_score),
+            try_redis_batch_until(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "rrg", max_score),
+            try_redis_batch_until(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "rrg", max_score),
+            try_redis_batch_until(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "rrg", max_score),
         );
-        for (redis_result, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
-            if let Some(map) = redis_result {
-                let joined: HashMap<String, Vec<OhlcvJoined>> = map.into_iter()
-                    .map(|(ticker, orows)| {
-                        let filtered = match et {
-                            Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
-                            None => orows,
-                        };
-                        let enhanced = ohlcv::enhance_rows_selective(&ticker, filtered, effective_limit, None, params.ema, MASCORE_MAX_MA_PERIOD);
-                        (ticker, enhanced)
-                    })
-                    .filter(|(_, v)| !v.is_empty())
-                    .collect();
-                if !joined.is_empty() {
-                    all_joined.push((joined, src));
-                    continue;
-                }
+        for (redis_result, src, requested) in [
+            (r1, sources[0], &syms[0]),
+            (r2, sources[1], &syms[1]),
+            (r3, sources[2], &syms[2]),
+            (r4, sources[3], &syms[3]),
+        ] {
+            let mut joined = redis_result
+                .map(|map| enhance_mascore_rows(map, effective_limit, et, params.ema))
+                .unwrap_or_default();
+            if let Err(error) = fill_missing_mascore_from_postgres(
+                &state.pool,
+                src,
+                requested,
+                &mut joined,
+                el,
+                et,
+                params.ema,
+                src == "sjc",
+            )
+            .await
+            {
+                tracing::warn!("Failed to fetch daily data for source '{}': {}", src, error);
             }
-            // Redis failed or returned empty for this source — fall back to PG
-            match ohlcv::get_ohlcv_joined_batch(&state.pool, src, &[], "1D", el, None, et, true, params.ema).await {
-                Ok(map) => all_joined.push((map, src)),
-                Err(e) => tracing::warn!("Failed to fetch daily data for source '{}': {}", src, e),
-            }
+            all_joined.push((joined, src));
         }
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        if let Some(map) = try_redis_batch(&state.redis_client, source, &symbols, "1D", redis_limit, "rrg/single").await {
-            let joined: HashMap<String, Vec<OhlcvJoined>> = map.into_iter()
-                .map(|(ticker, orows)| {
-                    let filtered = match end_time {
-                        Some(end) => orows.into_iter().filter(|r| r.time <= end).collect(),
-                        None => orows,
-                    };
-                    let enhanced = ohlcv::enhance_rows_selective(&ticker, filtered, effective_limit, None, params.ema, MASCORE_MAX_MA_PERIOD);
-                    (ticker, enhanced)
-                })
-                .filter(|(_, v)| !v.is_empty())
-                .collect();
-            if !joined.is_empty() {
-                all_joined.push((joined, source));
-            } else {
-                // Redis returned empty — fall back to PG
-                match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true, params.ema).await {
-                    Ok(map) => all_joined.push((map, source)),
-                    Err(e) => {
-                        tracing::error!("Failed to fetch daily data: {}", e);
-                        return (
-                            StatusCode::INTERNAL_SERVER_ERROR,
-                            Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-                        )
-                            .into_response();
-                    }
-                }
-            }
-        } else {
-            // Redis unavailable — fall back to PG
-            match ohlcv::get_ohlcv_joined_batch(&state.pool, source, &[], "1D", effective_limit, None, end_time, true, params.ema).await {
-                Ok(map) => all_joined.push((map, source)),
-                Err(e) => {
-                    tracing::error!("Failed to fetch daily data: {}", e);
-                    return (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({ "error": "Failed to fetch market data" })),
-                    )
-                        .into_response();
-                }
-            }
+        let max_score = end_time.map(|dt| dt.timestamp_millis());
+        let redis_result = try_redis_batch_until(
+            &state.redis_client,
+            source,
+            &symbols,
+            "1D",
+            redis_limit,
+            "rrg/single",
+            max_score,
+        )
+        .await;
+        let mut joined = redis_result
+            .map(|map| enhance_mascore_rows(map, effective_limit, end_time, params.ema))
+            .unwrap_or_default();
+        if let Err(error) = fill_missing_mascore_from_postgres(
+            &state.pool,
+            source,
+            &symbols,
+            &mut joined,
+            effective_limit,
+            end_time,
+            params.ema,
+            false,
+        )
+        .await
+        {
+            tracing::error!("Failed to fetch daily data: {error}");
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to fetch market data" })),
+            )
+                .into_response();
         }
+        all_joined.push((joined, source));
     }
 
     let mut snapshots = Vec::new();
@@ -629,7 +725,13 @@ async fn handle_mascore(
             }
 
             // Take the last effective_trails rows
-            let start = filled.len().saturating_sub(effective_trails as usize);
+            // With trails=0, the dated path still returns the latest row
+            // before the cutoff and omits the trail array.
+            let start = if effective_trails == 0 {
+                filled.len() - 1
+            } else {
+                filled.len().saturating_sub(effective_trails as usize)
+            };
             let trail_slice = &filled[start..];
 
             // Build trail points (only when effective_trails > 0)
@@ -667,6 +769,11 @@ async fn handle_mascore(
         }
     }
 
+    snapshots.sort_by(|left, right| {
+        left.symbol
+            .cmp(&right.symbol)
+            .then_with(|| left.source.cmp(&right.source))
+    });
     let total_analyzed = snapshots.len();
 
     (
@@ -774,46 +881,70 @@ async fn handle_jdk(
 
         // Try Redis first
         let jdk_limit = 250 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD };
-        if let Some(map) = try_redis_batch(
-            &state.redis_client, source, &fetch_symbols, "1D", jdk_limit, "rrg/jdk",
-        ).await {
-            for (sym, rows) in map {
-                let filtered = match end_time {
-                    Some(end) => rows.into_iter().filter(|r| r.time <= end).collect(),
+        let max_score = end_time.map(|dt| dt.timestamp_millis());
+        let redis_result = try_redis_batch_until(
+            &state.redis_client,
+            source,
+            &fetch_symbols,
+            "1D",
+            jdk_limit,
+            "rrg/jdk",
+            max_score,
+        )
+        .await;
+        let mut source_rows: HashMap<String, Vec<OhlcvRow>> = redis_result
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(symbol, rows)| {
+                let rows = match end_time {
+                    Some(end) => rows.into_iter().filter(|row| row.time <= end).collect(),
                     None => rows,
                 };
-                results.insert(format!("{source}:{sym}"), filtered);
-            }
-        } else {
-            // Fall back to PG
+                (symbol, rows)
+            })
+            .collect();
+
+        // A Redis batch can succeed for only some requested symbols. Match
+        // Python's per-ticker reads by filling just those misses from PG.
+        let missing = super::missing_symbols(&fetch_symbols, &source_rows);
+        if !missing.is_empty() {
             match ohlcv::get_ohlcv_batch_raw(
                 &state.pool,
                 source,
-                &fetch_symbols,
+                &missing,
                 "1D",
-                Some(250),
+                Some(jdk_limit),
                 None,
                 end_time,
             )
             .await
             {
                 Ok(map) => {
-                    for (sym, rows) in map {
-                        results.insert(format!("{source}:{sym}"), rows);
+                    for (symbol, rows) in map {
+                        source_rows.entry(symbol).or_insert(rows);
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Failed to fetch OHLCV for source '{}': {}", source, e);
+                    tracing::warn!("Failed to fetch missing OHLCV for source '{}': {}", source, e);
                 }
             }
         }
+
+        for (symbol, rows) in source_rows {
+            results.insert(format!("{source}:{symbol}"), rows);
+        }
     }
 
-    // Get benchmark rows from the first source that has them
-    let benchmark_rows = results
-        .iter()
-        .find(|(k, _)| k.ends_with(&format!(":{}", benchmark_upper)))
-        .map(|(_, v)| v.as_slice());
+    // Keep benchmark selection deterministic when the same symbol exists in
+    // multiple sources. Python's mode=all order is VN, Yahoo, then crypto.
+    let benchmark_source_order: &[&str] = match params.mode {
+        Mode::Vn => &["vn"],
+        Mode::Yahoo => &["yahoo"],
+        Mode::Crypto => &["crypto"],
+        Mode::All => &["vn", "yahoo", "crypto"],
+    };
+    let benchmark_rows =
+        select_nonempty_benchmark(&results, benchmark_source_order, &benchmark_upper);
 
     let benchmark_rows = match benchmark_rows {
         Some(r) => r,
@@ -935,6 +1066,11 @@ async fn handle_jdk(
         }
     }
 
+    snapshots.sort_by(|left, right| {
+        left.symbol
+            .cmp(&right.symbol)
+            .then_with(|| left.source.cmp(&right.source))
+    });
     let total_analyzed = snapshots.len();
 
     (
@@ -952,4 +1088,36 @@ async fn handle_jdk(
         }),
     )
         .into_response()
+}
+
+fn select_nonempty_benchmark<'a, T>(
+    results: &'a HashMap<String, Vec<T>>,
+    source_order: &[&str],
+    benchmark: &str,
+) -> Option<&'a [T]> {
+    source_order.iter().find_map(|source| {
+        results
+            .get(&format!("{source}:{benchmark}"))
+            .filter(|rows| !rows.is_empty())
+            .map(Vec::as_slice)
+    })
+}
+
+#[cfg(test)]
+mod benchmark_selection_tests {
+    use super::select_nonempty_benchmark;
+    use std::collections::HashMap;
+
+    #[test]
+    fn skips_empty_higher_priority_benchmark_source() {
+        let results = HashMap::from([
+            ("vn:VNINDEX".to_owned(), Vec::<i32>::new()),
+            ("yahoo:VNINDEX".to_owned(), vec![1, 2, 3]),
+        ]);
+
+        assert_eq!(
+            select_nonempty_benchmark(&results, &["vn", "yahoo"], "VNINDEX"),
+            Some([1, 2, 3].as_slice())
+        );
+    }
 }

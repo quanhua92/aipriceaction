@@ -5,6 +5,9 @@ x-api-environment: &api-environment
   SQLITE_PATH: /data/aipriceaction.sqlite3
   ARCHIVE_CACHE_PATH: /data/archive-cache
   ARCHIVE_OBJECT_PATH: /data/objects
+  UPLOADS_PATH: /data/uploads
+  UPLOADS_MAX_BYTES: ${UPLOADS_MAX_BYTES:-536870912}
+  UPLOADS_MAX_SESSIONS: ${UPLOADS_MAX_SESSIONS:-10000}
   ARCHIVE_BACKEND: s3
   S3_ENDPOINT: http://rustfs:9000
   S3_BUCKET: ${S3_BUCKET:-aipriceaction-api-local}
@@ -14,7 +17,9 @@ x-api-environment: &api-environment
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-aipa-local-development-only}
   AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
   CATALOG_BASE_URL: ${CATALOG_BASE_URL:-https://api.aipriceaction.com}
+  API_MAX_LIMIT: ${API_MAX_LIMIT:-40}
   CATALOG_SNAPSHOT_PATH: /data/catalog-snapshot.json
+  RUST_TICKER_IDENTITY_ORDER_PATH: ${RUST_TICKER_IDENTITY_ORDER_PATH:-}
   INGEST_UNIVERSE: catalog
   WATCHLIST_PATH: /app/watchlist.json
   ALLOW_DIRECT: ${ALLOW_DIRECT:-true}
@@ -27,9 +32,16 @@ x-api-environment: &api-environment
   HOURLY_RETENTION_YEARS: ${HOURLY_RETENTION_YEARS:-3}
   MINUTE_RETENTION_YEARS: ${MINUTE_RETENTION_YEARS:-1}
   SYNC_TOKEN: ${SYNC_TOKEN:-}
-  REFRESH_SECRET: ${REFRESH_SECRET:-}
-  CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com,http://localhost:3001,http://127.0.0.1:3001,http://0.0.0.0:3001}
+  REFRESH_SECRET: ${REFRESH_SECRET:?Set a non-empty REFRESH_SECRET before starting the API}
+  CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com}
   AIPA_LOG_LEVEL: ${AIPA_LOG_LEVEL:-INFO}
+  API_READ_CONCURRENCY: ${API_READ_CONCURRENCY:-4}
+  API_MARKET_READ_CONCURRENCY: ${API_MARKET_READ_CONCURRENCY:-4}
+  API_REQUEST_CONCURRENCY: ${API_REQUEST_CONCURRENCY:-64}
+  REDIS_DAILY_MAX_SIZE: ${REDIS_DAILY_MAX_SIZE:-5000}
+  REDIS_HOURLY_MAX_SIZE: ${REDIS_HOURLY_MAX_SIZE:-30000}
+  REDIS_MINUTE_MAX_SIZE: ${REDIS_MINUTE_MAX_SIZE:-20000}
+  REDIS_URL: ${REDIS_URL:-}
 
 x-api-service: &api-service
   build:
@@ -94,6 +106,7 @@ services:
     command: ["aipa-api", "serve", "--host", "0.0.0.0", "--port", "3001"]
     ports:
       - "0.0.0.0:${AIPA_API_PORT:-3001}:3001"
+      - "127.0.0.1:${AIPA_API_SSR_PORT:-3000}:3001"
     restart: unless-stopped
     healthcheck:
       test:

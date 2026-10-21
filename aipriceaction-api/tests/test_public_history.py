@@ -108,7 +108,8 @@ def test_valid_dates_become_available_without_healing_invalid_date_or_context(sy
         "vn", "VND", "1D", start=parse_time("2020-12-31"), end=parse_time("2020-12-31"), ma=True
     )
     assert len(rows) == 1 and rows[0]["time"] == "2020-12-31"
-    assert "ma10" not in rows[0]
+    # Rust expands short SMA windows when fewer than ten valid candles exist.
+    assert rows[0]["ma10"] == 100
     assert len(repo.history_gaps()) == 2
     assert len(archive.read(result["object"])) == 4
 

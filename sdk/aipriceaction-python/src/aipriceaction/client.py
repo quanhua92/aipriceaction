@@ -1261,7 +1261,7 @@ class AIPriceAction:
             ticker: Single ticker symbol (e.g. "VCB", "BTCUSDT"). None = all tickers.
             tickers: Multiple ticker symbols. Mutually exclusive with ticker.
             interval: Time interval. Native: "1D", "1h", "1m". Aggregated: "5m", "15m",
-                      "30m", "4h", "1W", "2W", "1M". Default: "1D".
+                      "30m", "4h", "1W", "2W". Default: "1D".
             limit: Max rows per ticker. Applied after fetching. Default: 252 for single ticker,
                 1 for multiple tickers. None = all rows in date range.
             start_date: Start date (inclusive). String "YYYY-MM-DD" or date object.

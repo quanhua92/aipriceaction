@@ -5,6 +5,43 @@ from datetime import UTC, datetime
 
 from .domain import PERIODS, DataError, bucket
 
+# Matches Rust constants::vci_worker::INDEX_TICKERS. Other VN instruments,
+# including non-listed index aliases, use the ordinary price-based tick size.
+_VOLUME_PROFILE_INDEX_TICKERS = frozenset(
+    {
+        "VNINDEX",
+        "VN30",
+        "VN30F1M",
+        "HNX30",
+        "VN100",
+        "VNMIDCAP",
+        "VNSMALLCAP",
+        "VNALLSHARE",
+        "VNXALLSHARE",
+        "VNMITECH",
+        "VNUTI",
+        "VNCONS",
+        "VNCOND",
+        "VNHEAL",
+        "VNIND",
+        "VNFIN",
+        "VNFINLEAD",
+        "VNFINSELECT",
+        "VNDIAMOND",
+        "VNDIVIDEND",
+        "VNREAL",
+        "VNENE",
+    }
+)
+
+
+def _rust_sum(values):
+    """Sum in iterator order, matching Rust's sequential f64 Iterator::sum."""
+    total = 0.0
+    for value in values:
+        total += value
+    return total
+
 
 def aggregate(rows, iv, source, validate_basis=None):
     groups = defaultdict(list)
@@ -37,18 +74,17 @@ def moving_average(values, period, ema=False):
         return result
     if ema:
         n = min(period, len(values))
-        result[n - 1] = sum(values[:n]) / n
+        result[n - 1] = _rust_sum(values[:n]) / n
         k = 2 / (period + 1)
         for i in range(n, len(values)):
             result[i] = values[i] * k + result[i - 1] * (1 - k)
     else:
-        running = 0.0
-        for i, value in enumerate(values):
-            running += value
-            if i >= period:
-                running -= values[i - period]
-            if i >= period - 1:
-                result[i] = running / period
+        for i in range(period - 1, len(values)):
+            result[i] = _rust_sum(values[i + 1 - period : i + 1]) / period
+        # Rust expands only when the entire series is shorter than the period.
+        if len(values) < period:
+            for i, _value in enumerate(values):
+                result[i] = _rust_sum(values[: i + 1]) / (i + 1)
     return result
 
 
@@ -71,14 +107,17 @@ def enhance(rows, iv, ma=True, ema=False):
         for p, values in averages.items():
             if values[i] > 0:
                 out[f"ma{p}"] = values[i]
-                out[f"ma{p}_score"] = (row.close / values[i] - 1) * 100
+                out[f"ma{p}_score"] = ((row.close - values[i]) / values[i]) * 100
         if i:
             prev = rows[i - 1]
             if prev.close > 0:
-                out["close_changed"] = (row.close / prev.close - 1) * 100
-            if prev.volume > 0:
-                out["volume_changed"] = (row.volume / prev.volume - 1) * 100
-            out["total_money_changed"] = (row.close - prev.close) * row.volume
+                out["close_changed"] = ((row.close - prev.close) / prev.close) * 100
+            current_volume = float(row.volume)
+            previous_volume = float(prev.volume)
+            if previous_volume > 0:
+                out["volume_changed"] = ((current_volume - previous_volume) / previous_volume) * 100
+            if prev.close > 0:
+                out["total_money_changed"] = (row.close - prev.close) * current_volume
         result.append(out)
     return result
 
@@ -87,7 +126,9 @@ def wma(values, p):
     result = [0.0] * len(values)
     weights = p * (p + 1) / 2
     for i in range(p - 1, len(values)):
-        result[i] = sum(v * (j + 1) for j, v in enumerate(values[i + 1 - p : i + 1])) / weights
+        result[i] = (
+            _rust_sum(v * (j + 1) for j, v in enumerate(values[i + 1 - p : i + 1])) / weights
+        )
     return result
 
 
@@ -95,8 +136,8 @@ def normalize(values, p):
     result = [100.0] * len(values)
     for i in range(p - 1, len(values)):
         window = values[i + 1 - p : i + 1]
-        mean = sum(window) / p
-        std = math.sqrt(sum((v - mean) ** 2 for v in window) / p)
+        mean = _rust_sum(window) / p
+        std = math.sqrt(_rust_sum((v - mean) * (v - mean) for v in window) / p)
         if std:
             result[i] = 100 + 10 * (values[i] - mean) / std
     return result
@@ -107,19 +148,34 @@ def jdk(security, benchmark, p):
         return None
     rs = [s / b if b else 0 for s, b in zip(security, benchmark, strict=True)]
     ratio = wma(wma(rs, p), p)
-    momentum = [(ratio[i] / ratio[i - 1] - 1) if ratio[i - 1] else 0 for i in range(1, len(ratio))]
+    momentum = [
+        (ratio[i] - ratio[i - 1]) / ratio[i - 1] if ratio[i - 1] else 0
+        for i in range(1, len(ratio))
+    ]
     x, y = normalize(ratio, p), normalize(momentum, p)
     return [(x[i + 1], y[i]) for i in range(p - 1, len(y))]
 
 
 def volume_profile(rows, symbol, source, bins=50, value_area=70):
-    from .domain import INDEXES, DataError
+    from .domain import DataError
 
     if not rows:
         raise DataError(f"No minute data found for {symbol}", 404)
-    avg = sum((r.high + r.low) / 2 for r in rows) / len(rows)
+    # Rust receives Redis and SQL rows newest-first. History.read is
+    # chronological, so normalize before sequential f64 reductions and per-row
+    # volume accumulation to make both backends use the same operation order.
+    rows = sorted(rows, key=lambda row: row.time, reverse=True)
+    avg = _rust_sum((r.high + r.low) / 2 for r in rows) / len(rows)
     if source == "vn":
-        tick = 0.01 if symbol in INDEXES else 10 if avg < 10000 else 50 if avg < 50000 else 100
+        tick = (
+            0.01
+            if symbol.upper() in _VOLUME_PROFILE_INDEX_TICKERS
+            else 10
+            if avg < 10000
+            else 50
+            if avg < 50000
+            else 100
+        )
     else:
         tick = 0.0001 if avg < 1 else 0.01 if avg < 100 else 0.1 if avg < 1000 else 1
     # Rust rounds half away from zero, unlike Python's round.
@@ -127,15 +183,25 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
     for row in rows:
         if not row.volume:
             continue
-        lo, hi = math.floor(row.low / tick + 0.5), math.floor(row.high / tick + 0.5)
-        if hi - lo > 1_000_000:
+        lo, hi = (
+            _round_half_away_from_zero(row.low / tick),
+            _round_half_away_from_zero(row.high / tick),
+        )
+        if hi < lo:
+            continue
+        if hi - lo + 1 > 1_000_000:
             raise DataError("Minute price range exceeds volume-profile resource limit", 400)
         vol = row.volume / (hi - lo + 1)
         for i in range(lo, hi + 1):
-            distribution[i * tick] += vol
+            # Rust aggregates by integer tick index, then converts each price
+            # to f64 after all per-index volume additions are complete.
+            distribution[i] += vol
     if not distribution:
-        raise DataError("No volume profile data generated", 404)
-    profile = sorted(distribution.items())
+        return None
+    profile = sorted((index * tick, volume) for index, volume in distribution.items())
+    # Rust sums the sorted integer-tick profile before aggregating display bins;
+    # preserve that denominator even when bin accumulation rounds differently.
+    total = _rust_sum(v for _, v in profile)
     bins = max(2, min(200, bins))
     if len(profile) > bins:
         lo, hi = profile[0][0], profile[-1][0]
@@ -144,11 +210,21 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
         for price, vol in profile:
             volumes[min(bins - 1, int((price - lo) / size))] += vol
         profile = [(lo + (i + 0.5) * size, vol) for i, vol in enumerate(volumes) if vol]
-    total = sum(v for _, v in profile)
     peak = max(range(len(profile)), key=lambda i: (profile[i][1], i))
-    lo = hi = peak
-    area = profile[peak][1]
-    while area < total * max(60, min(90, value_area)) / 100 and (lo > 0 or hi < len(profile) - 1):
+    poc_price = profile[peak][0]
+    # The Rust implementation resolves the POC back to a profile index using
+    # the first level within one cent. This matters for low-priced crypto and
+    # Yahoo symbols where several adjacent levels can be closer than $0.01.
+    poc_index = next(
+        (i for i, (price, _volume) in enumerate(profile) if abs(price - poc_price) < 0.01),
+        0,
+    )
+    lo = hi = poc_index
+    area = profile[poc_index][1]
+    # Rust's f64::clamp leaves a NaN input as NaN. That makes the target NaN,
+    # and the comparison false, so the value area remains the POC bin.
+    clamped_value_area = value_area if math.isnan(value_area) else max(60, min(90, value_area))
+    while area < total * (clamped_value_area / 100) and (lo > 0 or hi < len(profile) - 1):
         below = profile[lo - 1][1] if lo else 0
         above = profile[hi + 1][1] if hi + 1 < len(profile) else 0
         if below > above or hi == len(profile) - 1:
@@ -157,22 +233,26 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
         else:
             hi += 1
             area += profile[hi][1]
-    mean = sum(p * v for p, v in profile) / total
-    std = math.sqrt(sum((p - mean) ** 2 * v for p, v in profile) / total)
-    median = profile[0][0]
-    cumulative = 0.0
+    mean = _rust_sum(p * v for p, v in profile) / total
+    std = math.sqrt(_rust_sum((p - mean) * (p - mean) * v for p, v in profile) / total)
+    median = float(profile[0][0])
+    cumulative_percentage = 0.0
+    cumulative_volume = 0.0
+    median_found = False
     levels = []
     for price, vol in profile:
-        previous = cumulative
-        cumulative += vol
-        if previous < total / 2 <= cumulative:
-            median = price
+        cumulative_volume += vol
+        if not median_found and cumulative_volume >= total / 2:
+            median = float(price)
+            median_found = True
+        percentage = (vol / total) * 100
+        cumulative_percentage += percentage
         levels.append(
             {
-                "price": price,
+                "price": float(price),
                 "volume": vol,
-                "percentage": vol / total * 100,
-                "cumulative_percentage": cumulative / total * 100,
+                "percentage": percentage,
+                    "cumulative_percentage": cumulative_percentage,
             }
         )
     low = min(r.low for r in rows if r.volume)
@@ -183,13 +263,13 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
         "total_minutes": len(rows),
         "price_range": {"low": low, "high": high, "spread": high - low},
         "poc": {
-            "price": profile[peak][0],
+            "price": float(profile[peak][0]),
             "volume": profile[peak][1],
             "percentage": profile[peak][1] / total * 100,
         },
         "value_area": {
-            "low": profile[lo][0],
-            "high": profile[hi][0],
+            "low": float(profile[lo][0]),
+            "high": float(profile[hi][0]),
             "volume": area,
             "percentage": area / total * 100,
         },
@@ -198,6 +278,15 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
             "mean_price": mean,
             "median_price": median,
             "std_deviation": std,
-            "skewness": sum((p - mean) ** 3 * v for p, v in profile) / total / std**3 if std else 0,
+            "skewness": _rust_sum((p - mean) * (p - mean) * (p - mean) * v for p, v in profile)
+            / total
+            / (std * std * std)
+            if std
+            else 0,
         },
     }
+
+
+def _round_half_away_from_zero(value):
+    """Match Rust f64::round for finite positive or negative prices."""
+    return math.floor(value + 0.5) if value >= 0 else math.ceil(value - 0.5)

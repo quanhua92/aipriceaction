@@ -5,13 +5,16 @@ No runtime extension download or bucket-wide query glob is required.
 """
 
 import csv
+import fcntl
 import hashlib
 import json
 import os
+import stat
 import tempfile
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
@@ -19,6 +22,35 @@ import duckdb
 
 from .domain import Candle, DataError, cutoff
 from .storage import COLUMNS
+
+_LOCAL_FILE_LOCKS = {}
+_LOCAL_FILE_LOCKS_GUARD = threading.Lock()
+
+
+@contextmanager
+def _local_file_lock(path, blocking):
+    """Serialize same-process flock users without keeping one lock per object forever."""
+    key = os.path.abspath(path)
+    with _LOCAL_FILE_LOCKS_GUARD:
+        entry = _LOCAL_FILE_LOCKS.get(key)
+        if entry is None:
+            lock, users = threading.Lock(), 0
+        else:
+            lock, users = entry
+        _LOCAL_FILE_LOCKS[key] = (lock, users + 1)
+    acquired = False
+    try:
+        acquired = lock.acquire(blocking=blocking)
+        yield acquired
+    finally:
+        if acquired:
+            lock.release()
+        with _LOCAL_FILE_LOCKS_GUARD:
+            current_lock, users = _LOCAL_FILE_LOCKS[key]
+            if users == 1:
+                del _LOCAL_FILE_LOCKS[key]
+            else:
+                _LOCAL_FILE_LOCKS[key] = (current_lock, users - 1)
 
 
 def sha256(path):
@@ -145,75 +177,237 @@ class Archive:
             if settings.archive_backend == "filesystem"
             else S3Store(settings)
         )
-        self.lock = threading.RLock()
+        self._cache_eviction_guard = threading.Lock()
+        self._cache_needs_check = True
+
+    @contextmanager
+    def _cache_lock(self, name, blocking=True):
+        """Take a stable local and cross-process lock in the shared cache directory.
+
+        Lock files are deliberately persistent. Unlinking one can split waiters
+        across old and new inodes, while flock itself releases on process exit.
+        """
+        lock_dir = self.settings.cache_dir / ".locks"
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        lock_path = lock_dir / f"{name}.lock"
+        with _local_file_lock(str(lock_path), blocking) as local_acquired:
+            if not local_acquired:
+                yield False
+                return
+            flags = os.O_CREAT | os.O_RDWR
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            descriptor = os.open(lock_path, flags, 0o600)
+            acquired = False
+            try:
+                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                    raise DataError("Invalid archive cache lock")
+                operation = fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB)
+                try:
+                    fcntl.flock(descriptor, operation)
+                except BlockingIOError:
+                    yield False
+                    return
+                acquired = True
+                yield True
+            finally:
+                if acquired:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                os.close(descriptor)
+
+    @staticmethod
+    def _validate_checksum(checksum):
+        if (
+            not isinstance(checksum, str)
+            or len(checksum) != 64
+            or any(character not in "0123456789abcdef" for character in checksum)
+        ):
+            raise DataError("Invalid archive checksum")
+        return checksum
 
     def _path(self, obj, refresh=False):
         root = self.settings.cache_dir
         root.mkdir(parents=True, exist_ok=True)
-        path = root / (obj["checksum"] + ".parquet")
-        if refresh or not path.exists() or sha256(path) != obj["checksum"]:
+        checksum = self._validate_checksum(obj["checksum"])
+        path = root / (checksum + ".parquet")
+        changed = False
+        if path.is_symlink():
+            path.unlink()
+        if refresh or not path.is_file() or sha256(path) != checksum:
             with tempfile.NamedTemporaryFile(dir=root, suffix=".tmp", delete=False) as file:
                 temp = Path(file.name)
             try:
                 self.store.download(obj["object_key"], temp)
-                if sha256(temp) != obj["checksum"]:
+                if sha256(temp) != checksum:
                     raise DataError("Archive checksum mismatch")
                 if temp.stat().st_size > self.settings.cache_bytes:
                     raise DataError("Archive object exceeds cache budget; repartition it")
-                os.replace(temp, path)
+                # Publish before replacing the cache path so a crash or a
+                # failed timestamp update cannot hide a new object from other
+                # long-lived Archive processes. Keep the global eviction lock
+                # through replace so another process cannot clear the marker
+                # after publication but before the new path becomes visible.
+                with self._cache_lock("eviction") as acquired:
+                    if not acquired:
+                        raise DataError("Could not lock archive cache eviction")
+                    self._write_eviction_marker()
+                    os.replace(temp, path)
+                changed = True
             finally:
                 temp.unlink(missing_ok=True)
         path.touch()
-        return path
+        return path, changed
+
+    @property
+    def _eviction_marker(self):
+        return self.settings.cache_dir / ".locks" / "eviction-needed"
+
+    def _write_eviction_marker(self):
+        """Create the shared marker while holding the global eviction lock."""
+        marker = self._eviction_marker
+        flags = os.O_CREAT | os.O_WRONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(marker, flags, 0o600)
+        os.close(descriptor)
 
     def _evict(self):
-        files = sorted(self.settings.cache_dir.glob("*.parquet"), key=lambda p: p.stat().st_mtime)
-        total = sum(p.stat().st_size for p in files)
-        for path in files:
-            if total <= self.settings.cache_bytes:
-                break
-            total -= path.stat().st_size
-            path.unlink(missing_ok=True)
+        with self._cache_lock("eviction") as acquired:
+            if not acquired:
+                return True
+            files = []
+            for path in self.settings.cache_dir.glob("*.parquet"):
+                if path.is_symlink() or not path.is_file():
+                    continue
+                try:
+                    info = path.stat()
+                except FileNotFoundError:
+                    continue
+                files.append((path, info.st_mtime_ns, info.st_size))
+            files.sort(key=lambda item: item[1])
+            total = sum(size for _, _, size in files)
+            for path, scanned_mtime, scanned_size in files:
+                if total <= self.settings.cache_bytes:
+                    break
+                try:
+                    lock_name = self._validate_checksum(path.stem)
+                except DataError:
+                    # Old or stray .parquet files are not addressable by an
+                    # archive checksum, but still count against the cache.
+                    lock_name = "orphan-" + hashlib.sha256(path.name.encode()).hexdigest()
+                # Never wait for an active reader while holding the eviction
+                # lock. A later successful read will retry eviction.
+                with self._cache_lock(lock_name, blocking=False) as object_acquired:
+                    if not object_acquired:
+                        continue
+                    try:
+                        current = path.stat()
+                    except FileNotFoundError:
+                        continue
+                    # A read may have refreshed this object since the scan.
+                    if (
+                        current.st_mtime_ns != scanned_mtime
+                        or current.st_size != scanned_size
+                        or path.is_symlink()
+                        or not path.is_file()
+                    ):
+                        continue
+                    path.unlink(missing_ok=True)
+                    total -= current.st_size
+            needs_check = total > self.settings.cache_bytes
+            marker = self._eviction_marker
+            if needs_check:
+                self._write_eviction_marker()
+            else:
+                marker.unlink(missing_ok=True)
+            return needs_check
+
+    def _evict_if_needed(self, cache_changed):
+        with self._cache_eviction_guard:
+            if cache_changed:
+                self._cache_needs_check = True
+            local_needs_check = self._cache_needs_check
+        if not local_needs_check:
+            # Serialize the marker check with marker publication/removal. This
+            # lets a process that just released its last cache pin observe a
+            # retry another process published while it held that pin.
+            with self._cache_lock("eviction") as acquired:
+                if not acquired:
+                    with self._cache_eviction_guard:
+                        self._cache_needs_check = True
+                    return
+                if not self._eviction_marker.exists():
+                    return
+        with self._cache_eviction_guard:
+            self._cache_needs_check = False
+        try:
+            needs_check = self._evict()
+        except Exception:
+            with self._cache_eviction_guard:
+                self._cache_needs_check = True
+            raise
+        if needs_check:
+            with self._cache_eviction_guard:
+                self._cache_needs_check = True
 
     def read(self, obj, start=None, end=None, limit=None, refresh=False, forward=False):
-        with self.lock:
-            path = self._path(obj, refresh)
-            where, args = [], [str(path)]
-            if start is not None:
-                where.append("time>=?")
-                args.append(start)
-            if end is not None:
-                where.append("time<=?")
-                args.append(end)
-            query = (
-                "SELECT * FROM read_parquet(?)"
-                + (" WHERE " + " AND ".join(where) if where else "")
-                + (" ORDER BY time ASC" if forward else " ORDER BY time DESC")
-            )
-            if limit is not None:
-                query += " LIMIT ?"
-                args.append(limit)
+        checksum = self._validate_checksum(obj.get("checksum"))
+        cache_changed = False
+        try:
+            with self._cache_lock(checksum) as acquired:
+                if not acquired:
+                    raise DataError("Could not lock archive cache object")
+                path, cache_changed = self._path(obj, refresh)
+                where, args = [], [str(path)]
+                if start is not None:
+                    where.append("time>=?")
+                    args.append(start)
+                if end is not None:
+                    where.append("time<=?")
+                    args.append(end)
+                query = (
+                    "SELECT * FROM read_parquet(?)"
+                    + (" WHERE " + " AND ".join(where) if where else "")
+                    + (" ORDER BY time ASC" if forward else " ORDER BY time DESC")
+                )
+                if limit is not None:
+                    query += " LIMIT ?"
+                    args.append(limit)
+                try:
+                    with duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as con:
+                        cursor = con.execute(query, args)
+                        columns = [c[0] for c in cursor.description]
+                        fetched = cursor.fetchall()
+                        result = [
+                            Candle(**dict(zip(columns, row, strict=True))).validate()
+                            for row in (fetched if forward else reversed(fetched))
+                        ]
+                except DataError:
+                    raise
+                except Exception as exc:
+                    raise DataError("Invalid Parquet archive") from exc
+                if any(
+                    (c.source, c.symbol, c.interval, c.revision, c.provider)
+                    != (
+                        obj["source"],
+                        obj["symbol"],
+                        obj["interval"],
+                        obj["revision"],
+                        obj["provider"],
+                    )
+                    for c in result
+                ):
+                    raise DataError("Archive identity/revision mismatch")
+        except BaseException:
+            # Keep the original read error if eviction also fails. The shared
+            # marker remains available for the next cache operation to retry.
             try:
-                with duckdb.connect(config={"threads": 1, "memory_limit": "256MB"}) as con:
-                    cursor = con.execute(query, args)
-                    columns = [c[0] for c in cursor.description]
-                    fetched = cursor.fetchall()
-                    result = [
-                        Candle(**dict(zip(columns, row, strict=True))).validate()
-                        for row in (fetched if forward else reversed(fetched))
-                    ]
-            except DataError:
-                raise
-            except Exception as exc:
-                raise DataError("Invalid Parquet archive") from exc
-            if any(
-                (c.source, c.symbol, c.interval, c.revision, c.provider)
-                != (obj["source"], obj["symbol"], obj["interval"], obj["revision"], obj["provider"])
-                for c in result
-            ):
-                raise DataError("Archive identity/revision mismatch")
-            self._evict()
-            return result
+                self._evict_if_needed(cache_changed)
+            except Exception:
+                pass
+            raise
+        self._evict_if_needed(cache_changed)
+        return result
 
     def _write(self, candles, path):
         # Bulk-load through a local typed CSV rather than executing one INSERT

@@ -429,7 +429,16 @@ pub fn run() {
 
                 let (app, health_snapshot) = crate::server::create_app(pool.clone(), redis_client.clone(), redis_handle);
 
-                // Spawn health-stats worker (always enabled — lightweight)
+                // Populate the health snapshot before binding the listener so
+                // the first HTTP request sees the same initialized state as
+                // Python's lifespan startup refresh.
+                if let Err(e) =
+                    crate::workers::health::refresh_snapshot(&pool, &health_snapshot).await
+                {
+                    tracing::warn!("health worker: initial snapshot refresh failed: {e}");
+                }
+
+                // Spawn the health-stats worker (always enabled).
                 {
                     let pool = pool.clone();
                     tokio::spawn(async move {

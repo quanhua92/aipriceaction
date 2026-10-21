@@ -6,11 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml README.md ./
+ENV PATH="/app/.venv/bin:$PATH"
+
+COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 COPY watchlist.json ./watchlist.json
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir --retries 5 --timeout 60 uv==0.7.20 \
+    && uv sync --locked --no-dev
 
 EXPOSE 3001
 

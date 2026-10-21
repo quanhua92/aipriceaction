@@ -1,6 +1,7 @@
 import asyncio
 import time
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -205,10 +206,12 @@ def test_schema_upgrade_and_backup_preserve_checks(system, tmp_path):
 def test_health_exposes_snapshot_dates_without_claiming_live_verification(system):
     repo, settings = system
     repo.put(bars())
-    with TestClient(create_app(settings)) as client:
+    app = create_app(settings)
+    with TestClient(app) as client:
         response = client.get("/health")
     assert response.status_code == 200
-    check = response.json()["storage"]["series"][0]
-    assert check["last_ingest_at"] and check["latest_candle_at"].startswith("2026-01-05")
-    assert check["last_provider_success_at"] is None and not check["verification_current"]
+    check = repo.status()["series"][0]
+    assert check["last_ingest_ns"]
+    assert datetime.fromtimestamp(check["last"], UTC).isoformat().startswith("2026-01-05")
+    assert check["successful_at_ns"] is None and not check["verification_current"]
     assert check["latest_verification"] == "unverified"

@@ -9,15 +9,20 @@ from dataclasses import replace
 from .domain import DataError, completed_vn_sessions, cutoff
 from .providers import Providers, adjustment_changes, vn_provider_order
 from .quality import audit as audit  # Re-export for the existing operational CLI.
+from .redis_client import create_redis_client
+from .redis_publish import publish_ticker_list, publish_worker_candles, replace_worker_cache
 
 log = logging.getLogger(__name__)
 
 
 class Worker:
-    def __init__(self, repo, settings, providers=None, archive=None):
+    def __init__(self, repo, settings, providers=None, archive=None, redis_client=None):
         self.repo, self.settings = repo, settings
         self.providers = providers or Providers(settings)
         self.archive = archive
+        self.redis_client = (
+            create_redis_client(settings.redis_url) if redis_client is None else redis_client
+        )
         self.owner = uuid.uuid4().hex
         self.configuration = []
         self.deadline = 90  # Keep network operations shorter than durable leases.
@@ -160,7 +165,7 @@ class Worker:
             if entry is not None:
                 job = self.repo.advance_job_floor(job, self.floor(entry, job["interval"]))
             if job["cursor"] is not None and job["cursor"] <= job["floor"]:
-                return self.finish_recent_job(job)
+                return await self.finish_recent_job(job)
             page = await self.providers.page(
                 job["source"],
                 job["symbol"],
@@ -184,7 +189,7 @@ class Worker:
                 else (page.rows[0].time if page.rows else None)
             )
             if self.at_verified_listing_prefix(job, entry, page):
-                return self.finish_recent_job(job)
+                return await self.finish_recent_job(job)
             if oldest is None or (
                 not page.rows and (job["cursor"] is None or oldest > job["floor"])
             ):
@@ -207,7 +212,11 @@ class Worker:
             ):
                 # Publish the first validated recent page promptly, without
                 # claiming that the requested history floor has been reached.
-                self.repo.put([r for r in prepared if r.time >= job["floor"]])
+                published = [r for r in prepared if r.time >= job["floor"]]
+                self.repo.put(published)
+                await asyncio.to_thread(
+                    publish_worker_candles, self.redis_client, self.settings, published
+                )
                 self.repo.finding(
                     job["source"],
                     job["symbol"],
@@ -228,7 +237,7 @@ class Worker:
                         (self.owner, int(time.time()) + 120, job["id"]),
                     )
                     claimed = dict(row) | {"lease_owner": self.owner}
-                self.finish_recent_job(claimed)
+                await self.finish_recent_job(claimed)
             return len(prepared)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
@@ -367,7 +376,7 @@ class Worker:
             and first == job["cursor"]
         )
 
-    def finish_recent_job(self, job):
+    async def finish_recent_job(self, job):
         if job["provider"] == "vci":
             state = self.repo.state(job["source"], job["symbol"], job["interval"])
             if not state or state["provider"] != "vci" or not self.repo.snapshot_adoption(state):
@@ -404,6 +413,22 @@ class Worker:
                 self.repo.fail_job(job, reason)
                 return 0
         self.repo.finish_job(job)
+        if self.redis_client is not None:
+            retained = {
+                "1D": self.settings.redis_daily_max_size,
+                "1h": self.settings.redis_hourly_max_size,
+                "1m": self.settings.redis_minute_max_size,
+            }[job["interval"]]
+            tail = await asyncio.to_thread(
+                self.repo.read,
+                job["source"],
+                job["symbol"],
+                job["interval"],
+                limit=retained,
+            )
+            await asyncio.to_thread(
+                replace_worker_cache, self.redis_client, self.settings, tail
+            )
         self.repo.schedule(job["source"], job["symbol"], job["interval"], int(time.time()) + 60)
         return 0
 
@@ -611,6 +636,9 @@ class Worker:
                 raise DataError("Provider has no candles inside the retained window")
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
+            await asyncio.to_thread(
+                publish_worker_candles, self.redis_client, self.settings, rows
+            )
             # The recent observation and candles are committed together. A later
             # optional historical probe must not rewrite that successful result,
             # including when the worker is cancelled during the probe.
@@ -1055,6 +1083,10 @@ class Worker:
                 self.configuration = [entry for entry in self.configuration if entry["intervals"]]
 
             configure()
+            ticker_identities = await asyncio.to_thread(
+                self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
+            )
+            await asyncio.to_thread(publish_ticker_list, self.redis_client, ticker_identities)
             if not self.configuration:
                 raise DataError("No configured watchlist entries match worker filters", 400)
             log.info(
@@ -1080,6 +1112,12 @@ class Worker:
             while True:
                 if time.monotonic() >= next_configuration_refresh:
                     configure()
+                    ticker_identities = await asyncio.to_thread(
+                        self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
+                    )
+                    await asyncio.to_thread(
+                        publish_ticker_list, self.redis_client, ticker_identities
+                    )
                     self.bootstrap()
                     next_configuration_refresh = time.monotonic() + 15 * 60
                 await self.cycle()

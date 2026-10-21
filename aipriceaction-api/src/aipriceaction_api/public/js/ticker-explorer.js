@@ -106,7 +106,12 @@ async function fetchTicker() {
       pre.className = 'text-sm overflow-x-auto max-h-96 overflow-y-auto text-gray-800';
     } else {
       const data = await response.json();
-      const count = data.tickers ? data.tickers.length : 0;
+      const count = data && typeof data === 'object'
+        ? Object.values(data).reduce(
+          (total, rows) => total + (Array.isArray(rows) ? rows.length : 0),
+          0
+        )
+        : 0;
       countSpan.textContent = `${count} records`;
       pre.textContent = formatJson(data);
       pre.className = 'text-sm overflow-x-auto max-h-96 overflow-y-auto text-green-800';

@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 use crate::models::aggregated_interval::AggregatedInterval;
 
@@ -63,6 +64,50 @@ pub struct TickersQuery {
     /// true = use pre-computed snapshot cache (default), false = skip snapshots.
     #[serde(default = "default_true")]
     pub snap: bool,
+}
+
+/// Expand the comma-joined symbol form used by the web backtest caller while
+/// preserving the existing repeated-query-key form.
+pub fn expand_symbol_query(
+    symbols: Option<Vec<String>>,
+    known_symbols: &HashSet<String>,
+) -> Option<Vec<String>> {
+    symbols.map(|values| {
+        values
+            .into_iter()
+            .flat_map(|value| {
+                if value.contains(',') && !known_symbols.contains(&value) {
+                    value.split(',').map(str::to_owned).collect::<Vec<String>>()
+                } else {
+                    vec![value]
+                }
+            })
+            .collect()
+    })
+}
+
+#[cfg(test)]
+mod ticker_query_tests {
+    use super::expand_symbol_query;
+    use std::collections::HashSet;
+
+    #[test]
+    fn ticker_symbols_accept_repeated_and_comma_joined_values() {
+        let known = HashSet::from(["A,B".to_owned()]);
+        assert_eq!(
+            expand_symbol_query(Some(vec!["FPT,VCB".into(), "VNINDEX".into()]), &known),
+            Some(vec!["FPT".into(), "VCB".into(), "VNINDEX".into()])
+        );
+        assert_eq!(
+            expand_symbol_query(Some(vec!["A,B".into()]), &known),
+            Some(vec!["A,B".into()])
+        );
+        assert_eq!(
+            expand_symbol_query(Some(vec![String::new()]), &known),
+            Some(vec![String::new()])
+        );
+        assert_eq!(expand_symbol_query(None, &known), None);
+    }
 }
 
 fn default_format() -> String {

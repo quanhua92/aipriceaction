@@ -5,7 +5,10 @@ only the stated checks, not full data coverage or production readiness. Earlier
 staging narratives and superseded checklists remain in `VALIDATION.md` and Git
 history through `eb814ab`; they are not additional current open tasks.
 
-## Current verified checkpoint — 2026-10-05 ICT
+## Historical verified checkpoint — 2026-10-05 ICT
+
+This is the October 5 operational/data checkpoint, not the current test count.
+The latest endpoint implementation and validation status is recorded below.
 
 - [x] Expand operational ingestion beyond the legacy 404-symbol Vietnamese
   catalog. The packaged exchange directory contains 1,544 stock identities
@@ -1566,8 +1569,9 @@ action, holiday, historical year, or provider adjustment convention.
   partitions; preserve FPT pre-2018 and other earlier verified archives.
 - [x] Scope repairs to retention/listing floors, include verified final dates,
   detect source timestamp conflicts, and preserve originals during failures.
-- [x] Serve hourly aggregates for minute-only selected entries. Preserve native
-  hourly limitations and honest metadata/health state.
+- [x] Match Rust's fixed hourly base interval for 1h/4h API reads. Minute-only
+  entries no longer synthesize hourly candles through this compatibility route;
+  retain native-hourly limitations and honest metadata/health state.
 - [x] Pin public API capture read paths/revisions; reject backend or format
   changes within frozen snapshots. Public candles migrate without a PostgreSQL
   client; private sync inventory remains separately required before cutover.
@@ -1640,6 +1644,33 @@ retains the existing backend and archive.
 
 ## Working rules
 
+## Transport compatibility follow-up — 2026-10-20
+
+- [x] Match Tower's 5 MiB request-limit response (`413`, plain-text
+  `length limit exceeded`) and apply Rust's security headers to that early
+  response path.
+- [x] Match Axum's active-router 404 body, 405 empty body and merged `Allow`
+  header, plus static cache lifetimes (one hour fallback, one day for image and
+  icon extensions).
+- [x] Reject an invalid `/tickers/refresh` mode during body deserialization
+  with status 422 and a plain-text response, before route authorization.
+- [x] Match Axum's JSON rejection body details for the differential corpus on
+  `/tickers/refresh` and `POST /sync/{key}`: syntax versus data status, field and
+  nested array paths, parser reasons, byte-based line/column positions,
+  duplicates, missing fields, enum values, malformed numbers, unpaired high
+  surrogates, recursion limits, and tuple-style sequence input. Broader malformed
+  Unicode/number/escape combinations remain outside the tested corpus.
+- [x] Match captured static conditional and range behavior, including ignored
+  `If-Range`, single-byte ranges, rejected malformed/multipart/unsatisfiable
+  ranges, and Rust's static `HEAD` response headers.
+- [x] Compare dynamic gzip, Brotli, deflate, and weighted encoding negotiation
+  against Rust. The HTTPX client verifies decoded entity content and negotiated
+  headers; exact compressed wire bytes are not compared.
+- [x] Use one Rust-compatible 180-second request deadline across body reading
+  and route work. `API_QUERY_TIMEOUT` no longer overrides the production
+  default because the Rust service fixes its timeout at 180 seconds. Both
+  implementations return the Rust-compatible empty 408 response on expiry.
+
 - Complete one proposed commit's scope and relevant checks before expanding it.
 - Use ordinary workspace edits and short, separate commands. Avoid `sudo`,
   recursive host permission fixes, destructive volume commands, and unnecessary
@@ -1650,3 +1681,940 @@ retains the existing backend and archive.
   by the user. Proposed phase titles do not authorize production changes or pushes.
 - Keep unresolved user decisions visible; proceed with independent work rather
   than repeatedly requesting confirmation for routine reversible implementation.
+
+## Rust/Python/web endpoint compatibility — 2026-10-21
+
+This inventory covers the legacy Rust router, the replacement FastAPI router,
+and the interfaces used by the current web client. The caller column separates
+page-level calls from SDK/CLI and operational routes. “Implemented” means the
+route and feature exist locally; it does not certify byte-for-byte
+cross-backend output.
+An opt-in shared Rust/Python HTTP differential harness now exists at
+`tests/test_rust_python_differential.py`. The previous durable-history run after
+the volume-profile history-gap parity fix and the scalar extractor,
+populated-Notes-symlink, mode-alias, case-insensitive ticker-info, and
+UUID-canonicalization probes passed against Rust and Python on 2026-10-21: 14
+passed in 7.29 seconds, with one Starlette/httpx deprecation warning. The first
+expanded run found four duplicate Notes query-extractor mismatches; Python now
+returns the same 400 responses as Rust. This run includes
+invalid top-performer and volume-profile dates,
+`±Infinity` score/profile query values, above-clamp RRG, a registered Yahoo
+ticker with no hourly bars, Chrono-style unpadded dates, reversed Yahoo/SJC
+identity ordering for native, 2W and 1M queries, the Explorer's `with_hour=true`
+request, Notes lifecycle/quota/symlink probes, and a volume-profile request
+whose available bars intersect a recorded history gap. Rust and Python now
+return matching partial profiles for that fixture. The test uses a temporary PostgreSQL
+container bound to loopback with tmpfs-only storage; no production database or
+persistent test volume is used. The comparator checks status and application
+headers, exact CSV and non-JSON bodies, JSON scalar types and recursive object
+key order; HTTPX decompresses encoded responses before body comparison and does
+not compare float spelling or compressed wire bytes.
+The durable-history paired matrix passed on the rebuilt Rust binary (one matrix
+test in 8.64 seconds). Earlier seeded live-Redis runs covered negative and zero
+raw limits, malformed and duplicate members, end-bounded timestamps, per-ticker
+and joined-snapshot hits, null performer/sector metrics, and duplicate VCB
+membership in RRG. The complete Python suite now passes 1,502 tests with one
+skip in 399.51 seconds; the Rust suite passes 20 tests, and Python analysis
+compatibility passes 52. The latest rebuilt-binary/live-Redis run executed the
+single paired HTTP matrix test in 12.50 seconds, including adversarial HTTP
+assertions; the test module's total pytest function count is separate from the
+number of HTTP requests in that matrix.
+Ruff, scoped formatting, Python compilation and `git diff --check` pass. These
+checks do not establish 100% compatibility: production data revision parity,
+extended-year joined timestamps, remaining analysis/data boundaries, and
+browser/SSR integration remain open. The web repository was inspected read-only
+and was not changed.
+
+The expanded paired matrix was rerun with live Redis after extending the fixture
+to cover undated latest RRG for `vn`, `crypto`, `yahoo` and `all`; latest MA
+scores across all periods and EMA settings; every top-performer sort/direction;
+successful crypto and Yahoo volume profiles; and additional refresh, sync and
+Notes authorization failures. The run first exposed the legacy Yahoo MA-sector
+lookup and volume-profile reduction-order differences; Python was aligned to
+Rust, and the final paired run passed (one matrix test in 7.49 seconds). This is
+same-fixture endpoint parity evidence, not production-data or browser evidence.
+
+| Endpoint | Caller / exposure | Contract and web-facing features | Current status |
+|---|---|---|---|
+| `GET /tickers` | Home, chart, alerts, mixed watchlists and AI pages; CLI/SDK. | `symbol` (repeated or comma-joined), `interval`, `start_date`, `end_date`, `limit`, `legacy`, `format=json\|csv`, `cache`, `mode`, `redis`, `ma`, `ema`, `snap`; returns OHLCV, indicators and change fields. Home-page VN/crypto/Yahoo and chart intervals; mixed-source alerts/watchlists/AI use `mode=all`; Rust mode aliases `stock`/`stocks` and `cryptos` are covered. | Implemented in both. The durable shared-fixture run passes homepage CSV/JSON, dated/native and derived intervals, comma/repeated symbols (including a literal comma-bearing symbol versus two separate symbols in both cache-request orders), empty symbol, error and response-cache cases. The latest matrix independently checks homepage CSV headers, selected symbol rows, dates, closes, no-MA blanks, populated EMA columns and an EMA10 formula. Caller-shaped homepage `end_date` CSV and symbol-specific daily/hourly/minute CSV chart cases pass in the latest paired matrix run. Adversarial additions cover invalid typed mode, `HEAD /tickers`, CSV prices at formatting thresholds plus zero and negative values, and the empty SQL response for `limit=-1&ma=false`. The no-Redis latest/end-only weekly test independently checks exact aggregate OHLCV, changes, SMA values and row count on an 8,701-bar FPT history; the live-Redis case derives the same oracle from the exact retained 5,000-bar tail. The live-Redis paired matrix compares signed/end-bounded raw reads; seeded per-ticker snapshot hits; stale, incomplete and malformed snapshot behavior; absent, malformed, empty and subset ticker-list membership in single-source and `mode=all`; explicit source-priority fallback; partial raw batches; and empty-batch SQL fallback. A Redis-only FPT tail sentinel proves snapshot misses read Redis rather than SQL. It asserts `x-data-source` and `x-redis-*` values for these branches. Python supports `REDIS_URL`, reads/writes Rust-compatible per-ticker snapshots only for eligible native, MA-enabled, undated/current-end, single-source requests, and honors `snap=false`; its `cache` flag remains a separate in-memory response cache. The worker integration test runs a successful `Worker.sync` with a shared Redis test double, verifies bar publication and stale-snapshot invalidation, then verifies the FastAPI route returns the worker's latest close and refreshes the snapshot. Worker restart/rehydration after a durable database import and production cache configuration remain open. Python can load Rust's ordered `id,source,symbol` export through `RUST_TICKER_IDENTITY_ORDER_PATH`; exporting and applying the actual production mapping remains open. Undated reads skip pending archive-repair objects older than the latest trusted published/live candle; pending-only or same/newer repair data is omitted when no live candles exist, and pending data at or beyond the latest live row remains a 503 rather than returning stale data. Dated and end-only requests remain strict. The latest VN CSV returned 1,559 rows including VTH; the earlier local Rust smoke returned 59 symbols without VTH, so these live databases/catalogs are not a matched input comparison. The web typed SDK omits `redis` and `snap` from `TickersQueryParams`. |
+| `GET /health` | Web pages; operations. | Counts, last-sync values, uptime, trading-hours fields and runtime/cache metrics. | Implemented in both; complete stable health schema and values match on the shared fixture, including when PostgreSQL `pg_class.reltuples` is explicitly stale. Exact Rust record totals use per-ticker/per-interval counters maintained transactionally by an `INSERT`/`UPDATE`/`DELETE` trigger; the initial baseline is reconciled one ticker per transaction under a per-ticker advisory lock. Existing identities suppress deltas until their baseline is complete, so deletes during reconciliation cannot make partial counts negative. The fixture reruns reconciliation over populated data, tests writes before a ticker is reconciled, and checks delete/insert/update behavior for daily, hourly and minute rows plus a ticker-and-interval move. Both services publish all-or-nothing health snapshots every 30 seconds, retain the last good snapshot on refresh errors, and retry an initial failure immediately. Their exact values can still diverge when their underlying data revisions differ. Worker, memory and disk-cache fields remain zero placeholders. The per-candle trigger adds advisory-lock and counter-row work to writes; benchmark representative bulk imports and concurrent interval workers before production cutover. |
+| `GET /tickers/group` | Web pages. | `mode`; sector/group membership for VN, crypto and Yahoo. | Implemented in both; VN/crypto/Yahoo/all catalog responses pass the isolated shared-fixture matrix. Other catalog revisions remain a data-parity concern. |
+| `GET /tickers/name` | Web pages. | `mode`; symbol-to-name map. | Implemented in both; default, crypto, Yahoo and all responses pass the isolated shared-fixture matrix. Other catalog revisions remain a data-parity concern. |
+| `GET /tickers/info` | Operations; no sibling web page/client call found. | Optional, case-insensitive `ticker`; full instrument metadata or one instrument. | Implemented in both; one ticker, lowercase ticker lookup, not-found and full no-query responses pass the isolated shared-fixture matrix. This route is not exposed by the sibling `AIPriceActionClient`. Other catalog revisions remain a data-parity concern. |
+| `POST /tickers/refresh` | Packaged Explorer; operations. | JSON `interval`, `mode`, `key`; refresh authorization and schedule/error behavior. | Implemented in both and called by the packaged Explorer. It is not exposed by the sibling `AIPriceActionClient`. Python matches captured Axum media-type, syntax/data, field path, enum, missing/duplicate-field, line/column and size-limit responses. The latest paired matrix independently checks the exact success body and schedule effects for four modes (`vn`, `crypto`, `yahoo`, `all`) across `1D`, `1h`, and `1m`: selected schedule rows become fresh, Rust/Python timestamps agree within one second, and unrelated rows remain unchanged. Successful response key order matches. Paired MIME cases cover `application/foo++json`, a terminal empty parameter and a rejected empty quoted parameter; direct byte-level parser tests cover quoted HTAB and DEL rejection. Additional malformed JSON/header combinations remain open. |
+| `GET /sync/{key}` | Web/SDK authenticated state. | Bearer auth plus `secret` query; UUID path parsing/canonicalization; returns saved private sync record. | Implemented in both. Paired HTTP probes verify canonical retrieval after writing with a compact UUID, auth and query failures, unset/empty `SYNC_TOKEN`, Rust-compatible whitespace trimming, and rejection of non-ASCII authorization header bytes. Private production sync records are not part of public endpoint migration and still require separate inventory/export and authenticated acceptance. |
+| `POST /sync/{key}` | Web/SDK authenticated state. | Bearer auth plus JSON `secret` and `value`; UUID path parsing/canonicalization; creates or replaces sync record. | Implemented in both. Authenticated requests and the captured syntax/data rejection corpus pass HTTP comparison, including nested serde paths, numbers, Unicode, recursion limits, sequences, trailing input, compact-to-hyphenated UUID canonicalization and chunked size errors. The paired write/read fixture now uses the web `SyncData` shape (`watchlists`, `alerts`, `chartLines`, `exportedAt`); the caller-shaped web payload passed the latest paired rerun. Private production-record migration and additional malformed JSON/header-byte combinations remain open. |
+| `GET /analysis/top-performers` | Packaged explorer; SDK/helper/examples. | `mode`, `date`, `ema`, `sort_by`, `direction`, `limit`, `min_volume`, `sector`, `snap`, and Explorer's `with_hour=true`; returns top and worst performers with MA and sector fields. | Implemented in both for the shared Rust contract; seeded responses, invalid-date echo, sort fallback, zero limit and `min_volume` overflow cases pass HTTP comparison. Python filters exact sector membership and uses deterministic metric/symbol/source ordering. The paired matrix forces equal metric ties in single-source and `mode=all` cases and checks symbol/source order; invalid typed mode is covered too. A request-scoped overlapping-group fixture requires both servers to label FPT with the lexicographically first sector (`Alpha`). A per-symbol `DataError` (such as a local unresolved gap) is omitted while other tickers remain available, matching Rust's batch fallback behavior. The route forwards `snap`; Python reads and writes Rust-compatible joined snapshots when a complete source set is available, and `snap=false` skips reads while still refreshing snapshots after raw Redis/SQL fetch. The live-Redis matrix forces a complete joined-snapshot hit with VCB null optional metrics and asserts the sentinel row. New paired cases also cover stale single-source snapshots and complete/incomplete joined-snapshot sets in mode=all; an incomplete Yahoo set falls back for that source to raw Redis/SQL. The packaged Explorer's “Daily + Hourly” option sends `with_hour=true`, but Rust ignores it and returns `hourly:null`; Python matches that behavior, so the advertised hourly breakdown is not provided. The typed SDK omits `mode`, `snap` and `with_hour` from this query's parameter interface. |
+| `GET /analysis/ma-scores-by-sector` | Packaged explorer; SDK/helper/examples. | `mode`, `date`, `ema`, `ma_period`, `min_score`, `above_threshold_only`, `top_per_sector`, `snap`; returns sector scores and ranked constituents. | Implemented in both; seeded responses plus invalid-period, threshold, NaN and `±Infinity` cases pass the shared matrix (the infinite thresholds serialize as `null`). Python follows the curated analysis universe and excludes the Python-only `ALL_STOCKS` ingestion group. It also preserves Rust's single-source behavior: sector definitions remain VN groups, while rows come from the requested source; this can leave crypto empty and can place Yahoo rows into matching VN sectors. The latest paired matrix covers VN/crypto/Yahoo/all, all MA periods, and SMA/EMA. A per-symbol `DataError` is omitted while available tickers continue to contribute. The route forwards `snap`; Python uses complete-set joined snapshots with raw Redis/SQL fallback, and `snap=false` still refreshes snapshots. A controlled live-Redis joined-snapshot hit seeds VCB with a valid MA20 and null MA20 score; Rust and Python both omit it. New paired cases cover complete and incomplete cross-source snapshots in `mode=all`, including source-local fallback after removing Yahoo AAPL from Redis. Local tests also cover missing MA/score values. Python skips same-source duplicate MASCORE group membership like Rust; paired null/duplicate fixtures pass. Equal-score/average ties exercise deterministic ticker order and lexicographic sector-label selection, including the adversarial `mode=all` fixture; invalid typed mode is covered. The typed SDK omits `mode` and `snap` from this query's parameter interface. |
+| `GET /analysis/volume-profile` | Web analysis page; SDK/CLI. | `symbol`, `mode`, `date` or `start_date`/`end_date`, `bins`, `value_area_pct`; returns POC, value area, per-price levels and statistics. | Implemented in both. Python models Rust's retained 20,000-minute tail-selection rule, integer-tick accumulation, newest-first ordering, and sequential floating-point reductions; it sums the unbinned profile before binning, accumulates per-level percentages in Rust's order, and matches the median boundary and value-area threshold operation. It emits Rust-compatible floating-point price fields, rejects per-bar expansions over one million price steps, and matches the empty-profile body. Bounds, NaN/`±Infinity`, malformed dates, partial data overlapping a known gap, and successful crypto/Yahoo profiles pass the shared matrix. Added paired cases check conflicting `date` versus range bounds, start-only and end-only bounds, and invalid typed modes. Exact widget requests using `bins=10` with no `value_area_pct`, a zero-volume successful response, and the following daily CSV fallback request pass in the latest paired matrix run. Only case-insensitive `crypto` and `yahoo` choose those sources; other mode strings fall back to VN. The route reads the actual Redis minute tail when `REDIS_URL` is configured and uses the durable history fallback when it is not; durable reads ignore Python's separate history-gap ledger, matching Rust's available-row behavior. New paired cases verify that a partial overlapping Redis tail is used without SQL completion and a tail with no date overlap falls back to SQL. The BTCUSDT no-minute-history request independently checks the exact 404 JSON body. Production freshness remains open. |
+| `GET /analysis/rrg` | Web page and mixed custom watchlists (`mode=all`). | `mode`, `date`, `ema`, `algorithm=jdk\|mascore`, `benchmark`, `period`, `trails`, `min_volume`, `snap`; returns RRG points/trails and source/sector. | Implemented in both; dated JDK RRG and selected JDK/MASCORE mode/trail cases pass on the seeded fixture. Python aligns curated membership, source ordering, the exact 101-row latest MASCORE seed window, and `mascore&trails=0` latest-row/null-score behavior. Lower/upper boundaries, above-clamp (`period=51&trails=121`), unpadded Chrono date, invalid date and volume threshold probes pass the latest shared matrix. `mode=all` independently verifies Yahoo and crypto benchmark fallback and VN-before-Yahoo priority when both sources contain the benchmark ticker `DUPL` with distinct data. Python JDK and historical MASCORE paths now prefer bounded Redis ZSET tails and fill misses from durable history; latest MASCORE uses joined snapshots when the complete source set is present, then raw Redis/SQL fallback. `snap=false` disables snapshot reads but not raw Redis reads, matching Rust; JDK's `snap` is inert in Rust too. Fake Redis tests verify JDK Redis-over-SQL behavior and latest MASCORE snapshot refresh/use. The shared fixture lists VCB twice in one VN group; paired JDK and MASCORE responses match Rust, and Python MASCORE emits the source/ticker once like Rust's map. Python now rejects joined snapshots with null required OHLC fields, matching Rust's typed row decode; local unit tests pass. The live-Redis paired valid-stale and null-required-OHLC fallback cases pass. The latest matrix also checks complete `mode=all` joined snapshots and per-source fallback for an incomplete Yahoo set. Its overlapping-group HTTP case requires both servers to label FPT with the lexicographically first sector (`Alpha`). Static review confirms both Redis readers cap raw members before timestamp deduplication and choose the highest crawl timestamp; the paired live-Redis duplicate-member seed-depth case passes and verifies both servers use the same 99 unique rows after the raw 201-member cap. Production latency remains unverified. The earlier 57.56s Python versus 2.58s Rust timing was a durable-history-only run before Redis-first RRG; it is not a current matched-Redis comparison. A new bounded loopback benchmark validates the JDK response shape, repeated payload hashes, optional cross-server hash and 25-second p95 target; matched Rust/Python timing remains open. The typed SDK omits `snap` from this query's parameter interface. |
+| `GET /raw/{path}` | Deprecated SDK helper and packaged Explorer documentation; no active UI call site. | Raw-data passthrough exposed by `AIPriceActionClient.getRawData()`; Explorer lists `/raw/*` as deprecated. | Neither Rust nor Python mounts this retired route. The paired matrix now verifies `/raw/ticker_group.json` returns the same 404 status, headers and body in both. The SDK helper remains unusable if called; this is an identical legacy limitation, not an active web-page request. |
+| Legacy image and Markdown-file-delete routes | Dormant Rust helpers and stale upload test script; no mounted route or current web caller found. | `/upload/image`, `/uploads/{session_id}/images/*`, and `DELETE /uploads/{session_id}/markdown/{filename}?secret=...`. | None of these handlers is mounted in Rust or implemented in Python; do not count them as active API routes. The old `scripts/test-upload.mjs` also incorrectly labels the now-mounted Markdown routes as disabled. |
+| `GET /explorer`, `GET /public/*` | Python explorer UI/static assets. | Explorer HTML and packaged static assets. | Implemented in both. Python's packaged files match Rust byte-for-byte. The shared fixture compares conditional validators, `If-Unmodified-Since`, `If-Range`, single/multipart/malformed byte ranges, static `OPTIONS`, oversized request bodies, `HEAD` and compression. Local cases cover Tower's empty-file `bytes=0-` and `bytes=0-0` responses. The latest matrix compares GET/HEAD/POST/PUT with populated assets and a missing public directory, including empty 404 bodies and Rust's `Allow: GET,HEAD` header on 405 responses. The matrix also covers `/public` and `/public/` roots, body-limit exemption and HEAD compression. Deployment-derived `last-modified` remains excluded from cross-deployment equality; browser-level replacement smoke remains open. |
+| `GET /docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect` | FastAPI-only convenience. | Generated API documentation and schema. | Disabled in Python to match Rust's public route surface. Local tests check GET, HEAD and POST 404 behavior; the latest paired differential run passes the GET, HEAD and POST probes for those paths. OpenAPI generation remains available internally through `app.openapi()` for contract tests. |
+| `POST /upload/markdown` | Web Notes feature. | Upload with `session_id`, `secret` and multipart `file`. | Mounted in Rust and Python; the latest shared differential covers upload, quotas, and session/metadata/content symlinks, including a populated symlinked markdown directory whose external content must remain unchanged. Both return 500 for that path. Rust quota locking is process-local while Python uses a filesystem lock; under the current single-API-process Compose topology both serialize quota changes, but multiple Rust API processes sharing one uploads volume could race quotas. Parent-path check/use races remain a filesystem-hardening limitation in both. |
+| `GET /uploads/{session_id}/markdown/{filename}` | Web Notes feature. | Public Notes markdown retrieval; Rust accepts an optional `secret` query parameter, which has no effect for Markdown. | Mounted in Rust and Python; paired HTTP tests fetch the uploaded file and reject tested symlink paths. The web app is a client-rendered SPA, so its browser uses the Vite proxy or production API URL. The helper's server-side `127.0.0.1:3000` branch is dormant; browser-rendered Notes acceptance remains open. |
+| `DELETE /uploads/{session_id}` | Web Notes feature. | Notes-session deletion using `secret`; browsers issue a CORS preflight for DELETE. | Mounted in Rust and Python; the shared isolated HTTP differential deletes the same disposable session and covers the quota lifecycle and tested symlink paths. The paired matrix also checks the actual `OPTIONS` preflight shape for DELETE. Multi-process Rust quota locking and parent-path check/use races remain as described for upload. |
+
+### Adversarial compatibility follow-up — 2026-10-21
+
+The targeted checks below supersede narrower status notes above. The latest
+rebuilt Rust/Python matrix passed all 14 test functions in 15.57 seconds with
+temporary PostgreSQL and loopback Redis. It independently asserts that the
+comma-joined backtest request returns exactly FPT and VCB, while an exact
+registered `DUPL,FPT` symbol remains a single Yahoo result. The combined Notes,
+static-method, symbol and preflight regression run passed 14 tests in 19.27
+seconds. Ruff checks and formatting passed. Temporary database/Redis resources
+were cleaned up; API data stayed 6.0G and RustFS stayed 5.1G. No web-checkout
+files were changed.
+
+| Area | Latest evidence | Status |
+|---|---|---|
+| Route methods and `HEAD` | Added paired invalid-method probes across ticker, analysis, sync, Notes, Explorer and static routes. They require empty 405 responses and each exact `Allow` value. Added `HEAD` probes for every active GET route; each backend must return a populated 200 GET oracle and a bodyless HEAD with matching status, headers and `Content-Length`. The matrix found and fixed the Python Notes `Allow: GET` versus Rust `GET,HEAD` mismatch and nondeterministic `/public` method ordering; focused regressions and the paired gate pass. | Paired server method/HEAD checks pass. |
+| Production-origin CORS | The shared matrix sends real web-shaped sync GET/POST and Notes upload/read/delete requests with `Origin: https://aipriceaction.com`, plus sync GET (`authorization`), sync POST (`authorization,content-type`) and Notes DELETE preflights using the same paths and query strings as the calls. Notes multipart POST is a simple request and does not require a browser preflight; its OPTIONS probe is extra coverage. Actual-response cases require the allowed origin and exact exposed-header list. Preflight cases require an empty 200, allowed origin, requested method and requested-header coverage; separate contract tests pin the configured full allow lists, `Vary` and route-specific `Allow`. | Rust/Python local middleware parity passes. The deployed Cloudflare/browser edge remains unverified. |
+| Sync missing/secret errors | Added an authenticated GET with the correct Notes secret for a valid but absent sync UUID (404 `Key not found`) and a wrong-secret POST against an existing record (403 `Invalid secret`); the subsequent GET verifies the rejected write did not replace the web-shaped record. | Paired response and no-overwrite checks pass. Production token/configuration and private-record migration remain open. |
+| Actual TypeScript client | A temporary, read-only `tsx` probe passed URL serialization, `text/csv` and response capture for 24 Rust/Python homepage CSV responses (12 request shapes per backend). The checked-out `AIPriceActionClient.getTickers()` parser failed eight row-set checks: it drops the synthetic literal-comma symbol `DUPL,FPT` in all four Yahoo homepage CSV variants from both servers. The symbol is absent from the checked-in and local Yahoo catalogs, but the APIs preserve registered symbols containing commas. | Conditional client/API edge mismatch for a supported symbol shape, not evidence of a current production-catalog failure. The sibling web checkout remains read-only, so no parser fix was applied; arbitrary comma-containing catalog symbols prevent a 100% compatibility claim until the parser handles them or that symbol shape is formally excluded. |
+| End-to-end browser | The TypeScript probe executes the real query builder and parser with captured backend bodies, but it does not render the current web app or traverse the deployed edge. The app is an SPA, so the active Notes flow is client-side; direct Vite startup may still use its port-3000 proxy default unless overridden. | Open. Keep the web checkout read-only; verify rendered page requests, Notes upload/view/delete, and browser-visible CORS against the local wrapper and deployed edge. |
+
+### Current live deployment comparison — 2026-10-21
+
+These are sampled runtime checks against the currently deployed API, not a
+revision-pinned Rust oracle. They separate route/shape compatibility from
+production catalog, history and deployment state. The production service was
+not changed.
+
+- [x] An adversarial smoke sent the 15 distinct homepage request shapes through
+  the LAN Vite proxy at `:5174`; all returned 200. The same request paths also
+  returned 200 in production. Six VN/crypto/Yahoo `/tickers/group` and
+  `/tickers/name` response bodies matched byte-for-byte.
+- [ ] Production's all-symbol VN CSV still returned HTTP 200 with only the
+  172-byte header. This remained true for a September end date with response
+  cache, Redis and snapshots disabled; an explicit VCB request returned data.
+  The same local Python request returned 238,797 bytes in 8.27 seconds with
+  rows. Do not treat production's empty body as the desired Python behavior.
+- [ ] For a dated September VCB request, production and local Python OHLCV
+  matched in the earlier comparison, while EMA50/100/200 differed. The dated
+  JDK RRG sample remains 365 production tickers versus 364 local tickers.
+  Production and local health also diverge: latest sync dates were October 4
+  and October 8, and daily/hourly/minute counts were
+  `6,241,960 / 18,679,084 / 852,031,296` versus
+  `933,628 / 463,414 / 581,943`. These are data/revision/runtime parity gates,
+  not same-fixture route-contract failures.
+- [ ] Production reports `x-data-source: postgres`, while the checked-out
+  compatibility implementation uses its `database` label. Confirm the deployed
+  Rust build and configuration before using production for final parity claims.
+- [x] The intended web listener on `0.0.0.0:5173` serves the LAN root and
+  `/aipriceaction-api/health` with HTTP 200. Proxy health fields match direct
+  Python API health. The user-shaped crypto no-MA CSV returns 200 through the
+  LAN proxy and direct API with identical 5,853-byte bodies (SHA-256
+  `088974d65c4378f2e846857cff87ce7d0d21ce77f4267eb827edb4503d2081c7`). This is
+  representative local routing evidence, not a full browser or endpoint sweep.
+- [x] The intended LAN web at `:5173` and the second instance at `:5174` serve
+  byte-identical root pages; both `/aipriceaction-api/health` proxies return
+  200 with the same Python API state. The local `:5173` listener is the
+  temporary copy launched from the sibling web tree; that checkout remains
+  unchanged. A random-UUID Notes GET through the proxy and direct Python
+  API/SSR port returned JSON 404 as expected; the web helper's hard-coded
+  `127.0.0.1:3000` returned a Next HTML 404, confirming the SSR target mismatch.
+  Port 3000 is already owned by a local Next server, so a port-only Compose
+  change cannot safely fix Notes SSR without moving that server or changing the
+  web helper.
+
+### Compatibility work completed in this pass
+
+- [x] Match Rust's sequential floating-point accumulation and subtraction /
+  division order for MA scores, change percentages, JdK momentum, sector means
+  and volume-profile statistics; add regression fixtures including values above
+  the exact-integer range of `f64`.
+- [x] Make all-mode source collision priority deterministic and consistent
+  (`vn`, `yahoo`, `sjc`, `crypto`) in Rust and Python.
+- [x] Add `sector` to the Rust top-performers query and align Python filtering
+  and deterministic tie order.
+- [x] Align RRG curated groups and `mascore&trails=0` with Rust's latest joined
+  row behavior; do not backfill a missing latest score on the no-trails path.
+- [x] Align volume-profile tail selection, rounded inverted-range handling,
+  empty-profile body and resource guard; normalize Python inputs to Rust's
+  newest-first accumulation order.
+- [x] Match the RRG latest MASCORE path's exact 101-row input window for both
+  SMA and EMA, keep Rust joined snapshots isolated by raw seed-window depth and
+  require a complete symbol set for a hit, and skip empty higher-priority dated
+  benchmark vectors in Rust.
+- [x] Use the Rust ticker catalog as Python's PostgreSQL-fallback identity
+  universe for no-symbol requests, comma-name disambiguation and mode=all
+  symbol resolution; cover history-only identity exclusion.
+- [x] Make the Python explorer/static bundle byte-for-byte identical to Rust's
+  and test the complete file set through the served Python routes.
+- [x] Match repeated `sector` query rejection and publish OpenAPI enums, integer
+  bounds and the volume-profile mode fallback.
+- [x] Add optional `REDIS_URL` support for Rust-compatible `/tickers` per-symbol
+  snapshots, joined performer/sector/latest-MASCORE snapshots, bounded raw
+  ZSET-tail reads and ticker-list snapshots. `snap=false` skips joined snapshot
+  reads but still refreshes them after raw data retrieval; analysis raw Redis
+  reads remain enabled as they do in Rust. Fake-Redis tests cover cache
+  precedence, malformed/empty/stale snapshots, partial and empty batches,
+  freshness, and route forwarding. A worker-to-API test now exercises
+  `Worker.sync`, raw cache publication, stale-snapshot invalidation and API
+  snapshot refresh using one Redis client. The shared live-Redis HTTP differential now
+  compares raw Redis reads across `/tickers`, top-performers, sector MA scores,
+  volume profile and representative RRG requests. It explicitly seeds and asserts
+  per-ticker and complete joined-snapshot hits for `/tickers`, top-performers and
+  sector MA scores. The later paired matrix also checks stale/incomplete/malformed
+  per-ticker snapshots, partial/empty batches, ticker-list membership and source
+  fallback. Worker restart/rehydration remains open.
+- [x] Publish Python worker candle commits to Rust-compatible Redis ZSETs,
+  invalidate derived snapshots for changed series, replace retained tails after
+  bootstrap/revision completion, and refresh the short-lived ticker identity
+  key. Fake-Redis tests verify member shape, range replacement, retention and
+  snapshot invalidation. A focused worker/API integration test verifies a valid
+  stale snapshot is removed, a worker-published candle is read from the shared
+  Redis client, and the API then stores a fresh snapshot. Worker restart,
+  bootstrap/revision completion through the worker, and recovery after Redis
+  loss or publish failure remain open.
+- [x] Align typed snapshot decoding for supported dates: reject duplicate recognized fields,
+  non-standard `NaN`/`Infinity` constants, overflowing exponents, unpaired
+  surrogates, and `-0` volume tokens; ignore valid unknown fields and normalize
+  JSON integers used for f64 fields to floating-point values. Joined timestamps
+  follow Chrono's relaxed RFC3339 forms, including leap seconds and non-colon
+  offsets. Local regressions and explicit live per-ticker/joined snapshot-hit
+  cases pass. Chrono's signed extended years outside Python's 1..9999 datetime
+  range remain unsupported.
+- [x] Apply signed Redis raw limits before parsing, matching `ZREVRANGE 0,
+  limit-1` and end-bounded `ZREVRANGEBYSCORE LIMIT 0,limit`, including the
+  distinct zero-limit behaviors and signed `x-redis-limit` diagnostics. Local
+  fake-Redis regressions cover malformed oldest members for zero/negative
+  limits with and without an end date. The latest paired Rust/live-Redis run
+  passes the negative/zero limit cases, malformed-oldest selection, and
+  end-bounded embedded-timestamp filtering.
+- [x] Match the tested daily SQL-path Yahoo/SJC ticker-name collision before
+  indicator calculation, including the shared fixture's EMA200 result and row.
+- [x] Match body-limit extractor behavior for declared and chunked bodies:
+  Axum's exact chunked JSON rejection text, ignored bodies on unconsumed routes,
+  and the static route's exemption from the main-router 5 MiB layer.
+- [x] Restrict CORS `Allow` headers to matched method-router paths, distinguish
+  JSON integers from floats in differential comparison, and preserve Rust's
+  floating-point output types for health and volume-profile values.
+- [x] Match static range handling for one leading whitespace after a comma and
+  empty-file `bytes=0-` and `bytes=0-0` responses; these use a temporary local
+  asset fixture.
+- [x] Verify oversized request-body exemption at the exact `/public` mount root
+  as well as `/public/*`; the shared matrix includes the mount-root case.
+- [x] Fix Rust's dated MASCORE `trails=0` path to return the latest row without
+  panicking; the shared HTTP comparison exercises the regression case.
+- [x] Keep root `TODO.md` git-ignored; endpoint status and open gates are tracked
+  here in `aipriceaction-api/TODO.md`.
+- [x] Remove FastAPI-only public documentation routes so Python's public route
+  surface matches Rust; keep generated-schema assertions through `app.openapi()`
+  and test the Rust-compatible 404 body for every removed documentation path.
+- [x] Rerun the shared Rust/Python matrix with GET, HEAD and POST probes for the
+  four documentation paths. The paired HTTP matrix test passes these probes
+  using explicit disposable PostgreSQL and Redis fixtures.
+- [x] Trim all five Vietnamese CSV catalog fields and the ticker lookup key
+  with Rust-compatible Unicode whitespace semantics. A local regression test
+  uses padded VNZ data around every field. The shared paired `names-vn` case
+  pads the existing VCB fields so both APIs must emit the trimmed name without
+  changing the fixture's ticker universe. Catalog tests and the paired matrix
+  pass after adding the regression.
+- [x] Expose response diagnostics used by the web/API clients on configured
+  cross-origin responses. Rust and Python expose the same `x-data-source`, Redis
+  diagnostics, Cloudflare cache identifiers, rate-limit values, and
+  `Retry-After`; the paired matrix compares these CORS headers.
+
+### Read-only production and local web smoke — 2026-10-21
+
+- [x] The local Vite page and its `/aipriceaction-api` proxy returned 200 for
+  health, home-page VN/crypto/Yahoo CSV requests, crypto groups, Yahoo names,
+  and dated RRG (`2026-09-30`). A repeated top-performers `sector` query returned
+  the expected Rust-compatible 400. This verifies the configured proxy path,
+  not browser rendering, chart routes or Notes browser workflows.
+- [x] Sampled read-only production inputs show data divergence: the same dated
+  RRG returned 365 production tickers versus 57 local Python tickers; latest VN
+  `/tickers` returned a header-only production CSV versus local rows. Static
+  group results matched in sampled modes. This is not algorithm parity proof;
+  align data revisions/coverage before comparing numerical outputs.
+
+### Required acceptance gates before claiming 100%
+
+- [x] Pair Redis absence and dependency failures against Rust and Python. The
+  isolated four-phase gate passes with Redis absent (18 tests), live Redis
+  (full shared-fixture matrix), Redis configured to an unreachable loopback
+  port, and ACL-denied Redis (focused snapshot/ZSET and database-fallback
+  cases). Python now reports
+  `database` when the snapshot connection fails, `redis-snap` when Redis returns
+  a per-command snapshot error such as WRONGTYPE but the snapshot batch remains
+  reachable, and the same raw Redis diagnostics as Rust for ordinary cache
+  reads. Redis recovery after the dependency becomes reachable later in the
+  same process remains open.
+- [x] Add an opt-in deterministic runner that seeds isolated temporary Rust
+  PostgreSQL and Python SQLite stores, requests the shared mounted route matrix,
+  and compares status, application headers, JSON shape/values, CSV bytes,
+  omissions/nulls and error bodies. The comparator leaves `x-data-source` in
+  the comparison and reports byte offset plus first differing line for body
+  mismatches. Health compares the complete stable schema and values, validates
+  UTC timestamps, and allows only a documented two-second `uptime_secs` startup
+  skew. Notes upload, retrieval and deletion are included in the shared
+  differential using one disposable session in the isolated Rust working
+  directory and Python temporary upload directory.
+- [x] Add a PostgreSQL provider preflight that prefers a complete host server
+  toolchain and otherwise skips safely by default. An explicit
+  `AIPA_USE_DOCKER_POSTGRES=1` opts into a cached `postgres:17-bookworm` image;
+  Docker mode binds a generated host port only on `127.0.0.1`, uses a 1 GiB
+  tmpfs for PostgreSQL data, generates credentials/database names, rejects
+  unexpected mounts, and removes its uniquely named container with `docker rm
+  -f` on startup failure or test cleanup. It never pulls an image or uses a
+  bind/named volume. Pure tests cover provider selection, command composition,
+  mount validation and cleanup command without invoking Docker.
+- [x] Rerun the opt-in integration matrix after adding the above-clamp RRG,
+  registered no-bars interval, unpadded date, reversed Yahoo/SJC 2W/1M ordering,
+  `with_hour=true`, invalid analysis dates, `±Infinity`, mode aliases, lowercase
+  ticker-info lookup, UUID canonicalization and volume-profile gap policy
+  probes. The paired Rust/Python run passed on 2026-10-21 (1 passed, 8.46
+  seconds) using the durable-history fallback with Rust Redis and Python
+  cache-tail emulation disabled. The deliberate gap-policy status difference is
+  asserted and documented above. The test uses a generated
+  loopback port and 1 GiB tmpfs PostgreSQL container, cleans it up on completion,
+  and never connects to the shared tunnel.
+- [x] Extend the deterministic fixture to 701 weekday sessions ending on the
+  latest weekday before the test date; set JDK RRG to the requested
+  `mode=vn&trails=5&min_volume=1000&benchmark=VNINDEX&period=10&date=2026-10-20&ema=true`;
+  include a VN ticker below that volume threshold plus above-threshold controls;
+  add the comma-joined `symbol=FPT,VCB` web request shape; and add a native `1m`
+  ticker window beside `1D` and `1h`; add derived intervals, Yahoo/SJC collision,
+  selected `mode=all` analysis, and default/invalid/empty cases. The final matrix
+  has run against Rust. Notes upload/retrieve/delete run through the same
+  differential; `tests/test_notes_contract.py` also checks the Python contract
+  independently.
+- [x] Align tested `x-data-source` tags for no-Redis database reads and response
+  cache hits; Rust's mode=all cache-hit omission is matched by Python.
+- [x] Compare static conditional validators, byte ranges and exact trailing-slash
+  routing on the same Rust/Python fixture. `If-None-Match` and
+  `If-Modified-Since` do not produce Python-only 304 responses; old
+  `If-Unmodified-Since` returns 412; range and date `If-Range` return the Rust
+  partial representation; `/tickers/` and `/health/` return the Rust 404.
+- [x] Extend repeated-scalar rejection and integer-overflow comparisons across
+  typed GET routes and Notes query extractors. The paired run found and fixed
+  duplicate `secret`/`session_id` differences on Markdown fetch/upload/delete;
+  all covered duplicate and overflow cases now pass.
+- [x] Extend captured JSON rejection comparisons to malformed numeric and
+  Unicode values, nested recursion paths, and empty sequence input; all included
+  sync/refresh cases now match status, response headers and exact body.
+- [x] Extend the shared matrix with ticker date/interval boundaries, one-sided
+  ranges, capped single/multi-symbol limits, full ticker-info output, a literal
+  comma-containing ticker that conflicts with two known names, a three-letter
+  low-volume VN symbol, and RRG period/trail boundary values. The latest paired
+  run passes these probes plus above-clamp RRG, unpadded dates and the registered
+  no-bars Yahoo interval.
+- [x] Compare static and API `HEAD` responses plus gzip, Brotli, deflate and
+  weighted encoding negotiation against Rust. HTTPX decodes compressed bodies,
+  so this verifies entity content and headers rather than compressed wire bytes.
+- [x] Extend the matrix for Yahoo/SJC collisions on dated and latest 1W
+  aggregation, literal comma-containing symbols, full ticker-info output,
+  performer sort fallback/zero limit/min-volume overflow, MA invalid-period and
+  threshold/NaN values, volume-profile bin/value-area bounds and NaN,
+  and RRG period/trail lower and upper boundaries. The latest shared fixture
+  passes these cases.
+- [x] Extend repeated-scalar and integer-overflow query boundaries across
+  typed ticker/catalog/analysis/sync/Notes route extractors. The paired matrix found
+  and fixed duplicate optional Notes `secret` on fetch, duplicate `session_id`
+  and `secret` on upload, and duplicate delete `secret`; these now return the
+  same Axum 400 responses. Overflow probes cover ticker `limit`, performer
+  `limit`/`min_volume`, MA period/top-per-sector, profile bins, and RRG
+  period/trails/min-volume. The latest paired run passes these cases.
+- [x] Add Python unit tests for deliberate top-performer ties and overlapping
+  analysis-group ordering. These local tests do not establish Rust/Python
+  parity.
+- [x] Reject `null` in required OHLC fields for both stock and joined Redis
+  snapshots while continuing to allow `null` in optional indicators. New local
+  validator tests pass. The paired live-Redis run on 2026-10-21 executes the
+  named `rrg-mascore-valid-stale-joined-snapshot` and
+  `rrg-mascore-null-required-ohlc-joined-snapshot` cases; both match the Rust
+  snapshot/fallback response and expected Redis sentinel. The full run passes
+  after the `/raw` SDK-path case was added.
+- [x] Add paired live-Redis fixtures for top-performer null metrics and a sector
+  MA value with a null MA score. Complete joined snapshots are preseeded for the
+  requested VN universe; the comparator asserts the snapshot sentinel and that
+  Rust and Python both omit the null-score ticker.
+- [x] Add duplicate VCB membership to the shared VN fixture. Rust and Python
+  match for JDK and MASCORE RRG; Python deduplicates same-source MASCORE rows to
+  match Rust's source/ticker maps while preserving JDK's symbol-list behavior.
+- [x] Run the added paired live-Redis RRG seed-depth assertion. The final live-only
+  MASCORE case puts 102 same-timestamp duplicates inside the 201-member raw
+  window, gives the greatest crawl timestamp a distinct close, and leaves the
+  100th-newest outlier outside the selected 99 unique bars. Both servers must
+  return the Redis sentinel and scores computed from those 99 bars; the scores
+  differ from the result that would include the excluded outlier. The paired
+  matrix test passes in 9.17 seconds. The fixture's control check confirms
+  MA20 is unchanged while MA100 changes; both Rust and Python return the
+  expected 99-bar result. Invalid
+  analysis dates, `±Infinity`, the registered Yahoo no-bars interval, RRG
+  unpadded dates and above-clamp values, and reversed-identity Yahoo/SJC
+  native/2W/1M results pass the shared matrix.
+- [x] Expand same-state live Redis differential coverage for stale/incomplete and
+  malformed snapshots, partial and empty `/tickers` batches, empty-batch database
+  fallback, absent/malformed/empty/subset ticker lists in single-source and
+  `mode=all`, and explicit source-priority fallback. A Redis-only FPT tail
+  sentinel proves snapshot misses use raw Redis rather than identical SQL rows.
+  The paired matrix asserts source tags and Redis diagnostics, and passes in
+  9.10 seconds. A separate worker-to-API integration test verifies `Worker.sync`
+  updates the shared Redis bars, invalidates snapshots, and serves the new close.
+- [ ] Verify cache freshness after worker process restart, Redis loss/recovery and
+  database import; Python's worker publishes on successful sync/bootstrap paths,
+  but it does not currently prove startup rehydration for already-ready series.
+  Production Redis URL, cache state and ticker identity configuration also remain
+  deployment gates. The endpoint-level duplicate-member RRG seed-depth assertion
+  passed in the paired live-Redis matrix above.
+- [x] Match volume-profile behavior when a requested range intersects a recorded
+  history gap. The route opts out of only the Python gap-ledger rejection on its
+  durable read, retaining pending-repair, revision and basis checks; all other
+  history reads remain strict. The shared differential now compares the complete
+  HTTP snapshot and verifies 30 available rows and 34,350 total volume.
+- [ ] Audit the known VCB data divergence before any numerical parity claim. A
+  September 3, 2026 comparison found 519 of 600 OHLC rows differed between Rust
+  production and local Python over April 4, 2024–May 12, 2026, while timestamps
+  and volumes aligned; older coverage also differed (911 Rust rows versus 725
+  Python rows). Treat this as underlying revision/coverage divergence, not a
+  calculation fix, until matching input revisions are compared.
+- [x] Verify the LAN wrapper routes the user's supplied homepage/API URL set to
+  Python. After rebuilding API and worker together, all 17 unique requests
+  returned 200 through `http://192.168.1.13:5174`: root, `/chart`, health,
+  VN/crypto/Yahoo homepage CSV with MA+EMA and without MA, the VN 1D/EMA request,
+  group/name variants, and dated JDK RRG. The 2026-10-20 RRG request took 10.14s.
+  The temporary Vite copy binds `0.0.0.0:5174` because 5173 is occupied; the
+  sibling web repository was not edited.
+- [ ] Verify browser rendering, chart-data presentation, and Notes upload/view/
+  delete end to end through the active SPA path. The packaged Explorer also sends
+  `with_hour=true` for its “Daily + Hourly” option, but both servers currently
+  return `hourly:null`; decide whether to implement that advertised feature or
+  remove the control and document the limitation.
+- [x] Make `scripts/serve_local_web.py` derive its default API target from
+  `AIPA_LOCAL_API_URL`, `VITE_API_PROXY_TARGET`, process `AIPA_API_PORT`, then
+  this project's `.env` `AIPA_API_PORT` (Compose defaults to 3001). The current
+  local Compose port is 3002. The wrapper copies the sibling web tree to a
+  temporary directory and does not edit it.
+- [ ] Verify direct Vite startup separately from the LAN wrapper. The sibling
+  web repo's `vite.config.ts` defaults `VITE_API_PROXY_TARGET` to port 3000, so
+  ordinary `npm run dev` still does not inherit Compose's 3002 mapping. Keep
+  the web repository read-only.
+- [ ] Verify the exposed response-header list in a real cross-origin browser.
+  The paired HTTP matrix checks the configured CORS response, but only a browser
+  request from the production web origin proves JavaScript can read headers
+  through the deployment edge.
+- [ ] Add a `.br` static asset fixture if deployment begins shipping precompressed
+  Brotli files. The current packaged asset bundle has no `.br` files; dynamic
+  Brotli compression is covered by the Rust/Python matrix.
+- [x] Audit `AIPriceActionClient.getRawData()` and the deprecated Explorer note
+  pointing to `/raw/{path}`. The web SDK still exposes this deprecated method,
+  but no active UI call site uses it and neither Rust nor Python mounts the
+  route. Add `GET /raw/ticker_group.json` to the paired matrix; both return the
+  same 404 status, headers and body. This records parity while keeping the
+  retired proxy unavailable in both backends.
+- [ ] Verify Notes upload, view and deletion in a browser. The active app uses
+  the browser API base; the server-side helper branch is dormant. Direct Vite
+  startup may target port 3000, while `serve_local_web.py` overrides it to the
+  configured API port. Keep the sibling web repository read-only.
+- [ ] Verify cold/concurrent and production-equivalent RRG latency. A read-only
+  warm-cache benchmark against local Python returned the same payload hash on
+  all three samples (215,307 decoded bytes; SHA-256
+  `052af13a73fd9f5fb4c7e7fe34c9624737fe5e73b2b292795ef3918a3c6cc0fe`), with
+  p95 10.23s against a 25s target. The exact 2026-10-20 request through the web
+  wrapper took 10.14s. These local warm results fit the web's 30-second abort;
+  cold, concurrent and production-equivalent behavior remain open. The servers'
+  query timeout remains 180 seconds.
+- [ ] Inventory private sync records and verify refresh/sync authorization,
+  migration, and error behavior against the actual deployment configuration.
+- [ ] Verify the production launch configuration has the intended CORS origins,
+  refresh secret and sync bearer token. Exercise both authorized and rejected
+  requests against the candidate before public routing changes.
+- [ ] Expand the JSON rejection corpus to remaining unusual header-byte and
+  malformed escape/number ordering combinations. The current captured body
+  corpus already covers invalid UTF-8, numeric syntax, recursion, sequences,
+  duplicate/missing fields, Unicode surrogate errors and trailing data.
+
+### Validation performed — 2026-10-21
+
+- [x] Latest successful shared HTTP differential passed after adding the chunked-body,
+  static body-limit and `/public` mount-root, `OPTIONS` fallback, typed JSON
+  scalar, static range, dynamic/static HEAD compression and Yahoo/SJC 1W cases.
+  The latest rerun also verifies recursive JSON key order, empty Yahoo 1h
+  omission, invalid top-performer/volume-profile dates, `±Infinity`,
+  unpadded/invalid RRG dates, above-clamp RRG values, reversed-ID 2W/1M
+  Yahoo/SJC collisions, `with_hour=true`, populated Notes symlink rejection
+  and a volume-profile partial response that overlaps the history-gap ledger.
+  The durable-history pair used a unique loopback-bound PostgreSQL container on
+  tmpfs and a temporary Python SQLite database, both cleaned after the run. The
+  expanded live-Redis rerun passes in 7.49 seconds after adding latest RRG,
+  MA-mode, sort-key and cross-market volume-profile cases. It also asserts seeded
+  per-ticker and joined-snapshot hits with null indicators. A later live-Redis
+  rerun adds stale/incomplete/malformed per-ticker snapshots, divergent Redis-only
+  fallback bars, ticker-list fallback/source-priority cases, and partial/empty
+  batch diagnostics; it passes in 9.10 seconds after fixture-state isolation. The
+  worker-to-API freshness test passes in the focused Redis publisher suite (4
+  passed in 2.10 seconds). The post-change focused regression set passes 258
+  tests with one opt-in integration test skipped in 27.32 seconds. These checks do not
+  verify worker restart rehydration, production cache configuration, or browser
+  behavior.
+- [x] The matrix checks status, application/CORS/cache headers, JSON field
+  shape, scalar types and recursive object-key order, CSV bytes, omissions/nulls
+  and error bodies. It allows only documented health clock/uptime variance and
+  deployment-derived static `Last-Modified`; HTTPX decompresses responses before
+  comparing bodies. Raw JSON whitespace, number spelling and compressed wire
+  bytes are not compared.
+- [x] Rerun the full opt-in paired HTTP matrix after the adversarial route audit
+  and explicit legacy SDK `/raw` case: `AIPA_RUN_RUST_DIFFERENTIAL=1
+  AIPA_USE_DOCKER_POSTGRES=1 AIPA_USE_LIVE_REDIS_DIFFERENTIAL=1 uv run pytest
+  -q tests/test_rust_python_differential.py` passes **14 pytest functions in
+  11.75s**; one function executes the paired HTTP matrix and the others test
+  harness helpers.
+  The run uses a unique loopback-only PostgreSQL container on 1 GiB tmpfs, a
+  nonpersistent loopback Redis process, and temporary Python SQLite/archive/
+  upload paths. It includes the exact homepage CSV and JDK RRG request shapes,
+  chart ticker daily/hourly/minute reads, catalogs, info, analysis, health,
+  Notes upload/read/delete, sync, CORS, and static routes. It also executes the
+  live-Redis valid-stale and null-required-OHLC RRG cases. The temporary test
+  resources are stopped and removed by the harness. This proves same-fixture
+  contract parity for the matrix; it does not resolve live data-revision,
+  browser/SSR or production-configuration gates above.
+- [x] Earlier opt-in paired live-Redis run expanded analysis cache branches:
+  complete and incomplete `mode=all` joined snapshots for top performers, MA
+  scores and latest MASCORE RRG; stale top-performer snapshots; partial minute
+  tails that overlap the requested date; and non-overlapping tails that must
+  fall back to SQL. The missing Yahoo snapshot case removes both its joined
+  snapshot and raw Redis bars, verifying source-local fallback. The paired HTTP
+  matrix test passed in 11.27s. Its fixture used distinct same-source scores; the later
+  adversarial run added equal-score cases after deterministic ordering was
+  implemented. The temporary PostgreSQL container, Python SQLite/archive/upload
+  paths, and nonpersistent Redis process were cleaned; local API data remained
+  6.0G and RustFS remained 5.1G.
+- [x] Disable FastAPI's default public docs/OpenAPI routes. The local route and
+  schema tests pass (4 passed); schema assertions now call `app.openapi()` and
+  each of `/docs`, `/redoc`, `/openapi.json`, and `/docs/oauth2-redirect` returns
+  the Rust fallback body. Ruff and `git diff --check` pass. The paired matrix
+  passes the GET, HEAD and POST probes for those paths.
+- [x] Historical validation before the latest full-suite run included a
+  1,364-pass/one-skip Python run, a contract-file run with 170 passes and three
+  failures caused by an outdated test-double signature, and separate passes for
+  those three corrected cases. Pending-repair endpoint cases passed (4), and
+  history/public-history tests passed (45). Those counts predate the later full
+  suite and Redis boundary fixes; they are retained as run history, not as the
+  current acceptance result. The current post-fix evidence is recorded above.
+- [x] `ruff check src tests scripts`, formatting checks for changed Python
+  files, and `git diff --check` pass. Repository-wide `ruff format --check`
+  still reports six untouched files with pre-existing formatting differences.
+- [x] The complete Python suite passes 1,502 tests with one skipped in
+  399.51 seconds; the previous run's stale UTC-suffix expectation was corrected
+  and verified by this clean run. Rust tests pass 20/20 and Python analysis
+  compatibility tests pass 52/52. The latest rebuilt Rust/live-Redis paired
+  endpoint matrix test passes in 12.50 seconds, including independent checks
+  that HEAD matches its GET headers and Content-Length for a populated one-row
+  FPT CSV, DELETE preflight allowance, date-bound behavior, and overlapping-group
+  labels. Ruff, scoped formatting, compilation and
+  `git diff --check` pass. The isolated paired PostgreSQL container was removed;
+  local API data remained 6.0 GB and RustFS remained 5.1 GB. No persistent
+  differential container or database copy was retained.
+- [x] Protect the shared API/worker Parquet cache with stable per-checksum
+  `flock` read pins and nonblocking eviction locks. Cross-process eviction retries
+  use a shared marker published under the eviction lock before atomic cache
+  replacement; this covers failed reads and prevents another process from
+  clearing the marker before the new file appears. Ten focused lock tests pass,
+  including the actual read/eviction race, same-checksum materialization,
+  failed-read cleanup and marker-clear interleaving. A cross-container lock
+  rehearsal on the Compose mount passed. API and worker were rebuilt and
+  recreated together from the same image; both are healthy. A process killed
+  during download can still leave an uncounted `*.tmp` file in the cache; this
+  pre-existing crash-cleanup edge is outside the Parquet byte-budget accounting.
+- [x] After the latest full run, `aipriceaction-api/data` remains 6.0G and
+  the live RustFS `/data` volume remains 5.1G. The API container remains 1.2G
+  with a 14M archive cache and 3,148 Parquet files. The paired PostgreSQL container
+  is gone. No new test database copies were created in the persistent data
+  directory; its older SQLite sidecars remain untouched as retained evidence.
+  Temporary differential databases use temporary storage and are cleaned on exit.
+- [x] After signed-limit, malformed-snapshot, null-indicator and MASCORE
+  deduplication and typed-cache-boundary fixes, the focused Redis, snapshot and
+  analysis suite passed 148 tests; Ruff and formatting checks pass for the changed
+  files. The expanded Redis-enabled paired rerun passed one matrix test in 7.49
+  seconds after correcting Yahoo MA-sector membership and volume-profile floating
+  point operation order. Its isolated PostgreSQL tmpfs container and loopback
+  Redis process were cleaned up. The current full Python suite result is recorded
+  above.
+- [x] Current focused validation after required-OHLC snapshot rejection and the
+  RRG seed-depth fixture: 120 snapshot/Redis/analysis tests pass; 13 local
+  differential-harness checks pass; Ruff, compilation and `git diff --check`
+  pass. The first paired run exposed an incorrect fixture self-check: it
+  expected both MA20 and MA100 to change, although the excluded oldest bar is
+  outside MA20. The check now asserts the intended MA20 invariance and MA100
+  divergence. The escalated paired Rust/Python matrix test then passed in 9.17
+  seconds, including the live-Redis seed-depth case. A follow-up matrix test
+  passed in 10.51 seconds after adding padded VCB catalog fields
+  and exposed CORS diagnostics. Adversarial reviewers independently confirmed
+  raw-limit selection, highest-crawl winner, exact score expectations and case
+  isolation. No permanent PostgreSQL container or database copy was retained.
+
+- [x] Latest adversarial endpoint rerun used the rebuilt Rust binary and live
+  Redis and passed the paired HTTP matrix test in 12.50s. It adds equal-score ordering
+  in top-performers and sector scores, invalid typed modes, CSV numeric-format
+  boundaries, `HEAD /tickers`, volume-profile bound precedence and one-sided
+  bounds, the Notes DELETE CORS preflight, and overlapping-group requests for
+  top-performers and JDK RRG. Independent assertions require each server's HEAD
+  response to match a populated one-row FPT CSV GET, including Content-Length,
+  successful empty preflight with DELETE allowed, date-only equivalent profiles,
+  and every duplicated FPT row to use the `Alpha` sector. The clean full Python
+  suite passes 1,502 with one skip.
+  Temporary PostgreSQL, Redis and test directories were removed; API data stayed
+  6.0G, RustFS stayed 5.1G, and no differential PostgreSQL container remains.
+
+- [x] Rebuilt the current checked-out Rust server and reran the required gate
+  with `./scripts/check_rust_python_parity.sh`; all 14 pytest functions passed
+  in 17.02s, including the paired HTTP matrix with live Redis. The matrix now
+  independently validates home CSV row count/schema/date/close/MA values,
+  refresh schedule side effects for four modes by three intervals, production
+  web-origin CORS and JSON preflight, and static GET/HEAD/POST/PUT behavior
+  with both populated and missing public assets. The full API contract test
+  file then passed 177 tests in 313.72s, including the static regressions. The
+  adversarial route audit exposed and fixed Python's missing `Allow: GET,HEAD`
+  on static 405 responses
+  and its missing-directory fallthrough; paired cases now cover both. Focused
+  static regression tests pass (2). The gate uses loopback Redis and an isolated
+  temporary PostgreSQL container; its cleanup removed both. Post-run checks
+  found no differential PostgreSQL container; `data/` remained 6.0G and
+  RustFS `/data` remained 5.1G. The web checkout remains read-only. Actual
+  browser parsing/rendering, Notes browser workflows, production state/configuration, and
+  live data/catalog equivalence remain open.
+
+Until these gates pass, describe the work as compatibility improvements with
+documented differences, not a 100% drop-in replacement.
+
+### Latest implementation validation — 2026-10-21
+
+- [x] Fix dated aggregate storage-path parity at both coverage boundaries.
+  Rust and Python PostgreSQL fallbacks now read the same retained raw-candle
+  context as Redis, calculate aggregate candles and indicators, then filter by
+  aggregate bucket timestamps. Python only treats a range as Redis-covered when
+  an actual Redis client confirms coverage; without Redis, both implementations
+  preserve bounded SQL aggregation and its partial first bucket. Historical
+  ranges outside Redis coverage retain their bounded SQL query. Focused date-
+  window and weekly-indicator regressions cover both behaviors; the paired
+  matrix checks the covered Redis/forced-PostgreSQL path and the no-Redis path.
+- [x] Protect response-cache identity for comma-bearing symbols. Rust now
+  encodes its sorted symbol array unambiguously in the key and has a unit test
+  for the literal `DUPL,FPT` symbol versus repeated `DUPL` and `FPT` inputs.
+  Both request orders are in the paired matrix. The independent payload-key
+  assertions require each request to return its own symbol selection and reject
+  an `in-memory` hit from the distinct request's cache entry.
+- [x] Extend independent analysis checks: JDK RRG formula assertions cover
+  every returned ticker row, raw relative strength, momentum, volume and
+  zero-trail behavior. The `mode=all` matrix independently checks Yahoo and
+  crypto benchmark fallbacks plus VN-over-Yahoo priority for `DUPL`, which has
+  distinct fixture histories in both sources. Volume-profile success and the
+  no-minute-history 404 body are independently checked; the exact widget shape
+  (`bins=10`, default 70% value area) is checked for VN, crypto and Yahoo.
+  Top-performer Yahoo/crypto sector expectations follow the Rust VN-group lookup.
+- [x] The paired Rust/Python endpoint gate passes in four configurations:
+  18 tests with Redis absent, the live-Redis matrix, the unreachable-Redis
+  matrix, and an ACL-denied Redis matrix. Its new multi-symbol outage request
+  requires both VCB and FPT in the response, `x-data-source: database`, and no
+  Redis diagnostic headers. The ACL case allows connection and DB selection
+  but denies snapshot and OHLCV commands, so it exercises NOPERM fallback in
+  both clients. WRONGTYPE remains a per-command snapshot miss, matching fred's
+  error mapping. The full Python suite passes **1,528 tests with one skipped**;
+  after the final Redis error-classification changes, the focused Redis client
+  and route suite passes **31/31**. `SQLX_OFFLINE=true cargo test -q` passes
+  **22/22**. Ruff, Python compilation, and `git diff --check` pass. The paired
+  matrix also checks the signed no-MA SQL empty response, zero-retention Redis
+  limits, snapshot recovery, and the independent long-history aggregate oracle.
+- [x] Harden Rust health-count initialization for live writers. Trigger
+  installation commits separately from the count reconciliation; the
+  reconciler commits each ticker baseline independently under the same advisory
+  lock used by its trigger. Existing tickers are marked unreconciled so writes
+  skip count deltas until that ticker's exact baseline commits; newly created
+  identities initialize safely on their first write. A populated PostgreSQL
+  fixture reruns reconciliation and verifies a pre-reconciliation delete plus
+  insert, all three intervals' insert/delete/update paths, and moving a candle
+  between tickers and intervals. This avoids a full-history scan while holding
+  a write-conflicting table lock. Direct `TRUNCATE` of OHLCV still bypasses row
+  triggers; no current application path uses it, and manual maintenance must
+  run `CALL reconcile_ohlcv_health_counts()` afterward.
+- [x] Align initial health refresh retry behavior and cache-fallback source
+  tags. Python immediately retries a failed startup snapshot query, preserving
+  the last complete snapshot after later failures. Redis fallback tags now
+  match Rust for transport failures, generic/auth/permission errors, and
+  WRONGTYPE per-command misses. The paired live-Redis fixture checks an
+  all-WRONGTYPE snapshot batch with valid ZSET fallback; unreachable and
+  ACL-denied phases verify full database fallback for one and multiple tickers.
+- [x] Propagate major-ticker lookup failures from the Rust health refresh so a
+  transient query error cannot publish empty sync timestamps over the last
+  complete snapshot. Production-scale counter-trigger throughput remains an
+  explicit pre-cutover benchmark gate.
+- [x] Test cleanup leaves `aipriceaction-api/data` at 6.0G and the live RustFS
+  data volume at 5.1G, unchanged across the final four-phase gate. No
+  differential containers or full database test copies remain. Root `/TODO.md`
+  is ignored by `.gitignore`; this tracked endpoint roadmap remains
+  `aipriceaction-api/TODO.md`.
+
+These local contract checks do not close the outstanding production-data and
+deployment gates above. Production and local VCB historical rows diverge,
+browser parsing/rendering and Notes flows are not accepted end-to-end, private
+sync records and production runtime settings remain unverified, and the sibling
+web checkout still has a conditional literal-comma CSV parsing gap. Do not claim
+100% compatibility until those differences are resolved or their inputs are
+formally excluded.
+
+### Final verification update — 2026-10-21
+
+- [x] Re-run the full Python API suite after the Redis URL parsing updates:
+  1,568 passed, 3 skipped, in 427.20 seconds. Ruff, Python compilation and
+  `git diff --check` pass. The four-phase Rust/Python gate also passes after
+  the final changes: 20 tests with Redis absent, then one shared-fixture test
+  each with live, unreachable and ACL-denied Redis.
+- [x] Compare every URL from the home-page checklist through the local API and
+  LAN web proxy. All 19 requests returned HTTP 200 at both
+  `127.0.0.1:3002` and `192.168.1.13:5173/aipriceaction-api`; CSV, group, name
+  and RRG bodies matched byte-for-byte. Health's stable fields match; only
+  `current_system_time` and `uptime_secs` advanced between the two requests.
+  This verifies the proxy path and local API response, not browser rendering or
+  deployed production data.
+- [x] Align centralized `REDIS_URL` edge parsing with Fred for missing hosts,
+  invalid UTF-8 percent-encoded credentials, URL edge whitespace, and Valkey
+  aliases. The repository's production Rust Compose configuration uses a
+  standalone `redis://` endpoint. Cluster and Sentinel URLs remain unsupported
+  by Python and must not be used for the Python deployment without a separately
+  tested topology-aware client.
+- [x] Compose validation passes when a non-empty `REFRESH_SECRET` is supplied;
+  it intentionally rejects an unset/empty secret. Root `/TODO.md` remains
+  ignored by `.gitignore`.
+- [x] The parity run left no `aipa-differential` containers. Local API data is
+  still 6.0G and the existing RustFS data volume is still 5.1G; no temporary
+  database or object-store test data is retained.
+
+Production VCB history, production runtime settings and the sibling web
+client's literal-comma CSV parser remain open compatibility gaps. Keep the
+100% drop-in claim blocked until their inputs are compared or formally excluded.
+
+### Adversarial endpoint and web-consumer review — 2026-10-21
+
+- [x] Re-run the paired endpoint gate after adversarial review: 20 checks pass
+  with Redis absent, followed by passing shared-fixture checks with live Redis,
+  unreachable Redis, and ACL-denied Redis. The request matrix now pins negative
+  unsigned query values, malformed typed JSON followed by later syntax errors,
+  and the volume-profile resource-limit response body.
+- [x] Fix the confirmed low-priced crypto `/analysis/volume-profile` mismatch.
+  Python now uses Rust's first profile level within `$0.01` of the POC when
+  seeding value-area expansion. The MICROUSDT paired fixture explicitly expects
+  POC `0.0002`, value area `0.0001–0.0002`, and volume `101`.
+- [x] Fix malformed JSON field context for typed string fields so Python's
+  rejection text includes Serde's field path for malformed escapes and raw
+  control characters. Refresh and sync malformed-body cases compare those
+  responses against Rust.
+- [x] Add a paired WIDEUSDT case that reaches the 1,000,001-step boundary and
+  independently checks the exact HTTP 400 resource-limit error body.
+- [x] Correct the Python SDK's interval documentation: it does not implement
+  calendar-month `1M` aggregation end to end, despite prior docstrings claiming
+  support. The supported SDK aggregate intervals are `5m`, `15m`, `30m`, `4h`,
+  `1W`, and `2W`; 1M support remains a separate feature gap.
+- [x] Run the complete Python API test suite after the adversarial fixes:
+  **1,568 passed, 3 skipped**. `git diff --check` is clean.
+- [x] Verify test cleanup after the full run: no `aipa-differential` containers
+  or volumes remain; API `data/` is 6.0G and RustFS `/data` is 5.1G, unchanged
+  from the recorded pre-run sizes.
+- [x] Adversarially inventory mounted Rust routes, methods, static paths, CORS
+  probes, and query edges. A one-off 512-case request-builder sweep was run,
+  but its generator and result log were not retained, so that sweep is
+  transient evidence. The checked-in route inventory in
+  `tests/test_api_contract.py` reproducibly covers active Rust/Python route
+  registration and mounts. Neither inventory replaces the paired runtime
+  matrix or browser acceptance checks.
+
+Adversarial web review found no active route or method registration mismatch,
+but the external web checkout still has unclosed consumer-contract issues:
+
+- Its CSV parser splits literal commas and drops the synthetic fixture
+  `DUPL,FPT` symbol row even though Rust and Python return matching unquoted CSV. The
+  relevant file is `/Users/quan/data-workspace/aipriceaction-web/src/integrations/aipriceaction/src/utils.ts`.
+- Its SDK sends `format: "JSON"` to the CSV parser even though both APIs accept
+  the format case-insensitively. It also rejects bins/value-area and RRG bounds
+  that both APIs intentionally clamp, and its response/query types omit fields
+  present in the API contract.
+- The packaged Explorer defaults to an hourly option and sends
+  `with_hour=true`, but Rust ignores this unknown query key and returns
+  `hourly: null`; Python now has paired coverage for true, false, invalid and
+  duplicate values, including unchanged response JSON versus the baseline.
+  Explorer documentation promises hourly results but describes a shape that
+  conflicts with Rust's response scaffold and leaves timezone, hour labels,
+  ranking, and indicator baselines undefined. Keep server parity at Rust's
+  current behavior until those semantics are defined and implemented in both
+  services. Rendered browser/Notes acceptance and deployed-edge checks remain
+  outstanding.
+- Production database/history and runtime configuration have not been proven
+  equivalent to the local fixtures. Stale production results cannot establish
+  compatibility by themselves; repeat with a known synchronized date and the
+  deployed revision before cutover.
+
+The sibling web checkout remains read-only per the user's instruction. These
+items therefore remain blockers to claiming 100% web-to-API compatibility even
+when the paired Rust/Python server matrix passes.
+
+### Latest parity verification — 2026-10-21
+
+- [x] Match Rust's compact JSON float spelling across app and upload routes.
+  The response encoder now follows serde_json's fixed/scientific notation
+  thresholds; the paired matrix compares JSON wire bytes, including small
+  `std_deviation` values that previously differed only by exponent notation.
+- [x] Tighten the parity comparator so volatile health/sync fields cannot hide
+  malformed JSON, duplicate volatile keys, non-decimal `Content-Length` values
+  (including compressed responses), identity-body length mismatches,
+  encoded-length presence mismatches, or HEAD/GET header errors. Every HEAD
+  request now compares its matching GET representation across both runtimes.
+- [x] Correct the i64 limit, performer-volume, RRG-volume and profile-boundary
+  independent oracles. The profile fixture now reaches the requested UTC date,
+  covers over 200 price ticks, and exercises bins 0/2/200/201/u64::MAX and
+  value-area 0/60/70/90/100 clamps. The MICROUSDT hard-coded case freezes
+  Rust's one-cent POC-neighborhood lookup behavior as a compatibility quirk.
+- [x] Run the four-phase Rust/Python gate after the final Notes route and
+  extractor-precedence adjustments: 34 tests pass with Redis absent (40.10s);
+  the shared-fixture parity case also passes with live Redis (32.29s),
+  unreachable Redis (49.16s), and ACL-denied Redis (4.05s). Temporary
+  PostgreSQL/Redis resources are removed.
+- [x] Run the full API suite after the response-encoder change:
+  **1,589 passed, 3 skipped** in 429.80 seconds. Ruff, Python compilation and
+  `git diff --check` pass.
+- [x] Verify cleanup after the final four-phase run: no
+  `aipa-differential` containers or volumes remain; local API `data/` is still
+  6.0G and RustFS `/data` is still 5.1G. The root `/TODO.md` remains ignored by
+  `.gitignore`.
+- [x] Make both analysis clamps observable with 110 eligible synthetic symbols
+  in an isolated request-scoped sector. `limit=usize::MAX` returns exactly 100
+  top and 100 worst rows; `top_per_sector=usize::MAX` returns exactly 50 of
+  the 110 sector rows. The no-Redis Rust/Python matrix passed with these
+  independent cardinality assertions.
+- [x] Add a lower RRG clamp oracle: `period=3` returns period `4` and the
+  independent JdK calculation uses that effective value.
+- [x] Close adversarial Notes route and storage boundaries. Rust now raises
+  Axum's multipart extractor limit to the route's 5 MiB file allowance plus
+  framing; paired tests accept exactly 5 MiB, reject 5 MiB plus one byte, and
+  verify the stored and fetched content digests. Python preserves Axum's raw
+  route matching for encoded session separators, encoded fixed `markdown`
+  segments, empty and nested filenames, DEL/C1 controls, and duplicate-query
+  extractor precedence. Paired tests also accept an aggregate upload exactly
+  at the 6 MiB quota and reject the next byte. All quota filler files live in
+  the differential test's temporary directory and are removed after each case.
+- [x] Probe the checked-out TypeScript SDK with an injected `fetch` while keeping
+  the sibling web checkout read-only. The actual SDK sends uppercase
+  `format: "JSON"` and then treats the mocked JSON object as CSV (`.trim` fails);
+  lowercase `json` resolves. It rejects unpadded dates that both APIs accept,
+  malformed optional dates that the API ignores or falls back from, and RRG /
+  volume-profile bounds that the APIs clamp, all before sending a request. Its
+  literal-comma CSV parser drops the registered `DUPL,FPT` row. For
+  end-date-only volume-profile requests, the SDK also rejects before sending,
+  while both servers return HTTP 400 with the required-date error; the API
+  acceptance boundary matches, though the client surfaces a local validation
+  error instead of an HTTP response. These probes confirm client-side behavior,
+  not full browser or real-network acceptance.
+- [ ] Fix the SDK parsing and validation gaps above and complete browser
+  acceptance. The sibling web checkout remains read-only under the user's
+  instruction, so its files have not been changed.
+- [ ] Verify browser chart/analysis/Notes flows, cross-origin header access, and
+  production data/runtime settings. The active web client still has a
+  literal-comma CSV parsing issue, `with_hour=true` still returns `hourly:null`,
+  and its query/response types omit supported fields. Volume-profile's intended
+  daily fallback is unreachable when the API returns 404 for missing minute
+  data. Vite and the Notes SSR loader default to port 3000 while the local API
+  proxy has used 3001; Notes upload/delete also ignore the configured API URL
+  override. The web checkout remains read-only and unchanged.
+
+- [x] Recheck storage after the four-phase gate: no differential test
+  containers or full-database temporary directories remain; `aipriceaction-api/data/`
+  remains 6.0G and RustFS `/data` and `/logs` remain 5.1G and 26M. The ignored
+  root `TODO.md` is still covered by `.gitignore`.
+- [x] Re-run the four-phase gate after adversarial review corrected the
+  `with_hour` oracle. All 34 no-Redis cases pass (40.10s), followed by the
+  shared-fixture case with live Redis (32.27s), unreachable Redis (49.09s),
+  and ACL-denied Redis (3.98s). The four query variants now require HTTP 200,
+  the `top_performers` envelope, an explicit `hourly: null`, and response-body
+  bytes identical to the no-`with_hour` baseline for each server. Ruff, Python
+  compilation, and `git diff --check` pass. No differential containers or
+  volumes remain; API `data/` is 6.0G and RustFS data is 5.286GB.
+
+These results establish broad same-fixture Rust/Python server parity. They do
+not establish 100% compatibility with the external SDK, rendered SPA, or
+deployed production state. The HTTP comparator compares decompressed response
+bodies and normalized header mappings, so it does not prove compressed wire
+bytes, duplicate-header multiplicity/order, or Uvicorn/Axum framing behavior.
+
+### Adversarial follow-up — Explorer and homepage proxy replay — 2026-10-21
+
+- [x] Re-audit the 15 distinct homepage URL shapes from the user’s list through
+  the direct Python API (`:3002`), the local Vite proxy (`:5173`) and the local
+  wrapper (`:5174`). All 45 requests returned HTTP 200. Every ticker, group,
+  name and RRG response matched the direct API body hash through both proxies;
+  health matched after excluding its expected request-time and uptime fields.
+  The duplicated URLs in the original list were represented once per distinct
+  request shape. This verifies local routing and Python response delivery, not
+  Rust-vs-production values or a rendered external page.
+- [x] Fix the packaged Explorer’s JSON record count to sum candle arrays in the
+  API’s symbol-keyed object. Remove the unsupported “Daily + Hourly” request
+  option, which sent `with_hour=true` even though both servers return
+  `hourly: null`. Add explicit market, EMA and snapshot controls to the packaged
+  top-performers and MA-by-sector forms so those query fields can be exercised.
+  The RRG form also exposes its supported EMA and snapshot options, including
+  the user's `ema=true` request shape.
+  The Rust and Python public bundles remain byte-identical. Node VM checks
+  verify that the forms construct the selected mode/EMA/snapshot query and that
+  the ticker JSON count displays the actual number of candle rows.
+- [x] Correct the packaged API reference for the symbol-keyed `/tickers` JSON
+  shape and its mode/Redis/MA/EMA/snapshot fields, mode aliases for catalog and
+  analysis routes, health response field names, analysis response envelopes,
+  supported RRG algorithms, and RRG’s actual default minimum volume.
+- [x] Add the optional `secret` query field to Python Markdown retrieval’s
+  OpenAPI signature. Rust accepts but ignores it for Markdown; both runtimes
+  serve public notes and deny private notes regardless of whether the query
+  secret is absent, wrong or correct. Tests pin the optional OpenAPI parameter,
+  public retrieval with the query, and the private-session denial behavior.
+  A query-field inventory test also compares each of the eight static Rust
+  query-field manifests against the generated FastAPI OpenAPI parameters.
+- [x] Run the complete Notes contract file plus the OpenAPI query-inventory,
+  Explorer asset, and mode/schema regressions: 15 passed. Scoped Ruff checks,
+  formatting, JS syntax, `git diff --check`, and root TODO ignore checks pass.
+  The Node VM runtime check also passes for JSON row counting and all three
+  analysis URL builders. Root `/TODO.md` remains ignored by `.gitignore`.
+- [ ] Browser acceptance remains open. The cached Playwright package could not
+  launch system Chrome and timed out after 180 seconds; a Node VM check covers
+  the changed browser JavaScript but does not replace a rendered browser test.
+  The sibling web checkout remains read-only. Its checked-in Vite proxy defaults
+  to port 3000, while the active `:5173` process passed the same-body proxy
+  replay and therefore has an effective override. The sibling TypeScript SDK
+  still has parser/type gaps recorded above. Production history and runtime
+  parity also remain open.
+
+### Final compatibility validation — 2026-10-21
+
+- [x] Correct the packaged API reference and general health-panel copy in both
+  Rust and Python bundles:
+  `/tickers/group` returns curated group-to-symbol maps, not interval
+  availability; `/health` cache/memory fields are documented as zero-valued
+  placeholders; MA grouping documents VN groups and the additional Yahoo/crypto
+  groups used by `mode=all`; RRG documents JDK-only benchmark/period fields and
+  conditional `source`/`trails` fields. Both `index.html` copies are
+  byte-identical and `git diff --check` passes. The general health panel no
+  longer promises cache performance metrics.
+- [x] Re-run the packaged asset parity test after the final health-panel copy
+  correction: 1 passed.
+- [x] Run the complete Python API suite after the Explorer, Notes/OpenAPI, and
+  reference changes: **1,594 passed, 3 skipped** in 431.91 seconds. The only
+  warning is Starlette's existing `httpx` TestClient deprecation notice.
+- [x] Run `scripts/check_rust_python_parity.sh` using the existing local
+  Colima Docker context. The no-Redis run passes 34 cases; shared-fixture runs
+  pass with live Redis, unreachable Redis, and ACL-denied Redis (one case per
+  Redis phase) against a Rust executable rebuilt from the current checkout.
+  Temporary PostgreSQL containers/volumes are absent afterward.
+  API data remains 6,261,008 KiB and RustFS `/data` remains 5,267,428 KiB;
+  `/logs` measures 25,520 KiB on the final read-only check. No pytest SQLite
+  databases or sidecars from the run remain in the inspected temporary
+  directories.
+- [x] `cargo build --locked --offline` succeeds. `SQLX_OFFLINE=true cargo test
+  --locked --offline` passes all 22 Rust unit tests without connecting to a
+  database. Repository-wide `cargo fmt --check` reports formatting drift across
+  multiple files; no blanket reformat was applied.
+- [ ] Rendered-browser acceptance is still open: no local Chrome executable is
+  available, and the prior Playwright launch timed out. The sibling web
+  checkout remains read-only. Its SDK CSV parsing/uppercase-format validation
+  gaps and the checked-in Vite/Notes port overrides remain unresolved. Browser
+  behavior and revision-pinned production data/runtime parity are not certified;
+  do not claim 100% end-to-end web compatibility or cut over.

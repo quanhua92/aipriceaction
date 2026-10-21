@@ -333,6 +333,7 @@ async def execute(args, settings):
                 port=args.port,
                 access_log=False,
                 log_config=None,
+                limit_concurrency=settings.request_concurrency,
             )
         )
         await server.serve()

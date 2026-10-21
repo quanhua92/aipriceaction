@@ -128,6 +128,31 @@ pub async fn batch_read_snapshots(
             }
         };
 
+    // fred returns a one-element Err vector when the pipeline itself cannot
+    // reach the router/connection. That is different from per-command Redis
+    // errors (for example WRONGTYPE), which still return one result per key.
+    // Treat transport failures and short batches as an unavailable snapshot
+    // so the caller falls back for every requested ticker.
+    if results.len() != tickers.len()
+        || results.iter().any(|result| {
+            matches!(
+                result,
+                Err(error)
+                    if !matches!(
+                        error.kind(),
+                        ErrorKind::InvalidArgument | ErrorKind::InvalidCommand
+                    )
+            )
+        })
+    {
+        tracing::warn!(
+            expected = tickers.len(),
+            actual = results.len(),
+            "[SNAP] Redis pipeline unavailable; falling back for all tickers"
+        );
+        return None;
+    }
+
     let mut out: Vec<Option<String>> = Vec::with_capacity(tickers.len());
     for result in results {
         match result {
@@ -873,5 +898,7 @@ mod tests {
         assert_eq!(snap_key("crypto", "BTCUSDT", "1h"), "snap:crypto:BTCUSDT:1h");
         assert_eq!(snap_field(1, "sma"), "1:sma");
         assert_eq!(snap_field(40, "ema"), "40:ema");
+        assert_eq!(snap_field(101, "ema"), "101:ema");
+        assert_ne!(snap_field(101, "ema"), snap_field(601, "ema"));
     }
 }

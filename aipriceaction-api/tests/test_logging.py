@@ -41,7 +41,8 @@ def test_http_requests_log_status_latency_and_safe_path(tmp_path, caplog):
     assert "status=200" in message
     assert "latency_ms=" in message
     assert "must-not-be-logged" not in message
-    assert response.headers["x-request-id"]
+    assert "request_id=" in message
+    assert "x-request-id" not in response.headers
 
 
 def test_client_errors_log_at_warning(tmp_path, caplog):

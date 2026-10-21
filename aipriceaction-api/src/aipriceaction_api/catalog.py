@@ -3,6 +3,26 @@ import gzip
 import json
 from functools import cached_property
 
+from .config import trim_rust_whitespace
+
+RUST_TICKER_LIST_KEY = "meta:ticker_list"
+
+
+class _JsonObject(dict):
+    """JSON object retaining its pairs so required-field duplicates are visible."""
+
+    def __init__(self, pairs):
+        super().__init__(pairs)
+        self.pairs = pairs
+
+
+def _json_object(pairs):
+    return _JsonObject(pairs)
+
+
+def _reject_nonstandard_json_constant(value):
+    raise ValueError(f"Invalid JSON constant: {value}")
+
 
 class Catalog:
     def __init__(self, settings):
@@ -65,6 +85,57 @@ class Catalog:
         groups = self.snapshot["groups"]["vn"] if self.snapshot else self.load("ticker_group.json")
         return {symbol for symbols in groups.values() for symbol in symbols}
 
+    def redis_ticker_list(self, redis_client=None):
+        """Read Rust's ``meta:ticker_list`` cache as ``[{source, ticker}, ...]``.
+
+        A missing client/key, Redis error, invalid UTF-8/JSON, or a value that
+        cannot deserialize as Rust's ``Vec<TickerInfo>`` returns ``None``.
+        A valid empty array remains ``[]`` so callers can preserve Rust's
+        distinction between an empty cached list and an unavailable cache.
+        """
+
+        if redis_client is None:
+            return None
+        try:
+            raw = redis_client.get(RUST_TICKER_LIST_KEY)
+        except Exception:
+            # Rust's Redis reader falls back on connection errors and timeouts.
+            return None
+        if isinstance(raw, bytes):
+            try:
+                raw = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
+        if not isinstance(raw, str):
+            return None
+        try:
+            tickers = json.loads(
+                raw,
+                object_pairs_hook=_json_object,
+                parse_constant=_reject_nonstandard_json_constant,
+            )
+        except (json.JSONDecodeError, RecursionError, ValueError):
+            return None
+        if not isinstance(tickers, list):
+            return None
+
+        result = []
+        for ticker in tickers:
+            if not isinstance(ticker, _JsonObject):
+                return None
+            pairs = ticker.pairs
+            if (
+                sum(key == "source" for key, _ in pairs) != 1
+                or sum(key == "ticker" for key, _ in pairs) != 1
+            ):
+                return None
+            source = ticker.get("source")
+            symbol = ticker.get("ticker")
+            if not isinstance(source, str) or not isinstance(symbol, str):
+                return None
+            result.append({"source": source, "ticker": symbol})
+        return result
+
     def groups(self, mode):
         if self.snapshot and mode in self.snapshot["groups"] and mode != "vn":
             return self.snapshot["groups"][mode]
@@ -78,6 +149,8 @@ class Catalog:
         merged = {}
         for source in sources:
             for name, symbols in self.groups_by_source[source].items():
+                if source == "vn" and name == "ALL_STOCKS":
+                    continue
                 if name not in merged:
                     merged[name] = list(symbols)
                 elif mode == "yahoo" or source == "sjc":
@@ -90,12 +163,12 @@ class Catalog:
             reader = csv.reader(handle)
             next(reader)
             return {
-                row[0].upper(): {
-                    "ticker": row[0],
-                    "organ_name": row[1],
-                    "en_organ_name": row[2],
-                    "exchange": row[3],
-                    "type": row[4],
+                trim_rust_whitespace(row[0]).upper(): {
+                    "ticker": trim_rust_whitespace(row[0]),
+                    "organ_name": trim_rust_whitespace(row[1]),
+                    "en_organ_name": trim_rust_whitespace(row[2]),
+                    "exchange": trim_rust_whitespace(row[3]),
+                    "type": trim_rust_whitespace(row[4]),
                 }
                 for row in reader
                 if len(row) >= 5
@@ -103,7 +176,7 @@ class Catalog:
 
     @cached_property
     def names_by_source(self):
-        valid = set(s for symbols in self.groups_by_source["vn"].values() for s in symbols)
+        valid = self.curated_vn_symbols
         result = {"vn": {s: r["organ_name"] for s, r in self.vn_info.items() if s in valid}}
         for source, file in (
             ("yahoo", "global_tickers.json"),
@@ -124,13 +197,8 @@ class Catalog:
             else (mode,)
         )
         result = {}
-        registered = {source: {} for source in sources}
-        if repo is not None:
-            for row in repo.discovered_tickers(sources):
-                registered[row["source"]][row["symbol"]] = row["name"] or row["symbol"]
         for source in sources:
-            names = registered[source] | self.names_by_source[source]
-            for symbol, name in names.items():
+            for symbol, name in self.names_by_source[source].items():
                 result.setdefault(symbol, name)
         return dict(sorted(result.items()))
 
@@ -153,7 +221,7 @@ class Catalog:
 
     def sector(self, source, symbol):
         for sector, symbols in sorted(self.groups_by_source[source].items()):
-            if symbol in symbols:
+            if sector != "ALL_STOCKS" and symbol in symbols:
                 return sector
         return None
 

@@ -67,6 +67,23 @@ def test_known_missing_year_cannot_be_empty_skipped_or_joined(system, read):
     assert repo.status()["jobs"] == []
 
 
+def test_optional_partial_read_ignores_only_the_history_gap_ledger(system):
+    repo, _, history = system
+    rows = [replace(bar("2022-01-03"), interval="1m", time=parse_time("2022-01-03T02:00:00"))]
+    repo.put(rows)
+    repo.record_history_gap("vn", "FPT", "1m", rows[0].time, rows[0].time, "Missing minute row", {})
+
+    with pytest.raises(DataError, match="Historical data unavailable"):
+        history.read("vn", "FPT", "1m", rows[0].time, rows[0].time)
+    partial = history.read("vn", "FPT", "1m", rows[0].time, rows[0].time, ignore_history_gaps=True)
+    assert len(partial) == 1
+    assert (partial[0].time, partial[0].close, partial[0].volume) == (
+        rows[0].time,
+        rows[0].close,
+        rows[0].volume,
+    )
+
+
 def test_recent_and_satisfied_forward_limits_ignore_unneeded_missing_year(system):
     repo, _, history = system
     repo.put([bar(day) for day in ("2021-12-30", "2021-12-31", "2023-01-02", "2023-01-03")])
@@ -77,7 +94,7 @@ def test_recent_and_satisfied_forward_limits_ignore_unneeded_missing_year(system
     ].time == parse_time("2021-12-30")
     assert len(history.query("vn", "FPT", "1D", limit=1, ma=False)) == 1
     recent = history.query("vn", "FPT", "1D", start=parse_time("2023-01-02"), limit=1, ma=True)
-    assert recent[0]["close"] == 100 and "ma10" not in recent[0]
+    assert recent[0]["close"] == 100 and recent[0]["ma10"] == 100
 
 
 @pytest.mark.parametrize("ema", [False, True])
@@ -111,19 +128,179 @@ def test_optional_warmup_stops_at_gap_without_losing_valid_candles_or_polluting_
     else:
         assert row["ma20"] == pytest.approx(sum(range(82, 102)) / 20)
         assert row["ma100"] == pytest.approx(sum(range(2, 102)) / 100)
-        assert "ma200" not in row and "ma200_score" not in row
+        assert row["ma200"] == pytest.approx(sum(range(1, 102)) / 101)
+        assert "ma200_score" in row
     assert repo.read("vn", "FPT", "1D")[0].close == 1000
     assert len(repo.history_gaps("vn", "FPT", "1D")) == 1
     with pytest.raises(DataError, match="Historical data unavailable"):
         history.query("vn", "FPT", "1D", start=old.time, end=recent[-1].time, ema=ema)
 
 
-def test_short_sma_is_not_a_shortened_period_average(system):
+def test_short_sma_uses_rust_expanding_window(system):
     repo, _, history = system
     repo.put([bar("2026-01-02"), bar("2026-01-03")])
     row = history.query("vn", "FPT", "1D", limit=1)[0]
     assert row["close"] == 100
-    assert not any(key.startswith("ma") for key in row)
+    assert row["ma10"] == row["ma20"] == 100
+    assert row["ma200"] == 100
+
+
+def test_dated_ema_uses_rust_total_retained_native_history_cap(system):
+    from aipriceaction_api.calculations import moving_average
+
+    repo, _, history = system
+    origin = parse_time("2022-01-01")
+    candles = [
+        replace(
+            bar("2022-01-01"),
+            time=origin + i * 86400,
+            open=100 + i / 3 + (i % 17),
+            high=102 + i / 3 + (i % 17),
+            low=99 + i / 3 + (i % 17),
+            close=100 + i / 3 + (i % 17),
+        )
+        for i in range(6_500)
+    ]
+    # Make the first row in the latest 601-bar window extreme: the 600-bar
+    # EMA approximation should retain a measurable seed difference here.
+    candles[-601] = replace(
+        candles[-601], open=1_000_000_000, high=1_000_000_002, low=999_999_999, close=1_000_000_000
+    )
+    repo.put(candles)
+    closes = [row.close for row in candles]
+    retained = history.settings.redis_daily_max_size
+    expected_retained = moving_average(closes[-retained:], 200, ema=True)[-1]
+    expected_latest_window = moving_average(closes[-601:], 200, ema=True)[-1]
+
+    dated = history.query(
+        "vn",
+        "FPT",
+        "1D",
+        start=candles[-1].time,
+        end=candles[-1].time,
+        limit=1,
+        ema=True,
+        strict_source_intervals=True,
+    )[0]
+    latest = history.query("vn", "FPT", "1D", limit=1, ema=True)[0]
+    postgres_fallback = history.query(
+        "vn",
+        "FPT",
+        "1D",
+        start=candles[-1].time,
+        end=candles[-1].time,
+        limit=1,
+        ema=True,
+        redis=False,
+    )[0]
+
+    assert dated["ma200"] == pytest.approx(expected_retained)
+    assert latest["ma200"] == pytest.approx(expected_latest_window)
+    assert postgres_fallback["ma200"] == pytest.approx(expected_latest_window)
+    assert dated["ma200"] != pytest.approx(expected_latest_window)
+
+
+def test_dated_weekly_ema_uses_retained_daily_window(system):
+    from aipriceaction_api.calculations import aggregate, enhance
+
+    repo, _, history = system
+    origin = parse_time("2022-01-03")  # Monday; weekly buckets stay aligned.
+    template = bar("2022-01-03")
+    candles = []
+    for i in range(history.settings.redis_daily_max_size):
+        close = 10_000_000 if i < 350 else 10_000 + (i % 17)
+        candles.append(
+            replace(
+                template,
+                time=origin + i * 86400,
+                open=close,
+                high=close + 1,
+                low=close - 1,
+                close=close,
+                volume=1_000 + i,
+            )
+        )
+    repo.put(candles)
+
+    retained = repo.read(
+        "vn", "FPT", "1D", limit=history.settings.redis_daily_max_size, forward=False
+    )
+    all_bars = aggregate(retained, "1W", "vn", repo.validate_basis)
+    expected_all = enhance(all_bars, "1W", ma=True, ema=True)
+    start = origin + 650 * 7 * 86400
+    end = start + 21 * 86400
+    expected = [
+        result
+        for bar_row, result in zip(all_bars, expected_all, strict=True)
+        if start <= bar_row.time <= end
+    ][:3]
+
+    actual = history.query(
+        "vn",
+        "FPT",
+        "1W",
+        start=start,
+        end=end,
+        limit=3,
+        ma=True,
+        ema=True,
+        redis=True,
+        strict_source_intervals=True,
+    )
+
+    shorter_bars = aggregate(retained[-4_200:], "1W", "vn", repo.validate_basis)
+    shorter = enhance(shorter_bars, "1W", ma=True, ema=True)
+    short_target = [
+        result
+        for bar_row, result in zip(shorter_bars, shorter, strict=True)
+        if bar_row.time == start
+    ]
+    assert len(expected) == 3
+    assert expected[0]["ma200"] != short_target[0]["ma200"]
+    assert actual == expected
+
+
+def test_dated_ema_retained_window_includes_published_archives(system):
+    from aipriceaction_api.calculations import moving_average
+
+    repo, archive, history = system
+    origin = parse_time("2022-01-01")
+    candles = [
+        replace(
+            bar("2022-01-01"),
+            time=origin + i * 86400,
+            open=100 + i / 3 + (i % 17),
+            high=102 + i / 3 + (i % 17),
+            low=99 + i / 3 + (i % 17),
+            close=100 + i / 3 + (i % 17),
+        )
+        for i in range(6_500)
+    ]
+    candles[-601] = replace(
+        candles[-601], open=1_000_000_000, high=1_000_000_002, low=999_999_999, close=1_000_000_000
+    )
+    repo.put(candles)
+    archived = repo.read("vn", "FPT", "1D", limit=6_000, forward=True)
+    archive.publish(archived, prune=True)
+
+    closes = [row.close for row in candles]
+    retained = history.settings.redis_daily_max_size
+    expected_retained = moving_average(closes[-retained:], 200, ema=True)[-1]
+    expected_live_only = moving_average(closes[-500:], 200, ema=True)[-1]
+    dated = history.query(
+        "vn",
+        "FPT",
+        "1D",
+        start=candles[-1].time,
+        end=candles[-1].time,
+        limit=1,
+        ema=True,
+        strict_source_intervals=True,
+    )[0]
+
+    assert len(repo.read("vn", "FPT", "1D")) == 500
+    assert dated["ma200"] == pytest.approx(expected_retained)
+    assert dated["ma200"] != pytest.approx(expected_live_only)
 
 
 def test_warmup_does_not_swallow_request_resource_errors():
@@ -169,12 +346,14 @@ def test_unavailable_range_is_scoped_to_market_ticker_and_native_interval(system
 
 def test_http_reports_gap_and_rejects_missing_history_without_blocking_recent(system):
     repo, archive, _ = system
-    repo.put([bar("2023-01-02"), bar("2023-01-03")])
+    # One available recent row is a valid partial Redis/SQL tail even though
+    # the cache warmup count is larger and an older range is marked missing.
+    repo.put([bar("2023-01-02")])
     gap(repo)
     with TestClient(create_app(archive.settings)) as client:
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json()["storage"]["history_gaps"] == repo.history_gaps()
+        assert repo.history_gaps()
         response = client.get(
             "/tickers",
             params={
@@ -188,6 +367,28 @@ def test_http_reports_gap_and_rejects_missing_history_without_blocking_recent(sy
         assert "Historical data unavailable" in response.text
         response = client.get("/tickers", params={"symbol": "FPT", "limit": 1, "ma": "false"})
         assert response.status_code == 200 and len(response.json()["FPT"]) == 1
+        dated = client.get(
+            "/tickers",
+            params={
+                "symbol": "FPT",
+                "start_date": "2023-01-02",
+                "end_date": "2023-01-02",
+                "limit": 1,
+                "ma": "false",
+            },
+        )
+        assert dated.status_code == 200 and len(dated.json()["FPT"]) == 1
+        negative_limit = client.get("/tickers?symbol=FPT&limit=-1&redis=false")
+        assert negative_limit.status_code == 200 and len(negative_limit.json()["FPT"]) == 1
+        negative_limit_sql = client.get("/tickers?symbol=FPT&limit=-1&redis=false")
+        assert negative_limit_sql.status_code == 200
+        assert len(negative_limit_sql.json()["FPT"]) == 1
+        negative_end_limit = client.get(
+            "/tickers?symbol=FPT&end_date=2023-01-02&limit=-201&redis=false&cache=false"
+        )
+        # With no Redis, the SQL warmup limit becomes negative and PostgreSQL
+        # returns no rows; Rust preserves the empty 200 response.
+        assert negative_end_limit.status_code == 200 and negative_end_limit.json() == {}
 
 
 def test_gap_markers_survive_backup_and_manifest_restore_without_schema_change(system, tmp_path):

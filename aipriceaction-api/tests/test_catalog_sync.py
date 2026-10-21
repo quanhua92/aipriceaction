@@ -28,6 +28,25 @@ def transport_for(groups):
     return httpx.MockTransport(handler)
 
 
+def test_vn_info_trims_all_csv_fields_like_rust(tmp_path):
+    (tmp_path / "vn.csv").write_text(
+        "ticker,organ_name,en_organ_name,exchange,type\n"
+        " VNZ , CTCP Tập đoàn VNG , VNG Group Joint Stock Company , UPCOM , stock \n",
+        encoding="utf-8",
+    )
+    catalog = Catalog(replace(Settings(), catalog_dir=tmp_path))
+
+    assert catalog.vn_info == {
+        "VNZ": {
+            "ticker": "VNZ",
+            "organ_name": "CTCP Tập đoàn VNG",
+            "en_organ_name": "VNG Group Joint Stock Company",
+            "exchange": "UPCOM",
+            "type": "stock",
+        }
+    }
+
+
 @pytest.mark.asyncio
 async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_path):
     snapshot = tmp_path / "catalog.json"
@@ -56,8 +75,11 @@ async def test_live_catalog_drives_groups_and_complete_ingestion_universe(tmp_pa
         ingest_universe="catalog",
     )
     catalog = Catalog(settings)
-    vn_groups = catalog.groups("vn")
-    assert {group: symbols for group, symbols in vn_groups.items() if group != "ALL_STOCKS"} == live_groups()["vn"]
+    vn_groups = catalog.groups_by_source["vn"]
+    assert {
+        group: symbols for group, symbols in vn_groups.items() if group != "ALL_STOCKS"
+    } == live_groups()["vn"]
+    assert catalog.groups("vn") == live_groups()["vn"]
     assert len(vn_groups["ALL_STOCKS"]) > 1_500
     assert {"VCB", "TCB"} <= set(vn_groups["ALL_STOCKS"])
     assert catalog.groups("crypto") == live_groups()["crypto"]

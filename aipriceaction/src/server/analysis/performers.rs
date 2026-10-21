@@ -11,7 +11,7 @@ use crate::server::types::{is_vn_ticker, Mode};
 use crate::server::AppState;
 use crate::constants::api::{EMA_LOOKBACK, SMA_MAX_PERIOD};
 
-use super::{get_all_sources, get_ticker_sector, is_index_ticker, load_crypto_groups, load_yahoo_groups, parse_analysis_date, validate_limit, AnalysisResponse};
+use super::{get_all_sources, get_ticker_sector, get_tickers_in_sector, is_index_ticker, load_crypto_groups, load_yahoo_groups, parse_analysis_date, validate_limit, AnalysisResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct TopPerformersQuery {
@@ -22,6 +22,7 @@ pub struct TopPerformersQuery {
     #[serde(default = "default_direction")]
     pub direction: String,
     pub min_volume: Option<u64>,
+    pub sector: Option<String>,
     #[serde(default)]
     pub mode: Mode,
     /// true = use EMA instead of SMA for MA indicators.
@@ -101,7 +102,10 @@ fn sort_performers(
             "total_money_changed" => sort_optional_f64_desc(&a.total_money_changed, &b.total_money_changed),
             _ => sort_optional_f64_desc(&a.close_changed, &b.close_changed),
         };
-        if ascending { order.reverse() } else { order }
+        let order = if ascending { order.reverse() } else { order };
+        order
+            .then_with(|| a.symbol.cmp(&b.symbol))
+            .then_with(|| a.source.cmp(&b.source))
     };
 
     let mut desc = performers.clone();
@@ -166,10 +170,10 @@ pub async fn top_performers_handler(
             .map(|src| source_symbols.iter().find(|(s,_)| *s == *src).map(|(_,v)| v.clone()).unwrap_or_default())
             .collect();
         let (r1, r2, r3, r4) = tokio::join!(
-            super::fetch_source_enhanced(&state.redis_client, sources[0], &syms[0], "1D", redis_limit, "performers", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[1], &syms[1], "1D", redis_limit, "performers", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[2], &syms[2], "1D", redis_limit, "performers", params.ema, !params.snap),
-            super::fetch_source_enhanced(&state.redis_client, sources[3], &syms[3], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[0], &syms[0], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[1], &syms[1], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[2], &syms[2], "1D", redis_limit, "performers", params.ema, !params.snap),
+            super::fetch_source_enhanced(&state.pool, &state.redis_client, sources[3], &syms[3], "1D", redis_limit, "performers", params.ema, !params.snap),
         );
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (map, src) in [(r1, sources[0]), (r2, sources[1]), (r3, sources[2]), (r4, sources[3])] {
@@ -181,7 +185,7 @@ pub async fn top_performers_handler(
     } else {
         let source = params.mode.source_label();
         let symbols: Vec<String> = source_symbols.iter().find(|(s,_)| *s == source).map(|(_,v)| v.clone()).unwrap_or_default();
-        let map = super::fetch_source_enhanced(&state.redis_client, source, &symbols, "1D", 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }, "performers/single", params.ema, !params.snap).await;
+        let map = super::fetch_source_enhanced(&state.pool, &state.redis_client, source, &symbols, "1D", 1 + if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }, "performers/single", params.ema, !params.snap).await;
         let mut merged: Vec<(crate::models::ohlcv::OhlcvJoined, &str)> = Vec::new();
         for (_ticker, bars) in map {
             merged.extend(bars.into_iter().map(|row| (row, "")));
@@ -189,7 +193,15 @@ pub async fn top_performers_handler(
         if !merged.is_empty() {
             merged
         } else {
-            match ohlcv::get_latest_daily_per_ticker(&state.pool, source).await {
+            match ohlcv::get_latest_daily_per_ticker_with_ma_for_symbols(
+                &state.pool,
+                source,
+                Some(&symbols),
+                (if params.ema { EMA_LOOKBACK } else { SMA_MAX_PERIOD }) as usize,
+                params.ema,
+            )
+            .await
+            {
                 Ok(r) => r.into_iter().map(|row| (row, "")).collect(),
                 Err(e) => {
                     tracing::error!("Failed to fetch daily data: {}", e);
@@ -203,6 +215,10 @@ pub async fn top_performers_handler(
     };
 
     let min_volume = params.min_volume.unwrap_or(10000);
+    let sector_symbols = params
+        .sector
+        .as_deref()
+        .map(|sector| get_tickers_in_sector(sector, &ticker_groups));
 
     let mut daily_performers = Vec::new();
     for (row, row_source) in &rows {
@@ -210,6 +226,12 @@ pub async fn top_performers_handler(
             continue;
         }
         if is_index_ticker(&row.ticker) {
+            continue;
+        }
+        if sector_symbols
+            .as_ref()
+            .is_some_and(|symbols| !symbols.contains(&row.ticker))
+        {
             continue;
         }
         // Only apply min_volume filter to VN tickers

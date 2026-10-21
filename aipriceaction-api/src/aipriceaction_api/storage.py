@@ -14,9 +14,23 @@ from pathlib import Path
 
 from .domain import SOURCES, Candle, DataError, completed_vn_sessions
 
+MAJOR_VN = ("VNINDEX", "VN30", "VN30F1M")
+MAJOR_OFF_HOURS = (
+    "^GSPC",
+    "^DJI",
+    "^NDX",
+    "GC=F",
+    "CL=F",
+    "BTCUSDT",
+    "ETHUSDT",
+    "XRPUSDT",
+    "TONUSDT",
+)
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT OR IGNORE INTO meta VALUES ('epoch', 0);
+INSERT OR IGNORE INTO meta VALUES ('health_stats_version', 0);
 CREATE TABLE IF NOT EXISTS tickers(
  source TEXT NOT NULL, symbol TEXT NOT NULL, name TEXT, enabled INTEGER NOT NULL DEFAULT 0,
  next_1d INTEGER NOT NULL DEFAULT 0, next_1h INTEGER NOT NULL DEFAULT 0,
@@ -30,6 +44,22 @@ CREATE TABLE IF NOT EXISTS candles(
  open REAL NOT NULL, high REAL NOT NULL, low REAL NOT NULL, close REAL NOT NULL,
  volume INTEGER NOT NULL CHECK(volume>=0), provider TEXT NOT NULL, revision TEXT NOT NULL,
  updated_at INTEGER NOT NULL, PRIMARY KEY(source,symbol,interval,time));
+CREATE TABLE IF NOT EXISTS candle_health(
+ interval TEXT PRIMARY KEY, row_count INTEGER NOT NULL, last_sync INTEGER NOT NULL);
+CREATE TRIGGER IF NOT EXISTS candles_health_insert AFTER INSERT ON candles BEGIN
+ INSERT INTO candle_health(interval,row_count,last_sync) VALUES (NEW.interval,1,NEW.updated_at)
+ ON CONFLICT(interval) DO UPDATE SET row_count=row_count+1,last_sync=MAX(last_sync,NEW.updated_at);
+END;
+CREATE TRIGGER IF NOT EXISTS candles_health_update AFTER UPDATE OF interval,updated_at ON candles BEGIN
+ UPDATE candle_health SET row_count=row_count-1
+ WHERE interval=OLD.interval AND OLD.interval<>NEW.interval;
+ DELETE FROM candle_health WHERE interval=OLD.interval AND row_count<=0;
+ INSERT INTO candle_health(interval,row_count,last_sync)
+ SELECT NEW.interval,1,NEW.updated_at WHERE OLD.interval<>NEW.interval
+ ON CONFLICT(interval) DO UPDATE SET row_count=row_count+1,
+ last_sync=MAX(last_sync,NEW.updated_at);
+ UPDATE candle_health SET last_sync=MAX(last_sync,NEW.updated_at) WHERE interval=NEW.interval;
+END;
 CREATE TABLE IF NOT EXISTS archives(
  id TEXT PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  start INTEGER NOT NULL, end INTEGER NOT NULL, row_count INTEGER NOT NULL,
@@ -88,6 +118,14 @@ INSERT = (
 )
 
 
+class RefreshScheduleError(Exception):
+    """A source-local refresh scheduling failure, safe to report to the caller."""
+
+    def __init__(self, source):
+        self.source = source
+        super().__init__(f"Refresh schedule update failed for source {source}")
+
+
 class Repository:
     def __init__(self, path: Path):
         self.path = Path(path)
@@ -111,6 +149,57 @@ class Repository:
                 raise DataError("Database schema is newer than this application")
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
+            con.execute("BEGIN IMMEDIATE")
+            health_stats_version = con.execute(
+                "SELECT value FROM meta WHERE key='health_stats_version'"
+            ).fetchone()[0]
+            if health_stats_version < 3:
+                # Seed exact row totals with a small grouped result, then keep
+                # those totals current without rescanning candle history for
+                # each public health probe.
+                con.execute("DELETE FROM candle_health")
+                con.execute(
+                    """INSERT INTO candle_health(interval,row_count,last_sync)
+                    SELECT interval,COUNT(*),MAX(updated_at) FROM candles GROUP BY interval"""
+                )
+                # Older databases may already have direct summary triggers.
+                # DROP them all because CREATE TRIGGER IF NOT EXISTS does not
+                # replace the old definitions with the current row-count logic.
+                for trigger in (
+                    "candles_health_insert",
+                    "candles_health_update",
+                    "candles_health_delete",
+                ):
+                    con.execute(f"DROP TRIGGER IF EXISTS {trigger}")
+                con.execute("DROP TABLE IF EXISTS candle_health_sync")
+                con.execute(
+                    """CREATE TRIGGER candles_health_insert AFTER INSERT ON candles BEGIN
+                    INSERT INTO candle_health(interval,row_count,last_sync)
+                    VALUES (NEW.interval,1,NEW.updated_at)
+                    ON CONFLICT(interval) DO UPDATE SET row_count=row_count+1,
+                    last_sync=MAX(last_sync,NEW.updated_at);
+                    END"""
+                )
+                con.execute(
+                    """CREATE TRIGGER candles_health_update AFTER UPDATE OF interval,updated_at ON candles BEGIN
+                    UPDATE candle_health SET row_count=row_count-1
+                    WHERE interval=OLD.interval AND OLD.interval<>NEW.interval;
+                    DELETE FROM candle_health WHERE interval=OLD.interval AND row_count<=0;
+                    INSERT INTO candle_health(interval,row_count,last_sync)
+                    SELECT NEW.interval,1,NEW.updated_at WHERE OLD.interval<>NEW.interval
+                    ON CONFLICT(interval) DO UPDATE SET row_count=row_count+1,
+                    last_sync=MAX(last_sync,NEW.updated_at);
+                    UPDATE candle_health SET last_sync=MAX(last_sync,NEW.updated_at)
+                    WHERE interval=NEW.interval;
+                    END"""
+                )
+                con.execute(
+                    """CREATE TRIGGER candles_health_delete AFTER DELETE ON candles BEGIN
+                    UPDATE candle_health SET row_count=MAX(0,row_count-1) WHERE interval=OLD.interval;
+                    DELETE FROM candle_health WHERE interval=OLD.interval AND row_count=0;
+                    END"""
+                )
+                con.execute("UPDATE meta SET value=3 WHERE key='health_stats_version'")
 
     @staticmethod
     def bump(con):
@@ -644,7 +733,8 @@ class Repository:
                     state["revision"] != c.revision
                     or state["provider"] != c.provider
                     or state["status"] not in ("ready", "repairing")
-                    or state["status"] == "repairing" and not repair
+                    or state["status"] == "repairing"
+                    and not repair
                 ):
                     raise DataError("Provider/revision change requires staged recovery")
                 record = c.record()
@@ -656,8 +746,7 @@ class Repository:
                     # the replacement revision so atomic activation cannot drop
                     # observations that arrived while historical pages ran.
                     existing = con.execute(
-                        f"SELECT {','.join(COLUMNS[4:10])} FROM staging "
-                        "WHERE job_id=? AND time=?",
+                        f"SELECT {','.join(COLUMNS[4:10])} FROM staging WHERE job_id=? AND time=?",
                         (repair["id"], c.time),
                     ).fetchone()
                     if existing and tuple(existing) != tuple(record[key] for key in COLUMNS[4:10]):
@@ -1516,12 +1605,25 @@ class Repository:
         col = {"1D": "next_1d", "1h": "next_1h", "1m": "next_1m"}.get(interval)
         if not col:
             raise DataError("Invalid interval. Must be one of: 1D, 1h, 1m", 400)
-        with self.connect() as con:
-            n = con.execute(
-                f"UPDATE tickers SET {col}=0 WHERE enabled=1 AND source IN ({','.join('?' for _ in sources)})",
-                sources,
-            ).rowcount
-        return {"updated": n, "interval": col, "sources": list(sources)}
+        updated = 0
+        for source in sources:
+            try:
+                with self.connect() as con:
+                    due_at = int(time.time())
+                    updated += con.execute(
+                        f"""UPDATE tickers SET {col}=?
+                        WHERE source=?
+                        AND EXISTS (
+                          SELECT 1 FROM series s WHERE s.source=tickers.source
+                          AND s.symbol=tickers.symbol AND s.status='ready'
+                        )""",
+                        (due_at, source),
+                    ).rowcount
+            except Exception as exc:
+                # Rust commits each source update separately and returns the
+                # first source-local failure without undoing earlier sources.
+                raise RefreshScheduleError(source) from exc
+        return {"interval": col, "sources": list(sources), "updated": updated}
 
     def sync(self, key, secret, value=None, write=False):
         key = str(uuid.UUID(key))
@@ -1546,6 +1648,54 @@ class Repository:
                 "value": json.loads(row["value"]),
                 "created_at": row["created_at"],
                 "updated_at": row["updated_at"],
+            }
+
+    def health_summary(self, now=None):
+        """Return exact retained-candle counts and Rust-style major-ticker sync times."""
+        now = now or datetime.now(UTC)
+        is_vn_trading = now.weekday() < 5 and 2 <= now.hour < 8
+        if is_vn_trading:
+            major_filter = "t.source='vn' AND t.symbol IN (" + ",".join("?" for _ in MAJOR_VN) + ")"
+            major_symbols = MAJOR_VN
+        else:
+            major_filter = "t.symbol IN (" + ",".join("?" for _ in MAJOR_OFF_HOURS) + ")"
+            major_symbols = MAJOR_OFF_HOURS
+        active_after = int(now.timestamp()) - 7 * 24 * 60 * 60
+        year_start = int(datetime(now.year, 1, 1, tzinfo=UTC).timestamp())
+        next_year_start = int(datetime(now.year + 1, 1, 1, tzinfo=UTC).timestamp())
+        with self.connect() as con:
+            records, last_sync = {}, {}
+            for row in con.execute("SELECT interval,row_count,last_sync FROM candle_health"):
+                records[row["interval"]] = row["row_count"]
+            for interval in ("1D", "1h", "1m"):
+                year_filter = ""
+                year_params = ()
+                if interval in ("1h", "1m"):
+                    year_filter = "AND d.time>=? AND d.time<?"
+                    year_params = (year_start, next_year_start)
+                latest = con.execute(
+                    f"""SELECT MAX(c.updated_at)
+                    FROM (
+                      SELECT t.source,t.symbol,MAX(d.time) AS latest_time
+                      FROM tickers t JOIN candles d USING(source,symbol)
+                      WHERE d.interval=? AND {major_filter} {year_filter}
+                      GROUP BY t.source,t.symbol
+                    ) selected
+                    JOIN candles c ON c.source=selected.source AND c.symbol=selected.symbol
+                      AND c.interval=? AND c.time=selected.latest_time""",
+                    (interval, *major_symbols, *year_params, interval),
+                ).fetchone()[0]
+                if latest is not None:
+                    last_sync[interval] = latest
+            return {
+                "tickers": con.execute("SELECT COUNT(*) FROM tickers").fetchone()[0],
+                "active_tickers": con.execute(
+                    "SELECT COUNT(*) FROM (SELECT source,symbol FROM candles "
+                    "WHERE interval='1D' AND time>? GROUP BY source,symbol)",
+                    (active_after,),
+                ).fetchone()[0],
+                "records": records,
+                "last_sync": last_sync,
             }
 
     def status(self):

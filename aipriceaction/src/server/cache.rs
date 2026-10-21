@@ -98,3 +98,49 @@ impl TickersCache {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::TickersCache;
+    use crate::server::types::StockDataResponse;
+    use std::collections::BTreeMap;
+    use std::time::Duration;
+
+    #[test]
+    fn cached_ticker_floats_survive_json_round_trip_exactly() {
+        let expected = -0.12187979802776039_f64;
+        let mut cache = TickersCache::new(1, Duration::from_secs(30));
+        let response = StockDataResponse {
+            time: "2026-10-20".into(),
+            open: 1.0,
+            high: 1.0,
+            low: 1.0,
+            close: 1.0,
+            volume: 1,
+            symbol: "DUPL".into(),
+            ma10: None,
+            ma20: None,
+            ma50: None,
+            ma100: None,
+            ma200: None,
+            ma10_score: None,
+            ma20_score: None,
+            ma50_score: None,
+            ma100_score: None,
+            ma200_score: None,
+            close_changed: Some(expected),
+            volume_changed: None,
+            total_money_changed: None,
+        };
+        let values = BTreeMap::from([("DUPL".to_owned(), vec![response])]);
+
+        cache.put("mode-all".into(), &values);
+
+        let actual = cache
+            .get("mode-all")
+            .expect("the just-inserted entry should be present")["DUPL"][0]
+            .close_changed
+            .expect("close_changed should be present");
+        assert_eq!(actual.to_bits(), expected.to_bits());
+    }
+}

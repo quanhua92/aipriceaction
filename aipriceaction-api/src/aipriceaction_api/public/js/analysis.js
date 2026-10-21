@@ -30,8 +30,9 @@ function buildTopPerformersUrl() {
   const limit = document.getElementById('analysis-limit').value;
   const sector = document.getElementById('analysis-sector').value;
   const minVolume = document.getElementById('analysis-min-volume').value;
-  const withHourEl = document.getElementById('analysis-with-hour');
-  const withHour = withHourEl && withHourEl.value === 'true';
+  const mode = document.getElementById('analysis-mode').value;
+  const ema = document.getElementById('analysis-ema').checked;
+  const snap = document.getElementById('analysis-snap').checked;
 
   if (date) params.date = date;
   if (sortBy) params.sort_by = sortBy;
@@ -39,7 +40,9 @@ function buildTopPerformersUrl() {
   if (limit) params.limit = limit;
   if (sector) params.sector = sector;
   if (minVolume) params.min_volume = minVolume;
-  if (withHour) params.with_hour = 'true';
+  if (mode) params.mode = mode;
+  if (ema) params.ema = 'true';
+  if (!snap) params.snap = 'false';
 
   return buildApiUrl('/analysis/top-performers', params);
 }
@@ -53,12 +56,18 @@ function buildMAScoresUrl() {
   const minScore = document.getElementById('ma-min-score').value;
   const aboveThreshold = document.getElementById('ma-above-threshold').checked;
   const topPerSector = document.getElementById('ma-top-per-sector').value;
+  const mode = document.getElementById('ma-analysis-mode').value;
+  const ema = document.getElementById('ma-ema').checked;
+  const snap = document.getElementById('ma-snap').checked;
 
   if (date) params.date = date;
   if (maPeriod) params.ma_period = maPeriod;
   if (minScore) params.min_score = minScore;
   if (aboveThreshold) params.above_threshold_only = 'true';
   if (topPerSector) params.top_per_sector = topPerSector;
+  if (mode) params.mode = mode;
+  if (ema) params.ema = 'true';
+  if (!snap) params.snap = 'false';
 
   return buildApiUrl('/analysis/ma-scores-by-sector', params);
 }

@@ -20,6 +20,35 @@ pub struct RedisReadResult {
     pub base_interval: String,
 }
 
+impl RedisReadResult {
+    fn from_batch(
+        rows: Vec<OhlcvRow>,
+        raw_close_count: usize,
+        requested_limit: i64,
+        base_interval: &str,
+    ) -> Self {
+        let aligned_count = rows.len();
+        Self {
+            rows,
+            raw_close_count,
+            aligned_count,
+            requested_limit,
+            base_interval: base_interval.to_string(),
+        }
+    }
+
+    /// Copy the diagnostic metadata without retaining the fetched OHLCV rows.
+    pub(crate) fn metadata_only(&self) -> Self {
+        Self {
+            rows: Vec::new(),
+            raw_close_count: self.raw_close_count,
+            aligned_count: self.aligned_count,
+            requested_limit: self.requested_limit,
+            base_interval: self.base_interval.clone(),
+        }
+    }
+}
+
 /// Batch-read OHLCV from Redis for N tickers via pipelined ZREVRANGE.
 /// Works for single ticker (N=1) and multi-ticker (N>1).
 /// Returns `Some(HashMap<ticker, RedisReadResult>)` on success, or `None` if
@@ -136,16 +165,9 @@ pub async fn batch_read_ohlcv_from_redis(
             continue;
         }
 
-        let aligned_count = rows.len();
         parsed.insert(
             tickers[i].clone(),
-            RedisReadResult {
-                rows,
-                raw_close_count: raw_count,
-                aligned_count,
-                requested_limit: 0, // filled by caller
-                base_interval: interval.to_string(),
-            },
+            RedisReadResult::from_batch(rows, raw_count, total_limit, interval),
         );
     }
 
@@ -230,6 +252,31 @@ pub async fn redis_covers_range(
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RedisReadResult;
+
+    #[test]
+    fn batch_result_records_the_limit_sent_to_redis() {
+        let result = RedisReadResult::from_batch(Vec::new(), 7, 42, "1m");
+        assert_eq!(result.raw_close_count, 7);
+        assert_eq!(result.aligned_count, 0);
+        assert_eq!(result.requested_limit, 42);
+        assert_eq!(result.base_interval, "1m");
+    }
+
+    #[test]
+    fn metadata_only_copy_preserves_diagnostics_without_rows() {
+        let result = RedisReadResult::from_batch(Vec::new(), 7, 42, "1m");
+        let metadata = result.metadata_only();
+        assert!(metadata.rows.is_empty());
+        assert_eq!(metadata.raw_close_count, 7);
+        assert_eq!(metadata.aligned_count, 0);
+        assert_eq!(metadata.requested_limit, 42);
+        assert_eq!(metadata.base_interval, "1m");
+    }
 }
 
 /// Read cached ticker list from Redis (`meta:ticker_list`).

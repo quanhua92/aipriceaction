@@ -303,7 +303,7 @@ pub mod api {
     /// Default value for the `ema` query parameter across all endpoints.
     /// Set to true to use EMA by default, false to use SMA.
     pub const DEFAULT_USE_EMA: bool = false;
-    /// Max allowed ?limit= value for single-ticker requests. Override via API_SINGLE_TICKER_MAX_LIMIT env var.
+    /// Max allowed ?limit= value for single-ticker requests.
     /// 10k bars covers ~7 days of 1m data or ~40 years of daily data.
     pub const SINGLE_TICKER_MAX_LIMIT: i64 = 10_000;
     /// Max allowed ?limit= value when requesting multiple/all tickers (no symbol or >1 symbol).

@@ -831,28 +831,57 @@ async fn source_ticker_ids(pool: &PgPool, source: &str) -> sqlx::Result<Vec<i32>
         .await
 }
 
-/// Get the latest daily record for each ticker of a given source.
-/// Uses DISTINCT ON for a single efficient query.
-///
-/// Indicators are calculated in-memory from the last 200+ daily rows per ticker.
-pub async fn get_latest_daily_per_ticker(
+/// Read each ticker's latest daily row with a caller-selected MA seed window.
+/// ``ma_buffer`` is the number of preceding bars retained before the target
+/// row; analysis routes use this to keep Redis and PostgreSQL fallback math
+/// on the same input window.
+pub async fn get_latest_daily_per_ticker_with_ma(
     pool: &PgPool,
     source: &str,
+    ma_buffer: usize,
+    use_ema: bool,
 ) -> sqlx::Result<Vec<OhlcvJoined>> {
-    // Fetch latest 200+1 daily rows per ticker for accurate SMA(200)
+    get_latest_daily_per_ticker_with_ma_for_symbols(pool, source, None, ma_buffer, use_ema).await
+}
+
+/// Like [`get_latest_daily_per_ticker_with_ma`], restricted to an explicit
+/// symbol set. `Some(&[])` means no symbols; `None` means the whole source.
+pub async fn get_latest_daily_per_ticker_with_ma_for_symbols(
+    pool: &PgPool,
+    source: &str,
+    symbols: Option<&[String]>,
+    ma_buffer: usize,
+    use_ema: bool,
+) -> sqlx::Result<Vec<OhlcvJoined>> {
+    if symbols.is_some_and(|symbols| symbols.is_empty()) {
+        return Ok(Vec::new());
+    }
+
+    // Use the ticker/time index to retrieve only the selected seed window for
+    // each ticker. Fetching every historical row and trimming in Rust makes
+    // this fallback needlessly expensive when Redis is empty.
     let rows = sqlx::query_as::<_, OhlcvRow>(
-        r#"SELECT ticker_id, interval, time, open, high, low, close, volume
-           FROM ohlcv
-           WHERE ticker_id = ANY(
-               SELECT id FROM tickers WHERE source = $1
-           ) AND interval = '1D'
-           ORDER BY ticker_id, time DESC"#,
+        r#"SELECT candles.ticker_id, candles.interval, candles.time,
+                  candles.open, candles.high, candles.low, candles.close, candles.volume
+           FROM tickers
+           CROSS JOIN LATERAL (
+               SELECT ticker_id, interval, time, open, high, low, close, volume
+               FROM ohlcv
+               WHERE ticker_id = tickers.id AND interval = '1D'
+               ORDER BY time DESC
+               LIMIT $2
+           ) AS candles
+           WHERE tickers.source = $1
+             AND ($3::text[] IS NULL OR tickers.ticker = ANY($3::text[]))
+           ORDER BY candles.ticker_id, candles.time DESC"#,
     )
     .bind(source)
+    .bind((ma_buffer + 1) as i64)
+    .bind(symbols.map(<[String]>::to_vec))
     .fetch_all(pool)
     .await?;
 
-    // Group by ticker_id, keep at most SMA_MAX_PERIOD + 1 rows per ticker (for accuracy)
+    // Group by ticker_id, keeping the caller's seed window plus the target row.
     let mut by_ticker: std::collections::HashMap<i32, Vec<OhlcvRow>> = std::collections::HashMap::new();
     for row in rows {
         by_ticker
@@ -870,9 +899,9 @@ pub async fn get_latest_daily_per_ticker(
 
     let mut result = Vec::new();
     for (ticker_id, mut ticker_rows) in by_ticker {
-        // Already in DESC order, trim to SMA_MAX_PERIOD + 1
-        if ticker_rows.len() > SMA_MAX_PERIOD as usize + 1 {
-            ticker_rows.truncate(SMA_MAX_PERIOD as usize + 1);
+        // Already in DESC order, trim to the requested MA seed plus target.
+        if ticker_rows.len() > ma_buffer + 1 {
+            ticker_rows.truncate(ma_buffer + 1);
         }
 
         if ticker_rows.is_empty() {
@@ -884,8 +913,8 @@ pub async fn get_latest_daily_per_ticker(
             .cloned()
             .unwrap_or_default();
 
-        // Enhance with all rows for accurate indicators
-        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None, true, crate::constants::api::DEFAULT_USE_EMA);
+        // Enhance with the caller's requested MA type and exact lookback.
+        let joined = enhance_rows(&ticker_str, ticker_rows, Some(1), None, true, use_ema);
         result.extend(joined);
     }
 

@@ -166,32 +166,65 @@ uv run python -m scripts.diagnose_vn_feed_audit \
 
 ## Start locally
 
-The complete local service runs in Compose. From this directory:
+For replacing the legacy Rust production service, follow [MIGRATION.md](MIGRATION.md).
+
+For this seeded migration workspace, use the local steps in `MIGRATION.md`
+instead of copying `.env.example` or running the fresh-install initializer.
+The ignored local `.env` sets the Python host ports to 3002/3003, and the
+initializer fetches catalog data from the configured production URL. This
+machine currently has a confirmed SQLite bind-path divergence under Colima;
+do not restart the API or worker or change `AIPA_DATA_DIR` until the host and VM
+databases have been reconciled (see the storage note below).
+
+The Python API, worker and RustFS run in Compose. After resolving the data-mount
+divergence described below, the seeded workspace update is to start RustFS,
+rebuild the API and worker from source, and restart those services without
+rerunning initialization:
 
 ```sh
-cp .env.example .env
-docker compose up --build -d
+docker compose up -d --wait rustfs
+docker compose build api worker
+docker compose up -d --no-deps api worker
 ```
 
-API listens on `0.0.0.0:3001`; explorer: `/explorer`; OpenAPI: `/docs`.
-RustFS S3 listens on `0.0.0.0:9100`; console:
-`0.0.0.0:9101/rustfs/console/`. Local credentials are `aipa-local` and
+The API listens on `0.0.0.0:3002` in this workspace; explorer: `/explorer`.
+Swagger, ReDoc and the public OpenAPI route are disabled to match Rust. Local
+`.env` maps RustFS to host ports `9200` (S3) and `9201`
+(console), because SSH occupies host ports `9100`–`9103`. Containers
+continue using the internal endpoint `http://rustfs:9000`.
+Market-wide SQLite reads use four bounded concurrent readers. A local dated RRG
+request exceeded the web client's 30-second timeout with one reader, so the
+default now allows several ticker histories to progress together. Measure the
+target disk and RustFS latency before increasing this bound further.
+For the actual chart web app, run
+`python3 scripts/serve_local_web.py --api http://127.0.0.1:3002 --port 5173`
+and open `http://localhost:5173/chart`. This binds Vite to `0.0.0.0`, uses a
+temporary copy of the sibling web repository and proxies to the Python API
+without modifying the web source.
+RustFS S3 listens on `0.0.0.0:9200`; console:
+`0.0.0.0:9201/rustfs/console/`. Local credentials are `aipa-local` and
 `aipa-local-development-only`. The image digest is pinned to the tested build.
 Compose builds the Python 3.13 image and runs FastAPI, the Python ingestion
 worker, and RustFS. It contains no legacy Rust API service. SQLite is bind-mounted
 at `./data/aipriceaction.sqlite3`; the live ticker-catalog snapshot and bounded
 archive cache use the same `./data` mount. DuckDB remains embedded in Python.
-On Colima, `AIPA_DATA_DIR` must use a path shared with its VM. If the repository
-is physically under `/Volumes`, set it in `.env` to an equivalent shared
-`/Users/...` path and confirm `docker inspect` reports the same source for the
-API and worker. Otherwise Colima can silently create a second SQLite database.
+The normal update commands above apply only after the live data mount has been
+verified. The current `.env` path is `/Users/quan/...`, which macOS resolves into
+`/Volumes/data/...`; Colima shares `/Volumes/data` via virtiofs but does not
+resolve that symlink inside the VM. Docker therefore mounts a separate
+VM-local database. Keep both files intact and reconcile their contents before
+restarting either service or changing the mount. For a new setup, use a
+canonical path that Colima shares and verify host, VM and container file
+identity before starting writers; do not assume an equivalent `/Users/...`
+spelling is shared.
 
-Initialization refreshes VN, crypto, and Yahoo ticker groups from
-`api.aipriceaction.com`, creates the RustFS bucket, and enables every catalog
-symbol before API and worker startup. A failed catalog refresh stops startup
-instead of silently claiming an outdated universe. Follow ingestion with
-`docker compose logs -f worker`; `docker compose stop` preserves SQLite and
-RustFS data. Set `AIPA_DATA_DIR` to change the host SQLite/data directory.
+For a fresh isolated workspace only, initialization refreshes VN, crypto, and
+Yahoo ticker groups from `api.aipriceaction.com`, creates the RustFS bucket,
+and enables every catalog symbol before API and worker startup. Verify the
+catalog source before initializing; a failed refresh stops startup. Follow
+ingestion with `docker compose logs -f worker`; `docker compose stop` preserves
+SQLite and RustFS data. Set `AIPA_DATA_DIR` to change the host SQLite/data
+directory.
 
 For host-only development, use Python 3.13 or newer:
 
