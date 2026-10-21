@@ -379,6 +379,69 @@ def test_loader_reuses_wider_compact_tail_for_smaller_symbol_subset(system, monk
     assert set(subset.local) == {"VCB"}
 
 
+@pytest.mark.parametrize("compact_tail", [False, True])
+def test_loader_reuses_empty_identity_and_invalidates_when_it_gets_rows(
+    system, monkeypatch, compact_tail
+):
+    repo, history = system
+    repo.put([candle("VCB", index) for index in range(8)])
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["VCB", "FPT"], "1D", limit=8, compact_tail=compact_tail)
+    absent = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=compact_tail)
+
+    assert loads == 1
+    assert absent.local["FPT"] == []
+    assert "FPT" not in absent.compact_tails
+
+    first_rows = [candle("FPT", index) for index in range(3)]
+    repo.put(first_rows)
+    populated = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=compact_tail)
+
+    assert loads == 2
+    expected = repo.read("vn", "FPT", "1D", limit=3)
+    if compact_tail:
+        assert populated.compact_tails["FPT"].closes.tolist() == [row.close for row in expected]
+    else:
+        assert populated.local["FPT"] == expected
+
+
+@pytest.mark.parametrize("compact_tail", [False, True])
+def test_loader_invalidates_reused_empty_identity_when_gap_is_recorded(
+    system, monkeypatch, compact_tail
+):
+    repo, history = system
+    repo.put([candle("VCB", index) for index in range(8)])
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    loader.load_many("vn", ["VCB", "FPT"], "1D", limit=8, compact_tail=compact_tail)
+    absent = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=compact_tail)
+    assert loads == 1 and not absent.gaps["FPT"]
+
+    gap_time = candle("FPT", 0).time
+    repo.record_history_gap("vn", "FPT", "1D", gap_time, gap_time, "Missing", {})
+    with_gap = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=compact_tail)
+
+    assert loads == 2
+    assert with_gap.gaps["FPT"] == repo.history_gaps("vn", "FPT", "1D")
+
+
 def test_loader_reuses_compact_latest_rows_for_noncompact_two_bar_request(system, monkeypatch):
     repo, history = system
     repo.put([candle("FPT", index) for index in range(6)])
@@ -587,9 +650,7 @@ def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, e
 @pytest.mark.parametrize("ema", [False, True])
 def test_query_many_can_calculate_only_requested_ma_periods(system, ema):
     repo, history = system
-    repo.put(
-        [candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(260)]
-    )
+    repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(260)])
 
     full = history.query_many(
         "vn",

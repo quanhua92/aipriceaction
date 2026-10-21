@@ -189,13 +189,11 @@ class SQLiteDataLoader:
                 ):
                     continue
                 value = entry[2]
-                if cached_compact_tail and compact_tail:
-                    if any(symbol not in value.compact_tails for symbol in symbols):
-                        # An empty warmed identity can acquire its first row
-                        # after startup; do not pin that absence for a minute.
-                        continue
-                elif any(not value.local.get(symbol) for symbol in symbols):
-                    continue
+                # Empty identities are reusable too. `history_versions()` was
+                # read before this lookup, and every candle/archive/gap/
+                # adoption/correction mutation bumps that identity's version.
+                # A newly populated symbol is therefore marked stale and
+                # reloaded below instead of pinning the old empty result.
                 score = (
                     cached_compact_tail != compact_tail,
                     len(cached_symbols) - len(requested_symbols),
@@ -209,9 +207,7 @@ class SQLiteDataLoader:
             self._cache.move_to_end(cached_key)
 
         stale = [
-            symbol
-            for symbol in symbols
-            if value.versions.get(symbol, 0) != versions.get(symbol, 0)
+            symbol for symbol in symbols if value.versions.get(symbol, 0) != versions.get(symbol, 0)
         ]
         fresh = [symbol for symbol in symbols if symbol not in set(stale)]
         result = self._slice_cached(
