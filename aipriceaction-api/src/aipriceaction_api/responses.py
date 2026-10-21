@@ -203,10 +203,12 @@ def legacy_rows(data, mode):
     return result
 
 
-def csv_response(data):
+def csv_response(data, mode=None, legacy=False):
     # Match the Rust encoder, which writes symbol/time fields directly without
     # CSV quoting. The web parser is positional and does not implement quoted
     # CSV fields, so preserving Rust's wire bytes matters for unusual symbols.
+    if legacy:
+        data = legacy_rows(data, mode)
     output = [",".join(CSV_COLUMNS)]
     for _, rows in sorted(data.items()):
         for row in rows:

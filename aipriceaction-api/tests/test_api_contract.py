@@ -21,8 +21,8 @@ import pytest
 from fastapi.responses import Response
 from fastapi.testclient import TestClient
 
-import aipriceaction_api.config as config_module
 import aipriceaction_api.app as app_module
+import aipriceaction_api.config as config_module
 from aipriceaction_api.app import RUST_QUERY_FIELDS, RustCompatibleStaticFiles, create_app
 from aipriceaction_api.archive import Archive
 from aipriceaction_api.config import RUST_DEFAULT_CORS_ORIGINS, Settings
@@ -4073,6 +4073,22 @@ def test_compression_negotiation_matches_tower(client, accept_encoding, expected
     assert response.headers.get("content-encoding") == expected_encoding
     assert "accept-encoding" in response.headers["vary"].lower()
     assert response.json()["trading_hours_timezone"] == "Asia/Ho_Chi_Minh"
+
+
+@pytest.mark.parametrize("encoding", ["gzip", "br"])
+def test_large_compressed_responses_round_trip_after_worker_offload(client, encoding):
+    body = b"OHLCV,2026-10-21,100,110,90,105,123456\n" * 2048
+    client.app_instance.add_api_route(
+        "/compression-large",
+        lambda: Response(body, media_type="text/csv"),
+        methods=["GET"],
+    )
+
+    response = client.get("/compression-large", headers={"Accept-Encoding": encoding})
+
+    assert response.status_code == 200
+    assert response.headers["content-encoding"] == encoding
+    assert response.content == body
 
 
 @pytest.mark.skipif(

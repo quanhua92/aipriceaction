@@ -1,11 +1,46 @@
 """HTTP transport behavior that mirrors tower-http's default compression layer."""
 
+import asyncio
 import importlib.util
+import os
 import re
 import zlib
+from concurrent.futures import ThreadPoolExecutor
 
 _QVALUE = re.compile(r"q=([01])(?:\.([0-9]{0,3}))?\Z", re.IGNORECASE)
 _HAS_BROTLI = importlib.util.find_spec("brotli") is not None
+_COMPRESSION_WORKERS = max(1, min(4, getattr(os, "process_cpu_count", os.cpu_count)() or 1))
+_COMPRESSION_EXECUTOR = ThreadPoolExecutor(
+    max_workers=_COMPRESSION_WORKERS,
+    thread_name_prefix="aipa-compress",
+)
+_COMPRESSION_OFFLOAD_THRESHOLD = 16 * 1024
+
+
+def _compress_chunk(compressor, body, encoding, final):
+    if encoding == "br":
+        encoded = compressor.process(body)
+        if final:
+            encoded += compressor.finish()
+        return encoded
+    encoded = compressor.compress(body)
+    if final:
+        encoded += compressor.flush(zlib.Z_FINISH)
+    return encoded
+
+
+async def _compress_chunk_async(compressor, body, encoding, final):
+    if len(body) < _COMPRESSION_OFFLOAD_THRESHOLD:
+        return _compress_chunk(compressor, body, encoding, final)
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(
+        _COMPRESSION_EXECUTOR,
+        _compress_chunk,
+        compressor,
+        body,
+        encoding,
+        final,
+    )
 
 
 def _quality(value):
@@ -150,14 +185,12 @@ class RustCompatibleCompressionMiddleware:
             compressor = state["compressor"]
             if message_type == "http.response.body" and compressor is not None:
                 body = message.get("body", b"")
-                if state["encoding"] == "br":
-                    encoded = compressor.process(body)
-                    if not message.get("more_body", False):
-                        encoded += compressor.finish()
-                else:
-                    encoded = compressor.compress(body)
-                    if not message.get("more_body", False):
-                        encoded += compressor.flush(zlib.Z_FINISH)
+                encoded = await _compress_chunk_async(
+                    compressor,
+                    body,
+                    state["encoding"],
+                    not message.get("more_body", False),
+                )
                 message = {**message, "body": encoded}
             if message_type == "http.response.body" and scope.get("aipa.original_method") == "HEAD":
                 message = {**message, "body": b""}

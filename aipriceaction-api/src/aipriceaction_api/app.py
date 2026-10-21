@@ -1846,6 +1846,15 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         if redis_client is not None:
             return
 
+        # The home chart's all-market 110-bar query loads one extra native row
+        # for change fields. Warm that noncompact shape too; compact indicator
+        # tails cannot serve these chart windows. These bounded 111-row source
+        # batches fit alongside the compact tails in the loader's 256 MiB LRU.
+        for source in ("vn", "yahoo", "crypto", "sjc"):
+            symbols = [row["symbol"] for row in repo.tickers([source])]
+            if symbols:
+                history.data_loader.load_many(source, symbols, "1D", limit=111)
+
         current_date = datetime.now(UTC).strftime("%Y-%m-%d")
         current_end = date_bounds(current_date, True)
         current_start = date_bounds(current_date)
@@ -2965,7 +2974,6 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 data, tag, redis_meta = {}, "empty" if source_mode == "all" else "database", None
             if params.cache:
                 responses.put(key, data)
-        view = legacy_rows(data, source_mode) if params.legacy else data
         # Rust's mode=all fast path returns before adding its diagnostic header.
         # Preserve that cache-hit omission while keeping the normal mode cache tag.
         headers = {} if source_mode == "all" and cached is not None else {"x-data-source": tag}
@@ -2980,18 +2988,30 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             )
         if params.format.lower() == "csv":
             headers["content-type"] = "text/csv"
-            return Response(csv_response(view), headers=headers)
+            body = await background(csv_response, data, source_mode, params.legacy)
+            return Response(body, headers=headers)
+        view = (
+            await background(legacy_rows, data, source_mode) if params.legacy else data
+        )
         # Rust's StockDataResponse omits absent optional values instead of
         # serializing them as explicit JSON nulls. Keep CSV columns stable via
         # csv_response(), but preserve the Rust JSON shape here.
-        json_view = {
-            symbol: [
-                {key: row[key] for key in TICKER_JSON_FIELDS if key in row and row[key] is not None}
-                for row in rows
-            ]
-            for symbol, rows in sorted(view.items())
-        }
-        return JSONResponse(json_view, headers=headers)
+        def render_json_body():
+            json_view = {
+                symbol: [
+                    {
+                        key: row[key]
+                        for key in TICKER_JSON_FIELDS
+                        if key in row and row[key] is not None
+                    }
+                    for row in rows
+                ]
+                for symbol, rows in sorted(view.items())
+            }
+            return JSONResponse(json_view).body
+
+        body = await background(render_json_body)
+        return Response(body, media_type="application/json", headers=headers)
 
     @app.get("/health")
     async def health():
