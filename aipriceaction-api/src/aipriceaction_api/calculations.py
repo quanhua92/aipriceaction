@@ -516,12 +516,15 @@ def jdk(security, benchmark, p):
     return [(x[i + 1], y[i]) for i in range(p - 1, len(y))]
 
 
-def jdk_many(series, p):
+def jdk_many(series, p, tail=None):
     """Calculate JdK RRG points across equal-length ticker arrays in NumPy.
 
     RRG securities often share the same benchmark dates. Grouping by aligned
     length lets NumPy process ticker rows together while the per-window
     ``add.accumulate`` keeps the scalar Rust summation order.
+
+    ``tail`` limits Python result materialization to the newest points. The
+    array kernel still computes each finite window needed for those values.
     """
     if not series:
         return []
@@ -580,15 +583,44 @@ def jdk_many(series, p):
             ratio_norm = normalized(ratio)
             momentum_norm = normalized(momentum)
             for row_index, (original_index, _security, _benchmark) in enumerate(chunk):
+                x_values = ratio_norm[row_index, p:]
+                y_values = momentum_norm[row_index, p - 1 :]
+                if tail is not None:
+                    tail_count = max(0, int(tail))
+                    if tail_count == 0:
+                        results[original_index] = []
+                        continue
+                    x_values = x_values[-tail_count:]
+                    y_values = y_values[-tail_count:]
                 results[original_index] = [
                     (float(x), float(y))
-                    for x, y in zip(
-                        ratio_norm[row_index, p:],
-                        momentum_norm[row_index, p - 1 :],
-                        strict=True,
-                    )
+                    for x, y in zip(x_values, y_values, strict=True)
                 ]
     return results
+
+
+def numpy_align_rows(rows, benchmark_times, benchmark_closes):
+    """Align a chronological candle series to sorted benchmark arrays.
+
+    Return source-row indices and matched close arrays. This keeps JDK RRG's
+    timestamp join in NumPy while leaving final API record creation to Python.
+    """
+    import numpy as np
+
+    row_times = np.fromiter((row.time for row in rows), dtype=np.int64, count=len(rows))
+    row_closes = np.fromiter((row.close for row in rows), dtype=np.float64, count=len(rows))
+    if not len(row_times) or not len(benchmark_times):
+        empty_indices = np.empty(0, dtype=np.intp)
+        empty_closes = np.empty(0, dtype=np.float64)
+        return empty_indices, empty_closes, empty_closes.copy()
+
+    positions = np.searchsorted(benchmark_times, row_times)
+    in_range = positions < len(benchmark_times)
+    matched = np.zeros(len(row_times), dtype=np.bool_)
+    valid_rows = np.flatnonzero(in_range)
+    matched[valid_rows] = benchmark_times[positions[valid_rows]] == row_times[valid_rows]
+    indices = np.flatnonzero(matched)
+    return indices, row_closes[indices], benchmark_closes[positions[indices]]
 
 
 def volume_profile(rows, symbol, source, bins=50, value_area=70):

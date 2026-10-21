@@ -7,6 +7,7 @@ from .calculations import (
     enhance_many_selected,
     enhance_selected,
     jdk_many,
+    numpy_align_rows,
     numpy_numeric_orders,
     numpy_sequential_sum,
     volume_profile,
@@ -94,6 +95,16 @@ def _sector_lookup(groups):
         for symbol in groups[group]:
             result.setdefault(symbol, group)
     return result
+
+
+def _numpy_benchmark_vectors(benchmark):
+    import numpy as np
+
+    times = np.fromiter(sorted(benchmark), dtype=np.int64, count=len(benchmark))
+    closes = np.fromiter(
+        (benchmark[int(timestamp)] for timestamp in times), dtype=np.float64, count=len(times)
+    )
+    return times, closes
 
 
 class Analysis:
@@ -695,10 +706,10 @@ class Analysis:
         jdk_source = None
         if algorithm == "jdk":
             benchmark_found = False
-            compact_jdk_history = redis_client is None and hasattr(self.history, "read_many")
-            jdk_limit = (
-                _jdk_lookback_limit(period, trails, ema) if compact_jdk_history else jdk_full_limit
-            )
+            # JDK's requested tail depends on a finite number of aligned bars.
+            # Sparse series are expanded below, so use the compact limit for
+            # Redis and SQLite alike.
+            jdk_limit = _jdk_lookback_limit(period, trails, ema)
             source_order = _RRG_SOURCE_ORDER.get(mode, ())
             active_sources = [
                 source
@@ -707,7 +718,9 @@ class Analysis:
             ]
             for src in active_sources:
                 try:
-                    candidate = read_raw(src, benchmark, jdk_limit)
+                    # Keep the benchmark's full tail available for sparse
+                    # ticker retries, which may need older aligned dates.
+                    candidate = read_raw(src, benchmark, jdk_full_limit)
                 except DataError:
                     continue
                 if candidate:
@@ -717,6 +730,8 @@ class Analysis:
                     break
             if not benchmark_found:
                 raise DataError(f"Benchmark '{benchmark}' not found", 400)
+            benchmark_times, benchmark_closes = _numpy_benchmark_vectors(bench)
+            required_aligned = jdk_limit
 
         fast_mascore = algorithm == "mascore" and trails == 0 and date is None
         fast_latest = (
@@ -763,7 +778,6 @@ class Analysis:
                 # common case needs only a short tail. If missing sessions or
                 # sparse sources leave too few benchmark-aligned bars, retain
                 # the full Rust lookback for just those symbols.
-                required_aligned = _jdk_lookback_limit(period, trails, ema)
                 fallback_by_source = {}
                 for ticker in universe:
                     source, symbol = ticker["source"], ticker["symbol"]
@@ -772,7 +786,8 @@ class Analysis:
                     rows = batch_raw_rows.get((source, symbol))
                     if isinstance(rows, Exception) or not rows:
                         continue
-                    if sum(row.time in bench for row in rows) < required_aligned:
+                    aligned, _, _ = numpy_align_rows(rows, benchmark_times, benchmark_closes)
+                    if len(aligned) < required_aligned:
                         fallback_by_source.setdefault(source, []).append(symbol)
                 if fallback_by_source and jdk_source is not None:
                     # A sparse security may need earlier aligned dates than
@@ -789,6 +804,7 @@ class Analysis:
                     if expanded_benchmark and not isinstance(expanded_benchmark, Exception):
                         batch_raw_rows[(jdk_source, benchmark)] = expanded_benchmark
                         bench = {row.time: row.close for row in expanded_benchmark if row.close}
+                        benchmark_times, benchmark_closes = _numpy_benchmark_vectors(bench)
                 for source, symbols in fallback_by_source.items():
                     expanded = self.history.read_many(
                         source,
@@ -846,11 +862,29 @@ class Analysis:
                     return None
                 if not rows or rows[-1].volume < min_volume:
                     return None
-                aligned = [row for row in rows if row.time in bench]
-                if len(aligned) < 3 * period + 1:
+                aligned_indices, security, benchmark_values = numpy_align_rows(
+                    rows, benchmark_times, benchmark_closes
+                )
+                if len(aligned_indices) < required_aligned and jdk_limit < jdk_full_limit:
+                    # Redis-backed reads do not pass through the SQL batch
+                    # expansion below. Retry just the sparse ticker with the
+                    # full Rust lookback, then keep only the finite window the
+                    # last requested RRG points use.
+                    try:
+                        rows = read_raw(source, symbol, jdk_full_limit)
+                    except DataError:
+                        return None
+                    if not rows or rows[-1].volume < min_volume:
+                        return None
+                    aligned_indices, security, benchmark_values = numpy_align_rows(
+                        rows, benchmark_times, benchmark_closes
+                    )
+                if len(aligned_indices) < 3 * period + 1:
                     return None
-                security = [row.close for row in aligned]
-                benchmark_values = [bench[row.time] for row in aligned]
+                aligned_indices = aligned_indices[-required_aligned:]
+                security = security[-required_aligned:]
+                benchmark_values = benchmark_values[-required_aligned:]
+                aligned = [rows[int(index)] for index in aligned_indices]
                 return (source, symbol), rows, aligned, security, benchmark_values
 
             prepared = [
@@ -861,6 +895,7 @@ class Analysis:
             computed = jdk_many(
                 [(item[3], item[4]) for item in prepared],
                 period,
+                tail=max(1, trails),
             )
             for item, points in zip(prepared, computed, strict=True):
                 if points:

@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
@@ -15,6 +16,7 @@ from aipriceaction_api.calculations import (
     jdk,
     jdk_many,
     moving_average,
+    numpy_align_rows,
     numpy_numeric_orders,
     numpy_sequential_sum,
     volume_profile,
@@ -861,6 +863,31 @@ def test_rrg_jdk_defaults_vnindex_latest_and_last_aligned_close():
     assert ticker["volume"] == security[-1].volume
 
 
+def test_rrg_jdk_reads_compact_dense_ticker_window_and_matches_full_history():
+    security = daily_rows("vn", "VCB", count=900, start=100)
+    benchmark = daily_rows("vn", "VNINDEX", count=900, start=1000)
+    history = FakeHistory(
+        {("vn", "VCB", "1D"): security, ("vn", "VNINDEX", "1D"): benchmark}
+    )
+    analysis = Analysis(history, rrg_catalog())
+
+    response = analysis.rrg(mode="vn", algorithm="jdk", period=10, trails=5, min_volume=0)
+    ticker = next(row for row in response["data"]["tickers"] if row["symbol"] == "VCB")
+    expected = jdk([row.close for row in security], [row.close for row in benchmark], 10)
+
+    assert ticker["trails"] == [
+        {
+            "date": datetime.fromtimestamp(row.time, UTC).strftime("%Y-%m-%d"),
+            "rs_ratio": x,
+            "rs_momentum": y,
+        }
+        for row, (x, y) in zip(security[-5:], expected[-5:], strict=True)
+    ]
+    assert history.limits.count(450) == 1
+    assert ("vn", "VCB", "1D") in history.calls
+    assert 33 in history.limits
+
+
 @pytest.mark.parametrize("period,trails", [(4, 0), (10, 5), (20, 20), (50, 120)])
 def test_jdk_recent_trails_match_full_history_with_finite_lookback(period, trails):
     count = 900
@@ -945,6 +972,37 @@ def test_jdk_numpy_batch_matches_scalar_window_sums(period):
     assert actual == [jdk(security, benchmark, period) for security, benchmark in series]
 
 
+@pytest.mark.parametrize("tail", [1, 5, 20])
+def test_jdk_numpy_batch_can_materialize_only_the_requested_tail(tail):
+    series = []
+    for index in range(8):
+        length = 140 + index
+        security = [100 + position * 0.11 + (position % 7) * 0.23 for position in range(length)]
+        benchmark = [1000 + position * 0.37 + (position % 11) * 0.19 for position in range(length)]
+        series.append((security, benchmark))
+
+    full = jdk_many(series, 10)
+
+    assert jdk_many(series, 10, tail=tail) == [points[-tail:] for points in full]
+
+
+def test_numpy_align_rows_returns_benchmark_intersection_in_candle_order():
+    rows = [
+        Candle("vn", "VCB", "1D", timestamp, 1, 1, 1, close, 100)
+        for timestamp, close in ((10, 1.0), (20, 2.0), (30, 3.0), (40, 4.0))
+    ]
+    benchmark_times = np.asarray([10, 30, 40], dtype=np.int64)
+    benchmark_closes = np.asarray([100.0, 300.0, 400.0])
+
+    indices, closes, matched_benchmark = numpy_align_rows(
+        rows, benchmark_times, benchmark_closes
+    )
+
+    assert indices.tolist() == [0, 2, 3]
+    assert closes.tolist() == [1.0, 3.0, 4.0]
+    assert matched_benchmark.tolist() == [100.0, 300.0, 400.0]
+
+
 @pytest.mark.parametrize("count", [1, 2, 7])
 def test_jdk_numpy_batch_uses_vector_kernel_for_small_universes(count):
     series = []
@@ -957,12 +1015,12 @@ def test_jdk_numpy_batch_uses_vector_kernel_for_small_universes(count):
 
 
 def test_jdk_sparse_symbol_expands_both_security_and_benchmark_history():
-    benchmark = daily_rows("vn", "VNINDEX", count=100, start=1000)
-    security = [
+    benchmark = [
         row
-        for index, row in enumerate(daily_rows("vn", "VCB", count=100, start=100))
-        if index not in {95, 96, 97, 98, 99}
+        for index, row in enumerate(daily_rows("vn", "VNINDEX", count=100, start=1000))
+        if index % 2 == 0
     ]
+    security = daily_rows("vn", "VCB", count=100, start=100)
 
     class ReadManyHistory(FakeHistory):
         def __init__(self, data):
@@ -1202,7 +1260,7 @@ def test_jdk_uses_rust_redis_lookback_by_ema_setting():
         mode="vn", algorithm="jdk", period=50, trails=120, ema=True, min_volume=0
     )
 
-    assert history.limits == [850, 850, 850]
+    assert history.limits == [850, 268, 268]
 
 
 def test_jdk_dated_request_reads_historical_rows_before_cutoff():
@@ -1218,7 +1276,7 @@ def test_jdk_dated_request_reads_historical_rows_before_cutoff():
         mode="vn", algorithm="jdk", date=old_date, ema=True, min_volume=0
     )
 
-    assert history.limits == [850, 850, 850]
+    assert history.limits == [850, 38, 38]
     assert [row["symbol"] for row in response["data"]["tickers"]] == ["VCB"]
     assert all(
         point["date"] <= old_date for row in response["data"]["tickers"] for point in row["trails"]
