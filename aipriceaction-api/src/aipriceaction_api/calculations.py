@@ -251,9 +251,7 @@ def enhance_latest_many(contexts, closes_by_symbol, iv, ma=True, ema=False, peri
                 recurring = (lengths[:, None] > position) & (seed_counts <= position)
                 next_states = closes[:, position, None] * multipliers + states * decays
                 states[recurring] = next_states[recurring]
-            averages = {
-                period: states[:, index] for index, period in enumerate(requested_periods)
-            }
+            averages = {period: states[:, index] for index, period in enumerate(requested_periods)}
         else:
             for period in requested_periods:
                 counts = np.minimum(lengths, period)
@@ -675,6 +673,45 @@ def volume_profile(rows, symbol, source, bins=50, value_area=70):
             binned = np.zeros(bins, dtype=np.float64)
             # add.at is unbuffered and retains the ascending-level accumulation
             # order used by the previous Python loop.
+            np.add.at(binned, bin_ids, volumes)
+            centers = low_price + (np.arange(bins, dtype=np.float64) + 0.5) * size
+            nonzero = np.flatnonzero(binned)
+            dense_profile = [(float(centers[index]), float(binned[index])) for index in nonzero]
+        else:
+            dense_profile = [
+                (float(price), float(volume)) for price, volume in zip(prices, volumes, strict=True)
+            ]
+    elif expanded_ticks <= 1_000_000 and -(2**63) <= minimum_tick <= maximum_tick <= 2**63 - 1:
+        # Small or very sparse price ranges do not justify allocating a dense
+        # array covering the entire price span. Expand their bounded tick
+        # ranges into compact NumPy arrays instead. ``add.at`` processes the
+        # original newest-first candle order, preserving Rust's per-level
+        # sequential floating-point additions.
+        import numpy as np
+
+        range_lows = np.fromiter((lo for lo, _hi, _volume in tick_ranges), dtype=np.int64)
+        range_highs = np.fromiter((hi for _lo, hi, _volume in tick_ranges), dtype=np.int64)
+        range_volumes = np.fromiter((volume for _lo, _hi, volume in tick_ranges), dtype=np.float64)
+        counts = range_highs - range_lows + 1
+        expanded_lows = np.repeat(range_lows, counts)
+        range_offsets = np.repeat(np.cumsum(counts, dtype=np.int64) - counts, counts)
+        range_positions = np.arange(expanded_ticks, dtype=np.int64) - range_offsets
+        tick_indices = expanded_lows + range_positions
+        contributions = np.repeat(range_volumes, counts)
+        indices, inverse = np.unique(tick_indices, return_inverse=True)
+        volumes = np.zeros(len(indices), dtype=np.float64)
+        np.add.at(volumes, inverse, contributions)
+        prices = indices.astype(np.float64) * tick
+        dense_total = float(np.add.accumulate(volumes, dtype=np.float64)[-1])
+        bins = max(2, min(200, bins))
+        if len(indices) > bins:
+            low_price, high_price = float(prices[0]), float(prices[-1])
+            size = (high_price - low_price) / bins
+            bin_ids = np.minimum(
+                bins - 1,
+                ((prices - low_price) / size).astype(np.intp),
+            )
+            binned = np.zeros(bins, dtype=np.float64)
             np.add.at(binned, bin_ids, volumes)
             centers = low_price + (np.arange(bins, dtype=np.float64) + 0.5) * size
             nonzero = np.flatnonzero(binned)

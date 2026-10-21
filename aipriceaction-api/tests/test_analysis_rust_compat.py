@@ -1376,6 +1376,81 @@ def test_volume_profile_numpy_path_matches_sequential_integer_tick_sums():
     assert actual == expected
 
 
+def test_volume_profile_numpy_sparse_path_matches_sequential_tick_sums():
+    origin = parse_time("2024-02-01T02:30:00Z")
+    rows = []
+    for index in range(500):
+        center = 1000 + (index % 10) * 0.01
+        rows.append(
+            Candle(
+                "vn",
+                "VNINDEX",
+                "1m",
+                origin + index * 60,
+                center,
+                center + 0.03,
+                center - 0.03,
+                center,
+                100 + index % 17,
+            )
+        )
+
+    result = volume_profile(rows, "VNINDEX", "vn", bins=200)
+
+    expected = {}
+    for row in sorted(rows, key=lambda item: item.time, reverse=True):
+        low = math.floor(row.low / 0.01 + 0.5)
+        high = math.floor(row.high / 0.01 + 0.5)
+        share = row.volume / (high - low + 1)
+        for index in range(low, high + 1):
+            expected[index] = expected.get(index, 0.0) + share
+    actual = {
+        math.floor(level["price"] / 0.01 + 0.5): level["volume"] for level in result["profile"]
+    }
+    assert actual == expected
+
+
+def test_volume_profile_numpy_sparse_bins_match_sequential_python_bins():
+    origin = parse_time("2024-02-01T02:30:00Z")
+    rows = []
+    for index in range(500):
+        center = 1000 + index * 0.03
+        rows.append(
+            Candle(
+                "vn",
+                "VNINDEX",
+                "1m",
+                origin + index * 60,
+                center,
+                center + 0.03,
+                center - 0.03,
+                center,
+                100 + index % 17,
+            )
+        )
+
+    actual = volume_profile(rows, "VNINDEX", "vn", bins=20)
+
+    distribution = {}
+    for row in sorted(rows, key=lambda item: item.time, reverse=True):
+        low = math.floor(row.low / 0.01 + 0.5)
+        high = math.floor(row.high / 0.01 + 0.5)
+        share = row.volume / (high - low + 1)
+        for index in range(low, high + 1):
+            distribution[index] = distribution.get(index, 0.0) + share
+    raw_profile = sorted((index * 0.01, volume) for index, volume in distribution.items())
+    low_price, high_price = raw_profile[0][0], raw_profile[-1][0]
+    size = (high_price - low_price) / 20
+    binned = [0.0] * 20
+    for price, volume in raw_profile:
+        binned[min(19, int((price - low_price) / size))] += volume
+    expected = [
+        (low_price + (index + 0.5) * size, volume) for index, volume in enumerate(binned) if volume
+    ]
+
+    assert [(level["price"], level["volume"]) for level in actual["profile"]] == expected
+
+
 def test_volume_profile_numpy_bins_match_sequential_python_bins():
     origin = parse_time("2024-02-01T02:30:00Z")
     rows = []
