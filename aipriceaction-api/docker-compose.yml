@@ -11,7 +11,8 @@ x-api-environment: &api-environment
   ARCHIVE_BACKEND: s3
   S3_ENDPOINT: http://rustfs:9000
   S3_BUCKET: ${S3_BUCKET:-aipriceaction-api-local}
-  S3_PREFIX: ${S3_PREFIX:-archive-v2}
+  S3_PREFIX: ${S3_PREFIX:-parquet}
+  PUBLIC_EXPORT_ENABLED: ${PUBLIC_EXPORT_ENABLED:-true}
   S3_FORCE_PATH_STYLE: "true"
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-aipa-local}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-aipa-local-development-only}

@@ -117,8 +117,14 @@ class AIContextBuilder:
         base_url: str | None = None,
         cache_dir: str | None = None,
         utc_offset: int = 7,
+        live_mode: str = "range",
     ):
-        self._client = AIPriceAction(base_url=base_url, cache_dir=cache_dir, utc_offset=utc_offset)
+        self._client = AIPriceAction(
+            base_url=base_url,
+            cache_dir=cache_dir,
+            utc_offset=utc_offset,
+            live_mode=live_mode,
+        )
         self._lang = lang
         self._ma_type = ma_type
         self._interval: str = "1D"

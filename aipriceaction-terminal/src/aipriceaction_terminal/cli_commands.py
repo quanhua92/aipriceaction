@@ -104,7 +104,7 @@ async def cmd_analyze(args) -> None:
     if getattr(args, "verbose", False):
         logging.basicConfig(level=logging.DEBUG, format="[DEBUG] %(message)s", stream=sys.stderr, force=True)
 
-    builder = AIContextBuilder(lang=lang, ma_type=ma_type)
+    builder = AIContextBuilder(lang=lang, ma_type=ma_type, live_mode="latest")
 
     # Auto-detect reference ticker if user didn't explicitly override
     if args.reference_ticker is None and len(args.tickers) == 1:
@@ -271,7 +271,7 @@ def cmd_get_ohlcv(args) -> None:
     from .user_settings import resolve_ma_type
 
     raw_tickers = _resolve_tickers(args.tickers)
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
 
     ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema)
     use_ema = ma_type == "ema"
@@ -346,7 +346,7 @@ def cmd_live_data(args) -> None:
     from aipriceaction import AIPriceAction
     from .user_settings import resolve_ma_type
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     tickers = _resolve_tickers(args.tickers) if args.tickers else None
     interval = args.interval
     top = args.top
@@ -419,7 +419,7 @@ def cmd_live_data(args) -> None:
 def cmd_ticker_list(args) -> None:
     from aipriceaction import AIPriceAction
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     tickers = client.get_tickers(source=_resolve_source(args.source))
 
     if args.group:
@@ -530,7 +530,7 @@ def cmd_performers(args) -> None:
     from aipriceaction.performers import build_performers
     from .user_settings import resolve_ma_type
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     source = _resolve_source(args.source)
 
     ma_type = resolve_ma_type(force_sma=args.sma, force_ema=args.ema)
@@ -665,7 +665,7 @@ def cmd_volume_profile(args) -> None:
     from aipriceaction import AIPriceAction
     from aipriceaction.volume_profile import compute_volume_profile
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     ticker = args.ticker.upper()
     verbose_log(f"volume-profile: initializing for {ticker}")
 
@@ -819,14 +819,14 @@ def _resolve_ticker_source(args) -> list[str]:
     if args.tickers:
         return _resolve_tickers(args.tickers)
     from aipriceaction import AIPriceAction
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     return [t.ticker for t in client.get_tickers(source="vn")]
 
 
 def _fund_info(args) -> None:
     from aipriceaction import AIPriceAction
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     ticker = args.ticker.upper()
     verbose_log(f"fundamentals info: {ticker}")
 
@@ -877,7 +877,7 @@ def _fund_ratios(args) -> None:
 
     from aipriceaction import AIPriceAction
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     ticker = args.ticker.upper()
     verbose_log(f"fundamentals ratios: {ticker}")
 
@@ -946,7 +946,7 @@ def _fund_rank(args) -> None:
 
     from aipriceaction import AIPriceAction, build_fundamental_ranking
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     tickers = _resolve_ticker_source(args)
     verbose_log(f"fundamentals rank: {len(tickers)} tickers, sort_by={args.sort_by}")
 
@@ -1006,7 +1006,7 @@ def _fund_screen(args) -> None:
 
     from aipriceaction import AIPriceAction, screen_fundamentals
 
-    client = AIPriceAction()
+    client = AIPriceAction(live_mode="latest")
     tickers = _resolve_ticker_source(args)
     verbose_log(f"fundamentals screen: {len(tickers)} tickers")
 

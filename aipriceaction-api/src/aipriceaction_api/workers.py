@@ -29,6 +29,72 @@ class Worker:
         self.recovery_turn = 0
         self.live_turn = 0
 
+    def _public_csv_store(self):
+        if not self.settings.public_export_enabled or self.archive is None:
+            return None
+        from .archive import S3Store
+
+        if not isinstance(self.archive.store, S3Store):
+            return None
+        from .public_csv import publish_object
+
+        return publish_object, self.archive.store.client, self.settings.s3_bucket
+
+    def _publish_public_candles(self, source, symbol, iv, rows):
+        store = self._public_csv_store()
+        if store is None or not rows:
+            return {"objects": 0, "uploaded": 0}
+        from datetime import UTC, datetime
+
+        from .history import History
+        from .public_csv import period_bounds, plan_candles
+
+        publish, client, bucket = store
+        history = History(self.repo, self.archive, self.settings)
+        periods = sorted({datetime.fromtimestamp(row.time, UTC).date() for row in rows})
+        years = sorted({day.year for day in periods}) if iv in ("1D", "1h") else []
+        published, uploaded = 0, 0
+        for day in periods:
+            start, end = period_bounds(day=day)
+            candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
+            item = plan_candles(candles, source, symbol, iv, day=day)
+            result = publish(client, bucket, item)
+            published += 1
+            uploaded += int(result["uploaded"])
+        for year in years:
+            start, end = period_bounds(year=year)
+            candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
+            if not candles:
+                continue
+            item = plan_candles(candles, source, symbol, iv, year=year)
+            result = publish(client, bucket, item)
+            published += 1
+            uploaded += int(result["uploaded"])
+        return {"objects": published, "uploaded": uploaded}
+
+    def _publish_public_catalog(self):
+        store = self._public_csv_store()
+        if store is None:
+            return None
+        from .catalog import Catalog
+        from .public_csv import plan_catalog
+
+        publish, client, bucket = store
+        result = publish(client, bucket, plan_catalog(Catalog(self.settings), self.repo))
+        log.info(
+            "public ticker catalog rows=%s uploaded=%s",
+            result["rows"],
+            result["uploaded"],
+        )
+        return result
+
+    async def _try_publish_public_catalog(self):
+        try:
+            return await asyncio.to_thread(self._publish_public_catalog)
+        except Exception as exc:
+            log.warning("public ticker catalog export failed: %s", type(exc).__name__)
+            return None
+
     def load_watchlist(self):
         raw = json.loads(self.settings.watchlist.read_text())
         if self.settings.ingest_universe == "catalog":
@@ -643,6 +709,31 @@ class Worker:
             # optional historical probe must not rewrite that successful result,
             # including when the worker is cancelled during the probe.
             attempt = None
+            if self.settings.public_export_enabled:
+                try:
+                    public_result = await asyncio.to_thread(
+                        self._publish_public_candles, source, symbol, iv, rows
+                    )
+                    if public_result and public_result["objects"]:
+                        log.info(
+                            "public CSV export source=%s symbol=%s interval=%s objects=%s uploaded=%s",
+                            source,
+                            symbol,
+                            iv,
+                            public_result["objects"],
+                            public_result["uploaded"],
+                        )
+                except Exception as exc:
+                    # SQLite remains the ingestion source of truth. The next
+                    # successful check re-reads canonical history and retries
+                    # these direct-key exports.
+                    log.warning(
+                        "public CSV export failed source=%s symbol=%s interval=%s error=%s",
+                        source,
+                        symbol,
+                        iv,
+                        type(exc).__name__,
+                    )
             if iv == "1D" and source not in ("sjc", "crypto"):
                 try:
                     # Leave time for recording a failed probe and releasing the
@@ -1087,6 +1178,7 @@ class Worker:
                 self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
             )
             await asyncio.to_thread(publish_ticker_list, self.redis_client, ticker_identities)
+            await self._try_publish_public_catalog()
             if not self.configuration:
                 raise DataError("No configured watchlist entries match worker filters", 400)
             log.info(
@@ -1118,6 +1210,7 @@ class Worker:
                     await asyncio.to_thread(
                         publish_ticker_list, self.redis_client, ticker_identities
                     )
+                    await self._try_publish_public_catalog()
                     self.bootstrap()
                     next_configuration_refresh = time.monotonic() + 15 * 60
                 await self.cycle()

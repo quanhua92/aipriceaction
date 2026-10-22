@@ -1,7 +1,7 @@
 """Regressions for archive gaps and incompatible short live overlays."""
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import parse_qs, urlsplit
 
 import pandas as pd
@@ -145,6 +145,75 @@ def test_explicit_dates_keep_sdk_latest_limit_behavior(client):
     params = parse_qs(urlsplit(responses.calls[0].request.url).query)
     assert params["end_date"] == ["2025-04-29"]
     assert "start_date" not in params
+
+
+@responses.activate
+def test_latest_mode_uses_s3_history_and_requests_one_api_candle(client, monkeypatch):
+    client.live_mode = "latest"
+    today = date.today()
+    history = pd.DataFrame(
+        [candle((today - timedelta(days=2)).isoformat(), 100),
+         candle((today - timedelta(days=1)).isoformat(), 101)]
+    )
+    archive_calls = []
+
+    def archive(source, symbol, interval, days, **kwargs):
+        archive_calls.append((source, symbol, interval))
+        return history.copy()
+
+    monkeypatch.setattr(client, "_fetch_ohlcv_for_ticker", archive)
+
+    def reply(request):
+        params = parse_qs(urlsplit(request.url).query)
+        assert params["symbol"] == ["FPT"]
+        assert params["limit"] == ["1"]
+        assert params["ma"] == ["false"] and params["ema"] == ["false"]
+        assert params["mode"] == ["vn"]
+        assert "start_date" not in params and "end_date" not in params
+        return 200, {}, json.dumps({"FPT": [candle(today.isoformat(), 102)]})
+
+    responses.add_callback(
+        responses.GET, re.compile(r"http://localhost:9000/tickers\?"), callback=reply
+    )
+    frame = client.get_ohlcv("FPT", limit=2, ma=False)
+
+    assert archive_calls == [("vn", "FPT", "1D")]
+    assert frame["close"].tolist() == [101, 102]
+    assert frame["time"].tolist() == [
+        (today - timedelta(days=1)).isoformat(), today.isoformat()
+    ]
+    assert frame.attrs["data_source"] == "s3+api_latest"
+    assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_latest_mode_historical_cutoff_does_not_call_api(client, monkeypatch):
+    client.live_mode = "latest"
+    end = date.today() - timedelta(days=3)
+    monkeypatch.setattr(
+        client,
+        "_fetch_ohlcv_for_ticker",
+        lambda *args, **kwargs: pd.DataFrame([candle(end.isoformat(), 100)]),
+    )
+
+    frame = client.get_ohlcv("FPT", limit=1, end_date=end, ma=False)
+
+    assert frame["close"].tolist() == [100]
+    assert frame.attrs["data_source"] == "s3"
+    assert len(responses.calls) == 0
+
+
+def test_latest_merge_replaces_same_day_but_ignores_older_api_value(client):
+    history = pd.DataFrame(
+        [candle("2026-10-21", 100), candle("2026-10-22", 101)]
+    ).assign(symbol="FPT")
+    same_day = pd.DataFrame([candle("2026-10-22", 105)]).assign(symbol="FPT")
+    merged = client._merge_api_latest(history, {"FPT": same_day}, [("vn", "FPT")])
+    assert merged["close"].tolist() == [100, 105]
+
+    stale = pd.DataFrame([candle("2026-10-20", 90)]).assign(symbol="FPT")
+    unchanged = client._merge_api_latest(history, {"FPT": stale}, [("vn", "FPT")])
+    assert unchanged["close"].tolist() == [100, 101]
 
 
 @responses.activate

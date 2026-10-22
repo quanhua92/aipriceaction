@@ -7,10 +7,11 @@ import sqlite3
 import sys
 from contextlib import closing
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 from .adoption import adopt_snapshot
-from .archive import Archive
+from .archive import Archive, S3Store
 from .bootstrap_progress import publish_bootstrap_progress
 from .catalog import Catalog
 from .config import Settings
@@ -20,6 +21,7 @@ from .importing import import_bundle, import_csv, import_historical_snapshot
 from .logging_config import configure_logging
 from .migration import LegacyImporter
 from .providers import Providers
+from .public_csv import period_bounds, plan_candles, plan_catalog, publish_object
 from .public_history import recover_public_year
 from .recovery import recover_daily
 from .storage import Repository
@@ -277,6 +279,18 @@ def parser():
         "publish-index",
         help="Publish current archive metadata and retry failed manifests without downloading or pruning candles",
     )
+    public_export = commands.add_parser(
+        "export-public",
+        help="Export one Rust-compatible CSV/catalog object into the root of the configured S3 bucket",
+    )
+    public_scope = public_export.add_mutually_exclusive_group(required=True)
+    public_scope.add_argument("--catalog", action="store_true", help="Publish meta/tickers.json")
+    public_scope.add_argument("--day", help="Publish one UTC daily object for YYYY-MM-DD")
+    public_scope.add_argument("--year", type=int, help="Publish one full yearly 1D/1h object")
+    public_export.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
+    public_export.add_argument("--symbol")
+    public_export.add_argument("--interval", choices=("1D", "1h", "1m"))
+    public_export.add_argument("--execute", action="store_true", help="Upload; default is dry-run")
     backup = commands.add_parser("backup")
     backup.add_argument("path", type=Path)
     restore = commands.add_parser("restore", help="Restore backup into a NEW database file")
@@ -722,6 +736,52 @@ async def execute(args, settings):
     elif args.command == "publish-index":
         await asyncio.to_thread(archive.publish_metadata)
         emit({"published_index": True})
+    elif args.command == "export-public":
+        if args.catalog:
+            if any((args.source, args.symbol, args.interval, args.day, args.year)):
+                raise DataError("Catalog export cannot include an OHLCV scope", 400)
+            item = await asyncio.to_thread(plan_catalog, Catalog(settings), repo)
+        else:
+            if not all((args.source, args.symbol, args.interval)):
+                raise DataError("OHLCV export requires --source, --symbol, and --interval", 400)
+            if args.year is not None and args.interval == "1m":
+                raise DataError("The public archive has no yearly 1m objects", 400)
+            try:
+                day = date.fromisoformat(args.day) if args.day else None
+            except ValueError as exc:
+                raise DataError("Day must use YYYY-MM-DD", 400) from exc
+            start, end = period_bounds(day=day, year=args.year)
+            from .history import History
+
+            history = History(repo, archive, settings)
+            candles = await asyncio.to_thread(
+                history.read,
+                args.source,
+                args.symbol.upper(),
+                args.interval,
+                start=start,
+                end=end,
+                forward=True,
+            )
+            item = plan_candles(
+                candles,
+                args.source,
+                args.symbol.upper(),
+                args.interval,
+                day=day,
+                year=args.year,
+            )
+        if args.execute:
+            if not settings.public_export_enabled:
+                raise DataError("Public CSV publishing is disabled by PUBLIC_EXPORT_ENABLED", 400)
+            if not isinstance(archive.store, S3Store):
+                raise DataError("Public CSV publishing requires the configured S3 archive backend", 400)
+            result = await asyncio.to_thread(
+                publish_object, archive.store.client, settings.s3_bucket, item
+            )
+            emit({"dry_run": False} | result)
+        else:
+            emit({"dry_run": True} | item.report())
     elif args.command == "backup":
         repo.backup(args.path)
         emit({"backup": str(args.path)})

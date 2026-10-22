@@ -44,11 +44,11 @@ _source: str = "vn"
 def _ensure_clients(lang: str = "en") -> tuple[AIPriceAction, AIContextBuilder]:
     global _client, _builder
     if _client is None:
-        _client = AIPriceAction()
+        _client = AIPriceAction(live_mode="latest")
     if _builder is None or _builder._lang != lang:
         from aipriceaction import AIContextBuilder
         from .user_settings import resolve_ma_type
-        _builder = AIContextBuilder(lang=lang, ma_type=resolve_ma_type())
+        _builder = AIContextBuilder(lang=lang, ma_type=resolve_ma_type(), live_mode="latest")
     return _client, _builder
 
 

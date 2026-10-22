@@ -167,7 +167,9 @@ class SettingsTab(Vertical):
             if language:
                 self.app.language = language
                 from aipriceaction import AIContextBuilder
-                self.app.builder = AIContextBuilder(lang=language, ma_type=ma_type)
+                self.app.builder = AIContextBuilder(
+                    lang=language, ma_type=ma_type, live_mode="latest"
+                )
                 try:
                     from .agents import AgentSession, AgentConfig
                     self.app.agent = AgentSession(AgentConfig(lang=language))

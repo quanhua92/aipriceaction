@@ -403,7 +403,15 @@ async def test_failed_historical_probe_preserves_committed_daily_success(
     incoming = sorted(latest, key=lambda r: r.time)[1:] + [replace(latest[0], time=now)]
     provider = Pages(Page(incoming, "vps"), probe_error)
     worker = Worker(repo, settings, provider, archive)
+    public_exports = []
+    monkeypatch.setattr(
+        worker,
+        "_publish_public_candles",
+        lambda *args: public_exports.append(args) or {"objects": 2, "uploaded": 2},
+    )
     assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 40
+    assert len(public_exports) == 1
+    assert public_exports[0][:3] == ("vn", "FPT", "1D")
     status = repo.status()["series"][0]
     assert status["outcome"] == "succeeded" and status["completed_rows"] == 40
     assert repo.read("vn", "FPT", "1D", limit=1)[0].time == now

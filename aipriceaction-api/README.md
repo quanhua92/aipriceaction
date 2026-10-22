@@ -137,6 +137,13 @@ Redis, and snapshot caches; the archive object cache remained enabled. See
 [`VALIDATION.md`](VALIDATION.md) for the measurement scope and reproduction
 command.
 
+The API and terminal share one S3 bucket. Rust-compatible CSV objects stay at
+the bucket root (`ohlcv/...` and `meta/tickers.json`); Python Parquet objects use
+the sibling `parquet/` prefix. Public CSV export is enabled by default and runs
+after successful ingestion. The bucket is intended to be public, which also
+exposes the Parquet objects and manifests. See
+[`ops/s3/README.md`](ops/s3/README.md) for the key layout and backfill commands.
+
 ## API and operations
 
 - [`CONTRACT.md`](CONTRACT.md): current method, route families, and query shape.
@@ -145,6 +152,7 @@ command.
 - [`VALIDATION.md`](VALIDATION.md): benchmark and test evidence.
 - [`calendars/README.md`](calendars/README.md): exchange calendar data policy.
 - [`ops/systemd/README.md`](ops/systemd/README.md): prepared Linux systemd example.
+- [`ops/s3/README.md`](ops/s3/README.md): one-bucket CSV and Parquet layout.
 - [`legacy/README.md`](legacy/README.md): historical implementation and evidence.
 
 The API does not use the old Rust/PostgreSQL service as its OHLCV source. The

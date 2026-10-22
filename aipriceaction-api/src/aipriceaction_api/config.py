@@ -76,11 +76,16 @@ class Settings:
     archive_backend: str = "s3"
     s3_endpoint: str | None = "http://127.0.0.1:9100"
     s3_bucket: str = "aipriceaction-api-local"
-    s3_prefix: str = "archive-v2"
+    # Keep Parquet in its own bucket keyspace. The
+    # Rust-compatible public CSV catalog and candles live at the bucket root.
+    s3_prefix: str = "parquet"
     s3_region: str = "us-east-1"
     s3_access_key: str | None = "aipa-local"
     s3_secret_key: str | None = "aipa-local-development-only"
     s3_path_style: bool = True
+    # Public CSV compatibility writes reuse the same bucket/client credentials
+    # as Parquet and run automatically after successful worker ingestion.
+    public_export_enabled: bool = True
     daily_years: int = 3
     hourly_years: int = 3
     minute_years: int = 1
@@ -156,6 +161,7 @@ class Settings:
             "s3_access_key": "AWS_ACCESS_KEY_ID",
             "s3_secret_key": "AWS_SECRET_ACCESS_KEY",
             "s3_path_style": "S3_FORCE_PATH_STYLE",
+            "public_export_enabled": "PUBLIC_EXPORT_ENABLED",
             "daily_years": "DAILY_RETENTION_YEARS",
             "hourly_years": "HOURLY_RETENTION_YEARS",
             "minute_years": "MINUTE_RETENTION_YEARS",

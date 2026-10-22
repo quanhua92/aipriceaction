@@ -1,0 +1,59 @@
+{
+  "purpose": "Read-only verification of the existing public Rust CSV objects",
+  "observed_date_ict": "2026-10-23",
+  "request_note": "Verified again through the SDK's default requests.Session and the terminal get-ohlcv-data command with temporary caches; both parsed the public daily and yearly paths without custom browser headers. The earlier raw urllib 403 and browser-User-Agent 200 were inconclusive about the cause.",
+  "sdk_default_headers_verified": true,
+  "terminal_cli_verified": true,
+  "objects": [
+    {
+      "url": "https://s3.aipriceaction.com/ohlcv/vn/ACB/1D/ACB-1D-2014-05-13.csv",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "bytes": 56,
+      "rows": 1,
+      "columns_per_row": [6],
+      "body_sha256": "a590961836a0897fd03a26d307e3246336157d7796f32fc67dccc21aed74715d",
+      "python_exporter_body_bytes_match": true,
+      "s3_content_hash": "b07b63c2f48ffe4b504d5056ea44cf82ab1dc78c9d3901686c8537c2ac3e90e8",
+      "rust_fingerprint": "1:2014-05-13T00:00:00Z:19755000:118603",
+      "rust_fingerprint_matches_s3_metadata": true,
+      "first_row": [
+        "2014-05-13 00:00:00",
+        "1975.5",
+        "2001.84",
+        "1975.5",
+        "1975.5",
+        "118603"
+      ]
+    },
+    {
+      "url": "https://s3.aipriceaction.com/ohlcv/vn/ACB/yearly/ACB-1D-2020.csv",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "bytes": 14756,
+      "rows": 247,
+      "columns_per_row": [6],
+      "body_sha256": "3ebd5bbf075aba1578eec9c14472753f4443d71996d40bb1ba9d36a721f6783a",
+      "python_exporter_body_bytes_match": true,
+      "s3_content_hash": "9fc3253c8c38465ca575a8c9c88bf3455331940ad47bfaa21e2fc21ef828a5a1",
+      "rust_fingerprint": "247:2020-12-31T00:00:00Z:16138019000:1477148716",
+      "rust_fingerprint_matches_s3_metadata": true,
+      "first_row": [
+        "2020-01-02 00:00:00",
+        "5669.28",
+        "5719.01",
+        "5644.42",
+        "5719.01",
+        "1163109"
+      ],
+      "last_row": [
+        "2020-12-31 00:00:00",
+        "9018.99",
+        "9148.3",
+        "9002.83",
+        "9083.65",
+        "6774680"
+      ]
+    }
+  ]
+}
