@@ -1,86 +1,78 @@
 # AIPriceAction
 
-AIPriceAction provides market data, technical indicators, analysis endpoints,
-and Python/CLI clients for Vietnamese stocks, crypto, and global assets.
+AIPriceAction is a market-data service and a set of clients for Vietnamese
+stocks, crypto, and global assets. This repository contains the supported
+Python API, its ingestion and storage services, a terminal client, a Python SDK,
+and analysis workflows. The chart website source is maintained in a separate
+`aipriceaction-web` repository.
 
-## Runtime status
+## Choose a starting point
 
-The supported API implementation for this migration is the Python service in
-[`aipriceaction-api/`](aipriceaction-api/README.md). The former Rust API project
-has been moved to [`legacy/rust/`](legacy/rust/README.md) and is deprecated.
-The last recorded production baseline (2026-10-20) still showed the Rust
-service; this repository does not claim that production has been switched.
-See the [migration runbook](aipriceaction-api/MIGRATION.md) for deployment
-gates and rollback steps.
+- **Run the API and data worker locally:** follow [the API quickstart](aipriceaction-api/README.md#start-locally).
+- **Run the chart website locally:** first start the API, then follow [the web setup](aipriceaction-api/README.md#run-the-chart-website).
+- **Fetch data or analyze tickers from a terminal:** see [AIPA Terminal](aipriceaction-terminal/README.md).
+- **Use the Python client in your own code:** see the [Python SDK](sdk/aipriceaction-python/README.md).
+- **Understand the system before changing it:** read [the data flow](DATA_FLOW.md), [data sources](docs/DATA_SOURCES.md), then the [API contract](aipriceaction-api/CONTRACT.md).
 
-## Current data and storage
+## Current implementation
 
-The Python service ingests from VPS, VNDirect, and DNSE for Vietnam; Binance
-for crypto; Yahoo Finance for global symbols; and SJC's daily quote service for
-gold. VCI is an opt-in fallback for older Vietnamese one-minute history only.
-Recent and operational records live in SQLite. Verified historical data is
-stored as checksummed Parquet objects in an S3-compatible archive and read via
-DuckDB. Redis is optional; it is not the source of truth. Local Docker Compose
-uses RustFS as its S3-compatible object store. See
-[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) and
-[`DATA_FLOW.md`](DATA_FLOW.md).
+The supported API implementation is the Python service in
+[`aipriceaction-api/`](aipriceaction-api/README.md). The Rust source is retained
+under [`legacy/rust/`](legacy/rust/README.md) for reference; the Rust API is
+deprecated. See the
+[migration runbook](aipriceaction-api/MIGRATION.md) for deployment steps.
 
-Compose binds RustFS host ports to loopback by default. If LAN access is
-required, set a strong non-default access key and secret and protect those
-ports with the host firewall before changing `RUSTFS_BIND_ADDRESS`.
+RustFS is still an active part of the Python stack: it stores archived Parquet
+history through an S3-compatible interface. RustFS is separate from the retired
+Rust API.
 
-## Run the local API
+## How the pieces fit
 
-From the repository root:
-
-```sh
-cd aipriceaction-api
-# If .env does not exist, copy .env.example and set a non-empty REFRESH_SECRET.
-docker compose up -d --build
-curl --fail http://localhost:8899/health
+```mermaid
+flowchart LR
+  P[Market data providers] --> W[Python ingestion worker]
+  W --> S[(SQLite recent data)]
+  W --> A[(RustFS Parquet archive)]
+  S --> API[FastAPI service]
+  A --> API
+  API --> C[Chart website]
+  API --> SDK[Python SDK / CLI]
 ```
 
-The API listens on host port `8899`; its packaged explorer is at
-<http://localhost:8899/explorer>. Compose keeps SQLite under `aipriceaction-api/data`
-and stores archive objects in the RustFS volume. Keep `.env`, SQLite files,
-archive objects, and operational receipts local to the deployment; do not commit
-secrets or database copies.
-
-The main chart website is a separate Vite app. The local launcher serves a
-temporary copy and proxies `/aipriceaction-api` to Python without editing the
-sibling web repository:
-
-```sh
-cd aipriceaction-api
-.venv/bin/python scripts/serve_local_web.py --api http://127.0.0.1:8899 --port 5173
-```
-
-## Measured local performance
-
-On 2026-10-21, the exact 19-request home-page batch completed through the local
-Vite proxy in `550.51 ms` with cache bypass enabled. All 19 requests returned
-HTTP 200; p95 and maximum request latency were `517.23 ms`. This is a local
-measurement, not a production service-level objective. The report summary and
-reproduction command are in [`aipriceaction-api/VALIDATION.md`](aipriceaction-api/VALIDATION.md).
+Compose runs the API, an ingestion worker, an initializer, and RustFS. The
+initializer downloads ticker catalog metadata; it does **not** import old Rust
+PostgreSQL price history. The worker fetches price history from the configured
+providers, so it needs outbound network access. A healthy API process does not
+mean all tickers have finished loading or have fresh candles.
 
 ## Repository map
 
-| Path | Purpose |
+| Path | What it contains |
 | --- | --- |
-| `aipriceaction-api/` | Python FastAPI service, SQLite history loader, archive, workers, Compose deployment |
-| `aipriceaction-terminal/` | `aipa` CLI and Textual TUI |
-| `sdk/aipriceaction-python/` | Python OHLCV SDK and analysis helpers |
-| `skills/` | Agent skills and market-analysis workflows |
-| `legacy/rust/aipriceaction/` | Deprecated Rust API source; retained for reference |
-| `legacy/` | Historical docs and disabled Rust image workflow |
+| `aipriceaction-api/` | Supported FastAPI service, shared history loader, ingestion worker, storage, Docker Compose, scripts, and API tests |
+| `aipriceaction-terminal/` | `aipa` command-line tool and terminal UI |
+| `sdk/aipriceaction-python/` | Installable Python SDK and analysis helpers |
+| `skills/` | Agent workflows for fetching and analyzing market data |
+| `docs/`, `DATA_FLOW.md`, `FEATURES.md` | Current architecture, data policies, and feature overview |
+| `legacy/` | Retired Rust API and superseded documentation; not the current runtime |
 
-## Documentation
+`AGENTS.md` describes market-analysis behavior for AI agents; it is not the
+repository's software build guide. Use the API and client READMEs for setup.
 
-- [Current architecture and features](FEATURES.md)
-- [Data flow](DATA_FLOW.md)
-- [Data sources and storage](docs/DATA_SOURCES.md)
-- [API endpoints and query contract](aipriceaction-api/CONTRACT.md)
-- [Local API operations](aipriceaction-api/README.md)
-- [Production migration and rollback](aipriceaction-api/MIGRATION.md)
-- [Latest validation evidence](aipriceaction-api/VALIDATION.md)
-- [CLI and market workflow instructions](AGENTS.md)
+## Local setup
+
+The API uses host port `8899` and is reachable from the LAN when the host
+firewall allows it. RustFS ports `9100` and `9101` bind to loopback by default.
+The chart website runs on port `5173` when started with the local launcher. For
+exact prerequisites, data locations, startup checks, and cleanup commands,
+follow the [API quickstart](aipriceaction-api/README.md).
+
+When you copy `.env.example`, Vietnamese provider ingestion needs either
+`HTTP_PROXIES` or `ALLOW_DIRECT=true` in the local API `.env`. First startup also
+needs internet access to refresh catalog metadata and fetch provider data.
+
+## Checks and performance evidence
+
+API tests and lint commands are listed in the [API guide](aipriceaction-api/README.md#development-checks).
+The latest local 19-request home-page benchmark, including its scope and
+reproduction command, is in [validation evidence](aipriceaction-api/VALIDATION.md).

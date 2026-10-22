@@ -20,8 +20,11 @@ record's stored source identity.
 
 ## Storage path
 
-- SQLite stores recent candles and operational state at `data/aipriceaction.sqlite3`
-  by default. The indexed identity is source, symbol, interval, and timestamp.
+- SQLite stores recent candles and operational state at
+  `aipriceaction-api/data/aipriceaction.sqlite3` on the host and
+  `/data/aipriceaction.sqlite3` in the Compose containers by default. Set
+  `AIPA_DATA_DIR` to mount another host directory. The indexed identity is
+  source, symbol, interval, and timestamp.
 - Older verified history is stored as immutable Parquet objects under the
   configured S3 prefix, with checksums and JSON manifests.
 - DuckDB reads archived Parquet. A bounded local file cache reduces repeat

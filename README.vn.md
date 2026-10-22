@@ -6,12 +6,11 @@ các công cụ Python/CLI cho cổ phiếu Việt Nam, crypto và tài sản qu
 ## Trạng thái hệ thống
 
 API Python trong [`aipriceaction-api/`](aipriceaction-api/README.md) là hệ thống
-được hỗ trợ cho đợt chuyển đổi này. Mã nguồn API Rust cũ đã được chuyển vào
-[`legacy/rust/`](legacy/rust/README.md) và được đánh dấu không còn phát triển.
-Bằng chứng triển khai gần nhất (2026-10-20) vẫn cho thấy production đang chạy
-Rust; tài liệu này không khẳng định production đã chuyển đổi. Xem
-[hướng dẫn migration](aipriceaction-api/MIGRATION.md) để biết các điều kiện,
-bước chuyển đổi và rollback.
+được hỗ trợ. Mã nguồn API Rust cũ đã chuyển vào
+[`legacy/rust/`](legacy/rust/README.md); API Rust đã deprecated và chỉ giữ để
+tham khảo. Xem
+[hướng dẫn migration](aipriceaction-api/MIGRATION.md) để biết các bước triển
+khai.
 
 ## Nguồn dữ liệu và lưu trữ
 
@@ -28,19 +27,33 @@ RustFS làm object store tương thích S3. Xem
 
 ```sh
 cd aipriceaction-api
-# Nếu chưa có .env, sao chép .env.example và đặt REFRESH_SECRET khác rỗng.
+cp .env.example .env  # chỉ chạy lần đầu; giữ lại .env đang có
+python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
+# Dán giá trị vừa tạo vào REFRESH_SECRET trong .env.
+# Cấu hình HTTP_PROXIES hoặc đặt ALLOW_DIRECT=true để worker lấy dữ liệu VN.
 docker compose up -d --build
+docker compose ps
 curl --fail http://localhost:8899/health
 ```
 
 API dùng cổng host `8899`; explorer tích hợp nằm tại
-<http://localhost:8899/explorer>. Website biểu đồ chính là ứng dụng Vite riêng.
-Script cục bộ chạy bản sao tạm thời và proxy `/aipriceaction-api` tới Python mà
-không sửa repository web bên cạnh:
+<http://localhost:8899/explorer>. Cổng này có thể truy cập từ LAN nếu firewall
+cho phép. RustFS dùng cổng `9100` và `9101`, mặc định chỉ bind loopback. Khởi
+tạo lần đầu chỉ tải metadata mã chứng khoán; lịch sử giá cũ từ Rust/PostgreSQL
+không được tự động chuyển sang.
+
+Website cần một checkout riêng của `aipriceaction-web` đã cài dependencies
+Node. Từ thư mục `aipriceaction-api`, tạo môi trường Python và chạy launcher
+bằng đường dẫn checkout web thực tế. Launcher chỉ tạo bản sao tạm và proxy
+`/aipriceaction-api` tới Python, không sửa repository web:
 
 ```sh
-cd aipriceaction-api
-.venv/bin/python scripts/serve_local_web.py --api http://127.0.0.1:8899 --port 5173
+uv sync --locked --group dev
+WEB_DIR=/path/to/aipriceaction-web
+uv run python scripts/serve_local_web.py \
+  --web-dir "$WEB_DIR" \
+  --api http://127.0.0.1:8899 \
+  --port 5173
 ```
 
 ## Tài liệu

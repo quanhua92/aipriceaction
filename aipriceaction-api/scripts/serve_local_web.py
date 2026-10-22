@@ -29,12 +29,18 @@ def configured_api_url():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    configured_web_dir = os.environ.get("AIPA_WEB_DIR")
     parser.add_argument(
-        "--web-dir", type=Path, default=Path("/Users/quan/data-workspace/aipriceaction-web")
+        "--web-dir",
+        type=Path,
+        default=Path(configured_web_dir) if configured_web_dir else None,
+        help="Path to the separate aipriceaction-web checkout (or set AIPA_WEB_DIR)",
     )
     parser.add_argument("--api")
     parser.add_argument("--port", default="5173")
     args = parser.parse_args()
+    if args.web_dir is None:
+        parser.error("pass --web-dir or set AIPA_WEB_DIR to your aipriceaction-web checkout")
     args.api = args.api or configured_api_url()
     source = args.web_dir.resolve()
     vite = source / "node_modules/vite/bin/vite.js"
