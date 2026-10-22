@@ -109,7 +109,7 @@ The agent should prefer `uvx aipa-cli` for all commands. Only fall back to `aipa
 
 ## Environment Variables
 
-None required. `get-ohlcv-data` fetches data from public S3 archives — no backend API or API key needed.
+No API key is required for market data. `get-ohlcv-data` uses the Python SDK, which requests the live API first and falls back to a complete public S3 archive series when needed. The public production API has not yet been recorded as migrated to Python; use `AIPriceAction(live_url="http://localhost:8899")` in local Python workflows to target the local candidate.
 
 ## Available Data Sources
 
@@ -1065,7 +1065,7 @@ if rows:
 
 ## Tips for AI Agents
 
-1. **No API key or backend needed**: `get-ohlcv-data` fetches from public S3 archives. Works without `OPENAI_API_KEY` or a running backend.
+1. **No market-data API key needed**: `get-ohlcv-data` uses the live API by default and can fall back to the public S3 archive; it does not need `OPENAI_API_KEY`. If API and archive are both unavailable, the command can fail rather than fabricate data.
 
 2. **Auto-uppercase**: Ticker symbols are automatically uppercased. `vcb`, `btcusdt`, `spy` all work.
 

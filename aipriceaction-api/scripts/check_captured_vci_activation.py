@@ -66,7 +66,7 @@ async def run(args):
     if (
         base.archive_backend != "s3"
         or base.s3_endpoint != "http://127.0.0.1:9100"
-        or args.base_url != "http://127.0.0.1:3001"
+        or args.base_url != "http://127.0.0.1:8899"
     ):
         raise DataError("Verify only the local API and RustFS environment")
     activation = json.loads(args.activation.read_text())
@@ -197,5 +197,5 @@ if __name__ == "__main__":
     parser.add_argument("--activation", type=Path, required=True)
     parser.add_argument("--extension", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--base-url", default="http://127.0.0.1:3001")
+    parser.add_argument("--base-url", default="http://127.0.0.1:8899")
     asyncio.run(run(parser.parse_args()))

@@ -156,13 +156,20 @@ async def benchmark(args):
     if not 1 <= args.concurrency <= 32:
         raise ValueError("Choose 1–32 concurrent requests")
 
-    if args.tickers_only and args.all_read_endpoints:
-        raise ValueError("Choose only one of --tickers-only or --all-read-endpoints")
+    selected_modes = sum(
+        (args.tickers_only, args.all_read_endpoints, args.core_home_page_only)
+    )
+    if selected_modes > 1:
+        raise ValueError(
+            "Choose only one of --tickers-only, --all-read-endpoints, or --core-home-page-only"
+        )
     paths = (
         TICKER_CASES
         if args.tickers_only
         else READ_ENDPOINT_CASES
         if args.all_read_endpoints
+        else CORE_HOME_PAGE_URLS
+        if args.core_home_page_only
         else HOME_PAGE_URLS
     )
     requests = [
@@ -290,6 +297,11 @@ if __name__ == "__main__":
         "--all-read-endpoints",
         action="store_true",
         help="Run ticker, metadata, homepage, and analysis GET cases without mutation endpoints",
+    )
+    parser.add_argument(
+        "--core-home-page-only",
+        action="store_true",
+        help="Run the exact 19-request home-page list, including its duplicate requests",
     )
     parser.add_argument(
         "--report",

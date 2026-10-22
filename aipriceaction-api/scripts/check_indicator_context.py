@@ -156,7 +156,7 @@ def check(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default="http://127.0.0.1:3001")
+    parser.add_argument("--url", default="http://127.0.0.1:8899")
     parser.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"), required=True)
     parser.add_argument("--symbol", required=True)
     parser.add_argument("--start-date", default="2022-01-01")

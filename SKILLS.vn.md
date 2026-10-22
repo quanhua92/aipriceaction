@@ -115,7 +115,7 @@ Báo cáo cuối cùng
 
 ### Cổ phiếu Việt Nam
 
-Dữ liệu từ VCI, Vietstock, VNDirect, VPS, DNSE. Hỗ trợ VNINDEX, VN30 và 1600+ mã cổ phiếu.
+Python API dùng VPS, VNDirect và DNSE cho Việt Nam, Binance cho crypto, Yahoo Finance cho tài sản quốc tế và báo giá SJC hằng ngày cho vàng. VCI là nguồn dự phòng tùy chọn cho dữ liệu 1 phút lịch sử, không phải nguồn ưu tiên.
 
 **Khung thời gian:** 1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W, 2W
 
@@ -160,7 +160,7 @@ Dữ liệu từ sjc.com.vn. Giá vàng SJC hàng ngày.
 |---|---|---|
 | Giá | Miễn phí vĩnh viễn | Miễn phí (Beta), chưa rõ sau này |
 | Đăng ký / Auth | **Không cần** | Cần API Key |
-| Cổ phiếu Việt Nam | Yes (VCI, Vietstock, VNDirect, VPS) | Yes |
+| Cổ phiếu Việt Nam | Yes (VPS, VNDirect, DNSE; optional older-history VCI fallback) | Yes |
 | Crypto | Yes (Binance) | Hạn chế hoặc không |
 | Thị trường quốc tế | Yes (Yahoo Finance) | Hạn chế hoặc không |
 | Vàng SJC | Yes | Không |
@@ -179,7 +179,7 @@ Dữ liệu từ sjc.com.vn. Giá vàng SJC hàng ngày.
 Hoàn toàn miễn phí. Khi dùng với AI agent như Claude Code hay Gemini CLI, agent tự đọc dữ liệu và phân tích — không cần API Key nào cả.
 
 **Tại sao không cần API Key cho dữ liệu?**
-Dữ liệu OHLCV được cung cấp qua S3 archive công khai — truy cập bằng HTTP, không cần xác thực. Volume profile, performers, live-data đều hoạt động mà không cần credential.
+Dữ liệu Python SDK mặc định gọi live API và dự phòng bằng một chuỗi dữ liệu hoàn chỉnh từ S3 archive công khai khi cần. Dữ liệu thị trường không cần API key; endpoint production gần nhất vẫn dùng Rust cũ và đang chờ migration.
 
 **Tôi có cần cài đặt Python không?**
 `aipa-cli` cần Python 3.10+, nhưng bạn không cần cài thủ công. AI agent tự cài đặt qua `uvx` khi chạy lệnh lần đầu. `uvx` quản lý môi trường ảo riêng, không ảnh hưởng đến hệ thống.
@@ -190,7 +190,7 @@ Dữ liệu OHLCV được cung cấp qua S3 archive công khai — truy cập b
 - **aipa-research:** Nghiên cứu chuyên sâu — pipeline multi-agent phân tích toàn ngành, có thể kết hợp screening cơ bản. Agent-driven mode không cần API Key.
 
 **Dữ liệu có chính xác không?**
-Dữ liệu tổng hợp từ nhiều nguồn uy tín (VCI, Vietstock, VNDirect, Binance, Yahoo Finance, sjc.com.vn). Phân tích do AI tạo ra nên có thể chứa sai sót — luôn kiểm chứng trước khi ra quyết định giao dịch.
+Python API hiện tổng hợp dữ liệu từ VPS, VNDirect, DNSE, Binance, Yahoo Finance và báo giá SJC; VCI chỉ là nguồn dự phòng tùy chọn cho dữ liệu 1 phút lịch sử. Phân tích do AI tạo ra nên có thể chứa sai sót — luôn kiểm chứng trước khi ra quyết định giao dịch.
 
 **Có đặt lệnh giao dịch được không?**
 Không. AIPriceAction Skills tập trung vào phân tích dữ liệu thị trường, không thực hiện lệnh mua bán. Đây là công cụ thông tin, không phải nền tảng giao dịch.

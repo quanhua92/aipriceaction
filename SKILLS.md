@@ -115,7 +115,7 @@ Final report
 
 ### Vietnamese Stocks
 
-Data from VCI, Vietstock, VNDirect, VPS, DNSE. Covers VNINDEX, VN30 and 1600+ stocks.
+The Python API uses VPS, VNDirect, and DNSE for Vietnam, Binance for crypto, Yahoo Finance for global symbols, and SJC daily quotes for gold. VCI is an optional older-minute fallback, not a preferred provider.
 
 **Timeframes:** 1m, 5m, 15m, 30m, 1h, 4h, 1D, 1W, 2W
 
@@ -160,7 +160,7 @@ Data from sjc.com.vn. Daily SJC gold prices.
 |---|---|---|
 | Price | Free forever | Free (Beta), uncertain later |
 | Sign-up / Auth | **None** | Requires API key |
-| Vietnamese stocks | Yes (VCI, Vietstock, VNDirect, VPS) | Yes |
+| Vietnamese stocks | Yes (VPS, VNDirect, DNSE; optional older-history VCI fallback) | Yes |
 | Crypto | Yes (Binance) | Limited or none |
 | Global stocks | Yes (Yahoo Finance) | Limited or none |
 | SJC Gold | Yes | No |
@@ -179,7 +179,7 @@ Data from sjc.com.vn. Daily SJC gold prices.
 Completely free. When used with an AI agent like Claude Code or Gemini CLI, the agent reads data and analyzes it for you — no API key needed at all.
 
 **Why no API key for data?**
-OHLCV data is served from a public S3 archive — plain HTTP access, no authentication needed. Volume profile, performers, live-data all work without any credentials.
+The Python SDK uses the live API by default and falls back to a complete public S3 archive series when needed. Market data requires no API key; the live production endpoint was still the legacy Rust service in the last recorded baseline, pending migration.
 
 **Do I need to install Python?**
 `aipa-cli` requires Python 3.10+, but you don't need to install it manually. The AI agent auto-installs it via `uvx` on first run. `uvx` manages its own virtual environment — no impact on your system.
@@ -190,7 +190,7 @@ OHLCV data is served from a public S3 archive — plain HTTP access, no authenti
 - **aipa-research:** Deep research — multi-agent pipeline for sector-wide analysis with optional fundamental screening. Agent-driven mode needs no API key.
 
 **Is the data accurate?**
-Data is aggregated from reputable sources (VCI, Vietstock, VNDirect, Binance, Yahoo Finance, sjc.com.vn). Analysis is AI-generated and may contain errors — always verify before trading.
+The current Python API aggregates data from VPS, VNDirect, DNSE, Binance, Yahoo Finance, and SJC daily quotes; VCI is an opt-in older-minute fallback. Analysis is AI-generated and may contain errors — always verify before trading.
 
 **Can I place trades?**
 No. AIPriceAction Skills focuses on market data analysis — it does not execute buy/sell orders. This is an information tool, not a trading platform.

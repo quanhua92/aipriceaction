@@ -12,7 +12,7 @@ Visual guide to how `aipa analyze` and `aipa deep-research` use AI agents to pro
   │   Single Agent   │              │        Multi-Agent Pipeline          │
   │                  │              │                                      │
   │  Build context   │              │  Supervisor -> Workers -> Aggregator │
-  │  Send to LLM     │              │       -> Reviewer (up to 3 rounds)   │
+  │  Send to LLM     │              │       -> Reviewer (up to 5 rounds)   │
   │  Stream response │              │                                      │
   │                  │              │  Parallel sector analysis            │
   │  1 LLM call      │              │  4-6 LLM calls                       │

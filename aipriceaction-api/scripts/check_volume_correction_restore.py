@@ -19,7 +19,7 @@ from aipriceaction_api.volume_corrections import validate_record
 
 
 def verify_http(base_url, record, original, staged):
-    if base_url != "http://127.0.0.1:3001":
+    if base_url != "http://127.0.0.1:8899":
         raise DataError("Verification requires the existing loopback API")
     day = datetime.fromtimestamp(record["time"], UTC).strftime("%Y-%m-%d")
     fields = ("open", "high", "low", "close", "volume")
@@ -128,5 +128,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--receipt", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--base-url", default="http://127.0.0.1:3001")
+    parser.add_argument("--base-url", default="http://127.0.0.1:8899")
     run(parser.parse_args())

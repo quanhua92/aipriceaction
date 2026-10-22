@@ -1,234 +1,86 @@
 # AIPriceAction
 
-**Financial data platform with AI-powered analysis for Vietnamese stocks, crypto, and global markets.**
+AIPriceAction provides market data, technical indicators, analysis endpoints,
+and Python/CLI clients for Vietnamese stocks, crypto, and global assets.
 
-[![PyPI - aipriceaction](https://img.shields.io/pypi/v/aipriceaction?label=aipriceaction&color=blue)](https://pypi.org/project/aipriceaction/)
-[![PyPI - aipa-cli](https://img.shields.io/pypi/v/aipa-cli?label=aipa-cli&color=blue)](https://pypi.org/project/aipa-cli/)
-[![Docker Pulls](https://img.shields.io/docker/pulls/quanhua92/aipriceaction)](https://hub.docker.com/r/quanhua92/aipriceaction)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+## Runtime status
 
-[Tiếng Việt](README.vn.md)
+The supported API implementation for this migration is the Python service in
+[`aipriceaction-api/`](aipriceaction-api/README.md). The former Rust API project
+has been moved to [`legacy/rust/`](legacy/rust/README.md) and is deprecated.
+The last recorded production baseline (2026-10-20) still showed the Rust
+service; this repository does not claim that production has been switched.
+See the [migration runbook](aipriceaction-api/MIGRATION.md) for deployment
+gates and rollback steps.
 
----
+## Current data and storage
 
-## Get started in 30 seconds
+The Python service ingests from VPS, VNDirect, and DNSE for Vietnam; Binance
+for crypto; Yahoo Finance for global symbols; and SJC's daily quote service for
+gold. VCI is an opt-in fallback for older Vietnamese one-minute history only.
+Recent and operational records live in SQLite. Verified historical data is
+stored as checksummed Parquet objects in an S3-compatible archive and read via
+DuckDB. Redis is optional; it is not the source of truth. Local Docker Compose
+uses RustFS as its S3-compatible object store. See
+[`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md) and
+[`DATA_FLOW.md`](DATA_FLOW.md).
 
-```bash
-npx skills add quanhua92/aipriceaction
+Compose binds RustFS host ports to loopback by default. If LAN access is
+required, set a strong non-default access key and secret and protect those
+ports with the host firewall before changing `RUSTFS_BIND_ADDRESS`.
+
+## Run the local API
+
+From the repository root:
+
+```sh
+cd aipriceaction-api
+# If .env does not exist, copy .env.example and set a non-empty REFRESH_SECRET.
+docker compose up -d --build
+curl --fail http://localhost:8899/health
 ```
 
-Then ask any AI agent:
+The API listens on host port `8899`; its packaged explorer is at
+<http://localhost:8899/explorer>. Compose keeps SQLite under `aipriceaction-api/data`
+and stores archive objects in the RustFS volume. Keep `.env`, SQLite files,
+archive objects, and operational receipts local to the deployment; do not commit
+secrets or database copies.
 
-> "Compare VCB, TCB, MBB, CTG across 1h and 1D — which bank has the strongest trend?"
+The main chart website is a separate Vite app. The local launcher serves a
+temporary copy and proxies `/aipriceaction-api` to Python without editing the
+sibling web repository:
 
-> "Analyze VIC with volume profile and price action"
-
-> "Compare SJC gold price with global gold (GC=F)"
-
-> "Volume profile for BTCUSDT — where is the POC and value area?"
-
-> "Compare FPT, VNM, HPG with Wyckoff analysis"
-
-> "Show me top performers ranked by trading value"
-
-> "Deep research: which sectors are leading the VN market right now?"
-
-Four skills are installed: **aipa-data** (raw OHLCV), **aipa-analyze** (AI-powered analysis), **aipa-research** (multi-agent deep research), and **aipa-fundamentals** (fundamental analysis with PE, ROE, NPL, CAR, screening). Works with Claude Code, Gemini CLI, and Codex.
-
-### No install — one file
-
-Download [AGENTS.md](AGENTS.md) and drop it in your project root. Gemini CLI auto-detects it; for Claude Code, copy or symlink it:
-
-```bash
-# Option 1: Symlink (auto-updates when AGENTS.md changes)
-ln -s AGENTS.md CLAUDE.md
-
-# Option 2: Copy (manual update needed)
-cp AGENTS.md CLAUDE.md
+```sh
+cd aipriceaction-api
+.venv/bin/python scripts/serve_local_web.py --api http://127.0.0.1:8899 --port 5173
 ```
 
-Any AI agent now has full `aipa-cli` documentation — raw data commands, analysis flags, caching rules, and when-to-use table — without installing skills. Requires Python on the machine — the AI auto-installs `aipa-cli` on first use. Web-only agents (e.g. Claude.ai web) won't work. Note: with copy, AGENTS.md must be downloaded again manually when updated, while skills update easily via `npx skills update`.
+## Measured local performance
 
----
+On 2026-10-21, the exact 19-request home-page batch completed through the local
+Vite proxy in `550.51 ms` with cache bypass enabled. All 19 requests returned
+HTTP 200; p95 and maximum request latency were `517.23 ms`. This is a local
+measurement, not a production service-level objective. The report summary and
+reproduction command are in [`aipriceaction-api/VALIDATION.md`](aipriceaction-api/VALIDATION.md).
 
-## Install
+## Repository map
 
-| I want to... | Install | One-liner |
-|---|---|---|
-| Use AI agent — no skill install | Download [AGENTS.md](AGENTS.md) | Auto-installs aipa-cli |
-| Add AI agent skills | `npx skills add quanhua92/aipriceaction` | Auto-installs aipa-cli |
-| Use the CLI / TUI | `uv tool install aipa-cli` | Terminal analysis |
-| Build with Python | `pip install aipriceaction` | Pandas DataFrames |
+| Path | Purpose |
+| --- | --- |
+| `aipriceaction-api/` | Python FastAPI service, SQLite history loader, archive, workers, Compose deployment |
+| `aipriceaction-terminal/` | `aipa` CLI and Textual TUI |
+| `sdk/aipriceaction-python/` | Python OHLCV SDK and analysis helpers |
+| `skills/` | Agent skills and market-analysis workflows |
+| `legacy/rust/aipriceaction/` | Deprecated Rust API source; retained for reference |
+| `legacy/` | Historical docs and disabled Rust image workflow |
 
-### Updating
+## Documentation
 
-```bash
-# Update AI agent skills
-npx skills update
-
-# Update CLI (if installed via uv tool)
-uv tool upgrade aipa-cli
-```
-
----
-
-## Featured capabilities
-
-### Volume Profile
-
-POC, value area, and volume-by-price histogram from 1-minute data.
-
-```bash
-aipa volume-profile VCB
-aipa volume-profile BTCUSDT --source crypto --bins 30
-aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09
-```
-
-### Top Performers
-
-Rank tickers by price change, volume, MA scores, money flow, or sector.
-
-```bash
-aipa performers --sort-by value --limit 5
-aipa performers --sort-by ma50_score --group NGAN_HANG
-aipa performers --sort-by total_money_changed --source crypto
-```
-
-### AI Analysis
-
-Wyckoff, VPA, and smart money signals with structured context.
-
-```bash
-aipa analyze VCB --interval 1D
-aipa analyze VCB FPT VIC --interval 1h
-aipa deep-research --run
-```
-
----
-
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph Sources ["📡 Data Sources"]
-        VN["VCI · Vietstock · VNDirect<br/>VPS · DNSE<br/>VN Stocks"]
-        BIN["Binance<br/>Crypto"]
-        YAH["Yahoo Finance<br/>US / Global"]
-        SJC["sjc.com.vn<br/>SJC Gold"]
-    end
-
-    subgraph Backend ["🦀 Rust Backend"]
-        W["Background Workers"]
-        PG[("PostgreSQL")]
-        RD[("Redis")]
-        API["REST API<br/>:3000"]
-        W --> PG --> RD --> API
-    end
-
-    subgraph S3 ["🗄️ S3 Archive"]
-        CSV["Daily CSV<br/>Yearly CSV<br/>+ tickers.json"]
-    end
-
-    subgraph Consumers ["👥 Consumers"]
-        SDK["Python SDK<br/>pip install aipriceaction"]
-        CLI["AIPA CLI<br/>uv tool install aipa-cli"]
-        SKILLS["AI Agent Skills<br/>aipa-data · aipa-analyze · aipa-research · aipa-fundamentals"]
-        WEB["aipriceaction.com<br/>Web Frontend"]
-    end
-
-    VN & BIN & YAH & SJC --> W
-    API -- "sync every 60m" --> CSV
-    CSV -- "plain HTTP<br/>no credentials" --> SDK
-    API -- "live overlay" --> SDK
-    SDK --> CLI --> SKILLS
-    API --> WEB
-```
-
----
-
-## Data sources
-
-| Market | Provider | Ticker examples | Intervals |
-|---|---|---|---|
-| Vietnamese stocks | VCI / Vietstock / VNDirect / VPS | VCB, FPT, VNINDEX | 1m, 1h, 1D |
-| US / intl. stocks | Yahoo Finance | AAPL, GOOGL, GC=F | 1m, 1h, 1D |
-| Cryptocurrency | Binance | BTCUSDT, ETHUSDT | 1m, 1h, 1D |
-| SJC gold | sjc.com.vn | SJC-GOLD | 1D |
-
-Aggregated intervals (5m, 15m, 30m, 4h, 1W, 2W, 1M) are computed on-demand from base 1m/1D data.
-
----
-
-## Components
-
-### AI Agent Skills
-
-Four skills for Claude Code, Gemini CLI, and Codex: **aipa-data** fetches raw OHLCV data, **aipa-analyze** runs AI-powered single/multi-ticker analysis with Wyckoff and VPA patterns, **aipa-research** runs a multi-agent supervisor/worker/reviewer pipeline for sector-wide deep research, and **aipa-fundamentals** provides fundamental analysis with financial ratios, company profiles, and multi-criteria screening. See [skills/README.md](skills/README.md).
-
-### AIPA Terminal
-
-Textual-based TUI with streaming chat, thinking/reasoning display, autocomplete, and slash commands. Also ships CLI subcommands for non-interactive analysis, volume profile, performers, live data, and deep research. If you're not using `uvx`, ask your AI agent to update: *"update aipa-cli to the latest version"*. See [aipriceaction-terminal/README.md](aipriceaction-terminal/README.md).
-
-### Python SDK
-
-Reads OHLCV data from a public S3 archive via plain HTTP — no credentials needed. Returns pandas DataFrames with optional MA indicators and scores. Includes an AI Context Builder for LLM-powered analysis, LangChain/LangGraph agent integration, and live data overlay. See [sdk/aipriceaction-python/README.md](sdk/aipriceaction-python/README.md).
-
-### Rust Backend
-
-Axum REST API with background workers that sync OHLCV data from multiple providers into PostgreSQL, served through a Redis edge cache. Deploys as a single Docker container. See [aipriceaction/README.md](aipriceaction/README.md).
-
-### Frontend
-
-Human-facing web UI at [aipriceaction.com](https://aipriceaction.com). Source at [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web).
-
----
-
-## Self-host
-
-```bash
-cd aipriceaction
-cp .env.example .env
-docker compose up -d
-```
-
-See [aipriceaction/README.md](aipriceaction/README.md) for the full setup guide, build-from-source instructions, and production deployment with HAProxy.
-
----
-
-## Repository structure
-
-```
-aipriceaction/              Rust backend -- API server, background workers, PostgreSQL + Redis
-sdk/
-  aipriceaction-python/     Python SDK -- reads from S3 archive, no credentials needed
-aipriceaction-terminal/     Python TUI and CLI for AI-powered ticker analysis
-skills/                     Claude Code skills for market analysis workflows
-```
-
----
-
-## Deep dives
-
-| Document | What it covers |
-|---|---|
-| [DATA_FLOW.md](DATA_FLOW.md) | S3 archive, live API, cache freshness, and the merge pipeline |
-| [VOLUME_PROFILE.md](VOLUME_PROFILE.md) | Volume-by-price algorithm: POC, value area, and why uniform distribution |
-| [PERFORMERS.md](PERFORMERS.md) | Top/worst market rankings: metrics, MA scores, money flow |
-| [MULTI_AGENTS_ANALYSIS.md](MULTI_AGENTS_ANALYSIS.md) | AI agent architecture: single-agent analyze vs multi-agent deep-research pipeline |
-
-## Supply chain security
-
-Rust dependencies are managed with [cargo-cooldown](https://crates.io/crates/cargo-cooldown) — a 14-day minimum publish age policy ensures freshly published crates are not picked up until they've been available long enough for maintainers and automated scanners to review. See `aipriceaction/cooldown.toml` for configuration.
-
-```bash
-cargo cooldown update   # instead of cargo update
-cargo cooldown check    # instead of cargo check
-```
-
-## Development
-
-See [CLAUDE.md](CLAUDE.md) for development guidelines, architecture details, and contributor instructions.
-
-## License
-
-MIT
+- [Current architecture and features](FEATURES.md)
+- [Data flow](DATA_FLOW.md)
+- [Data sources and storage](docs/DATA_SOURCES.md)
+- [API endpoints and query contract](aipriceaction-api/CONTRACT.md)
+- [Local API operations](aipriceaction-api/README.md)
+- [Production migration and rollback](aipriceaction-api/MIGRATION.md)
+- [Latest validation evidence](aipriceaction-api/VALIDATION.md)
+- [CLI and market workflow instructions](AGENTS.md)

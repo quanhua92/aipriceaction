@@ -198,7 +198,7 @@ async def check(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--url", default="http://127.0.0.1:3001")
+    parser.add_argument("--url", default="http://127.0.0.1:8899")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--interval", action="append", choices=INTERVALS)
     parser.add_argument("--start-date")

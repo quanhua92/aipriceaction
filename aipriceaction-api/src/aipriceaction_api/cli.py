@@ -57,7 +57,7 @@ def parser():
     )
     serve = commands.add_parser("serve", help="Run API only; workers are a separate process")
     serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=3001)
+    serve.add_argument("--port", type=int, default=8899)
     commands.add_parser("status")
     for name in ("bootstrap", "worker"):
         cmd = commands.add_parser(name)

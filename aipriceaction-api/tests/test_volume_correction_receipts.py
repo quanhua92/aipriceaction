@@ -175,7 +175,7 @@ def test_restore_verifier_removes_temporary_databases_and_cache(
 
         monkeypatch.setattr(Archive, "restore_index", fail)
     output = tmp_path / "verification"
-    args = SimpleNamespace(receipt=record["id"], output=output, base_url="http://127.0.0.1:3001")
+    args = SimpleNamespace(receipt=record["id"], output=output, base_url="http://127.0.0.1:8899")
     if failure:
         with pytest.raises(DataError, match="Restore failure"):
             check_volume_correction_restore.run(args)

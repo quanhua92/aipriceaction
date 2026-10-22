@@ -1,8 +1,8 @@
 # AIPA Terminal
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
 
-Textual-based terminal interface for AI-powered ticker analysis. Features streaming chat with thinking/reasoning display, autocomplete, slash commands, and workflow tabs.
+Textual-based terminal interface for AI-powered ticker analysis. Features streaming chat with thinking/reasoning display, autocomplete, slash commands, and workflow tabs. Data commands use the Python SDK: live API first, then complete public S3 archive fallback when needed.
 
 ## Install
 
@@ -536,7 +536,6 @@ Settings are loaded from `~/.aipriceaction/settings.json`. You can configure the
 | `OPENAI_API_KEY` | API key for the LLM provider | — |
 | `OPENAI_BASE_URL` | Base URL for OpenAI-compatible API | OpenRouter |
 | `OPENAI_MODEL` | Model name | `openrouter/owl-alpha` |
-| `DATABASE_URL` | Backend API URL | `http://localhost:3000` |
 
 ## License
 

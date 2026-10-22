@@ -15,6 +15,6 @@ COPY watchlist.json ./watchlist.json
 RUN pip install --no-cache-dir --retries 5 --timeout 60 uv==0.7.20 \
     && uv sync --locked --no-dev
 
-EXPOSE 3001
+EXPOSE 8899
 
-CMD ["aipa-api", "serve", "--host", "0.0.0.0", "--port", "3001"]
+CMD ["aipa-api", "serve", "--host", "0.0.0.0", "--port", "8899"]

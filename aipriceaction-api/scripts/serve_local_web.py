@@ -17,7 +17,7 @@ def configured_api_url():
     if explicit_url:
         return explicit_url
     values = dotenv_values(PROJECT_ROOT / ".env")
-    port = os.environ.get("AIPA_API_PORT") or values.get("AIPA_API_PORT") or "3001"
+    port = os.environ.get("AIPA_API_PORT") or values.get("AIPA_API_PORT") or "8899"
     try:
         if not 1 <= int(port) <= 65535:
             raise ValueError

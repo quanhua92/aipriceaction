@@ -32,7 +32,7 @@ def test_live_http_requires_every_verified_value_and_success_status(failure):
         return httpx.Response(500 if failure == "status" else 200, json={"VCB": rows})
 
     with httpx.Client(
-        base_url="http://127.0.0.1:3001", transport=httpx.MockTransport(response)
+        base_url="http://127.0.0.1:8899", transport=httpx.MockTransport(response)
     ) as client:
         if failure:
             with pytest.raises(DataError):
@@ -85,7 +85,7 @@ def test_failed_full_index_restoration_removes_temporary_databases(tmp_path, mon
         activation=activation,
         extension=tmp_path,
         output=tmp_path / "result",
-        base_url="http://127.0.0.1:3001",
+        base_url="http://127.0.0.1:8899",
     )
     with pytest.raises(DataError, match="Injected"):
         asyncio.run(check.run(args))

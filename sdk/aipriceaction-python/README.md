@@ -1,8 +1,8 @@
 # aipriceaction
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Docker image:** [`quanhua92/aipriceaction:latest`](https://hub.docker.com/r/quanhua92/aipriceaction) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
+**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
 
-Python SDK for [AIPriceAction](https://aipriceaction.com/) — OHLCV data access and AI context builder for multi-market investment analysis. Reads from a public S3 archive (no API credentials needed).
+Python SDK for [AIPriceAction](https://aipriceaction.com/) — OHLCV data access and AI context builder for multi-market investment analysis. By default, it reads coherent ranges from the live API and falls back per ticker to a complete public S3 archive series when the API is unavailable or empty. No market-data API key is required.
 
 ## Install
 
@@ -12,11 +12,11 @@ pip install aipriceaction
 
 ## Data Sources
 
-The SDK reads OHLCV data from an S3-compatible archive. All sources are auto-detected from ticker metadata — no need to specify which market a ticker belongs to.
+The SDK auto-detects the market from ticker metadata. `use_live=True` (the default) requests data from `live_url`; an individual ticker falls back to its complete S3 archive series when the API is unreachable or empty. `use_live=False` selects archive-only reads.
 
 | Source | Examples | Intervals |
 |---|---|---|
-| Vietnamese stocks (VCI / Vietstock / VNDirect / VPS) | `VCB`, `FPT`, `VNINDEX` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
+| Vietnamese stocks (Python API: VPS / VNDirect / DNSE; optional VCI historical 1m fallback) | `VCB`, `FPT`, `VNINDEX` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | US / international stocks (Yahoo) | `AAPL`, `GOOGL`, `GC=F` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | Cryptocurrency (Binance) | `BTCUSDT`, `ETHUSDT` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
 | SJC gold | `SJC-GOLD` | `1D` |
@@ -75,7 +75,7 @@ df = client.get_ohlcv("VCB", interval="1D", limit=5, ma=False)
 ```
 
 When enabled, the SDK:
-- Fetches requested ranges and SMA/EMA values from `https://api.aipriceaction.com`
+- Fetches requested ranges and SMA/EMA values from `https://api.aipriceaction.com` by default. The last recorded production baseline still showed the legacy Rust API; use `live_url="http://localhost:8899"` to target the local Python candidate.
 - Uses server aggregation for API data
 - Falls back to a complete S3 series for each ticker whose API is unreachable or empty
 - Reports HTTP 503 history-consistency failures instead of hiding them with stale archive data

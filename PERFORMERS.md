@@ -336,4 +336,4 @@ aipa performers --source crypto --sort-by volume
 | `aipriceaction-terminal/src/aipriceaction_terminal/cli_commands.py` | CLI handler — `cmd_performers()` |
 | `aipriceaction-terminal/src/aipriceaction_terminal/agents/tools.py` | AI agent tool — `create_performers_tool()` |
 | `aipriceaction-terminal/src/aipriceaction_terminal/system.py` | MA score explanation strings (EN/VN) |
-| `src/server/analysis/performers.rs` | Rust server-side performers endpoint |
+| `aipriceaction-api/src/aipriceaction_api/app.py` | Python `GET /analysis/top-performers` route |

@@ -111,7 +111,7 @@ def test_batch_verification_cleans_temporary_index_on_success_and_http_failure(
 
     monkeypatch.setattr(verifier, "verify_http", http)
     output = tmp_path / "verification"
-    args = SimpleNamespace(activation=activation, output=output, base_url="http://127.0.0.1:3001")
+    args = SimpleNamespace(activation=activation, output=output, base_url="http://127.0.0.1:8899")
     if failure:
         with pytest.raises(DataError, match="HTTP mismatch"):
             verifier.run(args)

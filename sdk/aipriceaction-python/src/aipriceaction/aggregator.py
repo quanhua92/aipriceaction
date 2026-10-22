@@ -1,4 +1,4 @@
-"""Client-side OHLCV aggregation ported from aipriceaction/src/services/aggregator.rs.
+"""Client-side OHLCV aggregation ported from legacy/rust/aipriceaction/src/services/aggregator.rs.
 
 Supports aggregating base intervals into these higher timeframes:
   1m  -> 5m, 15m, 30m  (minute alignment within hour)

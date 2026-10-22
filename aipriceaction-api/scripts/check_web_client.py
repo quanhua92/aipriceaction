@@ -222,7 +222,7 @@ def check(api_url, symbol, report, market="vn", intervals=None, minimum_dates=No
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--api-url", default="http://127.0.0.1:3001")
+    parser.add_argument("--api-url", default="http://127.0.0.1:8899")
     parser.add_argument("--symbol", default="FPT")
     parser.add_argument("--market", choices=("vn", "crypto", "global"), default="vn")
     parser.add_argument("--interval", action="append", choices=("15m", "1h", "4h", "1W", "1M"))

@@ -137,7 +137,7 @@ async def run(args):
     def date_string(stamp):
         return datetime.fromtimestamp(stamp, UTC).strftime("%Y-%m-%d")
 
-    async with httpx.AsyncClient(base_url="http://127.0.0.1:3001", timeout=60) as client:
+    async with httpx.AsyncClient(base_url="http://127.0.0.1:8899", timeout=60) as client:
         for item in report["symbols"]:
             symbol = item["symbol"]
             golden = Repository(root / (symbol + "-golden.sqlite3"))
