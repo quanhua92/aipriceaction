@@ -42,9 +42,12 @@ Compose passes `.env` values to the API and worker. It overrides filesystem
 paths with container paths under `/data` and uses the RustFS service address
 when `S3_ENDPOINT` is not set.
 
-These are local development defaults. `.env.example` uses development
-credentials and a local bucket. Do not copy it over a production `.env`.
-Production setup and cutover are covered in the [migration runbook](MIGRATION.md).
+These are local development defaults. Before deploying, replace the values in
+the top deployment section of `.env` with the production secret, S3 endpoint,
+bucket, and write credentials. The remaining settings can stay at their
+defaults unless the deployment needs an override. This Compose file is still
+the local setup; see the [migration runbook](MIGRATION.md) for production
+cutover steps.
 
 The SQLite database is stored under `data/` by default. Set `AIPA_DATA_DIR` to
 use another host directory. `docker compose down` keeps the database and RustFS
