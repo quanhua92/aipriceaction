@@ -1027,20 +1027,25 @@ class Worker:
             for priority, entry in enumerate(self.configuration)
         }
         interval_priority = {"1m": 0, "1h": 1, "1D": 2}
+
         def live_priority(item):
+            entry, interval = item[1], item[2]
+            bitcoin_minute = (
+                entry["source"] == "crypto"
+                and entry["symbol"] == "BTCUSDT"
+                and interval == "1m"
+            )
             return (
+                0 if bitcoin_minute else 1,
                 item[0],
-                interval_priority[item[2]],
-                configured[(item[1]["source"], item[1]["symbol"])],
+                interval_priority[interval],
+                configured[(entry["source"], entry["symbol"])],
             )
 
         scheduled = sorted((item for item in due if item[0] > 0), key=live_priority)
         never = sorted(
             (item for item in due if item[0] == 0),
-            key=lambda item: (
-                interval_priority[item[2]],
-                configured[(item[1]["source"], item[1]["symbol"])],
-            ),
+            key=live_priority,
         )
         capacity = self.settings.worker_concurrency
         if scheduled and never and capacity == 1:

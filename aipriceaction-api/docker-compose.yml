@@ -74,7 +74,7 @@ services:
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_ACCESS_KEY: ${AWS_ACCESS_KEY_ID:-aipa-local}
       RUSTFS_SECRET_KEY: ${AWS_SECRET_ACCESS_KEY:-aipa-local-development-only}
-      RUSTFS_OBS_LOGGER_LEVEL: info
+      RUSTFS_OBS_LOGGER_LEVEL: warn
       RUSTFS_OBS_LOG_DIRECTORY: /logs
     volumes:
       - rustfs_data:/data
