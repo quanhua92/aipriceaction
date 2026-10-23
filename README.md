@@ -1,78 +1,63 @@
 # AIPriceAction
 
-AIPriceAction is a market-data service and a set of clients for Vietnamese
-stocks, crypto, and global assets. This repository contains the supported
-Python API, its ingestion and storage services, a terminal client, a Python SDK,
-and analysis workflows. The chart website source is maintained in a separate
-`aipriceaction-web` repository.
+AIPriceAction provides market data and analysis for Vietnamese stocks, crypto,
+global markets, and SJC gold. This repository contains the Python API, its data
+worker, the terminal app, a Python SDK, and agent skills. The chart website is
+maintained in a separate repository.
 
-## Choose a starting point
+## Start here
 
-- **Run the API and data worker locally:** follow [the API quickstart](aipriceaction-api/README.md#start-locally).
-- **Run the chart website locally:** first start the API, then follow [the web setup](aipriceaction-api/README.md#run-the-chart-website).
-- **Fetch data or analyze tickers from a terminal:** see [AIPA Terminal](aipriceaction-terminal/README.md).
-- **Use the Python client in your own code:** see the [Python SDK](sdk/aipriceaction-python/README.md).
-- **Understand the system before changing it:** read [the data flow](DATA_FLOW.md), [data sources](docs/DATA_SOURCES.md), then the [API contract](aipriceaction-api/CONTRACT.md).
+- Run the API and worker: [API quick start](aipriceaction-api/README.md)
+- Run the chart website locally: [web setup](aipriceaction-api/README.md#run-the-chart-website)
+- Use the terminal app: [AIPA Terminal](aipriceaction-terminal/README.md)
+- Use the Python client: [Python SDK](sdk/aipriceaction-python/README.md)
+- Review the API routes: [API contract](aipriceaction-api/CONTRACT.md)
+- Understand storage and providers: [data flow](DATA_FLOW.md) and [data sources](docs/DATA_SOURCES.md)
 
-## Current implementation
-
-The supported API implementation is the Python service in
-[`aipriceaction-api/`](aipriceaction-api/README.md). The Rust source is retained
-under [`legacy/rust/`](legacy/rust/README.md) for reference; the Rust API is
-deprecated. See the
-[migration runbook](aipriceaction-api/MIGRATION.md) for deployment steps.
-
-RustFS is still an active part of the Python stack: it stores archived Parquet
-history through an S3-compatible interface. RustFS is separate from the retired
-Rust API.
-
-## How the pieces fit
+## How the system works
 
 ```mermaid
 flowchart LR
-  P[Market data providers] --> W[Python ingestion worker]
-  W --> S[(SQLite recent data)]
-  W --> A[(RustFS Parquet archive)]
-  S --> API[FastAPI service]
-  A --> API
-  API --> C[Chart website]
-  API --> SDK[Python SDK / CLI]
+  Providers --> Worker
+  Worker --> SQLite[SQLite recent data]
+  Worker --> Archive[S3-compatible Parquet archive]
+  SQLite --> API[Python API]
+  Archive --> API
+  API --> Web[Chart website]
+  API --> Clients[SDK and terminal app]
 ```
 
-Compose runs the API, an ingestion worker, an initializer, and RustFS. The
-initializer downloads ticker catalog metadata; it does **not** import old Rust
-PostgreSQL price history. The worker fetches price history from the configured
-providers, so it needs outbound network access. A healthy API process does not
-mean all tickers have finished loading or have fresh candles.
+The worker fetches and validates market data. The API serves recent SQLite
+data and older verified archive data. Local Compose runs RustFS as the S3
+store. A healthy API does not mean every ticker has finished loading.
 
-## Repository map
-
-| Path | What it contains |
-| --- | --- |
-| `aipriceaction-api/` | Supported FastAPI service, shared history loader, ingestion worker, storage, Docker Compose, scripts, and API tests |
-| `aipriceaction-terminal/` | `aipa` command-line tool and terminal UI |
-| `sdk/aipriceaction-python/` | Installable Python SDK and analysis helpers |
-| `skills/` | Agent workflows for fetching and analyzing market data |
-| `docs/`, `DATA_FLOW.md`, `FEATURES.md` | Current architecture, data policies, and feature overview |
-| `legacy/` | Retired Rust API and superseded documentation; not the current runtime |
-
-`AGENTS.md` describes market-analysis behavior for AI agents; it is not the
-repository's software build guide. Use the API and client READMEs for setup.
+The Python API is the supported backend. The retired Rust API is kept under
+[`legacy/rust/`](legacy/rust/README.md) for reference. RustFS is still used by
+the Python stack as an object store; it is a separate service.
 
 ## Local setup
 
-The API uses host port `8899` and is reachable from the LAN when the host
-firewall allows it. RustFS ports `9100` and `9101` bind to loopback by default.
-The chart website runs on port `5173` when started with the local launcher. For
-exact prerequisites, data locations, startup checks, and cleanup commands,
-follow the [API quickstart](aipriceaction-api/README.md).
+From `aipriceaction-api/`, copy `.env.example` to `.env` only for a new local
+setup. Set a non-empty `REFRESH_SECRET`, then run:
 
-When you copy `.env.example`, Vietnamese provider ingestion needs either
-`HTTP_PROXIES` or `ALLOW_DIRECT=true` in the local API `.env`. First startup also
-needs internet access to refresh catalog metadata and fetch provider data.
+```sh
+docker compose up -d --build
+curl --fail http://localhost:8899/health
+```
 
-## Checks and performance evidence
+This local setup uses its RustFS container and local development settings. Do
+not use `.env.example` as a production configuration. See the [API guide](aipriceaction-api/README.md)
+for ports, data paths, logs, and web setup.
 
-API tests and lint commands are listed in the [API guide](aipriceaction-api/README.md#development-checks).
-The latest local 19-request home-page benchmark, including its scope and
-reproduction command, is in [validation evidence](aipriceaction-api/VALIDATION.md).
+## Repository map
+
+| Path | Purpose |
+| --- | --- |
+| `aipriceaction-api/` | Python API, worker, storage, Compose setup, and tests |
+| `aipriceaction-terminal/` | `aipa` command-line and terminal interface |
+| `sdk/aipriceaction-python/` | Installable Python SDK |
+| `skills/` | Agent workflows for market data and analysis |
+| `legacy/` | Retired Rust backend and superseded documentation |
+
+Use [API validation notes](aipriceaction-api/VALIDATION.md) for recorded local
+measurements. They are not production service guarantees.

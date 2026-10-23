@@ -1,84 +1,61 @@
-# Production migration: Rust API to Python API
+# Production migration runbook
 
-**Status:** not cut over in the last recorded production baseline (2026-10-20).
-The Rust API was still serving production, and its reported ticker data was
-stale/empty. Treat those as dated observations; verify live production before
-scheduling a change. The Rust implementation is deprecated and preserved under
-[`../legacy/rust/`](../legacy/rust/README.md).
+This guide covers a move from the retired Rust API to the Python API. Verify
+the live production state before choosing a cutover date.
 
-The local Compose configuration uses API port `8899`; confirm `/health` before using that instance. The
-main website is a separate Vite app; local development uses a temporary copy
-served on `5173` and a proxy to Python. No sibling web source is changed here.
+## Before deployment
 
-## Choose the data path
+The repository's Docker Compose file is for local development. It starts a
+local RustFS service and uses local defaults. It is not a production
+configuration. Do not copy `.env.example` over a production `.env`.
 
-**Start empty** when copying local data cannot be rehearsed cleanly or the local
-catalog/history is not accepted as production data. Initialize the production
-SQLite database and object archive, load the approved ticker catalog, start the
-all-source worker, and let it ingest. This is the simplest cutover but the
-service may need time to build history before longer lookbacks and analysis are
-complete.
+Prepare a production deployment that uses the existing data directory and the
+approved writable S3-compatible endpoint, bucket, credentials, and prefix.
+Keep the current Parquet prefix until its objects and manifests have been
+copied and verified under `parquet/`. Public CSV files stay at the bucket root
+under `ohlcv/`; Parquet is stored separately under `parquet/`.
 
-**Transfer local state** only when it materially reduces warm-up time and the
-exact local database/archive is verified. Move the SQLite database and its
-matching archive prefix together. Do not copy SQLite alone when its archive
-index refers to Parquet objects. Preserve operational receipts, manifests,
-checksums, and the ticker identity ordering needed by merged Yahoo/SJC queries.
+Choose one data path:
 
-For a transfer rehearsal, stop the local worker and API before making the
-operational before-image. Run SQLite integrity checks; copy archive objects and
-manifests to an isolated destination prefix; verify checksums and restore the
-index; then test reads before switching traffic. Keep one verified rollback
-before-image. Do not create extra full database copies for repeated checks, and
-clean temporary rehearsal copies when finished. Follow root `AGENTS.md` for
-storage lifecycle requirements.
+- **Start empty:** initialize production storage, load the approved ticker
+  catalog, and let the worker build history. Longer lookbacks may be incomplete
+  until ingestion catches up.
+- **Transfer local data:** move SQLite and its matching Parquet objects and
+  manifests together. Verify checksums and history reads before cutover. Do not
+  copy SQLite alone when it points to archive objects.
 
-## Cutover sequence
+Keep one verified rollback copy. Use temporary directories for rehearsal and
+restore copies, and remove them when checks finish. Follow the storage rules in
+root [`AGENTS.md`](../AGENTS.md).
 
-1. **Freeze the release.** Record the Python commit/image tag, Compose config,
-   SQLite schema version, object-store endpoint/bucket/prefix, catalog snapshot,
-   and configured provider order. Do not change the old Rust deployment yet.
-2. **Prepare production config.** Set `REFRESH_SECRET`, optional `SYNC_TOKEN`,
-   exact web CORS origins, S3 credentials/bucket/prefix, data mount, provider
-   access/proxies, retention, and API port. Keep RustFS for local testing; use
-   the approved production S3-compatible store in production.
-3. **Select empty start or data transfer** using the rules above. For an empty
-   start, verify the catalog source and first worker cycle. For transfer, verify
-   SQLite, each required series, matching archives/manifests, and restore-index.
-4. **Start Python side by side.** Start the API and all-source worker on an
-   isolated port/origin. Confirm worker restart/resume behavior and that VN,
-   crypto, Yahoo, and SJC receive fresh rows. Do not share the old Redis cache
-   unless that topology is intentionally configured and validated.
-5. **Run acceptance through the real web client.** Check the home-page 19-call
-   matrix, charts, indicators, all modes, `group`/`name`, RRG, volume profile,
-   Notes uploads/reads/deletes, SDK/CLI reads, health, and auth rejection/success.
-   Confirm freshness by market and interval; compare selected OHLCV against
-   verified source evidence. A fast health response alone is insufficient.
-6. **Switch ingress.** Route the production API origin to Python. Keep the old
-   Rust service available for rollback until the agreed observation period ends.
-   Watch errors, latency, ingestion, and data freshness.
-7. **Retire Rust.** After acceptance, stop the old Rust service, archive its
-   deployment configuration, revoke unused credentials, and retain the
-   operational rollback snapshot. The old GitHub image publisher is disabled
-   and archived under `legacy/rust/workflows/`.
+## Cutover steps
+
+1. Record the Python commit or image, Compose configuration, SQLite schema,
+   S3 endpoint/bucket/prefix, catalog snapshot, and provider order.
+2. Set production secrets, CORS origins, provider access, storage settings,
+   retention, and data mounts. Keep existing production `.env` values unless
+   each change is intentional.
+3. Initialize an empty store or rehearse the selected data transfer. Check
+   SQLite integrity, archive checksums, manifests, and representative reads.
+4. Start the Python API and worker beside the current service on an isolated
+   port. Confirm fresh rows for VN, crypto, Yahoo, and SJC after a restart.
+5. Test the real web client, all supported routes and query options, SDK/CLI
+   reads, Notes flows, authentication, and failure responses. Check data
+   freshness by market and interval; `/health` alone is not enough.
+6. Switch ingress to Python only after the tests pass. Watch errors, latency,
+   ingestion, and data freshness during the observation period.
+7. Retire the old service only after acceptance. Keep the verified rollback
+   copy until the observation period ends.
 
 ## Rollback
 
-Before cutover, verify a rollback target directly: check its health and confirm
-fresh, representative ticker data for the required markets, intervals, and
-dates. The last recorded Rust production baseline was stale/empty, so it is not
-a rollback target unless it has since been repaired and passes these checks.
+Use the old service only if it passes live health and data-freshness checks. If
+it does not, route traffic to the agreed recovery or maintenance path instead.
+Keep Python's database, archives, and receipts available for diagnosis. Do not
+merge Python data into the old database while the authoritative store is
+unclear. Record the affected versions and time window.
 
-If Python fails acceptance or freshness checks, route back to Rust only when
-that live validation passed. Otherwise, route to the agreed maintenance or
-known-good recovery path; do not send users to a stale Rust service. Preserve
-Python SQLite, object archives, and receipts for diagnosis, and do not merge
-them into the Rust database during rollback. Record the trigger, time window,
-and exact image revisions. Keep writes paused or isolated while the authoritative
-backend is unclear.
+## Remaining checks
 
-## Open gates
-
-See [`TODO.md`](TODO.md) and [`VALIDATION.md`](VALIDATION.md) for current local
-measurements and remaining checks. The 2026-10-21 local homepage benchmark does
-not establish production readiness or production data parity.
+See [`TODO.md`](TODO.md) for open gates and [`VALIDATION.md`](VALIDATION.md) for
+local test evidence. Local measurements do not prove production readiness.

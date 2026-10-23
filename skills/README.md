@@ -1,125 +1,27 @@
-# AIPriceAction Skills for Claude Code
+# Install AIPriceAction skills
 
-AI agent skills for financial market analysis using the [aipa CLI](https://aipriceaction.com). Compatible with Claude Code, Gemini CLI, and Codex.
+Install the skills with:
 
-## Installation
-
-### Option A: npx skills (recommended)
-
-```bash
+```sh
 npx skills add quanhua92/aipriceaction
 ```
 
-This will prompt you to select skills and target agents (Claude Code, Gemini CLI, Codex, Cursor, etc.), then install them via symlink.
+Choose one or more skills and the AI agent that should use them. Restart the
+agent after installation.
 
-### Option B: Clone and copy
+| Skill | Purpose |
+| --- | --- |
+| `aipa-data` | Fetch market data and calculate data-based metrics |
+| `aipa-analyze` | Analyze tickers and compare market behavior |
+| `aipa-fundamentals` | Review company profiles and financial ratios |
+| `aipa-research` | Research a market or sector using multiple workers |
 
-```bash
-git clone --depth 1 https://github.com/quanhua92/aipriceaction.git /tmp/aipriceaction
+For a no-install setup, copy the repository's [`AGENTS.md`](../AGENTS.md) into
+your project. It describes how to use the `aipa` CLI and validate market data.
 
-# Project-level
-cp -r /tmp/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
-cp -r /tmp/aipriceaction/skills/aipa-data .claude/skills/aipa-data
-cp -r /tmp/aipriceaction/skills/aipa-research .claude/skills/aipa-research
-cp -r /tmp/aipriceaction/skills/aipa-fundamentals .claude/skills/aipa-fundamentals
+Python 3.13+ is required by the terminal CLI. Data commands do not require an
+LLM key. Direct LLM analysis and the full research pipeline require an
+OpenAI-compatible API key.
 
-# Or personal (all projects)
-cp -r /tmp/aipriceaction/skills/aipa-analyze ~/.claude/skills/aipa-analyze
-cp -r /tmp/aipriceaction/skills/aipa-data ~/.claude/skills/aipa-data
-cp -r /tmp/aipriceaction/skills/aipa-research ~/.claude/skills/aipa-research
-cp -r /tmp/aipriceaction/skills/aipa-fundamentals ~/.claude/skills/aipa-fundamentals
-
-rm -rf /tmp/aipriceaction
-```
-
-### Option C: Manual copy
-
-If you already have the repo cloned, copy the skill folders:
-
-```bash
-# Project-level (from your project root)
-cp -r /path/to/aipriceaction/skills/aipa-analyze .claude/skills/aipa-analyze
-cp -r /path/to/aipriceaction/skills/aipa-data .claude/skills/aipa-data
-cp -r /path/to/aipriceaction/skills/aipa-research .claude/skills/aipa-research
-cp -r /path/to/aipriceaction/skills/aipa-fundamentals .claude/skills/aipa-fundamentals
-git add .claude/skills/
-git commit -m "add aipa CLI skills for financial analysis"
-```
-
-Restart Claude Code after installing. Verify by asking "what skills are available?"
-
-### Option D: No-install (AGENTS.md only)
-
-Download [AGENTS.md](../AGENTS.md) and drop it in your project root. No skills, no setup — any AI agent can use it.
-
-For Claude Code, add `@import "AGENTS.md"` to your `CLAUDE.md`. Gemini CLI auto-detects it.
-
-## Available Skills
-
-| Skill | Description |
-|---|---|
-| **aipa-analyze** | AI-powered stock/crypto analysis — single or multi-ticker analysis, technical analysis, trading insights |
-| **aipa-data** | Raw OHLCV price data fetch — candle data, moving averages, historical prices, no AI needed |
-| **aipa-fundamentals** | Fundamental analysis — financial ratios (PE, ROE, NPL, CAR), company profiles, multi-criteria screening and ranking |
-| **aipa-research** | Multi-agent deep research — sector-wide investigation, comprehensive market reports with supervisor/worker/reviewer pipeline |
-
-## Example Prompts
-
-### Data Fetch (aipa-data)
-
-- "Get price data for VCB"
-- "Show me the last 50 daily candles for BTCUSDT"
-- "OHLCV data for VNINDEX with moving averages"
-- "Get hourly data for ETHUSDT, last 100 bars"
-- "Historical prices for FPT from January to May 2025"
-- "Raw candle data for SOL, no moving averages"
-- "Get me AAPL and NVDA price data"
-
-### Analysis (aipa-analyze)
-
-- "Analyze VCB stock"
-- "Compare FPT, VNM, VIC, VCB with MA momentum analysis"
-- "What's the price action for BTCUSDT on the 4h chart?"
-- "Wyckoff analysis for HPG"
-- "Which bank stock has the strongest trend? Analyze VCB, TCB, MBB, CTG"
-- "Detect any extreme moves in VNM, HPG, FPT and research the news"
-
-### Deep Research (aipa-research)
-
-- "Deep research on the Vietnamese stock market"
-- "Research the banking sector in detail"
-- "Comprehensive analysis of real estate stocks"
-- "Deep dive into the current market rotation patterns"
-- "Research which sectors are leading and lagging right now"
-
-### Fundamentals (aipa-fundamentals)
-
-- "What is VCB's PE ratio?"
-- "Compare bank fundamentals: VCB, TCB, MBB, CTG"
-- "Rank VN30 stocks by ROE"
-- "Screen for cheap banks with NPL below 2%"
-- "Company profile for FPT"
-
-## Prerequisites
-
-- Python 3.10+
-- `OPENAI_API_KEY` environment variable set (or configured via `aipa setup`)
-
-Install the CLI:
-
-```bash
-# Preferred: uvx (always up-to-date, no install needed)
-uvx aipa-cli analyze VCB
-
-# Fallback: pip (if uv is not available)
-pip install aipa-cli
-aipa analyze VCB
-
-# Last fallback: system pip (if pip fails due to PEP 668)
-python3 -m pip install aipa-cli --break-system-packages
-aipa analyze VCB
-```
-
-## More Information
-
-Developed by AIPriceAction. Full documentation and data at [https://aipriceaction.com](https://aipriceaction.com).
+See the [terminal guide](../aipriceaction-terminal/README.md) for commands and
+the [market-data guide](aipa-data/SKILL.md) for data examples.

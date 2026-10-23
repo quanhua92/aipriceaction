@@ -1,537 +1,110 @@
-# aipriceaction
+# AIPriceAction Python SDK
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
-
-Python SDK for [AIPriceAction](https://aipriceaction.com/) — OHLCV data access and AI context builder for multi-market investment analysis. By default, it reads coherent ranges from the live API and falls back per ticker to a complete public S3 archive series when the API is unavailable or empty. No market-data API key is required.
+The `aipriceaction` package reads OHLCV data, builds analysis context, and
+provides market-ranking helpers. It supports Vietnamese stocks, global assets,
+crypto, and SJC gold. Raw data access does not need an API key.
 
 ## Install
 
-```bash
+```sh
 pip install aipriceaction
 ```
 
-## Data Sources
+Python 3.10 or newer is required.
 
-The SDK auto-detects the market from ticker metadata. `use_live=True` (the default) requests data from `live_url`; an individual ticker falls back to its complete S3 archive series when the API is unreachable or empty. `use_live=False` selects archive-only reads.
-
-| Source | Examples | Intervals |
-|---|---|---|
-| Vietnamese stocks (Python API: VPS / VNDirect / DNSE; optional VCI historical 1m fallback) | `VCB`, `FPT`, `VNINDEX` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
-| US / international stocks (Yahoo) | `AAPL`, `GOOGL`, `GC=F` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
-| Cryptocurrency (Binance) | `BTCUSDT`, `ETHUSDT` | `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` |
-| SJC gold | `SJC-GOLD` | `1D` |
-
-## Quick Start
+## Read market data
 
 ```python
 from aipriceaction import AIPriceAction
 
 client = AIPriceAction()
 
-# Ticker metadata
-tickers = client.get_tickers()            # all tickers
-tickers = client.get_tickers(source="vn") # filter by source
-
-# OHLCV data as DataFrame
-df = client.get_ohlcv("VCB", interval="1D")                         # VN stock
-df = client.get_ohlcv("AAPL", interval="1D")                        # US stock
-df = client.get_ohlcv("BTCUSDT", interval="1D")                     # crypto
-df = client.get_ohlcv(tickers=["VCB", "FPT", "BTCUSDT"], interval="1D")  # mixed
-
-# Date range, limit, MA indicators
-df = client.get_ohlcv("VCB", start_date="2025-01-01", end_date="2025-04-30", ma=True)
-df = client.get_ohlcv("VCB", interval="1D", limit=100, ema=True)    # EMA instead of SMA
-```
-
-Override the S3 endpoint if self-hosting:
-
-```python
-client = AIPriceAction(base_url="https://your-s3-endpoint/archive")
-```
-
-Data is cached to disk by default (temp dir). Set `cache_dir` for persistent caching:
-
-```python
-client = AIPriceAction(cache_dir="./cache")
-```
-
-### Timezone
-
-All OHLCV data is stored in UTC+0. By default, the SDK converts timestamps to UTC+7 (ICT, Vietnam timezone) for display. Pass `utc_offset=0` to keep raw UTC, or any integer hour offset:
-
-```python
-client = AIPriceAction(utc_offset=0)       # keep raw UTC
-client = AIPriceAction(utc_offset=9)       # UTC+9 (JST/KST)
-client = AIPriceAction(utc_offset=-5)      # UTC-5 (EST)
-```
-
-## Live Data
-
-By default (`use_live=True`), the SDK reads complete candle ranges and warmed indicators from the REST API. Metadata and fundamental files retain their existing S3 paths:
-
-```python
-client = AIPriceAction(use_live=True)
-df = client.get_ohlcv("VCB", interval="1D", limit=5, ma=False)
-```
-
-When enabled, the SDK:
-- Fetches requested ranges and SMA/EMA values from `https://api.aipriceaction.com` by default. The last recorded production baseline still showed the legacy Rust API; use `live_url="http://localhost:8899"` to target the local Python candidate.
-- Uses server aggregation for API data
-- Falls back to a complete S3 series for each ticker whose API is unreachable or empty
-- Reports HTTP 503 history-consistency failures instead of hiding them with stale archive data
-
-API and archive candles are never spliced within one ticker. Inspect `df.attrs["data_source"]` for `api`, `archive`, `archive_fallback`, or `api+archive_fallback`. Fallback may be stale.
-
-Use `AIPriceAction(use_live=False)` for archive-only reads. Native intervals (`1D`, `1h`, `1m`) retain their CSV paths; archive aggregations and indicators are computed client-side. Existing timezone, explicit date-range, and per-ticker limit behavior is preserved.
-
-### Direct live data access
-
-Use `fetch_live_data()` to get the raw live API response (all tickers, latest bar) without S3 — useful for market snapshots:
-
-```python
-data = client.fetch_live_data("1D")  # {"VCB": [{"time": ..., "open": ..., ...}], ...}
-```
-
-Returns a dict mapping ticker symbol to a list of candle dicts. Cached in memory for 120 seconds.
-
-Point to a self-hosted instance with `live_url`:
-
-```python
-client = AIPriceAction(
-    base_url="https://your-s3-endpoint/archive",
-    use_live=True,
-    live_url="https://your-api-instance.com",
-)
-```
-
-## Analysis
-
-Local analysis modules that compute directly on fetched data — no backend API calls required.
-
-### Performers
-
-Rank top/worst performers from live daily data by any metric (price change, volume, MA scores, etc.):
-
-```python
-from aipriceaction import AIPriceAction, build_performers
-
-client = AIPriceAction()
-
-# Fetch live 1D data with MA indicators
-live_data = client.fetch_live_data("1D", ma=True)
-
-# Build sector map from ticker metadata
 tickers = client.get_tickers(source="vn")
-sector_map = {t.ticker: t.group for t in tickers if t.group}
-
-# Get top 10 and worst 10 by price change
-top, worst = build_performers(live_data, sector_map, sort_by="close_changed", limit=10)
-
-for p in top:
-    print(f"{p.symbol}: {p.close_changed:+.2f}%  sector={p.sector}")
+df = client.get_ohlcv("VCB", interval="1D", limit=100)
+df = client.get_ohlcv("BTCUSDT", interval="1h", limit=48, ema=True)
+df = client.get_ohlcv(
+    tickers=["VCB", "FPT", "BTCUSDT"], interval="1D", limit=20
+)
 ```
 
-### Volume Profile
+`get_ohlcv()` returns a pandas DataFrame. Use `ticker` for one symbol or
+`tickers` for several. You can also pass `start_date`, `end_date`, `source`,
+`ma`, and `ema`.
 
-Compute volume-by-price histogram from 1-minute bars:
+## Choose how to read current data
+
+`AIPriceAction` defaults to `live_mode="range"`:
+
+- `range` requests the full requested range and indicators from the API. If the
+  API is unavailable or empty, it falls back to that ticker's S3 history. An API
+  history-consistency error is returned instead of being hidden by stale data.
+- `latest` reads history from public S3 and requests one latest candle per
+  ticker from the API. The terminal app uses this mode to avoid downloading the
+  full history on every request.
+- `use_live=False` reads from S3 only.
 
 ```python
-from aipriceaction import AIPriceAction, compute_volume_profile
-
-client = AIPriceAction()
-
-# Fetch 1m data for a specific date
-df = client.get_ohlcv("VCB", interval="1m", start_date="2026-05-09", end_date="2026-05-09")
-
-result = compute_volume_profile(df, "VCB", source="vn", bins=50)
-
-print(f"POC: {result.poc.price:.0f} ({result.poc.percentage:.1f}%)")
-print(f"Value Area: {result.value_area.low:.0f} - {result.value_area.high:.0f}")
-print(f"Mean: {result.statistics.mean_price:.0f}, StdDev: {result.statistics.std_deviation:.0f}")
-
-for level in result.profile:
-    print(f"  {level.price:>10.0f}  vol={level.volume:>10.0f}  {level.percentage:.1f}%  cum={level.cumulative_percentage:.1f}%")
+client = AIPriceAction(live_mode="latest")
+df = client.get_ohlcv("VCB", interval="1D", limit=100, ma=False)
 ```
 
-## AI Context Builder
+The public archive base URL defaults to `https://s3.aipriceaction.com`. Native
+daily and intraday CSV paths are under `ohlcv/{source}/{ticker}/`. Daily and
+hourly data may also use yearly files. The SDK reads those paths without S3
+credentials. Set `base_url` to use another public archive endpoint.
 
-Build structured context strings for LLM-powered investment analysis. Accepts the same `utc_offset` parameter as `AIPriceAction` (default 7 = UTC+7).
+Data is cached under `~/.aipriceaction/s3-cache` by default. Pass `cache_dir`
+to choose another location. Timestamps are displayed in Vietnam time (UTC+7)
+by default; pass `utc_offset=0` to keep UTC.
+
+## Fetch the latest API response directly
+
+Use `fetch_live_data()` when you need the latest API response without reading
+historical S3 data:
 
 ```python
-from aipriceaction import AIContextBuilder
-
-builder = AIContextBuilder(lang="en", utc_offset=7)  # default UTC+7
-
-# Single ticker (VNINDEX included as reference by default)
-context = builder.build(ticker="VCB", interval="1D")
-
-# Multi ticker
-context = builder.build(tickers=["VCB", "FPT", "TCB"], interval="1D")
-
-# All tickers for a source (uses live API when limit=1 for speed)
-context = builder.build(source="vn", interval="1D", limit=1, reference_ticker=None, include_system_prompt=False)
-
-# No data — system prompt + disclaimer only
-context = builder.build()
-
-# Omit VNINDEX reference
-context = builder.build(ticker="VCB", interval="1D", reference_ticker=None)
+data = client.fetch_live_data("1D", ma=True)
+# {"VCB": [{"time": ..., "open": ..., "high": ..., ...}], ...}
 ```
 
-### Browse Question Bank
+The response is cached in memory for 120 seconds. Set `live_url` when using a
+self-hosted API:
 
 ```python
-for q in builder.questions("single"):
-    print(f"{q['title']}: {q['snippet']}")
+client = AIPriceAction(live_url="http://localhost:8899")
 ```
 
-### Ask LLM
+## Build AI context
 
-Requires `OPENAI_API_KEY`. The context is built once and reused across `answer()` calls for KV cache efficiency.
-
-```python
-builder.build(ticker="VCB", interval="1D")
-
-response = builder.answer("What is the current trend?")
-follow_up = builder.answer("What is the support level?")  # faster, KV cache hit
-```
-
-### Configuration
-
-Set via environment variables or `.env` file:
-
-| Variable | Default | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | `""` | API key for LLM calls |
-| `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` | LLM API endpoint |
-| `OPENAI_MODEL` | `openai/gpt-oss-20b` | Default LLM model |
-| `AI_CONTEXT_LANG` | `en` | Context language (`en` or `vi`) |
-
-### OpenRouter Models
-
-Curated free-tier models available via `OpenRouter`:
-
-```python
-from aipriceaction.llm_models import OpenRouter
-
-for m in OpenRouter.FREE:
-    print(f"{m.id} — {m.label}")
-```
-
-## Examples
-
-### Build context
+`AIContextBuilder` formats market data for an LLM. Calling an LLM requires your
+own provider key; fetching the underlying data does not.
 
 ```python
 from aipriceaction import AIContextBuilder
 
 builder = AIContextBuilder(lang="en")
-
-# Single ticker — prints questions, then full context
-builder.build(ticker="VCB", interval="1D")
-print(builder._last_context)
+context = builder.build(ticker="VCB", interval="1D", limit=50)
 ```
 
-### Multi-ticker context
+## Analysis helpers
+
+The package also exports local calculation helpers:
 
 ```python
-builder.build(tickers=["VCB", "FPT", "TCB"], interval="1D")
-print(builder._last_context)
+from aipriceaction import build_performers, compute_volume_profile
+
+top, worst = build_performers(live_data, sector_map, sort_by="value", limit=10)
+profile = compute_volume_profile(candles, "VCB", source="vn", bins=50)
 ```
 
-### System prompt only (no market data)
+See the function docstrings for input fields and result types. The terminal
+guide has command examples: [AIPA Terminal](../../aipriceaction-terminal/README.md).
 
-```python
-context = builder.build()
-print(context)
+## Development
+
+From this directory:
+
+```sh
+uv sync --locked --group dev
+uv run pytest
 ```
-
-### Build context + call LLM
-
-Build once, ask multiple questions — the second call is faster due to LLM KV cache.
-
-```python
-from aipriceaction import AIContextBuilder
-
-builder = AIContextBuilder(lang="en")
-
-# Build context once
-builder.build(ticker="VCB", interval="1D")
-
-# First question (cold)
-response1 = builder.answer("What is the current trend?")
-
-# Follow-up (warm — same context prefix, KV cache hit)
-response2 = builder.answer("What is the support level?")
-```
-
-### Multi-timeframe analysis
-
-Switch timeframe between questions. Pass previous responses as `history` so the LLM can cross-reference timeframes.
-
-```python
-from aipriceaction import AIContextBuilder
-
-builder = AIContextBuilder(lang="en")
-
-# Daily context — big picture
-builder.build(ticker="VIC", interval="1D")
-daily_response = builder.answer("What is the weekly trend?")
-
-# Hourly context — intraday detail, with daily analysis as history
-builder.build(ticker="VIC", interval="1h")
-hourly_response = builder.answer(
-    "Confirm or reject the daily trend using intraday data.",
-    history=[daily_response],
-)
-```
-
-More examples in [examples/](examples/):
-
-| Example | Description |
-|---|---|
-| [single_ticker.py](examples/single_ticker.py) | Build context for one ticker |
-| [multi_ticker.py](examples/multi_ticker.py) | Build context for multiple tickers |
-| [multi_timeframe.py](examples/multi_timeframe.py) | Multi-timeframe: daily + hourly with history |
-| [reference_ticker.py](examples/reference_ticker.py) | Context with VNINDEX reference |
-| [llm_question.py](examples/llm_question.py) | Build context + call LLM |
-| [system_prompt_only.py](examples/system_prompt_only.py) | System prompt without ticker data |
-| [langchain_agent.py](examples/langchain_agent.py) | LangChain ReAct agent with AIContextBuilder and tool-calling |
-| [multi_agent.py](examples/multi_agent.py) | Multi-agent parallel sector research with LangGraph Send() |
-| [full_client_demo.py](examples/full_client_demo.py) | Full raw client feature tour — tickers, OHLCV, live data, performers, volume profile |
-
-## System Prompt
-
-`get_system_prompt()` builds the AIPriceAction system prompt from composable sections. Use the bool flags to customize which sections are included — useful when different agents in a multi-agent pipeline need different prompts.
-
-```python
-from aipriceaction.system import get_system_prompt
-
-# Full prompt — data-analyzing agents (workers)
-prompt = get_system_prompt("en")
-
-# Skip strict data policy — aggregator works with text, not raw data
-prompt = get_system_prompt("en", include_data_policy=False)
-
-# Format only — writer doesn't analyze or validate data
-prompt = get_system_prompt("en",
-    include_data_policy=False,
-    include_analysis_framework=False,
-)
-```
-
-### Parameters
-
-| Parameter | Default | Description |
-|---|---|---|
-| `lang` | — | Language: `"en"` or `"vn"` |
-| `ma_type` | `"ema"` | Moving average type (SDK default; aipa-cli defaults to SMA via setting): `"ema"` or `"sma"` |
-| `include_ma_score` | `True` | Include MA Score explanation section |
-| `include_disclaimer` | `True` | Include investment disclaimer section |
-| `include_data_policy` | `True` | Include strict data-usage rules (never hallucinate, ask user to paste data). Set `False` for agents working with text from other agents |
-| `include_analysis_framework` | `True` | Include VPA/Wyckoff analysis priorities. Set `False` for formatting/writer agents |
-
-### Prompt Sections
-
-The assembled prompt includes these sections (when enabled):
-
-| Section | Controlled by | Description |
-|---|---|---|
-| Identity | Always | Branding, language instruction, expertise areas |
-| Data Policy | `include_data_policy` | Rules for using only provided data, no hallucination |
-| Analysis Framework | `include_analysis_framework` | Chart context description, VPA/Wyckoff priorities |
-| Communication Style | Always | Output format, objectivity, disclaimers |
-| MA Score Explanation | `include_ma_score` | How MA Score is calculated and interpreted |
-| Investment Disclaimer | `include_disclaimer` | Legal disclaimer about investment risks |
-
-Use `get_system_prompt_with_ticker_info()` for single-ticker contexts that display ticker metadata in the analysis framework.
-
-## LangChain Agent
-
-Build a ReAct agent with VNINDEX context from `AIContextBuilder` and tool-calling to research tickers. Use `include_system_prompt=False` to get market data only (the system prompt goes in `system_prompt=` to avoid duplication), and tools use the same builder for consistent formatting.
-
-```python
-from langchain.agents import create_agent
-from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver
-
-from aipriceaction import AIPriceAction, AIContextBuilder
-from aipriceaction.settings import settings
-from aipriceaction.system import get_system_prompt
-
-LANG = settings.ai_context_lang
-_client = AIPriceAction()
-_builder = AIContextBuilder(lang=LANG)
-
-@tool
-def get_ohlcv_data(ticker: str, interval: str = "1D", limit: int = 30) -> str:
-    """Fetch OHLCV data for a ticker with MA indicators."""
-    try:
-        return _builder.build(ticker=ticker, interval=interval, limit=limit,
-                             reference_ticker=None, include_system_prompt=False)
-    except Exception as e:
-        return f"Error fetching {ticker}: {e}"
-
-@tool
-def get_ticker_list(source: str | None = None) -> str:
-    """List available ticker symbols and metadata."""
-    tickers = _client.get_tickers(source=source)
-    return "\n".join(f"{t.ticker} ({t.source})" for t in tickers)
-
-initial_context = _builder.build(ticker="VNINDEX", interval="1D",
-                                limit=10, include_system_prompt=False)
-
-llm = ChatOpenAI(api_key=settings.openai_api_key,
-                 base_url=settings.openai_base_url,
-                 model=settings.openai_model)
-
-AGENT_INSTRUCTIONS = """
-You have tools to fetch OHLCV data and list available tickers.
-Research workflow (MANDATORY):
-1. Call get_ohlcv_data for each ticker explicitly mentioned in the question.
-2. Call get_ticker_list to discover tickers in the same sectors.
-3. Call get_ohlcv_data for at least 2-3 additional tickers per sector.
-4. Provide per-ticker analysis, sector rotation observations, and ranking table.
-"""
-
-agent = create_agent(
-    llm,
-    [get_ticker_list, get_ohlcv_data],
-    checkpointer=MemorySaver(),
-    system_prompt=get_system_prompt(LANG) + "\n\n" + AGENT_INSTRUCTIONS,
-)
-
-for event in agent.stream(
-    {"messages": [{"role": "user",
-                   "content": f"{initial_context}\n\nResearch VIC, STB, SSI and related tickers."}]},
-    config={"configurable": {"thread_id": "demo"}},
-    stream_mode="updates",
-):
-    ...
-```
-
-See [examples/langchain_agent.py](examples/langchain_agent.py) for the full example.
-
-## Multi-Agent
-
-Build a multi-agent system with LangGraph `Send()` for parallel sector research.
-
-```
-START → fetch market snapshot → [supervisor] → Send() fan-out → [worker agents x N] → [aggregator] → [writer] → END
-```
-
-The supervisor receives a full market snapshot (latest bar for all VN tickers via the live API) and uses it to pick the most relevant sectors and tickers for each worker. Workers and the aggregator also receive the snapshot as context for cross-referencing. Each node runs a specialized role with a tailored system prompt via `get_system_prompt()` bool flags:
-
-```python
-from langchain.agents import create_agent
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
-from langgraph.graph import START, END, StateGraph, add_messages
-from langgraph.types import Send
-
-from aipriceaction import AIPriceAction, AIContextBuilder
-from aipriceaction.settings import settings
-from aipriceaction.system import get_system_prompt
-
-LANG = settings.ai_context_lang
-
-# Workers — full system prompt (data policy + analysis framework)
-# They fetch real data via tools and produce per-sector analysis.
-worker = create_agent(
-    llm,
-    [get_ticker_list, get_ohlcv_data],
-    system_prompt=get_system_prompt(LANG) + "\n\n" + worker_instructions,
-)
-
-# Aggregator — synthesize worker reports, skip strict data policy
-# since it works with text from workers, not raw market data.
-agg_sys = get_system_prompt(LANG, include_data_policy=False)
-llm.invoke([
-    SystemMessage(content=agg_sys + "\n\n" + aggregator_instructions),
-    HumanMessage(content=sector_reports),
-])
-
-# Writer — format only, skip data policy and analysis framework
-writer_sys = get_system_prompt(
-    LANG, include_data_policy=False, include_analysis_framework=False,
-)
-llm.invoke([
-    SystemMessage(content=writer_sys + "\n\n" + writer_instructions),
-    HumanMessage(content=analysis),
-])
-
-# Fan out to parallel workers via Send()
-graph.add_conditional_edges("supervisor", lambda state: [
-    Send("worker", {"messages": [...], "sector": st["sector"], ...})
-    for st in state["subtasks"]
-], ["worker"])
-```
-
-Key design principles:
-
-- **Workers** have tools (`get_ohlcv_data`, `get_ticker_list`) and the full system prompt. They fetch real data and produce per-sector analysis text.
-- **Aggregator** has no tools — it receives worker reports in a `HumanMessage` and synthesizes them into a unified analysis. `include_data_policy=False` because it works with text, not raw numbers.
-- **Writer** has no tools — it receives the aggregator's analysis in a `HumanMessage` and formats it. `include_data_policy=False, include_analysis_framework=False` because it only formats.
-- All prompts are language-aware (respect `LANG` setting from `AI_CONTEXT_LANG`).
-
-See [examples/multi_agent.py](examples/multi_agent.py) for the full example.
-
-### Persistent Checkpoint
-
-`PersistentCheckpointSaver` is a drop-in replacement for LangGraph's `MemorySaver` that persists checkpoint state to disk after each node. It supports callbacks to extract worker results into files, and session resume from interrupted runs.
-
-```python
-from pathlib import Path
-from aipriceaction.checkpoint import PersistentCheckpointSaver, PostPutCallback, load_session
-
-def extract_worker_results(channel_values: dict, session_dir: Path) -> None:
-    """Callback: extract per-sector analysis into .md files."""
-    for wr in channel_values.get("worker_results", []):
-        sector = wr.get("sector", "unknown")
-        analysis = wr.get("analysis", "")
-        safe_name = sector.replace(" ", "_")[:60]
-        (session_dir / f"worker_{safe_name}.md").write_text(
-            f"# Sector: {sector}\n\n{analysis}\n"
-        )
-    if channel_values.get("final_report"):
-        (session_dir / "final_report.md").write_text(channel_values["final_report"])
-
-checkpointer = PersistentCheckpointSaver(
-    base_dir=Path("/tmp") / "aipriceaction-checkpoints",
-    callbacks=[extract_worker_results],
-)
-
-graph = build_graph(checkpointer=checkpointer)
-result = graph.invoke(
-    {"messages": [...], "market_snapshot": snapshot},
-    config={"configurable": {"thread_id": checkpointer.session_id}},
-)
-```
-
-This creates a session folder per run:
-
-```
-/tmp/aipriceaction-checkpoints/<uuid7>/
-    state.pkl              # Full checkpoint state (exact restore)
-    latest.json            # Human-readable latest checkpoint
-    worker_Banking.md      # Per-sector analysis (via callback)
-    worker_Securities.md
-    final_report.md
-```
-
-Resume an interrupted run by passing the session ID:
-
-```bash
-uv run python examples/multi_agent.py <session_id>
-```
-
-Or restore programmatically:
-
-```python
-saver = load_session("/tmp/aipriceaction-checkpoints/<session_id>")
-```
-
-## License
-
-MIT

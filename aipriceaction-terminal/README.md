@@ -1,542 +1,86 @@
 # AIPA Terminal
 
-**Live site:** [aipriceaction.com](https://aipriceaction.com) | **GitHub:** [aipriceaction](https://github.com/quanhua92/aipriceaction) | **Frontend:** [aipriceaction-web](https://github.com/quanhua92/aipriceaction-web) | **Python SDK:** [`aipriceaction` on PyPI](https://pypi.org/project/aipriceaction/) | **AIPA Terminal:** [`aipa-cli` on PyPI](https://pypi.org/project/aipa-cli/)
-
-Textual-based terminal interface for AI-powered ticker analysis. Features streaming chat with thinking/reasoning display, autocomplete, slash commands, and workflow tabs. Data commands use the Python SDK: live API first, then complete public S3 archive fallback when needed.
+AIPA Terminal provides the `aipa` command-line tool and terminal interface for
+market data and analysis. It uses the Python SDK. Historical candles come from
+the public S3 archive; latest-data commands request only the newest candle from
+the API.
 
 ## Install
 
-```bash
-# Run directly (no install)
+Run without installing:
+
+```sh
 uvx aipa-cli ui
+```
 
-# Or install as a standalone tool
+Or install the command:
+
+```sh
 uv tool install aipa-cli
-
-# Use
 aipa ui
-aipa-cli ui
 ```
 
-## Requirements
+Python 3.13 or newer is required. Data commands and market snapshots do not
+need an AI key. Set `OPENAI_API_KEY` to run LLM-powered analysis. Set
+`OPENAI_BASE_URL` if you use another OpenAI-compatible provider.
 
-- Python 3.13+
-- An OpenAI-compatible API key (`OPENAI_API_KEY`) — only needed for AI analysis, not for data fetching
-- Optional: set `OPENAI_BASE_URL` for custom providers like OpenRouter
+## Common commands
 
-## Quick Start
+| Command | Use |
+| --- | --- |
+| `aipa get-ohlcv-data VCB --limit 10` | Read OHLCV candles and indicators |
+| `aipa live-data --top 10` | Show current high-value tickers |
+| `aipa ticker-list --source vn` | List available tickers |
+| `aipa performers --sort-by value` | Rank market performers |
+| `aipa volume-profile VCB` | Calculate volume by price |
+| `aipa analyze VCB` | Analyze a ticker with an LLM |
+| `aipa deep-research` | Show a market snapshot |
+| `aipa deep-research --run` | Run the full research workflow |
+| `aipa fundamentals rank VCB BID CTG --sort-by roe` | Compare financial fields |
+| `aipa config` | View or change local settings |
+| `aipa watchlist ls` | View saved watchlists |
+| `aipa resume` | List saved analysis sessions |
 
-```bash
-# Launch the TUI — first run auto-starts interactive setup
-aipa ui
+Add `--help` to any command to see its options. Examples:
 
-# Or run setup manually at any time
-aipa setup
-
-# AI analysis with default question template
-aipa analyze VCB
-
-# AI analysis with a custom question
-aipa analyze VCB --question "What is the support level and stop loss?"
-
-# Browse available question templates
-aipa analyze VCB --questions
-
-# Use a specific question template by index
-aipa analyze VCB 2 --question "What is the current trend of VCB?"
-
-# Dump raw context data without calling the LLM (no API key needed)
-aipa analyze VCB --context-only
-
-# Override language to English (default is your saved setting)
-aipa analyze VCB --lang en
-
-# Use hourly interval with SMA instead of EMA
-aipa analyze BTCUSDT --interval 1h --sma
-
-# Analyze multiple tickers at once
-aipa analyze VCB FPT VIC --interval 1D
-
-# Market snapshot only (default, fast, no API key needed)
-aipa deep-research
-
-# Market snapshot for crypto
-aipa deep-research --source crypto
-
-# Run the full multi-agent deep research pipeline (5-10 min)
-aipa deep-research --run
-
-# Full pipeline for global stocks
-aipa deep-research --source global --run
-
-# Full pipeline with a custom question and save report to file
-aipa deep-research --run "Which sectors are leading the market?" --output report.md
-
-# Resume a previous deep-research session from checkpoint
-aipa deep-research --run --resume <session-id>
-
-# Fetch raw OHLCV data as a table
-aipa get-ohlcv-data VCB --interval 1D --limit 10
-
-# Fetch multiple tickers at once
-aipa get-ohlcv-data VCB TCB MBB --limit 10
-
-# Fetch with date range and no moving averages
+```sh
 aipa get-ohlcv-data VCB --start-date 2026-04-01 --end-date 2026-04-30 --no-ma
-
-# Top tickers by trading value (latest candle)
-aipa live-data
-
-# Top 10 VN stocks by trading value
-aipa live-data --top 10
-
-# SJC gold data
-aipa live-data --source sjc
-
-# Crypto top 10
-aipa live-data --source crypto --top 10
-
-# Latest candle for specific tickers
-aipa live-data VCB TCB MBB
-
-# List available tickers
-aipa ticker-list
-
-# List tickers by source and group
-aipa ticker-list --source vn --group NGAN_HANG
-
-# Compact output (symbols only)
-aipa ticker-list --source crypto --compact
-
-# Top 10 VN performers by price change (default)
-aipa performers
-
-# Top 5 by volume
+aipa get-ohlcv-data VCB TCB MBB --limit 20
+aipa analyze VCB --question "Describe the current trend."
+aipa deep-research --source crypto
 aipa performers --sort-by volume --limit 5
-
-# Top 10 by trading value
-aipa performers --sort-by value --limit 10
-
-# Volume profile for VCB today
-aipa volume-profile VCB
-
-# Volume profile for BTCUSDT
-aipa volume-profile BTCUSDT --source crypto --bins 30
-
-# List saved chat sessions
-aipa resume
-
-# Open TUI with a resumed session
-aipa resume 0
 ```
 
-## CLI Commands
+Moving averages use the saved setting unless `--sma` or `--ema` is provided.
+Run `aipa config get use_sma` to check the current choice.
 
-### `aipa analyze`
+## Data sources
 
-AI-powered analysis for one or more tickers. Builds context from OHLCV data and sends it to the LLM with a question.
+| Market | Source | Example ticker |
+| --- | --- | --- |
+| Vietnam | VPS, VNDirect, DNSE | `VCB` |
+| Crypto | Binance | `BTCUSDT` |
+| Global markets | Yahoo Finance | `AAPL` |
+| SJC gold | SJC daily quotes | `SJC-GOLD` |
 
-```
-# Default: uses question template 0 with your saved language setting
-aipa analyze VCB
+The terminal reads historical CSV files from the public S3 layout. For current
+data, it requests one latest candle per ticker and merges it with history. See
+the [Python SDK guide](../sdk/aipriceaction-python/README.md) for details.
 
-# Custom question
-aipa analyze VCB --question "Is this a good time to buy?"
+## Settings and saved files
 
-# List all question templates (trading opportunity, news, Wyckoff, etc.)
-aipa analyze VCB --questions
+Run `aipa setup` on first use, or use `aipa config` to update settings later.
+Settings, watchlists, cached S3 files, and saved sessions live under
+`~/.aipriceaction/` by default.
 
-# Raw data dump only (no LLM call, no API key required)
-aipa analyze VCB --context-only
+## Development
 
-# Multi-ticker analysis
-aipa analyze VCB FPT MBB
+From this directory:
 
-# Hourly data with SMA indicators
-aipa analyze VCB --interval 1h --ma-type sma --limit 50
-
-# Force English output
-aipa analyze VCB --lang en
-```
-
-| Flag | Description |
-|---|---|
-| `--question TEXT` | Custom analysis question |
-| `--questions` | List available question templates and exit |
-| `--context-only` | Dump raw context without LLM (no API key needed) |
-| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
-| `--limit N` | Number of bars (default: 20) |
-| `--source` | Filter by source: `vn` or `crypto` |
-| `--start-date` / `--end-date` | Date range (e.g. `2026-04-01`) |
-| `--reference-ticker` | Override auto-detected reference ticker (auto: `VNINDEX` for VN stocks, `BTCUSDT` for crypto, `^GSPC` for global) |
-| `--lang` | Language: `en` or `vn` (default: saved setting) |
-| `--ma-type` | Moving average type: `ema` or `sma` (default: from settings) |
-
-### `aipa deep-research`
-
-Multi-agent deep research pipeline: supervisor decomposes into sector subtasks, parallel workers fetch data and analyze, aggregator synthesizes, and reviewer validates data integrity. By default, dumps a market snapshot only. Add `--run` to execute the full pipeline (takes 5-10 minutes). Use `--source` to target different markets — the supervisor, workers, and default question all adapt to the selected source.
-
-```
-# Default: VN market snapshot only (fast, no API key needed)
-aipa deep-research
-
-# Crypto market snapshot
-aipa deep-research --source crypto
-
-# Run the full multi-agent pipeline
-aipa deep-research --run
-
-# Full pipeline for global stocks
-aipa deep-research --source global --run
-
-# Full pipeline with custom research question
-aipa deep-research --run "Compare banking vs real estate sectors"
-
-# Save final report to file
-aipa deep-research --run --output ~/reports/market-analysis.md
-
-# Resume from a previous checkpoint session
-aipa deep-research --run --resume 019e0cbb-0466-fa9f-d68c-2da40d35a68f
-
-# Force Vietnamese output (full pipeline)
-aipa deep-research --run --lang vn
+```sh
+uv sync --locked --group dev
+uv run pytest
 ```
 
-| Flag | Description |
-|---|---|
-| `--run` | Run the full multi-agent pipeline (5-10 min). Default is market snapshot only. |
-| `--source` | Data source: `vn` (default), `crypto`, `global`, `sjc` |
-| `--resume ID` | Resume from a checkpoint session ID |
-| `--output FILE` | Save final report to file |
-| `--lang` | Language: `en` or `vn` (default: saved setting) |
-
-### `aipa get-ohlcv-data`
-
-Fetch raw OHLCV data as a table (no LLM involved, works without setup).
-
-```
-# Default: daily data with MA indicators
-aipa get-ohlcv-data VCB
-
-# Hourly data, last 10 bars
-aipa get-ohlcv-data VCB --interval 1h --limit 10
-
-# Date range, no moving averages
-aipa get-ohlcv-data VCB --start-date 2026-04-01 --end-date 2026-04-30 --no-ma
-
-# Crypto data
-aipa get-ohlcv-data BTCUSDT --interval 1D --limit 30
-```
-
-| Flag | Description |
-|---|---|
-| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
-| `--limit N` | Number of bars |
-| `--start-date` / `--end-date` | Date range |
-| `--source` | Filter by source: `vn` or `crypto` |
-| `--ma` / `--no-ma` | Include/exclude moving averages (default: included) |
-| `--sma` / `--ema` | Force SMA or EMA (overrides setting) |
-
-Note: Pass multiple space-separated ticker symbols (e.g. `VCB TCB MBB`) to fetch them in one call.
-
-### `aipa live-data`
-
-Fetch the latest candle for all tickers or specific tickers. No LLM involved, no API key needed. When no tickers are specified, returns top N tickers sorted by trading value (close × volume) descending.
-
-```
-# Top 50 by trading value (default)
-aipa live-data
-
-# Top 10
-aipa live-data --top 10
-
-# Hourly interval
-aipa live-data --interval 1h
-
-# Specific tickers
-aipa live-data VCB TCB MBB
-```
-
-| Flag | Description |
-|---|---|
-| `TICKERS...` | Optional ticker symbols (omit for top N) |
-| `--top N` | Number of top tickers to show (default: 50) |
-| `--interval` | Time interval: `1m`, `5m`, `15m`, `30m`, `1h`, `4h`, `1D`, `1W`, `2W` (default: `1D`) |
-| `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
-
-### `aipa ticker-list`
-
-List available ticker symbols with metadata (name, group, exchange, source). No LLM involved, no API key needed.
-
-```
-# All tickers
-aipa ticker-list
-
-# Filter by source
-aipa ticker-list --source vn
-
-# Filter by group (e.g. banking sector)
-aipa ticker-list --source vn --group NGAN_HANG
-
-# Compact: symbols only, comma-separated
-aipa ticker-list --source crypto --compact
-```
-
-| Flag | Description |
-|---|---|
-| `--source` | Filter by source: `vn`, `crypto`, `global`, `sjc` |
-| `--group` | Filter by group (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
-| `--compact` | Output symbols only, comma-separated |
-
-### `aipa performers`
-
-Rank top and worst performers by any metric. Fetches live daily data with MA indicators — no API key needed. Defaults to VN stocks.
-
-```
-# Top 10 VN stocks by price change (default)
-aipa performers
-
-# Top 5 by volume, ascending
-aipa performers --sort-by volume --direction asc --limit 5
-
-# Top 20 by MA50 score
-aipa performers --sort-by ma50_score --limit 20
-
-# Crypto performers
-aipa performers --source crypto --limit 5
-
-# Banking sector only
-aipa performers --group NGAN_HANG --sort-by value
-
-# Securities sector top gainers
-aipa performers --group CHUNG_KHOAN --sort-by close_changed --limit 5
-```
-
-| Flag | Description |
-|---|---|
-| `--sort-by` | Metric: `close_changed` (default), `volume`, `value`, `volume_changed`, `ma10_score`, `ma20_score`, `ma50_score`, `ma100_score`, `ma200_score`, `total_money_changed` |
-| `--direction` | `desc` (default) or `asc` |
-| `--limit N` | Entries per list (default: 10) |
-| `--min-volume N` | Min volume filter for VN tickers (default: 10000) |
-| `--source` | Data source: `vn` (default), `crypto`, `global`, `yahoo`, `sjc` |
-| `--group` | Filter by sector (e.g. `NGAN_HANG`, `CHUNG_KHOAN`, `BAT_DONG_SAN`) |
-
-### `aipa volume-profile`
-
-Volume-by-price histogram analysis from 1-minute data. Shows POC, value area, volume-weighted statistics, and a visual bar chart — no API key needed.
-
-```
-# Today's profile for VCB
-aipa volume-profile VCB
-
-# Specific date
-aipa volume-profile VCB --date 2026-05-09
-
-# Crypto with fewer bins
-aipa volume-profile BTCUSDT --source crypto --bins 30
-
-# Date range with custom value area
-aipa volume-profile FPT --start-date 2026-05-05 --end-date 2026-05-09 --value-area-pct 80
-```
-
-| Flag | Description |
-|---|---|
-| `TICKER` | Ticker symbol (required) |
-| `--date` | Single date (YYYY-MM-DD), defaults to today |
-| `--start-date` / `--end-date` | Date range |
-| `--source` | Source for tick size logic: `vn` (default), `crypto`, `global`, `yahoo`, `sjc` |
-| `--bins N` | Number of price bins (default: 50, range: 2–200) |
-| `--value-area-pct` | Value area target % (default: 70, range: 60–90) |
-
-### `aipa setup`
-
-Interactive first-run configuration. Prompts for language, reference ticker, API key, base URL, and model. Settings are saved to `~/.aipriceaction/settings.json`. Re-running shows current values as defaults.
-
-```
-# Run interactively
-aipa setup
-```
-
-### `aipa fundamentals`
-
-Fundamental data: company info, financial ratios, ranking, and screening. No API key needed — reads from cached `vn.zip`.
-
-#### `aipa fundamentals info TICKER`
-
-Show company profile, shareholders, and officers.
-
-```
-aipa fundamentals info ACB
-aipa fundamentals info FPT --source vn
-```
-
-#### `aipa fundamentals ratios TICKER`
-
-Show financial ratios organized by category.
-
-```
-aipa fundamentals ratios VCB                    # All yearly reports
-aipa fundamentals ratios VCB --latest            # Only latest yearly
-aipa fundamentals ratios VCB --year 2024         # Specific year
-aipa fundamentals ratios VCB --no-yearly         # Include quarterly
-aipa fundamentals ratios VCB --category bank     # Bank-specific fields only
-aipa fundamentals ratios VCB --json              # Raw JSON output
-```
-
-| Flag | Description |
-|---|---|
-| `--latest` | Show only latest yearly report |
-| `--year YEAR` | Show specific year |
-| `--no-yearly` | Include quarterly reports (default: yearly only) |
-| `--category` | `valuation`, `profitability`, `leverage`, `liquidity`, `bank`, `efficiency` |
-| `--json` | Raw JSON output |
-
-#### `aipa fundamentals rank`
-
-Rank tickers by any of 50+ fundamental fields.
-
-```
-aipa fundamentals rank                                           # Top 10 VN by ROE
-aipa fundamentals rank --sort-by pe --direction asc --limit 20   # Cheapest by PE
-aipa fundamentals rank VCB BID CTG TCB MBB --sort-by car         # Banks by CAR
-aipa fundamentals rank --watchlist VN30 --sort-by roe --limit 15 # VN30 by ROE
-aipa fundamentals rank --sort-by npl --direction asc --limit 10  # Best asset quality
-aipa fundamentals rank --sort-by dividend_yield                   # Highest dividend
-aipa fundamentals rank --sort-by market_cap --limit 20            # Largest by cap
-```
-
-| Flag | Description |
-|---|---|
-| `--sort-by` | Field to rank by: `pe`, `pb`, `roe`, `roa`, `npl`, `car`, `dividend_yield`, `market_cap`, etc. (50+ fields) |
-| `--direction` | `desc` (default) or `asc` |
-| `--limit N` | Max results (default: 10) |
-| `tickers` | Positional ticker symbols (default: all VN) |
-| `--watchlist` | Use watchlist as ticker source (VN30, VINGROUP, TM, MASAN, custom) |
-
-#### `aipa fundamentals screen`
-
-Filter tickers by fundamental criteria, then rank.
-
-```
-aipa fundamentals screen --pe-max 15 --roe-min 0.15 --sort-by roe                   # Value stocks
-aipa fundamentals screen --industry "ngân hàng" --sort-by roe                        # Banking sector
-aipa fundamentals screen --npl-max 0.015 --car-min 0.10 --sort-by npl --direction asc # Safe banks
-aipa fundamentals screen --dividend-yield-min 0.03 --sort-by dividend_yield           # Dividend stocks
-aipa fundamentals screen --watchlist VN30 --pe-max 20 --roe-min 0.10                  # Screen VN30
-aipa fundamentals screen VCB FPT HPG VNM --roe-min 0.15 --sort-by pe --direction asc  # Specific tickers
-```
-
-| Flag | Description |
-|---|---|
-| `--pe-min/max` | PE range filter |
-| `--pb-min/max` | PB range filter |
-| `--roe-min/max` | ROE range filter |
-| `--roa-min/max` | ROA range filter |
-| `--dividend-yield-min/max` | Dividend yield range |
-| `--debt-to-equity-max` | Max Debt/Equity |
-| `--npl-max` | Max NPL (banks) |
-| `--car-min` | Min CAR (banks) |
-| `--cir-max` | Max CIR (banks) |
-| `--market-cap-min/max` | Market cap range |
-| `--industry` | Industry filter (substring, case-insensitive) |
-| `--watchlist` | Use watchlist as ticker source |
-| `--sort-by` | Field to rank by |
-| `--direction` | Sort direction (default: `desc`) |
-| `--limit N` | Max results (default: 50) |
-
-### `aipa resume`
-
-List saved chat sessions or open the TUI with a resumed one. Sessions are auto-saved under `~/.aipriceaction/sessions/`.
-
-```
-# List recent sessions
-aipa resume
-
-# Open TUI with a specific session
-aipa resume 0
-
-# Open TUI by UUID prefix
-aipa resume 0194a2b3
-```
-
-| Argument | Description |
-|---|---|
-| `session` | Session ID prefix or list index (omit to list all) |
-
-## First-Run Setup
-
-Commands that require an API key will auto-run `aipa setup` on first use if not yet configured. Commands that don't need an API key always work immediately.
-
-| Command | Setup required? |
-|---|---|
-| `aipa get-ohlcv-data` | No setup needed |
-| `aipa live-data` | No setup needed |
-| `aipa ticker-list` | No setup needed |
-| `aipa performers` | No setup needed |
-| `aipa volume-profile VCB` | No setup needed |
-| `aipa fundamentals info ACB` | No setup needed |
-| `aipa fundamentals ratios VCB` | No setup needed |
-| `aipa fundamentals rank` | No setup needed |
-| `aipa fundamentals screen` | No setup needed |
-| `aipa analyze VCB --context-only` | No setup needed |
-| `aipa analyze VCB --questions` | No setup needed |
-| `aipa resume` | No setup needed |
-| `aipa setup` | Runs setup |
-| `aipa` | Shows help (lists all commands) |
-| `aipa ui` | Auto-runs setup first |
-| `aipa analyze VCB` | Auto-runs setup first |
-| `aipa deep-research` | No setup needed (market snapshot only) |
-| `aipa deep-research --run` | Auto-runs setup first |
-
-## TUI
-
-Launch the TUI with `aipa ui`. The interface has six tabs:
-
-- **Chat** — AI-powered chat with streaming responses, thinking/reasoning display, slash commands, and arrow-key history navigation
-- **Workflows** — Structured analysis forms with question bank dropdown for ticker analysis and deep research
-- **Vietnam** — Browse and search Vietnamese stock tickers
-- **Crypto** — Browse and search cryptocurrency tickers
-- **Global** — Browse and search global/Yahoo tickers
-- **Settings** — Configure API key, model, base URL, and other preferences
-
-### Slash Commands (Chat tab)
-
-```
-/analyze VCB                  # Default AI analysis
-/analyze VCB 1h               # AI analysis with hourly interval
-/analyze VCB 2                # Use question template index 2
-/analyze VCB --question What is support?   # Custom question
-/export VCB FPT               # Export context to markdown file
-/deep-research                # Multi-agent research
-/save                         # Export chat to markdown (default: ~/aipriceaction-chat-<id>.md)
-/save ~/my-chat.md            # Export chat to custom path
-/resume                       # List saved sessions
-/resume 0                     # Load session by index
-/resume 0194a2b3              # Load session by UUID prefix
-/sessions                     # Alias for /resume
-/new                          # Start new session (clears history)
-/clear                        # Clear chat display only
-/exit                         # Quit
-```
-
-Chat sessions are auto-saved to `~/.aipriceaction/sessions/` and restored with full LLM context when resumed.
-
-Press `Ctrl+O` in the Chat tab to view thinking/reasoning history.
-
-### Settings Tab
-
-Configure your API key, model, and base URL directly in the TUI. Settings are saved to `~/.aipriceaction/settings.json` and shared across both TUI and CLI.
-
-## Configuration
-
-Settings are loaded from `~/.aipriceaction/settings.json`. You can configure them via the TUI Settings tab or set environment variables:
-
-| Variable | Description | Default |
-|---|---|---|
-| `OPENAI_API_KEY` | API key for the LLM provider | — |
-| `OPENAI_BASE_URL` | Base URL for OpenAI-compatible API | OpenRouter |
-| `OPENAI_MODEL` | Model name | `openrouter/owl-alpha` |
-
-## License
-
-MIT
+The terminal entry point is `src/aipriceaction_terminal/cli.py`. The public
+Python SDK is in [`../sdk/aipriceaction-python/`](../sdk/aipriceaction-python/README.md).

@@ -1,68 +1,53 @@
-# Python API route contract
+# Python API routes
 
-This is a high-level route-family summary for the current FastAPI service, not a
-complete per-parameter schema. Route definitions, query/body validation,
-authentication, defaults, response fields, and edge behavior are implemented in
-`src/aipriceaction_api/app.py` and `uploads.py`; focused contract and
-differential tests live under `tests/test_api_contract.py`,
-`tests/test_notes_contract.py`, and related modules. The legacy Rust behavior is a
-compatibility reference, not the live route authority.
+This table lists the current FastAPI routes. Exact parameters, defaults,
+validation, and response fields are defined in the route models and tests under
+`src/aipriceaction_api/` and `tests/`.
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET`, `HEAD` | `/tickers` | OHLCV by symbol(s), mode, interval, limit/date range, MA/EMA, and JSON/CSV format. |
-| `GET`, `HEAD` | `/tickers/group` | Groups for the selected mode. |
-| `GET`, `HEAD` | `/tickers/name` | Symbol-to-name map for the selected mode. |
-| `GET`, `HEAD` | `/tickers/info` | Ticker metadata and available snapshot information. |
-| `POST` | `/tickers/refresh` | Secret-guarded refresh scheduling. |
-| `GET`, `HEAD` | `/health` | Process, market, ingestion, and storage health summary. |
-| `GET`, `HEAD`, `POST` | `/sync/{key}` | Optional bearer-token-protected key/value sync. |
-| `GET`, `HEAD` | `/analysis/top-performers` | Ranked daily performers and filters. |
-| `GET`, `HEAD` | `/analysis/ma-scores-by-sector` | Sector-level moving-average scores. |
-| `GET`, `HEAD` | `/analysis/volume-profile` | Volume-by-price profile for a symbol/date range. |
-| `GET`, `HEAD` | `/analysis/rrg` | Relative rotation graph data (`jdk` and `mascore`). |
-| `POST` | `/upload/markdown` | Upload a notes Markdown document. |
-| `GET`, `HEAD` | `/uploads/{session_id}/markdown/{filename}` | Retrieve a notes Markdown document. |
-| `DELETE` | `/uploads/{session_id}` | Delete an upload session. |
-| `GET`, `HEAD` | `/explorer` | Packaged API explorer (not included in OpenAPI schema). |
-| `GET`, `HEAD` | `/public` | Serve the packaged public `index.html`. |
-| `GET`, `HEAD` | `/public/{path}` | Serve packaged static files (not included in OpenAPI schema). |
+| `GET`, `HEAD` | `/tickers` | OHLCV by symbol, mode, interval, date range, indicators, and format |
+| `GET`, `HEAD` | `/tickers/group` | Ticker groups |
+| `GET`, `HEAD` | `/tickers/name` | Symbol-to-name map |
+| `GET`, `HEAD` | `/tickers/info` | Ticker and snapshot metadata |
+| `POST` | `/tickers/refresh` | Schedule a refresh; requires the configured secret |
+| `GET`, `HEAD` | `/health` | API, market, ingestion, and storage status |
+| `GET`, `HEAD`, `POST` | `/sync/{key}` | Optional bearer-token-protected key/value sync |
+| `GET`, `HEAD` | `/analysis/top-performers` | Ranked performers and filters |
+| `GET`, `HEAD` | `/analysis/ma-scores-by-sector` | Moving-average scores by sector |
+| `GET`, `HEAD` | `/analysis/volume-profile` | Volume-by-price data |
+| `GET`, `HEAD` | `/analysis/rrg` | Relative rotation graph data |
+| `POST` | `/upload/markdown` | Upload one Markdown file |
+| `GET`, `HEAD` | `/uploads/{session_id}/markdown/{filename}` | Retrieve a public-session file |
+| `DELETE` | `/uploads/{session_id}` | Delete an upload session |
+| `GET`, `HEAD` | `/explorer` | Packaged API explorer |
+| `GET`, `HEAD` | `/public`, `/public/{path}` | Packaged public page and static files |
 
-`/tickers` accepts repeated `symbol` query keys and supports `interval`,
-`limit`, `start_date`, `end_date`, `mode`, `ma`, `ema`, `format=csv`, and
-cache/snapshot controls. The endpoint can return one ticker, multiple requested
-tickers, or the selected market universe. Exact constraints and response fields
-are enforced by the Pydantic query models and tests; update those tests when
-changing the contract.
+## Request details
 
-The table lists routes and explicit methods only. It does not replace the
-request models or tests as the source for per-route parameter bounds, defaults,
-authentication, and response schemas.
+`GET /tickers` accepts repeated `symbol` parameters. It supports `interval`,
+`limit`, `start_date`, `end_date`, `mode`, `ma`, `ema`, `format=csv`, and cache
+controls. It can return one symbol, several requested symbols, or a market
+universe.
 
-The compatibility middleware accepts `HEAD` for every `GET` route and returns
-the matching headers without a response body. The static `/public` mount also
-supports `GET` and `HEAD` for its index and files.
+- `mode=yahoo` includes stored Yahoo and SJC records. `mode=all` includes all
+  configured sources. Each returned row keeps its stored source identity.
+- Every `GET` route also accepts `HEAD` and returns headers without a body.
+- The public `/openapi.json` and interactive API docs are disabled to preserve
+  the compatibility surface. Tests can inspect `app.openapi()`.
 
-Mutation and private-route wire shapes are:
+## Protected operations
 
-- `POST /tickers/refresh`: JSON `{ "interval": ..., "mode": ..., "key": ... }`;
-  `key` must match the configured `REFRESH_SECRET`.
-- `GET /sync/{key}`: bearer `SYNC_TOKEN` plus the required `secret` query
-  parameter. `POST /sync/{key}` uses the bearer token and JSON
-  `{ "secret": ..., "value": ... }`.
-- `POST /upload/markdown`: multipart `file` plus required `session_id` and
-  `secret` query parameters. Exactly one Markdown file is accepted.
-- `GET /uploads/{session_id}/markdown/{filename}`: retrieval is allowed only
-  for public sessions; the optional `secret` query field is ignored.
-- `DELETE /uploads/{session_id}`: requires the session `secret` query parameter.
+- `POST /tickers/refresh`: JSON body with `interval`, `mode`, and `key`. The key
+  must match `REFRESH_SECRET`.
+- `GET /sync/{key}`: bearer `SYNC_TOKEN` and required `secret` query parameter.
+- `POST /sync/{key}`: bearer `SYNC_TOKEN` and JSON body with `secret` and
+  `value`.
+- `POST /upload/markdown`: multipart `file`, plus `session_id` and `secret`
+  query parameters. Exactly one Markdown file is accepted.
+- `GET /uploads/{session_id}/markdown/{filename}`: only public sessions can be
+  read; the optional `secret` parameter is ignored.
+- `DELETE /uploads/{session_id}`: requires the session's `secret`.
 
-Detailed field constraints and response shapes remain defined by the request
-models, route handlers, and the linked contract tests.
-
-`mode=yahoo` includes both stored Yahoo and SJC records. `mode=all` includes all
-configured sources. A stored `source` field distinguishes the records.
-
-The root `/openapi.json` and interactive docs are disabled to preserve the
-public compatibility surface. Inspect `app.openapi()` in tests for the
-application schema. This document intentionally avoids treating the retired Rust
-router or its unmounted routes as current endpoints.
+Update the contract tests when route behavior changes. The retired Rust router
+is a compatibility reference, not the current route authority.
