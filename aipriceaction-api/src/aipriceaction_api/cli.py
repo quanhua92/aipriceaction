@@ -52,11 +52,6 @@ def parser():
     init.add_argument(
         "--s3", action="store_true", help="Create/access configured archive bucket explicitly"
     )
-    init.add_argument(
-        "--sync-catalog",
-        action="store_true",
-        help="Refresh VN, crypto and Yahoo ticker groups from the configured live API",
-    )
     serve = commands.add_parser("serve", help="Run API only; workers are a separate process")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8899)
@@ -360,14 +355,8 @@ async def execute(args, settings):
     repo.initialize()
     archive = Archive(repo, settings)
     if args.command == "init":
-        catalog_result = None
-        if args.sync_catalog:
-            from .catalog_sync import sync_catalog
-
-            catalog_result = await sync_catalog(
-                settings.catalog_base_url, settings.catalog_snapshot
-            )
-        Catalog(settings).initialize(repo)
+        catalog = Catalog(settings)
+        catalog.initialize(repo)
         Worker(repo, settings).load_watchlist()
         if args.s3:
             await asyncio.to_thread(archive.store.initialize)
@@ -375,7 +364,7 @@ async def execute(args, settings):
             {
                 "database": str(settings.database),
                 "archive_initialized": args.s3,
-                "catalog": catalog_result,
+                "catalog_source": "local files",
             }
         )
     elif args.command == "status":

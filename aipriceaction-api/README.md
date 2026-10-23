@@ -30,10 +30,17 @@ curl --fail http://localhost:8899/health
 docker compose logs --tail=100 initialize api worker
 ```
 
-Compose starts the Python API, one worker, a catalog initializer, and local
-RustFS. The API listens on port `8899`; RustFS uses ports `9100` and `9101` on
-loopback. The worker loads the configured ticker catalog. Initial history is
-fetched from market-data providers and may take time to build.
+Compose starts the Python API, one worker, a one-time initializer, and local
+RustFS. The initializer loads ticker groups and names from the files bundled in
+this repository; it does not call the production API for a catalog snapshot.
+The API listens on port `8899`; RustFS uses ports `9100` and `9101` on
+loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `watchlist`).
+Initial history is fetched from market-data providers and may take time to
+build.
+
+Compose passes `.env` values to the API and worker. It overrides filesystem
+paths with container paths under `/data` and uses the RustFS service address
+when `S3_ENDPOINT` is not set.
 
 These are local development defaults. `.env.example` uses development
 credentials and a local bucket. Do not copy it over a production `.env`.

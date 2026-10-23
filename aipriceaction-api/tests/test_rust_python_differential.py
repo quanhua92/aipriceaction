@@ -6797,7 +6797,6 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                 rust_ticker_identity_order=identity_order_path,
                 archive_backend="filesystem",
                 catalog_dir=catalog,
-                catalog_snapshot=root / "no-catalog-snapshot.json",
                 company_info=catalog / "company_info.json",
                 public_dir=python_public_dir,
                 sync_tokens=(SYNC_TOKEN,),
@@ -13462,7 +13461,6 @@ def test_rust_python_refresh_secret_empty_and_unset_match():
                     uploads_dir=root / f"python-{label}-uploads",
                     archive_backend="filesystem",
                     catalog_dir=catalog,
-                    catalog_snapshot=root / f"python-{label}-no-catalog-snapshot.json",
                     company_info=catalog / "company_info.json",
                     refresh_secret=secret,
                     cors_origins=(WEB_ORIGIN, PRODUCTION_WEB_ORIGIN),
@@ -13521,7 +13519,6 @@ def test_rust_python_refresh_secret_empty_and_unset_match():
                     uploads_dir=root / f"python-{label}-uploads",
                     archive_backend="filesystem",
                     catalog_dir=catalog,
-                    catalog_snapshot=root / f"python-{label}-no-catalog-snapshot.json",
                     company_info=catalog / "company_info.json",
                     sync_tokens=(
                         ()
@@ -13581,7 +13578,6 @@ def test_rust_python_refresh_secret_empty_and_unset_match():
                 uploads_dir=root / "python-sync-missing-secret-uploads",
                 archive_backend="filesystem",
                 catalog_dir=catalog,
-                catalog_snapshot=root / "python-sync-missing-secret-no-catalog-snapshot.json",
                 company_info=catalog / "company_info.json",
                 sync_tokens=(SYNC_TOKEN,),
                 cors_origins=(WEB_ORIGIN, PRODUCTION_WEB_ORIGIN),
@@ -13664,7 +13660,6 @@ def test_rust_python_empty_uploads_path_matches():
                     uploads_dir="",
                     archive_backend="filesystem",
                     catalog_dir=catalog,
-                    catalog_snapshot=root / "python-empty-upload-path-no-snapshot.json",
                     company_info=catalog / "company_info.json",
                     cors_origins=(WEB_ORIGIN, PRODUCTION_WEB_ORIGIN),
                 )
@@ -14309,7 +14304,6 @@ def test_python_jdk_rrg_applies_web_volume_threshold_on_requested_date():
             object_dir=root / "python-objects",
             archive_backend="filesystem",
             catalog_dir=catalog,
-            catalog_snapshot=root / "no-catalog-snapshot.json",
             company_info=catalog / "company_info.json",
             max_limit=40,
             single_limit=10000,

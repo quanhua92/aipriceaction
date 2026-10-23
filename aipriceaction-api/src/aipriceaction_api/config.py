@@ -121,11 +121,9 @@ class Settings:
         else Path(__file__).parent / "data/watchlist.json"
     )
     ingest_universe: str = "watchlist"
-    catalog_snapshot: Path = ROOT / "data/catalog-snapshot.json"
     # Optional ordered export from Rust's `tickers` table. It is used only to
     # preserve duplicate Yahoo/SJC identity ordering in merged API reads.
     rust_ticker_identity_order: Path | None = None
-    catalog_base_url: str = "https://api.aipriceaction.com"
     catalog_dir: Path = field(default_factory=lambda: Path(__file__).parent / "data")
     public_dir: Path = field(default_factory=lambda: Path(__file__).parent / "public")
     company_info: Path | None = None
@@ -183,9 +181,7 @@ class Settings:
             "requests_per_minute": "PROVIDER_RPM",
             "watchlist": "WATCHLIST_PATH",
             "ingest_universe": "INGEST_UNIVERSE",
-            "catalog_snapshot": "CATALOG_SNAPSHOT_PATH",
             "rust_ticker_identity_order": "RUST_TICKER_IDENTITY_ORDER_PATH",
-            "catalog_base_url": "CATALOG_BASE_URL",
             "company_info": "COMPANY_INFO_PATH",
             "read_concurrency": "API_READ_CONCURRENCY",
             "market_read_concurrency": "API_MARKET_READ_CONCURRENCY",

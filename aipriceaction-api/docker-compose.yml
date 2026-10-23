@@ -8,22 +8,18 @@ x-api-environment: &api-environment
   UPLOADS_PATH: /data/uploads
   UPLOADS_MAX_BYTES: ${UPLOADS_MAX_BYTES:-536870912}
   UPLOADS_MAX_SESSIONS: ${UPLOADS_MAX_SESSIONS:-10000}
-  ARCHIVE_BACKEND: s3
-  S3_ENDPOINT: http://rustfs:9000
+  ARCHIVE_BACKEND: ${ARCHIVE_BACKEND:-s3}
+  S3_ENDPOINT: ${S3_ENDPOINT:-http://rustfs:9000}
   S3_BUCKET: ${S3_BUCKET:-aipriceaction-api-local}
   S3_PREFIX: ${S3_PREFIX:-parquet}
   PUBLIC_EXPORT_ENABLED: ${PUBLIC_EXPORT_ENABLED:-true}
-  S3_FORCE_PATH_STYLE: "true"
+  S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-aipa-local}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-aipa-local-development-only}
   AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
-  CATALOG_BASE_URL: ${CATALOG_BASE_URL:-https://api.aipriceaction.com}
   API_MAX_LIMIT: ${API_MAX_LIMIT:-40}
-  CATALOG_SNAPSHOT_PATH: /data/catalog-snapshot.json
   RUST_TICKER_IDENTITY_ORDER_PATH: ${RUST_TICKER_IDENTITY_ORDER_PATH:-}
-  # The Compose worker intentionally warms every symbol from the live catalog.
-  # INGEST_UNIVERSE in .env is used only when invoking aipa-api outside Compose.
-  INGEST_UNIVERSE: catalog
+  INGEST_UNIVERSE: ${INGEST_UNIVERSE:-watchlist}
   WATCHLIST_PATH: /app/watchlist.json
   ALLOW_DIRECT: ${ALLOW_DIRECT:-true}
   HTTP_PROXIES: ${HTTP_PROXIES:-}
@@ -50,6 +46,8 @@ x-api-service: &api-service
   build:
     context: .
   image: aipriceaction-api:local
+  env_file:
+    - .env
   environment: *api-environment
   volumes:
     - ${AIPA_DATA_DIR:-./data}:/data
@@ -94,7 +92,9 @@ services:
     build:
       context: .
     image: aipriceaction-api:local
-    command: ["aipa-api", "init", "--s3", "--sync-catalog"]
+    command: ["aipa-api", "init", "--s3"]
+    env_file:
+      - .env
     environment: *api-environment
     volumes:
       - ${AIPA_DATA_DIR:-./data}:/data

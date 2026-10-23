@@ -17,9 +17,9 @@ under `ohlcv/`; Parquet is stored separately under `parquet/`.
 
 Choose one data path:
 
-- **Start empty:** initialize production storage, load the approved ticker
-  catalog, and let the worker build history. Longer lookbacks may be incomplete
-  until ingestion catches up.
+- **Start empty:** initialize production storage, load the ticker metadata
+  bundled with this repository, and let the worker build history. Longer
+  lookbacks may be incomplete until ingestion catches up.
 - **Transfer local data:** move SQLite and its matching Parquet objects and
   manifests together. Verify checksums and history reads before cutover. Do not
   copy SQLite alone when it points to archive objects.
@@ -31,7 +31,8 @@ root [`AGENTS.md`](../AGENTS.md).
 ## Cutover steps
 
 1. Record the Python commit or image, Compose configuration, SQLite schema,
-   S3 endpoint/bucket/prefix, catalog snapshot, and provider order.
+   S3 endpoint/bucket/prefix, bundled ticker metadata revision, and provider
+   order.
 2. Set production secrets, CORS origins, provider access, storage settings,
    retention, and data mounts. Keep existing production `.env` values unless
    each change is intentional.

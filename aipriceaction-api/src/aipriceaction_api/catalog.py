@@ -33,29 +33,11 @@ class Catalog:
         return json.loads((self.settings.catalog_dir / name).read_text())
 
     @cached_property
-    def snapshot(self):
-        path = self.settings.catalog_snapshot
-        if not path.exists():
-            return None
-        value = json.loads(path.read_text())
-        if value.get("schema") != 1 or set(value.get("groups", {})) != {
-            "vn",
-            "crypto",
-            "yahoo",
-        }:
-            raise ValueError("Invalid catalog snapshot")
-        return value
-
-    @cached_property
     def groups_by_source(self):
-        if self.snapshot:
-            vn = {group: list(symbols) for group, symbols in self.snapshot["groups"]["vn"].items()}
-            crypto = self.snapshot["groups"]["crypto"]
-        else:
-            vn = {group: list(symbols) for group, symbols in self.load("ticker_group.json").items()}
-            crypto = {
-                "CRYPTO_TOP_100": [r["symbol"] for r in self.load("binance_tickers.json")["data"]]
-            }
+        vn = {group: list(symbols) for group, symbols in self.load("ticker_group.json").items()}
+        crypto = {
+            "CRYPTO_TOP_100": [r["symbol"] for r in self.load("binance_tickers.json")["data"]]
+        }
         # Sector groups are intentionally curated and omit most listed shares.
         # Keep a complete stock directory alongside them so daily discovery is
         # not limited by the legacy web catalog.
@@ -66,15 +48,6 @@ class Catalog:
             for row in self.load(file)["data"]:
                 groups.setdefault(row.get("category", "Other"), []).append(row["symbol"])
             result[source] = groups
-        if self.snapshot:
-            sjc_symbols = {symbol for symbols in result["sjc"].values() for symbol in symbols}
-            result["yahoo"] = {
-                group: [symbol for symbol in symbols if symbol not in sjc_symbols]
-                for group, symbols in self.snapshot["groups"]["yahoo"].items()
-            }
-            result["yahoo"] = {
-                group: symbols for group, symbols in result["yahoo"].items() if symbols
-            }
         return result
 
     @cached_property
@@ -83,7 +56,7 @@ class Catalog:
 
     @cached_property
     def curated_vn_symbols(self):
-        groups = self.snapshot["groups"]["vn"] if self.snapshot else self.load("ticker_group.json")
+        groups = self.load("ticker_group.json")
         return {symbol for symbols in groups.values() for symbol in symbols}
 
     def redis_ticker_list(self, redis_client=None):
@@ -138,8 +111,6 @@ class Catalog:
         return result
 
     def groups(self, mode):
-        if self.snapshot and mode in self.snapshot["groups"] and mode != "vn":
-            return self.snapshot["groups"][mode]
         sources = (
             ("vn", "yahoo", "sjc", "crypto")
             if mode == "all"

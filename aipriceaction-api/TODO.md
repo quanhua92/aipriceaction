@@ -10,7 +10,7 @@ historical evidence are preserved in [`legacy/2026-10-22/`](legacy/README.md).
 - [ ] Rehearse either an empty production start or a matched SQLite + Parquet
   archive transfer. Do not transfer SQLite without its indexed archive objects.
 - [ ] Verify production S3 permissions, secrets, CORS, provider access, and
-  ticker catalog snapshot.
+  bundled ticker metadata.
 - [ ] Start Python API and the all-source worker side by side; verify current
   VN, crypto, Yahoo, and SJC ingestion after restart.
 - [x] Run the exact 19-request home-page benchmark; the retained local report
