@@ -517,6 +517,7 @@ class SQLiteDataLoader:
         forward=False,
         compact_tail=False,
         copy_result=True,
+        timing_stats=None,
     ):
         """Share identical in-flight reads before consulting the SQLite LRU.
 
@@ -528,6 +529,7 @@ class SQLiteDataLoader:
         symbols = list(dict.fromkeys(symbols))
         if not symbols:
             return LoadedHistory()
+        load_started = time.perf_counter()
         key = (
             source,
             tuple(sorted(symbols)),
@@ -538,7 +540,12 @@ class SQLiteDataLoader:
             bool(forward),
             bool(compact_tail),
         )
+        versions_started = time.perf_counter()
         versions = self.repository.history_versions(source, symbols, interval)
+        if timing_stats is not None:
+            timing_stats["loader_version_check_ms"] = round(
+                (time.perf_counter() - versions_started) * 1000, 3
+            )
         flight_key = (key, tuple(sorted(versions.items())))
         with self._cache_lock:
             future = self._inflight.get(flight_key)
@@ -547,16 +554,39 @@ class SQLiteDataLoader:
                 future = Future()
                 self._inflight[flight_key] = future
         if not owner:
+            wait_started = time.perf_counter()
             value = future.result()
+            if timing_stats is not None:
+                timing_stats.update(
+                    loader_cache_state="inflight",
+                    loader_cache_hit_symbols=len(symbols),
+                    loader_cache_miss_symbols=0,
+                    loader_inflight_wait_ms=round((time.perf_counter() - wait_started) * 1000, 3),
+                    loader_total_ms=round((time.perf_counter() - load_started) * 1000, 3),
+                )
             return self._copy_loaded(value) if copy_result else value
 
         try:
+            cache_lookup_started = time.perf_counter()
             cached, stale = self._cache_get_compatible(
                 key, versions, copy_result=copy_result
             )
+            if timing_stats is not None:
+                hit_symbols = len(symbols) - len(stale)
+                timing_stats.update(
+                    loader_cache_lookup_ms=round(
+                        (time.perf_counter() - cache_lookup_started) * 1000, 3
+                    ),
+                    loader_cache_hit_symbols=hit_symbols,
+                    loader_cache_miss_symbols=len(stale),
+                    loader_cache_state=(
+                        "hit" if not stale else "partial" if hit_symbols else "miss"
+                    ),
+                )
             if not stale:
                 result = cached
             else:
+                sqlite_started = time.perf_counter()
                 fresh = self._load_many(
                     source,
                     stale,
@@ -569,9 +599,27 @@ class SQLiteDataLoader:
                     copy_result=copy_result,
                     versions={symbol: versions[symbol] for symbol in stale},
                 )
+                if timing_stats is not None:
+                    timing_stats["loader_sqlite_load_ms"] = round(
+                        (time.perf_counter() - sqlite_started) * 1000, 3
+                    )
+                merge_started = time.perf_counter()
                 result = self._merge_loaded(cached, fresh, symbols)
+                if timing_stats is not None:
+                    timing_stats["loader_merge_ms"] = round(
+                        (time.perf_counter() - merge_started) * 1000, 3
+                    )
+                cache_put_started = time.perf_counter()
                 self._cache_put(key, result, time.monotonic())
+                if timing_stats is not None:
+                    timing_stats["loader_cache_put_ms"] = round(
+                        (time.perf_counter() - cache_put_started) * 1000, 3
+                    )
             future.set_result(result)
+            if timing_stats is not None:
+                timing_stats["loader_total_ms"] = round(
+                    (time.perf_counter() - load_started) * 1000, 3
+                )
             return result
         except BaseException as exc:
             future.set_exception(exc)

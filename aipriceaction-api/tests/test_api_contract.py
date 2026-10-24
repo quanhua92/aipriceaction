@@ -3852,7 +3852,7 @@ def test_sync_valid_uuid_formats_share_one_canonical_record_and_secret(client, k
         assert con.execute("SELECT count(*) FROM sync_kv").fetchone()[0] == 1
 
 
-def test_cors_and_rust_response_cache_semantics(client):
+def test_cors_and_versioned_response_cache_semantics(client):
     response = client.options(
         "/sync/example",
         headers={
@@ -3868,11 +3868,11 @@ def test_cors_and_rust_response_cache_semantics(client):
     repo = client.app_instance.state.repo
     row = repo.read("vn", "FPT", "1D", limit=1)[0]
     repo.put([replace(row, high=row.high + 10, close=row.close + 5)])
-    # Rust's response cache is query-keyed and keeps serving the old row until
-    # its TTL expires; writes do not invalidate the cached response.
-    still_cached = client.get("/tickers?symbol=FPT&limit=1")
-    assert still_cached.headers["x-data-source"] == "in-memory"
-    assert still_cached.json()["FPT"][0]["close"] == row.close
+    # A market-data write advances market_epoch and invalidates the response
+    # cache immediately, while leaving unchanged query results reusable.
+    updated = client.get("/tickers?symbol=FPT&limit=1")
+    assert updated.headers["x-data-source"] == "database"
+    assert updated.json()["FPT"][0]["close"] == row.close + 5
     fresh = client.get("/tickers?symbol=FPT&limit=1&cache=false")
     assert fresh.json()["FPT"][0]["close"] == row.close + 5
 

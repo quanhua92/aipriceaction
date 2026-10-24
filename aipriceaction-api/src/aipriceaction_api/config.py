@@ -101,8 +101,9 @@ class Settings:
     # emulation used by tests and offline development.
     redis_url: str | None = None
     cache_bytes: int = 512 * 1024 * 1024
-    # Match Rust's in-process /tickers response cache lifetime.
-    cache_ttl: float = 5
+    # Keep reusable ticker responses warm for one minute; market_epoch
+    # invalidates them as soon as market data changes.
+    cache_ttl: float = 60
     sync_tokens: tuple[str, ...] = ()
     # None means the variable is unset. An explicitly empty value matches Rust's
     # std::env::var behavior and is a configured empty refresh key.

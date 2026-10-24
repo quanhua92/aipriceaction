@@ -37,17 +37,23 @@ class VersionedAnalysisCache:
                 pending.extend(current)
         return total
 
-    def get(self, key, version):
+    def get(self, key, version, *, timing_stats=None):
         with self._lock:
             entry = self._entries.get(key)
             if entry is None:
+                if timing_stats is not None:
+                    timing_stats["cache_miss_reason"] = "absent"
                 return None
             stored_version, value, size = entry
             if stored_version != version:
                 self._entries.pop(key)
                 self._bytes -= size
+                if timing_stats is not None:
+                    timing_stats["cache_miss_reason"] = "input_version_changed"
                 return None
             self._entries.move_to_end(key)
+            if timing_stats is not None:
+                timing_stats["cache_miss_reason"] = None
             return deepcopy(value)
 
     def put(self, key, version, value):

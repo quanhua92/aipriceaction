@@ -16,6 +16,19 @@ def test_version_change_invalidates_and_cached_values_are_isolated():
     assert cache.size_bytes == 0
 
 
+def test_analysis_cache_timing_reports_absent_and_version_change_misses():
+    cache = VersionedAnalysisCache()
+    stats = {}
+
+    assert cache.get("rrg", 1, timing_stats=stats) is None
+    assert stats["cache_miss_reason"] == "absent"
+
+    cache.put("rrg", 1, {"value": 1})
+    stats.clear()
+    assert cache.get("rrg", 2, timing_stats=stats) is None
+    assert stats["cache_miss_reason"] == "input_version_changed"
+
+
 def test_analysis_cache_evicts_least_recent_entries_with_a_small_lru():
     cache = VersionedAnalysisCache(max_entries=2)
     cache.put("old", 1, {"value": 1})

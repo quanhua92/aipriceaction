@@ -1,4 +1,4 @@
-"""The short-lived `/tickers` response cache contract used by the Rust API."""
+"""Bounded in-process response cache for the `/tickers` endpoint."""
 
 import time
 from collections import OrderedDict
@@ -13,7 +13,7 @@ class TickersResponseCache:
 
     def __init__(
         self,
-        ttl: float = 5,
+        ttl: float = 60,
         max_entries: int = 500,
         max_bytes: int = 64 * 1024 * 1024,
         clock: Callable = time.monotonic,
@@ -51,18 +51,29 @@ class TickersResponseCache:
             self.stored_bytes -= entry[2]
         return entry
 
-    def get(self, key):
+    def get(self, key, *, version=None, timing_stats=None):
         entry = self.store.get(key)
         if entry is None:
+            if timing_stats is not None:
+                timing_stats["response_cache_miss_reason"] = "absent"
             return None
-        inserted_at, data, _size = entry
+        inserted_at, data, _size, stored_version = entry
         if self.clock() - inserted_at > self.ttl:
             self._remove(key)
+            if timing_stats is not None:
+                timing_stats["response_cache_miss_reason"] = "ttl_expired"
+            return None
+        if stored_version != version:
+            self._remove(key)
+            if timing_stats is not None:
+                timing_stats["response_cache_miss_reason"] = "market_epoch_changed"
             return None
         self.store.move_to_end(key)
+        if timing_stats is not None:
+            timing_stats["response_cache_miss_reason"] = None
         return data
 
-    def put(self, key, data):
+    def put(self, key, data, *, version=None):
         now = self.clock()
         for stored_key, entry in list(self.store.items()):
             if now - entry[0] > self.ttl:
@@ -80,7 +91,7 @@ class TickersResponseCache:
             or self.stored_bytes + size > self.max_bytes
         ):
             self._remove(next(iter(self.store)))
-        self.store[key] = (now, data, size)
+        self.store[key] = (now, data, size, version)
         self.store.move_to_end(key)
         self.stored_bytes += size
 

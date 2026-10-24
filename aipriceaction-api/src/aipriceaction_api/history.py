@@ -1410,6 +1410,7 @@ class History:
             forward=False,
             compact_tail=True,
             copy_result=False,
+            timing_stats=timing_stats,
         )
         if timing_stats is not None:
             timing_stats["history_load_ms"] = round((time.perf_counter() - load_started) * 1000, 3)

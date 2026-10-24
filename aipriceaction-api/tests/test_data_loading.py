@@ -697,6 +697,10 @@ def test_query_many_matches_single_latest_queries(system, ma, ema):
         timing_stats=timing_stats,
     )
     assert timing_stats["history_load_ms"] >= 0
+    assert timing_stats["loader_version_check_ms"] >= 0
+    assert timing_stats["loader_cache_lookup_ms"] >= 0
+    assert timing_stats["loader_total_ms"] >= 0
+    assert timing_stats["loader_cache_hit_symbols"] + timing_stats["loader_cache_miss_symbols"] == 4
     assert timing_stats["quality_check_ms"] >= 0
     assert timing_stats["indicator_resolve_ms"] >= 0
     assert timing_stats["safe_symbols"] == 3

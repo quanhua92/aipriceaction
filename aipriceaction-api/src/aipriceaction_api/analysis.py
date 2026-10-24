@@ -749,7 +749,7 @@ class Analysis:
             bool(snap),
         )
         cache_started = perf_counter()
-        cached = self._rrg_result_cache.get(key, version)
+        cached = self._rrg_result_cache.get(key, version, timing_stats=timing_stats)
         if timing_stats is not None:
             timing_stats["cache_lookup_ms"] = round((perf_counter() - cache_started) * 1000, 3)
             timing_stats["cache_eligible"] = True
