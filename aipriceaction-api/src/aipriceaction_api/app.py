@@ -3024,6 +3024,23 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             "trading_hours_timezone": "Asia/Ho_Chi_Minh",
             "uptime_secs": int(time.monotonic() - started),
             "current_system_time": now.isoformat(),
+            "configuration": {
+                "ingest_universe": settings.ingest_universe,
+                "vn_providers": list(settings.vn_providers),
+                "http_proxies_configured": bool(settings.proxies),
+                "allow_direct_setting": settings.allow_direct,
+                "vn_direct_access_enabled": settings.allow_direct or not settings.proxies,
+                "provider_rpm": settings.requests_per_minute,
+                "worker_concurrency": settings.worker_concurrency,
+                "retention_years": {
+                    "1D": settings.daily_years,
+                    "1h": settings.hourly_years,
+                    "1m": settings.minute_years,
+                },
+                "archive_backend": settings.archive_backend,
+                "parquet_prefix": settings.s3_prefix,
+                "public_csv_export_enabled": settings.public_export_enabled,
+            },
         }
         for label, iv in (("daily", "1D"), ("hourly", "1h"), ("minute", "1m")):
             data[f"{label}_records_count"] = status["records"].get(iv, 0)

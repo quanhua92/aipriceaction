@@ -1538,6 +1538,7 @@ def test_metadata_static_and_health(client):
     ]
     assert health_field_positions == sorted(health_field_positions)
     assert set(health) == {
+        "configuration",
         "total_tickers_count",
         "active_tickers_count",
         "is_trading_hours",
@@ -1567,6 +1568,9 @@ def test_metadata_static_and_health(client):
     assert health["daily_records_count"] == 720
     assert health["trading_hours_timezone"] == "Asia/Ho_Chi_Minh"
     assert "storage" not in health
+    assert health["configuration"]["ingest_universe"] == "catalog"
+    assert health["configuration"]["vn_direct_access_enabled"] is True
+    assert health["configuration"]["http_proxies_configured"] is False
     assert client.get("/explorer").status_code == 200
     ranged_explorer = client.get("/explorer", headers={"Range": "bytes=0-0"})
     assert ranged_explorer.status_code == 200

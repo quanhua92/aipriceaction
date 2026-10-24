@@ -31,6 +31,10 @@ curl --fail http://localhost:8899/health
 docker compose logs --tail=100 initialize api worker
 ```
 
+`/health` includes a `configuration` object with non-secret effective settings
+such as ingestion universe, provider access mode, retention, and Parquet prefix.
+It reports whether a proxy is configured, never its URL or credentials.
+
 Compose starts the Python API, one worker, a one-time initializer, and local
 RustFS. The initializer loads ticker groups and names from the files bundled in
 this repository; it does not call the production API for a catalog snapshot.
