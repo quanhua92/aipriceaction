@@ -31,7 +31,8 @@ from aipriceaction_api.responses import CSV_COLUMNS
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("OTEL_ENABLED", "false")
     settings = replace(
         Settings(),
         database=tmp_path / "db.sqlite3",
@@ -1525,6 +1526,26 @@ def test_minute_only_ticker_does_not_synthesize_rust_hourly_intervals(client):
     assert client.get("/tickers", params={**params, "interval": "4h"}).json() == {}
 
 
+def test_health_reports_safe_opentelemetry_configuration(client, monkeypatch):
+    monkeypatch.setenv("OTEL_ENABLED", "false")
+    monkeypatch.setenv("OTEL_ENDPOINT", "http://collector:5080")
+    monkeypatch.setenv("OTEL_SERVICE_NAME", "aipriceaction-health-test")
+    monkeypatch.setenv("OTEL_AUTH_HEADER", "Basic health-test-secret")
+
+    response = client.get("/health")
+    assert response.status_code == 200
+    otel = response.json()["configuration"]["opentelemetry"]
+    assert otel == {
+        "enabled": False,
+        "endpoint_configured": True,
+        "service_name": "aipriceaction-health-test",
+        "auth_configured": True,
+        "exporter_initialized": False,
+    }
+    assert "collector:5080" not in response.text
+    assert "health-test-secret" not in response.text
+
+
 def test_metadata_static_and_health(client):
     assert "ALL_STOCKS" not in client.get("/tickers/group").json()
     assert "FPT" in client.get("/tickers/name").json()
@@ -1580,7 +1601,7 @@ def test_metadata_static_and_health(client):
     javascript = client.get("/public/js/app.js")
     assert javascript.headers["cache-control"] == "max-age=300, public"
     assert javascript.headers["content-type"] == "text/javascript"
-    assert client.get("/public/js/README.md").headers["cache-control"] == "max-age=3600, public"
+    assert client.get("/public/js/README.md").status_code == 404
     missing_png = client.get("/public/missing.png")
     missing_ico = client.get("/public/missing.ico")
     assert missing_png.headers["cache-control"] == "max-age=86400, public"
@@ -2699,7 +2720,14 @@ def test_fastapi_exposes_every_active_legacy_http_route(client):
     ]
     assert len(public_root_handlers) == 1
 
-    rust_root = Path(__file__).resolve().parents[2] / "aipriceaction" / "src" / "server"
+    rust_root = (
+        Path(__file__).resolve().parents[2]
+        / "legacy"
+        / "rust"
+        / "aipriceaction"
+        / "src"
+        / "server"
+    )
     rust_router = _active_rust_router_source((rust_root / "mod.rs").read_text(encoding="utf-8"))
     # A chained MethodRouter can register explicit HEAD behavior without a
     # separate route declaration, so include these methods in the inventory.
@@ -2857,13 +2885,17 @@ def test_fastapi_documentation_routes_are_not_public(client):
 
 def test_explorer_and_public_assets_match_rust_bundle(client):
     workspace = Path(__file__).resolve().parents[2]
-    rust_public = workspace / "aipriceaction" / "public"
+    rust_public = workspace / "legacy" / "rust" / "aipriceaction" / "public"
     python_public = workspace / "aipriceaction-api" / "src" / "aipriceaction_api" / "public"
     rust_files = sorted(
-        path.relative_to(rust_public) for path in rust_public.rglob("*") if path.is_file()
+        path.relative_to(rust_public)
+        for path in rust_public.rglob("*")
+        if path.is_file()
     )
     python_files = sorted(
-        path.relative_to(python_public) for path in python_public.rglob("*") if path.is_file()
+        path.relative_to(python_public)
+        for path in python_public.rglob("*")
+        if path.is_file()
     )
 
     assert python_files == rust_files
@@ -2929,7 +2961,7 @@ def test_openapi_query_parameter_names_match_rust_query_field_manifest(client):
 
 def test_python_query_field_manifest_matches_rust_query_structs(client):
     workspace = Path(__file__).resolve().parents[2]
-    rust_root = workspace / "aipriceaction" / "src" / "server"
+    rust_root = workspace / "legacy" / "rust" / "aipriceaction" / "src" / "server"
     query_routes = {
         ("/tickers", "get"): ("api/mod.rs", "tickers", "TickersQuery"),
         ("/tickers/group", "get"): ("api/mod.rs", "tickers_group", "GroupQuery"),

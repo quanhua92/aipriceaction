@@ -55,8 +55,10 @@ from .responses import (
     RustJSONResponse as JSONResponse,
 )
 from .storage import RefreshScheduleError, Repository
+from .telemetry import health_configuration as telemetry_health_configuration
 from .telemetry import initialize as initialize_telemetry
 from .telemetry import shutdown as shutdown_telemetry
+from .telemetry import start as start_telemetry
 from .transport import RustCompatibleCompressionMiddleware
 from .uploads import router_for as uploads_router_for
 
@@ -1701,6 +1703,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
     market_executor = None
     read_slots = None
     health_slots = None
+    telemetry_runtime = None
 
     def parallel_market(items, function):
         """Run market reads in bounded batches and preserve input ordering."""
@@ -1906,7 +1909,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
     @asynccontextmanager
     async def lifespan(app):
         nonlocal executor, health_executor, market_executor, read_slots, health_slots
-        telemetry = initialize_telemetry(app)
+        telemetry = telemetry_runtime
         log.info(
             "api startup database=%s archive_backend=%s read_concurrency=%s",
             settings.database,
@@ -1923,6 +1926,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         read_slots = asyncio.Semaphore(settings.read_concurrency)
         health_slots = asyncio.Semaphore(1)
         health_task = None
+        app.state.telemetry_exporter_initialized = await asyncio.to_thread(
+            start_telemetry, telemetry
+        )
         try:
             await background(repo.initialize)
             await background(catalog.initialize, repo)
@@ -1953,6 +1959,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             if owns_redis_client:
                 redis_client.close()
             await asyncio.to_thread(shutdown_telemetry, telemetry)
+            app.state.telemetry_exporter_initialized = False
             log.info("api stopped")
 
     # Keep the public route surface aligned with Rust. OpenAPI remains available
@@ -1967,6 +1974,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         redoc_url=None,
         openapi_url=None,
     )
+    telemetry_runtime = initialize_telemetry(app)
     # The Rust router uses exact paths; `/tickers/` is a 404 rather than a 307.
     app.router.redirect_slashes = False
     app.state.settings = settings
@@ -1977,6 +1985,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
     app.state.catalog = catalog
     app.state.analysis = analysis
     app.state.health_snapshot = health_snapshot
+    app.state.telemetry_exporter_initialized = False
     app.include_router(uploads_router_for(settings))
 
     @app.middleware("http")
@@ -3044,6 +3053,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 "archive_backend": settings.archive_backend,
                 "parquet_prefix": settings.s3_prefix,
                 "public_csv_export_enabled": settings.public_export_enabled,
+                "opentelemetry": telemetry_health_configuration(
+                    exporter_initialized=app.state.telemetry_exporter_initialized
+                ),
             },
         }
         for label, iv in (("daily", "1D"), ("hourly", "1h"), ("minute", "1m")):
