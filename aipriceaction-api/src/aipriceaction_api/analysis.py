@@ -739,11 +739,20 @@ class Analysis:
                 # Keep the established validation path and error message in
                 # _rrg_uncached for malformed dates.
                 versions = history_versions("vn", symbols, "1D")
+                version = membership, tuple(sorted(versions.items()))
             else:
-                versions = as_of_versions("vn", symbols, "1D", as_of_end)
+                daily_version, metadata_versions = as_of_versions(
+                    "vn", symbols, "1D", as_of_end
+                )
+                version = (
+                    membership,
+                    "as_of",
+                    daily_version,
+                    tuple(sorted(metadata_versions.items())),
+                )
         else:
             versions = history_versions("vn", symbols, "1D")
-        version = membership, tuple(sorted(versions.items()))
+            version = membership, tuple(sorted(versions.items()))
         if timing_stats is not None:
             timing_stats["version_check_ms"] = round((perf_counter() - version_started) * 1000, 3)
         normalized_period = max(4, min(50, period))

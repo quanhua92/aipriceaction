@@ -485,12 +485,14 @@ def test_dated_jdk_rrg_cache_ignores_later_bars_and_invalidates_visible_correcti
     history = FakeHistory(rows)
     whole_series_versions = {"VCB": 1, "VNINDEX": 1}
     as_of_versions = {"VCB": 1, "VNINDEX": 1}
+    as_of_daily_version = [1]
     history.repo.history_versions = lambda _source, symbols, _interval: {
         symbol: whole_series_versions.get(symbol, 0) for symbol in symbols
     }
-    history.repo.history_versions_as_of = lambda _source, symbols, _interval, _end: {
-        symbol: as_of_versions.get(symbol, 0) for symbol in symbols
-    }
+    history.repo.history_versions_as_of = lambda _source, symbols, _interval, _end: (
+        as_of_daily_version[0],
+        {symbol: as_of_versions.get(symbol, 0) for symbol in symbols},
+    )
     analysis = Analysis(history, catalog)
     kwargs = {
         "mode": "vn",
@@ -518,6 +520,7 @@ def test_dated_jdk_rrg_cache_ignores_later_bars_and_invalidates_visible_correcti
     target = visible_rows[-1]
     ticker_rows[ticker_rows.index(target)] = replace(target, close=target.close + 5)
     whole_series_versions["VCB"] += 1
+    as_of_daily_version[0] += 1
     as_of_versions["VCB"] += 1
     corrected_response = analysis.rrg(**kwargs)
 

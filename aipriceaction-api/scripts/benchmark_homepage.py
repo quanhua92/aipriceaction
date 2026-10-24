@@ -78,14 +78,21 @@ READ_ENDPOINT_CASES = (
 
 def validate_base_url(value):
     parts = urlsplit(value)
+    allowed_hosts = {
+        "127.0.0.1",
+        "localhost",
+        "::1",
+        "192.168.1.13",
+        "api.aipriceaction.com",
+    }
     if (
         parts.scheme not in {"http", "https"}
-        or parts.hostname not in {"127.0.0.1", "localhost", "::1", "192.168.1.13"}
+        or parts.hostname not in allowed_hosts
         or parts.username is not None
         or parts.password is not None
         or parts.fragment
     ):
-        raise ValueError("Use the local API or 192.168.1.13 web-proxy URL without credentials")
+        raise ValueError("Use the local API, local web proxy, or production API URL without credentials")
     if parts.query:
         raise ValueError("Base URL must not contain a query string")
     return value.rstrip("/")
@@ -134,9 +141,6 @@ async def benchmark(args):
     base_url = validate_base_url(args.base_url)
     if not 1 <= args.timeout <= 120 or not 1 <= args.instant_ms <= 120_000:
         raise ValueError("Choose a timeout of 1–120 seconds and an instant target of 1–120000 ms")
-    if not 1 <= args.concurrency <= 32:
-        raise ValueError("Choose 1–32 concurrent requests")
-
     selected_modes = sum(
         (args.tickers_only, args.all_read_endpoints, args.core_home_page_only)
     )
@@ -153,6 +157,9 @@ async def benchmark(args):
         if args.core_home_page_only
         else HOME_PAGE_URLS
     )
+    concurrency = args.concurrency if args.concurrency is not None else len(paths)
+    if not 1 <= concurrency <= 32:
+        raise ValueError("Choose 1–32 concurrent requests")
     requests = [
         {
             "index": index + 1,
@@ -163,12 +170,12 @@ async def benchmark(args):
     ]
     timeout = httpx.Timeout(args.timeout)
     limits = httpx.Limits(
-        max_connections=args.concurrency,
-        max_keepalive_connections=args.concurrency,
+        max_connections=concurrency,
+        max_keepalive_connections=concurrency,
     )
     results = []
     wall_started = time.perf_counter()
-    request_slots = asyncio.Semaphore(args.concurrency)
+    request_slots = asyncio.Semaphore(concurrency)
 
     async with httpx.AsyncClient(
         timeout=timeout,
@@ -223,7 +230,7 @@ async def benchmark(args):
         "checked_at": datetime.now(UTC).isoformat(),
         "base_url": base_url,
         "request_count": len(requests),
-        "concurrency": args.concurrency,
+        "concurrency": concurrency,
         "accept_encoding": args.accept_encoding,
         "response_cache_bypassed": args.bypass_response_cache,
         "instant_target_ms": args.instant_ms,
@@ -249,9 +256,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--base-url",
         default="http://192.168.1.13:5173/aipriceaction-api",
-        help="Local API origin and optional Vite proxy prefix",
+        help="Local API, production API, or optional Vite proxy origin",
     )
-    parser.add_argument("--concurrency", type=int, default=len(HOME_PAGE_URLS))
+    parser.add_argument("--concurrency", type=int)
     parser.add_argument(
         "--accept-encoding",
         default="gzip, deflate, br",

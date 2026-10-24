@@ -120,6 +120,29 @@ CREATE TABLE IF NOT EXISTS history_versions(
 CREATE TABLE IF NOT EXISTS history_metadata_versions(
  source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source,symbol,interval));
+CREATE TABLE IF NOT EXISTS history_daily_versions(
+ source TEXT NOT NULL, time INTEGER NOT NULL, version INTEGER NOT NULL DEFAULT 0,
+ PRIMARY KEY(source,time));
+CREATE TRIGGER IF NOT EXISTS history_daily_version_insert AFTER INSERT ON candles
+WHEN NEW.interval='1D' BEGIN
+ INSERT INTO history_daily_versions(source,time,version) VALUES (NEW.source,NEW.time,1)
+ ON CONFLICT(source,time) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_daily_version_update_new AFTER UPDATE ON candles
+WHEN NEW.interval='1D' BEGIN
+ INSERT INTO history_daily_versions(source,time,version) VALUES (NEW.source,NEW.time,1)
+ ON CONFLICT(source,time) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_daily_version_update_old AFTER UPDATE ON candles
+WHEN OLD.interval='1D' AND (NEW.interval<>'1D' OR NEW.source<>OLD.source OR NEW.time<>OLD.time) BEGIN
+ INSERT INTO history_daily_versions(source,time,version) VALUES (OLD.source,OLD.time,1)
+ ON CONFLICT(source,time) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_daily_version_delete AFTER DELETE ON candles
+WHEN OLD.interval='1D' BEGIN
+ INSERT INTO history_daily_versions(source,time,version) VALUES (OLD.source,OLD.time,1)
+ ON CONFLICT(source,time) DO UPDATE SET version=version+1;
+END;
 CREATE TRIGGER IF NOT EXISTS series_metadata_version_insert AFTER INSERT ON series BEGIN
  INSERT INTO history_metadata_versions(source,symbol,interval,version)
  VALUES (NEW.source,NEW.symbol,NEW.interval,1)
@@ -446,44 +469,28 @@ class Repository:
         return total
 
     def history_versions_as_of(self, source, symbols, interval, end):
-        """Return candle and metadata versions limited to rows visible by ``end``.
-
-        The nanosecond ``updated_at`` stamp changes for every accepted candle
-        mutation. Combining it with the visible row count detects inserts,
-        corrections, and deletions without letting later bars invalidate an
-        earlier historical analysis.
-        """
+        """Return fast daily-change and metadata versions visible by ``end``."""
         symbols = list(dict.fromkeys(symbols))
-        versions = {symbol: (0, 0, 0) for symbol in symbols}
         if not symbols:
-            return versions
+            return 0, {}
         with self.connect() as con:
+            daily_version = con.execute(
+                "SELECT COALESCE(SUM(version),0) FROM history_daily_versions "
+                "WHERE source=? AND time<=?",
+                (source, end),
+            ).fetchone()[0]
+            metadata_versions = {symbol: 0 for symbol in symbols}
             for offset in range(0, len(symbols), 400):
                 chunk = symbols[offset : offset + 400]
                 placeholders = ",".join("?" for _ in chunk)
-                args = (source, interval, end, *chunk)
-                candles = con.execute(
-                    "SELECT symbol,COUNT(*) AS row_count,MAX(updated_at) AS last_change "
-                    "FROM candles WHERE source=? AND interval=? AND time<=? "
-                    f"AND symbol IN ({placeholders}) GROUP BY symbol",
-                    args,
-                )
-                for row in candles:
-                    _count, _last_change, metadata = versions[row["symbol"]]
-                    versions[row["symbol"]] = (
-                        row["row_count"],
-                        row["last_change"] or 0,
-                        metadata,
-                    )
                 metadata_rows = con.execute(
                     "SELECT symbol,version FROM history_metadata_versions "
                     f"WHERE source=? AND interval=? AND symbol IN ({placeholders})",
                     (source, interval, *chunk),
                 )
                 for row in metadata_rows:
-                    count, last_change, _metadata = versions[row["symbol"]]
-                    versions[row["symbol"]] = (count, last_change, row["version"])
-        return versions
+                    metadata_versions[row["symbol"]] = row["version"]
+        return daily_version, metadata_versions
 
     def register(self, source, symbol, name=None, enabled=False):
         with self.connect() as con:
