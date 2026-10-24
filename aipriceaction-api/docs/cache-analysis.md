@@ -212,7 +212,40 @@ container is unavailable, both replicas are unreachable.
 4. Account for about 400 MiB of resident memory per API process in deployment
    sizing. Two replicas duplicate their in-memory caches.
 
-The Nginx change improves deployment continuity. The production measurements
-do **not** show a stable sub-second result for every burst; cache invalidation,
-RRG recomputation, worker load, and duplicate in-flight requests remain the
-main performance work.
+The Nginx change improves deployment continuity. Before the no-op write fix,
+the production measurements did **not** show a stable sub-second result for
+every burst; cache invalidation, RRG recomputation, worker load, and duplicate
+in-flight requests were visible costs.
+
+## Production result after the unchanged-candle fix
+
+Commit `94918a6` makes candle upserts skip the SQL `UPDATE` when all market
+fields are unchanged. This prevents an identical worker refresh from firing
+the candle version trigger or incrementing the global market epoch. The API
+still records the latest successful provider check for health freshness.
+Actual candle changes continue to update versions and currently increment the
+global epoch, which can invalidate responses for other markets too.
+
+The exact 19 homepage requests were run concurrently through production Nginx
+on 2026-10-24. Every request returned HTTP 200 in all three bursts:
+
+| Burst | Page wall time | Slowest request | Over 1 second | Failed |
+|---|---:|---:|---:|---:|
+| First, immediately after the API replicas restarted | 1,525 ms | 1,381 ms | 6 | 0 |
+| Second | 627 ms | 614 ms | 0 | 0 |
+| Third | 394 ms | 331 ms | 0 | 0 |
+
+The first burst missed the 1-second target while the two newly started process
+caches populated. The following two bursts passed. Timing logs showed `/tickers`
+response-cache hits with no data-load wait, and RRG cache hits after each
+replica had calculated the requested historical date. Since the two API
+replicas keep independent in-memory caches, a cold or newly restarted replica
+can still make its first burst slower. CSV rendering and queue wait also remain
+measurable on a cache hit.
+
+This result shows the normal warm homepage burst is below one second through
+the production proxy. It does not establish a sub-second cold start or prove
+that a real worker update cannot invalidate responses. The global epoch still
+invalidates response caches after a genuine write in any market; scoping that
+invalidation to relevant market data remains a possible follow-up if production
+timings show it is still causing user-visible misses.
