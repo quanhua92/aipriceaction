@@ -3129,7 +3129,13 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 }
             )
 
-        def log_ticker_timing(body_bytes, render_wait_ms, render_worker_ms, legacy_view_ms=0):
+        def log_ticker_timing(
+            body_bytes,
+            render_wait_ms,
+            render_worker_ms,
+            legacy_view_ms=0,
+            render_cache_hit=False,
+        ):
             handler_ms = (time.perf_counter() - handler_started) * 1000
             fields = {
                 "request_id": getattr(request.state, "request_id", "-"),
@@ -3156,6 +3162,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 "render_wait_ms": round(render_wait_ms, 3),
                 "render_worker_ms": round(render_worker_ms, 3),
                 "render_queue_ms": round(max(0, render_wait_ms - render_worker_ms), 3),
+                "render_cache_hit": render_cache_hit,
                 "payload_bytes": body_bytes,
                 "handler_ms": round(handler_ms, 3),
             }
@@ -3169,10 +3176,30 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 result = csv_response(data, source_mode, params.legacy).encode("utf-8")
                 return result, (time.perf_counter() - started) * 1000
 
-            render_started = time.perf_counter()
-            body, render_worker_ms = await background(render_csv)
-            render_wait_ms = (time.perf_counter() - render_started) * 1000
-            log_ticker_timing(len(body), render_wait_ms, render_worker_ms)
+            render_key = (key, "csv", params.legacy, params.redis, params.snap)
+            cached_body = (
+                responses.get_rendered(render_key, version=cache_version)
+                if params.cache
+                else None
+            )
+            if cached_body is not None:
+                body = cached_body
+                render_wait_ms = 0.0
+                render_worker_ms = 0.0
+            else:
+                render_started = time.perf_counter()
+                body, render_worker_ms = await coalesced_background(
+                    ("ticker-csv-render", render_key, cache_version), render_csv
+                )
+                render_wait_ms = (time.perf_counter() - render_started) * 1000
+                if params.cache and not cache_version_changed_during_load:
+                    responses.put_rendered(render_key, body, version=cache_version)
+            log_ticker_timing(
+                len(body),
+                render_wait_ms,
+                render_worker_ms,
+                render_cache_hit=cached_body is not None,
+            )
             return Response(body, headers=headers)
         legacy_view_ms = 0.0
         if params.legacy:

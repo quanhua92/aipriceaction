@@ -3915,6 +3915,35 @@ def test_cors_and_versioned_response_cache_semantics(client):
     assert zero_all.headers["x-data-source"] == "empty"
 
 
+def test_ticker_csv_response_cache_reuses_rendered_bytes_and_invalidates_with_data(
+    client, monkeypatch
+):
+    original_csv_response = app_module.csv_response
+    render_calls = []
+
+    def count_csv_render(*args, **kwargs):
+        render_calls.append(1)
+        return original_csv_response(*args, **kwargs)
+
+    monkeypatch.setattr(app_module, "csv_response", count_csv_render)
+    url = "/tickers?symbol=FPT&limit=1&ma=false&format=csv"
+    first = client.get(url)
+    cached = client.get(url)
+
+    assert first.status_code == cached.status_code == 200
+    assert first.content == cached.content
+    assert len(render_calls) == 1
+
+    repo = client.app_instance.state.repo
+    latest = repo.read("vn", "FPT", "1D", limit=1)[0]
+    repo.put([replace(latest, high=latest.high + 1, close=latest.close + 1)])
+    updated = client.get(url)
+
+    assert updated.status_code == 200
+    assert updated.content != cached.content
+    assert len(render_calls) == 2
+
+
 def test_tick_cache_expires_after_configured_ttl(tmp_path):
     settings = replace(
         Settings(),

@@ -27,6 +27,35 @@ def test_default_response_cache_ttl_is_one_minute():
     assert TickersResponseCache().ttl == 60
 
 
+def test_rendered_body_uses_the_same_ttl_and_data_version_rules():
+    now = [0.0]
+    cache = TickersResponseCache(ttl=5, clock=lambda: now[0])
+    cache.put_rendered(("query", False), b"csv body", version=3)
+
+    assert cache.get_rendered(("query", False), version=3) == b"csv body"
+    assert cache.get_rendered(("query", True), version=3) is None
+    assert cache.get_rendered(("query", False), version=4) is None
+
+    cache.put_rendered(("query", False), b"new body", version=4)
+    now[0] = 5.0001
+    assert cache.get_rendered(("query", False), version=4) is None
+    assert cache.rendered_bytes == 0
+
+
+def test_rendered_body_cache_is_bounded_and_clear_resets_memory():
+    cache = TickersResponseCache(ttl=60, max_entries=1, max_bytes=1024)
+    cache.put_rendered("first", b"first", version=1)
+    cache.put_rendered("second", b"second", version=1)
+
+    assert cache.get_rendered("first", version=1) is None
+    assert cache.get_rendered("second", version=1) == b"second"
+    assert cache.rendered_bytes <= cache.rendered_max_bytes
+
+    cache.clear()
+    assert not cache.rendered_store
+    assert cache.rendered_bytes == 0
+
+
 def test_cache_hits_refresh_lru_order_without_refreshing_ttl():
     now = [0.0]
     cache = TickersResponseCache(ttl=5, max_entries=2, clock=lambda: now[0])

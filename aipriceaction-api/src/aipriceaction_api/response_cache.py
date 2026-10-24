@@ -24,6 +24,9 @@ class TickersResponseCache:
         self.clock = clock
         self.store = OrderedDict()
         self.stored_bytes = 0
+        self.rendered_store = OrderedDict()
+        self.rendered_bytes = 0
+        self.rendered_max_bytes = min(max_bytes, 64 * 1024 * 1024)
 
     @staticmethod
     def _size(value):
@@ -95,6 +98,46 @@ class TickersResponseCache:
         self.store.move_to_end(key)
         self.stored_bytes += size
 
+    def _remove_rendered(self, key):
+        entry = self.rendered_store.pop(key, None)
+        if entry is not None:
+            self.rendered_bytes -= entry[2]
+        return entry
+
+    def get_rendered(self, key, *, version=None):
+        """Return serialized response bytes while their data version is current."""
+        entry = self.rendered_store.get(key)
+        if entry is None:
+            return None
+        inserted_at, body, _size, stored_version = entry
+        if self.clock() - inserted_at > self.ttl or stored_version != version:
+            self._remove_rendered(key)
+            return None
+        self.rendered_store.move_to_end(key)
+        return body
+
+    def put_rendered(self, key, body, *, version=None):
+        """Store a rendered body in a separately bounded, versioned LRU."""
+        now = self.clock()
+        for stored_key, entry in list(self.rendered_store.items()):
+            if now - entry[0] > self.ttl:
+                self._remove_rendered(stored_key)
+        body = bytes(body)
+        size = getsizeof(body)
+        if size > self.rendered_max_bytes or self.max_entries <= 0:
+            return
+        self._remove_rendered(key)
+        while self.rendered_store and (
+            len(self.rendered_store) >= self.max_entries
+            or self.rendered_bytes + size > self.rendered_max_bytes
+        ):
+            self._remove_rendered(next(iter(self.rendered_store)))
+        self.rendered_store[key] = (now, body, size, version)
+        self.rendered_store.move_to_end(key)
+        self.rendered_bytes += size
+
     def clear(self):
         self.store.clear()
         self.stored_bytes = 0
+        self.rendered_store.clear()
+        self.rendered_bytes = 0
