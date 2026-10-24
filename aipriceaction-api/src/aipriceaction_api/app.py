@@ -1860,6 +1860,33 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             if symbols:
                 history.data_loader.load_many(source, symbols, "1D", limit=111)
 
+        warmed_indicators = 0
+        for source in ("vn", "yahoo", "crypto", "sjc"):
+            symbols = [row["symbol"] for row in repo.tickers([source])]
+            if not symbols:
+                continue
+            for ma, ema in ((True, False), (True, True), (False, False)):
+                rows_by_symbol = history.query_many(
+                    source,
+                    symbols,
+                    "1D",
+                    limit=1,
+                    ma=ma,
+                    ema=ema,
+                    strict_source_intervals=True,
+                    ignore_pending_repairs=True,
+                    return_exceptions=True,
+                )
+                warmed_indicators += sum(
+                    isinstance(rows, list) and bool(rows) for rows in rows_by_symbol.values()
+                )
+        log.info(
+            "latest indicator cache warmup rows=%d entries=%d cached_mb=%.1f",
+            warmed_indicators,
+            len(history.indicator_cache._entries),
+            history.indicator_cache.size_bytes / (1024 * 1024),
+        )
+
         current_date = datetime.now(UTC).strftime("%Y-%m-%d")
         current_end = date_bounds(current_date, True)
         current_start = date_bounds(current_date)
