@@ -73,6 +73,56 @@ def bar(day, close=100, revision="initial"):
     )
 
 
+def test_republishing_unchanged_candles_does_not_invalidate_market_caches(system):
+    repo, _, _ = system
+    candle = Candle(
+        "vn",
+        "VNINDEX",
+        "1D",
+        parse_time("2026-10-19"),
+        100,
+        101,
+        99,
+        100,
+        1000,
+        "vps",
+        "revision-1",
+    )
+    assert repo.put([candle]) == 1
+    version = repo.history_versions("vn", ["VNINDEX"], "1D")["VNINDEX"]
+    epoch = repo.market_epoch()
+    latest = repo.read("vn", "VNINDEX", "1D")[0]
+
+    attempt = repo.start_source_check("vn", "VNINDEX", "1D")
+    assert repo.put(
+        [candle],
+        verification={"attempt_ns": attempt, "completed_before": candle.time + 86400},
+    ) == 1
+
+    assert repo.history_versions("vn", ["VNINDEX"], "1D")["VNINDEX"] == version
+    assert repo.market_epoch() == epoch
+    with repo.connect() as con:
+        check = con.execute(
+            "SELECT successful_at_ns FROM source_checks "
+            "WHERE source='vn' AND symbol='VNINDEX' AND interval='1D'"
+        ).fetchone()
+    assert check["successful_at_ns"] is not None
+    assert check["successful_at_ns"] >= latest.updated_at
+    health_now = datetime(2026, 10, 20, 3, tzinfo=UTC)
+    successful_at = check["successful_at_ns"]
+    assert repo.health_summary(now=health_now)["last_sync"]["1D"] == successful_at
+
+    retry = repo.start_source_check("vn", "VNINDEX", "1D")
+    assert repo.health_summary(now=health_now)["last_sync"]["1D"] == successful_at
+    repo.fail_source_check("vn", "VNINDEX", "1D", retry, "temporary provider error")
+    assert repo.health_summary(now=health_now)["last_sync"]["1D"] == successful_at
+
+    changed = replace(candle, high=102, close=101)
+    assert repo.put([changed]) == 1
+    assert repo.history_versions("vn", ["VNINDEX"], "1D")["VNINDEX"] == version + 1
+    assert repo.market_epoch() == epoch + 1
+
+
 @pytest.mark.parametrize(
     "iv,stamp", [("1W", "2020-02-03"), ("2W", "2020-02-03"), ("1M", "2020-02-01")]
 )

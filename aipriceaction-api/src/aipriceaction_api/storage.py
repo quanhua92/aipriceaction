@@ -205,9 +205,12 @@ END;
 PRAGMA user_version=3;
 """
 COLUMNS = tuple(f.name for f in fields(Candle))
+MARKET_COLUMNS = COLUMNS[4:-1]
 INSERT = (
     f"INSERT INTO candles ({','.join(COLUMNS)}) VALUES ({','.join('?' for _ in COLUMNS)}) ON CONFLICT(source,symbol,interval,time) DO UPDATE SET "
     + ",".join(f"{c}=excluded.{c}" for c in COLUMNS[4:])
+    + " WHERE "
+    + " OR ".join(f"candles.{column} IS NOT excluded.{column}" for column in MARKET_COLUMNS)
 )
 
 
@@ -820,6 +823,7 @@ class Repository:
             raise DataError("Provider verification requires publishing every checked candle")
         stamp = time.time_ns()
         written = 0
+        accepted = 0
         statement = (
             INSERT if overwrite else INSERT.split(" ON CONFLICT", 1)[0] + " ON CONFLICT DO NOTHING"
         )
@@ -865,7 +869,11 @@ class Repository:
                     raise DataError("Provider/revision change requires staged recovery")
                 record = c.record()
                 record["updated_at"] = stamp
-                written += con.execute(statement, tuple(record[k] for k in COLUMNS)).rowcount
+                affected = con.execute(
+                    statement, tuple(record[k] for k in COLUMNS)
+                ).rowcount
+                written += affected
+                accepted += 1 if overwrite else affected
                 if repair and repair["provider"] == state["provider"]:
                     # A long same-provider backfill must not freeze the public
                     # tail. Mirror each independently verified live candle into
@@ -908,7 +916,7 @@ class Repository:
                     "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('provider_failure','provider_handoff_pending')",
                     ident,
                 )
-        return written
+        return accepted
 
     def active_repair(self, source, symbol, interval):
         """Whether this series has a durable staged repair in progress."""
@@ -2157,7 +2165,13 @@ class Repository:
                     year_filter = "AND d.time>=? AND d.time<?"
                     year_params = (year_start, next_year_start)
                 latest = con.execute(
-                    f"""SELECT MAX(c.updated_at)
+                    f"""SELECT MAX(
+                      CASE
+                        WHEN ch.provider=s.provider
+                          AND ch.revision=s.revision AND ch.successful_at_ns IS NOT NULL
+                        THEN MAX(c.updated_at,ch.successful_at_ns)
+                        ELSE c.updated_at
+                      END)
                     FROM (
                       SELECT t.source,t.symbol,MAX(d.time) AS latest_time
                       FROM tickers t JOIN candles d USING(source,symbol)
@@ -2165,7 +2179,11 @@ class Repository:
                       GROUP BY t.source,t.symbol
                     ) selected
                     JOIN candles c ON c.source=selected.source AND c.symbol=selected.symbol
-                      AND c.interval=? AND c.time=selected.latest_time""",
+                      AND c.interval=? AND c.time=selected.latest_time
+                    LEFT JOIN series s ON s.source=c.source AND s.symbol=c.symbol
+                      AND s.interval=c.interval
+                    LEFT JOIN source_checks ch ON ch.source=c.source AND ch.symbol=c.symbol
+                      AND ch.interval=c.interval""",
                     (interval, *major_symbols, *year_params, interval),
                 ).fetchone()[0]
                 if latest is not None:

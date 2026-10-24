@@ -3867,6 +3867,12 @@ def test_cors_and_versioned_response_cache_semantics(client):
     assert cached.headers["x-data-source"] == "in-memory"
     repo = client.app_instance.state.repo
     row = repo.read("vn", "FPT", "1D", limit=1)[0]
+    market_epoch = repo.market_epoch()
+    assert repo.put([row]) == 1
+    unchanged = client.get("/tickers?symbol=FPT&limit=1")
+    assert unchanged.headers["x-data-source"] == "in-memory"
+    assert repo.market_epoch() == market_epoch
+
     repo.put([replace(row, high=row.high + 10, close=row.close + 5)])
     # A market-data write advances market_epoch and invalidates the response
     # cache immediately, while leaving unchanged query results reusable.
@@ -3906,7 +3912,9 @@ def test_tick_cache_expires_after_configured_ttl(tmp_path):
         url = "/tickers?symbol=FPT&limit=1&ma=false"
         assert test_client.get(url).json()["FPT"][0]["close"] == 10
         repo.put([replace(row, close=12, high=13)])
-        assert test_client.get(url).json()["FPT"][0]["close"] == 10
+        refreshed = test_client.get(url)
+        assert refreshed.json()["FPT"][0]["close"] == 12
+        assert refreshed.headers["x-data-source"] == "database"
         time.sleep(0.55)
         expired = test_client.get(url)
         assert expired.headers["x-data-source"] != "in-memory"
