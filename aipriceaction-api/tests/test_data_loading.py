@@ -272,7 +272,7 @@ def test_repository_connections_enable_large_sqlite_read_cache(system):
         assert con.execute("PRAGMA mmap_size").fetchone()[0] >= 256 * 1024 * 1024
 
 
-def test_loader_lru_refreshes_changed_series_and_keeps_epoch_cache(system, monkeypatch):
+def test_loader_cache_refreshes_changed_series_without_time_expiry(system, monkeypatch):
     repo, history = system
     repo.put([candle("FPT", index) for index in range(3)])
     loader = history.data_loader
@@ -314,10 +314,12 @@ def test_loader_lru_refreshes_changed_series_and_keeps_epoch_cache(system, monke
         candle("FPT", index).close for index in range(1, 4)
     ]
 
-    now[0] += loader._CACHE_TTL_SECONDS + 0.01
+    # The bounded LRU stays resident across long idle periods. Per-series
+    # versions, rather than wall-clock expiry, determine whether rows are fresh.
+    now[0] += 24 * 60 * 60
     fifth = loader.load_many("vn", ["FPT"], "1D", limit=3, compact_tail=True)
 
-    assert reads == 3
+    assert reads == 2
     assert fifth.compact_tails["FPT"].closes.tolist() == [
         candle("FPT", index).close for index in range(1, 4)
     ]
@@ -478,7 +480,7 @@ def test_empty_startup_warmup_does_not_hide_first_market_rows(system):
     ]
 
 
-def test_compatible_loader_hits_do_not_extend_original_cache_ttl(system, monkeypatch):
+def test_compatible_loader_hits_remain_resident_and_refresh_changed_rows(system, monkeypatch):
     repo, history = system
     repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(4)])
     loader = history.data_loader
@@ -495,10 +497,10 @@ def test_compatible_loader_hits_do_not_extend_original_cache_ttl(system, monkeyp
 
     monkeypatch.setattr(loader, "_load_many", count_loads)
     loader.load_many("vn", ["FPT", "VCB"], "1D", limit=4, compact_tail=True)
-    now[0] = 159.0
+    now[0] += 24 * 60 * 60
     loader.load_many("vn", ["FPT"], "1D", limit=2, compact_tail=True)
     repo.put([candle("FPT", 4)])
-    now[0] = 160.01
+    now[0] += 1
     refreshed = loader.load_many("vn", ["FPT"], "1D", limit=2, compact_tail=True)
 
     assert loads == 2

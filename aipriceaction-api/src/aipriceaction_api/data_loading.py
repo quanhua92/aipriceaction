@@ -41,10 +41,8 @@ class LoadedHistory:
 class SQLiteDataLoader:
     """Load native candle tails and associated validation metadata."""
 
-    # Keep hot history resident across ordinary page visits. Per-series SQLite
-    # versions below provide prompt freshness without expiring the whole market
-    # cache after one idle minute.
-    _CACHE_TTL_SECONDS = 900
+    # Keep loaded history resident until the byte-bounded LRU needs the space.
+    # SQLite per-series versions, checked on every load, provide freshness.
     _CACHE_MAX_BYTES = 256 * 1024 * 1024
 
     def __init__(self, repository):
@@ -109,32 +107,28 @@ class SQLiteDataLoader:
                 pending.extend(value)
         return size
 
-    def _cache_get(self, key, now, copy_result=True):
+    def _cache_get(self, key, copy_result=True):
         with self._cache_lock:
             cached = self._cache.get(key)
             if cached is None:
                 return None
-            expires_at, size, value = cached
-            if expires_at <= now:
-                self._cache.pop(key)
-                self._cache_bytes -= size
-                return None
+            _stored_at, _size, value = cached
             self._cache.move_to_end(key)
         # Cached values are immutable by convention: they were copied on put,
         # and Candle is frozen. Clone containers outside the lock so a large
         # metadata result does not serialize unrelated cache hits.
         return self._copy_loaded(value) if copy_result else value
 
-    def _cache_get_compatible(self, key, now, versions, copy_result=True):
+    def _cache_get_compatible(self, key, versions, copy_result=True):
         """Reuse a wider cached batch for a symbol subset and shorter tail.
 
         Startup warming loads the full source universe so ticker and analysis
         routes can share the same SQLite snapshot. A request can safely reuse
         that read when its symbol set is a subset and its time bounds and sort
-        direction match. The cache continues to expire from the original read
-        time, even when smaller requests hit it repeatedly.
+        direction match. Version checks refresh changed identities; the byte-
+        bounded LRU, rather than elapsed time, controls retention.
         """
-        cached = self._cache_get(key, now, copy_result=False)
+        cached = self._cache_get(key, copy_result=False)
         if cached is not None:
             stale = [
                 symbol
@@ -156,11 +150,6 @@ class SQLiteDataLoader:
             return LoadedHistory(), list(symbols)
         requested_symbols = set(symbols)
         with self._cache_lock:
-            expired = [cached_key for cached_key, entry in self._cache.items() if entry[0] <= now]
-            for cached_key in expired:
-                entry = self._cache.pop(cached_key)
-                self._cache_bytes -= entry[1]
-
             candidates = []
             for cached_key, entry in self._cache.items():
                 (
@@ -315,11 +304,7 @@ class SQLiteDataLoader:
             previous = self._cache.pop(key, None)
             if previous is not None:
                 self._cache_bytes -= previous[1]
-            for cached_key, cached in list(self._cache.items()):
-                if cached[0] <= now:
-                    self._cache.pop(cached_key)
-                    self._cache_bytes -= cached[1]
-            self._cache[key] = (now + self._CACHE_TTL_SECONDS, size, cached_value)
+            self._cache[key] = (now, size, cached_value)
             self._cache_bytes += size
             while self._cache_bytes > self._CACHE_MAX_BYTES:
                 _, (_, evicted_size, _) = self._cache.popitem(last=False)
@@ -495,7 +480,7 @@ class SQLiteDataLoader:
 
         try:
             cached, stale = self._cache_get_compatible(
-                key, time.monotonic(), versions, copy_result=copy_result
+                key, versions, copy_result=copy_result
             )
             if not stale:
                 result = cached
