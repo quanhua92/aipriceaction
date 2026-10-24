@@ -36,8 +36,8 @@ def snapshot(symbol, rows, version):
     return IndicatorSnapshot.from_loaded("vn", symbol, "1D", version, tail, rows[-2:])
 
 
-@pytest.mark.parametrize("ema", [False, True])
-def test_version_marker_refreshes_only_changed_series(monkeypatch, ema):
+@pytest.mark.parametrize("ma,ema", [(False, False), (True, False), (True, True)])
+def test_version_marker_refreshes_only_changed_series(monkeypatch, ma, ema):
     import aipriceaction_api.indicator_cache as module
 
     calls = []
@@ -53,32 +53,32 @@ def test_version_marker_refreshes_only_changed_series(monkeypatch, ema):
     b_rows = [candle("BBB", i) for i in range(601)]
     a_v1, b_v1 = snapshot("AAA", a_rows, 1), snapshot("BBB", b_rows, 1)
 
-    initial = cache.resolve([a_v1, b_v1], ema=ema)
+    initial = cache.resolve([a_v1, b_v1], ma=ma, ema=ema)
     assert calls == [("AAA", "BBB")]
     assert initial["AAA"] == enhance_latest_many(
         {"AAA": a_rows[-2:]},
         {"AAA": [row.close for row in a_rows]},
         "1D",
-        ma=True,
+        ma=ma,
         ema=ema,
     )["AAA"]
 
     # Same SQLite series versions are a hot cache hit: no indicator pass.
-    assert cache.resolve([a_v1, b_v1], ema=ema) == initial
+    assert cache.resolve([a_v1, b_v1], ma=ma, ema=ema) == initial
     assert calls == [("AAA", "BBB")]
 
     # A new candle advances only AAA's version. Its updated snapshot replaces
     # that entry while BBB remains a cache hit.
     a_rows.append(candle("AAA", 601))
     a_v2 = snapshot("AAA", a_rows, 2)
-    updated = cache.resolve([a_v2, b_v1], ema=ema)
+    updated = cache.resolve([a_v2, b_v1], ma=ma, ema=ema)
     assert calls[-1] == ("AAA",)
     assert len(calls) == 2
     assert updated["AAA"] == enhance_latest_many(
         {"AAA": a_rows[-2:]},
         {"AAA": [row.close for row in a_rows]},
         "1D",
-        ma=True,
+        ma=ma,
         ema=ema,
     )["AAA"]
     assert updated["BBB"] == initial["BBB"]
@@ -86,13 +86,13 @@ def test_version_marker_refreshes_only_changed_series(monkeypatch, ema):
     # Historical corrections also advance the version and refresh from the
     # corrected tail, so the latest result cannot retain stale indicators.
     a_rows[500] = candle("AAA", 500, close=130.25)
-    corrected = cache.resolve([snapshot("AAA", a_rows, 3)], ema=ema)
+    corrected = cache.resolve([snapshot("AAA", a_rows, 3)], ma=ma, ema=ema)
     assert calls[-1] == ("AAA",)
     assert corrected["AAA"] == enhance_latest_many(
         {"AAA": a_rows[-2:]},
         {"AAA": [row.close for row in a_rows]},
         "1D",
-        ma=True,
+        ma=ma,
         ema=ema,
     )["AAA"]
     assert len(cache) == 2
@@ -109,3 +109,18 @@ def test_cache_invalidation_is_scoped_to_series():
     assert len(cache) == 1
     assert cache.invalidate("crypto") == 0
     assert len(cache) == 1
+
+
+def test_ma_and_non_ma_rows_use_separate_cache_entries():
+    cache = LatestIndicatorCache()
+    rows = [candle("AAA", i) for i in range(601)]
+    current = snapshot("AAA", rows, 1)
+
+    plain = cache.resolve([current], ma=False, ema=True, periods=(20,))["AAA"]
+    assert cache.resolve([current], ma=False)["AAA"] == plain
+    assert not any(key.startswith("ma") for key in plain[0])
+
+    with_indicators = cache.resolve([current], ma=True)["AAA"]
+    assert "ma20" in with_indicators[0]
+    assert cache.resolve([current], ma=False)["AAA"] == plain
+    assert len(cache) == 2

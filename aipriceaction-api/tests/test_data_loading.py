@@ -616,8 +616,8 @@ def test_query_many_matches_single_latest_queries(system, ma, ema):
         )
 
 
-@pytest.mark.parametrize("ema", [False, True])
-def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, ema):
+@pytest.mark.parametrize("ma,ema", [(False, False), (True, False), (True, True)])
+def test_compact_latest_rows_match_single_queries_and_archive_fallback(system, ma, ema):
     repo, history = system
     repo.put([candle("FPT", index) for index in range(700)])
     repo.put([candle("VCB", index) for index in range(601)])
@@ -628,7 +628,7 @@ def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, e
         ["FPT", "VCB", "MISSING"],
         "1D",
         limit=1,
-        ma=True,
+        ma=ma,
         ema=ema,
         strict_source_intervals=True,
         ignore_pending_repairs=True,
@@ -640,14 +640,44 @@ def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, e
             symbol,
             "1D",
             limit=1,
-            ma=True,
+            ma=ma,
             ema=ema,
             strict_source_intervals=True,
             ignore_pending_repairs=True,
         )
 
 
-def test_latest_indicator_cache_reuses_and_refreshes_sqlite_versions(system, monkeypatch):
+@pytest.mark.parametrize("ma,ema", [(False, False), (True, False), (True, True)])
+def test_compact_latest_rows_match_archive_only_series(system, ma, ema):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(260)]
+    repo.put(rows)
+    history.archive.publish(rows, prune=True)
+
+    batched = history.query_many(
+        "vn",
+        ["FPT"],
+        "1D",
+        limit=1,
+        ma=ma,
+        ema=ema,
+        strict_source_intervals=True,
+        return_exceptions=True,
+    )["FPT"]
+    expected = history.query(
+        "vn",
+        "FPT",
+        "1D",
+        limit=1,
+        ma=ma,
+        ema=ema,
+        strict_source_intervals=True,
+    )
+    assert batched == expected
+
+
+@pytest.mark.parametrize("ma,ema", [(False, False), (True, True)])
+def test_latest_row_cache_reuses_and_refreshes_sqlite_versions(system, monkeypatch, ma, ema):
     repo, history = system
     repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(700)])
     calls = []
@@ -664,8 +694,8 @@ def test_latest_indicator_cache_reuses_and_refreshes_sqlite_versions(system, mon
             ["FPT", "VCB"],
             "1D",
             limit=1,
-            ma=True,
-            ema=True,
+            ma=ma,
+            ema=ema,
             strict_source_intervals=True,
         )
 
@@ -680,7 +710,7 @@ def test_latest_indicator_cache_reuses_and_refreshes_sqlite_versions(system, mon
     refreshed = query()
     assert calls == [("FPT", "VCB"), ("FPT",)]
     assert refreshed["FPT"] == history.query(
-        "vn", "FPT", "1D", limit=1, ma=True, ema=True, strict_source_intervals=True
+        "vn", "FPT", "1D", limit=1, ma=ma, ema=ema, strict_source_intervals=True
     )
     assert refreshed["VCB"] == first["VCB"]
 
@@ -719,9 +749,9 @@ def test_query_many_can_calculate_only_requested_ma_periods(system, ema):
         assert selected[symbol] == [expected]
 
 
-@pytest.mark.parametrize("ema", [False, True])
+@pytest.mark.parametrize("ma,ema", [(False, False), (True, False), (True, True)])
 @pytest.mark.parametrize("ignore_pending_repairs", [False, True])
-def test_compact_latest_ma_preserves_gaps_after_latest(system, ema, ignore_pending_repairs):
+def test_compact_latest_rows_preserve_gaps_after_latest(system, ma, ema, ignore_pending_repairs):
     repo, history = system
     rows = [candle("FPT", index) for index in range(250)]
     repo.put(rows)
@@ -735,7 +765,7 @@ def test_compact_latest_ma_preserves_gaps_after_latest(system, ema, ignore_pendi
             "FPT",
             "1D",
             limit=1,
-            ma=True,
+            ma=ma,
             ema=ema,
             redis=False,
             strict_source_intervals=True,
@@ -746,7 +776,7 @@ def test_compact_latest_ma_preserves_gaps_after_latest(system, ema, ignore_pendi
         ["FPT"],
         "1D",
         limit=1,
-        ma=True,
+        ma=ma,
         ema=ema,
         redis=False,
         strict_source_intervals=True,

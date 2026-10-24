@@ -10,7 +10,6 @@ from pathlib import Path
 from .calculations import (
     aggregate,
     enhance,
-    enhance_latest_many,
     enhance_many_selected,
     enhance_selected,
 )
@@ -1387,19 +1386,20 @@ class History:
         result = enhance(rows, iv, ma, ema, periods=periods)
         return result[-len(target) :]
 
-    def _query_many_latest_ma(
+    def _query_many_latest_cached(
         self,
         source,
         symbols,
         iv,
         context_limit,
+        ma,
         ema,
         redis,
         ignore_pending_repairs,
         return_exceptions,
         periods=None,
     ):
-        """Fast latest MA rows while retaining archive and data-quality policy."""
+        """Fast latest rows with or without indicators, retaining quality policy."""
         loaded = self.data_loader.load_many(
             source,
             symbols,
@@ -1468,7 +1468,9 @@ class History:
             )
             for symbol in safe_contexts
         ]
-        results.update(self.indicator_cache.resolve(snapshots, ema=ema, periods=periods))
+        results.update(
+            self.indicator_cache.resolve(snapshots, ma=ma, ema=ema, periods=periods)
+        )
         if fallback_symbols:
             try:
                 fallback_contexts = self.read_many(
@@ -1494,7 +1496,7 @@ class History:
                             start=None,
                             end=None,
                             limit=1,
-                            ma=True,
+                            ma=ma,
                             ema=ema,
                             redis=redis,
                             strict_source_intervals=True,
@@ -1522,7 +1524,7 @@ class History:
                             start=None,
                             end=None,
                             limit=1,
-                            ma=True,
+                            ma=ma,
                             ema=ema,
                             redis=redis,
                             strict_source_intervals=True,
@@ -1538,7 +1540,7 @@ class History:
                         context,
                         iv,
                         [len(context) - 1],
-                        ma=True,
+                        ma=ma,
                         ema=ema,
                         periods=periods,
                     )
@@ -1611,12 +1613,13 @@ class History:
         buffer = 600 if ma and ema else 200 if ma else 1
         raw_limit = limit + buffer if ma else limit + 1
         context_limit = min(retained, max(1, raw_limit)) if redis and retained > 0 else raw_limit
-        if limit == 1 and ma:
-            return self._query_many_latest_ma(
+        if limit == 1:
+            return self._query_many_latest_cached(
                 source,
                 symbols,
                 iv,
                 context_limit,
+                ma,
                 ema,
                 redis,
                 ignore_pending_repairs,
@@ -1633,21 +1636,6 @@ class History:
             return_exceptions=True,
         )
         results = {}
-        vectorized_latest = {}
-        if limit == 1:
-            safe_contexts = {
-                symbol: context
-                for symbol, context in contexts.items()
-                if isinstance(context, list) and context
-            }
-            vectorized_latest = enhance_latest_many(
-                safe_contexts,
-                {symbol: [row.close for row in rows] for symbol, rows in safe_contexts.items()},
-                iv,
-                ma=ma,
-                ema=ema,
-                periods=periods,
-            )
         batch_contexts = {}
         selected_indices = {}
         for symbol in symbols:
@@ -1674,8 +1662,6 @@ class History:
                     results[symbol] = exc
             elif not context:
                 results[symbol] = []
-            elif limit == 1:
-                results[symbol] = vectorized_latest[symbol]
             else:
                 first = max(0, len(context) - limit)
                 if ma:

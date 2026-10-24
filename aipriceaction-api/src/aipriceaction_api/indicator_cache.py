@@ -51,14 +51,15 @@ class _Entry:
 
 
 class LatestIndicatorCache:
-    """Cache one latest MA/EMA response per ticker and request configuration.
+    """Cache one latest ticker row per symbol and request configuration.
 
     There is no time-based expiry. The API observes cross-process OHLCV changes
     through SQLite's per-series version marker on the next request. On a
     version change, ``resolve`` recomputes from that ticker's fresh compact
-    tail and replaces just that cache entry. Unchanged tickers return their
-    cached result without running the indicator kernel again. The byte-bounded
-    LRU controls memory use.
+    tail and replaces just that cache entry. This supports both rows with MA/
+    EMA and rows without them. Unchanged tickers return their cached result
+    without running the response calculation again. The byte-bounded LRU
+    controls memory use.
     """
 
     DEFAULT_MAX_BYTES = 64 * 1024 * 1024
@@ -72,13 +73,14 @@ class LatestIndicatorCache:
         self._lock = threading.Lock()
 
     @staticmethod
-    def _key(snapshot, ema, periods):
+    def _key(snapshot, ma, ema, periods):
         return (
             snapshot.source,
             snapshot.symbol,
             snapshot.interval,
-            bool(ema),
-            tuple(periods) if periods is not None else None,
+            bool(ma),
+            bool(ema) if ma else False,
+            tuple(periods) if ma and periods is not None else None,
         )
 
     @staticmethod
@@ -125,14 +127,14 @@ class LatestIndicatorCache:
                 _old_key, old = self._entries.popitem(last=False)
                 self._bytes -= old.size
 
-    def resolve(self, snapshots, *, ema=False, periods=None):
+    def resolve(self, snapshots, *, ma=True, ema=False, periods=None):
         """Return current rows, computing only cold or version-changed entries."""
         snapshots = list(snapshots)
         results = {}
         missing = []
         with self._lock:
             for snapshot in snapshots:
-                key = self._key(snapshot, ema, periods)
+                key = self._key(snapshot, ma, ema, periods)
                 entry = self._entries.get(key)
                 if entry is not None and entry.version == snapshot.version:
                     self._entries.move_to_end(key)
@@ -149,7 +151,7 @@ class LatestIndicatorCache:
             contexts,
             closes_by_symbol,
             missing[0][1].interval,
-            ma=True,
+            ma=ma,
             ema=ema,
             periods=periods,
         )
