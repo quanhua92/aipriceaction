@@ -112,7 +112,7 @@ class Settings:
     vci_history_fallback: bool = False
     vci_volume_proofs: Path | None = None
     proxies: tuple[str, ...] = ()
-    allow_direct: bool = False
+    allow_direct: bool = True
     worker_concurrency: int = 3
     requests_per_minute: int = 30
     watchlist: Path = (

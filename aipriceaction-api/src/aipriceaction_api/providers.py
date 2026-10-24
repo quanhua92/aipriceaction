@@ -2,16 +2,21 @@
 
 import asyncio
 import json
+import logging
+import random
 import time
+from collections import Counter
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import httpx
 
 from .binance_files import BinanceFiles
 from .domain import INDEXES, Candle, DataError
 from .vci_volume import apply_volume_proof, validate_volume_proof
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -80,6 +85,8 @@ class Providers:
         self.transport = transport
         self.clients = {}
         self.limits = {}
+        self.provider_attempt_counts = Counter()
+        self.provider_route_attempt_counts = Counter()
         if vci_volume_proofs is None:
             path = getattr(settings, "vci_volume_proofs", None)
             vci_volume_proofs = ()
@@ -112,8 +119,8 @@ class Providers:
     def routes(self, vn):
         routes = list(self.settings.proxies)
         # A configured proxy is the default VN route. If no proxy is configured,
-        # use direct access automatically; ALLOW_DIRECT controls direct fallback
-        # only when one or more proxies are present.
+        # use direct access automatically. ALLOW_DIRECT adds it to the proxy
+        # rotation when proxies are configured.
         direct_allowed = self.settings.allow_direct or not self.settings.proxies
         if not vn or direct_allowed or self.transport:
             routes.append(None)
@@ -121,33 +128,71 @@ class Providers:
             raise DataError("No VN provider route configured")
         return routes
 
+    def route_label(self, route):
+        if route is None:
+            return "direct"
+        proxy_number = next(
+            (index for index, proxy in enumerate(self.settings.proxies, start=1) if proxy == route),
+            None,
+        )
+        try:
+            parsed = urlsplit(route)
+            scheme = parsed.scheme or "proxy"
+            host = parsed.hostname or "unknown"
+            if ":" in host and not host.startswith("["):
+                host = f"[{host}]"
+            port = f":{parsed.port}" if parsed.port is not None else ""
+            address = f"{scheme}://{host}{port}"
+        except ValueError:
+            address = "invalid-address"
+        prefix = f"proxy-{proxy_number}" if proxy_number is not None else "proxy"
+        # Only the scheme, hostname, and port are logged; never proxy credentials.
+        return f"{prefix}({address})"
+
+    def shuffled_routes(self, vn):
+        routes = self.routes(vn)
+        random.shuffle(routes)
+        # Match Rust's five-attempt retry window, while ensuring every configured
+        # route is reached when the pool contains more than five clients.
+        return routes, max(5, len(routes))
+
+    def record_provider_attempt(self, provider, route):
+        route_name = self.route_label(route)
+        self.provider_attempt_counts[provider] += 1
+        self.provider_route_attempt_counts[(provider, route_name)] += 1
+        return self.provider_attempt_counts[provider], self.provider_route_attempt_counts[
+            (provider, route_name)
+        ]
+
     async def request(
         self, provider, url, params=None, referer=None, data=None, vn=False, json_body=None
     ):
         if data is not None and json_body is not None:
             raise DataError("Cannot combine form and JSON request bodies", 400)
         last = None
-        routes = self.routes(vn)
-        for attempt in range(3):
+        routes, max_attempts = self.shuffled_routes(vn)
+        for attempt in range(max_attempts):
             route = routes[attempt % len(routes)]
+            route_name = self.route_label(route)
             client_key = (provider, route)
-            if client_key not in self.clients:
-                self.clients[client_key] = httpx.AsyncClient(
-                    proxy=route,
-                    transport=self.transport,
-                    timeout=20,
-                    follow_redirects=True,
-                    headers={
-                        "User-Agent": "Mozilla/5.0 AIPriceAction/0.1",
-                        "Accept": "application/json, text/plain, */*",
-                    },
-                )
             limiter = self.limits.setdefault(
                 client_key, RateLimiter(self.settings.requests_per_minute)
             )
             await limiter.acquire()
+            provider_requests, route_requests = self.record_provider_attempt(provider, route)
             try:
-                client = self.clients[client_key]
+                client = self.clients.get(client_key)
+                if client is None:
+                    client = self.clients[client_key] = httpx.AsyncClient(
+                        proxy=route,
+                        transport=self.transport,
+                        timeout=20,
+                        follow_redirects=True,
+                        headers={
+                            "User-Agent": "Mozilla/5.0 AIPriceAction/0.1",
+                            "Accept": "application/json, text/plain, */*",
+                        },
+                    )
                 response = await client.request(
                     "POST" if data is not None or json_body is not None else "GET",
                     url,
@@ -157,34 +202,73 @@ class Providers:
                     headers={"Referer": referer} if referer else None,
                 )
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                log.info(
+                    "upstream request succeeded provider=%s route=%s attempt=%s/%s "
+                    "provider_attempts=%s provider_route_attempts=%s",
+                    provider,
+                    route_name,
+                    attempt + 1,
+                    max_attempts,
+                    provider_requests,
+                    route_requests,
+                )
+                return result
             except (httpx.HTTPError, ValueError) as exc:
                 last = type(exc).__name__
-                if attempt < 2:
-                    await asyncio.sleep(min(4, 2**attempt))
+                status_code = (
+                    exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+                )
+                log.warning(
+                    "upstream request failed provider=%s route=%s attempt=%s/%s "
+                    "error=%s status_code=%s provider_attempts=%s provider_route_attempts=%s",
+                    provider,
+                    route_name,
+                    attempt + 1,
+                    max_attempts,
+                    last,
+                    status_code,
+                    provider_requests,
+                    route_requests,
+                )
+                if attempt + 1 < max_attempts:
+                    if status_code in {403, 429}:
+                        await asyncio.sleep(2)
         # Never log proxies/URLs containing credentials or raw HTTP exceptions.
         raise DataError(f"{provider} request failed ({last})")
 
     async def binary_request(self, url, budget):
         """Use the same Binance request budget for bounded official file downloads."""
         last = None
-        routes = self.routes(False)
-        for attempt in range(3):
+        routes, max_attempts = self.shuffled_routes(False)
+        for attempt in range(max_attempts):
             route = routes[attempt % len(routes)]
+            route_name = self.route_label(route)
             key = ("binance", route)
-            if key not in self.clients:
-                self.clients[key] = httpx.AsyncClient(
-                    proxy=route,
-                    transport=self.transport,
-                    timeout=20,
-                    follow_redirects=True,
-                    headers={"User-Agent": "Mozilla/5.0 AIPriceAction/0.1"},
-                )
             limiter = self.limits.setdefault(key, RateLimiter(self.settings.requests_per_minute))
             await limiter.acquire()
+            provider_requests, route_requests = self.record_provider_attempt("binance", route)
             try:
-                async with self.clients[key].stream("GET", url) as response:
+                client = self.clients.get(key)
+                if client is None:
+                    client = self.clients[key] = httpx.AsyncClient(
+                        proxy=route,
+                        transport=self.transport,
+                        timeout=20,
+                        follow_redirects=True,
+                        headers={"User-Agent": "Mozilla/5.0 AIPriceAction/0.1"},
+                    )
+                async with client.stream("GET", url) as response:
                     if response.status_code == 404:
+                        log.info(
+                            "upstream request not found provider=binance route=%s attempt=%s/%s "
+                            "provider_attempts=%s provider_route_attempts=%s",
+                            route_name,
+                            attempt + 1,
+                            max_attempts,
+                            provider_requests,
+                            route_requests,
+                        )
                         return None
                     response.raise_for_status()
                     chunks, size = [], 0
@@ -193,11 +277,35 @@ class Providers:
                         if size > budget:
                             raise DataError("Binance file exceeds download size budget")
                         chunks.append(chunk)
+                    log.info(
+                        "upstream request succeeded provider=binance route=%s attempt=%s/%s "
+                        "provider_attempts=%s provider_route_attempts=%s",
+                        route_name,
+                        attempt + 1,
+                        max_attempts,
+                        provider_requests,
+                        route_requests,
+                    )
                     return b"".join(chunks)
             except httpx.HTTPError as exc:
                 last = type(exc).__name__
-                if attempt < 2:
-                    await asyncio.sleep(min(4, 2**attempt))
+                status_code = (
+                    exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+                )
+                log.warning(
+                    "upstream request failed provider=binance route=%s attempt=%s/%s "
+                    "error=%s status_code=%s provider_attempts=%s provider_route_attempts=%s",
+                    route_name,
+                    attempt + 1,
+                    max_attempts,
+                    last,
+                    status_code,
+                    provider_requests,
+                    route_requests,
+                )
+                if attempt + 1 < max_attempts:
+                    if status_code in {403, 429}:
+                        await asyncio.sleep(2)
         raise DataError(f"Binance file request failed ({last})")
 
     @staticmethod
