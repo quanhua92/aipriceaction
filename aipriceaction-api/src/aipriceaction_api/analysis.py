@@ -1,5 +1,6 @@
 import math
 from datetime import UTC, datetime
+from time import perf_counter
 
 from .analysis_cache import VersionedAnalysisCache
 from .calculations import (
@@ -653,10 +654,12 @@ class Analysis:
         trails=10,
         min_volume=100000,
         snap=True,
+        timing_stats=None,
     ):
         """Cache VN JDK results against the versions of their daily inputs."""
         if mode != "vn" or algorithm != "jdk":
-            return self._rrg_uncached(
+            started = perf_counter()
+            result = self._rrg_uncached(
                 mode,
                 date,
                 ema,
@@ -667,13 +670,19 @@ class Analysis:
                 min_volume,
                 snap,
             )
+            if timing_stats is not None:
+                timing_stats.update(
+                    cache_eligible=False, calculate_ms=round((perf_counter() - started) * 1000, 3)
+                )
+            return result
 
         # RRG reads may prefer a live Redis tail over SQLite. Redis publication
         # happens after SQLite commits, so the SQLite series version cannot
         # prove that a Redis-backed result is current during that handoff.
         # Avoid retaining RRG results when reads can come from Redis.
         if getattr(self.history, "redis_client", None) is not None:
-            return self._rrg_uncached(
+            started = perf_counter()
+            result = self._rrg_uncached(
                 mode,
                 date,
                 ema,
@@ -684,11 +693,19 @@ class Analysis:
                 min_volume,
                 snap,
             )
+            if timing_stats is not None:
+                timing_stats.update(
+                    cache_eligible=False,
+                    cache_bypass="redis_configured",
+                    calculate_ms=round((perf_counter() - started) * 1000, 3),
+                )
+            return result
 
         repository = getattr(self.history, "repo", None)
         history_versions = getattr(repository, "history_versions", None)
         if not callable(history_versions):
-            return self._rrg_uncached(
+            started = perf_counter()
+            result = self._rrg_uncached(
                 mode,
                 date,
                 ema,
@@ -699,7 +716,15 @@ class Analysis:
                 min_volume,
                 snap,
             )
+            if timing_stats is not None:
+                timing_stats.update(
+                    cache_eligible=False,
+                    cache_bypass="history_versions_unavailable",
+                    calculate_ms=round((perf_counter() - started) * 1000, 3),
+                )
+            return result
 
+        version_started = perf_counter()
         groups_by_source = self._rrg_groups_by_source()
         groups = groups_by_source["vn"]
         universe = self._rrg_universe("vn", groups_by_source)
@@ -708,6 +733,8 @@ class Analysis:
         membership = tuple((group, tuple(groups[group])) for group in sorted(groups))
         versions = history_versions("vn", symbols, "1D")
         version = membership, tuple(sorted(versions.items()))
+        if timing_stats is not None:
+            timing_stats["version_check_ms"] = round((perf_counter() - version_started) * 1000, 3)
         normalized_period = max(4, min(50, period))
         normalized_trails = 0 if trails == 0 else max(1, min(120, trails))
         key = (
@@ -721,10 +748,16 @@ class Analysis:
             min_volume,
             bool(snap),
         )
+        cache_started = perf_counter()
         cached = self._rrg_result_cache.get(key, version)
+        if timing_stats is not None:
+            timing_stats["cache_lookup_ms"] = round((perf_counter() - cache_started) * 1000, 3)
+            timing_stats["cache_eligible"] = True
+            timing_stats["cache_hit"] = cached is not None
         if cached is not None:
             return cached
 
+        calculate_started = perf_counter()
         result = self._rrg_uncached(
             mode,
             date,
@@ -736,7 +769,12 @@ class Analysis:
             min_volume,
             snap,
         )
+        if timing_stats is not None:
+            timing_stats["calculate_ms"] = round((perf_counter() - calculate_started) * 1000, 3)
+        cache_store_started = perf_counter()
         self._rrg_result_cache.put(key, version, result)
+        if timing_stats is not None:
+            timing_stats["cache_store_ms"] = round((perf_counter() - cache_store_started) * 1000, 3)
         return result
 
     def _rrg_uncached(

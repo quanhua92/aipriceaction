@@ -2036,6 +2036,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             request.scope["method"] = "GET"
         request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
         request_id = request_id[:64].replace("\n", "").replace("\r", "")
+        request.state.request_id = request_id
         forwarded = request.headers.get("x-forwarded-for")
         client_ip = (
             forwarded.split(",", 1)[0].strip()[:64]
@@ -2382,7 +2383,8 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         return JSONResponse(payload, 500)
 
     @app.get("/tickers")
-    async def tickers(params: Annotated[TickersQuery, Query()]):
+    async def tickers(params: Annotated[TickersQuery, Query()], request: Request):
+        handler_started = time.perf_counter()
         iv = interval(params.interval or "1D")
         source_mode = mode(params.mode)
         symbols = params.symbol
@@ -2431,8 +2433,13 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             params.ma,
             params.ema,
         )
+        cache_lookup_started = time.perf_counter()
         cached = responses.get(key) if params.cache else None
+        cache_lookup_ms = (time.perf_counter() - cache_lookup_started) * 1000
         redis_meta = None
+        load_metrics = {}
+        data_wait_ms = 0.0
+        cache_put_ms = 0.0
         if cached is not None:
             data = cached
             tag = "in-memory"
@@ -2440,10 +2447,14 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             data = {}
             tag = "empty" if source_mode == "all" else "database"
             if params.cache:
+                cache_put_started = time.perf_counter()
                 responses.put(key, data)
+                cache_put_ms = (time.perf_counter() - cache_put_started) * 1000
         else:
 
             def load():
+                load_started = time.perf_counter()
+                timing = {"fetch_mode": "parallel-symbols"}
                 data = {}
                 batch_sql_errors = set()
                 batch_sql_errors_lock = threading.Lock()
@@ -2728,9 +2739,12 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     for src, sym in pairs:
                         if sym:
                             by_source.setdefault(src, []).append(sym)
-                    futures = {
-                        src: market_executor.submit(
-                            history.query_many,
+                    timing["fetch_mode"] = "batched-history"
+
+                    def query_source(src, src_symbols):
+                        source_stats = {}
+                        worker_started = time.perf_counter()
+                        result = history.query_many(
                             src,
                             list(dict.fromkeys(src_symbols)),
                             iv,
@@ -2743,18 +2757,41 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             strict_source_intervals=True,
                             ignore_pending_repairs=True,
                             return_exceptions=True,
+                            timing_stats=source_stats,
                         )
+                        source_stats["worker_ms"] = round(
+                            (time.perf_counter() - worker_started) * 1000, 3
+                        )
+                        source_stats["queue_ms"] = round(
+                            (worker_started - source_submitted[src]) * 1000, 3
+                        )
+                        return result, source_stats
+
+                    batch_started = time.perf_counter()
+                    source_submitted = {}
+
+                    def submit_source(src, src_symbols):
+                        source_submitted[src] = time.perf_counter()
+                        return market_executor.submit(query_source, src, src_symbols)
+
+                    futures = {
+                        src: submit_source(src, src_symbols)
                         for src, src_symbols in by_source.items()
                     }
                     loaded_by_source = {}
+                    source_timings = {}
                     for src, future in futures.items():
                         try:
-                            loaded_by_source[src] = future.result()
+                            loaded_by_source[src], source_timings[src] = future.result()
                         except sqlite3.Error as exc:
                             batch_key = src if source_mode == "all" else source_mode
                             batch_sql_errors.add(batch_key)
                             log.warning("ticker database batch read failed source=%s: %s", src, exc)
                             loaded_by_source[src] = None
+                    timing["market_batch_wait_ms"] = round(
+                        (time.perf_counter() - batch_started) * 1000, 3
+                    )
+                    timing["market_sources"] = source_timings
                     items = []
                     for src, sym in pairs:
                         if not sym:
@@ -2784,11 +2821,13 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             items.append((sym, rows, None, False, False, False))
                     return items
 
+                fetch_started = time.perf_counter()
                 batched = batch_latest_queries(ordered_tickers)
                 fetched = discard_failed_sql_batches(
                     ordered_tickers,
                     batched if batched is not None else parallel_market(ordered_tickers, fetch),
                 )
+                timing["fetch_wait_ms"] = round((time.perf_counter() - fetch_started) * 1000, 3)
                 snapshot_miss_symbols = {
                     pair[1]
                     for pair, item in zip(ordered_tickers, fetched, strict=True)
@@ -3006,12 +3045,17 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     route_tag = "database"
                 if route_tag == "redis-snap":
                     first_meta = None
-                return data, route_tag, first_meta
+                timing["rows"] = sum(len(rows) for rows in data.values() if isinstance(rows, list))
+                timing["symbols"] = len(data)
+                timing["load_worker_ms"] = round((time.perf_counter() - load_started) * 1000, 3)
+                return data, route_tag, first_meta, timing
 
             try:
-                data, tag, redis_meta = await coalesced_background(
+                data_started = time.perf_counter()
+                data, tag, redis_meta, load_metrics = await coalesced_background(
                     ("tickers", key, params.redis, params.snap), load
                 )
+                data_wait_ms = (time.perf_counter() - data_started) * 1000
             except sqlite3.Error:
                 # Rust's ticker SQL helpers turn PostgreSQL query failures and
                 # timeouts during catalog resolution into an empty successful
@@ -3020,7 +3064,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 log.warning("ticker database read failed; returning an empty result")
                 data, tag, redis_meta = {}, "empty" if source_mode == "all" else "database", None
             if params.cache:
+                cache_put_started = time.perf_counter()
                 responses.put(key, data)
+                cache_put_ms = (time.perf_counter() - cache_put_started) * 1000
         # Rust's mode=all fast path returns before adding its diagnostic header.
         # Preserve that cache-hit omission while keeping the normal mode cache tag.
         headers = {} if source_mode == "all" and cached is not None else {"x-data-source": tag}
@@ -3033,13 +3079,56 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     "x-redis-limit": str(redis_meta.requested_limit),
                 }
             )
+
+        def log_ticker_timing(body_bytes, render_wait_ms, render_worker_ms, legacy_view_ms=0):
+            handler_ms = (time.perf_counter() - handler_started) * 1000
+            fields = {
+                "request_id": getattr(request.state, "request_id", "-"),
+                "mode": source_mode,
+                "interval": iv,
+                "format": params.format.lower(),
+                "ma": params.ma,
+                "ema": params.ema,
+                "limit": limit,
+                "universe": symbols is None,
+                "response_cache_hit": cached is not None,
+                "source": tag,
+                "symbols": len(data),
+                "rows": sum(len(rows) for rows in data.values() if isinstance(rows, list)),
+                "cache_lookup_ms": round(cache_lookup_ms, 3),
+                "data_wait_ms": round(data_wait_ms, 3),
+                "load_metrics": load_metrics,
+                "cache_put_ms": round(cache_put_ms, 3),
+                "legacy_view_ms": round(legacy_view_ms, 3),
+                "render_wait_ms": round(render_wait_ms, 3),
+                "render_worker_ms": round(render_worker_ms, 3),
+                "render_queue_ms": round(max(0, render_wait_ms - render_worker_ms), 3),
+                "payload_bytes": body_bytes,
+                "handler_ms": round(handler_ms, 3),
+            }
+            log.info("aipa timing endpoint=tickers %s", json.dumps(fields, separators=(",", ":")))
+
         if params.format.lower() == "csv":
             headers["content-type"] = "text/csv"
-            body = await background(csv_response, data, source_mode, params.legacy)
+
+            def render_csv():
+                started = time.perf_counter()
+                result = csv_response(data, source_mode, params.legacy).encode("utf-8")
+                return result, (time.perf_counter() - started) * 1000
+
+            render_started = time.perf_counter()
+            body, render_worker_ms = await background(render_csv)
+            render_wait_ms = (time.perf_counter() - render_started) * 1000
+            log_ticker_timing(len(body), render_wait_ms, render_worker_ms)
             return Response(body, headers=headers)
-        view = (
-            await background(legacy_rows, data, source_mode) if params.legacy else data
-        )
+        legacy_view_ms = 0.0
+        if params.legacy:
+            legacy_started = time.perf_counter()
+            view = await background(legacy_rows, data, source_mode)
+            legacy_view_ms = (time.perf_counter() - legacy_started) * 1000
+        else:
+            view = data
+
         # Rust's StockDataResponse omits absent optional values instead of
         # serializing them as explicit JSON nulls. Keep CSV columns stable via
         # csv_response(), but preserve the Rust JSON shape here.
@@ -3057,7 +3146,15 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             }
             return JSONResponse(json_view).body
 
-        body = await background(render_json_body)
+        def timed_render_json_body():
+            started = time.perf_counter()
+            result = render_json_body()
+            return result, (time.perf_counter() - started) * 1000
+
+        render_started = time.perf_counter()
+        body, render_worker_ms = await background(timed_render_json_body)
+        render_wait_ms = (time.perf_counter() - render_started) * 1000
+        log_ticker_timing(len(body), render_wait_ms, render_worker_ms, legacy_view_ms)
         return Response(body, media_type="application/json", headers=headers)
 
     @app.get("/health")
@@ -3360,6 +3457,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
 
     @app.get("/analysis/rrg")
     async def rrg(
+        request: Request,
         mode_value: Annotated[
             str,
             Query(
@@ -3388,19 +3486,45 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             min_volume,
             snap,
         )
-        return await coalesced_background(
-            key,
-            analysis.rrg,
-            mode(mode_value),
-            date,
-            ema,
-            algorithm,
-            benchmark,
-            period,
-            trails,
-            min_volume,
-            snap,
-        )
+
+        def run_rrg():
+            timing = {}
+            worker_started = time.perf_counter()
+            result = analysis.rrg(
+                mode(mode_value),
+                date,
+                ema,
+                algorithm,
+                benchmark,
+                period,
+                trails,
+                min_volume,
+                snap,
+                timing_stats=timing,
+            )
+            timing["worker_ms"] = round((time.perf_counter() - worker_started) * 1000, 3)
+            return result, timing
+
+        wait_started = time.perf_counter()
+        result, timing = await coalesced_background(key, run_rrg)
+        wait_ms = (time.perf_counter() - wait_started) * 1000
+        rows = result.get("data", {}).get("tickers", []) if isinstance(result, dict) else []
+        fields = {
+            "request_id": getattr(request.state, "request_id", "-"),
+            "mode": mode(mode_value),
+            "algorithm": algorithm,
+            "date": date,
+            "ema": ema,
+            "period": period,
+            "trails": trails,
+            "min_volume": min_volume,
+            "result_rows": len(rows) if isinstance(rows, list) else 0,
+            "wait_ms": round(wait_ms, 3),
+            "wait_over_worker_ms": round(max(0, wait_ms - timing.get("worker_ms", 0)), 3),
+            "timing": timing,
+        }
+        log.info("aipa timing endpoint=analysis_rrg %s", json.dumps(fields, separators=(",", ":")))
+        return result
 
     @app.get("/explorer", include_in_schema=False)
     async def explorer():

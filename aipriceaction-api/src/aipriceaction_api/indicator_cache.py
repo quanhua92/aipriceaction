@@ -7,6 +7,7 @@ This works across the API and worker processes without an in-process event bus.
 """
 
 import threading
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from sys import getsizeof
@@ -127,7 +128,7 @@ class LatestIndicatorCache:
                 _old_key, old = self._entries.popitem(last=False)
                 self._bytes -= old.size
 
-    def resolve(self, snapshots, *, ma=True, ema=False, periods=None):
+    def resolve(self, snapshots, *, ma=True, ema=False, periods=None, timing_stats=None):
         """Return current rows, computing only cold or version-changed entries."""
         snapshots = list(snapshots)
         results = {}
@@ -142,11 +143,16 @@ class LatestIndicatorCache:
                 else:
                     missing.append((key, snapshot))
 
+        if timing_stats is not None:
+            timing_stats["indicator_hits"] = len(snapshots) - len(missing)
+            timing_stats["indicator_misses"] = len(missing)
+
         if not missing:
             return results
 
         contexts = {snapshot.symbol: list(snapshot.rows) for _, snapshot in missing}
         closes_by_symbol = {snapshot.symbol: snapshot.closes for _, snapshot in missing}
+        calculate_started = time.perf_counter()
         computed = enhance_latest_many(
             contexts,
             closes_by_symbol,
@@ -155,6 +161,10 @@ class LatestIndicatorCache:
             ema=ema,
             periods=periods,
         )
+        if timing_stats is not None:
+            timing_stats["indicator_calculate_ms"] = round(
+                (time.perf_counter() - calculate_started) * 1000, 3
+            )
         for key, snapshot in missing:
             result = computed.get(snapshot.symbol, [])
             results[snapshot.symbol] = self._copy_result(result)

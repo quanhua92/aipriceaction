@@ -1398,8 +1398,10 @@ class History:
         ignore_pending_repairs,
         return_exceptions,
         periods=None,
+        timing_stats=None,
     ):
         """Fast latest rows with or without indicators, retaining quality policy."""
+        load_started = time.perf_counter()
         loaded = self.data_loader.load_many(
             source,
             symbols,
@@ -1409,11 +1411,14 @@ class History:
             compact_tail=True,
             copy_result=False,
         )
+        if timing_stats is not None:
+            timing_stats["history_load_ms"] = round((time.perf_counter() - load_started) * 1000, 3)
         safe_contexts = {}
         fallback_symbols = []
         results = {}
         latest_read_upper = int(time.time())
 
+        quality_started = time.perf_counter()
         for symbol in symbols:
             tail = loaded.compact_tails.get(symbol)
             if tail is None:
@@ -1457,6 +1462,13 @@ class History:
                 continue
             safe_contexts[symbol] = local
 
+        if timing_stats is not None:
+            timing_stats["quality_check_ms"] = round(
+                (time.perf_counter() - quality_started) * 1000, 3
+            )
+            timing_stats["safe_symbols"] = len(safe_contexts)
+            timing_stats["fallback_symbols"] = len(fallback_symbols)
+
         snapshots = [
             IndicatorSnapshot.from_loaded(
                 source,
@@ -1468,9 +1480,23 @@ class History:
             )
             for symbol in safe_contexts
         ]
+        indicator_stats = {}
+        indicator_started = time.perf_counter()
         results.update(
-            self.indicator_cache.resolve(snapshots, ma=ma, ema=ema, periods=periods)
+            self.indicator_cache.resolve(
+                snapshots,
+                ma=ma,
+                ema=ema,
+                periods=periods,
+                timing_stats=indicator_stats,
+            )
         )
+        if timing_stats is not None:
+            timing_stats.update(indicator_stats)
+            timing_stats["indicator_resolve_ms"] = round(
+                (time.perf_counter() - indicator_started) * 1000, 3
+            )
+        fallback_started = time.perf_counter()
         if fallback_symbols:
             try:
                 fallback_contexts = self.read_many(
@@ -1546,6 +1572,8 @@ class History:
                     )
                 else:
                     results[symbol] = []
+        if timing_stats is not None:
+            timing_stats["fallback_ms"] = round((time.perf_counter() - fallback_started) * 1000, 3)
         return results
 
     def query_many(
@@ -1563,6 +1591,7 @@ class History:
         ignore_pending_repairs=False,
         return_exceptions=False,
         periods=None,
+        timing_stats=None,
     ):
         """Query many symbols through one native latest-tail SQLite load.
 
@@ -1587,6 +1616,7 @@ class History:
             and limit > 0
         )
         if not fast:
+            query_started = time.perf_counter()
             results = {}
             for symbol in symbols:
                 try:
@@ -1608,12 +1638,21 @@ class History:
                     if not return_exceptions:
                         raise
                     results[symbol] = exc
+            if timing_stats is not None:
+                timing_stats.update(
+                    query_many_mode="per-symbol",
+                    symbols=len(symbols),
+                    query_many_ms=round((time.perf_counter() - query_started) * 1000, 3),
+                )
             return results
 
         buffer = 600 if ma and ema else 200 if ma else 1
         raw_limit = limit + buffer if ma else limit + 1
         context_limit = min(retained, max(1, raw_limit)) if redis and retained > 0 else raw_limit
         if limit == 1:
+            if timing_stats is not None:
+                timing_stats["query_many_mode"] = "latest-cached"
+                timing_stats["symbols"] = len(symbols)
             return self._query_many_latest_cached(
                 source,
                 symbols,
@@ -1625,7 +1664,9 @@ class History:
                 ignore_pending_repairs,
                 return_exceptions,
                 periods,
+                timing_stats,
             )
+        load_started = time.perf_counter()
         contexts = self.read_many(
             source,
             symbols,
@@ -1635,6 +1676,13 @@ class History:
             ignore_pending_repairs=ignore_pending_repairs,
             return_exceptions=True,
         )
+        if timing_stats is not None:
+            timing_stats["query_many_mode"] = "batched-history"
+            timing_stats["symbols"] = len(symbols)
+            timing_stats["history_load_ms"] = round(
+                (time.perf_counter() - load_started) * 1000, 3
+            )
+        transform_started = time.perf_counter()
         results = {}
         batch_contexts = {}
         selected_indices = {}
@@ -1681,6 +1729,10 @@ class History:
                     ema=ema,
                     periods=periods,
                 )
+            )
+        if timing_stats is not None:
+            timing_stats["query_many_transform_ms"] = round(
+                (time.perf_counter() - transform_started) * 1000, 3
             )
         return results
 

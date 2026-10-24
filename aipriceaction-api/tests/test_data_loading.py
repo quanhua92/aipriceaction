@@ -685,6 +685,7 @@ def test_query_many_matches_single_latest_queries(system, ma, ema):
         + [candle("VIC", index) for index in range(30)]
     )
 
+    timing_stats = {}
     batched = history.query_many(
         "vn",
         ["FPT", "VCB", "VIC", "MISSING"],
@@ -693,7 +694,13 @@ def test_query_many_matches_single_latest_queries(system, ma, ema):
         ma=ma,
         ema=ema,
         strict_source_intervals=True,
+        timing_stats=timing_stats,
     )
+    assert timing_stats["history_load_ms"] >= 0
+    assert timing_stats["quality_check_ms"] >= 0
+    assert timing_stats["indicator_resolve_ms"] >= 0
+    assert timing_stats["safe_symbols"] == 3
+    assert timing_stats["indicator_hits"] + timing_stats["indicator_misses"] == 3
     for symbol in ("FPT", "VCB", "VIC", "MISSING"):
         assert batched[symbol] == history.query(
             "vn",
@@ -704,6 +711,28 @@ def test_query_many_matches_single_latest_queries(system, ma, ema):
             ema=ema,
             strict_source_intervals=True,
         )
+
+
+def test_query_many_reports_batched_history_timings(system):
+    repo, history = system
+    repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(260)])
+    timing_stats = {}
+
+    result = history.query_many(
+        "vn",
+        ["FPT", "VCB"],
+        "1D",
+        limit=10,
+        ma=True,
+        strict_source_intervals=True,
+        timing_stats=timing_stats,
+    )
+
+    assert all(len(rows) == 10 for rows in result.values())
+    assert timing_stats["query_many_mode"] == "batched-history"
+    assert timing_stats["symbols"] == 2
+    assert timing_stats["history_load_ms"] >= 0
+    assert timing_stats["query_many_transform_ms"] >= 0
 
 
 @pytest.mark.parametrize("ma,ema", [(False, False), (True, False), (True, True)])
