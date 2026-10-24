@@ -431,6 +431,50 @@ def test_jdk_rrg_prefers_live_redis_tail_over_durable_history():
     assert history.calls == []
 
 
+def test_jdk_rrg_result_cache_is_disabled_when_live_redis_can_supply_data():
+    catalog = rrg_catalog()
+    catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    history = FakeHistory(
+        {
+            ("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=140, start=200),
+            ("vn", "VNINDEX", "1D"): daily_rows("vn", "VNINDEX", count=140, start=1000),
+        }
+    )
+    history.redis_client = object()
+    history.repo.history_versions = lambda _source, symbols, _interval: {
+        symbol: 7 for symbol in symbols
+    }
+    redis_rows = {
+        "VCB": daily_rows("vn", "VCB", count=140, start=500),
+        "VNINDEX": daily_rows("vn", "VNINDEX", count=140, start=1000),
+    }
+    redis_reads = []
+
+    def cache_tail(source, symbol, interval, end=None, limit=252):
+        redis_reads.append((source, symbol, interval))
+        return redis_rows.get(symbol, [])[-limit:]
+
+    history.cache_tail = cache_tail
+    analysis = Analysis(history, catalog)
+    kwargs = {
+        "mode": "vn",
+        "benchmark": "VNINDEX",
+        "algorithm": "jdk",
+        "period": 4,
+        "trails": 0,
+        "min_volume": 0,
+    }
+
+    first = analysis.rrg(**kwargs)
+    first_read_count = len(redis_reads)
+    redis_rows["VCB"] = daily_rows("vn", "VCB", count=140, start=800)
+    second = analysis.rrg(**kwargs)
+
+    assert first["data"]["tickers"][0]["close"] == 639
+    assert second["data"]["tickers"][0]["close"] == 939
+    assert len(redis_reads) > first_read_count
+
+
 def test_latest_mascore_rrg_uses_the_101_row_joined_snapshot_key_and_redis_tail():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}

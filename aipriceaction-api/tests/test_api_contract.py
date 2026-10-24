@@ -1592,6 +1592,8 @@ def test_metadata_static_and_health(client):
     assert health["configuration"]["ingest_universe"] == "catalog"
     assert health["configuration"]["vn_direct_access_enabled"] is True
     assert health["configuration"]["http_proxies_configured"] is False
+    assert health["configuration"]["api_read_concurrency"] == 4
+    assert health["configuration"]["api_market_read_concurrency"] == 4
     assert client.get("/explorer").status_code == 200
     ranged_explorer = client.get("/explorer", headers={"Range": "bytes=0-0"})
     assert ranged_explorer.status_code == 200

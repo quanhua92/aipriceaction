@@ -119,14 +119,22 @@ class SQLiteDataLoader:
         # metadata result does not serialize unrelated cache hits.
         return self._copy_loaded(value) if copy_result else value
 
+    @staticmethod
+    def _daily_end_slack(cached_end, requested_end):
+        """Bound how many daily rows a later cached end can hide."""
+        seconds = cached_end - requested_end
+        return (seconds + 86_399) // 86_400 + 1
+
     def _cache_get_compatible(self, key, versions, copy_result=True):
-        """Reuse a wider cached batch for a symbol subset and shorter tail.
+        """Reuse wider cached batches for symbol subsets and dated daily tails.
 
         Startup warming loads the full source universe so ticker and analysis
         routes can share the same SQLite snapshot. A request can safely reuse
         that read when its symbol set is a subset and its time bounds and sort
-        direction match. Version checks refresh changed identities; the byte-
-        bounded LRU, rather than elapsed time, controls retention.
+        direction match. Dated daily reads may also use a cache ending later
+        than the requested date, provided the cached tail has room for every
+        intervening daily row. Version checks refresh changed identities; the
+        byte-bounded LRU, rather than elapsed time, controls retention.
         """
         cached = self._cache_get(key, copy_result=False)
         if cached is not None:
@@ -140,7 +148,13 @@ class SQLiteDataLoader:
                 return result, []
             fresh = [symbol for symbol in key[1] if symbol not in set(stale)]
             result = self._slice_cached(
-                cached, fresh, key[5], key[6], key[7], copy_metadata=copy_result
+                cached,
+                fresh,
+                key[5],
+                key[6],
+                key[7],
+                end=key[4],
+                copy_metadata=copy_result,
             )
             result.versions = {symbol: versions[symbol] for symbol in fresh}
             return result, stale
@@ -162,14 +176,29 @@ class SQLiteDataLoader:
                     cached_forward,
                     cached_compact_tail,
                 ) = cached_key
+                later_daily_end = (
+                    interval == "1D"
+                    and start == cached_start
+                    and end is not None
+                    and cached_end is not None
+                    and cached_end > end
+                    and not forward
+                    and not compact_tail
+                    and not cached_compact_tail
+                    and isinstance(limit, int)
+                    and isinstance(cached_limit, int)
+                    and cached_limit >= limit + self._daily_end_slack(cached_end, end)
+                )
+                end_compatible = cached_end == end or later_daily_end
                 if (
                     cached_source != source
                     or cached_interval != interval
                     or cached_start != start
-                    or cached_end != end
+                    or not end_compatible
                     or cached_forward != forward
                     or not isinstance(cached_limit, int)
-                    or cached_limit < limit
+                    or cached_limit
+                    < limit + (self._daily_end_slack(cached_end, end) if later_daily_end else 0)
                     or not requested_symbols.issubset(cached_symbols)
                 ):
                     continue
@@ -185,33 +214,56 @@ class SQLiteDataLoader:
                 # reloaded below instead of pinning the old empty result.
                 score = (
                     cached_compact_tail != compact_tail,
+                    cached_end - end if later_daily_end else 0,
                     len(cached_symbols) - len(requested_symbols),
-                    cached_limit - limit,
+                    cached_limit
+                    - limit
+                    - (self._daily_end_slack(cached_end, end) if later_daily_end else 0),
                     -entry[0],
                 )
-                candidates.append((score, cached_key, value))
+                candidates.append((score, cached_key, value, later_daily_end))
             if not candidates:
                 return LoadedHistory(), list(symbols)
-            _score, cached_key, value = min(candidates, key=lambda item: item[0])
+            _score, cached_key, value, later_daily_end = min(
+                candidates, key=lambda item: item[0]
+            )
             self._cache.move_to_end(cached_key)
+
+        cached_limit = cached_key[5]
 
         stale = [
             symbol for symbol in symbols if value.versions.get(symbol, 0) != versions.get(symbol, 0)
         ]
-        fresh = [symbol for symbol in symbols if symbol not in set(stale)]
+        stale_set = set(stale)
+        if later_daily_end:
+            for symbol in symbols:
+                if symbol in stale_set:
+                    continue
+                rows = value.local.get(symbol, [])
+                visible_count = sum(row.time <= end for row in rows)
+                # If this identity filled the cached limit but fewer than the
+                # requested number precede the target date, the wider tail may
+                # have truncated rows needed by this historical request.
+                if len(rows) >= cached_limit and visible_count < limit:
+                    stale.append(symbol)
+                    stale_set.add(symbol)
+        fresh = [symbol for symbol in symbols if symbol not in stale_set]
         result = self._slice_cached(
             value,
             fresh,
             limit,
             forward,
             compact_tail,
+            end=end if later_daily_end else None,
             copy_metadata=copy_result,
         )
         result.versions = {symbol: versions[symbol] for symbol in fresh}
         return result, stale
 
     @staticmethod
-    def _slice_cached(value, symbols, limit, forward, compact_tail, copy_metadata=True):
+    def _slice_cached(
+        value, symbols, limit, forward, compact_tail, *, end=None, copy_metadata=True
+    ):
         """Return an isolated subset with the same shape as the requested read."""
         result = LoadedHistory()
         for symbol in symbols:
@@ -236,21 +288,41 @@ class SQLiteDataLoader:
                         mixed_provider=tail.mixed_provider,
                     )
             else:
-                selected = rows[:limit] if forward else rows[-limit:]
+                if end is not None:
+                    rows = [row for row in rows if row.time <= end]
+                selected = (
+                    rows
+                    if limit is None
+                    else rows[:limit]
+                    if forward
+                    else rows[-limit:]
+                )
                 result.local[symbol] = list(selected)
 
             if copy_metadata:
-                result.archives[symbol] = copy.deepcopy(value.archives.get(symbol, []))
-                result.gaps[symbol] = copy.deepcopy(value.gaps.get(symbol, []))
+                archives = value.archives.get(symbol, [])
+                gaps = value.gaps.get(symbol, [])
+                corrections = value.volume_corrections.get(symbol, [])
+                if end is not None:
+                    archives = [record for record in archives if record["start"] <= end]
+                    gaps = [record for record in gaps if record["start"] <= end]
+                    corrections = [record for record in corrections if record["time"] <= end]
+                result.archives[symbol] = copy.deepcopy(archives)
+                result.gaps[symbol] = copy.deepcopy(gaps)
                 result.adoptions[symbol] = copy.deepcopy(value.adoptions.get(symbol, {}))
-                result.volume_corrections[symbol] = copy.deepcopy(
-                    value.volume_corrections.get(symbol, [])
-                )
+                result.volume_corrections[symbol] = copy.deepcopy(corrections)
             else:
-                result.archives[symbol] = value.archives.get(symbol, [])
-                result.gaps[symbol] = value.gaps.get(symbol, [])
+                archives = value.archives.get(symbol, [])
+                gaps = value.gaps.get(symbol, [])
+                corrections = value.volume_corrections.get(symbol, [])
+                if end is not None:
+                    archives = [record for record in archives if record["start"] <= end]
+                    gaps = [record for record in gaps if record["start"] <= end]
+                    corrections = [record for record in corrections if record["time"] <= end]
+                result.archives[symbol] = archives
+                result.gaps[symbol] = gaps
                 result.adoptions[symbol] = value.adoptions.get(symbol, {})
-                result.volume_corrections[symbol] = value.volume_corrections.get(symbol, [])
+                result.volume_corrections[symbol] = corrections
             if symbol in value.versions:
                 result.versions[symbol] = value.versions[symbol]
         return result

@@ -133,8 +133,8 @@ class Settings:
     # production environment does not override this: Rust fixes it at 180s.
     query_timeout: int = 180
     request_concurrency: int = 64
-    read_concurrency: int = 8
-    market_read_concurrency: int = 8
+    read_concurrency: int = 4
+    market_read_concurrency: int = 4
 
     @classmethod
     def from_env(cls):

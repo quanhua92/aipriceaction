@@ -1,6 +1,7 @@
 import math
 from datetime import UTC, datetime
 
+from .analysis_cache import VersionedAnalysisCache
 from .calculations import (
     _rust_sum,
     enhance_latest_many,
@@ -111,6 +112,7 @@ class Analysis:
     def __init__(self, history, catalog, parallel_map=None):
         self.history, self.catalog = history, catalog
         self.parallel_map = parallel_map or (lambda items, function: list(map(function, items)))
+        self._rrg_result_cache = VersionedAnalysisCache()
 
     def universe(self, mode):
         # The Rust analysis routes enumerate the curated legacy groups rather
@@ -641,6 +643,103 @@ class Analysis:
         )
 
     def rrg(
+        self,
+        mode="vn",
+        date=None,
+        ema=False,
+        algorithm="jdk",
+        benchmark=None,
+        period=10,
+        trails=10,
+        min_volume=100000,
+        snap=True,
+    ):
+        """Cache VN JDK results against the versions of their daily inputs."""
+        if mode != "vn" or algorithm != "jdk":
+            return self._rrg_uncached(
+                mode,
+                date,
+                ema,
+                algorithm,
+                benchmark,
+                period,
+                trails,
+                min_volume,
+                snap,
+            )
+
+        # RRG reads may prefer a live Redis tail over SQLite. Redis publication
+        # happens after SQLite commits, so the SQLite series version cannot
+        # prove that a Redis-backed result is current during that handoff.
+        # Avoid retaining RRG results when reads can come from Redis.
+        if getattr(self.history, "redis_client", None) is not None:
+            return self._rrg_uncached(
+                mode,
+                date,
+                ema,
+                algorithm,
+                benchmark,
+                period,
+                trails,
+                min_volume,
+                snap,
+            )
+
+        repository = getattr(self.history, "repo", None)
+        history_versions = getattr(repository, "history_versions", None)
+        if not callable(history_versions):
+            return self._rrg_uncached(
+                mode,
+                date,
+                ema,
+                algorithm,
+                benchmark,
+                period,
+                trails,
+                min_volume,
+                snap,
+            )
+
+        groups_by_source = self._rrg_groups_by_source()
+        groups = groups_by_source["vn"]
+        universe = self._rrg_universe("vn", groups_by_source)
+        benchmark_symbol = ("VNINDEX" if benchmark is None else benchmark).upper()
+        symbols = sorted({ticker["symbol"] for ticker in universe} | {benchmark_symbol})
+        membership = tuple((group, tuple(groups[group])) for group in sorted(groups))
+        versions = history_versions("vn", symbols, "1D")
+        version = membership, tuple(sorted(versions.items()))
+        normalized_period = max(4, min(50, period))
+        normalized_trails = 0 if trails == 0 else max(1, min(120, trails))
+        key = (
+            mode,
+            date,
+            bool(ema),
+            algorithm,
+            benchmark_symbol,
+            normalized_period,
+            normalized_trails,
+            min_volume,
+            bool(snap),
+        )
+        cached = self._rrg_result_cache.get(key, version)
+        if cached is not None:
+            return cached
+
+        result = self._rrg_uncached(
+            mode,
+            date,
+            ema,
+            algorithm,
+            benchmark,
+            period,
+            trails,
+            min_volume,
+            snap,
+        )
+        self._rrg_result_cache.put(key, version, result)
+        return result
+
+    def _rrg_uncached(
         self,
         mode="vn",
         date=None,

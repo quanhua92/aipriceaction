@@ -1906,6 +1906,36 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             history.data_loader._cache_bytes / (1024 * 1024),
         )
 
+    def prewarm_home_rrg():
+        """Compute recent home-page RRG dates before the first browser burst."""
+        current_end = date_bounds(datetime.now(UTC).strftime("%Y-%m-%d"), True)
+        benchmark_rows = repo.read("vn", "VNINDEX", "1D", end=current_end, limit=3)
+        dates = sorted(
+            {
+                datetime.fromtimestamp(row.time, UTC).strftime("%Y-%m-%d")
+                for row in benchmark_rows
+            }
+        )
+        warmed = 0
+        for day in dates:
+            try:
+                analysis.rrg(
+                    mode="vn",
+                    date=day,
+                    ema=True,
+                    algorithm="jdk",
+                    benchmark="VNINDEX",
+                    period=10,
+                    trails=5,
+                    min_volume=1000,
+                    snap=True,
+                )
+            except Exception:
+                log.exception("homepage RRG cache warmup failed date=%s", day)
+            else:
+                warmed += 1
+        log.info("homepage RRG result cache warmup entries=%d", warmed)
+
     @asynccontextmanager
     async def lifespan(app):
         nonlocal executor, health_executor, market_executor, read_slots, health_slots
@@ -1938,6 +1968,10 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 # Cache warmup is an optimization. Keep API startup available
                 # if a damaged or inaccessible market history prevents it.
                 log.exception("market read cache warmup failed")
+            try:
+                await background(prewarm_home_rrg)
+            except Exception:
+                log.exception("homepage RRG result cache warmup failed")
             try:
                 health_snapshot.update(await background(repo.health_summary, priority=True))
             except Exception:
@@ -3045,6 +3079,8 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 "vn_direct_access_enabled": settings.allow_direct or not settings.proxies,
                 "provider_rpm": settings.requests_per_minute,
                 "worker_concurrency": settings.worker_concurrency,
+                "api_read_concurrency": settings.read_concurrency,
+                "api_market_read_concurrency": settings.market_read_concurrency,
                 "retention_years": {
                     "1D": settings.daily_years,
                     "1h": settings.hourly_years,

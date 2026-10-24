@@ -381,6 +381,94 @@ def test_loader_reuses_wider_compact_tail_for_smaller_symbol_subset(system, monk
     assert set(subset.local) == {"VCB"}
 
 
+def test_loader_reuses_wider_daily_cache_for_historical_end_and_filters_quality(system, monkeypatch):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(12)]
+    repo.put(rows)
+    repo.record_history_gap(
+        "vn", "FPT", "1D", rows[10].time, rows[11].time, "Later gap", {}
+    )
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    warm_end = rows[-1].time + 86_399
+    historical_end = rows[8].time + 86_399
+    loader.load_many("vn", ["FPT"], "1D", end=warm_end, limit=12)
+
+    historical = loader.load_many("vn", ["FPT"], "1D", end=historical_end, limit=5)
+
+    assert loads == 1
+    assert historical.local["FPT"] == repo.read(
+        "vn", "FPT", "1D", end=historical_end, limit=5
+    )
+    assert historical.gaps["FPT"] == []
+
+
+def test_loader_uses_selected_later_end_candidate_when_last_cache_is_older(system, monkeypatch):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(21)]
+    repo.put(rows)
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    later_end = rows[20].time + 86_399
+    older_end = rows[10].time + 86_399
+    requested_end = rows[15].time + 86_399
+
+    # Keep the later-end cache as a valid candidate, then make an older-end
+    # cache the final LRU entry. Candidate metadata must come from the cache
+    # actually selected, not whichever entry the scan visited last.
+    loader.load_many("vn", ["FPT"], "1D", end=later_end, limit=21)
+    loader.load_many("vn", ["FPT"], "1D", end=older_end, limit=11)
+
+    historical = loader.load_many("vn", ["FPT"], "1D", end=requested_end, limit=10)
+
+    assert loads == 2
+    assert historical.local["FPT"] == repo.read(
+        "vn", "FPT", "1D", end=requested_end, limit=10
+    )
+
+
+def test_loader_reloads_if_wider_daily_cache_may_not_cover_requested_tail(system, monkeypatch):
+    repo, history = system
+    rows = [candle("FPT", index) for index in range(12)]
+    repo.put(rows)
+    loader = history.data_loader
+    real_load = loader._load_many
+    loads = 0
+
+    def count_loads(*args, **kwargs):
+        nonlocal loads
+        loads += 1
+        return real_load(*args, **kwargs)
+
+    monkeypatch.setattr(loader, "_load_many", count_loads)
+    warm_end = rows[-1].time + 86_399
+    historical_end = rows[8].time + 86_399
+    loader.load_many("vn", ["FPT"], "1D", end=warm_end, limit=8)
+
+    historical = loader.load_many("vn", ["FPT"], "1D", end=historical_end, limit=5)
+
+    assert loads == 2
+    assert historical.local["FPT"] == repo.read(
+        "vn", "FPT", "1D", end=historical_end, limit=5
+    )
+
+
 @pytest.mark.parametrize("compact_tail", [False, True])
 def test_loader_reuses_empty_identity_and_invalidates_when_it_gets_rows(
     system, monkeypatch, compact_tail
