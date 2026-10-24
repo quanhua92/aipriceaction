@@ -113,7 +113,7 @@ class Settings:
     vci_volume_proofs: Path | None = None
     proxies: tuple[str, ...] = ()
     allow_direct: bool = True
-    worker_concurrency: int = 3
+    worker_concurrency: int = 6
     requests_per_minute: int = 30
     watchlist: Path = (
         ROOT / "watchlist.json"
