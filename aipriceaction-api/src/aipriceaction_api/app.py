@@ -55,6 +55,8 @@ from .responses import (
     RustJSONResponse as JSONResponse,
 )
 from .storage import RefreshScheduleError, Repository
+from .telemetry import initialize as initialize_telemetry
+from .telemetry import shutdown as shutdown_telemetry
 from .transport import RustCompatibleCompressionMiddleware
 from .uploads import router_for as uploads_router_for
 
@@ -1904,6 +1906,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
     @asynccontextmanager
     async def lifespan(app):
         nonlocal executor, health_executor, market_executor, read_slots, health_slots
+        telemetry = initialize_telemetry(app)
         log.info(
             "api startup database=%s archive_backend=%s read_concurrency=%s",
             settings.database,
@@ -1949,6 +1952,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             market_executor.shutdown(wait=False, cancel_futures=True)
             if owns_redis_client:
                 redis_client.close()
+            await asyncio.to_thread(shutdown_telemetry, telemetry)
             log.info("api stopped")
 
     # Keep the public route surface aligned with Rust. OpenAPI remains available

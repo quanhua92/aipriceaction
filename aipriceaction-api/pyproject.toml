@@ -15,6 +15,9 @@ dependencies = [
   "redis>=5,<9",
   "numpy>=2.2,<3",
   "orjson>=3.10,<4",
+  "opentelemetry-sdk>=1.27,<2",
+  "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
+  "opentelemetry-instrumentation-fastapi>=0.48b0,<1",
 ]
 
 [project.scripts]
