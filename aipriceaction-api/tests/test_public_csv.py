@@ -125,13 +125,28 @@ def test_public_period_bounds_are_utc_and_inclusive():
     assert year_end - year_start + 1 == 366 * 86_400
 
 
-def test_public_catalog_matches_legacy_metadata_shape(tmp_path):
-    (tmp_path / "vn.csv").write_text(
-        "ticker,organ_name,en_organ_name,exchange,type\n"
-        "VCB,Vietcombank,Vietcombank,HOSE,stock\n",
-        encoding="utf-8",
+def test_public_catalog_uses_full_vn_directory_metadata(tmp_path):
+    (tmp_path / "vn_tickers.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "generated_at": "2026-10-20T00:00:00Z",
+                "stocks": [
+                    {
+                        "symbol": "VCB",
+                        "name": "Vietcombank",
+                        "en_name": "Vietcombank",
+                        "exchange": "HOSE",
+                        "type": "stock",
+                        "listing_status": "listed",
+                        "icb_level2_name": "BANK",
+                        "market_cap_vnd": 100,
+                    }
+                ],
+            }
+        )
     )
-    (tmp_path / "ticker_group.json").write_text(json.dumps({"BANK": ["VCB"]}))
+    (tmp_path / "watchlist.json").write_text(json.dumps({"vn": []}))
     (tmp_path / "binance_tickers.json").write_text(
         json.dumps({"data": [{"symbol": "BTCUSDT", "name": "Bitcoin"}]})
     )
@@ -165,6 +180,42 @@ def test_public_catalog_matches_legacy_metadata_shape(tmp_path):
     assert by_identity[("crypto", "BTCUSDT")]["group"] == "CRYPTO_TOP_100"
     assert by_identity[("yahoo", "AAPL")]["category"] == "Stock"
     assert by_identity[("sjc", "SJC-GOLD")]["group"] == "Gold"
+
+
+def test_configured_watchlist_overrides_packaged_catalog_watchlist(tmp_path):
+    catalog_dir = tmp_path / "catalog"
+    catalog_dir.mkdir()
+    (catalog_dir / "watchlist.json").write_text(
+        json.dumps({"vn": [{"symbol": "PACKAGED", "asset_type": "index"}]})
+    )
+    (catalog_dir / "vn_tickers.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "stocks": [
+                    {
+                        "symbol": "VCB",
+                        "name": "Vietcombank",
+                        "type": "stock",
+                        "listing_status": "listed",
+                        "market_cap_vnd": 100,
+                    }
+                ],
+            }
+        )
+    )
+    configured_watchlist = tmp_path / "configured-watchlist.json"
+    configured_watchlist.write_text(
+        json.dumps({"vn": [{"symbol": "ACTIVE", "asset_type": "index"}]})
+    )
+    settings = replace(
+        Settings(), catalog_dir=catalog_dir, watchlist=configured_watchlist
+    )
+    catalog = Catalog(settings)
+
+    assert catalog.names("vn")["ACTIVE"] == "ACTIVE"
+    assert "PACKAGED" not in catalog.names("vn")
+    assert catalog.groups("vn")["INDEX"] == ["ACTIVE"]
 
 
 class FakeS3:

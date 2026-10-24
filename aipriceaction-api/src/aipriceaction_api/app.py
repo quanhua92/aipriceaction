@@ -33,7 +33,7 @@ from starlette.routing import Match
 
 from .analysis import Analysis, _jdk_lookback_limit
 from .archive import Archive
-from .catalog import Catalog
+from .catalog import DEFAULT_VN_MIN_MARKET_CAP_VND, Catalog
 from .config import Settings, trim_rust_whitespace
 from .domain import SOURCES, DataError, base_interval, date_bounds, interval, mode
 from .history import History
@@ -73,6 +73,7 @@ RUST_FIXED_PATHS = frozenset(
         "/tickers/group",
         "/tickers/name",
         "/tickers/info",
+        "/tickers/directory",
         "/tickers/refresh",
         "/analysis/top-performers",
         "/analysis/ma-scores-by-sector",
@@ -110,9 +111,26 @@ RUST_QUERY_FIELDS = {
         "ema": "bool",
         "snap": "bool",
     },
-    "/tickers/group": {"mode": "mode"},
-    "/tickers/name": {"mode": "mode"},
-    "/tickers/info": {"ticker": "optional_string"},
+    "/tickers/group": {
+        "mode": "mode",
+        "lang": "string",
+        "min_market_cap_vnd": "optional_u64",
+        "include_unknown_market_cap": "bool",
+    },
+    "/tickers/name": {
+        "mode": "mode",
+        "min_market_cap_vnd": "optional_u64",
+        "include_unknown_market_cap": "bool",
+    },
+    "/tickers/info": {
+        "ticker": "optional_string",
+        "min_market_cap_vnd": "optional_u64",
+        "include_unknown_market_cap": "bool",
+    },
+    "/tickers/directory": {
+        "min_market_cap_vnd": "optional_u64",
+        "include_unknown_market_cap": "bool",
+    },
     "/analysis/top-performers": {
         "date": "optional_string",
         "sort_by": "string",
@@ -161,6 +179,10 @@ RUST_OPTIONAL_QUERY_FIELDS = {
     ("/tickers", "end_date"),
     ("/tickers", "limit"),
     ("/tickers/info", "ticker"),
+    ("/tickers/group", "min_market_cap_vnd"),
+    ("/tickers/name", "min_market_cap_vnd"),
+    ("/tickers/info", "min_market_cap_vnd"),
+    ("/tickers/directory", "min_market_cap_vnd"),
 }
 RUST_REQUIRED_QUERY_FIELDS = {"/analysis/volume-profile": ("symbol",)}
 _RUST_FLOAT_QUERY = re.compile(
@@ -3319,11 +3341,42 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 json_schema_extra={"enum": MODE_VALUES},
             ),
         ] = "vn",
+        lang_value: Annotated[
+            str,
+            Query(alias="lang", json_schema_extra={"enum": ["en", "vi", "vn"]}),
+        ] = "en",
+        min_market_cap_vnd: OptionalUnsigned64 = None,
+        include_unknown_market_cap: StrictBoolean = False,
     ):
         # Catalog JSON is immutable for this process and cached after first
         # access. Keep this tiny metadata read off the bounded market-data pool
         # so multi-ticker bursts cannot queue it behind calculations.
-        return sort_json_value_keys(catalog.groups(mode(mode_value)))
+        normalized_mode = mode(mode_value)
+        normalized_lang = lang_value.strip().lower()
+        if normalized_lang == "vn":
+            normalized_lang = "vi"
+        if normalized_lang not in ("en", "vi"):
+            raise DataError("lang must be en or vi", 400)
+        if (
+            (min_market_cap_vnd is not None or include_unknown_market_cap)
+            and normalized_mode not in ("vn", "all")
+        ):
+            raise DataError("Market-cap filtering is only supported for VN tickers", 400)
+        effective_min_market_cap_vnd = (
+            min_market_cap_vnd
+            if min_market_cap_vnd is not None
+            else DEFAULT_VN_MIN_MARKET_CAP_VND
+            if normalized_mode in ("vn", "all")
+            else None
+        )
+        return sort_json_value_keys(
+            catalog.groups(
+                normalized_mode,
+                effective_min_market_cap_vnd,
+                include_unknown_market_cap,
+                lang=normalized_lang,
+            )
+        )
 
     @app.get("/tickers/name")
     async def names(
@@ -3334,18 +3387,93 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 json_schema_extra={"enum": MODE_VALUES},
             ),
         ] = "vn",
+        min_market_cap_vnd: OptionalUnsigned64 = None,
+        include_unknown_market_cap: StrictBoolean = False,
     ):
-        return sort_json_value_keys(catalog.names(mode(mode_value)))
+        normalized_mode = mode(mode_value)
+        if (
+            (min_market_cap_vnd is not None or include_unknown_market_cap)
+            and normalized_mode not in ("vn", "all")
+        ):
+            raise DataError("Market-cap filtering is only supported for VN tickers", 400)
+        effective_min_market_cap_vnd = (
+            min_market_cap_vnd
+            if min_market_cap_vnd is not None
+            else DEFAULT_VN_MIN_MARKET_CAP_VND
+            if normalized_mode in ("vn", "all")
+            else None
+        )
+        return sort_json_value_keys(
+            catalog.names(
+                normalized_mode,
+                min_market_cap_vnd=effective_min_market_cap_vnd,
+                include_unknown_market_cap=include_unknown_market_cap,
+            )
+        )
 
     @app.get("/tickers/info")
-    async def info(ticker: OptionalString = None):
+    async def info(
+        ticker: OptionalString = None,
+        min_market_cap_vnd: OptionalUnsigned64 = None,
+        include_unknown_market_cap: StrictBoolean = False,
+    ):
+        effective_min_market_cap_vnd = (
+            min_market_cap_vnd
+            if min_market_cap_vnd is not None
+            else DEFAULT_VN_MIN_MARKET_CAP_VND
+        )
         if ticker is None:
-            body = await background(lambda: catalog.info_json)
+            if min_market_cap_vnd is None and not include_unknown_market_cap:
+                body = await background(lambda: catalog.default_filtered_info_json)
+            else:
+                body = await background(
+                    lambda: JSONResponse(
+                        catalog.filtered_info(
+                            effective_min_market_cap_vnd,
+                            include_unknown_market_cap,
+                        )
+                    ).body
+                )
             return Response(body, media_type="application/json")
-        row = await background(lambda: catalog.info_by_ticker.get(ticker.upper()))
+        if min_market_cap_vnd is None and not include_unknown_market_cap:
+            row = await background(
+                lambda: catalog.filtered_info_by_ticker(
+                    ticker, effective_min_market_cap_vnd
+                )
+            )
+        else:
+            row = await background(
+                lambda: next(
+                    (
+                        item
+                        for item in catalog.filtered_info(
+                            effective_min_market_cap_vnd,
+                            include_unknown_market_cap,
+                        )
+                        if item["ticker"] == ticker.upper()
+                    ),
+                    None,
+                )
+            )
         if row is not None:
             return row
         raise DataError(f"Ticker '{ticker}' not found", 404)
+
+    @app.get("/tickers/directory")
+    async def ticker_directory(
+        min_market_cap_vnd: OptionalUnsigned64 = None,
+        include_unknown_market_cap: StrictBoolean = False,
+    ):
+        effective_min_market_cap_vnd = (
+            min_market_cap_vnd
+            if min_market_cap_vnd is not None
+            else DEFAULT_VN_MIN_MARKET_CAP_VND
+        )
+        return sort_json_value_keys(
+            catalog.stock_directory(
+                effective_min_market_cap_vnd, include_unknown_market_cap
+            )
+        )
 
     @app.post("/tickers/refresh")
     async def refresh(body: RefreshPost):

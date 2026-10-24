@@ -49,8 +49,8 @@ Both API replicas and all workers share the same SQLite data directory. SQLite
 is the source of truth; each API process keeps its own bounded in-memory caches.
 Nginx owns host port `8899` and localhost port `3003`, and sends requests to
 either healthy API replica. The initializer loads ticker groups and names from
-the files bundled in this repository; it does not call the production API for
-a catalog snapshot. RustFS uses ports `9100` and `9101` on loopback.
+the bundled `vn_tickers.json` directory; it does not call the production API.
+RustFS uses ports `9100` and `9101` on loopback.
 
 The workers use `INGEST_UNIVERSE` from `.env` (default `catalog`), which ingests
 every symbol in the bundled catalog. Set it to `watchlist` to limit ingestion
@@ -59,9 +59,43 @@ and minute intervals without per-symbol interval entries; catalog mode selects
 the full Yahoo directory. A Yahoo response that clearly has no candles is
 recorded as no data and retried after 24 hours; it does not retry every worker
 cycle. Crypto catalog entries use all three native intervals, SJC uses daily
-only, and VN intraday coverage follows the existing curated and liquid-symbol
-selection. Initial history for the full catalog may take time to build and
-depends on provider coverage and limits.
+only, and VN intraday coverage is promoted for liquid symbols. Other currently
+listed VN stocks start with daily history; delisted stocks stay in metadata but
+are not scheduled for ingestion. VN index symbols remain in the watchlist.
+Initial history for the full catalog may take time to build and depends on
+provider coverage and limits.
+
+## Refresh the Vietnamese stock directory
+
+From this directory, run `python3 scripts/refresh_vn_tickers.py`. It uses only
+the Python standard library and writes all Vietcap `STOCK` entries to
+`src/aipriceaction_api/data/vn_tickers.json`; it does not remove low-cap stocks.
+The market-cap snapshot is estimated as the KBS quote price times total listed
+shares. Stocks without a usable quote keep a null market cap. Use
+`--dry-run` to fetch and summarize without writing the file.
+Restart API processes after writing the file so their in-memory catalog reloads.
+
+The saved file is the single Vietnamese ticker source for `/tickers/group`,
+`/tickers/name`, `/tickers/info`, `/tickers/directory`, sector analysis, and
+catalog initialization. The old Python `vn.csv` and `ticker_group.json` are
+removed. Python does not read or update the archived Rust catalog files under
+`../legacy/rust/aipriceaction/`.
+
+The group, name, info, and directory endpoints use a shared default minimum
+market cap of VND 387,175,000,000. In the catalog generated on Oct 24, 2026,
+that cutoff kept 657 stocks and covered 99% of known market cap; the 235 rows
+with unknown market cap were excluded. This is one fixed constant shared by
+these endpoints. A later catalog refresh can change the coverage percentage.
+Pass `min_market_cap_vnd=0` to include every stock with a known market cap. Add
+`include_unknown_market_cap=true` to include rows without a market cap too.
+`/tickers/info` also includes legacy company profiles and financial ratios
+where available. These filters apply to metadata routes; `/tickers` continues
+to query stored OHLCV data.
+
+`/tickers/group` uses English ICB level-2 labels by default, such as `Banks`.
+Pass `lang=vi` (or `lang=vn`) for Vietnamese labels such as `Ngân hàng`. The
+directory and info rows include both labels in `icb_level2_name` and
+`icb_level2_name_en`.
 
 When a retained-series repair changes its revision, the same SQLite transaction
 marks older Parquet objects for repair and queues them. The worker repairs one

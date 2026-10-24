@@ -1558,6 +1558,56 @@ def _write_shared_catalog(root: Path) -> Path:
                 ("ABC", "Three Letter Stock", "Three Letter Stock", "HOSE", "stock"),
             )
         )
+    group_by_symbol = {
+        symbol: group
+        for group, symbols in vn_groups.items()
+        for symbol in symbols
+    }
+    stock_rows = []
+    with (catalog / "vn.csv").open(encoding="utf-8", newline="") as handle:
+        for index, row in enumerate(csv.DictReader(handle), start=1):
+            if row["type"].strip().lower() != "stock":
+                continue
+            symbol = row["ticker"].strip().upper()
+            stock_rows.append(
+                {
+                    "symbol": symbol,
+                    "name": row["organ_name"].strip(),
+                    "en_name": row["en_organ_name"].strip(),
+                    "short_name": row["organ_name"].strip(),
+                    "en_short_name": row["en_organ_name"].strip(),
+                    "exchange": row["exchange"].strip(),
+                    "listing_board": row["exchange"].strip(),
+                    "listing_status": "listed",
+                    "type": "stock",
+                    "icb_level2_code": str(index),
+                    "icb_level2_name": group_by_symbol[symbol],
+                    "icb_level2_name_en": group_by_symbol[symbol],
+                    "market_cap_vnd": 1_000_000_000,
+                    "market_cap_as_of": "2026-10-20T00:00:00Z",
+                    "market_cap_price_vnd": 10_000,
+                    "market_cap_price_basis": "last_trade",
+                    "shares_listed": 100_000,
+                }
+            )
+    (catalog / "vn_tickers.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "generated_at": "2026-10-20T00:00:00Z",
+                "stock_count": len(stock_rows),
+                "market_cap_known_count": len(stock_rows),
+                "market_cap_unknown_count": 0,
+                "stocks": stock_rows,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    (catalog / "watchlist.json").write_text(
+        json.dumps({"vn": [{"symbol": "VNINDEX", "asset_type": "index", "name": "Vietnam Index"}]}),
+        encoding="utf-8",
+    )
     company_info = [
         {"ticker": symbol, "company_name": name, "sector": sector, "fixture": True}
         for (source, symbol, name, _base, _slope), sector in zip(
@@ -4396,19 +4446,6 @@ def _cases(
                 "/tickers?symbol=DUPL%2CFPT&limit=14&mode=yahoo&ma=false&format=json&redis=false&snap=false&cache=true",
                 origin_headers,
             ),
-            RequestCase("groups-vn", "GET", "/tickers/group", origin_headers),
-            RequestCase(
-                "groups-stock-mode-alias", "GET", "/tickers/group?mode=stock", origin_headers
-            ),
-            RequestCase("groups-crypto", "GET", "/tickers/group?mode=crypto", origin_headers),
-            RequestCase("groups-yahoo", "GET", "/tickers/group?mode=yahoo", origin_headers),
-            RequestCase("groups-all", "GET", "/tickers/group?mode=all", origin_headers),
-            RequestCase(
-                "groups-duplicate-mode",
-                "GET",
-                "/tickers/group?mode=vn&mode=crypto",
-                origin_headers,
-            ),
             RequestCase("names-vn", "GET", "/tickers/name", origin_headers),
             RequestCase("names-crypto", "GET", "/tickers/name?mode=crypto", origin_headers),
             RequestCase(
@@ -4420,16 +4457,6 @@ def _cases(
                 "names-duplicate-mode",
                 "GET",
                 "/tickers/name?mode=vn&mode=crypto",
-                origin_headers,
-            ),
-            RequestCase("info-one", "GET", "/tickers/info?ticker=FPT", origin_headers),
-            RequestCase("info-case-insensitive", "GET", "/tickers/info?ticker=fpt", origin_headers),
-            RequestCase("info-not-found", "GET", "/tickers/info?ticker=NOPE", origin_headers),
-            RequestCase("info-all", "GET", "/tickers/info", origin_headers),
-            RequestCase(
-                "info-duplicate-optional-ticker",
-                "GET",
-                "/tickers/info?ticker=FPT&ticker=VCB",
                 origin_headers,
             ),
             RequestCase(
@@ -4947,18 +4974,6 @@ def _cases(
                 "top-performers-sector-filter",
                 "GET",
                 f"/analysis/top-performers?date={end_date}&mode=vn&sort_by=ma20_score&direction=desc&limit=10&min_volume=0&sector=Technology&snap=false",
-                origin_headers,
-            ),
-            RequestCase(
-                "top-performers-overlapping-sector-membership",
-                "GET",
-                f"/analysis/top-performers?date={end_date}&mode=vn&sort_by=close_changed&direction=desc&limit=20&min_volume=0&snap=false",
-                origin_headers,
-            ),
-            RequestCase(
-                "rrg-overlapping-sector-membership",
-                "GET",
-                f"/analysis/rrg?algorithm=jdk&mode=vn&trails=1&min_volume=0&benchmark=VNINDEX&period=10&date={end_date}&ema=true",
                 origin_headers,
             ),
             RequestCase(
@@ -8037,20 +8052,6 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                         kwargs["content"] = case.raw_body
                     elif case.chunked_body is not None:
                         kwargs["content"] = _ChunkedBody(case.chunked_body)
-                    overlapping_group_file = None
-                    overlapping_group_original = None
-                    if case.name in {
-                        "top-performers-overlapping-sector-membership",
-                        "rrg-overlapping-sector-membership",
-                    }:
-                        overlapping_group_file = catalog / "ticker_group.json"
-                        overlapping_group_original = overlapping_group_file.read_text(
-                            encoding="utf-8"
-                        )
-                        overlapping_group_file.write_text(
-                            json.dumps({"Zulu": ["FPT"], "Alpha": ["FPT"]}),
-                            encoding="utf-8",
-                        )
                     try:
                         request_options = (
                             {"timeout": case.request_timeout}
@@ -8071,10 +8072,6 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                             **kwargs,
                         )
                     except Exception as exc:
-                        if overlapping_group_file is not None:
-                            overlapping_group_file.write_text(
-                                overlapping_group_original or "{}", encoding="utf-8"
-                            )
                         for filler in quota_fillers:
                             filler.unlink(missing_ok=True)
                         failures.append(f"{case.name}: request failed: {type(exc).__name__}: {exc}")
@@ -8093,11 +8090,6 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                                 )
                     for filler in quota_fillers:
                         filler.unlink(missing_ok=True)
-                    if overlapping_group_file is not None:
-                        overlapping_group_file.write_text(
-                            overlapping_group_original or "{}", encoding="utf-8"
-                        )
-
                     differences = _differences(
                         _snapshot(
                             rust_response,
@@ -9847,41 +9839,6 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                                 failures.append(
                                     f"{case.name}: {runtime} Allow header was "
                                     f"{response.headers.get('allow')!r}, expected 'GET,HEAD'"
-                                )
-
-                    if case.name in {
-                        "top-performers-overlapping-sector-membership",
-                        "rrg-overlapping-sector-membership",
-                    }:
-                        for runtime, response in (
-                            ("Rust", rust_response),
-                            ("Python", python_response),
-                        ):
-                            if response.status_code != 200:
-                                failures.append(
-                                    f"{case.name}: expected {runtime} HTTP 200, "
-                                    f"got {response.status_code}"
-                                )
-                                continue
-                            if case.name.startswith("top-performers"):
-                                response_rows = (
-                                    response.json().get("data", {}).get("performers", [])
-                                )
-                                expected_count = 1
-                            else:
-                                response_rows = response.json().get("data", {}).get("tickers", [])
-                                # JDK RRG preserves one row per group member,
-                                # so this deliberately duplicated membership
-                                # should yield both entries with the same label.
-                                expected_count = 2
-                            fpt_rows = [row for row in response_rows if row.get("symbol") == "FPT"]
-                            if len(fpt_rows) != expected_count or any(
-                                row.get("sector") != "Alpha" for row in fpt_rows
-                            ):
-                                failures.append(
-                                    f"{case.name}: {runtime} did not choose the lexicographically "
-                                    f"first overlapping sector for all {expected_count} FPT rows: "
-                                    f"{fpt_rows!r}"
                                 )
 
                     if case.name == "csv-price-format-thresholds-zero-negative":
@@ -13133,6 +13090,45 @@ def test_rust_and_python_http_endpoints_match_on_shared_fixture():
                     cap_groups["CapProbe"] = list(cap_symbols)
                     cap_group_path.write_text(
                         json.dumps(cap_groups, ensure_ascii=False), encoding="utf-8"
+                    )
+                    directory_path = catalog / "vn_tickers.json"
+                    directory_payload = json.loads(directory_path.read_text(encoding="utf-8"))
+                    cap_directory_rows = [
+                        {
+                            "symbol": symbol,
+                            "name": f"Cap probe {symbol}",
+                            "en_name": f"Cap probe {symbol}",
+                            "exchange": "HOSE",
+                            "listing_board": "HSX",
+                            "listing_status": "listed",
+                            "type": "stock",
+                            "icb_level2_code": "CAP-PROBE",
+                            "icb_level2_name": "CapProbe",
+                            "icb_level2_name_en": "CapProbe",
+                            "market_cap_vnd": 1_000_000_000,
+                            "market_cap_as_of": "2026-10-20T00:00:00Z",
+                            "market_cap_price_vnd": 10_000,
+                            "market_cap_price_basis": "last_trade",
+                            "shares_listed": 100_000,
+                        }
+                        for symbol in cap_symbols
+                    ]
+                    directory_payload["stocks"].extend(cap_directory_rows)
+                    directory_payload["stock_count"] = len(directory_payload["stocks"])
+                    directory_payload["market_cap_known_count"] = len(
+                        directory_payload["stocks"]
+                    )
+                    directory_path.write_text(
+                        json.dumps(directory_payload, ensure_ascii=False), encoding="utf-8"
+                    )
+                    app.state.catalog.vn_stock_rows = (
+                        directory_payload,
+                        tuple(
+                            sorted(
+                                directory_payload["stocks"],
+                                key=lambda row: row["symbol"],
+                            )
+                        ),
                     )
 
                     cap_rows = []

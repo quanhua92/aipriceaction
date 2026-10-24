@@ -100,6 +100,17 @@ class FakeCatalog:
     def load(self, name):
         return self.files[name]
 
+    def vn_groups(self, *_args, **_kwargs):
+        return {
+            name: list(symbols)
+            for name, symbols in self.groups_by_source["vn"].items()
+            if name != "ALL_STOCKS"
+        }
+
+    @property
+    def vn_sector_groups(self):
+        return self.vn_groups()
+
     def sector(self, source, symbol):
         for name, symbols in sorted(self.groups_by_source[source].items()):
             if name != "ALL_STOCKS" and symbol in symbols:
@@ -237,6 +248,7 @@ def test_rrg_mascore_all_includes_postgres_fallback_sjc_tickers():
 def test_rrg_overlapping_sector_membership_uses_lexicographic_group_order():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Zulu": ["VCB"], "Alpha": ["VCB"]}
+    catalog.groups_by_source["vn"] = {"Zulu": ["VCB"], "Alpha": ["VCB"]}
     analysis = Analysis(FakeHistory({}), catalog)
 
     assert analysis._rrg_sector("vn", "VCB", analysis._rrg_groups_by_source()) == "Alpha"
@@ -245,6 +257,7 @@ def test_rrg_overlapping_sector_membership_uses_lexicographic_group_order():
 def test_performer_overlapping_sector_membership_uses_lexicographic_group_order():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Zulu": ["VCB"], "Alpha": ["VCB"]}
+    catalog.groups_by_source["vn"] = {"Zulu": ["VCB"], "Alpha": ["VCB"]}
     analysis = Analysis(FakeHistory({}), catalog)
     analysis.latest = lambda *_args: [
         (
@@ -268,6 +281,7 @@ def test_performer_overlapping_sector_membership_uses_lexicographic_group_order(
 def test_mascore_rrg_emits_a_source_ticker_once_for_overlapping_groups(trails):
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"]["Second bank group"] = ["VCB"]
+    catalog.groups_by_source["vn"]["Second bank group"] = ["VCB"]
     history = FakeHistory({("vn", "VCB", "1D"): daily_rows("vn", "VCB")})
 
     response = Analysis(history, catalog).rrg(
@@ -305,6 +319,10 @@ def test_ma_scores_do_not_emit_python_only_all_stocks_sector():
 def test_ma_sector_ties_use_average_then_name_and_source_and_stock_order():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {
+        "Zulu": ["VCB", "FPT"],
+        "Same": ["VCB"],
+    }
+    catalog.groups_by_source["vn"] = {
         "Zulu": ["VCB", "FPT"],
         "Same": ["VCB"],
     }
@@ -372,6 +390,7 @@ def test_ma_scores_skip_rows_with_null_or_missing_ma_indicators(row):
 def test_snap_false_skips_joined_snapshot_reads_but_refreshes_the_snapshot():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB"]}
     history = FakeHistory({("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=3)})
     stale = {
         "ticker": "VCB",
@@ -405,6 +424,7 @@ def test_snap_false_skips_joined_snapshot_reads_but_refreshes_the_snapshot():
 def test_jdk_rrg_prefers_live_redis_tail_over_durable_history():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB", "VNINDEX"]}
     durable = {
         ("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=140, start=200),
         ("vn", "VNINDEX", "1D"): daily_rows("vn", "VNINDEX", count=140, start=1000),
@@ -434,6 +454,7 @@ def test_jdk_rrg_prefers_live_redis_tail_over_durable_history():
 def test_jdk_rrg_result_cache_is_disabled_when_live_redis_can_supply_data():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB", "VNINDEX"]}
     history = FakeHistory(
         {
             ("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=140, start=200),
@@ -478,6 +499,7 @@ def test_jdk_rrg_result_cache_is_disabled_when_live_redis_can_supply_data():
 def test_dated_jdk_rrg_cache_ignores_later_bars_and_invalidates_visible_corrections():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB", "VNINDEX"]}
     rows = {
         ("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=140, start=200),
         ("vn", "VNINDEX", "1D"): daily_rows("vn", "VNINDEX", count=140, start=1000),
@@ -531,6 +553,7 @@ def test_dated_jdk_rrg_cache_ignores_later_bars_and_invalidates_visible_correcti
 def test_latest_mascore_rrg_uses_the_101_row_joined_snapshot_key_and_redis_tail():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB", "VNINDEX"]}
     redis = FakeSnapshotRedis()
     history = FakeHistory(
         {
@@ -648,6 +671,7 @@ def test_performers_fetch_latest_then_apply_rust_date_cutoff_and_invalid_date_fa
 def test_latest_analysis_omits_one_unavailable_ticker_and_keeps_other_rows():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "FPT"]}
+    catalog.groups_by_source["vn"] = {"Banks": ["VCB", "FPT"]}
     history = FakeHistory({("vn", "FPT", "1D"): daily_rows("vn", "FPT", count=3)})
     query = history.query
 
@@ -910,6 +934,22 @@ def test_top_performers_http_filters_the_requested_sector(tmp_path):
     app = create_app(settings)
     app.state.catalog.load = lambda name: {
         "ticker_group.json": {"Banks": ["VCB"]},
+        "vn_tickers.json": {
+            "schema_version": 1,
+            "generated_at": "2026-10-20T00:00:00Z",
+            "stocks": [
+                {
+                    "symbol": "VCB",
+                    "name": "Fixture",
+                    "en_name": "Fixture",
+                    "exchange": "HOSE",
+                    "listing_status": "listed",
+                    "type": "stock",
+                    "icb_level2_name": "Banks",
+                    "market_cap_vnd": 100,
+                }
+            ],
+        },
         "binance_tickers.json": {"data": []},
         "global_tickers.json": {"data": []},
         "sjc_tickers.json": {"data": []},

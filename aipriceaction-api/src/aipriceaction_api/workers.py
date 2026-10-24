@@ -119,9 +119,13 @@ class Worker:
                     preferred[source].append(symbol)
             expanded = {}
             catalog = Catalog(self.settings)
-            liquid_vn = self.repo.liquid_vn_symbols(catalog.vn_stock_symbols)
+            liquid_vn = self.repo.liquid_vn_symbols(catalog.vn_listed_symbols)
             for source, groups in catalog.groups_by_source.items():
                 catalog_symbols = {symbol for values in groups.values() for symbol in values}
+                if source == "vn":
+                    catalog_symbols = set(catalog.vn_listed_symbols) | {
+                        row["symbol"] for row in catalog.vn_index_rows
+                    }
                 priority = [
                     symbol for symbol in preferred.get(source, ()) if symbol in catalog_symbols
                 ]
@@ -129,12 +133,7 @@ class Worker:
                 expanded[source] = []
                 for symbol in symbols:
                     entry = {"symbol": symbol} | overrides.get((source, symbol), {})
-                    if (
-                        source == "vn"
-                        and symbol not in catalog.curated_vn_symbols
-                        and symbol not in liquid_vn
-                        and "intervals" not in entry
-                    ):
+                    if source == "vn" and symbol not in liquid_vn and "intervals" not in entry:
                         # Probe and retain three years of daily data for every
                         # listed share. Minute/hourly history is promoted only
                         # after broad daily discovery ranks it in the liquid 80%.

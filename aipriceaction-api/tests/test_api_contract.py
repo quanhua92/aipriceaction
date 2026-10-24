@@ -25,6 +25,7 @@ import aipriceaction_api.app as app_module
 import aipriceaction_api.config as config_module
 from aipriceaction_api.app import RUST_QUERY_FIELDS, RustCompatibleStaticFiles, create_app
 from aipriceaction_api.archive import Archive
+from aipriceaction_api.catalog import DEFAULT_VN_MIN_MARKET_CAP_VND
 from aipriceaction_api.config import RUST_DEFAULT_CORS_ORIGINS, Settings
 from aipriceaction_api.domain import Candle, DataError, parse_time
 from aipriceaction_api.responses import CSV_COLUMNS
@@ -1593,7 +1594,111 @@ def test_metadata_static_and_health(client):
     assert health["configuration"]["vn_direct_access_enabled"] is True
     assert health["configuration"]["http_proxies_configured"] is False
     assert health["configuration"]["api_read_concurrency"] == 4
-    assert health["configuration"]["api_market_read_concurrency"] == 4
+
+
+def test_vn_ticker_metadata_endpoints_share_market_cap_filter(client):
+    directory = client.get("/tickers/directory").json()
+    assert directory["total_stocks"] >= 1500
+    assert directory["min_market_cap_vnd"] == DEFAULT_VN_MIN_MARKET_CAP_VND
+    assert directory["market_cap_known"] + directory["market_cap_unknown"] == (
+        directory["total_stocks"]
+    )
+    assert directory["returned"] == len(directory["stocks"])
+    assert (
+        client.get("/tickers/directory?min_market_cap_vnd=").json()["returned"]
+        == directory["returned"]
+    )
+
+    full_directory = client.get(
+        "/tickers/directory?min_market_cap_vnd=0&include_unknown_market_cap=true"
+    ).json()
+    expected_default_symbols = {
+        row["symbol"]
+        for row in full_directory["stocks"]
+        if row["market_cap_vnd"] is not None
+        and row["market_cap_vnd"] >= DEFAULT_VN_MIN_MARKET_CAP_VND
+    }
+    assert {row["symbol"] for row in directory["stocks"]} == expected_default_symbols
+    assert len(expected_default_symbols) > 400
+    vcb = next(row for row in directory["stocks"] if row["symbol"] == "VCB")
+    assert vcb["icb_level2_name"] == "Ngân hàng"
+    assert vcb["icb_level2_name_en"] == "Banks"
+
+    known_only = client.get("/tickers/directory?min_market_cap_vnd=0").json()
+    with_unknown = client.get(
+        "/tickers/directory?min_market_cap_vnd=0&include_unknown_market_cap=true"
+    ).json()
+    assert known_only["returned"] == directory["market_cap_known"]
+    assert with_unknown["returned"] == directory["total_stocks"]
+    selected_symbols = {row["symbol"] for row in known_only["stocks"]}
+
+    groups = client.get("/tickers/group?min_market_cap_vnd=0").json()
+    grouped_symbols = {symbol for symbols in groups.values() for symbol in symbols}
+    assert grouped_symbols == selected_symbols
+    assert "INDEX" not in groups
+    assert "Banks" in groups and "Ngân hàng" not in groups
+    vietnamese_groups = client.get("/tickers/group?lang=vi&min_market_cap_vnd=0").json()
+    assert "Ngân hàng" in vietnamese_groups and "Banks" not in vietnamese_groups
+    assert {
+        symbol for symbols in vietnamese_groups.values() for symbol in symbols
+    } == selected_symbols
+    default_groups = client.get("/tickers/group").json()
+    assert {
+        symbol for symbols in default_groups.values() for symbol in symbols
+    } == expected_default_symbols
+    assert "INDEX" not in default_groups
+
+    names = client.get("/tickers/name?min_market_cap_vnd=0").json()
+    assert set(names) == selected_symbols
+    assert set(client.get("/tickers/name").json()) == expected_default_symbols
+
+    info = client.get("/tickers/info?min_market_cap_vnd=0").json()
+    assert {row["ticker"] for row in info} == selected_symbols
+    assert all(row["market_cap_vnd"] is not None for row in info)
+    all_info = client.get("/tickers/info").json()
+    assert {row["ticker"] for row in all_info} == expected_default_symbols
+    assert all(row["name"] for row in all_info)
+    assert len(client.get("/tickers/info?include_unknown_market_cap=true").json()) == (
+        len(expected_default_symbols) + directory["market_cap_unknown"]
+    )
+
+    unknown_cap_ticker = next(
+        row["symbol"] for row in full_directory["stocks"] if row["market_cap_vnd"] is None
+    )
+    assert (
+        client.get(
+            f"/tickers/info?ticker={unknown_cap_ticker}&min_market_cap_vnd=0"
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            f"/tickers/info?ticker={unknown_cap_ticker}&min_market_cap_vnd=0"
+            "&include_unknown_market_cap=true"
+        ).status_code
+        == 200
+    )
+
+    all_groups = client.get("/tickers/group?mode=all").json()
+    filtered_all_groups = client.get(
+        "/tickers/group?mode=all&min_market_cap_vnd=0"
+    ).json()
+    assert filtered_all_groups["CRYPTO_TOP_100"] == all_groups["CRYPTO_TOP_100"]
+    all_names = client.get("/tickers/name?mode=all").json()
+    filtered_all_names = client.get("/tickers/name?mode=all&min_market_cap_vnd=0").json()
+    crypto_ticker = all_groups["CRYPTO_TOP_100"][0]
+    assert filtered_all_names[crypto_ticker] == all_names[crypto_ticker]
+
+    low_cap_ticker = next(
+        row["symbol"]
+        for row in full_directory["stocks"]
+        if row["market_cap_vnd"] is not None
+        and row["market_cap_vnd"] < DEFAULT_VN_MIN_MARKET_CAP_VND
+    )
+    assert client.get(f"/tickers/info?ticker={low_cap_ticker}").status_code == 404
+    assert client.get(
+        f"/tickers/info?ticker={low_cap_ticker}&min_market_cap_vnd=0"
+    ).status_code == 200
     assert client.get("/explorer").status_code == 200
     ranged_explorer = client.get("/explorer", headers={"Range": "bytes=0-0"})
     assert ranged_explorer.status_code == 200
@@ -2654,6 +2759,7 @@ def test_fastapi_exposes_every_active_legacy_http_route(client):
         ("get", "/tickers/group"),
         ("get", "/tickers/name"),
         ("get", "/tickers/info"),
+        ("get", "/tickers/directory"),
         ("post", "/upload/markdown"),
         ("get", "/uploads/{session_id}/markdown/{filename}"),
         ("delete", "/uploads/{session_id}"),
@@ -2779,7 +2885,10 @@ def test_fastapi_exposes_every_active_legacy_http_route(client):
         for start, end, prefix, _route_depth in rust_route_blocks
         for declaration in collect_routes(rust_router[start:end], prefix)
     ]
-    assert Counter(rust_route_declarations) == Counter(expected_routes | {("get", "/explorer")})
+    rust_compatibility_routes = expected_routes - {("get", "/tickers/directory")}
+    assert Counter(rust_route_declarations) == Counter(
+        rust_compatibility_routes | {("get", "/explorer")}
+    )
 
     main_routes_block = rust_router[main_start:upload_start]
     upload_routes_block = rust_router[upload_start:public_start]
@@ -2926,6 +3035,7 @@ def test_openapi_documents_mode_algorithm_and_integer_query_bounds(client):
     mode_values = ["vn", "stock", "stocks", "crypto", "cryptos", "yahoo", "all"]
     assert parameters("/tickers")["mode"]["schema"]["enum"] == mode_values
     assert parameters("/tickers/group")["mode"]["schema"]["enum"] == mode_values
+    assert parameters("/tickers/group")["lang"]["schema"]["enum"] == ["en", "vi", "vn"]
     assert parameters("/analysis/rrg")["mode"]["schema"]["enum"] == mode_values
     assert parameters("/analysis/rrg")["algorithm"]["schema"]["enum"] == ["jdk", "mascore"]
     profile_mode = parameters("/analysis/volume-profile")["mode"]
@@ -2999,6 +3109,21 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
             "/uploads/{session_id}",
             "delete",
         ): ("upload.rs", "delete_session_handler", "DeleteQuery"),
+    }
+    python_query_extensions = {
+        "/tickers/group": {
+            "lang": ("string", "string"),
+            "min_market_cap_vnd": ("optional_u64", "integer"),
+            "include_unknown_market_cap": ("bool", "boolean"),
+        },
+        "/tickers/name": {
+            "min_market_cap_vnd": ("optional_u64", "integer"),
+            "include_unknown_market_cap": ("bool", "boolean"),
+        },
+        "/tickers/info": {
+            "min_market_cap_vnd": ("optional_u64", "integer"),
+            "include_unknown_market_cap": ("bool", "boolean"),
+        },
     }
 
     def rust_struct_fields(source_path, struct_name):
@@ -3233,13 +3358,18 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
         declaration_path = rust_query_structs[struct_name].relative_to(rust_root).as_posix()
         rust_fields = rust_struct_fields(declaration_path, struct_name)
         if route_path in RUST_QUERY_FIELDS:
-            assert set(RUST_QUERY_FIELDS[route_path]) == set(rust_fields), route_path
+            expected_python_fields = set(rust_fields) | set(
+                python_query_extensions.get(route_path, {})
+            )
+            assert set(RUST_QUERY_FIELDS[route_path]) == expected_python_fields, route_path
         query_parameters = {
             parameter["name"]: parameter
             for parameter in paths[route_path][method].get("parameters", ())
             if parameter["in"] == "query"
         }
-        expected_names = {field["name"] for field in rust_fields.values()}
+        expected_names = {field["name"] for field in rust_fields.values()} | set(
+            python_query_extensions.get(route_path, {})
+        )
         assert set(query_parameters) == expected_names, (route_path, method)
         for rust_name, field in rust_fields.items():
             assert not field["aliases"], (
@@ -3270,6 +3400,13 @@ def test_python_query_field_manifest_matches_rust_query_structs(client):
                 field,
                 parameter,
             )
+        for name, (kind, expected_type) in python_query_extensions.get(route_path, {}).items():
+            if route_path in RUST_QUERY_FIELDS:
+                assert RUST_QUERY_FIELDS[route_path][name] == kind
+            parameter = query_parameters[name]
+            assert parameter["required"] is False
+            schema = resolve_openapi_schema(parameter["schema"])
+            assert schema["type"] == expected_type
 
     refresh_source = (rust_root / "api" / "mod.rs").read_text(encoding="utf-8")
     refresh_match = re.search(r"\bpub\s+async\s+fn\s+tickers_refresh\s*\(", refresh_source)

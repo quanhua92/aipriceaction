@@ -23,9 +23,9 @@ from .redis_snapshots import (
     write_redis_snapshot,
 )
 
-# The Rust analysis routes use the legacy curated group files as their
-# membership source. The Python catalog adds ALL_STOCKS for ingestion and
-# keeps SJC under its own storage source; neither is an independent RRG source.
+# VN analysis membership and sectors come from the Python stock catalog's ICB
+# groups. ALL_STOCKS is an ingestion group, not an independent RRG sector;
+# SJC remains under Yahoo for analysis and its own source for storage.
 _RRG_SOURCE_ORDER = {
     "vn": ("vn",),
     "crypto": ("crypto",),
@@ -116,20 +116,18 @@ class Analysis:
         self._rrg_result_cache = VersionedAnalysisCache()
 
     def universe(self, mode):
-        # The Rust analysis routes enumerate the curated legacy groups rather
-        # than every locally registered ticker. Reuse the same catalog mapping
-        # already used by RRG so Python-only ingestion entries stay out.
+        # Keep analysis scoped to the current directory and watched indices,
+        # rather than every historical ticker still present in SQLite.
         return self._rrg_universe(mode, self._rrg_groups_by_source())
 
     def _rrg_groups_by_source(self):
-        """Return the curated groups used by Rust RRG, keyed by data source.
+        """Return directory-derived ICB groups keyed by data source.
 
-        Python's catalog deliberately adds ALL_STOCKS for broader ingestion
-        and stores SJC separately. Rust RRG uses the curated VN/crypto groups
-        and merges SJC into the Yahoo group map. Load the same source files
-        Rust reads so a Python catalog snapshot cannot widen this RRG universe.
+        The current Vietnamese listings and watched indices supply the VN
+        universe. Delisted listings remain available in ticker metadata but
+        are not included in current market analysis.
         """
-        vn = self.catalog.load("ticker_group.json")
+        vn = self.catalog.vn_groups(include_delisted=False)
         crypto_rows = self.catalog.load("binance_tickers.json").get("data", [])
         if not isinstance(crypto_rows, list):
             crypto_rows = []
@@ -407,7 +405,7 @@ class Analysis:
             cutoff = None
         if cutoff is None:
             cutoff = int(datetime.now(UTC).timestamp())
-        vn_groups = self.catalog.load("ticker_group.json")
+        vn_groups = self.catalog.vn_groups(include_delisted=False)
         sector_by_symbol = _sector_lookup(vn_groups)
         sector_symbols = set(vn_groups.get(sector, ())) if sector is not None else None
 
