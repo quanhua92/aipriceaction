@@ -475,6 +475,56 @@ def test_jdk_rrg_result_cache_is_disabled_when_live_redis_can_supply_data():
     assert len(redis_reads) > first_read_count
 
 
+def test_dated_jdk_rrg_cache_ignores_later_bars_and_invalidates_visible_corrections():
+    catalog = rrg_catalog()
+    catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}
+    rows = {
+        ("vn", "VCB", "1D"): daily_rows("vn", "VCB", count=140, start=200),
+        ("vn", "VNINDEX", "1D"): daily_rows("vn", "VNINDEX", count=140, start=1000),
+    }
+    history = FakeHistory(rows)
+    whole_series_versions = {"VCB": 1, "VNINDEX": 1}
+    as_of_versions = {"VCB": 1, "VNINDEX": 1}
+    history.repo.history_versions = lambda _source, symbols, _interval: {
+        symbol: whole_series_versions.get(symbol, 0) for symbol in symbols
+    }
+    history.repo.history_versions_as_of = lambda _source, symbols, _interval, _end: {
+        symbol: as_of_versions.get(symbol, 0) for symbol in symbols
+    }
+    analysis = Analysis(history, catalog)
+    kwargs = {
+        "mode": "vn",
+        "date": "2024-05-15",
+        "benchmark": "VNINDEX",
+        "algorithm": "jdk",
+        "period": 4,
+        "trails": 5,
+        "min_volume": 0,
+    }
+
+    first = analysis.rrg(**kwargs)
+    reads_after_first = len(history.calls)
+    first_tickers = first["data"]["tickers"]
+
+    ticker_rows = rows[("vn", "VCB", "1D")]
+    ticker_rows[-1] = replace(ticker_rows[-1], close=ticker_rows[-1].close + 50)
+    whole_series_versions["VCB"] += 1
+    later_bar_response = analysis.rrg(**kwargs)
+
+    assert len(history.calls) == reads_after_first
+    assert later_bar_response["data"]["tickers"] == first_tickers
+
+    visible_rows = [row for row in ticker_rows if row.time <= date_bounds("2024-05-15", True)]
+    target = visible_rows[-1]
+    ticker_rows[ticker_rows.index(target)] = replace(target, close=target.close + 5)
+    whole_series_versions["VCB"] += 1
+    as_of_versions["VCB"] += 1
+    corrected_response = analysis.rrg(**kwargs)
+
+    assert len(history.calls) > reads_after_first
+    assert corrected_response["data"]["tickers"] != first_tickers
+
+
 def test_latest_mascore_rrg_uses_the_101_row_joined_snapshot_key_and_redis_tail():
     catalog = rrg_catalog()
     catalog.files["ticker_group.json"] = {"Banks": ["VCB", "VNINDEX"]}

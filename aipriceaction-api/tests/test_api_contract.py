@@ -3873,9 +3873,29 @@ def test_cors_and_versioned_response_cache_semantics(client):
     assert unchanged.headers["x-data-source"] == "in-memory"
     assert repo.market_epoch() == market_epoch
 
+    repo.put(
+        [
+            Candle(
+                "crypto",
+                "BTCUSDT",
+                "1m",
+                parse_time("2026-10-20"),
+                100,
+                101,
+                99,
+                100,
+                1,
+                "fixture",
+                "crypto-revision",
+            )
+        ]
+    )
+    unrelated_update = client.get("/tickers?symbol=FPT&limit=1")
+    assert unrelated_update.headers["x-data-source"] == "in-memory"
+
     repo.put([replace(row, high=row.high + 10, close=row.close + 5)])
-    # A market-data write advances market_epoch and invalidates the response
-    # cache immediately, while leaving unchanged query results reusable.
+    # A matching source/interval/symbol update invalidates immediately; writes
+    # to other sources and intervals leave this cached response reusable.
     updated = client.get("/tickers?symbol=FPT&limit=1")
     assert updated.headers["x-data-source"] == "database"
     assert updated.json()["FPT"][0]["close"] == row.close + 5

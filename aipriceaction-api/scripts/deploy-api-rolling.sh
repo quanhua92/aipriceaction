@@ -34,6 +34,8 @@ deploy_replica() {
     container=$2
     docker compose up -d --no-deps "$service"
     wait_healthy "$service" "$container"
+    echo "Warming and verifying homepage routes on $service"
+    docker compose exec -T "$service" python -m aipriceaction_api.homepage_warmup --instant-ms 5000
 }
 
 if docker inspect aipriceaction-nginx >/dev/null 2>&1 \
@@ -49,10 +51,14 @@ else
     # already serves requests during api's startup and warmup.
     deploy_replica api2 aipriceaction-api-2
     docker compose up -d --no-deps api
-    docker compose up -d --no-deps nginx
     wait_healthy api aipriceaction-api
+    echo "Warming and verifying homepage routes on api"
+    docker compose exec -T api python -m aipriceaction_api.homepage_warmup --instant-ms 5000
+    docker compose up -d --no-deps nginx
     wait_healthy nginx aipriceaction-nginx
 fi
 
 docker compose up -d --no-deps worker
+echo "Checking the exact 19 homepage routes through Nginx"
+docker compose exec -T api python -m aipriceaction_api.homepage_warmup --base-url http://nginx:8899
 docker compose ps

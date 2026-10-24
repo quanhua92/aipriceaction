@@ -731,7 +731,18 @@ class Analysis:
         benchmark_symbol = ("VNINDEX" if benchmark is None else benchmark).upper()
         symbols = sorted({ticker["symbol"] for ticker in universe} | {benchmark_symbol})
         membership = tuple((group, tuple(groups[group])) for group in sorted(groups))
-        versions = history_versions("vn", symbols, "1D")
+        as_of_versions = getattr(repository, "history_versions_as_of", None)
+        if date is not None and callable(as_of_versions):
+            try:
+                as_of_end = date_bounds(date, True)
+            except DataError:
+                # Keep the established validation path and error message in
+                # _rrg_uncached for malformed dates.
+                versions = history_versions("vn", symbols, "1D")
+            else:
+                versions = as_of_versions("vn", symbols, "1D", as_of_end)
+        else:
+            versions = history_versions("vn", symbols, "1D")
         version = membership, tuple(sorted(versions.items()))
         if timing_stats is not None:
             timing_stats["version_check_ms"] = round((perf_counter() - version_started) * 1000, 3)

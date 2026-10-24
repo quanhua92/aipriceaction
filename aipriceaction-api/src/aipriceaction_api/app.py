@@ -2464,7 +2464,9 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         cache_version = None
         cache_lookup_started = time.perf_counter()
         if params.cache:
-            cache_version = repo.market_epoch()
+            cache_version = repo.history_version_epoch(
+                selected_sources(source_mode), iv, symbols
+            )
             cached = responses.get(
                 key, version=cache_version, timing_stats=response_cache_stats
             )
@@ -2476,7 +2478,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         load_metrics = {}
         data_wait_ms = 0.0
         cache_put_ms = 0.0
-        cache_epoch_changed_during_load = False
+        cache_version_changed_during_load = False
         if cached is not None:
             data = cached
             tag = "in-memory"
@@ -2485,9 +2487,11 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             tag = "empty" if source_mode == "all" else "database"
             if params.cache:
                 cache_put_started = time.perf_counter()
-                cache_epoch_after_load = repo.market_epoch()
-                cache_epoch_changed_during_load = cache_epoch_after_load != cache_version
-                if not cache_epoch_changed_during_load:
+                cache_version_after_load = repo.history_version_epoch(
+                    selected_sources(source_mode), iv, symbols
+                )
+                cache_version_changed_during_load = cache_version_after_load != cache_version
+                if not cache_version_changed_during_load:
                     responses.put(key, data, version=cache_version)
                 cache_put_ms = (time.perf_counter() - cache_put_started) * 1000
         else:
@@ -3105,9 +3109,11 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 data, tag, redis_meta = {}, "empty" if source_mode == "all" else "database", None
             if params.cache:
                 cache_put_started = time.perf_counter()
-                cache_epoch_after_load = repo.market_epoch()
-                cache_epoch_changed_during_load = cache_epoch_after_load != cache_version
-                if not cache_epoch_changed_during_load:
+                cache_version_after_load = repo.history_version_epoch(
+                    selected_sources(source_mode), iv, symbols
+                )
+                cache_version_changed_during_load = cache_version_after_load != cache_version
+                if not cache_version_changed_during_load:
                     responses.put(key, data, version=cache_version)
                 cache_put_ms = (time.perf_counter() - cache_put_started) * 1000
         # Rust's mode=all fast path returns before adding its diagnostic header.
@@ -3138,7 +3144,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                 "response_cache_miss_reason": response_cache_stats.get(
                     "response_cache_miss_reason"
                 ),
-                "cache_epoch_changed_during_load": cache_epoch_changed_during_load,
+                "cache_version_changed_during_load": cache_version_changed_during_load,
                 "source": tag,
                 "symbols": len(data),
                 "rows": sum(len(rows) for rows in data.values() if isinstance(rows, list)),

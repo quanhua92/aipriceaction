@@ -117,6 +117,93 @@ CREATE TABLE IF NOT EXISTS volume_corrections(
 CREATE TABLE IF NOT EXISTS history_versions(
  source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source,symbol,interval));
+CREATE TABLE IF NOT EXISTS history_metadata_versions(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
+ version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source,symbol,interval));
+CREATE TRIGGER IF NOT EXISTS series_metadata_version_insert AFTER INSERT ON series BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS series_metadata_version_update AFTER UPDATE ON series BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS series_metadata_version_delete AFTER DELETE ON series BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_metadata_version_insert AFTER INSERT ON archives BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_metadata_version_update AFTER UPDATE ON archives BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS archives_metadata_version_delete AFTER DELETE ON archives BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_metadata_version_insert AFTER INSERT ON quality
+WHEN NEW.kind='history_unavailable' BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_metadata_version_update AFTER UPDATE ON quality
+WHEN OLD.kind='history_unavailable' OR NEW.kind='history_unavailable' BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS history_gaps_metadata_version_delete AFTER DELETE ON quality
+WHEN OLD.kind='history_unavailable' BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_metadata_version_insert
+AFTER INSERT ON snapshot_adoptions BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_metadata_version_update
+AFTER UPDATE ON snapshot_adoptions BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS snapshot_adoptions_metadata_version_delete
+AFTER DELETE ON snapshot_adoptions BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_metadata_version_insert
+AFTER INSERT ON volume_corrections BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_metadata_version_update
+AFTER UPDATE ON volume_corrections BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (NEW.source,NEW.symbol,NEW.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
+CREATE TRIGGER IF NOT EXISTS volume_corrections_metadata_version_delete
+AFTER DELETE ON volume_corrections BEGIN
+ INSERT INTO history_metadata_versions(source,symbol,interval,version)
+ VALUES (OLD.source,OLD.symbol,OLD.interval,1)
+ ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
+END;
 CREATE TABLE IF NOT EXISTS archive_repair_batches(
  id TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('collecting','prepared','indexed','manifest_published','published','failed')),
  payload TEXT NOT NULL, retry_at INTEGER NOT NULL DEFAULT 0,
@@ -332,6 +419,70 @@ class Repository:
                     (source, interval, *chunk),
                 )
                 versions.update({row["symbol"]: row["version"] for row in rows})
+        return versions
+
+    def history_version_epoch(self, sources, interval, symbols=None):
+        """Return a stable version for the requested source/interval scope."""
+        sources = list(dict.fromkeys(sources))
+        selected = None if symbols is None else list(dict.fromkeys(symbols))
+        total = 0
+        with self.connect() as con:
+            for source in sources:
+                if selected is None:
+                    total += con.execute(
+                        "SELECT COALESCE(SUM(version),0) FROM history_versions "
+                        "WHERE source=? AND interval=?",
+                        (source, interval),
+                    ).fetchone()[0]
+                    continue
+                for offset in range(0, len(selected), 400):
+                    chunk = selected[offset : offset + 400]
+                    placeholders = ",".join("?" for _ in chunk)
+                    total += con.execute(
+                        "SELECT COALESCE(SUM(version),0) FROM history_versions "
+                        f"WHERE source=? AND interval=? AND symbol IN ({placeholders})",
+                        (source, interval, *chunk),
+                    ).fetchone()[0]
+        return total
+
+    def history_versions_as_of(self, source, symbols, interval, end):
+        """Return candle and metadata versions limited to rows visible by ``end``.
+
+        The nanosecond ``updated_at`` stamp changes for every accepted candle
+        mutation. Combining it with the visible row count detects inserts,
+        corrections, and deletions without letting later bars invalidate an
+        earlier historical analysis.
+        """
+        symbols = list(dict.fromkeys(symbols))
+        versions = {symbol: (0, 0, 0) for symbol in symbols}
+        if not symbols:
+            return versions
+        with self.connect() as con:
+            for offset in range(0, len(symbols), 400):
+                chunk = symbols[offset : offset + 400]
+                placeholders = ",".join("?" for _ in chunk)
+                args = (source, interval, end, *chunk)
+                candles = con.execute(
+                    "SELECT symbol,COUNT(*) AS row_count,MAX(updated_at) AS last_change "
+                    "FROM candles WHERE source=? AND interval=? AND time<=? "
+                    f"AND symbol IN ({placeholders}) GROUP BY symbol",
+                    args,
+                )
+                for row in candles:
+                    _count, _last_change, metadata = versions[row["symbol"]]
+                    versions[row["symbol"]] = (
+                        row["row_count"],
+                        row["last_change"] or 0,
+                        metadata,
+                    )
+                metadata_rows = con.execute(
+                    "SELECT symbol,version FROM history_metadata_versions "
+                    f"WHERE source=? AND interval=? AND symbol IN ({placeholders})",
+                    (source, interval, *chunk),
+                )
+                for row in metadata_rows:
+                    count, last_change, _metadata = versions[row["symbol"]]
+                    versions[row["symbol"]] = (count, last_change, row["version"])
         return versions
 
     def register(self, source, symbol, name=None, enabled=False):

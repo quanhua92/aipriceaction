@@ -66,7 +66,7 @@ class TickersResponseCache:
         if stored_version != version:
             self._remove(key)
             if timing_stats is not None:
-                timing_stats["response_cache_miss_reason"] = "market_epoch_changed"
+                timing_stats["response_cache_miss_reason"] = "data_version_changed"
             return None
         self.store.move_to_end(key)
         if timing_stats is not None:

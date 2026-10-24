@@ -123,6 +123,67 @@ def test_republishing_unchanged_candles_does_not_invalidate_market_caches(system
     assert repo.market_epoch() == epoch + 1
 
 
+def test_history_version_epoch_is_scoped_to_sources_intervals_and_symbols(system):
+    repo, _, _ = system
+    daily = bar("2026-10-20")
+    repo.put([daily])
+    vn_daily = repo.history_version_epoch(("vn",), "1D")
+    selected_daily = repo.history_version_epoch(("vn",), "1D", ["FPT"])
+
+    repo.put(
+        [
+            Candle(
+                "crypto",
+                "BTCUSDT",
+                "1m",
+                parse_time("2026-10-20"),
+                100,
+                101,
+                99,
+                100,
+                1,
+                "test",
+                "test-revision",
+            )
+        ]
+    )
+    assert repo.history_version_epoch(("vn",), "1D") == vn_daily
+    assert repo.history_version_epoch(("vn",), "1D", ["FPT"]) == selected_daily
+
+    repo.put([replace(daily, close=daily.close + 1, high=daily.high + 1)])
+    assert repo.history_version_epoch(("vn",), "1D") == vn_daily + 1
+    assert repo.history_version_epoch(("vn",), "1D", ["FPT"]) == selected_daily + 1
+    assert repo.history_version_epoch(("vn",), "1D", ["VCB"]) == 0
+
+
+def test_as_of_history_versions_ignore_later_bars_but_track_visible_changes(system):
+    repo, _, _ = system
+    visible = bar("2026-10-20")
+    later = bar("2026-10-22", close=200)
+    cutoff = parse_time("2026-10-20") + 86_399
+    repo.put([visible])
+    before = repo.history_versions_as_of("vn", ["FPT"], "1D", cutoff)
+
+    repo.put([later])
+    assert repo.history_versions_as_of("vn", ["FPT"], "1D", cutoff) == before
+
+    corrected = replace(visible, high=visible.high + 10, close=visible.close + 5)
+    repo.put([corrected])
+    after_correction = repo.history_versions_as_of("vn", ["FPT"], "1D", cutoff)
+    assert after_correction != before
+
+    repo.record_history_gap(
+        "vn",
+        "FPT",
+        "1D",
+        visible.time,
+        visible.time + 86_399,
+        "fixture gap",
+        {"test": True},
+    )
+    assert repo.history_versions_as_of("vn", ["FPT"], "1D", cutoff) != after_correction
+
+
 @pytest.mark.parametrize(
     "iv,stamp", [("1W", "2020-02-03"), ("2W", "2020-02-03"), ("1M", "2020-02-01")]
 )

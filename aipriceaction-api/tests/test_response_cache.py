@@ -12,7 +12,7 @@ def test_cache_keeps_entry_at_exact_ttl_and_expires_after_it():
     assert cache.get("query") is None
 
 
-def test_market_epoch_change_invalidates_cached_response():
+def test_scoped_data_version_change_invalidates_cached_response():
     cache = TickersResponseCache(ttl=60)
     value = {"BTCUSDT": [{"close": 100}]}
     cache.put("crypto", value, version=1)
@@ -20,7 +20,7 @@ def test_market_epoch_change_invalidates_cached_response():
     assert cache.get("crypto", version=1) == value
     stats = {}
     assert cache.get("crypto", version=2, timing_stats=stats) is None
-    assert stats["response_cache_miss_reason"] == "market_epoch_changed"
+    assert stats["response_cache_miss_reason"] == "data_version_changed"
 
 
 def test_default_response_cache_ttl_is_one_minute():
