@@ -30,18 +30,21 @@ Start the services and check the API:
 docker compose up -d --build
 docker compose ps
 curl --fail http://localhost:8899/health
-docker compose logs --tail=100 initialize api worker
+docker compose logs --tail=100 initialize api api2 nginx worker
 ```
 
 `/health` includes a `configuration` object with non-secret effective settings
 such as ingestion universe, provider access mode, retention, and Parquet prefix.
 It reports whether a proxy is configured, never its URL or credentials.
 
-Compose starts the Python API, one worker, a one-time initializer, and local
-RustFS. The initializer loads ticker groups and names from the files bundled in
-this repository; it does not call the production API for a catalog snapshot.
-The API listens on port `8899`; RustFS uses ports `9100` and `9101` on
-loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `catalog`),
+Compose starts two Python API replicas behind Nginx, one worker, a one-time
+initializer, and local RustFS. Both replicas share the same SQLite data
+directory; SQLite remains the source of truth, while each API process keeps its
+own bounded in-memory caches. Nginx owns host port `8899` and localhost port
+`3003`, and sends requests to either healthy API replica. The initializer loads
+ticker groups and names from the files bundled in this repository; it does not
+call the production API for a catalog snapshot. RustFS uses ports `9100` and
+`9101` on loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `catalog`),
 which ingests every symbol in the bundled catalog. Set it to `watchlist` to
 limit ingestion to `watchlist.json`. Initial history for the full catalog may
 take substantial time to build and depends on provider coverage and limits.
@@ -65,6 +68,11 @@ bucket, and write credentials. The remaining settings can stay at their
 defaults unless the deployment needs an override. This Compose file is still
 the local setup; see the [migration runbook](MIGRATION.md) for production
 cutover steps.
+
+For a rolling API update after the first Nginx deployment, run
+`./scripts/deploy-api-rolling.sh` from this directory. It rebuilds the shared
+image, replaces one API replica at a time, waits for its health check, reloads
+Nginx to resolve the replacement container address, then updates the worker.
 
 The SQLite database is stored under `data/` by default. Set `AIPA_DATA_DIR` to
 use another host directory. `docker compose down` keeps the database and RustFS

@@ -381,7 +381,7 @@ If a number cannot be verified from tool output or calculation, leave it out.
 
 ## Local AIPriceAction web and API ports
 
-- The Python API runs on port `8899`. Docker Compose publishes it on all host interfaces.
+- The Python API is served on port `8899` through the Compose Nginx load balancer, which routes to two API replicas. Port `3003` remains a localhost-only alias for that load balancer.
 - Docker Compose does not start the chart website. Run `aipriceaction-api/scripts/serve_local_web.py` separately; it serves on port `5173`, binds to `0.0.0.0`, and proxies API requests to `http://127.0.0.1:8899`.
-- Port `3003` is a localhost-only alias for the API. Port `3000` belongs to another project and is not the AIPriceAction web port.
-- Existing containers do not pick up source changes automatically. From `aipriceaction-api/`, run `docker compose up -d --build api worker`, then check `docker compose ps` and `curl --fail http://127.0.0.1:8899/health` before saying the API is current.
+- Port `3000` belongs to another project and is not the AIPriceAction web port.
+- Existing containers do not pick up source changes automatically. From `aipriceaction-api/`, use `./scripts/deploy-api-rolling.sh` to update both API replicas while Nginx remains available, then check `docker compose ps` and `curl --fail http://127.0.0.1:8899/health`.
