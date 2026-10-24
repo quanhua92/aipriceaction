@@ -25,6 +25,8 @@ wait_healthy() {
     return 1
 }
 
+# Keep port 8899 served while fetching the proxy image and rebuilding the API.
+docker compose pull nginx
 docker compose build api api2 worker
 
 deploy_replica() {
