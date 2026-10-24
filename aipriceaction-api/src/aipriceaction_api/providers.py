@@ -714,9 +714,26 @@ class Providers:
             raise DataError("Yahoo invalid chart result")
         data = results[0]
         stamps = data.get("timestamp")
-        if not isinstance(stamps, list):
-            raise DataError("Yahoo chart result is missing timestamps")
         indicators = data.get("indicators")
+        quote_arrays = indicators.get("quote") if isinstance(indicators, dict) else None
+        if not isinstance(stamps, list):
+            meta = data.get("meta")
+            private_empty = (
+                stamps is None
+                and isinstance(meta, dict)
+                and meta.get("instrumentType") == "PRIVATE_COMPANY"
+                and meta.get("symbol") == wire
+                and isinstance(quote_arrays, list)
+                and len(quote_arrays) == 1
+                and isinstance(quote_arrays[0], dict)
+                and not any(
+                    key in quote_arrays[0]
+                    for key in ("open", "high", "low", "close", "volume")
+                )
+            )
+            if private_empty:
+                return Page([], "yahoo", True)
+            raise DataError("Yahoo chart result is missing timestamps")
         if not isinstance(indicators, dict) or not isinstance(indicators.get("quote"), list):
             raise DataError("Yahoo chart result is missing quote data")
         if not indicators["quote"] or not isinstance(indicators["quote"][0], dict):

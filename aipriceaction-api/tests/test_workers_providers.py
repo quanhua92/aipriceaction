@@ -343,6 +343,33 @@ async def test_yahoo_structural_empty_responses_are_no_data(system, chart, expec
 
 
 @pytest.mark.asyncio
+async def test_yahoo_private_company_metadata_without_bars_is_no_data(system):
+    _, _, settings = system
+    payload = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {"symbol": "ANIN.PVT", "instrumentType": "PRIVATE_COMPANY"},
+                    "indicators": {"quote": [{}]},
+                }
+            ],
+            "error": None,
+        }
+    }
+    providers = Providers(
+        settings,
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=payload)),
+    )
+    try:
+        page = await providers.page(
+            "yahoo", "ANIN.PVT", "1m", parse_time("2026-10-01"), count=10
+        )
+        assert page.no_data and page.rows == []
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "chart",
     [
