@@ -25,6 +25,7 @@ from .domain import (
     completed_vn_sessions,
     cutoff,
 )
+from .indicator_cache import IndicatorSnapshot, LatestIndicatorCache
 from .redis_zset import RedisZsetReader
 
 log = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ class History:
     def __init__(self, repo, archive, settings, redis_client=None):
         self.repo, self.archive, self.settings = repo, archive, settings
         self.data_loader = SQLiteDataLoader(repo)
+        self.indicator_cache = LatestIndicatorCache()
         self.redis_client = redis_client
         self.redis_reader = RedisZsetReader(redis_client)
         self._cache_read_state = threading.local()
@@ -1408,7 +1410,6 @@ class History:
             copy_result=False,
         )
         safe_contexts = {}
-        safe_closes = {}
         fallback_symbols = []
         results = {}
         latest_read_upper = int(time.time())
@@ -1455,18 +1456,19 @@ class History:
                 fallback_symbols.append(symbol)
                 continue
             safe_contexts[symbol] = local
-            safe_closes[symbol] = tail.closes
 
-        results.update(
-            enhance_latest_many(
-                safe_contexts,
-                safe_closes,
+        snapshots = [
+            IndicatorSnapshot.from_loaded(
+                source,
+                symbol,
                 iv,
-                ma=True,
-                ema=ema,
-                periods=periods,
+                loaded.versions.get(symbol, 0),
+                loaded.compact_tails[symbol],
+                safe_contexts[symbol],
             )
-        )
+            for symbol in safe_contexts
+        ]
+        results.update(self.indicator_cache.resolve(snapshots, ema=ema, periods=periods))
         if fallback_symbols:
             try:
                 fallback_contexts = self.read_many(

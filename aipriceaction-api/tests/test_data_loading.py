@@ -647,6 +647,44 @@ def test_compact_latest_ma_matches_single_queries_and_archive_fallback(system, e
         )
 
 
+def test_latest_indicator_cache_reuses_and_refreshes_sqlite_versions(system, monkeypatch):
+    repo, history = system
+    repo.put([candle(symbol, index) for symbol in ("FPT", "VCB") for index in range(700)])
+    calls = []
+    original = enhance_latest_many
+
+    def counted(contexts, closes, interval, **kwargs):
+        calls.append(tuple(contexts))
+        return original(contexts, closes, interval, **kwargs)
+
+    monkeypatch.setattr("aipriceaction_api.indicator_cache.enhance_latest_many", counted)
+    def query():
+        return history.query_many(
+            "vn",
+            ["FPT", "VCB"],
+            "1D",
+            limit=1,
+            ma=True,
+            ema=True,
+            strict_source_intervals=True,
+        )
+
+    first = query()
+    assert calls == [("FPT", "VCB")]
+    assert query() == first
+    assert calls == [("FPT", "VCB")]
+
+    # The worker writes through another process in production. The API sees
+    # SQLite's per-series version marker on its next request.
+    repo.put([candle("FPT", 700)])
+    refreshed = query()
+    assert calls == [("FPT", "VCB"), ("FPT",)]
+    assert refreshed["FPT"] == history.query(
+        "vn", "FPT", "1D", limit=1, ma=True, ema=True, strict_source_intervals=True
+    )
+    assert refreshed["VCB"] == first["VCB"]
+
+
 @pytest.mark.parametrize("ema", [False, True])
 def test_query_many_can_calculate_only_requested_ma_periods(system, ema):
     repo, history = system
