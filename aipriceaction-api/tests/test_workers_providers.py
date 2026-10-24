@@ -295,6 +295,128 @@ async def test_yahoo_native_interval_labels_preserve_source_values(system, iv, s
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "chart,expected_no_data",
+    [
+        ({"result": [], "error": None}, True),
+        (
+            {
+                "result": None,
+                "error": {
+                    "code": "Not Found",
+                    "description": "No data found, symbol may be delisted",
+                },
+            },
+            True,
+        ),
+        (
+            {
+                "result": [
+                    {
+                        "timestamp": [],
+                        "indicators": {
+                            "quote": [
+                                {key: [] for key in ("open", "high", "low", "close", "volume")}
+                            ]
+                        },
+                    }
+                ],
+                "error": None,
+            },
+            True,
+        ),
+    ],
+)
+async def test_yahoo_structural_empty_responses_are_no_data(system, chart, expected_no_data):
+    _, _, settings = system
+    providers = Providers(
+        settings,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"chart": chart})
+        ),
+    )
+    try:
+        page = await providers.page("yahoo", "AAPL", "1m", parse_time("2026-10-01"), count=10)
+        assert page.no_data is expected_no_data and page.rows == []
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "chart",
+    [
+        {"result": None, "error": None},
+        {
+            "result": [
+                {
+                    "timestamp": [parse_time("2026-09-30")],
+                    "indicators": {
+                        "quote": [
+                            {key: [] for key in ("open", "high", "low", "close", "volume")}
+                        ]
+                    },
+                }
+            ],
+            "error": None,
+        },
+        {
+            "result": [
+                {
+                    "timestamp": [parse_time("2026-09-30")],
+                    "indicators": {
+                        "quote": [
+                            {
+                                key: [None]
+                                for key in ("open", "high", "low", "close", "volume")
+                            }
+                        ]
+                    },
+                }
+            ],
+            "error": None,
+        },
+    ],
+)
+async def test_yahoo_malformed_or_truncated_responses_are_errors(system, chart):
+    _, _, settings = system
+    providers = Providers(
+        settings,
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json={"chart": chart})
+        ),
+    )
+    try:
+        with pytest.raises(DataError):
+            await providers.page("yahoo", "AAPL", "1m", parse_time("2026-10-01"), count=10)
+    finally:
+        await providers.close()
+
+
+@pytest.mark.asyncio
+async def test_yahoo_empty_bootstrap_is_skipped_with_a_durable_retry(system):
+    repo, archive, settings = system
+    entry = {"source": "yahoo", "symbol": "SPCX", "intervals": ["1m"]}
+    repo.activate_watchlist([entry])
+    worker = Worker(repo, settings, Pages(Page([], "yahoo", no_data=True)), archive)
+    worker.configuration = [entry]
+    repo.queue("yahoo", "SPCX", "1m", "bootstrap", worker.floor(entry, "1m"), "yahoo")
+    job = repo.claim_job(worker.owner, allowed=[("yahoo", "SPCX", "1m")])
+
+    assert await worker.repair_page(job) == 0
+    retry_at = repo.no_data_retry_at("yahoo", "SPCX", "1m")
+    assert retry_at is not None and retry_at >= int(time.time()) + 23 * 60 * 60
+    with repo.connect() as con:
+        skipped = con.execute("SELECT status,error,retry_at FROM jobs WHERE id=?", (job["id"],)).fetchone()
+    assert skipped["status"] == "complete" and skipped["error"].startswith("no_data:")
+    assert skipped["retry_at"] == retry_at
+    assert repo.read("yahoo", "SPCX", "1m") == []
+    assert repo.state("yahoo", "SPCX", "1m") is None
+    assert repo.tickers(enabled=True)[0]["next_1m"] == retry_at
+    assert any(f["kind"] == "provider_no_data" for f in repo.findings())
+
+
+@pytest.mark.asyncio
 async def test_yahoo_hourly_boundary_collision_rejects_conflicting_bars(system):
     _, _, settings = system
     stamp = parse_time("2026-09-29T13:00:00Z")
@@ -2125,7 +2247,11 @@ class YahooOverlapPages(Pages):
 
 def yahoo_overlap_rows(iv, count=200):
     step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
-    base = parse_time("2026-01-01" if iv == "1D" else "2026-09-01")
+    base = (
+        parse_time("2026-01-01")
+        if iv == "1D"
+        else int((time.time() - 14 * 86400) // step * step)
+    )
     return [
         Candle("yahoo", "AAPL", iv, base + i * step, 100, 101, 99, 100, 1000, "yahoo")
         for i in range(count)

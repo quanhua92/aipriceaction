@@ -535,6 +535,59 @@ class Repository:
             ).fetchone()
             return dict(row) if row else None
 
+    def no_data_retry_at(self, source, symbol, interval):
+        """Return a future retry time for a Yahoo bootstrap with no provider data."""
+        if source != "yahoo":
+            return None
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT status,error,retry_at FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind='bootstrap'",
+                (source, symbol, interval),
+            ).fetchone()
+        if (
+            not row
+            or row["status"] != "complete"
+            or not (row["error"] or "").startswith("no_data:")
+            or row["retry_at"] <= int(time.time())
+        ):
+            return None
+        return int(row["retry_at"])
+
+    def skip_no_data_job(self, job, provider, reason, retry_at):
+        """Finish an empty first Yahoo page without retrying it every worker cycle."""
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+            if (
+                not row
+                or row["source"] != "yahoo"
+                or row["kind"] != "bootstrap"
+                or row["cursor"] is not None
+                or row["status"] != "running"
+                or row["lease_owner"] != job["lease_owner"]
+                or row["revision"] != job["revision"]
+                or row["lease_until"] < now
+                or con.execute(
+                    "SELECT 1 FROM staging WHERE job_id=? LIMIT 1", (job["id"],)
+                ).fetchone()
+            ):
+                raise DataError("No-data bootstrap lease changed before it could be skipped")
+            changed = con.execute(
+                "UPDATE jobs SET status='complete',provider=?,error=?,retry_at=?,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND revision=? AND lease_owner=? AND status='running'",
+                (
+                    provider,
+                    "no_data: " + str(reason)[:480],
+                    retry_at,
+                    time.time_ns(),
+                    job["id"],
+                    job["revision"],
+                    job["lease_owner"],
+                ),
+            ).rowcount
+            if not changed:
+                raise DataError("No-data bootstrap lease changed before it could be skipped")
+
     def discovered_tickers(self, sources):
         """Include historical identities without enabling ingestion."""
         with self.connect() as con:

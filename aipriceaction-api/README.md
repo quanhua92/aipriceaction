@@ -30,24 +30,38 @@ Start the services and check the API:
 docker compose up -d --build
 docker compose ps
 curl --fail http://localhost:8899/health
-docker compose logs --tail=100 initialize api api2 nginx worker
+docker compose logs --tail=100 initialize api api2 nginx worker worker-hourly worker-minute
 ```
 
 `/health` includes a `configuration` object with non-secret effective settings
 such as ingestion universe, provider access mode, retention, and Parquet prefix.
 It reports whether a proxy is configured, never its URL or credentials.
 
-Compose starts two Python API replicas behind Nginx, one worker, a one-time
-initializer, and local RustFS. Both replicas share the same SQLite data
-directory; SQLite remains the source of truth, while each API process keeps its
-own bounded in-memory caches. Nginx owns host port `8899` and localhost port
-`3003`, and sends requests to either healthy API replica. The initializer loads
-ticker groups and names from the files bundled in this repository; it does not
-call the production API for a catalog snapshot. RustFS uses ports `9100` and
-`9101` on loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `catalog`),
-which ingests every symbol in the bundled catalog. Set it to `watchlist` to
-limit ingestion to `watchlist.json`. Initial history for the full catalog may
-take substantial time to build and depends on provider coverage and limits.
+Compose starts two Python API replicas behind Nginx, three interval workers, a
+one-time initializer, and local RustFS. The daily worker handles daily data and
+Parquet retention. The hourly and minute workers handle those intervals
+independently, so slow intraday requests cannot block daily updates. Each worker
+defaults to 2 concurrent tasks and 10 requests/minute per provider route; set
+the matching `*_WORKER_CONCURRENCY` or `*_PROVIDER_RPM` variable to change it.
+These six role-specific settings replace `WORKER_CONCURRENCY` and
+`PROVIDER_RPM` for Compose workers; the old variables do not override them.
+Both API replicas and all workers share the same SQLite data directory. SQLite
+is the source of truth; each API process keeps its own bounded in-memory caches.
+Nginx owns host port `8899` and localhost port `3003`, and sends requests to
+either healthy API replica. The initializer loads ticker groups and names from
+the files bundled in this repository; it does not call the production API for
+a catalog snapshot. RustFS uses ports `9100` and `9101` on loopback.
+
+The workers use `INGEST_UNIVERSE` from `.env` (default `catalog`), which ingests
+every symbol in the bundled catalog. Set it to `watchlist` to limit ingestion
+to `watchlist.json`. Every selected Yahoo symbol is probed at daily, hourly,
+and minute intervals without per-symbol interval entries; catalog mode selects
+the full Yahoo directory. A Yahoo response that clearly has no candles is
+recorded as no data and retried after 24 hours; it does not retry every worker
+cycle. Crypto catalog entries use all three native intervals, SJC uses daily
+only, and VN intraday coverage follows the existing curated and liquid-symbol
+selection. Initial history for the full catalog may take time to build and
+depends on provider coverage and limits.
 
 When a retained-series repair changes its revision, the same SQLite transaction
 marks older Parquet objects for repair and queues them. The worker repairs one

@@ -168,11 +168,35 @@ services:
       start_period: 5s
 
   worker:
-    container_name: aipriceaction-worker
+    container_name: aipriceaction-worker-daily
     <<: *api-service
-    # One worker refreshes every configured market so Yahoo and crypto do not
-    # remain frozen while VN ingestion runs.
-    command: ["aipa-api", "worker", "--archive-daily"]
+    # Keep the previous aggregate provider budget: 2 concurrent requests and
+    # 10 requests/minute per route in each of the three interval workers.
+    environment:
+      <<: *api-environment
+      WORKER_CONCURRENCY: ${DAILY_WORKER_CONCURRENCY:-2}
+      PROVIDER_RPM: ${DAILY_PROVIDER_RPM:-10}
+    command: ["aipa-api", "worker", "--interval", "1D", "--archive-daily"]
+    restart: unless-stopped
+
+  worker-hourly:
+    container_name: aipriceaction-worker-hourly
+    <<: *api-service
+    environment:
+      <<: *api-environment
+      WORKER_CONCURRENCY: ${HOURLY_WORKER_CONCURRENCY:-2}
+      PROVIDER_RPM: ${HOURLY_PROVIDER_RPM:-10}
+    command: ["aipa-api", "worker", "--interval", "1h", "--skip-catalog-publish"]
+    restart: unless-stopped
+
+  worker-minute:
+    container_name: aipriceaction-worker-minute
+    <<: *api-service
+    environment:
+      <<: *api-environment
+      WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-2}
+      PROVIDER_RPM: ${MINUTE_PROVIDER_RPM:-10}
+    command: ["aipa-api", "worker", "--interval", "1m", "--skip-catalog-publish"]
     restart: unless-stopped
 
 volumes:

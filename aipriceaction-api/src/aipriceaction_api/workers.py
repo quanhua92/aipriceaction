@@ -15,6 +15,10 @@ from .redis_publish import publish_ticker_list, publish_worker_candles, replace_
 
 log = logging.getLogger(__name__)
 
+YAHOO_NATIVE_INTERVALS = ["1D", "1h", "1m"]
+YAHOO_NO_DATA_FINDING = "Yahoo has no candles in the supported current window; retry probe in 24 hours"
+YAHOO_NO_DATA_RETRY_SECONDS = 24 * 60 * 60
+
 
 class Worker:
     def __init__(self, repo, settings, providers=None, archive=None, redis_client=None):
@@ -26,6 +30,7 @@ class Worker:
         )
         self.owner = uuid.uuid4().hex
         self.configuration = []
+        self.worker_scope = None
         self.deadline = 90  # Keep network operations shorter than durable leases.
         self.recovery_turn = 0
         self.live_turn = 0
@@ -143,9 +148,14 @@ class Worker:
             for item in items:
                 entry = {"symbol": item} if isinstance(item, str) else dict(item)
                 symbol = entry["symbol"].upper()
-                intervals = entry.get(
-                    "intervals", ["1D"] if source in ("sjc", "yahoo") else ["1D", "1h", "1m"]
-                )
+                if source == "yahoo":
+                    # Probe every Yahoo catalog/watchlist symbol at its native
+                    # intervals; missing symbols are cooled down, not retried.
+                    intervals = list(YAHOO_NATIVE_INTERVALS)
+                elif source == "sjc":
+                    intervals = ["1D"]
+                else:
+                    intervals = entry.get("intervals", ["1D", "1h", "1m"])
                 if not intervals or set(intervals) - {"1D", "1h", "1m"}:
                     raise DataError("Watchlist intervals must be native 1D, 1h, 1m", 400)
                 entry.update(source=source, symbol=symbol, intervals=intervals)
@@ -165,6 +175,12 @@ class Worker:
             "1m": self.settings.minute_years,
         }[iv]
         result = cutoff(years)
+        if entry["source"] == "yahoo":
+            # Yahoo only serves bounded intraday history. Stay one day inside
+            # its documented edge, matching the old Rust bootstrap behavior.
+            yahoo_days = {"1h": 729, "1m": 29}.get(iv)
+            if yahoo_days is not None:
+                result = max(result, int(time.time()) - yahoo_days * 86400)
         # Explicit listing/history start prevents invented pre-listing gaps.
         if entry.get("history_start"):
             result = max(result, parse_time(entry["history_start"]))
@@ -172,7 +188,10 @@ class Worker:
 
     def bootstrap(self):
         jobs = []
-        for entry in self.configuration or self.load_watchlist():
+        configuration = self.configuration
+        if not configuration and self.worker_scope is None:
+            configuration = self.load_watchlist()
+        for entry in configuration:
             for iv in entry["intervals"]:
                 state = self.repo.state(entry["source"], entry["symbol"], iv)
                 if state:
@@ -195,6 +214,12 @@ class Worker:
                                 )
                             )
                 else:
+                    retry_at = self.repo.no_data_retry_at(
+                        entry["source"], entry["symbol"], iv
+                    )
+                    if retry_at is not None:
+                        self.repo.schedule(entry["source"], entry["symbol"], iv, retry_at)
+                        continue
                     jobs.append(
                         self.repo.queue(
                             entry["source"], entry["symbol"], iv, "bootstrap", self.floor(entry, iv)
@@ -252,6 +277,31 @@ class Worker:
                 provider=job["provider"],
                 **({"start": job["floor"]} if job["source"] == "vn" else {}),
             )
+            if (
+                job["source"] == "yahoo"
+                and job["kind"] == "bootstrap"
+                and job["cursor"] is None
+                and page.no_data
+                and not page.rows
+            ):
+                retry_at = int(time.time()) + YAHOO_NO_DATA_RETRY_SECONDS
+                reason = "Yahoo has no bars for this interval in its current history window"
+                self.repo.skip_no_data_job(job, page.provider, reason, retry_at)
+                self.repo.finding(
+                    job["source"],
+                    job["symbol"],
+                    job["interval"],
+                    "provider_no_data",
+                    YAHOO_NO_DATA_FINDING,
+                )
+                self.repo.schedule(job["source"], job["symbol"], job["interval"], retry_at)
+                log.info(
+                    "bootstrap skipped source=yahoo symbol=%s interval=%s reason=no_data retry_at=%s",
+                    job["symbol"],
+                    job["interval"],
+                    retry_at,
+                )
+                return 0
             oldest = (
                 page.cursor
                 if page.cursor is not None
@@ -274,9 +324,10 @@ class Worker:
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             complete = oldest <= job["floor"]
             self.repo.stage(job, prepared, oldest, page.provider)
+            current_state = self.repo.state(job["source"], job["symbol"], job["interval"])
             if (
                 job["kind"] == "bootstrap"
-                and self.repo.state(job["source"], job["symbol"], job["interval"]) is None
+                and current_state is None
                 and page.provider != "vci"
             ):
                 # Publish the first validated recent page promptly, without
@@ -526,9 +577,14 @@ class Worker:
         if not self.repo.live_claim(source, symbol, iv, self.owner):
             return 0
         attempt = None
+        cooldown_until = None
         try:
             state = self.repo.state(source, symbol, iv)
             if not state:
+                retry_at = self.repo.no_data_retry_at(source, symbol, iv)
+                if retry_at is not None:
+                    cooldown_until = retry_at
+                    return 0
                 self.repo.queue(source, symbol, iv, "bootstrap", self.floor(entry, iv))
                 return 0
             if state["status"] != "ready" and not (
@@ -596,6 +652,18 @@ class Worker:
                 if page is None:
                     raise DataError("All configured VN providers unavailable") from None
             if not page.rows:
+                if source == "yahoo" and page.no_data:
+                    reason = "Yahoo returned no candles in the current request window"
+                    self.repo.fail_source_check(source, symbol, iv, attempt, reason, "no_data")
+                    self.repo.finding(
+                        source,
+                        symbol,
+                        iv,
+                        "provider_no_data",
+                        YAHOO_NO_DATA_FINDING,
+                    )
+                    cooldown_until = int(time.time()) + YAHOO_NO_DATA_RETRY_SECONDS
+                    return 0
                 raise DataError("No recent provider data")
             if (
                 source in ("vn", "yahoo")
@@ -705,6 +773,15 @@ class Worker:
                 raise DataError("Provider has no candles inside the retained window")
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
+            if source == "yahoo":
+                self.repo.finding(
+                    source,
+                    symbol,
+                    iv,
+                    "provider_no_data",
+                    YAHOO_NO_DATA_FINDING,
+                    resolved=True,
+                )
             await asyncio.to_thread(
                 publish_worker_candles, self.redis_client, self.settings, rows
             )
@@ -779,7 +856,13 @@ class Worker:
             # Bounded cooldown also prevents one unavailable provider monopolizing
             # the loop. Other tickers remain independently scheduled.
             self.repo.schedule(
-                source, symbol, iv, int(time.time()) + {"1D": 3600, "1h": 900, "1m": 60}[iv]
+                source,
+                symbol,
+                iv,
+                max(
+                    cooldown_until or 0,
+                    int(time.time()) + {"1D": 3600, "1h": 900, "1m": 60}[iv],
+                ),
             )
             self.repo.live_release(source, symbol, iv, self.owner)
 
@@ -1185,7 +1268,7 @@ class Worker:
             return 0
 
     async def cycle(self):
-        if not self.configuration:
+        if not self.configuration and self.worker_scope is None:
             self.load_watchlist()
         available = {(t["source"], t["symbol"]): t for t in self.repo.tickers(enabled=True)}
         due = []
@@ -1253,8 +1336,15 @@ class Worker:
         # two requests each to regain overlap. Reserve most of the provider
         # budget for those checks, while still giving durable history one turn
         # in four so backfills cannot starve indefinitely.
-        live_backlog = self.repo.live_check_backlog(
-            "vn", "1m", time.time_ns() - 15 * 60 * 1_000_000_000
+        live_backlog = (
+            self.repo.live_check_backlog(
+                "vn", "1m", time.time_ns() - 15 * 60 * 1_000_000_000
+            )
+            if any(
+                entry["source"] == "vn" and "1m" in entry["intervals"]
+                for entry in self.configuration
+            )
+            else 0
         )
         run_recovery = live_backlog <= self.settings.worker_concurrency or not (
             self.recovery_turn % 4
@@ -1347,10 +1437,19 @@ class Worker:
             await self.providers.close()
 
     async def run(
-        self, once=False, cycles=None, source=None, symbols=None, interval=None, archive_daily=False
+        self,
+        once=False,
+        cycles=None,
+        source=None,
+        symbols=None,
+        interval=None,
+        archive_daily=False,
+        skip_catalog_publish=False,
     ):
         maintenance_task = None
         try:
+            self.worker_scope = (source, symbols, interval)
+
             def configure():
                 self.load_watchlist()
                 self.configuration = [
@@ -1368,13 +1467,25 @@ class Worker:
 
             configure()
             self.archive_repair_scope = (source, symbols, interval)
-            ticker_identities = await asyncio.to_thread(
-                self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
-            )
-            await asyncio.to_thread(publish_ticker_list, self.redis_client, ticker_identities)
-            await self._try_publish_public_catalog()
             if not self.configuration:
-                raise DataError("No configured watchlist entries match worker filters", 400)
+                if interval and not source and not symbols:
+                    if once or cycles:
+                        log.info(
+                            "worker has no configured series interval=%s; exiting idle", interval
+                        )
+                        return
+                    log.info(
+                        "worker has no configured series interval=%s; checking again in 15 minutes",
+                        interval,
+                    )
+                else:
+                    raise DataError("No configured watchlist entries match worker filters", 400)
+            if not skip_catalog_publish:
+                ticker_identities = await asyncio.to_thread(
+                    self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
+                )
+                await asyncio.to_thread(publish_ticker_list, self.redis_client, ticker_identities)
+                await self._try_publish_public_catalog()
             log.info(
                 "worker started owner=%s series=%s source=%s symbols=%s interval=%s archive_daily=%s",
                 self.owner,
@@ -1398,15 +1509,30 @@ class Worker:
             while True:
                 if time.monotonic() >= next_configuration_refresh:
                     configure()
-                    ticker_identities = await asyncio.to_thread(
-                        self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
-                    )
-                    await asyncio.to_thread(
-                        publish_ticker_list, self.redis_client, ticker_identities
-                    )
-                    await self._try_publish_public_catalog()
+                    if not skip_catalog_publish:
+                        ticker_identities = await asyncio.to_thread(
+                            self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
+                        )
+                        await asyncio.to_thread(
+                            publish_ticker_list, self.redis_client, ticker_identities
+                        )
+                        await self._try_publish_public_catalog()
                     self.bootstrap()
                     next_configuration_refresh = time.monotonic() + 15 * 60
+                if not self.configuration:
+                    if maintenance is not None and (
+                        maintenance_task is None or maintenance_task.done()
+                    ):
+                        if maintenance_task is not None:
+                            await maintenance_task
+                        maintenance_task = asyncio.create_task(
+                            asyncio.to_thread(maintenance.tick)
+                        )
+                    refresh_delay = max(1, next_configuration_refresh - time.monotonic())
+                    await asyncio.sleep(
+                        min(refresh_delay, 60 if maintenance is not None else refresh_delay)
+                    )
+                    continue
                 await self.cycle()
                 if maintenance is not None:
                     # One transfer batch at a time, independent of live ingestion.

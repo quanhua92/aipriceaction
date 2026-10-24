@@ -27,7 +27,7 @@ wait_healthy() {
 
 # Keep port 8899 served while fetching the proxy image and rebuilding the API.
 docker compose pull nginx
-docker compose build api api2 worker
+docker compose build api api2 worker worker-hourly worker-minute
 
 deploy_replica() {
     service=$1
@@ -58,7 +58,7 @@ else
     wait_healthy nginx aipriceaction-nginx
 fi
 
-docker compose up -d --no-deps worker
+docker compose up -d --no-deps worker worker-hourly worker-minute
 echo "Checking the exact 19 homepage routes through Nginx"
 docker compose exec -T api python -m aipriceaction_api.homepage_warmup --base-url http://nginx:8899
 docker compose ps

@@ -201,6 +201,25 @@ class Providers:
                     json=json_body,
                     headers={"Referer": referer} if referer else None,
                 )
+                if provider == "yahoo" and response.status_code == 404:
+                    try:
+                        not_found_payload = response.json()
+                    except ValueError:
+                        not_found_payload = None
+                    if isinstance(not_found_payload, dict) and isinstance(
+                        not_found_payload.get("chart"), dict
+                    ):
+                        log.info(
+                            "upstream request not found provider=%s route=%s attempt=%s/%s "
+                            "provider_attempts=%s provider_route_attempts=%s",
+                            provider,
+                            route_name,
+                            attempt + 1,
+                            max_attempts,
+                            provider_requests,
+                            route_requests,
+                        )
+                        return not_found_payload
                 response.raise_for_status()
                 result = response.json()
                 log.info(
@@ -664,13 +683,50 @@ class Providers:
                 }
             ),
         )
-        chart = payload.get("chart", {})
-        if chart.get("error") or not chart.get("result"):
+        chart = payload.get("chart") if isinstance(payload, dict) else None
+        if not isinstance(chart, dict):
+            raise DataError("Yahoo invalid chart response")
+        error = chart.get("error")
+        if error:
+            if isinstance(error, dict):
+                error_code = str(error.get("code", "")).lower()
+                error_text = str(error.get("description", "")).lower()
+            else:
+                error_code = ""
+                error_text = str(error).lower()
+            if error_code in {"not found", "no_data", "no data"} or any(
+                phrase in error_text
+                for phrase in (
+                    "no data found",
+                    "no price data found",
+                    "symbol may be delisted",
+                    "symbol not found",
+                )
+            ):
+                return Page([], "yahoo", True)
             raise DataError("Yahoo history unavailable for requested range")
-        data = chart["result"][0]
-        stamps = data.get("timestamp") or []
-        indicators = data.get("indicators", {})
-        quotes = indicators.get("quote", [{}])[0]
+        results = chart.get("result")
+        if results == []:
+            return Page([], "yahoo", True)
+        if results is None:
+            raise DataError("Yahoo chart response is missing its result")
+        if not isinstance(results, list) or not isinstance(results[0], dict):
+            raise DataError("Yahoo invalid chart result")
+        data = results[0]
+        stamps = data.get("timestamp")
+        if not isinstance(stamps, list):
+            raise DataError("Yahoo chart result is missing timestamps")
+        indicators = data.get("indicators")
+        if not isinstance(indicators, dict) or not isinstance(indicators.get("quote"), list):
+            raise DataError("Yahoo chart result is missing quote data")
+        if not indicators["quote"] or not isinstance(indicators["quote"][0], dict):
+            raise DataError("Yahoo chart result has invalid quote data")
+        quotes = indicators["quote"][0]
+        if any(
+            not isinstance(quotes.get(key), list) or len(quotes[key]) != len(stamps)
+            for key in ("open", "high", "low", "close", "volume")
+        ):
+            raise DataError("Yahoo chart result has incomplete OHLCV arrays")
         adjusted = indicators.get("adjclose", [{}])[0].get("adjclose") or []
         rows = []
         # Match the legacy worker's native interval boundaries. Yahoo's
@@ -705,6 +761,8 @@ class Providers:
                     "yahoo",
                 )
             )
+        if stamps and not rows:
+            raise DataError("Yahoo chart returned timestamps without valid OHLCV candles")
         return self.normalize(rows, before, count, "yahoo", start=start)
 
     async def sjc_page(self, symbol, iv, before, count):

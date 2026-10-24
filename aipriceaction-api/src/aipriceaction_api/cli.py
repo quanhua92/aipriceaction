@@ -68,6 +68,11 @@ def parser():
             action="store_true",
             help="Publish and verified-prune old rows once per UTC day within these filters",
         )
+        cmd.add_argument(
+            "--skip-catalog-publish",
+            action="store_true",
+            help="Do not publish the shared ticker catalog; another worker owns it",
+        )
     refresh = commands.add_parser(
         "refresh", help="Recheck selected ready series once without processing historical jobs"
     )
@@ -380,6 +385,7 @@ async def execute(args, settings):
             [s.upper() for s in args.symbol] if args.symbol else None,
             args.interval,
             args.archive_daily,
+            args.skip_catalog_publish,
         )
         if args.once or args.cycles:
             status = repo.status()

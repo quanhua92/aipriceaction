@@ -21,7 +21,11 @@ def system(tmp_path):
     watchlist = tmp_path / "watchlist.json"
     watchlist.write_text(json.dumps({"vn": [{"symbol": "FPT", "intervals": ["1D"]}]}))
     settings = replace(
-        Settings(), database=tmp_path / "db", archive_backend="filesystem", watchlist=watchlist
+        Settings(),
+        database=tmp_path / "db",
+        archive_backend="filesystem",
+        watchlist=watchlist,
+        ingest_universe="watchlist",
     )
     repo = Repository(settings.database)
     repo.initialize()

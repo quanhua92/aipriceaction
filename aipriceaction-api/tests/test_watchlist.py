@@ -21,7 +21,7 @@ def test_starting_worker_never_exposes_partially_disabled_watchlist(tmp_path, mo
     repo.put([Candle("vn", "OLD", "1D", parse_time("2024-01-01"), 100, 101, 99, 100, 1000)])
     watchlist = tmp_path / "watchlist.json"
     watchlist.write_text('{"vn":["FPT","VCB","TCB"]}')
-    worker = Worker(repo, replace(Settings(), watchlist=watchlist))
+    worker = Worker(repo, replace(Settings(), watchlist=watchlist, ingest_universe="watchlist"))
 
     entered, release = Event(), Event()
     original_connect = repo.connect
@@ -77,6 +77,27 @@ def test_liquid_vn_selection_waits_for_broad_daily_coverage_and_keeps_top_80_per
         ]
     )
     assert repo.liquid_vn_symbols(symbols) == {f"S{i}" for i in range(1, 8)}
+
+
+def test_yahoo_always_uses_native_intervals_and_sjc_stays_daily(tmp_path):
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(
+        '{"yahoo":[{"symbol":"SPCX","intervals":["1D"]}],'
+        '"sjc":[{"symbol":"SJC-GOLD","intervals":["1h","1m"]}]}'
+    )
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    worker = Worker(
+        repo,
+        replace(Settings(), watchlist=watchlist, ingest_universe="watchlist"),
+    )
+
+    configured = {
+        (entry["source"], entry["symbol"]): entry["intervals"]
+        for entry in worker.load_watchlist()
+    }
+    assert configured[("yahoo", "SPCX")] == ["1D", "1h", "1m"]
+    assert configured[("sjc", "SJC-GOLD")] == ["1D"]
 
 
 @pytest.mark.asyncio
