@@ -116,6 +116,11 @@ class Settings:
     allow_direct: bool = True
     worker_concurrency: int = 6
     requests_per_minute: int = 30
+    history_years: int = 10
+    history_page_size: int = 500
+    history_batch_rows: int = 1_000
+    history_requests_per_minute: int = 5
+    history_pause_seconds: int = 1
     watchlist: Path = (
         ROOT / "watchlist.json"
         if (ROOT / "watchlist.json").exists()
@@ -180,6 +185,11 @@ class Settings:
             "allow_direct": "ALLOW_DIRECT",
             "worker_concurrency": "WORKER_CONCURRENCY",
             "requests_per_minute": "PROVIDER_RPM",
+            "history_years": "HISTORY_YEARS",
+            "history_page_size": "HISTORY_PAGE_SIZE",
+            "history_batch_rows": "HISTORY_BATCH_ROWS",
+            "history_requests_per_minute": "HISTORY_PROVIDER_RPM",
+            "history_pause_seconds": "HISTORY_PAUSE_SECONDS",
             "watchlist": "WATCHLIST_PATH",
             "ingest_universe": "INGEST_UNIVERSE",
             "rust_ticker_identity_order": "RUST_TICKER_IDENTITY_ORDER_PATH",
@@ -275,6 +285,11 @@ class Settings:
             "single_limit",
             "worker_concurrency",
             "requests_per_minute",
+            "history_years",
+            "history_page_size",
+            "history_batch_rows",
+            "history_requests_per_minute",
+            "history_pause_seconds",
             "cache_bytes",
             "uploads_max_bytes",
             "uploads_max_sessions",

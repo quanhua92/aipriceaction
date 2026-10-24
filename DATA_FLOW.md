@@ -5,7 +5,7 @@ is preserved under [`legacy/rust/`](legacy/rust/README.md).
 
 ```mermaid
 flowchart LR
-  VPS[VPS] --> W[Python ingestion worker]
+  VPS[VPS] --> W[Python live workers]
   VND[VNDirect] --> W
   DNSE[DNSE] --> W
   BN[Binance] --> W
@@ -13,6 +13,14 @@ flowchart LR
   SJC[SJC daily quotes] --> W
   W --> HOT[(SQLite: live candles and operational state)]
   W --> ARC[(S3-compatible archive: checksummed Parquet and manifests)]
+  VPS --> HW[Single-flight history worker]
+  VND --> HW
+  DNSE --> HW
+  BN --> HW
+  YF --> HW
+  SJC --> HW
+  HW --> ARC
+  HW --> CSV[Public Rust-compatible CSV]
   HOT --> H[Shared History / SQLiteDataLoader]
   ARC --> D[DuckDB archive reader]
   D --> H
@@ -21,9 +29,11 @@ flowchart LR
   API --> WEB[Web app or SDK/CLI clients]
 ```
 
-The worker fetches provider pages, validates and stages rows, then commits
-accepted candles and operational receipts to SQLite. Archive maintenance writes
-verified historical data as Parquet objects and publishes manifests. Reads use
+Live workers fetch provider pages, validate and stage rows, then commit accepted
+candles and operational receipts to SQLite. The single-flight history worker
+fetches older pages one at a time and writes cold candles only to verified
+Parquet objects and sequential public CSV files. It records cursors and object
+metadata in SQLite. Archive maintenance publishes manifests. Reads use
 the shared history loader, which fetches bounded SQLite rows and consults the
 archive for older ranges as needed; the two sources are reconciled by their
 source, symbol, interval, and timestamp identity.

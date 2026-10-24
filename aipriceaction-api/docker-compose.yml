@@ -30,6 +30,11 @@ x-api-environment: &api-environment
   DAILY_RETENTION_YEARS: ${DAILY_RETENTION_YEARS:-3}
   HOURLY_RETENTION_YEARS: ${HOURLY_RETENTION_YEARS:-3}
   MINUTE_RETENTION_YEARS: ${MINUTE_RETENTION_YEARS:-1}
+  HISTORY_YEARS: ${HISTORY_YEARS:-10}
+  HISTORY_PAGE_SIZE: ${HISTORY_PAGE_SIZE:-500}
+  HISTORY_BATCH_ROWS: ${HISTORY_BATCH_ROWS:-1000}
+  HISTORY_PROVIDER_RPM: ${HISTORY_PROVIDER_RPM:-5}
+  HISTORY_PAUSE_SECONDS: ${HISTORY_PAUSE_SECONDS:-1}
   SYNC_TOKEN: ${SYNC_TOKEN:-}
   REFRESH_SECRET: ${REFRESH_SECRET:?Set a non-empty REFRESH_SECRET before starting the API}
   CORS_ORIGINS: ${CORS_ORIGINS:-https://aipriceaction.com,https://api.aipriceaction.com}
@@ -176,7 +181,7 @@ services:
       <<: *api-environment
       WORKER_CONCURRENCY: ${DAILY_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${DAILY_PROVIDER_RPM:-10}
-    command: ["aipa-api", "worker", "--interval", "1D", "--archive-daily"]
+    command: ["aipa-api", "worker", "--interval", "1D"]
     restart: unless-stopped
 
   worker-hourly:
@@ -197,6 +202,15 @@ services:
       WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${MINUTE_PROVIDER_RPM:-10}
     command: ["aipa-api", "worker", "--interval", "1m", "--skip-catalog-publish"]
+    restart: unless-stopped
+
+  worker-history:
+    container_name: aipriceaction-worker-history
+    <<: *api-service
+    environment:
+      <<: *api-environment
+      PROVIDER_RPM: ${HISTORY_PROVIDER_RPM:-5}
+    command: ["aipa-api", "history-worker"]
     restart: unless-stopped
 
 volumes:

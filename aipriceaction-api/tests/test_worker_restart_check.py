@@ -65,7 +65,12 @@ def test_restart_rejects_changed_previously_completed_value(images):
 def test_restart_rejects_frozen_or_index_record_version_changes(images, protected):
     before, after, checkpoint, repo, _, frozen, index = images
     # Identical OHLCV with a rewritten version still violates these boundaries.
-    repo.put([frozen if protected == "frozen_candle_versions" else index])
+    row = frozen if protected == "frozen_candle_versions" else index
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE candles SET updated_at=updated_at+1 WHERE source=? AND symbol=? AND interval=? AND time=?",
+            (row.source, row.symbol, row.interval, row.time),
+        )
     report = verify(before, after, ["crypto"], checkpoint)
     assert not report["passed"] and not report["protected"][protected]
 

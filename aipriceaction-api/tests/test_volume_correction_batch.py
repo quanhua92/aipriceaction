@@ -35,13 +35,13 @@ def test_batch_is_atomic_preserves_raw_prices_and_restores_from_one_manifest(
     repo, archive, settings, rows, proof, raw = system
     selected, second_rows = candidates(system)
     calls = []
-    manifest = archive.manifest
+    manifest = archive.manifest_current
 
-    def publish(objects):
+    def publish():
         calls.append(len(repo.volume_corrections()))
-        return manifest(objects)
+        return manifest()
 
-    monkeypatch.setattr(archive, "manifest", publish)
+    monkeypatch.setattr(archive, "manifest_current", publish)
     records = publish_corrections(repo, archive, selected)
     assert calls == [2]
     assert repo.read("vn", proof["symbol"], "1m") == rows
@@ -94,17 +94,17 @@ def test_later_busy_series_releases_all_acquired_leases_without_publication(syst
 def test_manifest_failure_keeps_whole_verified_batch_and_retry_repairs_pointer(system, monkeypatch):
     repo, archive, settings, rows, proof, raw = system
     selected, second_rows = candidates(system)
-    manifest = archive.manifest
+    manifest = archive.manifest_current
 
-    def fail(objects):
+    def fail():
         raise DataError("Manifest pointer failed")
 
-    monkeypatch.setattr(archive, "manifest", fail)
+    monkeypatch.setattr(archive, "manifest_current", fail)
     with pytest.raises(DataError, match="pointer failed"):
         publish_corrections(repo, archive, selected)
     records = repo.volume_corrections()
     assert len(records) == 2
-    monkeypatch.setattr(archive, "manifest", manifest)
+    monkeypatch.setattr(archive, "manifest_current", manifest)
     result = publish_corrections(repo, archive, selected)
     assert {row["id"] for row in result} == {row["id"] for row in records}
     assert len(repo.volume_corrections()) == 2

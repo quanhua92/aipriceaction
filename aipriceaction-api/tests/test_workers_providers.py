@@ -1604,13 +1604,13 @@ async def test_archived_adjustment_repairs_publish_as_one_manifest_batch(system)
         archive.publish([candle(day, provider="legacy", revision="snapshot")])
     repo.mark_archive_repairs("vn", "FPT", "1D")
     manifests = []
-    original_manifest = archive.manifest
+    original_manifest = archive.manifest_current
 
-    def record_manifest(objects):
-        manifests.append(objects)
-        return original_manifest(objects)
+    def record_manifest():
+        manifests.append(repo.archives())
+        return original_manifest()
 
-    archive.manifest = record_manifest
+    archive.manifest_current = record_manifest
 
     class Provider:
         async def page(self, source, symbol, iv, before=None, count=500, provider=None):
@@ -1649,7 +1649,7 @@ async def test_archived_adjustment_repairs_publish_as_one_manifest_batch(system)
 
 
 def test_retained_revision_change_marks_and_queues_archive_repairs_atomically(system):
-    repo, archive, _ = system
+    repo, archive, settings = system
     repo.put([candle(3)])
     original = archive.publish([candle(1, provider="legacy", revision="snapshot")])
     repo.queue("vn", "FPT", "1D", "repair", candle(3).time, "vps")
@@ -1672,6 +1672,14 @@ def test_retained_revision_change_marks_and_queues_archive_repairs_atomically(sy
     assert archive_status == "pending_repair"
     assert len(queued) == 1
     assert queued[0]["provider"] == "vps" and queued[0]["status"] == "pending"
+    assert repo.archive_manifest_is_dirty()
+
+    archive.publish_metadata()
+
+    assert not repo.archive_manifest_is_dirty()
+    pointer = json.loads(archive.store.read(f"{settings.s3_prefix}/LATEST.json"))
+    manifest = json.loads(archive.store.read(pointer["key"]))
+    assert any(obj["id"] == original["id"] and obj["status"] == "pending_repair" for obj in manifest["objects"])
 
 
 @pytest.mark.asyncio
@@ -1684,14 +1692,14 @@ async def test_archive_repair_batch_keeps_all_targets_pending_when_one_fetch_fai
     for day in (1, 2):
         archive.publish([candle(day, provider="legacy", revision="snapshot")])
     repo.mark_archive_repairs("vn", "FPT", "1D")
-    original_manifest = archive.manifest
+    original_manifest = archive.manifest_current
     manifest_calls = []
 
-    def count_manifest(objects):
-        manifest_calls.append(objects)
-        return original_manifest(objects)
+    def count_manifest():
+        manifest_calls.append(repo.archives())
+        return original_manifest()
 
-    archive.manifest = count_manifest
+    archive.manifest_current = count_manifest
 
     class Provider:
         async def page(self, source, symbol, iv, before=None, count=500, provider=None):
@@ -1712,6 +1720,61 @@ async def test_archive_repair_batch_keeps_all_targets_pending_when_one_fetch_fai
         batch = con.execute("SELECT status,payload FROM archive_repair_batches").fetchone()
         assert batch["status"] == "collecting"
         assert len(json.loads(batch["payload"])["targets"]) == 2
+
+
+@pytest.mark.parametrize(
+    ("interval", "timestamps", "expected_targets"),
+    [
+        (
+            "1h",
+            [parse_time(f"2020-{month:02}-01T00:00:00Z") for month in range(1, 13)]
+            + [parse_time("2021-01-01T00:00:00Z")],
+            12,
+        ),
+        (
+            "1m",
+            [
+                parse_time("2024-01-01T00:00:00Z"),
+                parse_time("2024-01-01T12:00:00Z"),
+                parse_time("2024-01-02T00:00:00Z"),
+            ],
+            2,
+        ),
+    ],
+)
+def test_archive_repair_batch_keeps_public_csv_periods_whole(
+    system, interval, timestamps, expected_targets
+):
+    repo, archive, _ = system
+
+    def bar(stamp, provider, revision):
+        return Candle(
+            "vn",
+            "FPT",
+            interval,
+            stamp,
+            100,
+            101,
+            99,
+            100,
+            1000,
+            provider,
+            revision,
+        )
+
+    repo.put([bar(parse_time("2025-01-01T00:00:00Z"), "vps", "active")])
+    for stamp in timestamps:
+        archive.publish([bar(stamp, "legacy", "snapshot")])
+    repo.mark_archive_repairs("vn", "FPT", interval)
+
+    batch = repo.ensure_archive_repair_batch("vn", "FPT", interval)
+
+    assert batch is not None
+    assert len(batch["payload"]["targets"]) == expected_targets
+    assert all(
+        target["old"]["status"] == "pending_repair"
+        for target in batch["payload"]["targets"]
+    )
 
 
 @pytest.mark.asyncio
@@ -1843,15 +1906,15 @@ async def test_archive_repair_retries_publication_without_redownloading_complete
     original = archive.publish([candle(1, provider="legacy", revision="snapshot")])
     repo.mark_archive_repairs("vn", "FPT", "1D")
     manifests = []
-    original_manifest = archive.manifest
+    original_manifest = archive.manifest_current
 
-    def fail_first_manifest(objects):
-        manifests.append(objects)
+    def fail_first_manifest():
+        manifests.append(repo.archives())
         if len(manifests) == 1:
             raise DataError("temporary manifest outage")
-        return original_manifest(objects)
+        return original_manifest()
 
-    archive.manifest = fail_first_manifest
+    archive.manifest_current = fail_first_manifest
     worker = Worker(
         repo,
         settings,

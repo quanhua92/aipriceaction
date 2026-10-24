@@ -156,6 +156,18 @@ def test_reads_for_distinct_checksums_can_overlap(tmp_path, monkeypatch):
     assert eviction_calls == 1
 
 
+def test_public_csv_lock_files_are_bounded_by_stripes(tmp_path):
+    cache = tmp_path / "cache"
+    archive = Archive(None, _cache_settings(cache), store=object())
+
+    for index in range(2_000):
+        with archive.public_csv_lock(f"ohlcv/vn/T{index}/1D/2026-01-01.csv"):
+            pass
+
+    locks = list((cache / ".locks").glob("public-csv-stripe-*.lock"))
+    assert len(locks) <= 64
+
+
 def test_read_session_reuses_one_duckdb_connection_for_archive_objects(tmp_path, monkeypatch):
     import aipriceaction_api.archive as archive_module
 

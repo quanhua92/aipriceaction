@@ -7,8 +7,8 @@ import time
 import uuid
 from dataclasses import replace
 
-from .domain import DataError, completed_vn_sessions, cutoff
-from .providers import Providers, adjustment_changes, vn_provider_order
+from .domain import INDEXES, DataError, completed_vn_sessions, cutoff
+from .providers import Providers, adjustment_changes, suspected_adjustment, vn_provider_order
 from .quality import audit as audit  # Re-export for the existing operational CLI.
 from .redis_client import create_redis_client
 from .redis_publish import publish_ticker_list, publish_worker_candles, replace_worker_cache
@@ -36,6 +36,7 @@ class Worker:
         self.live_turn = 0
         self.archive_repair_turn = 0
         self.archive_repair_scope = (None, None, None)
+        self._next_manifest_retry = 0.0
 
     def _public_csv_store(self):
         if not self.settings.public_export_enabled or self.archive is None:
@@ -55,7 +56,7 @@ class Worker:
         from datetime import UTC, datetime
 
         from .history import History
-        from .public_csv import period_bounds, plan_candles
+        from .public_csv import daily_key, period_bounds, plan_candles, yearly_key
 
         publish, client, bucket = store
         history = History(self.repo, self.archive, self.settings)
@@ -63,19 +64,23 @@ class Worker:
         years = sorted({day.year for day in periods}) if iv in ("1D", "1h") else []
         published, uploaded = 0, 0
         for day in periods:
-            start, end = period_bounds(day=day)
-            candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
-            item = plan_candles(candles, source, symbol, iv, day=day)
-            result = publish(client, bucket, item)
+            key = daily_key(source, symbol, iv, day)
+            with self.archive.public_csv_lock(key):
+                start, end = period_bounds(day=day)
+                candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
+                item = plan_candles(candles, source, symbol, iv, day=day)
+                result = publish(client, bucket, item)
             published += 1
             uploaded += int(result["uploaded"])
         for year in years:
-            start, end = period_bounds(year=year)
-            candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
-            if not candles:
-                continue
-            item = plan_candles(candles, source, symbol, iv, year=year)
-            result = publish(client, bucket, item)
+            key = yearly_key(source, symbol, iv, year)
+            with self.archive.public_csv_lock(key):
+                start, end = period_bounds(year=year)
+                candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
+                if not candles:
+                    continue
+                item = plan_candles(candles, source, symbol, iv, year=year)
+                result = publish(client, bucket, item)
             published += 1
             uploaded += int(result["uploaded"])
         return {"objects": published, "uploaded": uploaded}
@@ -88,7 +93,9 @@ class Worker:
         from .public_csv import plan_catalog
 
         publish, client, bucket = store
-        result = publish(client, bucket, plan_catalog(Catalog(self.settings), self.repo))
+        with self.archive.public_csv_lock("meta/tickers.json"):
+            item = plan_catalog(Catalog(self.settings), self.repo)
+            result = publish(client, bucket, item)
         log.info(
             "public ticker catalog rows=%s uploaded=%s",
             result["rows"],
@@ -531,7 +538,11 @@ class Worker:
                 self.repo.finding("vn", job["symbol"], "1h", "coverage_pending", reason)
                 self.repo.fail_job(job, reason)
                 return 0
-        self.repo.finish_job(job)
+        if job["kind"] == "repair" and self.archive is not None:
+            await asyncio.to_thread(self.archive.finish_live_repair, job)
+        else:
+            self.repo.finish_job(job)
+        self.advance_adjustment_rebase(job)
         if self.redis_client is not None:
             retained = {
                 "1D": self.settings.redis_daily_max_size,
@@ -550,6 +561,44 @@ class Worker:
             )
         self.repo.schedule(job["source"], job["symbol"], job["interval"], int(time.time()) + 60)
         return 0
+
+    def advance_adjustment_rebase(self, job):
+        """Rebuild daily, hourly, then minute data after Rust's adjustment signal."""
+        if job["kind"] != "repair":
+            return
+        source, symbol, interval = job["source"], job["symbol"], job["interval"]
+        rebase = self.repo.adjustment_rebase(source, symbol)
+        expected = {"daily_pending": "1D", "hourly_pending": "1h", "minute_pending": "1m"}
+        if not rebase or rebase["status"] not in expected or expected[rebase["status"]] != interval:
+            return
+        next_intervals = {"1D": ("1h", "1m"), "1h": ("1m",), "1m": ()}[interval]
+        entry = next(
+            (row for row in self.configuration if row["source"] == source and row["symbol"] == symbol),
+            {"source": source, "symbol": symbol, "intervals": []},
+        )
+        for next_interval in next_intervals:
+            state = self.repo.state(source, symbol, next_interval)
+            if not state or state["status"] != "ready":
+                continue
+            self.repo.queue(
+                source,
+                symbol,
+                next_interval,
+                "repair",
+                self.floor(entry, next_interval),
+                state["provider"],
+            )
+            stage = "hourly_pending" if next_interval == "1h" else "minute_pending"
+            self.repo.set_adjustment_rebase(source, symbol, stage)
+            log.info(
+                "adjustment rebase queued source=%s symbol=%s interval=%s provider=%s",
+                source,
+                symbol,
+                next_interval,
+                state["provider"],
+            )
+            return
+        self.repo.set_adjustment_rebase(source, symbol, "cold_pending")
 
     async def sync(self, entry, iv):
         try:
@@ -739,7 +788,31 @@ class Worker:
                 if iv == "1D"
                 else int(time.time()) // (3600 if iv == "1h" else 60) * (3600 if iv == "1h" else 60)
             )
-            if page.provider != state["provider"] or adjustment_changes(
+            adjustment = (
+                suspected_adjustment(overlap, page.rows)
+                if source in ("vn", "yahoo") and iv == "1D" and symbol not in INDEXES
+                else None
+            )
+            if adjustment:
+                self.repo.begin_adjustment_rebase(source, symbol, adjustment)
+                self.repo.finding(
+                    source,
+                    symbol,
+                    iv,
+                    "suspected_adjustment",
+                    json.dumps(adjustment, sort_keys=True, separators=(",", ":")),
+                )
+                log.warning(
+                    "suspected price adjustment source=%s symbol=%s interval=%s "
+                    "divergent_bars=%s worst_date=%s worst_ratio=%.6f",
+                    source,
+                    symbol,
+                    iv,
+                    adjustment["divergent_bars"],
+                    adjustment["worst_date"],
+                    adjustment["worst_ratio"],
+                )
+            if page.provider != state["provider"] or adjustment or adjustment_changes(
                 overlap, page.rows, completed, snapshot_provider=self.repo.snapshot_provider(state)
             ):
                 self.repo.queue(source, symbol, iv, "repair", self.floor(entry, iv), page.provider)
@@ -1269,6 +1342,16 @@ class Worker:
     async def cycle(self):
         if not self.configuration and self.worker_scope is None:
             self.load_watchlist()
+        if (
+            self.archive is not None
+            and time.monotonic() >= self._next_manifest_retry
+            and self.repo.archive_manifest_is_dirty()
+        ):
+            self._next_manifest_retry = time.monotonic() + 60
+            try:
+                await asyncio.to_thread(self.archive.publish_metadata)
+            except Exception as exc:
+                log.warning("archive manifest dirty; publish retry failed error=%s", type(exc).__name__)
         available = {(t["source"], t["symbol"]): t for t in self.repo.tickers(enabled=True)}
         due = []
         now = int(time.time())

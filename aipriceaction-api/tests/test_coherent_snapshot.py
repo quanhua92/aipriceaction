@@ -200,10 +200,10 @@ def test_manifest_failure_reports_committed_state_without_replacing_it_again(sys
     repo, archive, rows = system
     snapshot = capture(repo, archive, "FPT")
 
-    def fail(objects):
+    def fail():
         raise DataError("injected manifest failure")
 
-    monkeypatch.setattr(archive, "manifest", fail)
+    monkeypatch.setattr(archive, "manifest_current", fail)
     result = publish(repo, archive, snapshot, rows, FLOOR, execute=True)
     assert result["published"] and not result["manifest_published"]
     assert "manifest failure" in result["manifest_error"]

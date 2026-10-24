@@ -72,6 +72,10 @@ CREATE TABLE IF NOT EXISTS archives(
  provider TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'published',
  schema_version INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS archives_lookup ON archives(source,symbol,interval,end,start);
+CREATE TABLE IF NOT EXISTS archive_manifest_state(
+ id INTEGER PRIMARY KEY CHECK(id=1), generation INTEGER NOT NULL DEFAULT 0,
+ published_generation INTEGER NOT NULL DEFAULT 0);
+INSERT OR IGNORE INTO archive_manifest_state(id,generation,published_generation) VALUES (1,0,0);
 CREATE TABLE IF NOT EXISTS jobs(
  id TEXT PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  kind TEXT NOT NULL, provider TEXT, revision TEXT NOT NULL, cursor INTEGER,
@@ -92,6 +96,29 @@ CREATE TABLE IF NOT EXISTS quality(
 CREATE TABLE IF NOT EXISTS sync_kv(
  id TEXT PRIMARY KEY, secret TEXT NOT NULL, value TEXT NOT NULL,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS history_jobs(
+ job_id TEXT NOT NULL UNIQUE, source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
+ hot_cutoff INTEGER NOT NULL, target_start INTEGER NOT NULL, cursor INTEGER NOT NULL,
+ provider TEXT NOT NULL, revision TEXT NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+ retry_at INTEGER NOT NULL DEFAULT 0, error TEXT,
+ batch_start INTEGER, batch_end INTEGER, batch_cursor INTEGER,
+ batch_status TEXT, csv_keys TEXT NOT NULL DEFAULT '[]', csv_cursor INTEGER NOT NULL DEFAULT 0,
+ page_count INTEGER NOT NULL DEFAULT 0, row_count INTEGER NOT NULL DEFAULT 0,
+ created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, completed_at INTEGER,
+ PRIMARY KEY(source,symbol,interval));
+CREATE INDEX IF NOT EXISTS history_jobs_ready ON history_jobs(status,retry_at,updated_at);
+CREATE TABLE IF NOT EXISTS history_pending_objects(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
+ object_id TEXT NOT NULL, batch_start INTEGER NOT NULL, payload TEXT NOT NULL,
+ created_at INTEGER NOT NULL,
+ PRIMARY KEY(source,symbol,interval,object_id),
+ FOREIGN KEY(source,symbol,interval) REFERENCES history_jobs(source,symbol,interval) ON DELETE CASCADE);
+CREATE TABLE IF NOT EXISTS adjustment_rebases(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, status TEXT NOT NULL,
+ detected_at INTEGER NOT NULL, evidence TEXT NOT NULL, error TEXT,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(source,symbol));
 CREATE TABLE IF NOT EXISTS live_leases(
  source TEXT NOT NULL,symbol TEXT NOT NULL,interval TEXT NOT NULL,
  owner TEXT NOT NULL,until INTEGER NOT NULL,PRIMARY KEY(source,symbol,interval));
@@ -312,7 +339,7 @@ CREATE TRIGGER IF NOT EXISTS volume_corrections_version_delete AFTER DELETE ON v
  VALUES (OLD.source,OLD.symbol,OLD.interval,1)
  ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
 END;
-PRAGMA user_version=3;
+PRAGMA user_version=4;
 """
 COLUMNS = tuple(f.name for f in fields(Candle))
 MARKET_COLUMNS = COLUMNS[4:-1]
@@ -356,7 +383,7 @@ class Repository:
     def initialize(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as con:
-            if con.execute("PRAGMA user_version").fetchone()[0] > 3:
+            if con.execute("PRAGMA user_version").fetchone()[0] > 4:
                 raise DataError("Database schema is newer than this application")
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
@@ -534,6 +561,337 @@ class Repository:
                 (source, symbol, interval),
             ).fetchone()
             return dict(row) if row else None
+
+    def configure_history_job(
+        self, source, symbol, interval, hot_cutoff, target_start, provider, revision
+    ):
+        """Create or reconcile metadata for one cold-history series."""
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            if not row:
+                con.execute(
+                    """INSERT INTO history_jobs(
+                    job_id,source,symbol,interval,hot_cutoff,target_start,cursor,provider,revision,
+                    status,created_at,updated_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,'pending',?,?)""",
+                    (
+                        str(uuid.uuid4()),
+                        source,
+                        symbol,
+                        interval,
+                        hot_cutoff,
+                        target_start,
+                        hot_cutoff,
+                        provider,
+                        revision,
+                        now,
+                        now,
+                    ),
+                )
+            else:
+                changed_basis = (row["provider"], row["revision"]) != (provider, revision)
+                extended = target_start < row["target_start"]
+                new_target = min(target_start, row["target_start"])
+                if changed_basis:
+                    con.execute(
+                        "DELETE FROM history_pending_objects WHERE source=? AND symbol=? AND interval=?",
+                        (source, symbol, interval),
+                    )
+                    con.execute(
+                        """UPDATE history_jobs SET hot_cutoff=?,target_start=?,cursor=?,
+                        provider=?,revision=?,status='pending',attempts=0,retry_at=0,error=NULL,
+                        batch_start=NULL,batch_end=NULL,batch_cursor=NULL,batch_status=NULL,
+                        csv_keys='[]',csv_cursor=0,completed_at=NULL,updated_at=?
+                        WHERE source=? AND symbol=? AND interval=?""",
+                        (
+                            hot_cutoff,
+                            new_target,
+                            hot_cutoff,
+                            provider,
+                            revision,
+                            now,
+                            source,
+                            symbol,
+                            interval,
+                        ),
+                    )
+                else:
+                    status = "pending" if extended and row["status"] == "complete" else row["status"]
+                    cursor = row["cursor"]
+                    if cursor <= new_target:
+                        status = "complete"
+                    con.execute(
+                        """UPDATE history_jobs SET hot_cutoff=?,target_start=?,status=?,
+                        completed_at=CASE WHEN ?='complete' THEN COALESCE(completed_at,?) ELSE NULL END,
+                        updated_at=? WHERE source=? AND symbol=? AND interval=?""",
+                        (
+                            max(hot_cutoff, row["hot_cutoff"]),
+                            new_target,
+                            status,
+                            status,
+                            now,
+                            now,
+                            source,
+                            symbol,
+                            interval,
+                        ),
+                    )
+            current = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            return dict(current)
+
+    def history_job(self, source, symbol, interval):
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def history_jobs(self, source=None, symbol=None, interval=None, limit=None):
+        where, args = [], []
+        for column, value in (("source", source), ("symbol", symbol), ("interval", interval)):
+            if value is not None:
+                where.append(f"{column}=?")
+                args.append(value)
+        sql = "SELECT * FROM history_jobs"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY status,source,interval,symbol"
+        if limit is not None:
+            sql += " LIMIT ?"
+            args.append(limit)
+        with self.connect() as con:
+            return [dict(row) for row in con.execute(sql, args)]
+
+    def history_pending_objects(self, source, symbol, interval, batch_start=None):
+        sql = "SELECT payload FROM history_pending_objects WHERE source=? AND symbol=? AND interval=?"
+        args = [source, symbol, interval]
+        if batch_start is not None:
+            sql += " AND batch_start=?"
+            args.append(batch_start)
+        sql += " ORDER BY created_at,object_id"
+        with self.connect() as con:
+            return [json.loads(row[0]) for row in con.execute(sql, args)]
+
+    def checkpoint_history_page(
+        self, job, *, batch_start, batch_end, batch_cursor, objects, row_count
+    ):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            current = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (job["source"], job["symbol"], job["interval"]),
+            ).fetchone()
+            if (
+                not current
+                or (current["provider"], current["revision"])
+                != (job["provider"], job["revision"])
+            ):
+                raise DataError("Historical job basis changed before its page checkpoint")
+            for obj in objects:
+                con.execute(
+                    """INSERT OR IGNORE INTO history_pending_objects(
+                    source,symbol,interval,object_id,batch_start,payload,created_at)
+                    VALUES (?,?,?,?,?,?,?)""",
+                    (
+                        job["source"],
+                        job["symbol"],
+                        job["interval"],
+                        obj["id"],
+                        batch_start,
+                        json.dumps(obj, sort_keys=True, separators=(",", ":")),
+                        now,
+                    ),
+                )
+            con.execute(
+                """UPDATE history_jobs SET batch_start=?,batch_end=?,batch_cursor=?,
+                batch_status='fetching',page_count=page_count+1,row_count=row_count+?,
+                attempts=0,retry_at=0,error=NULL,status='pending',completed_at=NULL,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (
+                    batch_start,
+                    batch_end,
+                    batch_cursor,
+                    row_count,
+                    now,
+                    job["source"],
+                    job["symbol"],
+                    job["interval"],
+                ),
+            )
+
+    def mark_history_batch_csv(self, source, symbol, interval, keys):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute(
+                """UPDATE history_jobs SET batch_status='csv',csv_keys=?,csv_cursor=0,
+                status='pending',retry_at=0,error=NULL,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (
+                    json.dumps(keys, separators=(",", ":")),
+                    now,
+                    source,
+                    symbol,
+                    interval,
+                ),
+            )
+
+    def advance_history_csv(self, source, symbol, interval, csv_cursor):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute(
+                "UPDATE history_jobs SET csv_cursor=?,updated_at=? WHERE source=? AND symbol=? AND interval=?",
+                (csv_cursor, now, source, symbol, interval),
+            )
+
+    def finish_history_batch(self, source, symbol, interval, cursor):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            con.execute(
+                "DELETE FROM history_pending_objects WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            )
+            con.execute(
+                """UPDATE history_jobs SET cursor=?,batch_start=NULL,batch_end=NULL,
+                batch_cursor=NULL,batch_status=NULL,csv_keys='[]',csv_cursor=0,
+                status=CASE WHEN ?<=target_start THEN 'complete' ELSE 'pending' END,
+                completed_at=CASE WHEN ?<=target_start THEN ? ELSE NULL END,
+                attempts=0,retry_at=0,error=NULL,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (cursor, cursor, cursor, now, now, source, symbol, interval),
+            )
+
+    def fail_history_job(self, source, symbol, interval, error, retry_at, *, blocked=False):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute(
+                """UPDATE history_jobs SET status=?,attempts=attempts+1,retry_at=?,error=?,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (
+                    "coverage_gap" if blocked else "retry",
+                    retry_at,
+                    str(error)[:1000],
+                    now,
+                    source,
+                    symbol,
+                    interval,
+                ),
+            )
+
+    def set_history_job_status(self, source, symbol, interval, status, error=None):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute(
+                """UPDATE history_jobs SET status=?,error=?,
+                retry_at=CASE WHEN ? IN ('pending','provider_limit','complete') THEN 0 ELSE retry_at END,
+                attempts=CASE WHEN ?='pending' THEN 0 ELSE attempts END,
+                completed_at=CASE WHEN ?='complete' THEN COALESCE(completed_at,?)
+                    WHEN ?='pending' THEN NULL ELSE completed_at END,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (
+                    status,
+                    str(error)[:1000] if error else None,
+                    status,
+                    status,
+                    status,
+                    now,
+                    status,
+                    now,
+                    source,
+                    symbol,
+                    interval,
+                ),
+            )
+
+    def renew_live_lease(self, source, symbol, interval, owner, lease=3600):
+        now = int(time.time())
+        with self.connect() as con:
+            return con.execute(
+                "UPDATE live_leases SET until=? WHERE source=? AND symbol=? AND interval=? AND owner=? AND until>=?",
+                (now + lease, source, symbol, interval, owner, now),
+            ).rowcount == 1
+
+    def begin_adjustment_rebase(self, source, symbol, evidence):
+        stamp = int(time.time())
+        encoded = json.dumps(evidence, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        with self.connect() as con:
+            con.execute(
+                """INSERT INTO adjustment_rebases(source,symbol,status,detected_at,evidence,updated_at)
+                VALUES (?,?,'daily_pending',?,?,?)
+                ON CONFLICT(source,symbol) DO UPDATE SET
+                status=CASE WHEN adjustment_rebases.status IN ('complete','failed')
+                    THEN 'daily_pending' ELSE adjustment_rebases.status END,
+                detected_at=CASE WHEN adjustment_rebases.status IN ('complete','failed')
+                    THEN excluded.detected_at ELSE adjustment_rebases.detected_at END,
+                evidence=CASE WHEN adjustment_rebases.status IN ('complete','failed')
+                    THEN excluded.evidence ELSE adjustment_rebases.evidence END,
+                error=NULL,updated_at=excluded.updated_at""",
+                (source, symbol, stamp, encoded, stamp),
+            )
+
+    def adjustment_rebase(self, source, symbol):
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT * FROM adjustment_rebases WHERE source=? AND symbol=?",
+                (source, symbol),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def adjustment_rebase_outputs_pending(self, source, symbol):
+        """Whether any interval or its public CSV still has adjustment work."""
+        with self.connect() as con:
+            if con.execute(
+                "SELECT 1 FROM archives WHERE source=? AND symbol=? AND status='pending_repair' LIMIT 1",
+                (source, symbol),
+            ).fetchone():
+                return True
+            if con.execute(
+                """SELECT 1 FROM quality WHERE source=? AND symbol=?
+                AND kind='archive_csv_repair_pending' AND resolved=0 LIMIT 1""",
+                (source, symbol),
+            ).fetchone():
+                return True
+            batches = con.execute(
+                """SELECT payload FROM archive_repair_batches
+                WHERE status IN ('collecting','prepared','indexed','manifest_published')"""
+            ).fetchall()
+        for row in batches:
+            payload = json.loads(row["payload"])
+            if any(
+                target["old"]["source"] == source and target["old"]["symbol"] == symbol
+                for target in payload.get("targets", [])
+            ):
+                return True
+        return False
+
+    def set_adjustment_rebase(self, source, symbol, status, error=None):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute(
+                "UPDATE adjustment_rebases SET status=?,error=?,updated_at=? WHERE source=? AND symbol=?",
+                (status, str(error)[:1000] if error else None, now, source, symbol),
+            )
+
+    def adjustment_rebases(self, status=None):
+        with self.connect() as con:
+            if status:
+                rows = con.execute(
+                    "SELECT * FROM adjustment_rebases WHERE status=? ORDER BY updated_at",
+                    (status,),
+                )
+            else:
+                rows = con.execute("SELECT * FROM adjustment_rebases ORDER BY updated_at")
+            return [dict(row) for row in rows]
 
     def no_data_retry_at(self, source, symbol, interval):
         """Return a future retry time for a Yahoo bootstrap with no provider data."""
@@ -1154,6 +1512,50 @@ class Repository:
             forward=forward,
         )[symbol]
 
+    def eligible_archive_group(self, source, symbol, interval, floor):
+        """Load only the oldest expired provider/revision partition for a series."""
+        period = (
+            "strftime('%Y',time,'unixepoch')"
+            if interval == "1D"
+            else "strftime('%Y-%m',time,'unixepoch')"
+        )
+        with self.connect() as con:
+            basis = con.execute(
+                f"SELECT provider,revision,MIN(time) AS first_time FROM candles "
+                f"WHERE source=? AND symbol=? AND interval=? AND time<? "
+                f"GROUP BY provider,revision,{period} ORDER BY first_time LIMIT 1",
+                (source, symbol, interval, floor),
+            ).fetchone()
+            if not basis:
+                return []
+            value = datetime.fromtimestamp(basis["first_time"], UTC)
+            start = (
+                datetime(value.year, 1, 1, tzinfo=UTC)
+                if interval == "1D"
+                else datetime(value.year, value.month, 1, tzinfo=UTC)
+            )
+            end = (
+                datetime(value.year + 1, 1, 1, tzinfo=UTC)
+                if interval == "1D" or value.month == 12
+                else datetime(value.year, value.month + 1, 1, tzinfo=UTC)
+            )
+            rows = con.execute(
+                f"SELECT {','.join(COLUMNS)} FROM candles WHERE source=? AND symbol=? "
+                "AND interval=? AND time>=? AND time<? AND time<? AND provider=? "
+                "AND revision=? ORDER BY time",
+                (
+                    source,
+                    symbol,
+                    interval,
+                    int(start.timestamp()),
+                    int(end.timestamp()),
+                    floor,
+                    basis["provider"],
+                    basis["revision"],
+                ),
+            ).fetchall()
+            return [Candle(**dict(row)) for row in rows]
+
     def read_many(self, source, symbols, interval, start=None, end=None, limit=None, forward=False):
         """Read raw native candle rows for one or many symbols via the shared loader."""
         from .data_loading import SQLiteDataLoader
@@ -1188,6 +1590,50 @@ class Repository:
                     args,
                 )
             ]
+
+    def archive_manifest_snapshot(self):
+        """Read one archive index generation for a manifest publication."""
+        with self.connect() as con:
+            con.execute("BEGIN")
+            objects = [
+                dict(row)
+                for row in con.execute(
+                    "SELECT * FROM archives WHERE status IN "
+                    "('published','pending_repair','historical_snapshot') ORDER BY end DESC"
+                )
+            ]
+            state = con.execute(
+                "SELECT generation FROM archive_manifest_state WHERE id=1"
+            ).fetchone()
+            return objects, int(state[0])
+
+    @staticmethod
+    def mark_archive_manifest_dirty(con):
+        con.execute(
+            "UPDATE archive_manifest_state SET generation=generation+1 WHERE id=1"
+        )
+
+    def mark_archive_manifest_published(self, generation):
+        with self.connect() as con:
+            con.execute(
+                "UPDATE archive_manifest_state SET published_generation="
+                "MAX(published_generation,?) WHERE id=1",
+                (generation,),
+            )
+
+    def archive_manifest_is_dirty(self):
+        with self.connect() as con:
+            row = con.execute(
+                "SELECT generation>published_generation FROM archive_manifest_state WHERE id=1"
+            ).fetchone()
+            return bool(row and row[0])
+
+    def resolve_archive_manifest_findings(self):
+        with self.connect() as con:
+            con.execute(
+                "UPDATE quality SET resolved=1 WHERE kind='archive_manifest_pending' "
+                "AND (SELECT generation=published_generation FROM archive_manifest_state WHERE id=1)"
+            )
 
     @staticmethod
     def _enqueue_archive_repairs(con, identity, provider, revision):
@@ -1280,7 +1726,13 @@ class Repository:
             ).fetchone()
             if active:
                 return self._archive_repair_batch_dict(active)
-            where = ["a.status='pending_repair'", "s.status='ready'"]
+            where = [
+                "a.status='pending_repair'",
+                "s.status='ready'",
+                "NOT EXISTS (SELECT 1 FROM adjustment_rebases r WHERE r.source=a.source "
+                "AND r.symbol=a.symbol AND r.status IN "
+                "('daily_pending','hourly_pending','minute_pending'))",
+            ]
             args = []
             for column, value in (("a.source", source), ("a.symbol", symbol), ("a.interval", interval)):
                 if value is not None:
@@ -1293,18 +1745,80 @@ class Repository:
                     else:
                         where.append(f"{column}=?")
                         args.append(value)
-            records = [
-                dict(row)
-                for row in con.execute(
-                    "SELECT a.*,s.provider AS current_provider,s.revision AS current_revision "
-                    "FROM archives a JOIN series s USING(source,symbol,interval) WHERE "
-                    + " AND ".join(where)
-                    + " ORDER BY a.end,a.symbol,a.id LIMIT ?",
-                    (*args, max_items),
-                )
-            ]
-            if not records:
+            candidate = con.execute(
+                "SELECT a.* FROM archives a JOIN series s USING(source,symbol,interval) WHERE "
+                + " AND ".join(where)
+                + " ORDER BY a.end,a.symbol,a.id LIMIT 1",
+                args,
+            ).fetchone()
+            if not candidate:
                 return None
+            source_id, symbol_id, interval_id = (
+                candidate["source"],
+                candidate["symbol"],
+                candidate["interval"],
+            )
+
+            def period_bounds(stamp):
+                value = datetime.fromtimestamp(stamp, UTC)
+                if interval_id == "1m":
+                    start = datetime(value.year, value.month, value.day, tzinfo=UTC)
+                    end = datetime.fromtimestamp(
+                        int(start.timestamp()) + 86400, UTC
+                    )
+                else:
+                    start = datetime(value.year, 1, 1, tzinfo=UTC)
+                    end = datetime(value.year + 1, 1, 1, tzinfo=UTC)
+                return int(start.timestamp()), int(end.timestamp())
+
+            group_start = period_bounds(candidate["start"])[0]
+            # Archive ranges use inclusive candle timestamps. Convert the last
+            # candle to its containing public-CSV period before expanding the
+            # exclusive grouping boundary.
+            group_end = period_bounds(candidate["end"])[1]
+            # Repair every pending object that contributes to the same public
+            # CSV period. Hourly Parquet is monthly but its legacy CSV is yearly;
+            # splitting a ticker-year across batches makes History.read reject
+            # the yearly CSV while sibling objects remain pending.
+            while True:
+                group_where = [
+                    *where,
+                    "a.source=?",
+                    "a.symbol=?",
+                    "a.interval=?",
+                    "a.start<?",
+                    "a.end>=?",
+                ]
+                group_args = [
+                    *args,
+                    source_id,
+                    symbol_id,
+                    interval_id,
+                    group_end,
+                    group_start,
+                ]
+                records = [
+                    dict(row)
+                    for row in con.execute(
+                        "SELECT a.*,s.provider AS current_provider,s.revision AS current_revision "
+                        "FROM archives a JOIN series s USING(source,symbol,interval) WHERE "
+                        + " AND ".join(group_where)
+                        + " ORDER BY a.end,a.symbol,a.id",
+                        group_args,
+                    )
+                ]
+                expanded_start = min(group_start, period_bounds(min(r["start"] for r in records))[0])
+                expanded_end = max(
+                    group_end, period_bounds(max(r["end"] for r in records))[1]
+                )
+                if (expanded_start, expanded_end) == (group_start, group_end):
+                    break
+                group_start, group_end = expanded_start, expanded_end
+            if len(records) > max_items:
+                raise DataError(
+                    f"One public CSV repair period has {len(records)} Parquet objects; "
+                    f"batch limit is {max_items}"
+                )
             targets = []
             for record in records:
                 identity = (record["source"], record["symbol"], record["interval"])
@@ -1544,10 +2058,26 @@ class Repository:
                     "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
                     (obj["source"], obj["symbol"], obj["interval"]),
                 ).fetchone()
-                if not state or (state["provider"], state["revision"], state["status"]) != (
-                    obj["provider"],
-                    obj["revision"],
-                    "ready",
+                accepted_providers = {state["provider"]} if state else set()
+                if state and state["status"] == "ready" and state["revision"] == obj["revision"]:
+                    adoption = con.execute(
+                        "SELECT snapshot_provider FROM snapshot_adoptions WHERE source=? "
+                        "AND symbol=? AND interval=? AND revision=? AND provider=?",
+                        (
+                            obj["source"],
+                            obj["symbol"],
+                            obj["interval"],
+                            state["revision"],
+                            state["provider"],
+                        ),
+                    ).fetchone()
+                    if adoption:
+                        accepted_providers.add(adoption["snapshot_provider"])
+                if (
+                    not state
+                    or state["status"] != "ready"
+                    or state["revision"] != obj["revision"]
+                    or obj["provider"] not in accepted_providers
                 ):
                     raise DataError("Archive candidate superseded by a series repair")
             con.execute(
@@ -1569,6 +2099,43 @@ class Repository:
                 con.executemany(
                     f"DELETE FROM candles WHERE {predicate}",
                     [tuple(c.record()[k] for k in COLUMNS) for c in snapshot],
+                )
+            self.bump(con, market=True)
+
+    def publish_archives(self, objects, *, require_current=False):
+        """Index a prepared archive batch with one short SQLite transaction."""
+        objects = list(objects)
+        if not objects:
+            return
+        identities = {
+            (obj["source"], obj["symbol"], obj["interval"], obj["provider"], obj["revision"])
+            for obj in objects
+        }
+        if len(identities) != 1:
+            raise DataError("An archive publication batch must contain one series basis")
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            if require_current:
+                source, symbol, interval, provider, revision = next(iter(identities))
+                state = con.execute(
+                    "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
+                    (source, symbol, interval),
+                ).fetchone()
+                if not state or (state["provider"], state["revision"], state["status"]) != (
+                    provider,
+                    revision,
+                    "ready",
+                ):
+                    raise DataError("Archive batch basis changed before publication")
+            for obj in objects:
+                con.execute(
+                    "INSERT OR IGNORE INTO tickers(source,symbol) VALUES (?,?)",
+                    (obj["source"], obj["symbol"]),
+                )
+                columns = tuple(obj)
+                con.execute(
+                    f"INSERT OR IGNORE INTO archives({','.join(columns)}) VALUES ({','.join('?' for _ in columns)})",
+                    tuple(obj[column] for column in columns),
                 )
             self.bump(con, market=True)
 
@@ -1734,6 +2301,7 @@ class Repository:
             )
             if count:
                 self.bump(con, market=True)
+                self.mark_archive_manifest_dirty(con)
             if not con.execute(
                 "SELECT 1 FROM archives WHERE source=? AND symbol=? AND interval=? AND status IN ('published','pending_repair') AND (status='pending_repair' OR (provider<>? AND provider<>?) OR revision<>?)",
                 (source, symbol, interval, state["provider"], snapshot_provider, state["revision"]),
@@ -2223,10 +2791,12 @@ class Repository:
                         "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0 WHERE id=?",
                         (stale["id"],),
                     )
-                con.execute(
+                changed_archives = con.execute(
                     "UPDATE archives SET status='pending_repair' WHERE source=? AND symbol=? AND interval=? AND revision<>? AND status='published'",
                     (*ident, row["revision"]),
-                )
+                ).rowcount
+                if changed_archives:
+                    self.mark_archive_manifest_dirty(con)
                 self._enqueue_archive_repairs(con, ident, row["provider"], row["revision"])
             con.execute("DELETE FROM staging WHERE job_id=?", (job["id"],))
             con.execute(

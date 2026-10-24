@@ -169,7 +169,7 @@ def recover_public_year(
             },
         )
         repo.publish_partitioned_history(obj, parent, gaps)
-        archive.manifest(repo.archives())
+        archive.manifest_current()
         return report | {"object": obj, "remaining_gaps": gaps}
     finally:
         repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)

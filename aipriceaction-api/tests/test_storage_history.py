@@ -763,18 +763,18 @@ def test_compaction_manifest_failure_keeps_a_verified_readable_local_index(syste
     expected = history.read("vn", "FPT", "1D")
     key = f"{archive.settings.s3_prefix}/LATEST.json"
     pointer = archive.store.read(key)
-    publish_manifest = archive.manifest
+    publish_manifest = archive.manifest_current
 
-    def unavailable(_):
+    def unavailable():
         raise DataError("Manifest unavailable")
 
-    monkeypatch.setattr(archive, "manifest", unavailable)
+    monkeypatch.setattr(archive, "manifest_current", unavailable)
     with pytest.raises(DataError, match="Manifest unavailable"):
         archive.compact(originals)
     assert archive.store.read(key) == pointer
     assert len(repo.archives()) == 1 and archive.compaction_groups() == []
     assert history.read("vn", "FPT", "1D") == expected
-    publish_manifest(repo.archives())
+    publish_manifest()
     assert archive.store.read(key) != pointer
 
 
@@ -795,10 +795,10 @@ def test_failed_manifest_keeps_local_rows(system, monkeypatch):
     repo, archive, _ = system
     repo.put([bar("2020-01-01")])
 
-    def fail(_):
+    def fail():
         raise DataError("network unavailable")
 
-    monkeypatch.setattr(archive, "manifest", fail)
+    monkeypatch.setattr(archive, "manifest_current", fail)
     with pytest.raises(DataError):
         archive.publish(repo.read("vn", "FPT", "1D"), prune=True)
     assert len(repo.read("vn", "FPT", "1D")) == 1
@@ -891,14 +891,14 @@ def test_retiring_superseded_archive_work_respects_active_leases(system):
 def test_archive_marked_pending_during_manifest_publication_is_not_pruned(system, monkeypatch):
     repo, archive, _ = system
     repo.put([bar("2020-01-01")])
-    manifest = archive.manifest
+    manifest = archive.manifest_current
 
-    def race(objects):
-        manifest(objects)
+    def race():
+        manifest()
         with repo.connect() as con:
             con.execute("UPDATE archives SET status='pending_repair'")
 
-    monkeypatch.setattr(archive, "manifest", race)
+    monkeypatch.setattr(archive, "manifest_current", race)
     with pytest.raises(DataError, match="verified for pruning"):
         archive.publish(repo.read("vn", "FPT", "1D"), prune=True)
     assert repo.read("vn", "FPT", "1D")[0].close == 100

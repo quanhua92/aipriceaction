@@ -8,6 +8,7 @@ import csv
 import fcntl
 import hashlib
 import json
+import logging
 import os
 import stat
 import tempfile
@@ -22,6 +23,8 @@ import duckdb
 
 from .domain import Candle, DataError, cutoff
 from .storage import COLUMNS
+
+log = logging.getLogger(__name__)
 
 _LOCAL_FILE_LOCKS = {}
 _LOCAL_FILE_LOCKS_GUARD = threading.Lock()
@@ -241,6 +244,21 @@ class Archive:
                 if acquired:
                     fcntl.flock(descriptor, fcntl.LOCK_UN)
                 os.close(descriptor)
+
+    @contextmanager
+    def public_csv_lock(self, key):
+        """Serialize public CSV writers with a bounded set of cross-process locks.
+
+        A ten-year export can touch millions of object keys; fixed lock stripes
+        keep the shared cache directory bounded while allowing unrelated
+        objects to publish concurrently in most cases.
+        """
+        stripe = int.from_bytes(hashlib.sha256(key.encode("utf-8")).digest()[:4], "big") % 64
+        name = f"public-csv-stripe-{stripe:02d}"
+        with self._cache_lock(name) as acquired:
+            if not acquired:
+                raise DataError("Could not lock public CSV publication")
+            yield
 
     @staticmethod
     def _validate_checksum(checksum):
@@ -514,7 +532,7 @@ class Archive:
                 raise DataError("Archive verification differs from exported snapshot")
         return obj
 
-    def manifest(self, objects):
+    def _write_manifest(self, objects):
         data = json.dumps(
             {
                 "version": 1,
@@ -541,6 +559,37 @@ class Archive:
             self.store.put(f"{self.settings.s3_prefix}/LATEST.json", path)
             if self.store.read(f"{self.settings.s3_prefix}/LATEST.json") != path.read_bytes():
                 raise DataError("Archive manifest pointer verification failed")
+
+    def manifest(self, objects):
+        """Publish an explicitly supplied manifest snapshot under the shared lock."""
+        with self._cache_lock("manifest") as acquired:
+            if not acquired:
+                raise DataError("Could not lock archive manifest publication")
+            self._write_manifest(objects)
+
+    def manifest_current(self):
+        """Read the latest SQLite index only after taking the cross-process lock."""
+        with self._cache_lock("manifest") as acquired:
+            if not acquired:
+                raise DataError("Could not lock archive manifest publication")
+            objects, generation = self.repo.archive_manifest_snapshot()
+            self._write_manifest(objects)
+            self.repo.mark_archive_manifest_published(generation)
+
+    def publish_prepared(self, objects, *, require_current=True):
+        """Index previously uploaded Parquet objects and publish one manifest."""
+        objects = list(objects)
+        if not objects:
+            return []
+        owner = uuid.uuid4().hex
+        if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
+            raise DataError("Another archive writer is active")
+        try:
+            self.repo.publish_archives(objects, require_current=require_current)
+            self.manifest_current()
+            return objects
+        finally:
+            self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
     def validate_historical_snapshot(self, candles):
         if not candles:
@@ -596,7 +645,7 @@ class Archive:
                 self.repo.replace_archive(replaces, obj)
             else:
                 self.repo.publish_archive(obj, require_current=require_current)
-            self.manifest(self.repo.archives())
+            self.manifest_current()
             if prune:
                 self.repo.publish_archive(obj, candles, True)
             return obj
@@ -626,7 +675,40 @@ class Archive:
         if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
             raise DataError("Another archive writer is active; metadata remains recorded locally")
         try:
-            self.manifest(self.repo.archives())
+            self.manifest_current()
+            if not self.repo.archive_manifest_is_dirty():
+                self.repo.resolve_archive_manifest_findings()
+        finally:
+            self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
+
+    def finish_live_repair(self, job):
+        """Activate a live repair and refresh its archive status under one writer lease."""
+        owner = uuid.uuid4().hex
+        if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", owner, lease=3600):
+            raise DataError("Another archive writer is active; repair activation will retry")
+        try:
+            self.repo.finish_job(job)
+            if self.repo.archive_manifest_is_dirty():
+                try:
+                    self.manifest_current()
+                    if not self.repo.archive_manifest_is_dirty():
+                        self.repo.resolve_archive_manifest_findings()
+                except Exception as exc:
+                    self.repo.finding(
+                        job["source"],
+                        job["symbol"],
+                        job["interval"],
+                        "archive_manifest_pending",
+                        "Archive manifest publication after live repair failed",
+                    )
+                    log.warning(
+                        "archive manifest update pending after live repair source=%s "
+                        "symbol=%s interval=%s error=%s",
+                        job["source"],
+                        job["symbol"],
+                        job["interval"],
+                        type(exc).__name__,
+                    )
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
@@ -642,7 +724,7 @@ class Archive:
         try:
             batch = self.repo.apply_archive_repair_batch(batch_id, owner)
             if batch["status"] == "indexed":
-                self.manifest(self.repo.archives())
+                self.manifest_current()
                 self.repo.mark_archive_repair_manifest_published(batch_id, owner)
             elif batch["status"] != "manifest_published":
                 raise DataError("Archive repair batch was not indexed")
@@ -764,12 +846,39 @@ class Archive:
                         merged[row.time] = row
             candidate = self.prepare(list(merged.values()))
             self.repo.compact_archives(objects, candidate)
-            self.manifest(self.repo.archives())
+            self.manifest_current()
             return candidate
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
-    def eligible(self, source=None, symbols=None, interval=None, now=None):
+    def eligible(self, source=None, symbols=None, interval=None, now=None, max_groups=None):
+        if max_groups is not None:
+            if max_groups < 1:
+                raise ValueError("max_groups must be positive")
+            now = (now or datetime.now(UTC)).astimezone(UTC)
+            floors = {
+                iv: cutoff(years, now)
+                for iv, years in (
+                    ("1D", self.settings.daily_years),
+                    ("1h", self.settings.hourly_years),
+                    ("1m", self.settings.minute_years),
+                )
+                if interval is None or iv == interval
+            }
+            allowed = set(symbols or ())
+            bounded = []
+            for ticker in self.repo.tickers(sources=[source] if source else None):
+                if allowed and ticker["symbol"] not in allowed:
+                    continue
+                for iv, floor in floors.items():
+                    rows = self.repo.eligible_archive_group(
+                        ticker["source"], ticker["symbol"], iv, floor
+                    )
+                    if rows:
+                        bounded.append(rows)
+                    if len(bounded) >= max_groups:
+                        return bounded
+            return bounded
         groups = []
         symbols = set(symbols or ())
         now = now or datetime.now(UTC)

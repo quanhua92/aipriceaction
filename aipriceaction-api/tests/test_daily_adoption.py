@@ -177,6 +177,22 @@ async def test_daily_certificate_restore_and_tamper_rejection(system, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_retention_accepts_the_verified_snapshot_provider_for_active_revision(system):
+    repo, archive, _, _ = system
+    await adopt_daily_snapshot(repo, Provider(repo), "FPT", "vps", True)
+    state = repo.state("vn", "FPT", "1D")
+    snapshot_provider = repo.snapshot_provider(state)
+    snapshot_row = next(
+        row for row in repo.read("vn", "FPT", "1D") if row.provider == snapshot_provider
+    )
+
+    obj = archive.prepare([snapshot_row])
+    repo.publish_archive(obj, require_current=True)
+
+    assert repo.archives("vn", "FPT", "1D")[0]["provider"] == snapshot_provider
+
+
+@pytest.mark.asyncio
 async def test_daily_adjustment_after_handoff_queues_repair_without_erasing_snapshot(system):
     repo, archive, _, settings = system
     await adopt_daily_snapshot(repo, Provider(repo), "FPT", "vps", True)

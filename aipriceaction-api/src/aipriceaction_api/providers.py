@@ -909,3 +909,44 @@ def adjustment_changes(
             if abs(ratio - 1) > tolerance:
                 changed.append((row.time, ratio))
     return changed if len(changed) >= min_matches else []
+
+
+def suspected_adjustment(existing, incoming):
+    """Match Rust's close-ratio dividend/split suspicion heuristic exactly.
+
+    This is a recovery signal, not proof of a cash dividend and never an
+    instruction to scale candles. It compares 20 stored daily closes, ignores
+    the newest fetched candle, and requires at least five ratios above 1.03.
+    """
+    old_rows = sorted(existing, key=lambda row: row.time)[-20:]
+    new_rows = sorted(incoming, key=lambda row: row.time)
+    if not old_rows or not new_rows:
+        return None
+    newest = new_rows[-1].time
+    old_by_time = {row.time: row for row in old_rows}
+    divergences = []
+    overlap_bars = 0
+    for row in new_rows:
+        previous = old_by_time.get(row.time)
+        if previous is None or row.time >= newest or row.close <= 0:
+            continue
+        overlap_bars += 1
+        ratio = previous.close / row.close
+        if ratio > 1.03:
+            divergences.append((row.time, ratio))
+    if len(divergences) < 5:
+        return None
+    worst_time, worst_ratio = max(divergences, key=lambda item: item[1])
+    return {
+        "detector": "rust_close_ratio_v1",
+        "compared_bars": len(old_rows),
+        "overlap_bars": overlap_bars,
+        "divergent_bars": len(divergences),
+        "divergent_dates": [
+            datetime.fromtimestamp(stamp, UTC).date().isoformat()
+            for stamp, _ratio in divergences
+        ],
+        "worst_date": datetime.fromtimestamp(worst_time, UTC).date().isoformat(),
+        "worst_ratio": worst_ratio,
+        "classification": "suspected price adjustment; cause unverified",
+    }

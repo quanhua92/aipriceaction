@@ -234,7 +234,7 @@ def publish(repo, archive, snapshot, replacement, floor, *, execute=False):
         # If remote publication fails, local data and rollback images survive;
         # the receipt explicitly identifies the missing restore checkpoint.
         try:
-            archive.manifest(repo.archives())
+            archive.manifest_current()
         except DataError as exc:
             result["manifest_error"] = str(exc)
         else:

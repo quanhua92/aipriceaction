@@ -17,15 +17,58 @@ from .catalog import Catalog
 from .config import Settings
 from .daily_adoption import adopt_daily_snapshot
 from .domain import DataError, cutoff, interval, parse_time
+from .history_worker import HistoryWorker
 from .importing import import_bundle, import_csv, import_historical_snapshot
 from .logging_config import configure_logging
 from .migration import LegacyImporter
 from .providers import Providers
-from .public_csv import period_bounds, plan_candles, plan_catalog, publish_object
+from .public_csv import (
+    daily_key,
+    period_bounds,
+    plan_candles,
+    plan_catalog,
+    publish_object,
+    yearly_key,
+)
 from .public_history import recover_public_year
 from .recovery import recover_daily
 from .storage import Repository
 from .workers import Worker, audit
+
+
+def _export_public_catalog(archive, settings, repo, *, execute):
+    with archive.public_csv_lock("meta/tickers.json"):
+        item = plan_catalog(Catalog(settings), repo)
+        if execute:
+            return {"dry_run": False} | publish_object(
+                archive.store.client, settings.s3_bucket, item
+            )
+        return {"dry_run": True} | item.report()
+
+
+def _export_public_candles(
+    archive, settings, repo, source, symbol, iv, *, day=None, year=None, execute
+):
+    key = (
+        daily_key(source, symbol, iv, day)
+        if day is not None
+        else yearly_key(source, symbol, iv, year)
+    )
+    with archive.public_csv_lock(key):
+        from .history import History
+
+        start, end = period_bounds(day=day, year=year)
+        rows = History(repo, archive, settings).read(
+            source, symbol, iv, start=start, end=end, forward=True
+        )
+        item = plan_candles(rows, source, symbol, iv, day=day, year=year)
+        if item.key != key:
+            raise DataError("Public CSV planner produced an unexpected object key")
+        if execute:
+            return {"dry_run": False} | publish_object(
+                archive.store.client, settings.s3_bucket, item
+            )
+        return {"dry_run": True} | item.report()
 
 
 def parser():
@@ -73,6 +116,19 @@ def parser():
             action="store_true",
             help="Do not publish the shared ticker catalog; another worker owns it",
         )
+    history_worker = commands.add_parser(
+        "history-worker", help="Backfill older history slowly into Parquet and public CSV"
+    )
+    history_worker.add_argument("--once", action="store_true", help="Process one bounded step")
+    history_worker.add_argument("--cycles", type=int, help="Process a bounded number of steps")
+    history_worker.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
+    history_worker.add_argument("--symbol", action="append", help="Filter configured tickers; may repeat")
+    history_worker.add_argument("--interval", choices=("1D", "1h", "1m"))
+    history_status = commands.add_parser("history-status", help="Show durable cold-history progress")
+    history_status.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
+    history_status.add_argument("--symbol")
+    history_status.add_argument("--interval", choices=("1D", "1h", "1m"))
+    history_status.add_argument("--limit", type=int, default=200)
     refresh = commands.add_parser(
         "refresh", help="Recheck selected ready series once without processing historical jobs"
     )
@@ -374,6 +430,15 @@ async def execute(args, settings):
         )
     elif args.command == "status":
         emit(repo.status())
+    elif args.command == "history-status":
+        if args.limit < 1:
+            raise DataError("History status limit must be positive", 400)
+        jobs = repo.history_jobs(args.source, args.symbol.upper() if args.symbol else None, args.interval, args.limit)
+        for job in jobs:
+            job["pending_objects"] = len(
+                repo.history_pending_objects(job["source"], job["symbol"], job["interval"])
+            )
+        emit({"jobs": jobs, "count": len(jobs), "truncated": len(jobs) == args.limit})
     elif args.command in ("bootstrap", "worker"):
         worker = Worker(repo, settings, archive=archive)
         if args.cycles is not None and args.cycles < 1:
@@ -394,6 +459,28 @@ async def execute(args, settings):
                     "records": status["records"],
                     "pending_jobs": len(status["jobs"]),
                     "quality_findings": len(repo.findings()),
+                }
+            )
+    elif args.command == "history-worker":
+        worker = HistoryWorker(repo, settings, archive=archive)
+        if args.cycles is not None and args.cycles < 1:
+            raise DataError("History worker cycles must be positive", 400)
+        await worker.run(
+            args.once,
+            args.cycles,
+            args.source,
+            [symbol.upper() for symbol in args.symbol] if args.symbol else None,
+            args.interval,
+        )
+        if args.once or args.cycles:
+            emit(
+                {
+                    "jobs": repo.history_jobs(
+                        args.source,
+                        args.symbol[0].upper() if args.symbol and len(args.symbol) == 1 else None,
+                        args.interval,
+                        200,
+                    )
                 }
             )
     elif args.command == "refresh":
@@ -604,12 +691,12 @@ async def execute(args, settings):
                 raise DataError(
                     "Archive-only reconciliation pins the current provider; omit --provider", 400
                 )
+            pending = repo.mark_archive_repairs(
+                args.source, args.symbol.upper(), iv
+            )
+            await asyncio.to_thread(archive.publish_metadata)
             emit(
-                {
-                    "pending_archives": repo.mark_archive_repairs(
-                        args.source, args.symbol.upper(), iv
-                    )
-                }
+                {"pending_archives": pending, "manifest_published": True}
             )
             return
         years = {
@@ -738,7 +825,14 @@ async def execute(args, settings):
         if args.catalog:
             if any((args.source, args.symbol, args.interval, args.day, args.year)):
                 raise DataError("Catalog export cannot include an OHLCV scope", 400)
-            item = await asyncio.to_thread(plan_catalog, Catalog(settings), repo)
+            if args.execute:
+                if not settings.public_export_enabled:
+                    raise DataError("Public CSV publishing is disabled by PUBLIC_EXPORT_ENABLED", 400)
+                if not isinstance(archive.store, S3Store):
+                    raise DataError("Public CSV publishing requires the configured S3 archive backend", 400)
+            result = await asyncio.to_thread(
+                _export_public_catalog, archive, settings, repo, execute=args.execute
+            )
         else:
             if not all((args.source, args.symbol, args.interval)):
                 raise DataError("OHLCV export requires --source, --symbol, and --interval", 400)
@@ -748,45 +842,31 @@ async def execute(args, settings):
                 day = date.fromisoformat(args.day) if args.day else None
             except ValueError as exc:
                 raise DataError("Day must use YYYY-MM-DD", 400) from exc
-            start, end = period_bounds(day=day, year=args.year)
-            from .history import History
-
-            history = History(repo, archive, settings)
-            candles = await asyncio.to_thread(
-                history.read,
-                args.source,
-                args.symbol.upper(),
-                args.interval,
-                start=start,
-                end=end,
-                forward=True,
-            )
-            item = plan_candles(
-                candles,
+            if args.execute:
+                if not settings.public_export_enabled:
+                    raise DataError("Public CSV publishing is disabled by PUBLIC_EXPORT_ENABLED", 400)
+                if not isinstance(archive.store, S3Store):
+                    raise DataError("Public CSV publishing requires the configured S3 archive backend", 400)
+            result = await asyncio.to_thread(
+                _export_public_candles,
+                archive,
+                settings,
+                repo,
                 args.source,
                 args.symbol.upper(),
                 args.interval,
                 day=day,
                 year=args.year,
+                execute=args.execute,
             )
-        if args.execute:
-            if not settings.public_export_enabled:
-                raise DataError("Public CSV publishing is disabled by PUBLIC_EXPORT_ENABLED", 400)
-            if not isinstance(archive.store, S3Store):
-                raise DataError("Public CSV publishing requires the configured S3 archive backend", 400)
-            result = await asyncio.to_thread(
-                publish_object, archive.store.client, settings.s3_bucket, item
-            )
-            emit({"dry_run": False} | result)
-        else:
-            emit({"dry_run": True} | item.report())
+        emit(result)
     elif args.command == "backup":
         repo.backup(args.path)
         emit({"backup": str(args.path)})
 
 
 async def execute_with_shutdown(args, settings, *, restore_signal=True):
-    if args.command not in ("worker", "bootstrap"):
+    if args.command not in ("worker", "bootstrap", "history-worker"):
         return await execute(args, settings)
     loop, task = asyncio.get_running_loop(), asyncio.current_task()
     stopping = False
@@ -818,7 +898,7 @@ async def execute_with_shutdown(args, settings, *, restore_signal=True):
 def main(argv=None):
     args = parser().parse_args(argv)
     configure_logging()
-    handles_shutdown = args.command in ("worker", "bootstrap")
+    handles_shutdown = args.command in ("worker", "bootstrap", "history-worker")
     previous = signal.getsignal(signal.SIGTERM) if handles_shutdown else None
     try:
         settings = Settings.from_env()

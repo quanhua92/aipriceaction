@@ -188,7 +188,7 @@ def publish_corrections(repo, archive, candidates):
         repo.record_volume_corrections(pending)
         # A pointer failure leaves the entire verified batch locally visible;
         # retry republishes these same receipts, with original candles immutable.
-        archive.manifest(repo.archives())
+        archive.manifest_current()
         return records
     finally:
         for symbol in claimed:

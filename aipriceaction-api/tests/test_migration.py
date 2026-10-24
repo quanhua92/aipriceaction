@@ -155,14 +155,14 @@ async def test_failed_publication_resumes_verified_downloads(system, monkeypatch
         calls.append(request.url.path)
         return httpx.Response(200, text=csv("2022-01-04"))
 
-    publish = archive.manifest
+    publish = archive.manifest_current
 
-    def fail(_):
+    def fail():
         raise DataError("Interrupted manifest upload")
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
         importer = LegacyImporter(repo, archive, client=client)
-        monkeypatch.setattr(archive, "manifest", fail)
+        monkeypatch.setattr(archive, "manifest_current", fail)
         with pytest.raises(DataError, match="Interrupted"):
             await importer.run(
                 "https://example.test",
@@ -174,7 +174,7 @@ async def test_failed_publication_resumes_verified_downloads(system, monkeypatch
             )
         assert len(repo.archives()) == 1 and repo.read("vn", "FPT", "1D") == []
         assert history.read("vn", "FPT", "1D")[0].close == 100
-        monkeypatch.setattr(archive, "manifest", publish)
+        monkeypatch.setattr(archive, "manifest_current", publish)
         result = await importer.run(
             "https://example.test",
             "vn",

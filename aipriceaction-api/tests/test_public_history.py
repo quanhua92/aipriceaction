@@ -226,17 +226,17 @@ def test_public_partition_failed_readback_preserves_coarse_marker(system, monkey
 
 def test_public_partition_manifest_retry_does_not_lose_invalid_gap(system, monkeypatch, tmp_path):
     repo, archive, _, _, _ = system
-    manifest = archive.manifest
+    manifest = archive.manifest_current
 
-    def unavailable(objects):
+    def unavailable():
         raise OSError("object store unavailable")
 
-    monkeypatch.setattr(archive, "manifest", unavailable)
+    monkeypatch.setattr(archive, "manifest_current", unavailable)
     with pytest.raises(OSError):
         apply(system)
     assert len(repo.archives()) == 1
     assert repo.history_gaps()[1]["start"] == parse_time("2020-02-19")
-    monkeypatch.setattr(archive, "manifest", manifest)
+    monkeypatch.setattr(archive, "manifest_current", manifest)
     archive.publish_metadata()
     restored = Repository(tmp_path / "restored")
     restored.initialize()

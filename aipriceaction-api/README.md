@@ -30,21 +30,37 @@ Start the services and check the API:
 docker compose up -d --build
 docker compose ps
 curl --fail http://localhost:8899/health
-docker compose logs --tail=100 initialize api api2 nginx worker worker-hourly worker-minute
+docker compose logs --tail=100 initialize api api2 nginx worker worker-hourly worker-minute worker-history
 ```
 
 `/health` includes a `configuration` object with non-secret effective settings
 such as ingestion universe, provider access mode, retention, and Parquet prefix.
 It reports whether a proxy is configured, never its URL or credentials.
 
-Compose starts two Python API replicas behind Nginx, three interval workers, a
-one-time initializer, and local RustFS. The daily worker handles daily data and
-Parquet retention. The hourly and minute workers handle those intervals
-independently, so slow intraday requests cannot block daily updates. Each worker
-defaults to 2 concurrent tasks and 10 requests/minute per provider route; set
+Compose starts two Python API replicas behind Nginx, three live interval
+workers, one single-flight history worker, a one-time initializer, and local
+RustFS. The daily worker handles current daily data. The hourly and minute
+workers handle those intervals independently, so slow intraday requests cannot
+block daily updates. The history worker crawls backward from each live retention
+cutoff, up to ten years, publishes cold Parquet and Rust-compatible CSV, and
+archives rows as they age out of SQLite. It keeps only job and archive metadata
+in SQLite; cold candles stay in Parquet. It pins the active provider/revision
+for each series and uses the normal proxy shuffle/retry behavior. If VN history
+needs another provider, it queues a live repair and restarts the cold pass only
+after the new series basis is active. It moves at most one retention group per
+minute so the first archive pass cannot block cold-history pages. Each live worker defaults to 2 concurrent
+tasks and 10 requests/minute per provider route; set
 the matching `*_WORKER_CONCURRENCY` or `*_PROVIDER_RPM` variable to change it.
 These six role-specific settings replace `WORKER_CONCURRENCY` and
 `PROVIDER_RPM` for Compose workers; the old variables do not override them.
+The history worker defaults to 5 requests/minute per route and one series page
+at a time. Its request budget does not pause the live workers. Use
+`aipa-api history-status` to inspect cold-history cursors and retries.
+Follow provider, page, Parquet, and CSV progress with
+`docker compose logs -f worker-history`. To inspect one ticker, run
+`docker compose exec worker-history aipa-api history-status --source vn --symbol VCB --interval 1D`.
+`coverage_gap` means older candles remain unverified; `provider_limit` means the
+provider's history boundary was reached.
 Both API replicas and all workers share the same SQLite data directory. SQLite
 is the source of truth; each API process keeps its own bounded in-memory caches.
 Nginx owns host port `8899` and localhost port `3003`, and sends requests to

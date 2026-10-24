@@ -8,7 +8,7 @@ import pytest
 
 from aipriceaction_api.archive import Archive
 from aipriceaction_api.config import Settings
-from aipriceaction_api.domain import Candle, cutoff
+from aipriceaction_api.domain import Candle, DataError, cutoff
 from aipriceaction_api.history import History
 from aipriceaction_api.maintenance import DailyArchive
 from aipriceaction_api.storage import Repository
@@ -53,6 +53,41 @@ def test_daily_archive_scopes_rollover_and_restarts_without_duplicate_objects(sy
     assert History(repo, archive, settings).read("crypto", "BTCUSDT", "1m") == original
     for row in others:
         assert len(repo.read(row.source, row.symbol, row.interval)) == 1
+
+
+def test_daily_archive_can_limit_each_tick_to_one_object(system):
+    repo, archive, _settings = system
+    now = datetime(2026, 10, 3, tzinfo=UTC)
+    floor = cutoff(1, now)
+    repo.put(
+        [bar(symbol, floor - 86400 + 120) for symbol in ("BTCUSDT", "ETHUSDT")]
+    )
+    maintenance = DailyArchive(archive, "crypto", interval="1m")
+
+    first = maintenance.tick(now, max_objects=1)
+    second = maintenance.tick(now + timedelta(seconds=61), max_objects=1)
+
+    assert first["complete"] is False and first["objects"] == 1
+    assert second["complete"] is True and second["objects"] == 1
+    assert len(repo.archives()) == 2
+
+
+def test_retention_refuses_to_index_or_prune_a_superseded_revision(system):
+    repo, archive, _settings = system
+    stamp = cutoff(1) - 86400 + 120
+    repo.put([bar("BTCUSDT", stamp)])
+    row = repo.read("crypto", "BTCUSDT", "1m")[0]
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE series SET provider='alternate',revision='new-revision' "
+            "WHERE source='crypto' AND symbol='BTCUSDT' AND interval='1m'"
+        )
+
+    with pytest.raises(DataError, match="superseded by a series repair"):
+        archive.publish([row], prune=True, require_current=True)
+
+    assert repo.read("crypto", "BTCUSDT", "1m") == [row]
+    assert repo.archives() == []
 
 
 def test_partial_archive_failure_retries_remaining_rows_after_cooldown(system, monkeypatch):
