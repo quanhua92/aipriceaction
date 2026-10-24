@@ -378,3 +378,9 @@ python3 -c "lots = [(8400, 1000), (8600, 500)]; avg = sum(p*q for p,q in lots) /
 ```
 
 If a number cannot be verified from tool output or calculation, leave it out.
+
+## Local AIPriceAction web and API ports
+
+- The Python API runs on port `8899`. Docker Compose publishes it on all host interfaces.
+- The local chart website runs on port `5173` through `aipriceaction-api/scripts/serve_local_web.py`; it binds to `0.0.0.0` and proxies API requests to `http://127.0.0.1:8899`.
+- Port `3003` is a localhost-only alias for the API. Port `3000` belongs to another project and is not the AIPriceAction web port.
