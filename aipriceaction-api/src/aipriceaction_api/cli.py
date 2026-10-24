@@ -246,7 +246,7 @@ def parser():
     compact.add_argument("--execute", action="store_true", help="Default is a dry run")
     compact.add_argument("--max-groups", type=int, default=20)
     repair = commands.add_parser(
-        "archive-repair", help="Process one lower-priority affected archive page"
+        "archive-repair", help="Resume a verified batch of queued Parquet archive repairs"
     )
     repair.add_argument("--source", choices=("vn", "crypto", "yahoo", "sjc"))
     repair.add_argument("--symbol")
@@ -693,14 +693,17 @@ async def execute(args, settings):
     elif args.command == "archive-repair":
         worker = Worker(repo, settings, archive=archive)
         try:
+            processed = await worker.archive_repair(
+                args.source,
+                args.symbol.upper() if args.symbol else None,
+                native_interval(args.interval) if args.interval else None,
+                args.restart,
+            )
+            batches = repo.status()["archive_repair_batches"]
             emit(
                 {
-                    "processed": await worker.archive_repair(
-                        args.source,
-                        args.symbol.upper() if args.symbol else None,
-                        native_interval(args.interval) if args.interval else None,
-                        args.restart,
-                    )
+                    "processed_rows": processed,
+                    "repair_batch": batches[0] if batches else None,
                 }
             )
         finally:

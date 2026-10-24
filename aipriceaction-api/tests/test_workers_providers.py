@@ -1445,39 +1445,177 @@ def test_expired_lease_cannot_publish(system):
 
 
 @pytest.mark.asyncio
-async def test_archived_adjustment_repairs_have_independent_object_checkpoints(system):
+async def test_archived_adjustment_repairs_publish_as_one_manifest_batch(system):
     repo, archive, settings = system
-    repo.put([candle(1), candle(2), candle(3)])
+    repo.put([candle(day, 90) for day in (3, 4, 5)])
+    with repo.connect() as con:
+        con.execute("UPDATE series SET revision='adjusted' WHERE symbol='FPT'")
+        con.execute("UPDATE candles SET revision='adjusted' WHERE symbol='FPT'")
     for day in (1, 2):
-        archive.publish(
-            repo.read("vn", "FPT", "1D", candle(day).time, candle(day).time), prune=True
-        )
-    repo.queue("vn", "FPT", "1D", "repair", candle(3).time, "vps")
-    worker = Worker(
-        repo,
-        settings,
-        Pages(
-            Page([candle(2, 90), candle(3, 90)], "vps"),
-            Page([candle(2, 90)], "vps"),
-            Page([candle(2, 90), candle(3, 90)], "vps"),
-            Page([candle(1, 90)], "vps"),
-            Page([candle(2, 90), candle(3, 90)], "vps"),
-        ),
-        archive,
-    )
-    assert await worker.repair_page(repo.claim_job(worker.owner)) == 2
-    assert all(obj["status"] == "pending_repair" for obj in repo.archives())
-    assert await worker.archive_repair() == 1
-    assert await worker.archive_repair() == 1
+        archive.publish([candle(day, provider="legacy", revision="snapshot")])
+    repo.mark_archive_repairs("vn", "FPT", "1D")
+    manifests = []
+    original_manifest = archive.manifest
+
+    def record_manifest(objects):
+        manifests.append(objects)
+        return original_manifest(objects)
+
+    archive.manifest = record_manifest
+
+    class Provider:
+        async def page(self, source, symbol, iv, before=None, count=500, provider=None):
+            rows = (
+                [candle(day, 90, revision="adjusted") for day in (3, 4, 5)]
+                if before > candle(5).time
+                else [candle(1 if before <= candle(2).time else 2, 90, revision="adjusted")]
+            )
+            return Page(rows, "vps")
+
+    worker = Worker(repo, settings, Provider(), archive)
+    csv_objects = []
+
+    def publish_csv(client, bucket, item):
+        csv_objects.append(item)
+        return {"uploaded": True}
+
+    worker._public_csv_store = lambda: (publish_csv, object(), "public")
+    assert await worker.archive_repair("vn", "FPT", "1D") == 2
+    assert len(manifests) == 1
+    assert {item.key for item in csv_objects} == {
+        "ohlcv/vn/FPT/1D/FPT-1D-2024-01-01.csv",
+        "ohlcv/vn/FPT/1D/FPT-1D-2024-01-02.csv",
+        "ohlcv/vn/FPT/yearly/FPT-1D-2024.csv",
+    }
     assert len(repo.archives()) == 2
     assert all(obj["status"] == "published" for obj in repo.archives())
-    assert [r.close for r in History(repo, archive, settings).read("vn", "FPT", "1D")] == [90] * 3
+    assert [r.close for r in History(repo, archive, settings).read("vn", "FPT", "1D")] == [90] * 5
     with repo.connect() as con:
         assert (
             con.execute(
                 "SELECT COUNT(*) FROM jobs WHERE kind LIKE 'archive_repair:%' AND status='complete'"
             ).fetchone()[0]
             == 2
+        )
+
+
+def test_retained_revision_change_marks_and_queues_archive_repairs_atomically(system):
+    repo, archive, _ = system
+    repo.put([candle(3)])
+    original = archive.publish([candle(1, provider="legacy", revision="snapshot")])
+    repo.queue("vn", "FPT", "1D", "repair", candle(3).time, "vps")
+    job = repo.claim_job("retained-repair")
+    repo.stage(
+        job,
+        [replace(candle(3, 90), revision=job["revision"])],
+        candle(3).time,
+        "vps",
+    )
+    job = repo.claim_job("retained-repair")
+    repo.finish_job(job)
+    with repo.connect() as con:
+        archive_status = con.execute(
+            "SELECT status FROM archives WHERE id=?", (original["id"],)
+        ).fetchone()[0]
+        queued = con.execute(
+            "SELECT * FROM jobs WHERE kind LIKE 'archive_repair:%'"
+        ).fetchall()
+    assert archive_status == "pending_repair"
+    assert len(queued) == 1
+    assert queued[0]["provider"] == "vps" and queued[0]["status"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_archive_repair_batch_keeps_all_targets_pending_when_one_fetch_fails(system):
+    repo, archive, settings = system
+    repo.put([candle(day, 90) for day in (3, 4, 5)])
+    with repo.connect() as con:
+        con.execute("UPDATE series SET revision='adjusted' WHERE symbol='FPT'")
+        con.execute("UPDATE candles SET revision='adjusted' WHERE symbol='FPT'")
+    for day in (1, 2):
+        archive.publish([candle(day, provider="legacy", revision="snapshot")])
+    repo.mark_archive_repairs("vn", "FPT", "1D")
+    original_manifest = archive.manifest
+    manifest_calls = []
+
+    def count_manifest(objects):
+        manifest_calls.append(objects)
+        return original_manifest(objects)
+
+    archive.manifest = count_manifest
+
+    class Provider:
+        async def page(self, source, symbol, iv, before=None, count=500, provider=None):
+            if before > candle(5).time:
+                return Page([candle(day, 90) for day in (3, 4, 5)], "vps")
+            if before <= candle(2).time:
+                return Page([candle(1, 90)], "vps")
+            raise DataError("second archive range unavailable")
+
+    worker = Worker(repo, settings, Provider(), archive)
+    assert await worker.archive_repair("vn", "FPT", "1D") == 0
+    assert [obj["status"] for obj in repo.archives("vn", "FPT", "1D")] == [
+        "pending_repair",
+        "pending_repair",
+    ]
+    assert not manifest_calls
+    with repo.connect() as con:
+        batch = con.execute("SELECT status,payload FROM archive_repair_batches").fetchone()
+        assert batch["status"] == "collecting"
+        assert len(json.loads(batch["payload"])["targets"]) == 2
+
+
+@pytest.mark.asyncio
+async def test_worker_cycle_automatically_processes_queued_archive_repair(system):
+    repo, archive, settings = system
+    repo.put([candle(day, 90) for day in (3, 4, 5)])
+    with repo.connect() as con:
+        con.execute("UPDATE series SET revision='adjusted' WHERE symbol='FPT'")
+        con.execute("UPDATE candles SET revision='adjusted' WHERE symbol='FPT'")
+    originals = [
+        archive.publish([candle(day, provider="legacy", revision="snapshot")])
+        for day in (1, 2)
+    ]
+    repo.mark_archive_repairs("vn", "FPT", "1D")
+
+    class Provider:
+        async def page(self, source, symbol, iv, before=None, count=500, provider=None):
+            if before > candle(5).time:
+                return Page([candle(day, 90) for day in (3, 4, 5)], "vps")
+            return Page(
+                [candle(1 if before <= candle(2).time else 2, 90)], "vps"
+            )
+
+    worker = Worker(repo, settings, Provider(), archive)
+    worker.configuration = [{"source": "vn", "symbol": "FPT", "intervals": ["1D"]}]
+    assert await worker.cycle() == 0
+    assert all(
+        obj["status"] == "pending_repair" for obj in repo.archives("vn", "FPT", "1D")
+    )
+    for _ in range(4):
+        result = await worker.cycle()
+    batch = repo.pending_archive_repair_batch()
+    assert result == 2, (
+        result,
+        batch["status"] if batch else None,
+        batch["error"] if batch else None,
+        [
+            (target["old"]["end"], bool(target["replacement"]))
+            for target in batch["payload"]["targets"]
+        ] if batch else None,
+        [
+            (job["symbol"], job["kind"], job["error"])
+            for job in repo.status()["jobs"]
+        ],
+    )
+    with repo.connect() as con:
+        assert con.execute(
+            "SELECT status FROM archive_repair_batches"
+        ).fetchone()[0] == "published"
+        assert all(
+            con.execute("SELECT status FROM archives WHERE id=?", (obj["id"],)).fetchone()[0]
+            == "superseded"
+            for obj in originals
         )
 
 
@@ -1521,7 +1659,9 @@ async def test_archive_repair_filter_preserves_other_series_jobs(system):
     assert repo.archives("vn", "FPT", "1D")[0]["status"] == "published"
     assert repo.archives("vn", "VIC", "1D")[0]["status"] == "pending_repair"
     with repo.connect() as con:
-        assert not con.execute("SELECT 1 FROM jobs WHERE symbol='VIC'").fetchone()
+        assert con.execute(
+            "SELECT 1 FROM jobs WHERE symbol='VIC' AND kind LIKE 'archive_repair:%'"
+        ).fetchone()
 
 
 @pytest.mark.asyncio
@@ -1551,30 +1691,45 @@ async def test_small_archive_partition_does_not_request_unrelated_invalid_histor
 async def test_archive_repair_retries_publication_without_redownloading_completed_history(system):
     repo, archive, settings = system
     repo.put([candle(d) for d in (3, 4, 5)])
-    archive.publish([candle(1, provider="legacy", revision="snapshot")])
+    original = archive.publish([candle(1, provider="legacy", revision="snapshot")])
     repo.mark_archive_repairs("vn", "FPT", "1D")
+    manifests = []
+    original_manifest = archive.manifest
+
+    def fail_first_manifest(objects):
+        manifests.append(objects)
+        if len(manifests) == 1:
+            raise DataError("temporary manifest outage")
+        return original_manifest(objects)
+
+    archive.manifest = fail_first_manifest
     worker = Worker(
         repo,
         settings,
         Pages(
             Page([candle(1)], "vps"),
-            DataError("temporary head outage"),
             Page([candle(d) for d in (3, 4, 5)], "vps"),
         ),
         archive,
     )
     assert await worker.archive_repair("vn", "FPT", "1D") == 0
     with repo.connect() as con:
-        assert con.execute("SELECT COUNT(*) FROM staging").fetchone()[0] == 1
-        con.execute("UPDATE jobs SET retry_at=0")
-    # Only recheck the current basis; no second old-history page is available.
-    assert await worker.archive_repair("vn", "FPT", "1D") == 0
+        assert con.execute("SELECT COUNT(*) FROM staging").fetchone()[0] == 0
+        assert con.execute(
+            "SELECT status FROM archive_repair_batches"
+        ).fetchone()[0] == "indexed"
+        assert con.execute("SELECT status FROM archives WHERE id=?", (original["id"],)).fetchone()[0] == "superseded"
+        con.execute("UPDATE archive_repair_batches SET retry_at=0")
+    assert repo.status()["archive_repair_batches"][0]["status"] == "indexed"
+    # The repair resumes from its indexed receipt and does not fetch history again.
+    assert await worker.archive_repair("vn", "FPT", "1D") == 1
     assert not worker.providers.pages
+    assert len(manifests) == 2
     assert repo.archives("vn", "FPT", "1D")[0]["status"] == "published"
     assert [r.time for r in History(repo, archive, settings).read("vn", "FPT", "1D")] == [
         candle(d).time for d in (1, 3, 4, 5)
     ]
-    assert repo.status()["jobs"] == []
+    assert not [job for job in repo.status()["jobs"] if job["kind"].startswith("archive_repair:")]
 
 
 @pytest.mark.asyncio

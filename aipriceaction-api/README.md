@@ -38,6 +38,15 @@ loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `watchlist`).
 Initial history is fetched from market-data providers and may take time to
 build.
 
+When a retained-series repair changes its revision, the same SQLite transaction
+marks older Parquet objects for repair and queues them. The worker repairs one
+object per few cycles, prepares a batch, and publishes one Parquet manifest for
+that batch. It also refreshes the affected public daily and yearly CSV files.
+If a provider cannot verify a full archive range and its overlap with the
+current series, that object stays pending. The worker retries it; operators can
+inspect `aipa-api status` and `aipa-api quality`, or resume the batch with
+`aipa-api archive-repair`.
+
 Compose passes `.env` values to the API and worker. It overrides filesystem
 paths with container paths under `/data` and uses the RustFS service address
 when `S3_ENDPOINT` is not set.

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import logging
 import math
@@ -28,6 +29,8 @@ class Worker:
         self.deadline = 90  # Keep network operations shorter than durable leases.
         self.recovery_turn = 0
         self.live_turn = 0
+        self.archive_repair_turn = 0
+        self.archive_repair_scope = (None, None, None)
 
     def _public_csv_store(self):
         if not self.settings.public_export_enabled or self.archive is None:
@@ -837,7 +840,7 @@ class Worker:
                 getattr(r, key), getattr(latest[r.time], key), rel_tol=1e-8, abs_tol=1e-8
             )
             for r in matched
-            for key in ("open", "high", "low", "close")
+            for key in ("open", "high", "low", "close", "volume")
         ):
             entry = next(
                 (
@@ -866,147 +869,320 @@ class Worker:
             "verified_at_ns": time.time_ns(),
         }
 
-    async def archive_repair(self, source=None, symbol=None, interval=None, restart_failed=False):
-        """Repair one affected archive at a time, pinned to current provider.
+    def _claim_archive_repair_job(self, job_id, restart_failed=False):
+        now = int(time.time())
+        with self.repo.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+            if not row or row["status"] in ("complete", "cancelled"):
+                return None
+            if row["lease_until"] > now and row["lease_owner"] != self.owner:
+                return None
+            if row["lease_owner"] == self.owner and row["lease_until"] > now:
+                con.execute(
+                    "UPDATE jobs SET lease_until=? WHERE id=?",
+                    (now + 120, job_id),
+                )
+                return dict(row) | {"lease_owner": self.owner, "status": "running"}
+            if row["retry_at"] > now and not restart_failed:
+                return None
+            if restart_failed and row["error"]:
+                con.execute("DELETE FROM staging WHERE job_id=?", (job_id,))
+                con.execute(
+                    "UPDATE jobs SET cursor=NULL,retry_at=0,error=NULL WHERE id=?", (job_id,)
+                )
+                row = con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
+            con.execute(
+                "UPDATE jobs SET lease_owner=?,lease_until=?,status='running' WHERE id=?",
+                (self.owner, now + 120, job_id),
+            )
+            return dict(row) | {"lease_owner": self.owner, "status": "running"}
 
-        Never apply an inferred dividend factor. Acquire/validate exact source
-        candles; inaccessible old upstream data stays explicitly pending.
-        """
+    def _archive_repair_staging(self, job_id):
+        from .domain import Candle
+
+        with self.repo.connect() as con:
+            return [
+                Candle(**{key: value for key, value in dict(row).items() if key != "job_id"})
+                for row in con.execute(
+                    "SELECT * FROM staging WHERE job_id=? ORDER BY time", (job_id,)
+                )
+            ]
+
+    async def _publish_archive_repair_csv(self, batch_id, owner, payload):
+        if self.archive is None:
+            self.repo.complete_archive_repair_batch(batch_id, owner)
+            return
+        public_store = self._public_csv_store()
+        if public_store is None:
+            self.repo.complete_archive_repair_batch(batch_id, owner)
+            return
+        groups = {}
+        for target in payload["targets"]:
+            obj = target["replacement"]
+            key = (obj["source"], obj["symbol"], obj["interval"])
+            groups.setdefault(key, []).extend(await asyncio.to_thread(self.archive.read, obj))
+        try:
+            for (source, symbol, iv), rows in groups.items():
+                await asyncio.to_thread(
+                    self._publish_public_candles,
+                    source,
+                    symbol,
+                    iv,
+                    sorted(rows, key=lambda row: row.time),
+                )
+            with self.repo.connect() as con:
+                con.execute("BEGIN IMMEDIATE")
+                for source, symbol, iv in groups:
+                    con.execute(
+                        "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind='archive_csv_repair_pending'",
+                        (source, symbol, iv),
+                    )
+            self.repo.complete_archive_repair_batch(batch_id, owner)
+        except Exception as exc:
+            reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+            for source, symbol, iv in groups:
+                self.repo.finding(
+                    source, symbol, iv, "archive_csv_repair_pending", reason
+                )
+            raise
+
+    async def archive_repair(
+        self, source=None, symbol=None, interval=None, restart_failed=False, max_targets=None
+    ):
+        """Repair all captured pending objects as one resumable manifest batch."""
         if self.archive is None:
             return 0
         if restart_failed and not all((source, symbol, interval)):
             raise DataError("Restart requires a source, symbol, and native interval", 400)
-        self.repo.retire_archive_jobs(source, symbol, interval)
-        pending = [
-            obj
-            for obj in self.repo.archives(source, symbol, interval)
-            if obj["status"] == "pending_repair"
-        ]
-        for obj in sorted(pending, key=lambda r: (r["end"], r["symbol"]), reverse=True):
-            state = self.repo.state(obj["source"], obj["symbol"], obj["interval"])
-            if not state or state["status"] != "ready":
-                continue
-            job_id = self.repo.queue(
-                obj["source"],
-                obj["symbol"],
-                obj["interval"],
-                f"archive_repair:{obj['id']}:{state['revision']}",
-                obj["start"],
-                state["provider"],
-            )
-            # Each immutable object/revision has an independent resumable job.
-            with self.repo.connect() as con:
-                con.execute("BEGIN IMMEDIATE")
-                row = con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-                if row["lease_until"] > int(time.time()):
-                    continue
-                if restart_failed and row["error"]:
-                    # Explicitly restart a failed candidate, never published data.
-                    # A live owner still wins; default retries retain completed
-                    # downloads when only their head/publication check failed.
-                    con.execute("DELETE FROM staging WHERE job_id=?", (job_id,))
-                    con.execute(
-                        "UPDATE jobs SET cursor=NULL,retry_at=0,error=NULL WHERE id=?", (job_id,)
-                    )
-                    row = con.execute("SELECT * FROM jobs WHERE id=?", (job_id,)).fetchone()
-                elif row["retry_at"] > int(time.time()):
-                    continue
-                con.execute(
-                    "UPDATE jobs SET lease_owner=?,lease_until=?,status='running' WHERE id=?",
-                    (self.owner, int(time.time()) + 120, job_id),
+        batch = self.repo.ensure_archive_repair_batch(source, symbol, interval)
+        if not batch:
+            return 0
+        batch = self.repo.claim_archive_repair_batch(self.owner, force=restart_failed)
+        if not batch:
+            return 0
+        payload = batch["payload"]
+        total_rows = sum(
+            target["old"]["row_count"] for target in payload.get("targets", [])
+        )
+        try:
+            if batch["status"] in ("indexed", "manifest_published"):
+                payload = await asyncio.to_thread(
+                    self.archive.publish_repair_batch, batch["id"], self.owner
                 )
-                job = dict(row) | {"lease_owner": self.owner}
-            # Daily providers may timestamp the final market date at session
-            # start (DNSE 02:00 UTC), rather than its normalized UTC midnight.
-            # Include the entire final date in the first upstream request.
-            before = job["cursor"] or obj["end"] + (86400 if obj["interval"] == "1D" else 1)
-            try:
-                rows = []
-                covered = job["cursor"] is not None and job["cursor"] <= obj["start"]
-                if not covered:
-                    with self.repo.connect() as con:
-                        downloaded = con.execute(
-                            "SELECT COUNT(*) FROM staging WHERE job_id=?", (job_id,)
-                        ).fetchone()[0]
-                    # Request the remaining indexed coverage, rather than a
-                    # large unrelated preceding range for a small partition.
-                    # Extra provider dates still fail the exact-set check.
-                    count = min(500, max(1, obj["row_count"] - downloaded))
-                    page = await self.providers.page(
-                        obj["source"],
-                        obj["symbol"],
-                        obj["interval"],
-                        before,
-                        count=count,
-                        provider=state["provider"],
-                    )
-                    if not page.rows or page.rows[0].time >= before:
-                        raise DataError("Archived adjusted history unavailable or non-advancing")
-                    rows = [
-                        replace(r, revision=state["revision"])
-                        for r in page.rows
-                        if obj["start"] <= r.time <= obj["end"]
-                    ]
-                    # Stable job revision isolates all staging pages. A failed
-                    # publication/head check can reuse this completed download.
-                    self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
-                    self.repo.stage(
-                        job,
-                        [replace(r, revision=job["revision"]) for r in rows],
-                        page.rows[0].time,
-                        state["provider"],
-                    )
-                    covered = page.rows[0].time <= obj["start"]
-                if covered:
-                    with self.repo.connect() as con:
-                        staged = [
-                            dict(r)
-                            for r in con.execute(
-                                "SELECT * FROM staging WHERE job_id=? ORDER BY time", (job_id,)
-                            )
-                        ]
-                    from .domain import Candle
+                if batch["status"] == "manifest_published":
+                    await self._publish_archive_repair_csv(batch["id"], self.owner, payload)
+                    return total_rows
+                batch = self.repo.pending_archive_repair_batch()
+                if batch and batch["status"] == "manifest_published":
+                    await self._publish_archive_repair_csv(batch["id"], self.owner, payload)
+                    return total_rows
+                return total_rows
 
-                    replacement = [
-                        Candle(**{k: v for k, v in r.items() if k != "job_id"}) for r in staged
-                    ]
-                    replacement = [replace(r, revision=state["revision"]) for r in replacement]
-                    old = await asyncio.to_thread(self.archive.read, obj)
-                    if {r.time for r in replacement} != {r.time for r in old}:
-                        raise DataError(
-                            "Archived replacement timestamp coverage differs; manual quality review required"
-                        )
-                    await self.verify_archive_head(obj, state)
-                    await asyncio.to_thread(self.archive.publish, replacement, False, obj["id"])
+            targets = payload.get("targets", [])
+            if not targets or len(targets) > 100:
+                raise DataError("Archive repair batch target list is empty or too large")
+            prepared_this_call = 0
+            for target_index, target in enumerate(targets):
+                old = target["old"]
+                already_prepared = bool(target["replacement"])
+                identity = (old["source"], old["symbol"], old["interval"])
+                state = self.repo.state(*identity)
+                if not state or state["status"] != "ready" or (
+                    state["provider"], state["revision"]
+                ) != (target["provider"], target["revision"]):
+                    self.repo.fail_archive_repair_batch(
+                        batch["id"], self.owner, "Series revision changed during archive repair"
+                    )
+                    return 0
+                job = self._claim_archive_repair_job(
+                    target["job_id"],
+                    restart_failed=restart_failed and not target["replacement"],
+                )
+                if not job:
                     with self.repo.connect() as con:
-                        con.execute("DELETE FROM staging WHERE job_id=?", (job_id,))
-                        con.execute(
-                            "UPDATE jobs SET status='complete',lease_owner=NULL,lease_until=0 WHERE id=?",
-                            (job_id,),
+                        row = con.execute(
+                            "SELECT retry_at,error FROM jobs WHERE id=?", (target["job_id"],)
+                        ).fetchone()
+                    retry_at = row["retry_at"] if row else int(time.time()) + 30
+                    message = (row["error"] if row else None) or "Archive repair job is leased or delayed"
+                    self.repo.release_archive_repair_batch(
+                        batch["id"], self.owner, message, max(int(time.time()) + 5, retry_at)
+                    )
+                    return 0
+                obj = old
+                try:
+                    if target["replacement"]:
+                        replacement = await asyncio.to_thread(
+                            self.archive.read, target["replacement"], refresh=True
                         )
-                        if not con.execute(
-                            "SELECT 1 FROM archives WHERE source=? AND symbol=? AND interval=? AND status IN ('published','pending_repair') AND (status='pending_repair' OR provider<>? OR revision<>?)",
-                            (
+                        staged = self._archive_repair_staging(target["job_id"])
+                        staged = [replace(row, revision=target["revision"]) for row in staged]
+                        if replacement != staged:
+                            raise DataError("Prepared Parquet differs from its durable staged candles")
+                    else:
+                        old_rows = await asyncio.to_thread(self.archive.read, obj)
+                        covered = False
+                        rows = []
+                        pages = 0
+                        while not covered:
+                            with self.repo.connect() as con:
+                                job_row = con.execute(
+                                    "SELECT * FROM jobs WHERE id=?", (target["job_id"],)
+                                ).fetchone()
+                                if not job_row:
+                                    raise DataError("Archive repair checkpoint job disappeared")
+                                current_job = dict(job_row)
+                                downloaded = con.execute(
+                                    "SELECT COUNT(*) FROM staging WHERE job_id=?",
+                                    (target["job_id"],),
+                                ).fetchone()[0]
+                            before = current_job["cursor"] or obj["end"] + (
+                                86400 if obj["interval"] == "1D" else 1
+                            )
+                            covered = current_job["cursor"] is not None and current_job["cursor"] <= obj["start"]
+                            if covered:
+                                break
+                            job = self._claim_archive_repair_job(target["job_id"])
+                            if not job:
+                                raise DataError("Archive repair page lease could not be renewed")
+                            count = min(500, max(1, obj["row_count"] - downloaded))
+                            page = await self.providers.page(
                                 obj["source"],
                                 obj["symbol"],
                                 obj["interval"],
-                                state["provider"],
-                                state["revision"],
-                            ),
-                        ).fetchone():
-                            con.execute(
-                                "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('archive_repair_pending','imported_revision_boundary')",
-                                (obj["source"], obj["symbol"], obj["interval"]),
+                                before,
+                                count=count,
+                                provider=target["provider"],
                             )
-                return len(rows)
-            except Exception as exc:
-                reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
-                self.repo.finding(
-                    obj["source"], obj["symbol"], obj["interval"], "archive_repair_pending", reason
+                            if (
+                                not page.rows
+                                or page.provider != target["provider"]
+                                or page.rows[0].time >= before
+                            ):
+                                raise DataError(
+                                    "Pinned provider returned no usable adjusted history or did not advance"
+                                )
+                            rows = [
+                                replace(row, revision=job["revision"])
+                                for row in page.rows
+                                if obj["start"] <= row.time <= obj["end"]
+                            ]
+                            if (
+                                not rows
+                                and obj["start"] <= page.rows[0].time <= obj["end"]
+                            ):
+                                raise DataError("Pinned provider skipped dates inside the archive")
+                            self.repo.record_volume_proofs(
+                                getattr(page, "volume_proofs", ())
+                            )
+                            self.repo.stage(job, rows, page.rows[0].time, target["provider"])
+                            covered = page.rows[0].time <= obj["start"]
+                            pages += 1
+                            if pages > 20:
+                                raise DataError("Archive repair exceeded its bounded page budget")
+                        replacement = [
+                            replace(row, revision=target["revision"])
+                            for row in self._archive_repair_staging(target["job_id"])
+                        ]
+                        if {row.time for row in replacement} != {row.time for row in old_rows}:
+                            raise DataError(
+                                "Provider timestamp coverage differs from the archive; target remains pending"
+                            )
+                        head_evidence = await self.verify_archive_head(obj, state)
+                        capture = json.dumps(
+                            [row.record() for row in replacement],
+                            sort_keys=True,
+                            separators=(",", ":"),
+                            allow_nan=False,
+                        ).encode()
+                        evidence = {
+                            "provider": target["provider"],
+                            "revision": target["revision"],
+                            "rows": len(replacement),
+                            "first": replacement[0].time,
+                            "last": replacement[-1].time,
+                            "normalized_candles_sha256": hashlib.sha256(capture).hexdigest(),
+                            "retained_overlap": head_evidence,
+                        }
+                        new_obj = await asyncio.to_thread(self.archive.prepare, replacement)
+                        target["replacement"] = new_obj
+                        target["evidence"] = evidence
+                        self.repo.save_archive_repair_batch(
+                            batch["id"], self.owner, "collecting", payload
+                        )
+                    if target["replacement"] and not target["evidence"]:
+                        target["evidence"] = {
+                            "provider": target["provider"],
+                            "revision": target["revision"],
+                            "rows": len(replacement),
+                            "first": replacement[0].time,
+                            "last": replacement[-1].time,
+                            "normalized_candles_sha256": target["replacement"]["checksum"],
+                            "resumed_prepared_object": True,
+                        }
+                    target["replacement"] = target["replacement"] or await asyncio.to_thread(
+                        self.archive.prepare, replacement
+                    )
+                    self.repo.save_archive_repair_batch(
+                        batch["id"], self.owner, "collecting", payload
+                    )
+                    with self.repo.connect() as con:
+                        con.execute("BEGIN IMMEDIATE")
+                        con.execute(
+                            "UPDATE jobs SET status='pending',lease_owner=NULL,lease_until=0 WHERE id=? AND lease_owner=?",
+                            (target["job_id"], self.owner),
+                        )
+                    if not already_prepared:
+                        prepared_this_call += 1
+                    if max_targets and prepared_this_call >= max_targets and any(
+                        not following["replacement"] for following in targets[target_index + 1 :]
+                    ):
+                        self.repo.release_archive_repair_batch(
+                            batch["id"], self.owner, "Batch preparation checkpoint saved", int(time.time())
+                        )
+                        return 0
+                except Exception as exc:
+                    reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                    self.repo.finding(
+                        old["source"], old["symbol"], old["interval"],
+                        "archive_repair_pending", reason
+                    )
+                    self.repo.fail_job(job, reason)
+                    with self.repo.connect() as con:
+                        failed = con.execute(
+                            "SELECT retry_at FROM jobs WHERE id=?", (target["job_id"],)
+                        ).fetchone()
+                    self.repo.release_archive_repair_batch(
+                        batch["id"], self.owner, reason,
+                        failed["retry_at"] if failed else int(time.time()) + 30,
+                    )
+                    return 0
+            self.repo.save_archive_repair_batch(batch["id"], self.owner, "prepared", payload)
+            payload = await asyncio.to_thread(
+                self.archive.publish_repair_batch, batch["id"], self.owner
+            )
+            await self._publish_archive_repair_csv(batch["id"], self.owner, payload)
+            return total_rows
+        except Exception as exc:
+            reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+            current = self.repo.pending_archive_repair_batch()
+            if current and current["id"] == batch["id"]:
+                stale_receipt = any(
+                    marker in reason.lower()
+                    for marker in (
+                        "target changed after batch capture",
+                        "series basis changed during batch",
+                        "does not preserve its exact target range",
+                    )
                 )
-                self.repo.fail_job(job, reason)
-                return 0
-        return 0
+                if current["status"] in ("collecting", "prepared") and stale_receipt:
+                    self.repo.fail_archive_repair_batch(batch["id"], self.owner, reason)
+                else:
+                    self.repo.release_archive_repair_batch(
+                        batch["id"], self.owner, reason, int(time.time()) + 30
+                    )
+            return 0
 
     async def cycle(self):
         if not self.configuration:
@@ -1094,6 +1270,18 @@ class Worker:
                 job["interval"],
                 values[-1],
             )
+        if self.archive is not None and self.archive_repair_turn % 4 == 0:
+            repair_source, repair_symbols, repair_interval = self.archive_repair_scope
+            repaired = await self.archive_repair(
+                repair_source,
+                repair_symbols,
+                repair_interval,
+                max_targets=1,
+            )
+            if repaired:
+                values.append(repaired)
+                log.info("archive repair batch processed rows=%s", repaired)
+        self.archive_repair_turn += 1
         return sum(values)
 
     async def refresh(self, source, symbols, interval):
@@ -1179,6 +1367,7 @@ class Worker:
                 self.configuration = [entry for entry in self.configuration if entry["intervals"]]
 
             configure()
+            self.archive_repair_scope = (source, symbols, interval)
             ticker_identities = await asyncio.to_thread(
                 self.repo.discovered_tickers, ("vn", "crypto", "yahoo", "sjc")
             )

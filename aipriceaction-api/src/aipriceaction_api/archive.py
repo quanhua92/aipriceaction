@@ -630,6 +630,26 @@ class Archive:
         finally:
             self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", owner)
 
+    def publish_repair_batch(self, batch_id, owner):
+        """Apply one durable repair receipt and advertise it with one manifest.
+
+        The receipt remains indexed if S3 publication fails. Retrying rebuilds
+        the same manifest from SQLite and does not fetch or rewrite candles.
+        """
+        archive_owner = uuid.uuid4().hex
+        if not self.repo.live_claim("vn", "__ARCHIVE_WRITER__", "1D", archive_owner, lease=3600):
+            raise DataError("Another archive writer is active")
+        try:
+            batch = self.repo.apply_archive_repair_batch(batch_id, owner)
+            if batch["status"] == "indexed":
+                self.manifest(self.repo.archives())
+                self.repo.mark_archive_repair_manifest_published(batch_id, owner)
+            elif batch["status"] != "manifest_published":
+                raise DataError("Archive repair batch was not indexed")
+            return batch["payload"]
+        finally:
+            self.repo.live_release("vn", "__ARCHIVE_WRITER__", "1D", archive_owner)
+
     def restore_index(self):
         pointer = json.loads(self.store.read(f"{self.settings.s3_prefix}/LATEST.json"))
         raw = self.store.read(pointer["key"])

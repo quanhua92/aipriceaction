@@ -117,6 +117,13 @@ CREATE TABLE IF NOT EXISTS volume_corrections(
 CREATE TABLE IF NOT EXISTS history_versions(
  source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(source,symbol,interval));
+CREATE TABLE IF NOT EXISTS archive_repair_batches(
+ id TEXT PRIMARY KEY, status TEXT NOT NULL CHECK(status IN ('collecting','prepared','indexed','manifest_published','published','failed')),
+ payload TEXT NOT NULL, retry_at INTEGER NOT NULL DEFAULT 0,
+ lease_owner TEXT, lease_until INTEGER NOT NULL DEFAULT 0,
+ created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, error TEXT);
+CREATE INDEX IF NOT EXISTS archive_repair_batches_status
+ ON archive_repair_batches(status,retry_at,created_at);
 CREATE TRIGGER IF NOT EXISTS candles_version_insert AFTER INSERT ON candles BEGIN
  INSERT INTO history_versions(source,symbol,interval,version)
  VALUES (NEW.source,NEW.symbol,NEW.interval,1)
@@ -963,6 +970,351 @@ class Repository:
                 )
             ]
 
+    @staticmethod
+    def _enqueue_archive_repairs(con, identity, provider, revision):
+        source, symbol, interval = identity
+        records = con.execute(
+            "SELECT id,start FROM archives WHERE source=? AND symbol=? AND interval=? AND status='pending_repair' ORDER BY end,start,id",
+            identity,
+        ).fetchall()
+        now = int(time.time())
+        queued = []
+        for record in records:
+            kind = f"archive_repair:{record['id']}:{revision}"
+            existing = con.execute(
+                "SELECT * FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind=?",
+                (*identity, kind),
+            ).fetchone()
+            if existing and existing["status"] not in ("complete", "cancelled"):
+                if existing["provider"] != provider:
+                    if existing["lease_until"] > now:
+                        continue
+                    con.execute("DELETE FROM staging WHERE job_id=?", (existing["id"],))
+                    job_id, job_revision = str(uuid.uuid4()), str(uuid.uuid4())
+                    con.execute(
+                        "UPDATE jobs SET id=?,provider=?,revision=?,cursor=NULL,floor=?,status='pending',attempts=0,retry_at=0,lease_owner=NULL,lease_until=0,created_at=?,updated_at=?,error=NULL WHERE id=?",
+                        (
+                            job_id,
+                            provider,
+                            job_revision,
+                            record["start"],
+                            now,
+                            time.time_ns(),
+                            existing["id"],
+                        ),
+                    )
+                    queued.append(job_id)
+                else:
+                    queued.append(existing["id"])
+                continue
+            job_id, job_revision = str(uuid.uuid4()), str(uuid.uuid4())
+            if existing:
+                con.execute("DELETE FROM staging WHERE job_id=?", (existing["id"],))
+                con.execute(
+                    "UPDATE jobs SET id=?,provider=?,revision=?,cursor=NULL,floor=?,status='pending',attempts=0,retry_at=0,lease_owner=NULL,lease_until=0,created_at=?,updated_at=?,error=NULL WHERE id=?",
+                    (
+                        job_id,
+                        provider,
+                        job_revision,
+                        record["start"],
+                        now,
+                        time.time_ns(),
+                        existing["id"],
+                    ),
+                )
+            else:
+                con.execute(
+                    "INSERT INTO jobs(id,source,symbol,interval,kind,provider,revision,floor,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        job_id,
+                        source,
+                        symbol,
+                        interval,
+                        kind,
+                        provider,
+                        job_revision,
+                        record["start"],
+                        now,
+                        time.time_ns(),
+                    ),
+                )
+            queued.append(job_id)
+        return queued
+
+    @staticmethod
+    def _archive_repair_batch_dict(row):
+        if row is None:
+            return None
+        value = dict(row)
+        value["payload"] = json.loads(value["payload"])
+        return value
+
+    def ensure_archive_repair_batch(
+        self, source=None, symbol=None, interval=None, max_items=100
+    ):
+        if not 1 <= max_items <= 100:
+            raise DataError("Archive repair batch must contain one to 100 records", 400)
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            active = con.execute(
+                "SELECT * FROM archive_repair_batches WHERE status IN ('collecting','prepared','indexed','manifest_published') ORDER BY created_at LIMIT 1"
+            ).fetchone()
+            if active:
+                return self._archive_repair_batch_dict(active)
+            where = ["a.status='pending_repair'", "s.status='ready'"]
+            args = []
+            for column, value in (("a.source", source), ("a.symbol", symbol), ("a.interval", interval)):
+                if value is not None:
+                    if column == "a.symbol" and isinstance(value, (list, tuple, set)):
+                        symbols = sorted(set(value))
+                        if not symbols:
+                            return None
+                        where.append(f"{column} IN ({','.join('?' for _ in symbols)})")
+                        args.extend(symbols)
+                    else:
+                        where.append(f"{column}=?")
+                        args.append(value)
+            records = [
+                dict(row)
+                for row in con.execute(
+                    "SELECT a.*,s.provider AS current_provider,s.revision AS current_revision "
+                    "FROM archives a JOIN series s USING(source,symbol,interval) WHERE "
+                    + " AND ".join(where)
+                    + " ORDER BY a.end,a.symbol,a.id LIMIT ?",
+                    (*args, max_items),
+                )
+            ]
+            if not records:
+                return None
+            targets = []
+            for record in records:
+                identity = (record["source"], record["symbol"], record["interval"])
+                provider, revision = record.pop("current_provider"), record.pop("current_revision")
+                self._enqueue_archive_repairs(con, identity, provider, revision)
+                kind = f"archive_repair:{record['id']}:{revision}"
+                job = con.execute(
+                    "SELECT id,provider FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind=?",
+                    (*identity, kind),
+                ).fetchone()
+                if not job or job["provider"] != provider:
+                    return None
+                targets.append(
+                    {
+                        "old": record,
+                        "provider": provider,
+                        "revision": revision,
+                        "job_id": job["id"],
+                        "replacement": None,
+                        "evidence": None,
+                    }
+                )
+            batch_id = str(uuid.uuid4())
+            now_ns = time.time_ns()
+            payload = json.dumps(
+                {"version": 1, "targets": targets},
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            con.execute(
+                "INSERT INTO archive_repair_batches(id,status,payload,created_at,updated_at) VALUES (?,'collecting',?,?,?)",
+                (batch_id, payload, int(time.time()), now_ns),
+            )
+            return self._archive_repair_batch_dict(
+                con.execute("SELECT * FROM archive_repair_batches WHERE id=?", (batch_id,)).fetchone()
+            )
+
+    def claim_archive_repair_batch(self, owner, lease=1800, force=False):
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute(
+                "SELECT * FROM archive_repair_batches WHERE status IN ('collecting','prepared','indexed','manifest_published') AND (? OR retry_at<=?) AND lease_until<=? ORDER BY created_at LIMIT 1",
+                (int(force), now, now),
+            ).fetchone()
+            if not row:
+                return None
+            con.execute(
+                "UPDATE archive_repair_batches SET lease_owner=?,lease_until=?,retry_at=0,updated_at=? WHERE id=?",
+                (owner, now + lease, time.time_ns(), row["id"]),
+            )
+            return self._archive_repair_batch_dict(
+                con.execute("SELECT * FROM archive_repair_batches WHERE id=?", (row["id"],)).fetchone()
+            )
+
+    def save_archive_repair_batch(self, batch_id, owner, status, payload, error=None):
+        if status not in ("collecting", "prepared"):
+            raise DataError("Invalid archive repair batch checkpoint")
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            changed = con.execute(
+                "UPDATE archive_repair_batches SET status=?,payload=?,error=?,retry_at=0,lease_until=?,updated_at=? WHERE id=? AND lease_owner=? AND lease_until>=? AND status IN ('collecting','prepared')",
+                (status, encoded, error, int(time.time()) + 1800, time.time_ns(), batch_id, owner, int(time.time())),
+            ).rowcount
+            if not changed:
+                raise DataError("Archive repair batch lease expired or changed")
+
+    def release_archive_repair_batch(self, batch_id, owner, error, retry_at):
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            con.execute(
+                "UPDATE archive_repair_batches SET error=?,retry_at=?,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND lease_owner=? AND status IN ('collecting','prepared','indexed','manifest_published')",
+                (str(error)[:500], retry_at, time.time_ns(), batch_id, owner),
+            )
+
+    def fail_archive_repair_batch(self, batch_id, owner, error):
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            batch = con.execute(
+                "SELECT status,payload FROM archive_repair_batches WHERE id=? AND lease_owner=?",
+                (batch_id, owner),
+            ).fetchone()
+            if not batch or batch["status"] not in ("collecting", "prepared"):
+                raise DataError("Archive repair batch cannot be failed from its current state")
+            payload = json.loads(batch["payload"])
+            for target in payload.get("targets", []):
+                job_id = target.get("job_id")
+                if job_id:
+                    con.execute("DELETE FROM staging WHERE job_id=?", (job_id,))
+                    con.execute(
+                        "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,error=?,updated_at=? WHERE id=? AND status<>'complete'",
+                        (str(error)[:500], time.time_ns(), job_id),
+                    )
+            changed = con.execute(
+                "UPDATE archive_repair_batches SET status='failed',error=?,retry_at=0,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND lease_owner=? AND status IN ('collecting','prepared')",
+                (str(error)[:500], time.time_ns(), batch_id, owner),
+            ).rowcount
+            if not changed:
+                raise DataError("Archive repair batch cannot be failed from its current state")
+
+    def apply_archive_repair_batch(self, batch_id, owner):
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            batch = con.execute(
+                "SELECT * FROM archive_repair_batches WHERE id=?", (batch_id,)
+            ).fetchone()
+            if not batch or batch["lease_owner"] != owner or batch["lease_until"] < int(time.time()):
+                raise DataError("Archive repair batch lease expired")
+            if batch["status"] in ("indexed", "manifest_published"):
+                return self._archive_repair_batch_dict(batch)
+            if batch["status"] != "prepared":
+                raise DataError("Archive repair batch is not prepared")
+            payload = json.loads(batch["payload"])
+            targets = payload.get("targets")
+            if payload.get("version") != 1 or not isinstance(targets, list) or not targets:
+                raise DataError("Archive repair receipt is invalid")
+            if len(targets) > 100 or any(not target.get("replacement") for target in targets):
+                raise DataError("Archive repair receipt is incomplete")
+            seen = set()
+            for target in targets:
+                old, obj = target["old"], target["replacement"]
+                old_id = old["id"]
+                identity = (old["source"], old["symbol"], old["interval"])
+                if old_id in seen:
+                    raise DataError("Archive repair receipt repeats a target")
+                seen.add(old_id)
+                current_old = con.execute("SELECT * FROM archives WHERE id=?", (old_id,)).fetchone()
+                if not current_old or dict(current_old) != old or old["status"] != "pending_repair":
+                    raise DataError("Archive repair target changed after batch capture")
+                state = con.execute(
+                    "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
+                    identity,
+                ).fetchone()
+                if not state or (state["provider"], state["revision"], state["status"]) != (
+                    target["provider"],
+                    target["revision"],
+                    "ready",
+                ):
+                    raise DataError("Archive repair series basis changed during batch")
+                if (
+                    (obj["source"], obj["symbol"], obj["interval"], obj["provider"], obj["revision"])
+                    != (*identity, target["provider"], target["revision"])
+                    or obj["status"] != "published"
+                    or obj["start"] != old["start"]
+                    or obj["end"] != old["end"]
+                    or obj["row_count"] != old["row_count"]
+                ):
+                    raise DataError("Archive replacement does not preserve its exact target range")
+                columns = tuple(obj)
+                con.execute(
+                    f"INSERT OR IGNORE INTO archives({','.join(columns)}) VALUES ({','.join('?' for _ in columns)})",
+                    tuple(obj.values()),
+                )
+                con.execute(
+                    "UPDATE archives SET status='superseded' WHERE id=? AND status='pending_repair'",
+                    (old_id,),
+                )
+                job = con.execute("SELECT id FROM jobs WHERE id=?", (target["job_id"],)).fetchone()
+                if job:
+                    con.execute("DELETE FROM staging WHERE job_id=?", (target["job_id"],))
+                    con.execute(
+                        "UPDATE jobs SET status='complete',lease_owner=NULL,lease_until=0,retry_at=0,error=NULL,updated_at=? WHERE id=?",
+                        (time.time_ns(), target["job_id"]),
+                    )
+            con.execute(
+                "UPDATE archive_repair_batches SET status='indexed',error=NULL,retry_at=0,updated_at=? WHERE id=?",
+                (time.time_ns(), batch_id),
+            )
+            self.bump(con, market=True)
+            return self._archive_repair_batch_dict(
+                con.execute("SELECT * FROM archive_repair_batches WHERE id=?", (batch_id,)).fetchone()
+            )
+
+    def mark_archive_repair_manifest_published(self, batch_id, owner):
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            changed = con.execute(
+                "UPDATE archive_repair_batches SET status='manifest_published',error=NULL,retry_at=0,updated_at=? WHERE id=? AND status='indexed' AND lease_owner=? AND lease_until>=?",
+                (time.time_ns(), batch_id, owner, int(time.time())),
+            ).rowcount
+            if not changed:
+                row = con.execute(
+                    "SELECT status,lease_owner FROM archive_repair_batches WHERE id=?", (batch_id,)
+                ).fetchone()
+                if not row or row["status"] != "manifest_published" or row["lease_owner"] != owner:
+                    raise DataError("Archive repair batch lost its manifest checkpoint")
+
+    def complete_archive_repair_batch(self, batch_id, owner):
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute(
+                "SELECT * FROM archive_repair_batches WHERE id=?", (batch_id,)
+            ).fetchone()
+            if not row or row["status"] != "manifest_published" or row["lease_owner"] != owner:
+                raise DataError("Archive repair batch manifest is not published")
+            payload = json.loads(row["payload"])
+            identities = {
+                (target["old"]["source"], target["old"]["symbol"], target["old"]["interval"])
+                for target in payload["targets"]
+            }
+            for identity in identities:
+                state = con.execute(
+                    "SELECT provider,revision FROM series WHERE source=? AND symbol=? AND interval=?",
+                    identity,
+                ).fetchone()
+                if state and not con.execute(
+                    "SELECT 1 FROM archives WHERE source=? AND symbol=? AND interval=? AND status IN ('published','pending_repair') AND (status='pending_repair' OR provider<>? OR revision<>?)",
+                    (*identity, state["provider"], state["revision"]),
+                ).fetchone():
+                    con.execute(
+                        "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('archive_repair_pending','imported_revision_boundary')",
+                        identity,
+                    )
+            con.execute(
+                "UPDATE archive_repair_batches SET status='published',error=NULL,retry_at=0,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=?",
+                (time.time_ns(), batch_id),
+            )
+            self.bump(con, market=True)
+
+    def pending_archive_repair_batch(self):
+        with self.connect() as con:
+            return self._archive_repair_batch_dict(
+                con.execute(
+                    "SELECT * FROM archive_repair_batches WHERE status IN ('collecting','prepared','indexed','manifest_published') ORDER BY created_at LIMIT 1"
+                ).fetchone()
+            )
+
     def publish_archive(self, obj, snapshot=(), prune=False, require_current=False):
         # Compare all exported values including nanosecond write version: a
         # reconciliation write after export can never be accidentally pruned.
@@ -1158,6 +1510,9 @@ class Repository:
                 "UPDATE archives SET status='pending_repair' WHERE source=? AND symbol=? AND interval=? AND status='published' AND ((provider<>? AND provider<>?) OR revision<>?)",
                 (source, symbol, interval, state["provider"], snapshot_provider, state["revision"]),
             ).rowcount
+            self._enqueue_archive_repairs(
+                con, (source, symbol, interval), state["provider"], state["revision"]
+            )
             if count:
                 self.bump(con, market=True)
             if not con.execute(
@@ -1653,6 +2008,7 @@ class Repository:
                     "UPDATE archives SET status='pending_repair' WHERE source=? AND symbol=? AND interval=? AND revision<>? AND status='published'",
                     (*ident, row["revision"]),
                 )
+                self._enqueue_archive_repairs(con, ident, row["provider"], row["revision"])
             con.execute("DELETE FROM staging WHERE job_id=?", (job["id"],))
             con.execute(
                 "UPDATE jobs SET status='complete',lease_owner=NULL,lease_until=0,updated_at=? WHERE id=?",
@@ -1926,6 +2282,23 @@ class Repository:
                     dict(r)
                     for r in con.execute(
                         "SELECT id,source,symbol,interval,kind,status,attempts,error FROM jobs WHERE status NOT IN ('complete','cancelled')"
+                    )
+                ],
+                "archive_repair_batches": [
+                    {
+                        "id": row["id"],
+                        "status": row["status"],
+                        "targets": len(json.loads(row["payload"]).get("targets", [])),
+                        "prepared": sum(
+                            bool(target.get("replacement"))
+                            for target in json.loads(row["payload"]).get("targets", [])
+                        ),
+                        "retry_at": row["retry_at"],
+                        "error": row["error"],
+                        "updated_at": row["updated_at"],
+                    }
+                    for row in con.execute(
+                        "SELECT id,status,payload,retry_at,error,updated_at FROM archive_repair_batches WHERE status IN ('collecting','prepared','indexed','manifest_published','failed') ORDER BY created_at DESC LIMIT 20"
                     )
                 ],
                 "last_sync": last_sync,
