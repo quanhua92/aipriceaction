@@ -41,9 +41,10 @@ that a range is complete.
 
 ## Catalog and migration boundaries
 
-The Compose initializer may fetch a ticker catalog using `CATALOG_BASE_URL`
-(default: `https://api.aipriceaction.com`). That is catalog metadata
-initialization, not price ingestion from the old Rust server. Review the
-catalog snapshot before using a fresh deployment. Production cutover is still
-pending in the last recorded baseline; see the
+The worker defaults to `INGEST_UNIVERSE=catalog` and attempts every bundled
+catalog symbol; set it to `watchlist` to restrict ingestion. This does not mean
+every provider has complete history for every symbol. The Compose initializer
+loads ticker metadata from the files bundled with the API; it does not fetch
+price history from the old Rust server. Production cutover is still pending in
+the last recorded baseline; see the
 [migration runbook](../aipriceaction-api/MIGRATION.md).

@@ -35,9 +35,10 @@ Compose starts the Python API, one worker, a one-time initializer, and local
 RustFS. The initializer loads ticker groups and names from the files bundled in
 this repository; it does not call the production API for a catalog snapshot.
 The API listens on port `8899`; RustFS uses ports `9100` and `9101` on
-loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `watchlist`).
-Initial history is fetched from market-data providers and may take time to
-build.
+loopback. The worker uses `INGEST_UNIVERSE` from `.env` (default `catalog`),
+which ingests every symbol in the bundled catalog. Set it to `watchlist` to
+limit ingestion to `watchlist.json`. Initial history for the full catalog may
+take substantial time to build and depends on provider coverage and limits.
 
 When a retained-series repair changes its revision, the same SQLite transaction
 marks older Parquet objects for repair and queues them. The worker repairs one

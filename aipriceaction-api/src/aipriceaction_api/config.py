@@ -120,7 +120,7 @@ class Settings:
         if (ROOT / "watchlist.json").exists()
         else Path(__file__).parent / "data/watchlist.json"
     )
-    ingest_universe: str = "watchlist"
+    ingest_universe: str = "catalog"
     # Optional ordered export from Rust's `tickers` table. It is used only to
     # preserve duplicate Yahoo/SJC identity ordering in merged API reads.
     rust_ticker_identity_order: Path | None = None
