@@ -30,7 +30,8 @@ cd aipriceaction-api
 cp .env.example .env  # chỉ chạy lần đầu; giữ lại .env đang có
 python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 # Dán giá trị vừa tạo vào REFRESH_SECRET trong .env.
-# Cấu hình HTTP_PROXIES hoặc đặt ALLOW_DIRECT=true để worker lấy dữ liệu VN.
+# Nếu HTTP_PROXIES trống, worker tự kết nối trực tiếp tới nhà cung cấp VN.
+# Nếu có proxy, đặt ALLOW_DIRECT=true để cho phép kết nối trực tiếp dự phòng.
 docker compose up -d --build
 docker compose ps
 curl --fail http://localhost:8899/health

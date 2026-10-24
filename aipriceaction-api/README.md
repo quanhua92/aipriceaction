@@ -18,8 +18,9 @@ For a new local setup only, create `.env` from the example:
 cp .env.example .env
 ```
 
-Set a non-empty `REFRESH_SECRET`. For Vietnamese provider requests, either set
-`HTTP_PROXIES` or allow direct connections with `ALLOW_DIRECT=true`.
+Set a non-empty `REFRESH_SECRET`. Vietnamese provider requests use
+`HTTP_PROXIES` when configured. When it is empty, the worker connects directly.
+If proxies are configured, set `ALLOW_DIRECT=true` to allow direct fallback.
 
 Start the services and check the API:
 

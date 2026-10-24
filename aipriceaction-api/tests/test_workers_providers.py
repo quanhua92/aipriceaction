@@ -1428,10 +1428,10 @@ async def test_dnse_daily_session_start_preserves_the_market_date(system):
         await providers.close()
 
 
-def test_direct_vn_calls_require_explicit_configuration(system):
+def test_direct_vn_calls_are_allowed_when_proxy_list_is_empty(system):
     _, _, settings = system
-    with pytest.raises(DataError, match="HTTP_PROXIES"):
-        Providers(settings).routes(True)
+    assert settings.proxies == ()
+    assert Providers(settings).routes(True) == [None]
 
 
 def test_expired_lease_cannot_publish(system):

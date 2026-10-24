@@ -111,10 +111,14 @@ class Providers:
 
     def routes(self, vn):
         routes = list(self.settings.proxies)
-        if not vn or self.settings.allow_direct or self.transport:
+        # A configured proxy is the default VN route. If no proxy is configured,
+        # use direct access automatically; ALLOW_DIRECT controls direct fallback
+        # only when one or more proxies are present.
+        direct_allowed = self.settings.allow_direct or not self.settings.proxies
+        if not vn or direct_allowed or self.transport:
             routes.append(None)
         if not routes:
-            raise DataError("VN requests require HTTP_PROXIES or explicit ALLOW_DIRECT=true")
+            raise DataError("No VN provider route configured")
         return routes
 
     async def request(
