@@ -2562,6 +2562,23 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             tickers.append(min(matches, key=lambda item: priority[item[0]]))
                 else:
                     tickers = [(src, sym) for src in sources for sym in symbols]
+                # Broad VN reads use the same default market-cap universe as
+                # the VN metadata endpoints. Explicit symbol requests remain
+                # available for smaller or unlisted VN tickers.
+                if symbols is None and "vn" in sources:
+                    default_vn_symbols = {
+                        row["symbol"]
+                        for row in catalog.vn_tickers(DEFAULT_VN_MIN_MARKET_CAP_VND)
+                    }
+                    default_vn_symbols.update(
+                        row["symbol"] for row in catalog.vn_index_rows
+                    )
+                    tickers = [
+                        (src, sym)
+                        for src, sym in tickers
+                        if src != "vn" or sym in default_vn_symbols
+                    ]
+
                 if symbols is None and source_mode == "all":
                     priority = {"vn": 0, "yahoo": 1, "sjc": 2, "crypto": 3}
                     selected = {}

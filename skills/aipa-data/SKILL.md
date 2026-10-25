@@ -45,22 +45,25 @@ The API stores Yahoo and SJC under separate source identities. A request using
 
 ## Direct Python API catalog
 
-This applies to direct HTTP requests to the Python API; it does not change the
-CLI's own behavior.
+The Python API uses one default VN stock market-cap cutoff for metadata and
+broad OHLCV requests.
 
 - The metadata endpoints `/tickers/group`, `/tickers/name`, `/tickers/info`,
   and `/tickers/directory` default to a VND 387,175,000,000 market-cap cutoff.
+  Broad `/tickers` requests with `mode=vn` apply the same cutoff to stocks;
+  configured VN index symbols remain available. The VN portion of broad
+  `/tickers?mode=all` requests uses that cutoff too.
   In the Oct 24, 2026 catalog snapshot this returned 657 stocks and covered
   99% of known market cap. The cutoff is fixed; its coverage can shift when
   market data is refreshed.
 - To include the full metadata catalog, pass
   `min_market_cap_vnd=0&include_unknown_market_cap=true`. Unknown-cap rows
-  otherwise stay out of the response.
+  otherwise stay out of metadata and broad VN OHLCV responses.
+- Explicit `/tickers?symbol=TICKER&mode=vn` requests do not apply the default
+  cutoff. They can fetch a below-cutoff stock when its OHLCV data is stored.
 - Group labels are localized API labels: use
   `/tickers/group?mode=vn&lang=vi` for Vietnamese or `lang=en` for English.
   Treat labels as display names; do not assume they are stable IDs.
-- A direct `/tickers?symbol=TICKER&mode=vn&interval=1D` request is not
-  market-cap filtered. It still requires stored OHLCV for that symbol.
 - Catalog ingestion is independent of the metadata cutoff. Current production
   schedules daily data for all 1,519 currently listed VN stocks (Oct 24, 2026
   snapshot); hourly and minute ingestion is limited to selected liquid stocks.
