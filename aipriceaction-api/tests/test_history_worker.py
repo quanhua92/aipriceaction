@@ -102,6 +102,62 @@ def test_history_partition_walks_back_from_the_exclusive_cutoff():
     assert start < end
 
 
+def test_sjc_history_starts_before_its_latest_sqlite_quote(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    hot_floor = int(datetime(2023, 10, 25, tzinfo=UTC).timestamp())
+    target_start = int(datetime(2013, 10, 25, tzinfo=UTC).timestamp())
+    latest = int(datetime(2026, 10, 24, tzinfo=UTC).timestamp())
+    revision = "sjc-current-revision"
+    repo.put(
+        [
+            Candle(
+                "sjc",
+                "SJC-GOLD",
+                "1D",
+                latest,
+                99,
+                101,
+                98,
+                100,
+                1,
+                "sjc-quote",
+                revision,
+            )
+        ]
+    )
+    repo.configure_history_job(
+        "sjc", "SJC-GOLD", "1D", hot_floor, target_start, "sjc-quote", revision
+    )
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    worker.configuration = [{"source": "sjc", "symbol": "SJC-GOLD", "intervals": ["1D"]}]
+    monkeypatch.setattr(worker.policy, "floor", lambda _entry, _interval: hot_floor)
+
+    worker._ensure_jobs()
+
+    job = repo.history_job("sjc", "SJC-GOLD", "1D")
+    assert job["hot_cutoff"] == latest
+    assert job["cursor"] == latest
+    assert job["target_start"] == target_start
+
+
+def test_sjc_history_cursor_priority_preempts_bulk_queue(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    worker._jobs_initialized = True
+    jobs = [
+        {"source": "crypto", "status": "pending", "retry_at": 0},
+        {"source": "sjc", "status": "pending", "retry_at": 0},
+    ]
+    selected = []
+    monkeypatch.setattr(repo, "history_jobs", lambda: jobs)
+    monkeypatch.setattr(
+        worker, "_job_can_continue", lambda job: selected.append(job["source"]) or False
+    )
+
+    assert asyncio.run(worker.step())
+    assert selected == ["sjc"]
+
+
 def test_vci_minute_fallback_is_a_supported_active_history_provider(history_system):
     repo, archive, settings = history_system
     settings = replace(

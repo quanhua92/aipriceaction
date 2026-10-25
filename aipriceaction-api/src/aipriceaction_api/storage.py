@@ -647,6 +647,42 @@ class Repository:
             ).fetchone()
             return dict(current)
 
+    def advance_unstarted_history_cursor(self, source, symbol, interval, cursor):
+        """Move a pristine history job forward to its actual SQLite tail.
+
+        This is used when a source's live SQLite coverage is shorter than the
+        standard hot-retention window. Once any page is checkpointed, preserve
+        the durable cursor and let the worker finish that pass instead.
+        """
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            if (
+                not row
+                or row["page_count"]
+                or row["row_count"]
+                or row["batch_start"] is not None
+                or cursor <= row["cursor"]
+            ):
+                return False
+            pending = con.execute(
+                "SELECT 1 FROM history_pending_objects WHERE source=? AND symbol=? AND interval=? LIMIT 1",
+                (source, symbol, interval),
+            ).fetchone()
+            if pending:
+                return False
+            con.execute(
+                """UPDATE history_jobs SET cursor=?,status='pending',attempts=0,retry_at=0,
+                error=NULL,completed_at=NULL,updated_at=?
+                WHERE source=? AND symbol=? AND interval=?""",
+                (cursor, now, source, symbol, interval),
+            )
+            return True
+
     def history_job(self, source, symbol, interval):
         with self.connect() as con:
             row = con.execute(

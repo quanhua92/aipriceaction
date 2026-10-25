@@ -275,8 +275,16 @@ class HistoryWorker:
                             "Existing Parquet objects are awaiting provider-basis repair",
                         )
                     continue
-                hot_cutoff = self.policy.floor(entry, iv)
-                target_start = self._target_start(hot_cutoff, entry)
+                hot_floor = self.policy.floor(entry, iv)
+                target_start = self._target_start(hot_floor, entry)
+                hot_cutoff = hot_floor
+                if source == "sjc" and iv == "1D":
+                    # SJC's live worker retains only its latest quote in SQLite.
+                    # Archive everything before that quote, including the years
+                    # that the normal three-year hot window would otherwise skip.
+                    latest = self.repo.read(source, symbol, iv, limit=1)
+                    if latest:
+                        hot_cutoff = latest[-1].time
                 job = self.repo.configure_history_job(
                     source,
                     symbol,
@@ -286,6 +294,18 @@ class HistoryWorker:
                     state["provider"],
                     state["revision"],
                 )
+                if source == "sjc" and iv == "1D" and hot_cutoff > job["cursor"]:
+                    if self.repo.advance_unstarted_history_cursor(
+                        source, symbol, iv, hot_cutoff
+                    ):
+                        job = self.repo.history_job(source, symbol, iv)
+                        log.info(
+                            "SJC history cursor advanced to latest SQLite quote "
+                            "symbol=%s hot_cutoff=%s target_start=%s",
+                            symbol,
+                            hot_cutoff,
+                            target_start,
+                        )
                 if job["status"] in (
                     "waiting_series",
                     "waiting_rebase",
@@ -816,7 +836,10 @@ class HistoryWorker:
         ]
         if not jobs:
             return False
-        job = jobs[0]
+        # There is one SJC series, but it covers a long gap between the latest
+        # live quote and the historical cutoff. Let it drain before the broad
+        # multi-market archive queue.
+        job = next((item for item in jobs if item["source"] == "sjc"), jobs[0])
         if not self._job_can_continue(job):
             return True
         if job["batch_status"] == "csv":
