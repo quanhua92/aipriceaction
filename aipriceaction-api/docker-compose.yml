@@ -209,6 +209,7 @@ services:
     <<: *api-service
     environment:
       <<: *api-environment
+      HISTORY_WORKER_CONCURRENCY: ${HISTORY_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${HISTORY_PROVIDER_RPM:-5}
     command: ["aipa-api", "history-worker"]
     restart: unless-stopped

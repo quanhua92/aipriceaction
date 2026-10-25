@@ -20,6 +20,7 @@ from .workers import Worker
 log = logging.getLogger(__name__)
 
 HISTORY_LEASE = ("vn", "__HISTORY_WORKER__", "1D")
+HISTORY_SOURCE_ROTATION = ("sjc", "vn", "crypto", "yahoo")
 BINANCE_MINUTE_PAGE_SIZE = 50_000
 HANDOFF_FAILURES = 3
 RETRY_SECONDS = 300
@@ -65,7 +66,7 @@ def _market_values(row):
 
 
 class HistoryWorker:
-    """Fetch one provider page at a time; SQLite stores job/index metadata only."""
+    """Assign each task one ticker; keep its provider pages sequential."""
 
     def __init__(self, repo, settings, providers=None, archive=None):
         self.repo = repo
@@ -92,6 +93,10 @@ class HistoryWorker:
         self._jobs_initialized = False
         self._lease_lost = None
         self._next_manifest_retry = 0.0
+        self._ticker_claim_lock = asyncio.Lock()
+        self._archive_publish_lock = asyncio.Lock()
+        self._active_tickers = set()
+        self._next_source_index = 0
 
     def _configure(self):
         source, symbols, interval = self.scope
@@ -584,9 +589,10 @@ class HistoryWorker:
             job["source"], job["symbol"], job["interval"], job["batch_start"]
         )
         if objects:
-            await asyncio.to_thread(
-                self.archive.publish_prepared, objects, require_current=True
-            )
+            async with self._archive_publish_lock:
+                await asyncio.to_thread(
+                    self.archive.publish_prepared, objects, require_current=True
+                )
         rows = await asyncio.to_thread(
             self._read,
             job["source"],
@@ -824,22 +830,75 @@ class HistoryWorker:
         self.repo.set_adjustment_rebase(source, symbol, "failed", "No ready interval is available for rebase")
         return False
 
-    async def step(self):
-        if not self._jobs_initialized:
-            self._ensure_jobs()
-            self._jobs_initialized = True
+    def _ready_history_jobs(self, ticker=None):
         now = int(time.time())
         jobs = [
             job
             for job in self.repo.history_jobs()
             if job["status"] in ("pending", "retry", "coverage_gap") and job["retry_at"] <= now
         ]
-        if not jobs:
-            return False
-        # There is one SJC series, but it covers a long gap between the latest
-        # live quote and the historical cutoff. Let it drain before the broad
-        # multi-market archive queue.
-        job = next((item for item in jobs if item["source"] == "sjc"), jobs[0])
+        if ticker is not None:
+            jobs = [job for job in jobs if (job["source"], job["symbol"]) == ticker]
+        return jobs
+
+    async def _claim_next_ticker(self):
+        if not self._jobs_initialized:
+            self._ensure_jobs()
+            self._jobs_initialized = True
+        async with self._ticker_claim_lock:
+            jobs = self._ready_history_jobs()
+            available = []
+            seen = set()
+            for job in jobs:
+                ticker = (job["source"], job["symbol"])
+                if ticker not in self._active_tickers and ticker not in seen:
+                    available.append(ticker)
+                    seen.add(ticker)
+            if not available:
+                return None
+            for offset in range(len(HISTORY_SOURCE_ROTATION)):
+                source_index = (self._next_source_index + offset) % len(
+                    HISTORY_SOURCE_ROTATION
+                )
+                source = HISTORY_SOURCE_ROTATION[source_index]
+                ticker = next((item for item in available if item[0] == source), None)
+                if ticker is None:
+                    continue
+                self._active_tickers.add(ticker)
+                self._next_source_index = (source_index + 1) % len(HISTORY_SOURCE_ROTATION)
+                return ticker
+            return None
+
+    async def _release_ticker(self, ticker):
+        async with self._ticker_claim_lock:
+            self._active_tickers.discard(ticker)
+
+    async def _ticker_worker_loop(self, slot):
+        log.info(
+            "history ticker task started slot=%s concurrency=%s",
+            slot,
+            self.settings.history_worker_concurrency,
+        )
+        while not self._lease_lost.is_set():
+            ticker = await self._claim_next_ticker()
+            if ticker is None:
+                await asyncio.sleep(5)
+                continue
+            source, symbol = ticker
+            log.info("history ticker claimed slot=%s source=%s symbol=%s", slot, source, symbol)
+            try:
+                while not self._lease_lost.is_set():
+                    jobs = self._ready_history_jobs(ticker)
+                    if not jobs:
+                        break
+                    if not await self._process_job(jobs[0]):
+                        break
+                    await asyncio.sleep(self.settings.history_pause_seconds)
+            finally:
+                await self._release_ticker(ticker)
+                log.info("history ticker released slot=%s source=%s symbol=%s", slot, source, symbol)
+
+    async def _process_job(self, job):
         if not self._job_can_continue(job):
             return True
         if job["batch_status"] == "csv":
@@ -884,8 +943,20 @@ class HistoryWorker:
                 "provider_fetch" if isinstance(exc, HistoricalProviderError) else "page_prepare",
                 provider_failure=isinstance(exc, HistoricalProviderError),
             )
-            return True
         return True
+
+    async def step(self):
+        if not self._jobs_initialized:
+            self._ensure_jobs()
+            self._jobs_initialized = True
+        jobs = self._ready_history_jobs()
+        if not jobs:
+            return False
+        # There is one SJC series, but it covers a long gap between the latest
+        # live quote and the historical cutoff. Preserve its priority for
+        # bounded single-step runs; continuous runs use per-ticker source rotation.
+        job = next((item for item in jobs if item["source"] == "sjc"), jobs[0])
+        return await self._process_job(job)
 
     async def _tick_retention_archive(self):
         if time.monotonic() < self._next_archive_tick:
@@ -900,7 +971,8 @@ class HistoryWorker:
         # DailyArchive takes one eligibility snapshot and publishes its groups
         # sequentially. Rebuilding that entire snapshot once per object would
         # repeatedly scan every retained ticker and interval.
-        result = await asyncio.to_thread(self._maintenance.tick, max_objects=1)
+        async with self._archive_publish_lock:
+            result = await asyncio.to_thread(self._maintenance.tick, max_objects=1)
         if result and not result["complete"]:
             log.info(
                 "history retention archive progress day=%s objects=%s rows=%s complete=false",
@@ -936,10 +1008,11 @@ class HistoryWorker:
         self._lease_lost = asyncio.Event()
         heartbeat = asyncio.create_task(self._heartbeat_lease())
         count = 0
+        ticker_tasks = []
         try:
             log.info(
                 "history worker started owner=%s series=%s source=%s symbols=%s interval=%s "
-                "years=%s page_size=%s provider_rpm=%s",
+                "years=%s page_size=%s concurrency=%s provider_rpm=%s",
                 self.owner,
                 sum(len(entry["intervals"]) for entry in self.configuration),
                 source or "all",
@@ -947,41 +1020,77 @@ class HistoryWorker:
                 interval or "all",
                 self.settings.history_years,
                 self.settings.history_page_size,
+                self.settings.history_worker_concurrency,
                 self.settings.history_requests_per_minute,
             )
-            while True:
-                if self._lease_lost.is_set() or not self.repo.renew_live_lease(
-                    *HISTORY_LEASE, self.owner, lease=HISTORY_LEASE_SECONDS
-                ):
-                    raise DataError("Historical worker lost its single-flight lease")
-                if (
-                    time.monotonic() >= self._next_manifest_retry
-                    and self.repo.archive_manifest_is_dirty()
-                ):
-                    self._next_manifest_retry = time.monotonic() + 60
-                    try:
-                        await asyncio.to_thread(self.archive.publish_metadata)
-                    except Exception as exc:
-                        log.warning(
-                            "archive manifest dirty; history-worker retry failed error=%s",
-                            type(exc).__name__,
-                        )
-                if time.monotonic() >= self._next_catalog_refresh:
-                    self._configure()
-                    self._ensure_jobs()
-                    self._jobs_initialized = True
-                progressed = await self.step()
-                await self._tick_retention_archive()
-                if progressed:
-                    count += 1
-                    if once or cycles and count >= cycles:
+            self._ensure_jobs()
+            self._jobs_initialized = True
+            if once or cycles:
+                while True:
+                    if self._lease_lost.is_set() or not self.repo.renew_live_lease(
+                        *HISTORY_LEASE, self.owner, lease=HISTORY_LEASE_SECONDS
+                    ):
+                        raise DataError("Historical worker lost its single-flight lease")
+                    if (
+                        time.monotonic() >= self._next_manifest_retry
+                        and self.repo.archive_manifest_is_dirty()
+                    ):
+                        self._next_manifest_retry = time.monotonic() + 60
+                        try:
+                            await asyncio.to_thread(self.archive.publish_metadata)
+                        except Exception as exc:
+                            log.warning(
+                                "archive manifest dirty; history-worker retry failed error=%s",
+                                type(exc).__name__,
+                            )
+                    if time.monotonic() >= self._next_catalog_refresh:
+                        self._configure()
+                        self._ensure_jobs()
+                        self._jobs_initialized = True
+                    progressed = await self.step()
+                    await self._tick_retention_archive()
+                    if progressed:
+                        count += 1
+                        if once or cycles and count >= cycles:
+                            break
+                        await asyncio.sleep(self.settings.history_pause_seconds)
+                    else:
                         break
-                    await asyncio.sleep(self.settings.history_pause_seconds)
-                elif once or cycles:
-                    break
-                else:
-                    await asyncio.sleep(30)
+            else:
+                ticker_tasks = [
+                    asyncio.create_task(self._ticker_worker_loop(slot), name=f"history-ticker-{slot}")
+                    for slot in range(1, self.settings.history_worker_concurrency + 1)
+                ]
+                while True:
+                    if self._lease_lost.is_set():
+                        raise DataError("Historical worker lost its single-flight lease")
+                    if (
+                        time.monotonic() >= self._next_manifest_retry
+                        and self.repo.archive_manifest_is_dirty()
+                    ):
+                        self._next_manifest_retry = time.monotonic() + 60
+                        try:
+                            await asyncio.to_thread(self.archive.publish_metadata)
+                        except Exception as exc:
+                            log.warning(
+                                "archive manifest dirty; history-worker retry failed error=%s",
+                                type(exc).__name__,
+                            )
+                    if time.monotonic() >= self._next_catalog_refresh:
+                        self._configure()
+                        self._ensure_jobs()
+                        self._jobs_initialized = True
+                    await self._tick_retention_archive()
+                    for task in ticker_tasks:
+                        if task.done():
+                            await task
+                            raise DataError("Historical ticker task stopped unexpectedly")
+                    await asyncio.sleep(1)
         finally:
+            for task in ticker_tasks:
+                task.cancel()
+            if ticker_tasks:
+                await asyncio.gather(*ticker_tasks, return_exceptions=True)
             heartbeat.cancel()
             await asyncio.gather(heartbeat, return_exceptions=True)
             try:

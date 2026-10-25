@@ -119,6 +119,7 @@ class Settings:
     history_years: int = 10
     history_page_size: int = 500
     history_batch_rows: int = 1_000
+    history_worker_concurrency: int = 2
     history_requests_per_minute: int = 5
     history_pause_seconds: int = 1
     watchlist: Path = (
@@ -188,6 +189,7 @@ class Settings:
             "history_years": "HISTORY_YEARS",
             "history_page_size": "HISTORY_PAGE_SIZE",
             "history_batch_rows": "HISTORY_BATCH_ROWS",
+            "history_worker_concurrency": "HISTORY_WORKER_CONCURRENCY",
             "history_requests_per_minute": "HISTORY_PROVIDER_RPM",
             "history_pause_seconds": "HISTORY_PAUSE_SECONDS",
             "watchlist": "WATCHLIST_PATH",
@@ -288,6 +290,7 @@ class Settings:
             "history_years",
             "history_page_size",
             "history_batch_rows",
+            "history_worker_concurrency",
             "history_requests_per_minute",
             "history_pause_seconds",
             "cache_bytes",

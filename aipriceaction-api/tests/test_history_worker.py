@@ -158,6 +158,54 @@ def test_sjc_history_cursor_priority_preempts_bulk_queue(history_system, monkeyp
     assert selected == ["sjc"]
 
 
+@pytest.mark.asyncio
+async def test_history_tasks_claim_distinct_tickers(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    worker._jobs_initialized = True
+    jobs = [
+        {
+            "source": "sjc",
+            "symbol": "SJC-GOLD",
+            "interval": "1D",
+            "status": "pending",
+            "retry_at": 0,
+        },
+        {
+            "source": "vn",
+            "symbol": "HPG",
+            "interval": "1D",
+            "status": "pending",
+            "retry_at": 0,
+        },
+        {
+            "source": "vn",
+            "symbol": "HPG",
+            "interval": "1h",
+            "status": "pending",
+            "retry_at": 0,
+        },
+        {
+            "source": "vn",
+            "symbol": "VIC",
+            "interval": "1D",
+            "status": "pending",
+            "retry_at": 0,
+        },
+    ]
+    monkeypatch.setattr(repo, "history_jobs", lambda: jobs)
+
+    first = await worker._claim_next_ticker()
+    second = await worker._claim_next_ticker()
+
+    assert first == ("sjc", "SJC-GOLD")
+    assert second == ("vn", "HPG")
+    assert first != second
+
+    await worker._release_ticker(first)
+    await worker._release_ticker(second)
+
+
 def test_vci_minute_fallback_is_a_supported_active_history_provider(history_system):
     repo, archive, settings = history_system
     settings = replace(
