@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import math
 import random
 import time
 from collections import Counter
@@ -811,6 +812,7 @@ class Providers:
         scan_days = min(180, max(14, needed * 3))
         scanned_days = 0
         no_quote_days = 0
+        fallback_branches = Counter()
         for _ in range(scan_days):
             scanned_days += 1
             payload = await self.request(
@@ -832,18 +834,42 @@ class Providers:
                 if len(rows) >= needed:
                     break
                 continue
-            if not isinstance(data, list) or any(
-                not isinstance(record, dict) for record in data
-            ):
+            if not isinstance(data, list):
                 raise DataError(f"SJC returned invalid quote records for {day}")
-            records = [r for r in data if r.get("BranchName") == "Hồ Chí Minh"]
-            if not records:
-                raise DataError(f"SJC Hồ Chí Minh branch missing for {day}")
-            record = records[0]
-            try:
-                buy, sell = float(record["BuyValue"]), float(record["SellValue"])
-            except (KeyError, TypeError, ValueError) as exc:
-                raise DataError(f"SJC quote values invalid for {day}") from exc
+            valid_records = []
+            for record in data:
+                if (
+                    not isinstance(record, dict)
+                    or not isinstance(record.get("BranchName"), str)
+                    or not record["BranchName"].strip()
+                ):
+                    continue
+                try:
+                    buy = float(record["BuyValue"])
+                    sell = float(record["SellValue"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if (
+                    math.isfinite(buy)
+                    and math.isfinite(sell)
+                    and buy > 0
+                    and sell >= buy
+                ):
+                    valid_records.append((record, buy, sell))
+            selected = next(
+                (
+                    candidate
+                    for candidate in valid_records
+                    if candidate[0]["BranchName"] == "Hồ Chí Minh"
+                ),
+                None,
+            )
+            if selected is None and valid_records:
+                selected = valid_records[0]
+                fallback_branches[selected[0]["BranchName"]] += 1
+            if selected is None:
+                raise DataError(f"SJC returned no valid branch quotes for {day}")
+            record, buy, sell = selected
             mid = (buy + sell) / 2
             rows.append(
                 Candle(
@@ -862,6 +888,12 @@ class Providers:
             day -= timedelta(days=1)
             if len(rows) >= needed:
                 break
+        if fallback_branches:
+            log.warning(
+                "SJC preferred branch unavailable before=%s fallback_branches=%s",
+                before,
+                json.dumps(dict(fallback_branches), ensure_ascii=False, sort_keys=True),
+            )
         rows.sort(key=lambda r: r.time)
         rows = [replace(r, open=rows[i - 1].close) if i else r for i, r in enumerate(rows)]
         page = self.normalize(rows, before, requested, "sjc-quote")
