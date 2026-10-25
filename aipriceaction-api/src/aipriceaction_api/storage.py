@@ -2598,6 +2598,33 @@ class Repository:
             self.bump(con)
             return True
 
+    def cancel_empty_bootstrap(self, source, symbol, interval, reason):
+        """Cancel an unleased bootstrap that has no staged page to preserve."""
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            state = con.execute(
+                "SELECT 1 FROM series WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            job = con.execute(
+                """SELECT id FROM jobs WHERE source=? AND symbol=? AND interval=?
+                AND kind='bootstrap' AND status IN ('pending','running') AND lease_until<=?
+                AND NOT EXISTS (SELECT 1 FROM staging WHERE staging.job_id=jobs.id)""",
+                (source, symbol, interval, now),
+            ).fetchone()
+            if state or not job:
+                return False
+            changed = con.execute(
+                """UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,
+                error=?,updated_at=? WHERE id=? AND status IN ('pending','running')
+                AND lease_until<=?""",
+                (reason[:500], time.time_ns(), job["id"], now),
+            ).rowcount
+            if changed:
+                self.bump(con)
+            return bool(changed)
+
     def claim_job(self, owner, lease=120, allowed=None):
         now = int(time.time())
         if allowed is not None and not allowed:
@@ -2823,6 +2850,27 @@ class Repository:
                     job["lease_owner"],
                 ),
             )
+
+    def cancel_leased_job(self, job, reason):
+        """Cancel exactly the currently leased job after a deliberate handoff."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            row = con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone()
+            if (
+                not row
+                or row["status"] != "running"
+                or row["lease_owner"] != job.get("lease_owner")
+                or row["revision"] != job["revision"]
+                or row["lease_until"] < int(time.time())
+            ):
+                raise DataError("Job lease expired or superseded before cancellation")
+            con.execute("DELETE FROM staging WHERE job_id=?", (job["id"],))
+            con.execute(
+                """UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,
+                error=?,updated_at=? WHERE id=?""",
+                (reason[:500], time.time_ns(), job["id"]),
+            )
+            self.bump(con)
 
     def schedule(self, source, symbol, interval, when):
         col = {"1D": "next_1d", "1h": "next_1h", "1m": "next_1m"}[interval]

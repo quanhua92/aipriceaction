@@ -165,7 +165,15 @@ class Providers:
         ]
 
     async def request(
-        self, provider, url, params=None, referer=None, data=None, vn=False, json_body=None
+        self,
+        provider,
+        url,
+        params=None,
+        referer=None,
+        data=None,
+        vn=False,
+        json_body=None,
+        user_agent=None,
     ):
         if data is not None and json_body is not None:
             raise DataError("Cannot combine form and JSON request bodies", 400)
@@ -193,13 +201,18 @@ class Providers:
                             "Accept": "application/json, text/plain, */*",
                         },
                     )
+                headers = {}
+                if referer:
+                    headers["Referer"] = referer
+                if user_agent:
+                    headers["User-Agent"] = user_agent
                 response = await client.request(
                     "POST" if data is not None or json_body is not None else "GET",
                     url,
                     params=params,
                     data=data,
                     json=json_body,
-                    headers={"Referer": referer} if referer else None,
+                    headers=headers or None,
                 )
                 if provider == "yahoo" and response.status_code == 404:
                     try:
@@ -786,21 +799,51 @@ class Providers:
         if iv != "1D" or symbol != "SJC-GOLD":
             raise DataError("SJC supports SJC-GOLD daily quotes only")
         # The upstream endpoint provides dated quotes, not trade candles. Mark
-        # provider explicitly and preserve the legacy quote-derived representation.
+        # provider explicitly and preserve Rust's quote-derived representation.
+        # Scan calendar dates because weekends and market holidays have no quote.
         day = datetime.fromtimestamp(before - 1, UTC).date()
         rows = []
-        for _ in range(min(count + 1, 30)):
+        requested = max(1, int(count))
+        # A one-candle live read needs only today's quote. Historical pages need
+        # one extra earlier quote so the oldest returned candle gets yesterday's
+        # midpoint as its synthetic open, matching Rust's CSV import algorithm.
+        needed = requested if requested == 1 else requested + 1
+        scan_days = min(180, max(14, needed * 3))
+        scanned_days = 0
+        no_quote_days = 0
+        for _ in range(scan_days):
+            scanned_days += 1
             payload = await self.request(
                 "sjc",
                 "https://sjc.com.vn/GoldPrice/Services/PriceService.ashx",
                 referer="https://sjc.com.vn/",
                 data={"method": "GetSJCGoldPriceByDate", "toDate": day.strftime("%d/%m/%Y")},
+                user_agent=(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36"
+                ),
             )
-            records = [r for r in payload.get("data", []) if r.get("BranchName") == "Hồ Chí Minh"]
-            if not payload.get("success") or not records:
-                raise DataError(f"SJC quote unavailable for {day}")
+            if not isinstance(payload, dict):
+                raise DataError(f"SJC returned an invalid response for {day}")
+            data = payload.get("data", [])
+            if not payload.get("success") or not data:
+                no_quote_days += 1
+                day -= timedelta(days=1)
+                if len(rows) >= needed:
+                    break
+                continue
+            if not isinstance(data, list) or any(
+                not isinstance(record, dict) for record in data
+            ):
+                raise DataError(f"SJC returned invalid quote records for {day}")
+            records = [r for r in data if r.get("BranchName") == "Hồ Chí Minh"]
+            if not records:
+                raise DataError(f"SJC Hồ Chí Minh branch missing for {day}")
             record = records[0]
-            buy, sell = float(record["BuyValue"]), float(record["SellValue"])
+            try:
+                buy, sell = float(record["BuyValue"]), float(record["SellValue"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise DataError(f"SJC quote values invalid for {day}") from exc
             mid = (buy + sell) / 2
             rows.append(
                 Candle(
@@ -817,9 +860,22 @@ class Providers:
                 )
             )
             day -= timedelta(days=1)
+            if len(rows) >= needed:
+                break
         rows.sort(key=lambda r: r.time)
         rows = [replace(r, open=rows[i - 1].close) if i else r for i, r in enumerate(rows)]
-        return self.normalize(rows, before, count, "sjc-quote")
+        page = self.normalize(rows, before, requested, "sjc-quote")
+        log.info(
+            "SJC quote page before=%s requested=%s scanned_days=%s no_quote_days=%s "
+            "rows=%s oldest=%s",
+            before,
+            requested,
+            scanned_days,
+            no_quote_days,
+            len(page.rows),
+            page.rows[0].time if page.rows else None,
+        )
+        return page
 
     async def page(
         self,

@@ -220,6 +220,20 @@ class Worker:
                                 )
                             )
                 else:
+                    if entry["source"] == "sjc" and iv == "1D":
+                        cancelled = self.repo.cancel_empty_bootstrap(
+                            "sjc",
+                            entry["symbol"],
+                            iv,
+                            "SJC now seeds the live quote directly; cold history belongs to the history worker",
+                        )
+                        if cancelled:
+                            log.info(
+                                "bootstrap cancelled source=sjc symbol=%s interval=1D "
+                                "reason=cold_history_worker",
+                                entry["symbol"],
+                            )
+                        continue
                     retry_at = self.repo.no_data_retry_at(
                         entry["source"], entry["symbol"], iv
                     )
@@ -254,6 +268,21 @@ class Worker:
     async def _repair_page(self, job):
         before = job["cursor"] or int(time.time()) + 1
         try:
+            if (
+                job["source"] == "sjc"
+                and job["kind"] == "bootstrap"
+                and self.repo.state("sjc", job["symbol"], job["interval"])
+            ):
+                self.repo.cancel_leased_job(
+                    job,
+                    "SJC live quote is seeded separately; cold history belongs to the history worker",
+                )
+                log.info(
+                    "bootstrap cancelled source=sjc symbol=%s interval=%s reason=live_seed_ready",
+                    job["symbol"],
+                    job["interval"],
+                )
+                return 0
             entry = next(
                 (
                     entry
@@ -619,6 +648,52 @@ class Worker:
             )
             return 0
 
+    async def _seed_sjc(self, entry):
+        """Create the first live SJC candle without importing a legacy CSV."""
+        page = await self.providers.page(
+            "sjc",
+            entry["symbol"],
+            "1D",
+            before=int(time.time()) + 1,
+            count=1,
+            provider="sjc-quote",
+        )
+        if not page.rows:
+            reason = "SJC has no available quote in the provider scan window"
+            self.repo.finding("sjc", entry["symbol"], "1D", "provider_failure", reason)
+            log.warning("SJC live seed unavailable symbol=%s", entry["symbol"])
+            return 0
+        row = replace(page.rows[-1], revision=uuid.uuid4().hex)
+        self.repo.put([row])
+        await asyncio.to_thread(
+            publish_worker_candles, self.redis_client, self.settings, [row]
+        )
+        if self.settings.public_export_enabled:
+            try:
+                result = await asyncio.to_thread(
+                    self._publish_public_candles, "sjc", entry["symbol"], "1D", [row]
+                )
+                if result and result["objects"]:
+                    log.info(
+                        "public CSV export source=sjc symbol=%s interval=1D objects=%s uploaded=%s",
+                        entry["symbol"],
+                        result["objects"],
+                        result["uploaded"],
+                    )
+            except Exception as exc:
+                log.warning(
+                    "public CSV export failed source=sjc symbol=%s interval=1D error=%s",
+                    entry["symbol"],
+                    type(exc).__name__,
+                )
+        log.info(
+            "SJC live seed ready symbol=%s date=%s provider=%s",
+            entry["symbol"],
+            time.strftime("%Y-%m-%d", time.gmtime(row.time)),
+            page.provider,
+        )
+        return 1
+
     async def _sync(self, entry, iv):
         started = asyncio.get_running_loop().time()
         source, symbol = entry["source"], entry["symbol"]
@@ -626,9 +701,14 @@ class Worker:
             return 0
         attempt = None
         cooldown_until = None
+        failed = False
         try:
             state = self.repo.state(source, symbol, iv)
             if not state:
+                if source == "sjc" and iv == "1D":
+                    seeded = await self._seed_sjc(entry)
+                    failed = not seeded
+                    return seeded
                 retry_at = self.repo.no_data_retry_at(source, symbol, iv)
                 if retry_at is not None:
                     cooldown_until = retry_at
@@ -664,7 +744,7 @@ class Worker:
             hourly_range = self.repo.snapshot_hourly_range(state)
             request_policy = {"yahoo_hourly_range": hourly_range} if hourly_range else {}
             overlap = latest
-            count = 40
+            count = 1 if source == "sjc" else 40
             step = {"1D": 86400, "1h": 3600, "1m": 60}[iv]
             tail_times = {latest[-1].time} if latest else set()
             if source == "yahoo" and iv in ("1h", "1m") and latest:
@@ -836,11 +916,28 @@ class Worker:
             # replies ending before the published latest candle.
             if latest and page.rows[-1].time < latest[-1].time:
                 raise DataError("Provider recent tail ends before published latest candle")
-            rows = [
-                replace(r, revision=state["revision"])
-                for r in page.rows
-                if r.time >= self.floor(entry, iv)
-            ]
+            if source == "sjc":
+                quote = page.rows[-1]
+                previous = next((row for row in latest if row.time == quote.time), None)
+                if previous:
+                    quote = replace(
+                        quote,
+                        open=previous.open,
+                        high=max(previous.high, quote.high),
+                        low=min(previous.low, quote.low),
+                        volume=previous.volume,
+                    )
+                rows = (
+                    [replace(quote, revision=state["revision"])]
+                    if quote.time >= self.floor(entry, iv)
+                    else []
+                )
+            else:
+                rows = [
+                    replace(r, revision=state["revision"])
+                    for r in page.rows
+                    if r.time >= self.floor(entry, iv)
+                ]
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
@@ -901,6 +998,7 @@ class Worker:
                     self.repo.finding(source, symbol, iv, "historical_probe_failure", reason)
             return len(rows)
         except Exception as exc:
+            failed = True
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
             log.log(
                 logging.WARNING if isinstance(exc, DataError) else logging.ERROR,
@@ -919,6 +1017,7 @@ class Worker:
             self.repo.finding(source, symbol, iv, "provider_failure", reason)
             return 0
         except asyncio.CancelledError:
+            failed = True
             if attempt is not None:
                 self.repo.fail_source_check(
                     source, symbol, iv, attempt, "Provider update interrupted or timed out"
@@ -927,15 +1026,20 @@ class Worker:
         finally:
             # Bounded cooldown also prevents one unavailable provider monopolizing
             # the loop. Other tickers remain independently scheduled.
-            self.repo.schedule(
-                source,
-                symbol,
-                iv,
-                max(
+            now = int(time.time())
+            if source == "sjc" and iv == "1D":
+                if failed:
+                    next_sync = max(cooldown_until or 0, now + 60)
+                else:
+                    utc = time.gmtime(now)
+                    delay = 300 if utc.tm_wday < 5 and 2 <= utc.tm_hour < 8 else 1800
+                    next_sync = now + delay
+            else:
+                next_sync = max(
                     cooldown_until or 0,
-                    int(time.time()) + {"1D": 3600, "1h": 900, "1m": 60}[iv],
-                ),
-            )
+                    now + {"1D": 3600, "1h": 900, "1m": 60}[iv],
+                )
+            self.repo.schedule(source, symbol, iv, next_sync)
             self.repo.live_release(source, symbol, iv, self.owner)
 
     async def sentinel(self, entry, state):
