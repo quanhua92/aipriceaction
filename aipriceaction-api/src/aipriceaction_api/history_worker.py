@@ -15,6 +15,7 @@ from .history import History
 from .maintenance import DailyArchive
 from .providers import Providers, vn_provider_order
 from .public_csv import daily_key, period_bounds, plan_candles, publish_object, yearly_key
+from .storage import MAX_HISTORY_FAILURES
 from .workers import Worker
 
 log = logging.getLogger(__name__)
@@ -23,8 +24,8 @@ HISTORY_LEASE = ("vn", "__HISTORY_WORKER__", "1D")
 HISTORY_SOURCE_ROTATION = ("sjc", "vn", "crypto", "yahoo")
 BINANCE_MINUTE_PAGE_SIZE = 50_000
 HANDOFF_FAILURES = 3
-RETRY_SECONDS = 300
-COVERAGE_RECHECK_SECONDS = 30 * 24 * 60 * 60
+RETRY_BASE_SECONDS = 30 * 60
+RETRY_MAX_SECONDS = 60 * 60
 HISTORY_LEASE_SECONDS = 180
 
 
@@ -238,6 +239,14 @@ class HistoryWorker:
             for iv in entry["intervals"]:
                 state = self.repo.state(source, symbol, iv)
                 existing = self.repo.history_job(source, symbol, iv)
+                if existing and existing["status"] == "exhausted":
+                    if (
+                        not state
+                        or state["status"] != "ready"
+                        or (state["provider"], state["revision"])
+                        == (existing["provider"], existing["revision"])
+                    ):
+                        continue
                 if not state or state["status"] != "ready":
                     if existing:
                         self.repo.set_history_job_status(
@@ -328,7 +337,7 @@ class HistoryWorker:
                         "provider_limit",
                         "Yahoo intraday history does not extend before its configured hot cutoff",
                     )
-                elif job["cursor"] <= job["target_start"]:
+                elif job["status"] != "exhausted" and job["cursor"] <= job["target_start"]:
                     self.repo.set_history_job_status(source, symbol, iv, "complete")
 
     def _route_delta(self, before):
@@ -757,23 +766,27 @@ class HistoryWorker:
                 "Waiting for the live provider-basis repair before restarting cold history",
             )
             return
-        terminal_gap = coverage_gap and (
+        coverage_gap_status = coverage_gap and (
             job["source"] != "vn" or job["attempts"] + 1 >= HANDOFF_FAILURES
         )
-        retry_at = int(time.time()) + (
-            COVERAGE_RECHECK_SECONDS if terminal_gap else RETRY_SECONDS
-        )
-        self.repo.fail_history_job(
+        saved = self.repo.fail_history_job(
             job["source"],
             job["symbol"],
             job["interval"],
             exc,
-            retry_at,
-            blocked=terminal_gap,
+            blocked=coverage_gap_status,
+            max_failures=MAX_HISTORY_FAILURES,
+            retry_base_seconds=RETRY_BASE_SECONDS,
+            retry_max_seconds=RETRY_MAX_SECONDS,
         )
+        failures = saved["failure_count"] if saved else job.get("failure_count", 0) + 1
+        attempts = saved["attempts"] if saved else job["attempts"] + 1
+        status = saved["status"] if saved else "unknown"
+        retry_at = saved["retry_at"] if saved else 0
         log.warning(
             "history step failed stage=%s job_id=%s source=%s symbol=%s interval=%s "
-            "provider=%s before=%s target_start=%s retry_at=%s reason=%s",
+            "provider=%s before=%s target_start=%s failures=%s/%s retry_attempts=%s "
+            "status=%s retry_at=%s reason=%s",
             stage,
             job["job_id"],
             job["source"],
@@ -782,6 +795,10 @@ class HistoryWorker:
             job["provider"],
             job.get("batch_cursor") or job["cursor"],
             job["target_start"],
+            failures,
+            MAX_HISTORY_FAILURES,
+            attempts,
+            status,
             retry_at,
             str(exc),
             exc_info=not isinstance(exc, (DataError, HistoricalProviderError)),
@@ -835,7 +852,9 @@ class HistoryWorker:
         jobs = [
             job
             for job in self.repo.history_jobs()
-            if job["status"] in ("pending", "retry", "coverage_gap") and job["retry_at"] <= now
+            if job["status"] in ("pending", "retry", "coverage_gap")
+            and job["retry_at"] <= now
+            and job.get("failure_count", 0) < MAX_HISTORY_FAILURES
         ]
         if ticker is not None:
             jobs = [job for job in jobs if (job["source"], job["symbol"]) == ticker]

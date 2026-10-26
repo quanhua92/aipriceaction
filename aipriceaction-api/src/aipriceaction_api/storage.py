@@ -30,6 +30,7 @@ MAJOR_OFF_HOURS = (
 _ADOPTION_NOT_LOADED = object()
 _SQLITE_CACHE_SIZE_KIB = 32 * 1024
 _SQLITE_MMAP_SIZE_BYTES = 256 * 1024 * 1024
+MAX_HISTORY_FAILURES = 10
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
@@ -101,6 +102,7 @@ CREATE TABLE IF NOT EXISTS history_jobs(
  hot_cutoff INTEGER NOT NULL, target_start INTEGER NOT NULL, cursor INTEGER NOT NULL,
  provider TEXT NOT NULL, revision TEXT NOT NULL,
  status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0,
+ failure_count INTEGER NOT NULL DEFAULT 0,
  retry_at INTEGER NOT NULL DEFAULT 0, error TEXT,
  batch_start INTEGER, batch_end INTEGER, batch_cursor INTEGER,
  batch_status TEXT, csv_keys TEXT NOT NULL DEFAULT '[]', csv_cursor INTEGER NOT NULL DEFAULT 0,
@@ -339,7 +341,6 @@ CREATE TRIGGER IF NOT EXISTS volume_corrections_version_delete AFTER DELETE ON v
  VALUES (OLD.source,OLD.symbol,OLD.interval,1)
  ON CONFLICT(source,symbol,interval) DO UPDATE SET version=version+1;
 END;
-PRAGMA user_version=4;
 """
 COLUMNS = tuple(f.name for f in fields(Candle))
 MARKET_COLUMNS = COLUMNS[4:-1]
@@ -383,11 +384,29 @@ class Repository:
     def initialize(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as con:
-            if con.execute("PRAGMA user_version").fetchone()[0] > 4:
+            schema_version = con.execute("PRAGMA user_version").fetchone()[0]
+            if schema_version > 5:
                 raise DataError("Database schema is newer than this application")
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
             con.execute("BEGIN IMMEDIATE")
+            history_columns = {
+                row[1] for row in con.execute("PRAGMA table_info(history_jobs)")
+            }
+            if "failure_count" not in history_columns:
+                con.execute(
+                    "ALTER TABLE history_jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0"
+                )
+            con.execute(
+                "UPDATE history_jobs SET failure_count=attempts "
+                "WHERE failure_count=0 AND attempts>0"
+            )
+            con.execute(
+                """UPDATE history_jobs SET status='exhausted',retry_at=0
+                WHERE failure_count>=? AND status NOT IN ('complete','provider_limit','exhausted')""",
+                (MAX_HISTORY_FAILURES,),
+            )
+            con.execute("PRAGMA user_version=5")
             health_stats_version = con.execute(
                 "SELECT value FROM meta WHERE key='health_stats_version'"
             ).fetchone()[0]
@@ -604,7 +623,8 @@ class Repository:
                     )
                     con.execute(
                         """UPDATE history_jobs SET hot_cutoff=?,target_start=?,cursor=?,
-                        provider=?,revision=?,status='pending',attempts=0,retry_at=0,error=NULL,
+                        provider=?,revision=?,status='pending',attempts=0,failure_count=0,
+                        retry_at=0,error=NULL,
                         batch_start=NULL,batch_end=NULL,batch_cursor=NULL,batch_status=NULL,
                         csv_keys='[]',csv_cursor=0,completed_at=NULL,updated_at=?
                         WHERE source=? AND symbol=? AND interval=?""",
@@ -623,7 +643,7 @@ class Repository:
                 else:
                     status = "pending" if extended and row["status"] == "complete" else row["status"]
                     cursor = row["cursor"]
-                    if cursor <= new_target:
+                    if cursor <= new_target and status != "exhausted":
                         status = "complete"
                     con.execute(
                         """UPDATE history_jobs SET hot_cutoff=?,target_start=?,status=?,
@@ -807,15 +827,43 @@ class Repository:
                 (cursor, cursor, cursor, now, now, source, symbol, interval),
             )
 
-    def fail_history_job(self, source, symbol, interval, error, retry_at, *, blocked=False):
+    def fail_history_job(
+        self,
+        source,
+        symbol,
+        interval,
+        error,
+        *,
+        blocked=False,
+        max_failures=MAX_HISTORY_FAILURES,
+        retry_base_seconds=30 * 60,
+        retry_max_seconds=60 * 60,
+    ):
         now = int(time.time())
         with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            current = con.execute(
+                "SELECT attempts,failure_count FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            if not current:
+                return None
+            attempts = current["attempts"] + 1
+            failure_count = current["failure_count"] + 1
+            exhausted = failure_count >= max_failures
+            status = "exhausted" if exhausted else "coverage_gap" if blocked else "retry"
+            retry_delay = min(
+                retry_base_seconds * 2 ** min(failure_count - 1, 20), retry_max_seconds
+            )
             con.execute(
-                """UPDATE history_jobs SET status=?,attempts=attempts+1,retry_at=?,error=?,updated_at=?
+                """UPDATE history_jobs SET status=?,attempts=?,failure_count=?,retry_at=?,
+                error=?,updated_at=?,completed_at=NULL
                 WHERE source=? AND symbol=? AND interval=?""",
                 (
-                    "coverage_gap" if blocked else "retry",
-                    retry_at,
+                    status,
+                    attempts,
+                    failure_count,
+                    0 if exhausted else now + retry_delay,
                     str(error)[:1000],
                     now,
                     source,
@@ -823,6 +871,11 @@ class Repository:
                     interval,
                 ),
             )
+            saved = con.execute(
+                "SELECT * FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, interval),
+            ).fetchone()
+            return dict(saved)
 
     def set_history_job_status(self, source, symbol, interval, status, error=None):
         now = int(time.time())

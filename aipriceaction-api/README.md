@@ -59,8 +59,15 @@ at a time. Its request budget does not pause the live workers. Use
 Follow provider, page, Parquet, and CSV progress with
 `docker compose logs -f worker-history`. To inspect one ticker, run
 `docker compose exec worker-history aipa-api history-status --source vn --symbol VCB --interval 1D`.
-`coverage_gap` means older candles remain unverified; `provider_limit` means the
-provider's history boundary was reached.
+Failed cold jobs wait 30 minutes after the first failure and one hour after the
+second and later failures. Ten failed attempts for the same provider and
+revision mark the job `exhausted`; the worker will not retry it again on that
+basis. Successful pages do not reset this total. A new provider or revision
+basis starts a fresh pass. During upgrade, the last recorded retry streak is
+carried forward; failures from before an earlier successful page cannot be
+reconstructed. A verified VN provider handoff waits for live-series repair and
+does not spend a failure attempt. `coverage_gap` means older candles remain
+unverified; `provider_limit` means the provider's history boundary was reached.
 Both API replicas and all workers share the same SQLite data directory. SQLite
 is the source of truth; each API process keeps its own bounded in-memory caches.
 Nginx owns host port `8899` and localhost port `3003`, and sends requests to

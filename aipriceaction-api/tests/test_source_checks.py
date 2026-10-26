@@ -197,8 +197,8 @@ def test_schema_upgrade_and_backup_preserve_checks(system, tmp_path):
     restored.initialize()
     assert restored.status()["series"] == repo.status()["series"]
     with restored.connect() as con:
-        assert con.execute("PRAGMA user_version").fetchone()[0] == 4
-        con.execute("PRAGMA user_version=5")
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 5
+        con.execute("PRAGMA user_version=6")
     with pytest.raises(DataError, match="newer"):
         restored.initialize()
 

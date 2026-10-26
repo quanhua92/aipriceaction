@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -9,7 +10,14 @@ from aipriceaction_api.cli import _export_public_candles
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle
 from aipriceaction_api.history import History
-from aipriceaction_api.history_worker import HistoryWorker, _partition
+from aipriceaction_api.history_worker import (
+    MAX_HISTORY_FAILURES,
+    RETRY_BASE_SECONDS,
+    RETRY_MAX_SECONDS,
+    HistoricalProviderError,
+    HistoryWorker,
+    _partition,
+)
 from aipriceaction_api.providers import Page
 from aipriceaction_api.storage import Repository
 
@@ -221,13 +229,209 @@ def test_vci_minute_fallback_is_a_supported_active_history_provider(history_syst
 def test_history_gate_resume_clears_stale_retry_delay(history_system):
     repo, _archive, _settings = history_system
     repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
-    repo.fail_history_job("crypto", "BTCUSDT", "1D", "temporary", 9999999999)
+    repo.fail_history_job("crypto", "BTCUSDT", "1D", "temporary")
     repo.set_history_job_status("crypto", "BTCUSDT", "1D", "waiting_series")
     repo.set_history_job_status("crypto", "BTCUSDT", "1D", "pending")
     job = repo.history_job("crypto", "BTCUSDT", "1D")
     assert job["status"] == "pending"
     assert job["retry_at"] == 0
     assert job["attempts"] == 0
+    assert job["failure_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_history_failures_back_off_and_exhaust_on_tenth_attempt(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    now = 1_800_000_000
+    repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    monkeypatch.setattr("aipriceaction_api.history_worker.time.time", lambda: now)
+
+    for failed_attempt in range(1, MAX_HISTORY_FAILURES + 1):
+        await worker._record_failure(
+            repo.history_job("crypto", "BTCUSDT", "1D"),
+            HistoricalProviderError("temporary upstream failure"),
+            "provider_fetch",
+        )
+        saved = repo.history_job("crypto", "BTCUSDT", "1D")
+        assert saved["failure_count"] == failed_attempt
+        if failed_attempt == MAX_HISTORY_FAILURES:
+            assert saved["status"] == "exhausted"
+            assert saved["retry_at"] == 0
+        else:
+            assert saved["status"] == "retry"
+            expected_delay = min(
+                RETRY_BASE_SECONDS * 2 ** (failed_attempt - 1), RETRY_MAX_SECONDS
+            )
+            assert saved["retry_at"] == now + expected_delay
+            repo.checkpoint_history_page(
+                saved,
+                batch_start=10,
+                batch_end=100,
+                batch_cursor=90 - failed_attempt,
+                objects=[],
+                row_count=1,
+            )
+            progressed = repo.history_job("crypto", "BTCUSDT", "1D")
+            assert progressed["attempts"] == 0
+            assert progressed["failure_count"] == failed_attempt
+
+    assert worker._ready_history_jobs() == []
+
+
+@pytest.mark.asyncio
+async def test_coverage_gap_failures_also_exhaust_after_ten(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    now = 1_800_000_000
+    repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    monkeypatch.setattr("aipriceaction_api.history_worker.time.time", lambda: now)
+
+    for failed_attempt in range(1, MAX_HISTORY_FAILURES + 1):
+        await worker._record_failure(
+            repo.history_job("crypto", "BTCUSDT", "1D"),
+            HistoricalProviderError(
+                "Provider returned no candles before 100; coverage remains unverified"
+            ),
+            "provider_fetch",
+        )
+        saved = repo.history_job("crypto", "BTCUSDT", "1D")
+        if failed_attempt == MAX_HISTORY_FAILURES:
+            assert saved["status"] == "exhausted"
+            assert saved["retry_at"] == 0
+        else:
+            assert saved["status"] == "coverage_gap"
+            expected_delay = min(
+                RETRY_BASE_SECONDS * 2 ** (failed_attempt - 1), RETRY_MAX_SECONDS
+            )
+            assert saved["retry_at"] == now + expected_delay
+
+
+@pytest.mark.asyncio
+async def test_future_retry_does_not_block_another_source(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    now = 1_800_000_000
+    monkeypatch.setattr("aipriceaction_api.history_worker.time.time", lambda: now)
+    repo.configure_history_job("vn", "A32", "1D", 100, 10, "vps", "vn-rev")
+    repo.fail_history_job("vn", "A32", "1D", "temporary")
+    repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "crypto-rev")
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    worker._jobs_initialized = True
+
+    claimed = await worker._claim_next_ticker()
+
+    assert claimed == ("crypto", "BTCUSDT")
+    assert ("vn", "A32") not in [
+        (job["source"], job["symbol"]) for job in worker._ready_history_jobs()
+    ]
+    await worker._release_ticker(claimed)
+    monkeypatch.setattr("aipriceaction_api.history_worker.time.time", lambda: now + 1800)
+    assert ("vn", "A32") in [
+        (job["source"], job["symbol"]) for job in worker._ready_history_jobs()
+    ]
+    repo.fail_history_job("vn", "A32", "1D", "second failure")
+    monkeypatch.setattr(
+        "aipriceaction_api.history_worker.time.time", lambda: now + 1800 + 3599
+    )
+    assert ("vn", "A32") not in [
+        (job["source"], job["symbol"]) for job in worker._ready_history_jobs()
+    ]
+    monkeypatch.setattr(
+        "aipriceaction_api.history_worker.time.time", lambda: now + 1800 + 3600
+    )
+    assert ("vn", "A32") in [
+        (job["source"], job["symbol"]) for job in worker._ready_history_jobs()
+    ]
+
+
+def test_exhausted_history_job_stays_terminal_for_same_basis(history_system, monkeypatch):
+    repo, archive, settings = history_system
+    hot_cutoff, target_start = 1_800_000_000, 1_500_000_000
+    repo.configure_history_job(
+        "crypto", "BTCUSDT", "1D", hot_cutoff, target_start, "binance", "rev"
+    )
+    with repo.connect() as con:
+        con.execute(
+            "INSERT INTO series(source,symbol,interval,provider,revision,status) "
+            "VALUES ('crypto','BTCUSDT','1D','binance','rev','ready')"
+        )
+    for _ in range(MAX_HISTORY_FAILURES):
+        repo.fail_history_job("crypto", "BTCUSDT", "1D", "persistent failure")
+
+    worker = HistoryWorker(repo, settings, providers=OnePageProvider([]), archive=archive)
+    worker.configuration = [{"source": "crypto", "symbol": "BTCUSDT", "intervals": ["1D"]}]
+    monkeypatch.setattr(worker.policy, "floor", lambda _entry, _interval: hot_cutoff)
+    monkeypatch.setattr(worker, "_target_start", lambda _hot, _entry: target_start)
+    worker._ensure_jobs()
+
+    saved = repo.history_job("crypto", "BTCUSDT", "1D")
+    assert saved["status"] == "exhausted"
+    assert saved["failure_count"] == MAX_HISTORY_FAILURES
+
+    restarted_repo = Repository(settings.database)
+    restarted = HistoryWorker(
+        restarted_repo, settings, providers=OnePageProvider([]), archive=archive
+    )
+    restarted.configuration = worker.configuration
+    monkeypatch.setattr(restarted.policy, "floor", lambda _entry, _interval: hot_cutoff)
+    monkeypatch.setattr(restarted, "_target_start", lambda _hot, _entry: target_start)
+    restarted._ensure_jobs()
+    assert restarted_repo.history_job("crypto", "BTCUSDT", "1D")["status"] == "exhausted"
+
+    repo.configure_history_job(
+        "crypto", "BTCUSDT", "1D", hot_cutoff, target_start, "binance", "new-rev"
+    )
+    reset = repo.history_job("crypto", "BTCUSDT", "1D")
+    assert reset["status"] == "pending"
+    assert reset["failure_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "prior_status",
+    ("retry", "coverage_gap", "waiting_series", "waiting_rebase", "waiting_archive_repair"),
+)
+def test_old_history_retries_at_limit_exhaust_during_schema_upgrade(tmp_path, prior_status):
+    repo = Repository(tmp_path / "legacy.sqlite3")
+    repo.initialize()
+    repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE history_jobs SET status=?,attempts=10,retry_at=9999999999 "
+            "WHERE source='crypto' AND symbol='BTCUSDT' AND interval='1D'",
+            (prior_status,),
+        )
+        con.execute("ALTER TABLE history_jobs DROP COLUMN failure_count")
+        con.execute("PRAGMA user_version=4")
+
+    repo.initialize()
+
+    saved = repo.history_job("crypto", "BTCUSDT", "1D")
+    assert saved["failure_count"] == MAX_HISTORY_FAILURES
+    assert saved["status"] == "exhausted"
+    assert saved["retry_at"] == 0
+
+
+def test_history_schema_migration_is_safe_when_replicas_initialize_together(tmp_path):
+    database = tmp_path / "concurrent-migration.sqlite3"
+    repo = Repository(database)
+    repo.initialize()
+    repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE history_jobs SET status='retry',attempts=10,retry_at=9999999999 "
+            "WHERE source='crypto' AND symbol='BTCUSDT' AND interval='1D'"
+        )
+        con.execute("ALTER TABLE history_jobs DROP COLUMN failure_count")
+        con.execute("PRAGMA user_version=4")
+
+    replicas = [Repository(database), Repository(database)]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(lambda replica: replica.initialize(), replicas))
+
+    saved = replicas[0].history_job("crypto", "BTCUSDT", "1D")
+    assert saved["failure_count"] == MAX_HISTORY_FAILURES
+    assert saved["status"] == "exhausted"
+    assert saved["retry_at"] == 0
 
 
 @pytest.mark.asyncio
