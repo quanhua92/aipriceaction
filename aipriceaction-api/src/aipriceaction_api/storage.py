@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import math
 import sqlite3
 import time
@@ -31,6 +32,9 @@ _ADOPTION_NOT_LOADED = object()
 _SQLITE_CACHE_SIZE_KIB = 32 * 1024
 _SQLITE_MMAP_SIZE_BYTES = 256 * 1024 * 1024
 MAX_HISTORY_FAILURES = 10
+HISTORY_RETRY_BASE_SECONDS = 30 * 60
+HISTORY_RETRY_MAX_SECONDS = 60 * 60
+log = logging.getLogger(__name__)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
@@ -385,28 +389,57 @@ class Repository:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as con:
             schema_version = con.execute("PRAGMA user_version").fetchone()[0]
-            if schema_version > 5:
+            if schema_version > 6:
                 raise DataError("Database schema is newer than this application")
             con.execute("PRAGMA journal_mode=WAL")
             con.executescript(SCHEMA)
             con.execute("BEGIN IMMEDIATE")
+            schema_version = con.execute("PRAGMA user_version").fetchone()[0]
+            if schema_version > 6:
+                raise DataError("Database schema is newer than this application")
             history_columns = {
                 row[1] for row in con.execute("PRAGMA table_info(history_jobs)")
             }
+            backfilled = 0
             if "failure_count" not in history_columns:
                 con.execute(
                     "ALTER TABLE history_jobs ADD COLUMN failure_count INTEGER NOT NULL DEFAULT 0"
                 )
-            con.execute(
-                "UPDATE history_jobs SET failure_count=attempts "
-                "WHERE failure_count=0 AND attempts>0"
-            )
-            con.execute(
-                """UPDATE history_jobs SET status='exhausted',retry_at=0
-                WHERE failure_count>=? AND status NOT IN ('complete','provider_limit','exhausted')""",
-                (MAX_HISTORY_FAILURES,),
-            )
-            con.execute("PRAGMA user_version=5")
+                backfilled = con.execute(
+                    "UPDATE history_jobs SET failure_count=attempts WHERE attempts>0"
+                ).rowcount
+            if schema_version < 6:
+                con.execute(
+                    """UPDATE history_jobs SET status='exhausted',retry_at=0
+                    WHERE failure_count>=?
+                    AND status NOT IN ('complete','provider_limit','exhausted')""",
+                    (MAX_HISTORY_FAILURES,),
+                )
+                exhausted = con.execute("SELECT changes()").fetchone()[0]
+                now = int(time.time())
+                rescheduled = con.execute(
+                    """UPDATE history_jobs
+                    SET retry_at=? + CASE WHEN failure_count<=1 THEN ? ELSE ? END
+                    WHERE failure_count>0 AND status IN ('retry','coverage_gap')
+                    AND retry_at > ? + CASE WHEN failure_count<=1 THEN ? ELSE ? END""",
+                    (
+                        now,
+                        HISTORY_RETRY_BASE_SECONDS,
+                        HISTORY_RETRY_MAX_SECONDS,
+                        now,
+                        HISTORY_RETRY_BASE_SECONDS,
+                        HISTORY_RETRY_MAX_SECONDS,
+                    ),
+                ).rowcount
+                con.execute("PRAGMA user_version=6")
+                log.info(
+                    "history retry migration from_schema=%s to_schema=6 backfilled=%s "
+                    "exhausted=%s rescheduled=%s",
+                    schema_version,
+                    backfilled,
+                    exhausted,
+                    rescheduled,
+                )
             health_stats_version = con.execute(
                 "SELECT value FROM meta WHERE key='health_stats_version'"
             ).fetchone()[0]
@@ -836,8 +869,8 @@ class Repository:
         *,
         blocked=False,
         max_failures=MAX_HISTORY_FAILURES,
-        retry_base_seconds=30 * 60,
-        retry_max_seconds=60 * 60,
+        retry_base_seconds=HISTORY_RETRY_BASE_SECONDS,
+        retry_max_seconds=HISTORY_RETRY_MAX_SECONDS,
     ):
         now = int(time.time())
         with self.connect() as con:

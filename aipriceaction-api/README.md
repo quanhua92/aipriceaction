@@ -65,9 +65,11 @@ revision mark the job `exhausted`; the worker will not retry it again on that
 basis. Successful pages do not reset this total. A new provider or revision
 basis starts a fresh pass. During upgrade, the last recorded retry streak is
 carried forward; failures from before an earlier successful page cannot be
-reconstructed. A verified VN provider handoff waits for live-series repair and
-does not spend a failure attempt. `coverage_gap` means older candles remain
-unverified; `provider_limit` means the provider's history boundary was reached.
+reconstructed. Old 30-day coverage-gap deadlines are shortened to the current
+retry schedule, while retries already due remain due. A verified VN provider
+handoff waits for live-series repair and does not spend a failure attempt.
+`coverage_gap` means older candles remain unverified; `provider_limit` means the
+provider's history boundary was reached.
 Both API replicas and all workers share the same SQLite data directory. SQLite
 is the source of truth; each API process keeps its own bounded in-memory caches.
 Nginx owns host port `8899` and localhost port `3003`, and sends requests to
@@ -144,6 +146,9 @@ For a rolling API update after the first Nginx deployment, run
 `./scripts/deploy-api-rolling.sh` from this directory. It rebuilds the shared
 image, replaces one API replica at a time, waits for its health check, reloads
 Nginx to resolve the replacement container address, then updates the worker.
+It pauses `worker-history` during the API migration so an old worker cannot
+write retry state after the database schema changes, then resumes it on the new
+image.
 
 The SQLite database is stored under `data/` by default. Set `AIPA_DATA_DIR` to
 use another host directory. `docker compose down` keeps the database and RustFS

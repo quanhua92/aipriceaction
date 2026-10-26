@@ -15,6 +15,8 @@ from .history import History
 from .maintenance import DailyArchive
 from .providers import Providers, vn_provider_order
 from .public_csv import daily_key, period_bounds, plan_candles, publish_object, yearly_key
+from .storage import HISTORY_RETRY_BASE_SECONDS as RETRY_BASE_SECONDS
+from .storage import HISTORY_RETRY_MAX_SECONDS as RETRY_MAX_SECONDS
 from .storage import MAX_HISTORY_FAILURES
 from .workers import Worker
 
@@ -24,8 +26,6 @@ HISTORY_LEASE = ("vn", "__HISTORY_WORKER__", "1D")
 HISTORY_SOURCE_ROTATION = ("sjc", "vn", "crypto", "yahoo")
 BINANCE_MINUTE_PAGE_SIZE = 50_000
 HANDOFF_FAILURES = 3
-RETRY_BASE_SECONDS = 30 * 60
-RETRY_MAX_SECONDS = 60 * 60
 HISTORY_LEASE_SECONDS = 180
 
 

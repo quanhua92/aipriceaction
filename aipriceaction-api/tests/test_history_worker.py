@@ -411,27 +411,96 @@ def test_old_history_retries_at_limit_exhaust_during_schema_upgrade(tmp_path, pr
     assert saved["retry_at"] == 0
 
 
-def test_history_schema_migration_is_safe_when_replicas_initialize_together(tmp_path):
+def test_v5_migration_shortens_legacy_retry_dates_once(tmp_path, monkeypatch):
+    now = 1_800_000_000
+    repo = Repository(tmp_path / "retry-upgrade.sqlite3")
+    repo.initialize()
+    for symbol in ("BTCUSDT", "ETHUSDT", "LTCUSDT", "SOLUSDT", "ADAUSDT", "XRPUSDT"):
+        repo.configure_history_job("crypto", symbol, "1D", 100, 10, "binance", "rev")
+    old_deadline = now + 30 * 24 * 60 * 60
+    with repo.connect() as con:
+        con.execute(
+            "UPDATE history_jobs SET status='retry',attempts=0,failure_count=1,"
+            "retry_at=? WHERE symbol='BTCUSDT'",
+            (old_deadline,),
+        )
+        con.execute(
+            "UPDATE history_jobs SET status='coverage_gap',attempts=1,failure_count=2,"
+            "retry_at=? WHERE symbol='ETHUSDT'",
+            (old_deadline,),
+        )
+        con.execute(
+            "UPDATE history_jobs SET status='retry',attempts=0,failure_count=1,"
+            "retry_at=? WHERE symbol='LTCUSDT'",
+            (now - 60,),
+        )
+        con.execute(
+            "UPDATE history_jobs SET status='retry',attempts=0,failure_count=1,"
+            "retry_at=0 WHERE symbol='XRPUSDT'"
+        )
+        con.execute(
+            "UPDATE history_jobs SET status='waiting_rebase',attempts=0,failure_count=10,"
+            "retry_at=? WHERE symbol='SOLUSDT'",
+            (old_deadline,),
+        )
+        con.execute(
+            "UPDATE history_jobs SET status='complete',attempts=0,failure_count=10,"
+            "retry_at=0 WHERE symbol='ADAUSDT'"
+        )
+        con.execute("PRAGMA user_version=5")
+
+    monkeypatch.setattr("aipriceaction_api.storage.time.time", lambda: now)
+    repo.initialize()
+
+    one_failure = repo.history_job("crypto", "BTCUSDT", "1D")
+    two_failures = repo.history_job("crypto", "ETHUSDT", "1D")
+    overdue = repo.history_job("crypto", "LTCUSDT", "1D")
+    due_now = repo.history_job("crypto", "XRPUSDT", "1D")
+    waiting_cap = repo.history_job("crypto", "SOLUSDT", "1D")
+    complete = repo.history_job("crypto", "ADAUSDT", "1D")
+    assert one_failure["failure_count"] == 1
+    assert one_failure["retry_at"] == now + RETRY_BASE_SECONDS
+    assert two_failures["failure_count"] == 2
+    assert two_failures["retry_at"] == now + RETRY_MAX_SECONDS
+    assert overdue["retry_at"] == now - 60
+    assert due_now["retry_at"] == 0
+    assert waiting_cap["status"] == "exhausted"
+    assert waiting_cap["retry_at"] == 0
+    assert complete["status"] == "complete"
+    assert complete["retry_at"] == 0
+
+    monkeypatch.setattr("aipriceaction_api.storage.time.time", lambda: now + 3600)
+    repo.initialize()
+    assert repo.history_job("crypto", "BTCUSDT", "1D")["retry_at"] == now + RETRY_BASE_SECONDS
+    assert repo.history_job("crypto", "ETHUSDT", "1D")["retry_at"] == now + RETRY_MAX_SECONDS
+
+
+def test_history_schema_migration_is_safe_when_replicas_initialize_together(
+    tmp_path, monkeypatch
+):
+    now = 1_800_000_000
     database = tmp_path / "concurrent-migration.sqlite3"
     repo = Repository(database)
     repo.initialize()
     repo.configure_history_job("crypto", "BTCUSDT", "1D", 100, 10, "binance", "rev")
     with repo.connect() as con:
         con.execute(
-            "UPDATE history_jobs SET status='retry',attempts=10,retry_at=9999999999 "
-            "WHERE source='crypto' AND symbol='BTCUSDT' AND interval='1D'"
+            "UPDATE history_jobs SET status='coverage_gap',attempts=1,failure_count=2,"
+            "retry_at=? "
+            "WHERE source='crypto' AND symbol='BTCUSDT' AND interval='1D'",
+            (now + 30 * 24 * 60 * 60,),
         )
-        con.execute("ALTER TABLE history_jobs DROP COLUMN failure_count")
-        con.execute("PRAGMA user_version=4")
+        con.execute("PRAGMA user_version=5")
 
+    monkeypatch.setattr("aipriceaction_api.storage.time.time", lambda: now)
     replicas = [Repository(database), Repository(database)]
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(lambda replica: replica.initialize(), replicas))
 
     saved = replicas[0].history_job("crypto", "BTCUSDT", "1D")
-    assert saved["failure_count"] == MAX_HISTORY_FAILURES
-    assert saved["status"] == "exhausted"
-    assert saved["retry_at"] == 0
+    assert saved["failure_count"] == 2
+    assert saved["status"] == "coverage_gap"
+    assert saved["retry_at"] == now + RETRY_MAX_SECONDS
 
 
 @pytest.mark.asyncio

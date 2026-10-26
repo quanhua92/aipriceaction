@@ -25,9 +25,30 @@ wait_healthy() {
     return 1
 }
 
+history_worker_paused=false
+resume_history_worker() {
+    exit_code=$?
+    trap - EXIT
+    if [ "$history_worker_paused" = true ]; then
+        if ! docker compose up -d --no-deps worker-history; then
+            echo "Failed to resume worker-history after interrupted deployment" >&2
+            exit_code=1
+        fi
+    fi
+    exit "$exit_code"
+}
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap resume_history_worker EXIT
+
 # Keep port 8899 served while fetching the proxy image and rebuilding the API.
 docker compose pull nginx
 docker compose build api api2 worker worker-hourly worker-minute worker-history
+
+# Avoid an old history worker writing v5 retry state after the API migration.
+history_worker_paused=true
+docker compose stop worker-history
 
 deploy_replica() {
     service=$1
@@ -36,6 +57,30 @@ deploy_replica() {
     wait_healthy "$service" "$container"
     echo "Warming and verifying homepage routes on $service"
     docker compose exec -T "$service" python -m aipriceaction_api.homepage_warmup --instant-ms 5000
+}
+
+wait_history_started() {
+    attempts=60
+    while [ "$attempts" -gt 0 ]; do
+        state=$(docker inspect --format '{{.State.Status}}' aipriceaction-worker-history 2>/dev/null || true)
+        started_at=$(docker inspect --format '{{.State.StartedAt}}' aipriceaction-worker-history 2>/dev/null || true)
+        if [ "$state" = exited ] || [ "$state" = dead ]; then
+            docker compose logs --no-color --tail=100 worker-history >&2
+            echo "worker-history exited during startup" >&2
+            return 1
+        fi
+        if [ "$state" = running ] && [ -n "$started_at" ]; then
+            if docker logs --since "$started_at" aipriceaction-worker-history 2>&1 \
+                | grep -q "history worker started owner="; then
+                return 0
+            fi
+        fi
+        attempts=$((attempts - 1))
+        sleep 2
+    done
+    docker compose logs --no-color --tail=100 worker-history >&2
+    echo "Timed out waiting for worker-history startup" >&2
+    return 1
 }
 
 if docker inspect aipriceaction-nginx >/dev/null 2>&1 \
@@ -59,6 +104,8 @@ else
 fi
 
 docker compose up -d --no-deps worker worker-hourly worker-minute worker-history
+wait_history_started
+history_worker_paused=false
 echo "Checking the exact 19 homepage routes through Nginx"
 docker compose exec -T api python -m aipriceaction_api.homepage_warmup --base-url http://nginx:8899
 docker compose ps
