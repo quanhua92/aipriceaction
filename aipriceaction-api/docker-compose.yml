@@ -214,15 +214,14 @@ services:
     command: ["aipa-api", "history-worker"]
     restart: unless-stopped
 
-  # Invoked by the host's systemd timer, never started by `compose up`.
-  # The source is opened with SQLite's read-only Online Backup API; the shared
-  # data mount remains writable so SQLite can coordinate WAL shared memory.
+  # Invoked by the host's user crontab, never started by `compose up`.
+  # Production SQLite and WAL files are root-owned. This one-shot helper uses
+  # the same container owner to acquire WAL locks; it writes only the snapshot.
   sqlite-backup:
     profiles: [backup]
     build:
       context: .
     image: aipriceaction-api:backup-local
-    user: "${AIPA_BACKUP_UID:-1000}:${AIPA_BACKUP_GID:-1000}"
     environment:
       AIPA_API_HOME: /app
       SQLITE_PATH: /data/aipriceaction.sqlite3

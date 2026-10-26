@@ -3283,13 +3283,19 @@ class Repository:
         path.parent.mkdir(parents=True, exist_ok=True)
         created = False
         try:
-            source_uri = self.path.resolve().as_uri() + "?mode=ro"
-            with closing(sqlite3.connect(source_uri, uri=True, timeout=60)) as source:
+            # A WAL database needs a writable shared-memory lock mapping even
+            # when this connection performs no SQL writes. Production's live
+            # database is root-owned, so the one-shot container uses that same
+            # owner while the application data remains untouched.
+            with closing(sqlite3.connect(self.path, timeout=60)) as source:
                 source.execute("PRAGMA busy_timeout=60000")
                 with path.open("xb"):
                     created = True
                 with closing(sqlite3.connect(path, timeout=60)) as dest:
                     source.backup(dest, pages=512, sleep=0.1)
+            # The host staging directory is mode 0700 and owned by admin; this
+            # lets the non-root Restic container read the temporary file.
+            path.chmod(0o644)
         except Exception:
             if created:
                 path.unlink(missing_ok=True)

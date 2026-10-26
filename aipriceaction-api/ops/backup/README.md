@@ -1,9 +1,12 @@
 # Production SQLite backups
 
-The production user's cron entries run one-shot Docker Compose jobs. SQLite's Online
-Backup API makes a consistent snapshot of the shared `/data/aipriceaction.sqlite3`
-file while the API and workers stay online. Restic encrypts and deduplicates the
-snapshot into the S3 repository prefix:
+The production user's cron entries run one-shot Docker Compose jobs. SQLite's
+Online Backup API makes a consistent snapshot of the shared
+`/data/aipriceaction.sqlite3` file while the API and workers stay online. The
+snapshot helper uses the same root container owner as the API because the
+production database and WAL are root-owned; it runs no schema initialization or
+SQL writes. The host staging directory remains private to `admin`. Restic
+encrypts and deduplicates the snapshot into the S3 repository prefix:
 
 ```text
 backups/aipriceaction-prod/sqlite-restic/
@@ -121,15 +124,19 @@ existing destination and checks SQLite integrity before creating the target.
 
 ## Phase commits
 
-1. **Read-only, point-in-time snapshot and verifier.** The `backup` command
-   opens the live DB read-only and skips schema initialization/migrations. The
-   verifier supports quick daily checks and full restore drills.
+1. **Point-in-time snapshot and verifier.** The `backup` command uses SQLite's
+   Online Backup API without schema initialization/migrations or SQL writes.
+   Its source handle is read/write only so SQLite can coordinate the root-owned
+   WAL lock file. The verifier supports quick checks and full restore drills.
 2. **Automated encrypted storage and operations.** Add the separate Compose
-   backup profile, Restic backup/drill scripts, run reports, and systemd units.
-   Commit: `a657b08`.
+   backup profile, Restic backup/drill scripts, run reports, and the first
+   systemd installer. Commit: `a657b08`.
 3. **Rootless scheduling for gc.** Replace system units with an idempotent
    installer for the Compose owner's crontab because `admin` has no
    passwordless sudo. Keep logs and generated config under the admin home.
-4. **Production acceptance.** Pull the cron installer on `gc`, install the
-   jobs, run one backup and one restore drill, and retain only small run
-   evidence.
+4. **Root-owned WAL support.** Run the one-shot snapshot container as root to
+   coordinate locks on the existing root-owned SQLite/WAL files. Keep the host
+   staging directory private, and give the Restic process read access only to
+   the temporary snapshot.
+5. **Production acceptance.** Pull the WAL fix on `gc`, rerun the backup, run
+   one full restore drill, and retain only small run evidence.
