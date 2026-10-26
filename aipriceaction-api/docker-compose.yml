@@ -214,6 +214,45 @@ services:
     command: ["aipa-api", "history-worker"]
     restart: unless-stopped
 
+  # Invoked by the host's systemd timer, never started by `compose up`.
+  # The source is opened with SQLite's read-only Online Backup API; the shared
+  # data mount remains writable so SQLite can coordinate WAL shared memory.
+  sqlite-backup:
+    profiles: [backup]
+    build:
+      context: .
+    image: aipriceaction-api:backup-local
+    user: "${AIPA_BACKUP_UID:-1000}:${AIPA_BACKUP_GID:-1000}"
+    environment:
+      AIPA_API_HOME: /app
+      SQLITE_PATH: /data/aipriceaction.sqlite3
+    volumes:
+      - ${AIPA_DATA_DIR:-./data}:/data
+    command: ["aipa-api", "backup", "/backup/aipriceaction.sqlite3"]
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    restart: "no"
+    cpu_shares: 256
+
+  # Restic runs as a one-shot job. It receives only the S3 credentials and
+  # repository settings needed for encrypted backups, not provider/API secrets.
+  backup-restic:
+    profiles: [backup]
+    image: restic/restic:0.19.1
+    user: "${AIPA_BACKUP_UID:-1000}:${AIPA_BACKUP_GID:-1000}"
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD_FILE: /run/secrets/restic-password
+      RESTIC_CACHE_DIR: /tmp/restic-cache
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+    cpu_shares: 256
+
 volumes:
   rustfs_data:
   rustfs_logs:

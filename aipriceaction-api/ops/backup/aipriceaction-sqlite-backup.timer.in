@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily AIPriceAction SQLite backup timer
+
+[Timer]
+OnCalendar=*-*-* 20:35:00 UTC
+Persistent=true
+AccuracySec=1m
+Unit=aipriceaction-sqlite-backup.service
+
+[Install]
+WantedBy=timers.target

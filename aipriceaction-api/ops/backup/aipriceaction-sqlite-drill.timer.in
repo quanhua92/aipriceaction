@@ -1,0 +1,11 @@
+[Unit]
+Description=Monthly AIPriceAction SQLite restore drill timer
+
+[Timer]
+OnCalendar=*-*-01 21:00:00 UTC
+Persistent=true
+AccuracySec=1m
+Unit=aipriceaction-sqlite-drill.service
+
+[Install]
+WantedBy=timers.target

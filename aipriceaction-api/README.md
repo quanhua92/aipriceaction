@@ -155,6 +155,10 @@ use another host directory. `docker compose down` keeps the database and RustFS
 data. `docker compose down -v` deletes the RustFS volume; use it only when you
 intend to remove that archive.
 
+Production SQLite backups and monthly restore drills are installed as separate
+systemd timers. They do not start with `docker compose up`; see the
+[backup operations guide](ops/backup/README.md).
+
 ## Run the chart website
 
 The web source is a separate checkout. Start the API first, then run the local
