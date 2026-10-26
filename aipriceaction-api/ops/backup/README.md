@@ -99,8 +99,10 @@ existing destination and checks SQLite integrity before creating the target.
 ## Adversarial checks built into the procedure
 
 1. **Concurrent writes and WAL activity:** snapshot through SQLite's online
-   backup API; never `cp` the live database. Workers and API replicas continue
-   operating, while SQLite takes short read locks as pages are copied.
+   backup API; never `cp` the live database. One backup step avoids SQLite
+   restarting from page zero after each page batch when another process writes.
+   In production WAL mode, API readers and worker writes can continue during the
+   snapshot read lock. The snapshot is a consistent point-in-time image.
 2. **Disk exhaustion:** before snapshot/restore, require free space of at least
    the live DB size plus 20%. If that space is unavailable, fail before copying.
 3. **Interrupted upload:** do not prune unless the backup completed and a
@@ -129,14 +131,19 @@ existing destination and checks SQLite integrity before creating the target.
    Its source handle is read/write only so SQLite can coordinate the root-owned
    WAL lock file. The verifier supports quick checks and full restore drills.
 2. **Automated encrypted storage and operations.** Add the separate Compose
-   backup profile, Restic backup/drill scripts, run reports, and the first
+   backup profile, Restic backup/drill scripts, run reports, and an initial
    systemd installer. Commit: `a657b08`.
 3. **Rootless scheduling for gc.** Replace system units with an idempotent
    installer for the Compose owner's crontab because `admin` has no
    passwordless sudo. Keep logs and generated config under the admin home.
+   Commit: `79673a5`.
 4. **Root-owned WAL support.** Run the one-shot snapshot container as root to
    coordinate locks on the existing root-owned SQLite/WAL files. Keep the host
    staging directory private, and give the Restic process read access only to
-   the temporary snapshot.
-5. **Production acceptance.** Pull the WAL fix on `gc`, rerun the backup, run
-   one full restore drill, and retain only small run evidence.
+   the temporary snapshot. Commit: `2ca186f`.
+5. **Single-step snapshot under production writes.** A live rehearsal showed
+   512-page batches repeatedly restarting under worker writes. Switch to one
+   SQLite backup step and add a WAL regression test. This is the next code
+   commit after `2ca186f`.
+6. **Production acceptance.** Run one complete backup and restore drill on
+   `gc`; retain run logs and JSON, and delete only temporary database copies.

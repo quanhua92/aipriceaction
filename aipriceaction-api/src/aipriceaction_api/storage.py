@@ -3292,7 +3292,11 @@ class Repository:
                 with path.open("xb"):
                     created = True
                 with closing(sqlite3.connect(path, timeout=60)) as dest:
-                    source.backup(dest, pages=512, sleep=0.1)
+                    # Copy in one SQLite backup step. With small page batches,
+                    # every pause lets another process write the source; SQLite
+                    # then restarts the snapshot from page zero. A single step
+                    # avoids that repeated work on the busy production WAL DB.
+                    source.backup(dest, pages=-1)
             # The host staging directory is mode 0700 and owned by admin; this
             # lets the non-root Restic container read the temporary file.
             path.chmod(0o644)

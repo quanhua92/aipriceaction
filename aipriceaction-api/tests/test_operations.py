@@ -83,7 +83,7 @@ def test_restore_refuses_existing_or_configured_destination(tmp_path, monkeypatc
         assert destination.read_bytes() == b"existing data"
 
 
-def test_backup_is_read_only_and_does_not_run_schema_migrations(tmp_path, monkeypatch, capsys):
+def test_backup_does_not_mutate_source_or_run_schema_migrations(tmp_path, monkeypatch, capsys):
     runtime = tmp_path / "runtime.sqlite3"
     with sqlite3.connect(runtime) as con:
         con.execute("CREATE TABLE candles(value TEXT)")
@@ -105,6 +105,35 @@ def test_backup_is_read_only_and_does_not_run_schema_migrations(tmp_path, monkey
     with sqlite3.connect(snapshot) as con:
         assert con.execute("PRAGMA user_version").fetchone()[0] == 999
         assert con.execute("SELECT value FROM candles").fetchone()[0] == "live"
+
+
+def test_backup_captures_committed_wal_rows(tmp_path, monkeypatch, capsys):
+    runtime = tmp_path / "runtime.sqlite3"
+    with sqlite3.connect(runtime) as writer:
+        writer.execute("PRAGMA journal_mode=WAL")
+        writer.execute("PRAGMA wal_autocheckpoint=0")
+        writer.execute("CREATE TABLE candles(value TEXT)")
+        writer.execute("CREATE TABLE series(value TEXT)")
+        writer.execute("INSERT INTO candles VALUES ('committed-in-wal')")
+        writer.commit()
+        assert (tmp_path / "runtime.sqlite3-wal").exists()
+        monkeypatch.setattr(
+            Settings,
+            "from_env",
+            classmethod(lambda cls: replace(Settings(), database=runtime)),
+        )
+
+        snapshot = tmp_path / "snapshot.sqlite3"
+        assert main(["backup", str(snapshot)]) == 0
+        result = json.loads(capsys.readouterr().out)
+        assert result["bytes"] == snapshot.stat().st_size
+        with sqlite3.connect(snapshot) as backup:
+            assert backup.execute("SELECT value FROM candles").fetchall() == [
+                ("committed-in-wal",)
+            ]
+        assert writer.execute("SELECT value FROM candles").fetchall() == [
+            ("committed-in-wal",)
+        ]
 
 
 def test_backup_refuses_existing_destination_without_touching_it(tmp_path, monkeypatch):
