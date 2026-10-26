@@ -83,6 +83,70 @@ def test_restore_refuses_existing_or_configured_destination(tmp_path, monkeypatc
         assert destination.read_bytes() == b"existing data"
 
 
+def test_backup_is_read_only_and_does_not_run_schema_migrations(tmp_path, monkeypatch, capsys):
+    runtime = tmp_path / "runtime.sqlite3"
+    with sqlite3.connect(runtime) as con:
+        con.execute("CREATE TABLE candles(value TEXT)")
+        con.execute("CREATE TABLE series(value TEXT)")
+        con.execute("INSERT INTO candles VALUES ('live')")
+        con.execute("PRAGMA user_version=999")
+    before = runtime.read_bytes()
+    monkeypatch.setattr(
+        Settings, "from_env", classmethod(lambda cls: replace(Settings(), database=runtime))
+    )
+
+    snapshot = tmp_path / "snapshots" / "snapshot.sqlite3"
+    assert main(["backup", str(snapshot)]) == 0
+    result = json.loads(capsys.readouterr().out)
+
+    assert result["backup"] == str(snapshot)
+    assert result["bytes"] == snapshot.stat().st_size
+    assert runtime.read_bytes() == before
+    with sqlite3.connect(snapshot) as con:
+        assert con.execute("PRAGMA user_version").fetchone()[0] == 999
+        assert con.execute("SELECT value FROM candles").fetchone()[0] == "live"
+
+
+def test_backup_refuses_existing_destination_without_touching_it(tmp_path, monkeypatch):
+    runtime = tmp_path / "runtime.sqlite3"
+    with sqlite3.connect(runtime) as con:
+        con.execute("CREATE TABLE source(value TEXT)")
+    destination = tmp_path / "existing.sqlite3"
+    destination.write_bytes(b"keep this file")
+    monkeypatch.setattr(
+        Settings, "from_env", classmethod(lambda cls: replace(Settings(), database=runtime))
+    )
+
+    assert main(["backup", str(destination)]) == 1
+    assert destination.read_bytes() == b"keep this file"
+    assert runtime.exists()
+
+
+def test_verify_backup_full_checks_integrity_and_reports_market_rows(tmp_path, monkeypatch, capsys):
+    snapshot = tmp_path / "snapshot.sqlite3"
+    with sqlite3.connect(snapshot) as con:
+        con.execute("CREATE TABLE candles(value TEXT)")
+        con.execute("CREATE TABLE series(value TEXT)")
+        con.execute("INSERT INTO candles VALUES ('one')")
+        con.execute("INSERT INTO series VALUES ('one')")
+        con.execute("PRAGMA user_version=6")
+    monkeypatch.setattr(
+        Settings, "from_env", classmethod(lambda cls: replace(Settings(), database=tmp_path / "live.sqlite3"))
+    )
+
+    assert main(["verify-backup", str(snapshot), "--full"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result == {
+        "verified": True,
+        "check": "integrity_check",
+        "bytes": snapshot.stat().st_size,
+        "user_version": 6,
+        "tables": 2,
+        "candles": 1,
+        "series": 1,
+    }
+
+
 @pytest.mark.parametrize("execute", [False, True])
 def test_scoped_archive_cli_preserves_other_markets_intervals_and_recent_rows(
     tmp_path, monkeypatch, capsys, execute

@@ -8,7 +8,7 @@ import math
 import sqlite3
 import time
 import uuid
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from dataclasses import fields
 from datetime import UTC, datetime
 from pathlib import Path
@@ -3278,6 +3278,21 @@ class Repository:
         path = Path(path)
         if path.exists() or path.resolve() == self.path.resolve():
             raise DataError("Backup destination must be a new file", 400)
+        if not self.path.is_file():
+            raise DataError("Database file does not exist", 400)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with self.connect() as con, sqlite3.connect(path) as dest:
-            con.backup(dest)
+        created = False
+        try:
+            source_uri = self.path.resolve().as_uri() + "?mode=ro"
+            with closing(sqlite3.connect(source_uri, uri=True, timeout=60)) as source:
+                source.execute("PRAGMA busy_timeout=60000")
+                with path.open("xb"):
+                    created = True
+                with closing(sqlite3.connect(path, timeout=60)) as dest:
+                    source.backup(dest, pages=512, sleep=0.1)
+        except Exception:
+            if created:
+                path.unlink(missing_ok=True)
+                Path(f"{path}-wal").unlink(missing_ok=True)
+                Path(f"{path}-shm").unlink(missing_ok=True)
+            raise

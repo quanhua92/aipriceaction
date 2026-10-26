@@ -348,7 +348,14 @@ def parser():
     public_export.add_argument("--interval", choices=("1D", "1h", "1m"))
     public_export.add_argument("--execute", action="store_true", help="Upload; default is dry-run")
     backup = commands.add_parser("backup")
-    backup.add_argument("path", type=Path)
+    backup.add_argument("path", type=Path, help="Write a consistent snapshot to a new file")
+    verify = commands.add_parser("verify-backup", help="Check a restored SQLite backup")
+    verify.add_argument("path", type=Path)
+    verify.add_argument(
+        "--full",
+        action="store_true",
+        help="Run PRAGMA integrity_check instead of the faster quick_check",
+    )
     restore = commands.add_parser("restore", help="Restore backup into a NEW database file")
     restore.add_argument("path", type=Path)
     restore.add_argument("--destination", type=Path, required=True)
@@ -411,6 +418,13 @@ async def execute(args, settings):
     if args.command == "restore":
         restore_backup(args.path, args.destination, settings.database)
         emit({"restored": str(args.destination)})
+        return
+    if args.command == "backup":
+        Repository(settings.database).backup(args.path)
+        emit({"backup": str(args.path), "bytes": args.path.stat().st_size})
+        return
+    if args.command == "verify-backup":
+        emit(verify_backup(args.path, full=args.full))
         return
     repo = Repository(settings.database)
     repo.initialize()
@@ -860,9 +874,41 @@ async def execute(args, settings):
                 execute=args.execute,
             )
         emit(result)
-    elif args.command == "backup":
-        repo.backup(args.path)
-        emit({"backup": str(args.path)})
+
+
+def verify_backup(path, *, full=False):
+    path = Path(path)
+    if not path.is_file():
+        raise DataError("Backup file does not exist", 400)
+    pragma = "integrity_check" if full else "quick_check"
+    try:
+        with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=60)) as con:
+            con.execute("PRAGMA busy_timeout=60000")
+            check = [row[0] for row in con.execute(f"PRAGMA {pragma}")]
+            if check != ["ok"]:
+                raise DataError(f"Backup {pragma} failed: {'; '.join(check[:10])}")
+            tables = {
+                row[0]
+                for row in con.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                )
+            }
+            if not {"candles", "series"}.issubset(tables):
+                raise DataError("Backup is missing required market-data tables")
+            candle_count = con.execute("SELECT COUNT(*) FROM candles").fetchone()[0]
+            series_count = con.execute("SELECT COUNT(*) FROM series").fetchone()[0]
+            user_version = con.execute("PRAGMA user_version").fetchone()[0]
+    except sqlite3.Error as exc:
+        raise DataError("Backup could not be read") from exc
+    return {
+        "verified": True,
+        "check": pragma,
+        "bytes": path.stat().st_size,
+        "user_version": user_version,
+        "tables": len(tables),
+        "candles": candle_count,
+        "series": series_count,
+    }
 
 
 async def execute_with_shutdown(args, settings, *, restore_signal=True):
