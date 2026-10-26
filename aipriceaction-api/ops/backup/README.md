@@ -152,6 +152,28 @@ existing destination and checks SQLite integrity before creating the target.
 7. **WAL restore verification.** A production drill confirmed that a restored
    WAL-mode database cannot be opened read-only without its `-wal` and `-shm`
    files. Use SQLite immutable read-only mode and cover this case in tests.
-   This is the next code commit after `f1b3ec3`.
-8. **Production acceptance.** Complete the backup and restore drill on `gc`;
-   retain run logs and JSON, and delete only temporary database copies.
+   Commit: `132111a`.
+8. **Production acceptance.** Backup and restore drill passed on `gc` on
+   2026-10-26. Retain run logs and JSON, and delete only temporary database
+   copies. Measurements are recorded below.
+
+## Production acceptance on 2026-10-26
+
+- Backup run `backup-20261026T080614Z-3176875` completed successfully in
+  3m12s. It snapshotted 6,150,098,944 bytes. Restic packed 1,124,404,956 bytes
+  into the initial encrypted S3 baseline in 83s. Later daily runs should add
+  only changed chunks unless the database is heavily rewritten.
+- Restore drill `restore-drill-20261026T081522Z-3276569` restored the snapshot
+  in 27s, then passed SQLite `integrity_check`. The full drill took 18m19s and
+  verified 23 tables, 34,388,178 candles, 3,823 series, and schema version 6.
+- One earlier drill exposed the missing-WAL-sidecar read-only issue. The
+  restored database itself was intact; the verifier was fixed in `132111a`,
+  and the successful drill above validates that fix.
+- Every sampled API health request during the backup and both drills returned
+  HTTP 200. Measured responses were 5–99 ms. Peak drill disk use left 30 GB
+  free; after cleanup, 36 GB was free. No API or worker containers were
+  restarted.
+- Cron is installed in `admin`'s crontab: backup daily at 03:35 ICT; full
+  restore drill monthly on day 2 at 04:00 ICT. Each run's logs and JSON remain
+  under `~/.aipriceaction/sqlite-backup/runs/`; all full temporary DB files
+  were removed.
