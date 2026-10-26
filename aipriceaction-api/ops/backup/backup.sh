@@ -62,7 +62,7 @@ latest = max(snapshots, key=lambda item: item["time"])
 print(f"restic_snapshot_count={len(snapshots)} latest_snapshot={latest.get('short_id')}")
 PY
 
-if [[ "$(date -u +%u)" == 7 ]]; then
+if [[ "$(date +%u)" == 7 ]]; then
     RUN_STAGE=weekly-retention
     run_restic "" forget --host "$RESTIC_HOST" --tag "$RESTIC_TAG" \
         --keep-daily "${RESTIC_KEEP_DAILY:-7}" \

@@ -1,6 +1,6 @@
 # Production SQLite backups
 
-The production systemd timers run one-shot Docker Compose jobs. SQLite's Online
+The production user's cron entries run one-shot Docker Compose jobs. SQLite's Online
 Backup API makes a consistent snapshot of the shared `/data/aipriceaction.sqlite3`
 file while the API and workers stay online. Restic encrypts and deduplicates the
 snapshot into the S3 repository prefix:
@@ -42,12 +42,12 @@ cannot be restored.
 
 ## Schedule
 
-- Daily backup at 20:35 UTC (03:35 Vietnam time).
-- Monthly full restore and `PRAGMA integrity_check` on the first day at 21:00
-  UTC (04:00 Vietnam time).
+- Daily backup at 03:35 in the server's `Asia/Ho_Chi_Minh` timezone.
+- Monthly full restore and `PRAGMA integrity_check` on day 2 at 04:00 in that
+  timezone. Day 2 avoids overlapping the first-of-month backup.
 - Weekly retention runs after the Sunday backup succeeds: keep 7 daily, 4
   weekly, and 12 monthly snapshots, then prune unreferenced chunks.
-- All jobs share a nonblocking lock. A concurrent timer or manual run is
+- All jobs share a nonblocking lock. A concurrent cron or manual run is
   recorded as `skipped-overlap` and cannot read or delete another job's files.
 
 The restore drill downloads one complete database once per month. It checks
@@ -57,21 +57,23 @@ or replaces it.
 
 ## Install and operate
 
-On production, from this directory:
+On production, as the unprivileged Docker Compose owner, from this directory:
 
 ```sh
-sudo -n ops/backup/install-systemd.sh
-sudo systemctl start aipriceaction-sqlite-backup.service
-sudo systemctl start aipriceaction-sqlite-drill.service
-systemctl list-timers --all 'aipriceaction-sqlite-*'
+ops/backup/install-cron.sh
+ops/backup/backup.sh
+ops/backup/drill.sh
+crontab -l
 ```
 
-The install script requires the production Compose configuration to resolve to
+The installer requires the production Compose configuration to resolve to
 an HTTPS S3 endpoint with write credentials. It refuses to change an existing
 Restic repository prefix automatically. It builds a separate API backup image,
 so installing the backup command does not replace the image used by running API
-containers. It pulls the version-pinned `restic/restic:0.19.1` image and installs
-systemd units without restarting the API, workers, Nginx, or database.
+containers. It pulls the version-pinned `restic/restic:0.19.1` image and adds
+only its marked lines to the Compose owner's crontab. It does not restart the
+API, workers, Nginx, or database. Success output stays in the run folder; failed
+jobs send a short cron mail if local mail delivery is configured.
 The encrypted Restic password is created once in the private config directory;
 the install output never prints it. The S3 key used by Restic must allow list,
 read, write, and delete under the backup prefix because weekly pruning removes
@@ -83,7 +85,7 @@ Inspect a particular run:
 ```sh
 ls -1t ~/.aipriceaction/sqlite-backup/runs
 cat ~/.aipriceaction/sqlite-backup/runs/<run-id>/run.json
-sudo journalctl -u aipriceaction-sqlite-backup.service -n 100 --no-pager
+tail -100 ~/.aipriceaction/sqlite-backup/runs/<run-id>/run.log
 ```
 
 If production recovery is needed, restore to a **new** path, verify it, and
@@ -122,8 +124,12 @@ existing destination and checks SQLite integrity before creating the target.
 1. **Read-only, point-in-time snapshot and verifier.** The `backup` command
    opens the live DB read-only and skips schema initialization/migrations. The
    verifier supports quick daily checks and full restore drills.
-2. **Automated encrypted storage and operations.** Add a separate Compose
-   backup profile, Restic scripts, run reports, systemd timers, and installer.
-3. **Production install and acceptance.** Pull the committed change on `gc`,
-   install timers, run one backup, run one restore drill, and retain only small
-   run evidence.
+2. **Automated encrypted storage and operations.** Add the separate Compose
+   backup profile, Restic backup/drill scripts, run reports, and systemd units.
+   Commit: `a657b08`.
+3. **Rootless scheduling for gc.** Replace system units with an idempotent
+   installer for the Compose owner's crontab because `admin` has no
+   passwordless sudo. Keep logs and generated config under the admin home.
+4. **Production acceptance.** Pull the cron installer on `gc`, install the
+   jobs, run one backup and one restore drill, and retain only small run
+   evidence.

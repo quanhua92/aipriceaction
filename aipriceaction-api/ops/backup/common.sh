@@ -4,6 +4,8 @@ set -Eeuo pipefail
 BACKUP_OPS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd -- "$BACKUP_OPS_DIR/../.." && pwd)"
 STATE_ROOT="${AIPA_BACKUP_HOME:-${HOME:?HOME must be set}/.aipriceaction/sqlite-backup}"
+export AIPA_BACKUP_UID="${AIPA_BACKUP_UID:-$(id -u)}"
+export AIPA_BACKUP_GID="${AIPA_BACKUP_GID:-$(id -g)}"
 CONFIG_DIR="$STATE_ROOT/config"
 RUNS_DIR="$STATE_ROOT/runs"
 WORK_ROOT="$STATE_ROOT/work"
@@ -28,7 +30,8 @@ begin_run() {
     mkdir -m 700 "$RUN_DIR"
     LOG_FILE="$RUN_DIR/run.log"
     umask 077
-    exec > >(tee -a "$LOG_FILE") 2>&1
+    exec 3>&1
+    exec > >(tee -a "$LOG_FILE" >/dev/null) 2>&1
     RUN_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
     exec 9>"$STATE_ROOT/locks/all-jobs.lock"
@@ -49,7 +52,7 @@ begin_run() {
 
 load_backup_config() {
     if [[ ! -r "$CONFIG_FILE" ]]; then
-        echo "Missing $CONFIG_FILE; run ops/backup/install-systemd.sh first." >&2
+        echo "Missing $CONFIG_FILE; run ops/backup/install-cron.sh first." >&2
         return 1
     fi
     local key value
@@ -134,6 +137,9 @@ finish_run() {
         [[ $rc -ne 0 ]] || rc=1
     }
     echo "result=$RUN_RESULT stage=$RUN_STAGE exit_code=$rc work_cleanup=$WORK_CLEANUP_RESULT"
+    if [[ $rc -ne 0 ]]; then
+        echo "AIPriceAction SQLite $RUN_KIND failed at $RUN_STAGE; inspect $RUN_DIR/run.json and run.log." >&3
+    fi
     exit "$rc"
 }
 
