@@ -882,7 +882,15 @@ def verify_backup(path, *, full=False):
         raise DataError("Backup file does not exist", 400)
     pragma = "integrity_check" if full else "quick_check"
     try:
-        with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=60)) as con:
+        # Restic restores only the main SQLite file. An online snapshot may
+        # retain journal_mode=WAL, and a normal read-only open then tries to
+        # create missing -wal/-shm sidecars. A restored drill copy is immutable,
+        # so tell SQLite not to create sidecars or acquire write locks.
+        with closing(
+            sqlite3.connect(
+                path.resolve().as_uri() + "?mode=ro&immutable=1", uri=True, timeout=60
+            )
+        ) as con:
             con.execute("PRAGMA busy_timeout=60000")
             check = [row[0] for row in con.execute(f"PRAGMA {pragma}")]
             if check != ["ok"]:

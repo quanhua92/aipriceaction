@@ -2,6 +2,7 @@ import json
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -174,6 +175,44 @@ def test_verify_backup_full_checks_integrity_and_reports_market_rows(tmp_path, m
         "candles": 1,
         "series": 1,
     }
+
+
+def test_verify_backup_reads_wal_snapshot_without_sidecars_in_read_only_dir(
+    tmp_path, monkeypatch, capsys
+):
+    source = tmp_path / "source.sqlite3"
+    with sqlite3.connect(source) as con:
+        con.execute("PRAGMA journal_mode=WAL")
+        con.execute("PRAGMA wal_autocheckpoint=0")
+        con.execute("CREATE TABLE candles(value TEXT)")
+        con.execute("CREATE TABLE series(value TEXT)")
+        con.execute("INSERT INTO candles VALUES ('restored')")
+    snapshot_dir = tmp_path / "restore-read-only"
+    snapshot_dir.mkdir()
+    snapshot = snapshot_dir / "aipriceaction.sqlite3"
+    with sqlite3.connect(source) as live, sqlite3.connect(snapshot) as restored:
+        live.backup(restored, pages=-1)
+    for suffix in ("-wal", "-shm"):
+        Path(f"{snapshot}{suffix}").unlink(missing_ok=True)
+    snapshot.chmod(0o444)
+    snapshot_dir.chmod(0o555)
+    monkeypatch.setattr(
+        Settings,
+        "from_env",
+        classmethod(lambda cls: replace(Settings(), database=tmp_path / "live.sqlite3")),
+    )
+
+    try:
+        assert main(["verify-backup", str(snapshot), "--full"]) == 0
+        result = json.loads(capsys.readouterr().out)
+        assert result["verified"] is True
+        assert result["check"] == "integrity_check"
+        assert result["candles"] == 1
+        assert not Path(f"{snapshot}-wal").exists()
+        assert not Path(f"{snapshot}-shm").exists()
+    finally:
+        snapshot_dir.chmod(0o755)
+        snapshot.chmod(0o644)
 
 
 @pytest.mark.parametrize("execute", [False, True])

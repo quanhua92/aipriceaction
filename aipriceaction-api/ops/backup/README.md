@@ -121,8 +121,9 @@ existing destination and checks SQLite integrity before creating the target.
    files and SQLite sidecars are removed by the exit handler.
 7. **Bad restore point:** the monthly drill selects the latest snapshot tagged
    for this production host, restores it to a fresh temporary directory, and
-   runs full `integrity_check`. Failed drills retain logs but remove the full
-   restored database.
+   runs full `integrity_check`. The restored database is opened immutable and
+   read-only because Restic stores the single SQLite snapshot file, not WAL
+   sidecars. Failed drills retain logs but remove the full restored database.
 
 ## Phase commits
 
@@ -147,6 +148,10 @@ existing destination and checks SQLite integrity before creating the target.
    SQLite backup step and add a WAL regression test. Commit: `efbb900`.
 6. **Run status clarity.** Store the final stage separately from the failure
    stage; only failed runs name a `failed_stage`. Add tests for both outcomes.
-   This is the next code commit after `efbb900`.
-7. **Production acceptance.** Run one complete backup and restore drill on
-   `gc`; retain run logs and JSON, and delete only temporary database copies.
+   Commit: `f1b3ec3`.
+7. **WAL restore verification.** A production drill confirmed that a restored
+   WAL-mode database cannot be opened read-only without its `-wal` and `-shm`
+   files. Use SQLite immutable read-only mode and cover this case in tests.
+   This is the next code commit after `f1b3ec3`.
+8. **Production acceptance.** Complete the backup and restore drill on `gc`;
+   retain run logs and JSON, and delete only temporary database copies.
