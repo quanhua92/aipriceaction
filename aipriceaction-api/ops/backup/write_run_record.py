@@ -25,11 +25,14 @@ def restic_summary(path: Path) -> dict | None:
 
 def main() -> int:
     run_dir = Path(sys.argv[1])
+    result = os.environ.get("AIPA_RUN_RESULT")
+    stage = os.environ.get("AIPA_RUN_STAGE")
     record = {
         "run_id": os.environ.get("AIPA_RUN_ID"),
         "kind": os.environ.get("AIPA_RUN_KIND"),
-        "result": os.environ.get("AIPA_RUN_RESULT"),
-        "failed_stage": os.environ.get("AIPA_RUN_STAGE"),
+        "result": result,
+        "stage": stage,
+        "failed_stage": stage if result == "failed" else None,
         "started_at_utc": os.environ.get("AIPA_RUN_STARTED_AT"),
         "ended_at_utc": os.environ.get("AIPA_RUN_ENDED_AT"),
         "exit_code": int(os.environ.get("AIPA_RUN_EXIT_CODE", "1")),

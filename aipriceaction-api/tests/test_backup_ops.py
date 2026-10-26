@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 
@@ -7,6 +8,7 @@ import pytest
 from aipriceaction_api.config import ROOT
 
 CONFIG_RENDERER = ROOT / "ops" / "backup" / "render_backup_config.py"
+RUN_RECORD_WRITER = ROOT / "ops" / "backup" / "write_run_record.py"
 
 
 def compose_config(*, endpoint="https://s3.example.test", access="key", secret="secret"):
@@ -86,3 +88,40 @@ def test_rendered_config_rejects_insecure_or_incomplete_s3_settings(tmp_path, co
 
     assert result.returncode != 0
     assert not output.exists() or output.read_text() == ""
+
+
+@pytest.mark.parametrize(
+    ("result", "stage", "exit_code", "expected_failed_stage"),
+    [
+        ("success", "complete", "0", None),
+        ("failed", "snapshot", "1", "snapshot"),
+    ],
+)
+def test_run_record_only_sets_failed_stage_for_failures(
+    tmp_path, result, stage, exit_code, expected_failed_stage
+):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    env = {
+        "AIPA_RUN_ID": "backup-test",
+        "AIPA_RUN_KIND": "backup",
+        "AIPA_RUN_RESULT": result,
+        "AIPA_RUN_STAGE": stage,
+        "AIPA_RUN_STARTED_AT": "2026-10-26T00:00:00Z",
+        "AIPA_RUN_ENDED_AT": "2026-10-26T00:01:00Z",
+        "AIPA_RUN_EXIT_CODE": exit_code,
+        "AIPA_RUN_WORK_CLEANUP": "removed",
+    }
+    completed = subprocess.run(
+        [sys.executable, str(RUN_RECORD_WRITER), str(run_dir)],
+        env={**os.environ, **env},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    record = json.loads((run_dir / "run.json").read_text())
+    assert record["result"] == result
+    assert record["stage"] == stage
+    assert record["failed_stage"] == expected_failed_stage

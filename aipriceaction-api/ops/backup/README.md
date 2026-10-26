@@ -32,7 +32,7 @@ The installer creates this private directory under the service user's home:
 └── runs/
     └── <job>-<UTC-time>-<pid>/
         ├── run.log
-        ├── run.json
+        ├── run.json          # result, stage, sizes, duration, Restic summary
         └── Restic/SQLite operation logs
 ```
 
@@ -130,6 +130,7 @@ existing destination and checks SQLite integrity before creating the target.
    Online Backup API without schema initialization/migrations or SQL writes.
    Its source handle is read/write only so SQLite can coordinate the root-owned
    WAL lock file. The verifier supports quick checks and full restore drills.
+   Commit: `290814a`.
 2. **Automated encrypted storage and operations.** Add the separate Compose
    backup profile, Restic backup/drill scripts, run reports, and an initial
    systemd installer. Commit: `a657b08`.
@@ -143,7 +144,9 @@ existing destination and checks SQLite integrity before creating the target.
    the temporary snapshot. Commit: `2ca186f`.
 5. **Single-step snapshot under production writes.** A live rehearsal showed
    512-page batches repeatedly restarting under worker writes. Switch to one
-   SQLite backup step and add a WAL regression test. This is the next code
-   commit after `2ca186f`.
-6. **Production acceptance.** Run one complete backup and restore drill on
+   SQLite backup step and add a WAL regression test. Commit: `efbb900`.
+6. **Run status clarity.** Store the final stage separately from the failure
+   stage; only failed runs name a `failed_stage`. Add tests for both outcomes.
+   This is the next code commit after `efbb900`.
+7. **Production acceptance.** Run one complete backup and restore drill on
    `gc`; retain run logs and JSON, and delete only temporary database copies.
