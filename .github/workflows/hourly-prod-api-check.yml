@@ -1,0 +1,94 @@
+name: Hourly production API check
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hourly-production-api-check
+  cancel-in-progress: true
+
+jobs:
+  check-production-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install HTTP client
+        run: python -m pip install httpx==0.28.1
+
+      - name: Check the 19 homepage routes
+        id: routes
+        working-directory: aipriceaction-api
+        env:
+          PYTHONPATH: src
+          AIPA_PROD_BASE_URL: https://api.aipriceaction.com
+        run: |
+          python -m aipriceaction_api.homepage_warmup \
+            --base-url "$AIPA_PROD_BASE_URL" \
+            --instant-ms 5000 \
+            --timeout 45 \
+            --max-rounds 1 > hourly-api-check.json
+          cat hourly-api-check.json
+
+      - name: Add route results to the run summary
+        if: always()
+        working-directory: aipriceaction-api
+        env:
+          CHECK_OUTCOME: ${{ steps.routes.outcome }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          report_path = Path("hourly-api-check.json")
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          lines = [
+              "## Production API hourly check",
+              "",
+              f"Result: **{os.environ['CHECK_OUTCOME']}**",
+              "",
+          ]
+          if report_path.exists():
+              try:
+                  report = json.loads(report_path.read_text())
+              except (OSError, json.JSONDecodeError):
+                  lines.append("The route checker did not produce valid JSON output.")
+              else:
+                  rounds = report.get("rounds", [])
+                  verification = rounds[-1].get("verify", {}) if rounds else {}
+                  requests = verification.get("requests", [])
+                  lines.extend(
+                      [
+                          f"Base URL: `{report.get('base_url', 'unknown')}`",
+                          f"Instant: **{report.get('instant', False)}**",
+                          f"Verify round: {len(requests)} requests; "
+                          f"{verification.get('failed', 0)} failed; "
+                          f"max latency {verification.get('max_request_ms', 0)} ms; "
+                          f"{verification.get('over_target', 0)} over 1 second.",
+                          "",
+                          "| Route | Status | Latency |",
+                          "|---|---:|---:|",
+                      ]
+                  )
+                  for request in requests:
+                      status = request.get("status") or request.get("error", "failed")
+                      lines.append(
+                          f"| `{request['path']}` | {status} | "
+                          f"{request.get('elapsed_ms', 0)} ms |"
+                      )
+          else:
+              lines.append("The route checker did not produce a report.")
+          with summary.open("a") as output:
+              output.write("\n".join(lines) + "\n")
+          PY
