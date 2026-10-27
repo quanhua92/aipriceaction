@@ -638,7 +638,7 @@ async def test_historical_revision_outside_live_overlap_still_queues_repair(
     assert any(row["kind"] == "historical_revision" for row in repo.findings())
 
 
-@pytest.mark.parametrize("elapsed", [100, 1200])
+@pytest.mark.parametrize("elapsed", [100, 1200, 3000, 3001])
 @pytest.mark.asyncio
 async def test_crypto_restart_fills_bounded_gap_or_queues_recovery(system, monkeypatch, elapsed):
     repo, archive, settings = system
@@ -650,10 +650,11 @@ async def test_crypto_restart_fills_bounded_gap_or_queues_recovery(system, monke
     class Live:
         async def page(self, source, symbol, iv, before=None, count=40, provider=None):
             calls.append(count)
+            end = elapsed if before is None else min(elapsed, (before - first - 1) // 60)
             return Page(
                 [
                     replace(original, time=first + 60 * i)
-                    for i in range(max(0, elapsed - count + 1), elapsed + 1)
+                    for i in range(max(0, end - count + 1), end + 1)
                 ],
                 "binance",
             )
@@ -662,15 +663,40 @@ async def test_crypto_restart_fills_bounded_gap_or_queues_recovery(system, monke
     monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
     monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + elapsed * 60)
     processed = await worker.sync({"source": "crypto", "symbol": "BTCUSDT"}, "1m")
-    if elapsed == 100:
-        assert processed == 101 and len(repo.read("crypto", "BTCUSDT", "1m")) == 101
-        assert calls == [140] and repo.status()["jobs"] == []
+    if elapsed <= 3000:
+        assert processed == elapsed + (elapsed < 3000)
+        assert len(repo.read("crypto", "BTCUSDT", "1m")) == elapsed + 1
+        assert calls == ([140] if elapsed == 100 else [1000] * (2 if elapsed == 1200 else 3))
+        assert repo.status()["jobs"] == []
     else:
-        assert processed == 0 and calls == [1000]
+        assert processed == 0 and calls == [1000, 1000, 1000]
         assert repo.read("crypto", "BTCUSDT", "1m")[0].time == first
         jobs = repo.status()["jobs"]
         assert len(jobs) == 1 and jobs[0]["kind"] == "repair" and jobs[0]["status"] == "pending"
         assert any(r["kind"] == "coverage_pending" for r in repo.findings())
+
+
+@pytest.mark.parametrize("missing", [50, 600])
+@pytest.mark.asyncio
+async def test_crypto_gap_catchup_rejects_missing_candles(system, monkeypatch, missing):
+    repo, archive, settings = system
+    first = parse_time("2026-01-01")
+    original = Candle("crypto", "BTCUSDT", "1m", first, 100, 101, 99, 100, 1000, "binance")
+    repo.put([original])
+
+    class BrokenPages:
+        async def page(self, source, symbol, iv, before=None, count=40, provider=None):
+            end = 1200 if before is None else (before - first - 1) // 60
+            rows = [replace(original, time=first + 60 * i)
+                    for i in range(max(0, end - count + 1), end + 1) if i != missing]
+            return Page(rows, "binance")
+
+    worker = Worker(repo, settings, providers=BrokenPages(), archive=archive)
+    monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: first + 1200 * 60)
+    assert await worker.sync({"source": "crypto", "symbol": "BTCUSDT"}, "1m") == 0
+    assert len(repo.read("crypto", "BTCUSDT", "1m")) == 1
+    assert repo.status()["jobs"][0]["kind"] == "repair"
 
 
 @pytest.mark.parametrize(

@@ -18,6 +18,7 @@ log = logging.getLogger(__name__)
 YAHOO_NATIVE_INTERVALS = ["1D", "1h", "1m"]
 YAHOO_NO_DATA_FINDING = "Yahoo has no candles in the supported current window; retry probe in 24 hours"
 YAHOO_NO_DATA_RETRY_SECONDS = 24 * 60 * 60
+CRYPTO_LIVE_CATCHUP_PAGES = 3
 
 
 class Worker:
@@ -648,6 +649,35 @@ class Worker:
             )
             return 0
 
+    async def _bridge_crypto_gap(self, symbol, iv, page, last_time, provider, step):
+        """Fetch a few contiguous pages before scheduling a full retained repair."""
+        if page.provider != provider:
+            return page
+        rows = list(page.rows)
+        if not rows or any(b.time - a.time != step for a, b in zip(rows, rows[1:])):
+            return page
+        for _ in range(CRYPTO_LIVE_CATCHUP_PAGES - 1):
+            if rows[0].time <= last_time + step:
+                break
+            earlier = await self.providers.page(
+                "crypto", symbol, iv, before=rows[0].time, count=1000, provider=provider
+            )
+            if (
+                earlier.provider != provider
+                or not earlier.rows
+                or earlier.rows[-1].time != rows[0].time - step
+                or any(b.time - a.time != step for a, b in zip(earlier.rows, earlier.rows[1:]))
+            ):
+                return page
+            rows = list(earlier.rows) + rows
+        if rows[0].time > last_time + step:
+            return page
+        log.info(
+            "crypto live gap bridged symbol=%s interval=%s rows=%s first=%s last=%s",
+            symbol, iv, len(rows), rows[0].time, rows[-1].time,
+        )
+        return replace(page, rows=rows)
+
     async def _seed_sjc(self, entry):
         """Create the first live SJC candle without importing a legacy CSV."""
         page = await self.providers.page(
@@ -824,6 +854,13 @@ class Worker:
                     overlap = self.repo.read(
                         source, symbol, iv, start=page.rows[0].time, end=latest[-1].time
                     )
+            if (
+                source == "crypto" and latest and page.provider == state["provider"]
+                and page.rows[0].time > latest[-1].time + step
+            ):
+                page = await self._bridge_crypto_gap(
+                    symbol, iv, page, latest[-1].time, state["provider"], step
+                )
             gap = None
             if source == "crypto" and latest and page.rows[0].time > latest[-1].time + step:
                 gap = f"Continuous-market gap from {latest[-1].time} to {page.rows[0].time}; recovery queued"
