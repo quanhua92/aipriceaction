@@ -72,6 +72,8 @@ handoff waits for live-series repair and does not spend a failure attempt.
 provider's history boundary was reached.
 Both API replicas and all workers share the same SQLite data directory. SQLite
 is the source of truth; each API process keeps its own bounded in-memory caches.
+The Docker image builds SQLite 3.54.1 from checksum-verified upstream source so
+all API, worker, and backup containers include the WAL-reset corruption fix.
 Nginx owns host port `8899` and localhost port `3003`, and sends requests to
 either healthy API replica. The initializer loads ticker groups and names from
 the bundled `vn_tickers.json` directory; it does not call the production API.
