@@ -1,6 +1,8 @@
 import math
+import sqlite3
 import time
 import uuid
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -153,6 +155,34 @@ def test_health_counts_recent_daily_identities_without_scanning_intraday_rows(sy
     assert expected == 3
     assert repo.health_summary(now=now)["active_tickers"] == expected
     assert any("SEARCH candles" in row[3] and "INDEX" in row[3] for row in plan)
+
+
+def test_health_count_uses_one_consistent_snapshot_while_writers_run(system, monkeypatch):
+    repo, _, _ = system
+    now = datetime(2026, 10, 27, 3, tzinfo=UTC)
+    repo.put([Candle("vn", "AAA", "1D", parse_time("2026-10-26"), 10, 11, 9, 10, 100)])
+    original_connect = repo.connect
+    inserted = []
+
+    @contextmanager
+    def connect_with_writer():
+        with original_connect() as con:
+            def inject(sql):
+                if not inserted and sql.startswith("SELECT source,symbol FROM candles ORDER"):
+                    with sqlite3.connect(repo.path) as writer:
+                        writer.execute(
+                            "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                            ("vn", "ZZZ", "1D", parse_time("2026-10-26"), 10, 11, 9,
+                             10, 100, "test", "initial", 1),
+                        )
+                    inserted.append(True)
+            con.set_trace_callback(inject)
+            yield con
+
+    monkeypatch.setattr(repo, "connect", connect_with_writer)
+    assert repo.health_summary(now=now)["active_tickers"] == 1
+    assert inserted == [True]
+    assert repo.health_summary(now=now)["active_tickers"] == 2
 
 
 def test_history_version_epoch_is_scoped_to_sources_intervals_and_symbols(system):

@@ -3120,6 +3120,7 @@ class Repository:
         year_start = int(datetime(now.year, 1, 1, tzinfo=UTC).timestamp())
         next_year_start = int(datetime(now.year + 1, 1, 1, tzinfo=UTC).timestamp())
         with self.connect() as con:
+            con.execute("BEGIN")
             records, last_sync = {}, {}
             for row in con.execute("SELECT interval,row_count,last_sync FROM candle_health"):
                 records[row["interval"]] = row["row_count"]
