@@ -3123,43 +3123,60 @@ class Repository:
             records, last_sync = {}, {}
             for row in con.execute("SELECT interval,row_count,last_sync FROM candle_health"):
                 records[row["interval"]] = row["row_count"]
+            major_tickers = con.execute(
+                f"SELECT t.source,t.symbol FROM tickers t WHERE {major_filter}", major_symbols
+            ).fetchall()
             for interval in ("1D", "1h", "1m"):
                 year_filter = ""
                 year_params = ()
                 if interval in ("1h", "1m"):
-                    year_filter = "AND d.time>=? AND d.time<?"
+                    year_filter = "AND c.time>=? AND c.time<?"
                     year_params = (year_start, next_year_start)
-                latest = con.execute(
-                    f"""SELECT MAX(
-                      CASE
+                latest = None
+                for ticker in major_tickers:
+                    row = con.execute(
+                        f"""SELECT CASE
                         WHEN ch.provider=s.provider
                           AND ch.revision=s.revision AND ch.successful_at_ns IS NOT NULL
                         THEN MAX(c.updated_at,ch.successful_at_ns)
                         ELSE c.updated_at
-                      END)
-                    FROM (
-                      SELECT t.source,t.symbol,MAX(d.time) AS latest_time
-                      FROM tickers t JOIN candles d USING(source,symbol)
-                      WHERE d.interval=? AND {major_filter} {year_filter}
-                      GROUP BY t.source,t.symbol
-                    ) selected
-                    JOIN candles c ON c.source=selected.source AND c.symbol=selected.symbol
-                      AND c.interval=? AND c.time=selected.latest_time
+                      END
+                    FROM candles c
                     LEFT JOIN series s ON s.source=c.source AND s.symbol=c.symbol
                       AND s.interval=c.interval
                     LEFT JOIN source_checks ch ON ch.source=c.source AND ch.symbol=c.symbol
-                      AND ch.interval=c.interval""",
-                    (interval, *major_symbols, *year_params, interval),
-                ).fetchone()[0]
+                      AND ch.interval=c.interval
+                    WHERE c.source=? AND c.symbol=? AND c.interval=? {year_filter}
+                    ORDER BY c.time DESC LIMIT 1""",
+                        (ticker["source"], ticker["symbol"], interval, *year_params),
+                    ).fetchone()
+                    if row and row[0] is not None:
+                        latest = max(latest, row[0]) if latest is not None else row[0]
                 if latest is not None:
                     last_sync[interval] = latest
+            # Jump between distinct candle identities using the leading columns
+            # of the primary key. A GROUP BY scan touches the entire multi-GB
+            # intraday index just to count recent daily tickers.
+            active_tickers = 0
+            identity = con.execute(
+                "SELECT source,symbol FROM candles ORDER BY source,symbol LIMIT 1"
+            ).fetchone()
+            while identity:
+                source, symbol = identity
+                if con.execute(
+                    "SELECT 1 FROM candles WHERE source=? AND symbol=? "
+                    "AND interval='1D' AND time>? LIMIT 1",
+                    (source, symbol, active_after),
+                ).fetchone():
+                    active_tickers += 1
+                identity = con.execute(
+                    "SELECT source,symbol FROM candles WHERE (source,symbol)>(?,?) "
+                    "ORDER BY source,symbol LIMIT 1",
+                    (source, symbol),
+                ).fetchone()
             return {
                 "tickers": con.execute("SELECT COUNT(*) FROM tickers").fetchone()[0],
-                "active_tickers": con.execute(
-                    "SELECT COUNT(*) FROM (SELECT source,symbol FROM candles "
-                    "WHERE interval='1D' AND time>? GROUP BY source,symbol)",
-                    (active_after,),
-                ).fetchone()[0],
+                "active_tickers": active_tickers,
                 "records": records,
                 "last_sync": last_sync,
             }

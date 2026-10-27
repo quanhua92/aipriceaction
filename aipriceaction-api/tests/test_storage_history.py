@@ -123,6 +123,38 @@ def test_republishing_unchanged_candles_does_not_invalidate_market_caches(system
     assert repo.market_epoch() == epoch + 1
 
 
+def test_health_counts_recent_daily_identities_without_scanning_intraday_rows(system):
+    repo, _, _ = system
+    now = datetime(2026, 10, 27, 3, tzinfo=UTC)
+    repo.put([
+        Candle("vn", "VNINDEX", "1D", parse_time("2026-10-26"), 10, 11, 9, 10, 100),
+        Candle("vn", "STALE", "1D", parse_time("2026-10-19"), 10, 11, 9, 10, 100),
+        Candle("crypto", "BTCUSDT", "1m", parse_time("2026-10-26"), 10, 11, 9, 10, 100),
+        Candle("crypto", "BTCUSDT", "1D", parse_time("2026-10-26"), 10, 11, 9, 10, 100),
+    ])
+    with repo.connect() as con:
+        # Preserve the old count even if a database has a candle with no
+        # corresponding ticker metadata.
+        con.execute(
+            "INSERT INTO candles VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            ("yahoo", "ORPHAN", "1D", parse_time("2026-10-26"), 10, 11, 9, 10, 100,
+             "test", "initial", 1),
+        )
+        expected = con.execute(
+            "SELECT COUNT(*) FROM (SELECT source,symbol FROM candles "
+            "WHERE interval='1D' AND time>? GROUP BY source,symbol)",
+            (int(now.timestamp()) - 7 * 86400,),
+        ).fetchone()[0]
+        plan = con.execute(
+            "EXPLAIN QUERY PLAN SELECT source,symbol FROM candles WHERE (source,symbol)>(?,?) "
+            "ORDER BY source,symbol LIMIT 1",
+            ("vn", "A"),
+        ).fetchall()
+    assert expected == 3
+    assert repo.health_summary(now=now)["active_tickers"] == expected
+    assert any("SEARCH candles" in row[3] and "INDEX" in row[3] for row in plan)
+
+
 def test_history_version_epoch_is_scoped_to_sources_intervals_and_symbols(system):
     repo, _, _ = system
     daily = bar("2026-10-20")
