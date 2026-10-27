@@ -202,6 +202,26 @@ def _not_found(exc):
     return error.get("Code") in {"404", "NoSuchKey", "NotFound"}
 
 
+def _csv_timestamps(body, key):
+    """Read timestamps from a Rust-format CSV before replacing an object."""
+    try:
+        rows = csv.reader(io.StringIO(body.decode("utf-8"), newline=""))
+        timestamps = set()
+        for row in rows:
+            if len(row) != 6:
+                raise ValueError("expected six columns")
+            stamp = datetime.fromisoformat(row[0])
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=UTC)
+            stamp = stamp.astimezone(UTC)
+            if stamp in timestamps:
+                raise ValueError("duplicate timestamp")
+            timestamps.add(stamp)
+        return timestamps
+    except (UnicodeError, ValueError, csv.Error) as exc:
+        raise DataError(f"Cannot safely replace existing public CSV {key}: invalid rows") from exc
+
+
 def publish_object(client, bucket, item):
     """Idempotently PUT one object, then verify its SDK-visible hash metadata."""
     from botocore.exceptions import ClientError
@@ -221,6 +241,24 @@ def publish_object(client, bucket, item):
             and head.get("ContentType") == item.content_type
         ):
             return item.report() | {"uploaded": False, "verified": True}
+
+        if item.content_type == "text/csv":
+            request = {"Bucket": bucket, "Key": item.key}
+            if head.get("ETag"):
+                request["IfMatch"] = head["ETag"]
+            response = client.get_object(**request)
+            stream = response["Body"]
+            try:
+                existing = _csv_timestamps(stream.read(), item.key)
+            finally:
+                stream.close()
+            missing = existing - _csv_timestamps(item.body, item.key)
+            if missing:
+                earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
+                raise DataError(
+                    f"Refusing to replace public CSV {item.key}: "
+                    f"{len(missing)} existing timestamp(s) are missing, starting at {earliest}"
+                )
 
     client.put_object(
         Bucket=bucket,

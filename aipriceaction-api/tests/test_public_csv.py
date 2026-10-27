@@ -1,3 +1,4 @@
+import io
 import json
 from dataclasses import replace
 from datetime import date
@@ -237,6 +238,9 @@ class FakeS3:
         self.puts.append(kwargs)
         self.objects[(kwargs["Bucket"], kwargs["Key"])] = kwargs
 
+    def get_object(self, *, Bucket, Key, **kwargs):
+        return {"Body": io.BytesIO(self.objects[(Bucket, Key)]["Body"])}
+
 
 def test_public_publisher_sets_sdk_hash_and_skips_unchanged_objects():
     item = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))
@@ -288,6 +292,38 @@ def test_public_publisher_skips_unchanged_rust_published_object():
 
     assert not result["uploaded"] and result["verified"]
     assert s3.puts == []
+
+
+def test_public_publisher_preserves_existing_timestamps_after_restore():
+    s3 = FakeS3()
+    old_rows = [candle(parse_time("2026-10-20")), candle()]
+    old = plan_candles(old_rows, "vn", "VCB", "1D", year=2026)
+    publish_object(s3, "one-bucket", old)
+
+    incomplete = plan_candles([candle()], "vn", "VCB", "1D", year=2026)
+    with pytest.raises(DataError, match="1 existing timestamp.*2026-10-20"):
+        publish_object(s3, "one-bucket", incomplete)
+    assert s3.objects[("one-bucket", old.key)]["Body"] == old.body
+    assert len(s3.puts) == 1
+
+    # A complete replacement may update prices and add new days.
+    updated = plan_candles(
+        [replace(old_rows[0], close=1.5), old_rows[1], candle(parse_time("2026-10-22"))],
+        "vn", "VCB", "1D", year=2026,
+    )
+    assert publish_object(s3, "one-bucket", updated)["uploaded"]
+    assert s3.objects[("one-bucket", old.key)]["Body"] == updated.body
+
+
+def test_public_publisher_refuses_to_overwrite_unreadable_existing_csv():
+    s3 = FakeS3()
+    item = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))
+    s3.objects[("one-bucket", item.key)] = {
+        "Body": b"unreadable,old,format\n", "ContentType": "text/csv", "Metadata": {},
+    }
+    with pytest.raises(DataError, match="invalid rows"):
+        publish_object(s3, "one-bucket", item)
+    assert not s3.puts
 
 
 def test_settings_default_to_one_parquet_prefix_and_public_export():

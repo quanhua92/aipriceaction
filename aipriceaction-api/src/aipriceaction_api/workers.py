@@ -981,7 +981,7 @@ class Worker:
                         source,
                         symbol,
                         iv,
-                        type(exc).__name__,
+                        str(exc) if isinstance(exc, DataError) else type(exc).__name__,
                     )
             if iv == "1D" and source not in ("sjc", "crypto"):
                 try:
