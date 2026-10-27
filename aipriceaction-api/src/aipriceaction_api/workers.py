@@ -60,29 +60,29 @@ class Worker:
 
         publish, client, bucket = store
         history = History(self.repo, self.archive, self.settings)
-        periods = sorted({datetime.fromtimestamp(row.time, UTC).date() for row in rows})
-        years = sorted({day.year for day in periods}) if iv in ("1D", "1h") else []
+        periods = sorted({datetime.fromtimestamp(row.time, UTC).date() for row in rows}, reverse=True)
+        years = sorted({day.year for day in periods}, reverse=True) if iv in ("1D", "1h") else []
         published, uploaded = 0, 0
-        for day in periods:
-            key = daily_key(source, symbol, iv, day)
-            with self.archive.public_csv_lock(key):
-                start, end = period_bounds(day=day)
-                candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
-                item = plan_candles(candles, source, symbol, iv, day=day)
-                result = publish(client, bucket, item)
-            published += 1
-            uploaded += int(result["uploaded"])
-        for year in years:
-            key = yearly_key(source, symbol, iv, year)
-            with self.archive.public_csv_lock(key):
-                start, end = period_bounds(year=year)
-                candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
-                if not candles:
-                    continue
-                item = plan_candles(candles, source, symbol, iv, year=year)
-                result = publish(client, bucket, item)
-            published += 1
-            uploaded += int(result["uploaded"])
+        errors = []
+        for day, year in [(day, None) for day in periods] + [(None, year) for year in years]:
+            key = daily_key(source, symbol, iv, day) if day else yearly_key(source, symbol, iv, year)
+            try:
+                with self.archive.public_csv_lock(key):
+                    start, end = period_bounds(day=day, year=year)
+                    candles = history.read(source, symbol, iv, start=start, end=end, forward=True)
+                    if year is not None and not candles:
+                        continue
+                    item = plan_candles(candles, source, symbol, iv, day=day, year=year)
+                    result = publish(client, bucket, item)
+                published += 1
+                uploaded += int(result["uploaded"])
+            except Exception as exc:
+                reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                errors.append((key, reason))
+                log.warning("public CSV period export failed key=%s error=%s", key, reason)
+        if errors:
+            key, reason = errors[0]
+            raise DataError(f"{len(errors)} public CSV period(s) failed; first: {key}: {reason}")
         return {"objects": published, "uploaded": uploaded}
 
     def _publish_public_catalog(self):

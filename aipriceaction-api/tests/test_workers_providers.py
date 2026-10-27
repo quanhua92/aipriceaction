@@ -1593,6 +1593,30 @@ def test_expired_lease_cannot_publish(system):
         repo.stage(job, [replace(candle(1), revision=job["revision"])], candle(1).time, "vps")
 
 
+def test_public_csv_failure_does_not_block_other_periods(system):
+    repo, archive, settings = system
+    rows = [candle(1), candle(2)]
+    repo.put(rows)
+    worker = Worker(repo, settings, Pages(), archive)
+    attempted = []
+
+    def publish_csv(client, bucket, item):
+        attempted.append(item.key)
+        if item.key.endswith("FPT-1D-2024-01-01.csv"):
+            raise DataError("existing timestamps would be lost")
+        return {"uploaded": True}
+
+    worker._public_csv_store = lambda: (publish_csv, object(), "public")
+    with pytest.raises(DataError, match="1 public CSV period.*existing timestamps"):
+        worker._publish_public_candles("vn", "FPT", "1D", rows)
+
+    assert attempted == [
+        "ohlcv/vn/FPT/1D/FPT-1D-2024-01-02.csv",
+        "ohlcv/vn/FPT/1D/FPT-1D-2024-01-01.csv",
+        "ohlcv/vn/FPT/yearly/FPT-1D-2024.csv",
+    ]
+
+
 @pytest.mark.asyncio
 async def test_archived_adjustment_repairs_publish_as_one_manifest_batch(system):
     repo, archive, settings = system
