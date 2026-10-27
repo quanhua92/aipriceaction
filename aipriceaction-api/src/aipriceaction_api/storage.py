@@ -582,10 +582,24 @@ class Repository:
         """Publish the complete ingestion universe in one transaction."""
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
-            con.execute("UPDATE tickers SET enabled=0")
+            con.execute(
+                "CREATE TEMP TABLE desired_tickers(source TEXT NOT NULL, symbol TEXT NOT NULL, "
+                "PRIMARY KEY(source,symbol)) WITHOUT ROWID"
+            )
+            identities = [(entry["source"], entry["symbol"]) for entry in entries]
             con.executemany(
-                "INSERT INTO tickers(source,symbol,enabled) VALUES (?,?,1) ON CONFLICT(source,symbol) DO UPDATE SET enabled=1",
-                [(entry["source"], entry["symbol"]) for entry in entries],
+                "INSERT OR IGNORE INTO desired_tickers(source,symbol) VALUES (?,?)",
+                identities,
+            )
+            con.execute(
+                "UPDATE tickers SET enabled=0 WHERE enabled<>0 AND NOT EXISTS "
+                "(SELECT 1 FROM desired_tickers d WHERE d.source=tickers.source "
+                "AND d.symbol=tickers.symbol)"
+            )
+            con.executemany(
+                "INSERT INTO tickers(source,symbol,enabled) VALUES (?,?,1) "
+                "ON CONFLICT(source,symbol) DO UPDATE SET enabled=1 WHERE tickers.enabled<>1",
+                identities,
             )
 
     def tickers(self, sources=None, enabled=False):

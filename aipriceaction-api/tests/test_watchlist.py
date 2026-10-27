@@ -54,6 +54,52 @@ def test_starting_worker_never_exposes_partially_disabled_watchlist(tmp_path, mo
     assert len(repo.read("vn", "OLD", "1D")) == 1
 
 
+def test_catalog_refresh_only_writes_changed_tickers(tmp_path):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    repo.register("vn", "FPT", name="FPT company", enabled=True)
+    repo.register("vn", "OLD", enabled=True)
+    repo.register("crypto", "BTCUSDT", enabled=False)
+    repo.schedule("vn", "FPT", "1m", 12345)
+    with repo.connect() as con:
+        con.executescript(
+            """CREATE TABLE ticker_write_audit(action TEXT, source TEXT, symbol TEXT);
+            CREATE TRIGGER audit_ticker_insert AFTER INSERT ON tickers BEGIN
+                INSERT INTO ticker_write_audit VALUES ('insert', NEW.source, NEW.symbol);
+            END;
+            CREATE TRIGGER audit_ticker_update AFTER UPDATE ON tickers BEGIN
+                INSERT INTO ticker_write_audit VALUES ('update', NEW.source, NEW.symbol);
+            END;"""
+        )
+
+    entries = [
+        {"source": "vn", "symbol": "FPT"},
+        {"source": "crypto", "symbol": "BTCUSDT"},
+    ]
+    repo.activate_watchlist(entries)
+    with repo.connect() as con:
+        assert {tuple(row) for row in con.execute("SELECT * FROM ticker_write_audit")} == {
+            ("update", "vn", "OLD"),
+            ("update", "crypto", "BTCUSDT"),
+        }
+        con.execute("DELETE FROM ticker_write_audit")
+
+    repo.activate_watchlist([entries[1], entries[0], entries[0]])
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        list(executor.map(repo.activate_watchlist, [entries] * 4))
+    with repo.connect() as con:
+        assert con.execute("SELECT COUNT(*) FROM ticker_write_audit").fetchone()[0] == 0
+    row = next(r for r in repo.tickers() if r["symbol"] == "FPT")
+    assert row["name"] == "FPT company" and row["next_1m"] == 12345
+
+    repo.activate_watchlist([])
+    with repo.connect() as con:
+        assert {tuple(row) for row in con.execute("SELECT * FROM ticker_write_audit")} == {
+            ("update", "vn", "FPT"),
+            ("update", "crypto", "BTCUSDT"),
+        }
+
+
 def test_liquid_vn_selection_waits_for_broad_daily_coverage_and_keeps_top_80_percent(
     tmp_path,
 ):
