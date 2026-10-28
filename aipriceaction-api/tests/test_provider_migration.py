@@ -82,6 +82,27 @@ def test_migration_limit_is_atomic_across_competing_workers(repo):
         assert repo.read("vn", symbol, "1D") == [row]
 
 
+def test_repeated_incompatible_handoffs_pause_until_operator_resumes(repo):
+    row = seed(repo, "FPT")
+    with repo.connect() as con:
+        for index in range(5):
+            con.execute(
+                "INSERT INTO provider_migrations(source,symbol,interval,from_provider,from_revision,to_provider,job_id,status,created_at,updated_at) VALUES ('vn',?,'1D','dnse','old','vps',?,'review',?,?)",
+                (f"S{index}", f"job-{index}", index, index + 1),
+            )
+    assert repo.provider_migration_circuit_open()
+    assert repo.provider_migration_status(("vps",))["safety_paused"]
+    assert repo.queue_provider_migration(
+        "vn", "FPT", "1D", repo.state("vn", "FPT", "1D"), row.time - 100, "vps", 1
+    ) is None
+    repo.resume_provider_migrations()
+    assert not repo.provider_migration_circuit_open()
+    assert repo.provider_migration_counts() == {"review": 5}
+    assert repo.queue_provider_migration(
+        "vn", "FPT", "1D", repo.state("vn", "FPT", "1D"), row.time - 100, "vps", 1
+    )
+
+
 def test_in_progress_cold_partition_is_not_discarded(repo):
     row = seed(repo, "FPT")
     repo.configure_history_job("vn", "FPT", "1D", row.time, row.time - 1000, "dnse", "old")

@@ -118,6 +118,11 @@ Before switching, the replacement must cover every completed candle in the
 retained window and agree with the existing OHLCV values, allowing only small
 numeric rounding differences. If coverage or values differ, the migration is
 marked `review` and both the published data and candidate pages are retained.
+If five consecutive replacements need review or exhaust their retries, new
+handoffs pause automatically to avoid filling SQLite with incompatible
+candidates. After investigating, run
+`docker compose exec worker-history aipa-api provider-migration-resume` to
+resume future handoffs. This keeps the saved review candidates unchanged.
 
 Run `docker compose exec worker-history aipa-api provider-migration-status` for
 counts by state, the series still pinned to disabled providers, and individual

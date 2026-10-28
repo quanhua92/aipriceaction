@@ -95,6 +95,7 @@ class HistoryWorker:
         self._lease_lost = None
         self._next_manifest_retry = 0.0
         self._next_provider_migrations = 0.0
+        self._provider_migration_pause_logged = False
         self._ticker_claim_lock = asyncio.Lock()
         self._archive_publish_lock = asyncio.Lock()
         self._active_tickers = set()
@@ -265,6 +266,14 @@ class HistoryWorker:
         """Keep a small number of handoffs active, prioritizing daily data."""
         self._next_provider_migrations = time.monotonic() + 30
         disabled = set(Providers.VN) - set(self.settings.vn_providers)
+        if disabled and self.repo.provider_migration_circuit_open():
+            if not self._provider_migration_pause_logged:
+                log.error(
+                    "provider migrations paused: five consecutive handoffs required review or exhausted retries; staged pages retained"
+                )
+                self._provider_migration_pause_logged = True
+            return
+        self._provider_migration_pause_logged = False
         slots = self.settings.vn_provider_migration_concurrency - self.repo.provider_migration_counts().get(
             "active", 0
         )

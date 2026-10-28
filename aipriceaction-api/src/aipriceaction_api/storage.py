@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value INTEGER NOT NULL);
 INSERT OR IGNORE INTO meta VALUES ('epoch', 0);
 INSERT OR IGNORE INTO meta VALUES ('market_epoch', 0);
 INSERT OR IGNORE INTO meta VALUES ('health_stats_version', 0);
+INSERT OR IGNORE INTO meta VALUES ('provider_migration_resume_at', 0);
 CREATE TABLE IF NOT EXISTS tickers(
  source TEXT NOT NULL, symbol TEXT NOT NULL, name TEXT, enabled INTEGER NOT NULL DEFAULT 0,
  next_1d INTEGER NOT NULL DEFAULT 0, next_1h INTEGER NOT NULL DEFAULT 0,
@@ -2772,6 +2773,8 @@ class Repository:
         now = int(time.time())
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
+            if self._provider_migration_circuit_open(con):
+                return None
             current = con.execute(
                 "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
                 ident,
@@ -2887,6 +2890,33 @@ class Repository:
                 "SELECT status,COUNT(*) AS count FROM provider_migrations GROUP BY status"
             )}
 
+    @staticmethod
+    def _provider_migration_circuit_open(con):
+        resume = con.execute(
+            "SELECT value FROM meta WHERE key='provider_migration_resume_at'"
+        ).fetchone()
+        resumed_at = resume[0] if resume else 0
+        recent = [row[0] for row in con.execute(
+            "SELECT status FROM provider_migrations WHERE status IN ('complete','review','exhausted') AND updated_at>=? ORDER BY updated_at DESC LIMIT 5",
+            (resumed_at,),
+        )]
+        return len(recent) == 5 and all(status != "complete" for status in recent)
+
+    def provider_migration_circuit_open(self):
+        with self.connect() as con:
+            return self._provider_migration_circuit_open(con)
+
+    def resume_provider_migrations(self):
+        """Resume future attempts while retaining all review candidates and evidence."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            stamp = time.time_ns()
+            con.execute(
+                "INSERT INTO meta(key,value) VALUES ('provider_migration_resume_at',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (stamp,),
+            )
+            return stamp
+
     def provider_migration_status(self, allowed, limit=50):
         if not allowed or not 1 <= limit <= 1000:
             raise DataError("Provider migration status requires providers and a limit from 1 to 1000", 400)
@@ -2909,7 +2939,12 @@ class Repository:
                 ORDER BY CASE m.status WHEN 'active' THEN 0 WHEN 'review' THEN 1 WHEN 'exhausted' THEN 2 ELSE 3 END,
                 m.updated_at DESC LIMIT ?""", (limit,)
             )]
-            return {"counts": counts, "pinned_to_disabled_provider": pinned, "migrations": migrations}
+            return {
+                "counts": counts,
+                "safety_paused": self._provider_migration_circuit_open(con),
+                "pinned_to_disabled_provider": pinned,
+                "migrations": migrations,
+            }
 
     def cancel_superseded_bootstrap(self, source, symbol, interval, floor):
         """Retire an untouched placeholder predating a verified snapshot handoff.
