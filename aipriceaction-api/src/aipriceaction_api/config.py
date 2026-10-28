@@ -110,7 +110,6 @@ class Settings:
     refresh_secret: str | None = None
     cors_origins: tuple[str, ...] = RUST_DEFAULT_CORS_ORIGINS
     vn_providers: tuple[str, ...] = ("vps", "vndirect", "dnse")
-    vn_provider_migration_concurrency: int = 2
     vci_history_fallback: bool = False
     vci_volume_proofs: Path | None = None
     proxies: tuple[str, ...] = ()
@@ -181,7 +180,6 @@ class Settings:
             "refresh_secret": "REFRESH_SECRET",
             "cors_origins": "CORS_ORIGINS",
             "vn_providers": "VN_PROVIDERS",
-            "vn_provider_migration_concurrency": "VN_PROVIDER_MIGRATION_CONCURRENCY",
             "vci_history_fallback": "VCI_HISTORY_FALLBACK",
             "vci_volume_proofs": "VCI_VOLUME_PROOFS",
             "proxies": "HTTP_PROXIES",
@@ -288,7 +286,6 @@ class Settings:
             "minute_years",
             "single_limit",
             "worker_concurrency",
-            "vn_provider_migration_concurrency",
             "requests_per_minute",
             "history_years",
             "history_page_size",

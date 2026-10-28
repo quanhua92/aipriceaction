@@ -166,18 +166,17 @@ async def test_provider_revision_change_is_pending_not_success(system):
 
 
 @pytest.mark.asyncio
-async def test_unverified_vn_snapshot_does_not_attempt_silent_provider_switch(system):
+async def test_vn_snapshot_keeps_completed_rows_and_records_new_provider_check(system):
     repo, settings = system
     rows = [replace(r, source="vn", symbol="GEG", provider="legacy-api") for r in bars()]
     repo.put(rows)
-    provider = Provider(rows)
+    provider = Provider([replace(r, provider="vps") for r in rows])
     worker = Worker(repo, settings, providers=provider)
-    assert await worker.sync({"source": "vn", "symbol": "GEG"}, "1m") == 0
-    assert not provider.called and repo.status()["jobs"] == []
+    assert await worker.sync({"source": "vn", "symbol": "GEG"}, "1m") == 2
+    assert provider.called and repo.status()["jobs"] == []
+    assert [r.provider for r in repo.read("vn", "GEG", "1m")] == ["legacy-api", "legacy-api"]
     check = repo.status()["series"][0]
-    assert "verified provider handoff" in check["error"]
-    assert check["outcome"] == "handoff_required"
-    assert check["latest_verification"] == "unverified"
+    assert check["outcome"] == "succeeded"
 
 
 def test_schema_upgrade_and_backup_preserve_checks(system, tmp_path):

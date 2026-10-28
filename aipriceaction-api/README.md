@@ -103,35 +103,9 @@ Set `VN_PROVIDERS` in `.env` to the allowed providers, for example
 queued recovery jobs as well as new requests. `/health` shows the effective
 provider list.
 
-Each existing series keeps its last published data while a replacement is
-downloaded and checked. The history worker schedules up to
-`VN_PROVIDER_MIGRATION_CONCURRENCY` replacements at once, daily series first.
-An unfinished cold partition or archive repair is preserved and defers that
-series' migration. A replacement that fails ten times stops and keeps its
-staged pages for investigation; other series can then use its slot. See
-`docker compose logs -f worker-history worker worker-hourly worker-minute` for
-the ticker, interval, provider, and repair outcome. After a replacement, older
-Parquet/CSV partitions may need separate repair; historical reads can report a
-repair as pending until it finishes.
+Live and historical requests try the enabled providers, including fallbacks. DNSE is preferred for indexes when enabled. A provider change does not trigger a full-series migration. Previously completed candles keep their original provider and values; new observations record their own provider. The history worker retains in-progress Parquet checkpoints. If the providers return different values for the same period, those values may not be directly comparable. Logs and source checks show which provider supplied new data.
 
-Before switching, the replacement must cover every completed candle in the
-retained window and agree with the existing OHLCV values, allowing only small
-numeric rounding differences. If coverage or values differ, the migration is
-marked `review` and both the published data and candidate pages are retained.
-If five consecutive replacements need review or exhaust their retries, new
-handoffs pause automatically to avoid filling SQLite with incompatible
-candidates. After investigating, run
-`docker compose exec worker-history aipa-api provider-migration-resume` to
-resume future handoffs. This keeps the saved review candidates unchanged.
-
-Run `docker compose exec worker-history aipa-api provider-migration-status` for
-counts by state, the series still pinned to disabled providers, and individual
-active, review, or exhausted migrations.
-
-When DNSE is disabled, VN cash-index hourly and minute ingestion pauses: the
-other feeds have produced post-close or indicative index bars that do not match
-the exchange-session series. Previously published index candles remain
-available. Daily index data and other VN series are not subject to this pause.
+VN index feeds can differ: VPS has returned post-close bars and VNDirect has returned indicative quotes. Choose enabled providers with that difference in mind.
 
 ## Refresh the Vietnamese stock directory
 

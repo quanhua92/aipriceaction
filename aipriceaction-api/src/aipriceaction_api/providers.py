@@ -48,40 +48,20 @@ class RateLimiter:
 def vn_provider_order(settings, iv, before, symbol=None):
     selected = list(settings.vn_providers)
     cash_index = symbol in INDEXES and symbol != "VN30F1M"
-    if (iv == "1h" or cash_index and iv in {"1m", "1D"}) and "dnse" in selected:
-        # DNSE is the only index feed with clean exchange-session timestamps.
-        # VPS appends a large post-close index bar and VNDirect mixes indicative
-        # quotes into minute OHLC, so keep one coherent provider across all
-        # native index intervals.
+    if cash_index and iv in {"1m", "1h", "1D"} and "dnse" in selected:
+        # Prefer DNSE where configured because its index timestamps most
+        # closely match exchange sessions. Other configured feeds can follow.
         selected.remove("dnse")
         selected.insert(0, "dnse")
     if (
-        (iv in {"1m", "1D"} and symbol not in INDEXES)
-        and "dnse" in selected
-        and "vndirect" in selected
+        iv in {"1m", "1D"} and symbol not in INDEXES
+        and "dnse" in selected and "vndirect" in selected
     ):
-        # Repeated native controls show DNSE minute/daily OHLCV agreeing exactly
-        # with VPS while VNDirect can disagree on isolated prices and HNX/UPCOM
-        # volume. Preserve VPS as preferred, but try the corroborated DNSE feed
-        # before VNDirect fallback.
         selected.remove("dnse")
         selected.insert(selected.index("vndirect"), "dnse")
     if settings.vci_history_fallback and iv == "1m" and before < time.time() - 7 * 86400:
         selected.append("vci")
     return selected
-
-
-def vn_index_intraday_unverified(settings, source, symbol, interval):
-    # The available VPS and VNDirect index feeds include post-close or
-    # indicative bars that do not match the exchange-session series. Do not
-    # silently substitute them when the established DNSE feed is disabled.
-    return (
-        source == "vn"
-        and symbol in INDEXES
-        and symbol != "VN30F1M"
-        and interval in {"1m", "1h"}
-        and "dnse" not in settings.vn_providers
-    )
 
 
 class Providers:
@@ -785,6 +765,18 @@ class Providers:
             if any(v is None for v in values):
                 continue  # Null/non-trading candles are not invented.
             o, h, low, c, v = values
+            if (
+                iv in ("1h", "1m")
+                and i == len(stamps) - 1
+                and rows
+                and int(stamp) // step * step == rows[-1].time
+                and int(stamp) % step
+                and v == 0
+                and o == h == low == c
+            ):
+                # Yahoo appends a point-in-time market quote after the full
+                # current candle. It is not another candle for the same bucket.
+                continue
             factor = (
                 adjusted[i] / c
                 if iv == "1D" and i < len(adjusted) and adjusted[i] is not None and c

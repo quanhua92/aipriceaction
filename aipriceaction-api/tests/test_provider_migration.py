@@ -139,11 +139,11 @@ def test_migration_waits_for_other_durable_repairs(repo, blocker):
     assert repo.read("vn", "FPT", "1D") == [row]
 
 
-def test_disabled_jobs_are_paused_but_unpinned_and_other_markets_run(repo):
-    repo.queue("vn", "DNSE", "1D", "bootstrap", 100, "dnse")
+def test_disabled_bootstrap_can_resume_using_an_enabled_provider(repo):
+    disabled = repo.queue("vn", "DNSE", "1D", "bootstrap", 100, "dnse")
     unpinned = repo.queue("vn", "NEW", "1D", "bootstrap", 100)
-    assert repo.claim_job("one", excluded_vn_providers={"dnse"})["id"] == unpinned
-    assert repo.claim_job("two", excluded_vn_providers={"dnse"}) is None
+    assert {repo.claim_job("one", excluded_vn_providers={"dnse"})["id"],
+            repo.claim_job("two", excluded_vn_providers={"dnse"})["id"]} == {disabled, unpinned}
 
 
 def test_migration_preserves_old_bootstrap_pages(repo):
@@ -262,15 +262,16 @@ def test_mismatching_provider_is_parked_without_overwriting_candles(repo, field)
 
 
 @pytest.mark.asyncio
-async def test_live_sync_does_not_use_disabled_pinned_provider(repo):
+async def test_live_sync_uses_enabled_provider_when_old_provider_disabled(repo):
     row = seed(repo, "FPT")
 
-    class NeverFetch:
+    class EnabledProvider:
         async def page(self, *args, **kwargs):
-            pytest.fail("Disabled provider must not be contacted")
+            assert kwargs["provider"] == "vps"
+            return Page([replace(row, provider="vps")], "vps")
 
-    worker = Worker(repo, replace(Settings(), vn_providers=("vps",)), providers=NeverFetch())
-    assert await worker._sync({"source": "vn", "symbol": "FPT"}, "1D") == 0
+    worker = Worker(repo, replace(Settings(), vn_providers=("vps",)), providers=EnabledProvider())
+    assert await worker._sync({"source": "vn", "symbol": "FPT"}, "1D") == 1
     assert repo.read("vn", "FPT", "1D") == [row]
 
 
@@ -285,46 +286,46 @@ def test_bootstrap_does_not_repeatedly_replace_allowed_vndirect_series(repo):
     assert repo.state("vn", "ECI", "1D")["status"] == "ready"
 
 
-def test_scheduler_prefers_daily_and_does_not_exceed_limit(repo, tmp_path):
+def test_history_scheduler_does_not_start_provider_migrations(repo, tmp_path):
     rows = {symbol: seed(repo, symbol) for symbol in ("FPT", "VCB", "HPG")}
     settings = replace(
-        Settings(), vn_providers=("vps",), vn_provider_migration_concurrency=1,
+        Settings(), vn_providers=("vps",),
         archive_backend="filesystem", object_dir=tmp_path / "objects", cache_dir=tmp_path / "cache",
     )
     worker = HistoryWorker(repo, settings)
     worker.configuration = [
         {"source": "vn", "symbol": symbol, "intervals": ["1D"]} for symbol in rows
     ]
-    worker._schedule_disabled_provider_migrations()
-    assert repo.provider_migration_counts() == {"active": 1}
-    assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
-    worker._schedule_disabled_provider_migrations()
-    assert repo.provider_migration_counts() == {"active": 1}
+    worker._ensure_jobs()
+    assert repo.provider_migration_counts() == {}
+    assert all(repo.state("vn", symbol, "1D")["status"] == "ready" for symbol in rows)
+    assert all(repo.history_job("vn", symbol, "1D") for symbol in rows)
     asyncio.run(worker.providers.close())
 
 
 @pytest.mark.asyncio
-async def test_unverified_index_intraday_fallback_is_not_ingested(repo, tmp_path):
+async def test_index_intraday_uses_enabled_fallback(repo, tmp_path):
     row = seed(repo, "VNINDEX", "1m")
     settings = replace(
         Settings(), vn_providers=("vps", "vndirect"), archive_backend="filesystem",
         object_dir=tmp_path / "objects", cache_dir=tmp_path / "cache",
     )
 
-    class NeverFetch:
+    class EnabledProvider:
         async def page(self, *args, **kwargs):
-            pytest.fail("Unverified index fallback must not be fetched")
+            assert kwargs["provider"] == "vps"
+            return Page([replace(row, provider="vps")], "vps")
 
     entry = {"source": "vn", "symbol": "VNINDEX", "intervals": ["1D", "1h", "1m"]}
-    worker = Worker(repo, settings, providers=NeverFetch())
+    worker = Worker(repo, settings, providers=EnabledProvider())
     worker.configuration = [entry]
-    assert await worker._sync(entry, "1m") == 0
+    assert await worker._sync(entry, "1m") == 1
     worker.bootstrap()
     with repo.connect() as con:
-        assert not con.execute("SELECT 1 FROM jobs WHERE symbol='VNINDEX' AND interval IN ('1h','1m')").fetchone()
+        assert con.execute("SELECT 1 FROM jobs WHERE symbol='VNINDEX' AND interval='1h'").fetchone()
     history = HistoryWorker(repo, settings)
     history.configuration = [entry]
-    history._schedule_disabled_provider_migrations()
+    history._ensure_jobs()
     assert repo.provider_migration_counts() == {}
     assert repo.read("vn", "VNINDEX", "1m") == [row]
     await history.providers.close()

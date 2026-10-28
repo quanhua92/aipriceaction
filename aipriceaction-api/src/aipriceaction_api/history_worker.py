@@ -13,7 +13,7 @@ from .archive import Archive, S3Store
 from .domain import DataError, parse_time
 from .history import History
 from .maintenance import DailyArchive
-from .providers import Providers, vn_index_intraday_unverified, vn_provider_order
+from .providers import Providers, vn_provider_order
 from .public_csv import daily_key, period_bounds, plan_candles, publish_object, yearly_key
 from .storage import HISTORY_RETRY_BASE_SECONDS as RETRY_BASE_SECONDS
 from .storage import HISTORY_RETRY_MAX_SECONDS as RETRY_MAX_SECONDS
@@ -94,8 +94,6 @@ class HistoryWorker:
         self._jobs_initialized = False
         self._lease_lost = None
         self._next_manifest_retry = 0.0
-        self._next_provider_migrations = 0.0
-        self._provider_migration_pause_logged = False
         self._ticker_claim_lock = asyncio.Lock()
         self._archive_publish_lock = asyncio.Lock()
         self._active_tickers = set()
@@ -130,6 +128,8 @@ class HistoryWorker:
 
     def _queue_provider_activation(self, entry, interval, state):
         source, symbol = entry["source"], entry["symbol"]
+        if source == "vn":
+            return False
         active = state["provider"]
         if self._expected_provider(source, symbol, interval, active):
             return False
@@ -209,27 +209,11 @@ class HistoryWorker:
         return bool(
             state
             and state["status"] == "ready"
-            and (state["provider"], state["revision"])
-            == (job["provider"], job["revision"])
+            and state["revision"] == job["revision"]
+            and (job["source"] == "vn" or state["provider"] == job["provider"])
         )
 
     def _job_can_continue(self, job):
-        if vn_index_intraday_unverified(
-            self.settings, job["source"], job["symbol"], job["interval"]
-        ):
-            self.repo.set_history_job_status(
-                job["source"], job["symbol"], job["interval"], "waiting_series",
-                "VN index intraday fallback is not verified; checkpoint retained",
-            )
-            return False
-        if job["source"] == "vn" and not self._expected_provider(
-            job["source"], job["symbol"], job["interval"], job["provider"]
-        ):
-            self.repo.set_history_job_status(
-                job["source"], job["symbol"], job["interval"], "waiting_series",
-                "Historical provider is disabled; checkpoint retained until provider handoff",
-            )
-            return False
         if not self._job_basis_is_current(job):
             self.repo.set_history_job_status(
                 job["source"], job["symbol"], job["interval"], "waiting_series",
@@ -262,64 +246,15 @@ class HistoryWorker:
             self.repo.set_history_job_status(source, symbol, interval, "pending")
         return True
 
-    def _schedule_disabled_provider_migrations(self):
-        """Keep a small number of handoffs active, prioritizing daily data."""
-        self._next_provider_migrations = time.monotonic() + 30
-        disabled = set(Providers.VN) - set(self.settings.vn_providers)
-        if disabled and self.repo.provider_migration_circuit_open():
-            if not self._provider_migration_pause_logged:
-                log.error(
-                    "provider migrations paused: five consecutive handoffs required review or exhausted retries; staged pages retained"
-                )
-                self._provider_migration_pause_logged = True
-            return
-        self._provider_migration_pause_logged = False
-        slots = self.settings.vn_provider_migration_concurrency - self.repo.provider_migration_counts().get(
-            "active", 0
-        )
-        if not disabled or slots <= 0:
-            return
-        candidates = self.repo.disabled_provider_migration_candidates(disabled)
-        for interval in ("1D", "1m", "1h"):
-            for entry in self.configuration:
-                ident = (entry["source"], entry["symbol"], interval)
-                state = candidates.get(ident)
-                if not state or interval not in entry["intervals"] or ident[:2] in self._active_tickers:
-                    continue
-                if vn_index_intraday_unverified(self.settings, *ident):
-                    continue
-                floor = self.policy.floor(entry, interval)
-                providers = vn_provider_order(self.settings, interval, floor, entry["symbol"])
-                selected = next((value for value in providers if value != state["provider"]), None)
-                if selected is None:
-                    continue
-                job_id = self.repo.queue_provider_migration(
-                    *ident, state, floor, selected, self.settings.vn_provider_migration_concurrency
-                )
-                if not job_id:
-                    continue
-                log.warning(
-                    "provider migration queued source=%s symbol=%s interval=%s from=%s to=%s job_id=%s",
-                    *ident, state["provider"], selected, job_id,
-                )
-                slots -= 1
-                if slots <= 0:
-                    return
-
     def _ensure_jobs(self):
-        self._schedule_disabled_provider_migrations()
+        retired = self.repo.retire_vn_provider_migrations(self.settings.vn_providers)
+        if retired:
+            log.info("retired obsolete VN provider handoffs count=%s; staged evidence retained", retired)
         for entry in self.configuration:
             source, symbol = entry["source"], entry["symbol"]
             for iv in entry["intervals"]:
                 state = self.repo.state(source, symbol, iv)
                 existing = self.repo.history_job(source, symbol, iv)
-                if vn_index_intraday_unverified(self.settings, source, symbol, iv):
-                    if existing and existing["status"] != "waiting_series":
-                        self.repo.set_history_job_status(
-                            source, symbol, iv, "waiting_series",
-                            "VN index intraday fallback is not verified; checkpoint retained",
-                        )
-                    continue
                 if state and state["status"] == "ready" and self._queue_provider_activation(entry, iv, state):
                     continue
                 if existing and existing["status"] == "exhausted":
@@ -486,8 +421,11 @@ class HistoryWorker:
             if previous is None:
                 new_rows.append(row)
                 continue
+            if job["source"] == "vn" and previous.provider != row.provider:
+                # Preserve an overlapping candle from a different provider.
+                continue
             if (
-                previous.provider not in accepted_providers
+                job["source"] != "vn" and previous.provider not in accepted_providers
                 or previous.revision != row.revision
                 or _market_values(previous) != _market_values(row)
             ):
@@ -532,74 +470,6 @@ class HistoryWorker:
             )
         return objects, len(new_rows)
 
-    async def _handoff_vn_provider(self, job):
-        if job["source"] != "vn" or job["attempts"] + 1 < HANDOFF_FAILURES:
-            return False
-        before = job.get("batch_cursor") or job["cursor"]
-        live_floor = self.policy.floor(
-            next(
-                entry
-                for entry in self.configuration
-                if entry["source"] == job["source"] and entry["symbol"] == job["symbol"]
-            ),
-            job["interval"],
-        )
-        target_floor_probe = min(before, job["target_start"] + 31 * 86400)
-        for alternate in vn_provider_order(
-            self.settings, job["interval"], before, job["symbol"]
-        ):
-            if alternate == job["provider"]:
-                continue
-            try:
-                sample = await self.providers.page(
-                    "vn",
-                    job["symbol"],
-                    job["interval"],
-                    before,
-                    count=3,
-                    provider=alternate,
-                    start=job["target_start"],
-                )
-                floor_sample = await self.providers.page(
-                    "vn",
-                    job["symbol"],
-                    job["interval"],
-                    target_floor_probe,
-                    count=3,
-                    provider=alternate,
-                    start=job["target_start"],
-                )
-                if not sample.rows or not floor_sample.rows:
-                    continue
-                self.repo.queue(
-                    "vn",
-                    job["symbol"],
-                    job["interval"],
-                    "repair",
-                    live_floor,
-                    alternate,
-                )
-                self.repo.finding(
-                    "vn",
-                    job["symbol"],
-                    job["interval"],
-                    "provider_handoff_pending",
-                    f"Historical provider {job['provider']} failed; live series repair queued on {alternate}",
-                )
-                log.warning(
-                    "history provider handoff queued job_id=%s source=vn symbol=%s interval=%s "
-                    "from=%s to=%s; waiting for the live repair to activate a coherent basis",
-                    job["job_id"],
-                    job["symbol"],
-                    job["interval"],
-                    job["provider"],
-                    alternate,
-                )
-                return True
-            except Exception:
-                continue
-        return False
-
     async def _fetch_page(self, job, batch_start, batch_end, batch_cursor):
         route_counts = Counter(self.providers.provider_route_attempt_counts)
         provider_counts = Counter(self.providers.provider_attempt_counts)
@@ -612,13 +482,13 @@ class HistoryWorker:
                 job["interval"],
                 before=batch_cursor,
                 count=self._page_size(job["source"], job["interval"]),
-                provider=job["provider"],
+                provider=None if job["source"] == "vn" else job["provider"],
                 **kwargs,
             )
         except Exception as exc:
             raise HistoricalProviderError(str(exc)) from exc
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
-        if page.provider != job["provider"]:
+        if job["source"] != "vn" and page.provider != job["provider"]:
             raise DataError("Provider changed during a pinned historical series")
         oldest = page.cursor if page.cursor is not None else (page.rows[0].time if page.rows else None)
         if oldest is None or not page.rows:
@@ -838,15 +708,6 @@ class HistoryWorker:
             "coverage remains unverified" in str(exc).lower()
             or "no candles" in str(exc).lower()
         )
-        if provider_failure and await self._handoff_vn_provider(job):
-            self.repo.set_history_job_status(
-                job["source"],
-                job["symbol"],
-                job["interval"],
-                "waiting_series",
-                "Waiting for the live provider-basis repair before restarting cold history",
-            )
-            return
         coverage_gap_status = coverage_gap and (
             job["source"] != "vn" or job["attempts"] + 1 >= HANDOFF_FAILURES
         )
@@ -1147,8 +1008,6 @@ class HistoryWorker:
                         self._configure()
                         self._ensure_jobs()
                         self._jobs_initialized = True
-                    if time.monotonic() >= self._next_provider_migrations:
-                        self._schedule_disabled_provider_migrations()
                     progressed = await self.step()
                     await self._tick_retention_archive()
                     if progressed:
@@ -1182,8 +1041,6 @@ class HistoryWorker:
                         self._configure()
                         self._ensure_jobs()
                         self._jobs_initialized = True
-                    if time.monotonic() >= self._next_provider_migrations:
-                        self._schedule_disabled_provider_migrations()
                     await self._tick_retention_archive()
                     for task in ticker_tasks:
                         if task.done():

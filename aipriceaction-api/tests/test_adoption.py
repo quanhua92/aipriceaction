@@ -167,12 +167,12 @@ async def test_adoption_evidence_survives_archive_index_restore(system, tmp_path
     assert History(fresh, restored, settings).query("vn", "FPT", "15m", limit=1) == expected
 
 
-def test_same_revision_without_adoption_cannot_mix_providers(system):
+def test_same_vn_revision_can_preserve_multiple_provider_provenance(system):
     repo, archive, history, _ = system
     row = repo.read("vn", "FPT", "1m")[-1]
     archive.publish([replace(row, time=row.time + 60, provider="dnse")])
-    with pytest.raises(DataError, match="Unverified providers"):
-        history.read("vn", "FPT", "1m", limit=2)
+    rows = history.read("vn", "FPT", "1m", limit=2)
+    assert [r.provider for r in rows] == ["legacy-api", "dnse"]
 
 
 def test_vn_finality_includes_closed_sessions_and_excludes_partial_sessions():

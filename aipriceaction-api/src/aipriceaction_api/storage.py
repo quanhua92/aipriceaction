@@ -1498,9 +1498,9 @@ class Repository:
         else:
             record = adoption
         providers = {c.provider for c in candles}
-        if (len(providers) > 1 and not record) or (
+        if first.source != "vn" and ((len(providers) > 1 and not record) or (
             record and not providers <= {record["snapshot_provider"], record["provider"]}
-        ):
+        )):
             raise DataError("Unverified providers in one adjustment revision")
         if record:
             self.validate_adoption(dict(record))
@@ -1581,13 +1581,41 @@ class Repository:
                 if (
                     state["revision"] != c.revision
                     or state["provider"] != c.provider
+                    and not (verification and c.source == "vn")
                     or state["status"] not in ("ready", "repairing")
                     or state["status"] == "repairing"
                     and not repair
                 ):
                     raise DataError("Provider/revision change requires staged recovery")
+                if repair and c.source == "vn" and c.provider != state["provider"]:
+                    raise DataError("A different-provider repair is still active")
+                if verification and c.source == "vn":
+                    previous = con.execute(
+                        "SELECT provider FROM candles WHERE source=? AND symbol=? AND interval=? AND time=?",
+                        (c.source, c.symbol, c.interval, c.time),
+                    ).fetchone()
+                    if (previous and previous["provider"] != c.provider
+                            and c.time < verification["completed_before"]):
+                        # A fallback can extend the series without rewriting
+                        # completed candles from a different provider.
+                        continue
                 record = c.record()
                 record["updated_at"] = stamp
+                existing = None
+                if repair and repair["provider"] == state["provider"]:
+                    existing = con.execute(
+                        f"SELECT {','.join(COLUMNS[4:10])} FROM staging WHERE job_id=? AND time=?",
+                        (repair["id"], c.time),
+                    ).fetchone()
+                    if (existing and tuple(existing) != tuple(record[key] for key in COLUMNS[4:10])
+                            and c.time < verification["completed_before"]):
+                        # The repair has a different completed value. Keep its
+                        # staged evidence and still publish unrelated live bars.
+                        log.warning(
+                            "retaining staged completed candle source=%s symbol=%s interval=%s time=%s",
+                            c.source, c.symbol, c.interval, c.time,
+                        )
+                        continue
                 affected = con.execute(
                     statement, tuple(record[k] for k in COLUMNS)
                 ).rowcount
@@ -1598,12 +1626,11 @@ class Repository:
                     # tail. Mirror each independently verified live candle into
                     # the replacement revision so atomic activation cannot drop
                     # observations that arrived while historical pages ran.
-                    existing = con.execute(
-                        f"SELECT {','.join(COLUMNS[4:10])} FROM staging WHERE job_id=? AND time=?",
-                        (repair["id"], c.time),
-                    ).fetchone()
                     if existing and tuple(existing) != tuple(record[key] for key in COLUMNS[4:10]):
-                        raise DataError("Verified live candle conflicts with staged repair")
+                        log.info(
+                            "refreshing staged repair with newer verified candle source=%s symbol=%s interval=%s time=%s",
+                            c.source, c.symbol, c.interval, c.time,
+                        )
                     staged = record | {"revision": repair["revision"]}
                     con.execute(
                         f"INSERT OR REPLACE INTO staging(job_id,{','.join(COLUMNS)}) "
@@ -1650,6 +1677,38 @@ class Repository:
                     (source, symbol, interval),
                 ).fetchone()
             )
+
+    def retire_vn_provider_migrations(self, allowed):
+        """Release obsolete provider handoffs without deleting staged evidence."""
+        allowed = tuple(allowed)
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            placeholders = ",".join("?" for _ in allowed)
+            rows = con.execute(
+                """SELECT j.id,j.source,j.symbol,j.interval FROM jobs j
+                LEFT JOIN provider_migrations m ON m.job_id=j.id AND m.status='active'
+                WHERE j.source='vn' AND j.kind='repair' AND j.status IN ('pending','running')
+                AND (m.job_id IS NOT NULL OR (j.provider IS NOT NULL AND j.provider NOT IN ("""
+                + placeholders + ")))", allowed,
+            ).fetchall()
+            now = time.time_ns()
+            for row in rows:
+                reason = "Provider pin removed; staged repair retained for review"
+                con.execute(
+                    "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,error=?,updated_at=? WHERE id=?",
+                    (reason, now, row["id"]),
+                )
+                con.execute(
+                    "UPDATE provider_migrations SET status='review',error=?,updated_at=? WHERE job_id=? AND status='active'",
+                    (reason, now, row["id"]),
+                )
+                con.execute(
+                    "UPDATE series SET status='ready' WHERE source=? AND symbol=? AND interval=? AND status='repairing'",
+                    (row["source"], row["symbol"], row["interval"]),
+                )
+            if rows:
+                self.bump(con)
+            return len(rows)
 
     def read(self, source, symbol, interval, start=None, end=None, limit=None, forward=False):
         return self.read_many(
@@ -2291,7 +2350,7 @@ class Repository:
                     not state
                     or state["status"] != "ready"
                     or state["revision"] != obj["revision"]
-                    or obj["provider"] not in accepted_providers
+                    or obj["source"] != "vn" and obj["provider"] not in accepted_providers
                 ):
                     raise DataError("Archive candidate superseded by a series repair")
             con.execute(
@@ -2325,7 +2384,8 @@ class Repository:
             (obj["source"], obj["symbol"], obj["interval"], obj["provider"], obj["revision"])
             for obj in objects
         }
-        if len(identities) != 1:
+        series_revisions = {(s, sym, iv, rev) for s, sym, iv, _, rev in identities}
+        if len(series_revisions) != 1 or (len(identities) != 1 and objects[0]["source"] != "vn"):
             raise DataError("An archive publication batch must contain one series basis")
         with self.connect() as con:
             con.execute("BEGIN IMMEDIATE")
@@ -2335,10 +2395,8 @@ class Repository:
                     "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
                     (source, symbol, interval),
                 ).fetchone()
-                if not state or (state["provider"], state["revision"], state["status"]) != (
-                    provider,
-                    revision,
-                    "ready",
+                if not state or state["revision"] != revision or state["status"] != "ready" or (
+                    source != "vn" and state["provider"] != provider
                 ):
                     raise DataError("Archive batch basis changed before publication")
             for obj in objects:
@@ -2720,6 +2778,16 @@ class Repository:
                 "SELECT * FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind=?",
                 (source, symbol, interval, kind),
             ).fetchone()
+            if current and current["status"] in ("complete", "cancelled") and con.execute(
+                "SELECT 1 FROM staging WHERE job_id=? LIMIT 1", (current["id"],)
+            ).fetchone():
+                # Keep old candidate rows and their foreign-key parent, while
+                # freeing the logical job slot for a later real repair.
+                con.execute(
+                    "UPDATE jobs SET kind=? WHERE id=?",
+                    (f"retired:{kind}:{current['id']}", current["id"]),
+                )
+                current = None
             if current and current["status"] not in ("complete", "cancelled"):
                 if provider is None or provider == current["provider"]:
                     return current["id"]
@@ -3056,7 +3124,7 @@ class Repository:
             parameters = [now, now]
             if excluded_vn_providers:
                 excluded = sorted(excluded_vn_providers)
-                extra += " AND (source<>'vn' OR provider IS NULL OR provider NOT IN (" + ",".join("?" for _ in excluded) + "))"
+                extra += " AND (source<>'vn' OR kind='bootstrap' OR provider IS NULL OR provider NOT IN (" + ",".join("?" for _ in excluded) + "))"
                 parameters.extend(excluded)
             row = con.execute(
                 "SELECT * FROM jobs WHERE status IN ('pending','running') AND kind NOT LIKE 'archive_repair%' AND retry_at<=? AND lease_until<=?"
@@ -3100,7 +3168,8 @@ class Repository:
                 or row["lease_until"] < int(time.time())
             ):
                 raise DataError("Repair lease expired")
-            if row["provider"] and row["provider"] != provider:
+            mixed_bootstrap = job["source"] == "vn" and job["kind"] == "bootstrap"
+            if row["provider"] and row["provider"] != provider and not mixed_bootstrap:
                 raise DataError("Cannot mix providers in a staged series")
             for c in candles:
                 if (c.source, c.symbol, c.interval, c.provider, c.revision) != (
@@ -3113,7 +3182,7 @@ class Repository:
                     raise DataError("Staging series identity mismatch")
                 values = c.record() | {"updated_at": time.time_ns()}
                 con.execute(
-                    f"INSERT OR REPLACE INTO staging(job_id,{','.join(COLUMNS)}) VALUES ({','.join('?' for _ in range(len(COLUMNS) + 1))})",
+                    f"INSERT OR {'IGNORE' if mixed_bootstrap else 'REPLACE'} INTO staging(job_id,{','.join(COLUMNS)}) VALUES ({','.join('?' for _ in range(len(COLUMNS) + 1))})",
                     (job["id"], *(values[k] for k in COLUMNS)),
                 )
             con.execute(
@@ -3508,7 +3577,7 @@ class Repository:
                 for ticker in major_tickers:
                     row = con.execute(
                         f"""SELECT CASE
-                        WHEN ch.provider=s.provider
+                        WHEN ch.provider=c.provider
                           AND ch.revision=s.revision AND ch.successful_at_ns IS NOT NULL
                         THEN MAX(c.updated_at,ch.successful_at_ns)
                         ELSE c.updated_at
@@ -3580,6 +3649,9 @@ class Repository:
                     COALESCE(s.status,CASE WHEN a.archive_objects>0 THEN 'archived'
                     ELSE 'archive_pending' END) status,
                     COALESCE(c.rows,0) rows,c.first,c.last,c.last_ingest_ns,
+                    (SELECT provider FROM candles last_row WHERE last_row.source=i.source
+                     AND last_row.symbol=i.symbol AND last_row.interval=i.interval
+                     ORDER BY last_row.time DESC LIMIT 1) latest_provider,
                     COALESCE(a.archive_objects,0) archive_objects,
                     COALESCE(a.archive_rows,0) archive_rows,a.archive_first,a.archive_last,
                     COALESCE(a.pending_archive_repairs,0) pending_archive_repairs,
@@ -3599,7 +3671,7 @@ class Repository:
             for row in series:
                 current = (
                     row["status"] == "ready"
-                    and row["provider"] == row["checked_provider"]
+                    and row["latest_provider"] == row["checked_provider"]
                     and row["revision"] == row["checked_revision"]
                     and row["successful_at_ns"] is not None
                     and row["last_ingest_ns"] is not None

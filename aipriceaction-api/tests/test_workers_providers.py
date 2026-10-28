@@ -838,23 +838,27 @@ async def test_vn_expanded_overlap_failure_preserves_published_candles(system, m
 
 @pytest.mark.parametrize("iv", ["1m", "1D"])
 @pytest.mark.asyncio
-async def test_vn_outage_fallback_queues_basis_recovery_without_expanding_alternate(system, iv):
+async def test_vn_outage_fallback_preserves_existing_candle_and_adds_latest(system, iv, monkeypatch):
     repo, archive, settings = system
-    original = Candle("vn", "FPT", iv, parse_time("2026-01-05"), 100, 101, 99, 100, 1000, "vps")
+    step = 86400 if iv == "1D" else 60
+    now = int(time.time()) // 86400 * 86400
+    original = Candle("vn", "FPT", iv, now - step, 100, 101, 99, 100, 1000, "vps")
     repo.put([original])
     original_rows = repo.read("vn", "FPT", iv)
     fallback = "dnse"
     incoming = replace(
-        original, provider=fallback, time=original.time + 100 * (86400 if iv == "1D" else 60)
+        original, provider=fallback, time=original.time + step
     )
-    providers = Pages(DataError("VPS unavailable"), Page([incoming], fallback))
+    overlap = replace(original, provider=fallback)
+    providers = Pages(DataError("VPS unavailable"), Page([overlap, incoming], fallback))
     worker = Worker(repo, settings, providers=providers, archive=archive)
-    assert await worker.sync({"source": "vn", "symbol": "FPT"}, iv) == 0
+    monkeypatch.setattr(worker, "floor", lambda *args: original.time)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, iv) == 2
     assert providers.calls == ["vps", fallback]
-    assert repo.read("vn", "FPT", iv) == original_rows
-    jobs = repo.status()["jobs"]
-    assert len(jobs) == 1 and repo.claim_job(worker.owner)["provider"] == fallback
-    assert repo.status()["series"][0]["outcome"] == "repair_queued"
+    rows = repo.read("vn", "FPT", iv)
+    assert rows[0] == original_rows[0] and rows[-1].provider == fallback
+    assert repo.status()["jobs"] == []
+    assert repo.status()["series"][0]["outcome"] == "succeeded"
 
 
 @pytest.mark.parametrize("iv", ["1m", "1h", "1D"])
@@ -1187,7 +1191,7 @@ async def test_alternate_provider_repair_still_expands_published_provider_overla
 
 
 @pytest.mark.asyncio
-async def test_same_provider_live_tail_cannot_overwrite_staged_revision(system, monkeypatch):
+async def test_same_provider_live_tail_keeps_completed_staged_revision(system, monkeypatch):
     repo, archive, settings = system
     first = parse_time("2026-10-08T07:43:00Z")
     row = replace(candle(1), interval="1m", time=first, symbol="VCB")
@@ -1201,8 +1205,9 @@ async def test_same_provider_live_tail_cannot_overwrite_staged_revision(system, 
     )
     monkeypatch.setattr(worker, "floor", lambda entry, iv: first)
 
-    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 0
-    assert repo.read("vn", "VCB", "1m")[-1].time == first
+    monkeypatch.setattr("aipriceaction_api.workers.completed_vn_sessions", lambda: first + 86400)
+    assert await worker.sync({"source": "vn", "symbol": "VCB"}, "1m") == 2
+    assert repo.read("vn", "VCB", "1m")[-1].time == first + 60
     with repo.connect() as con:
         staged = con.execute(
             "SELECT close,revision FROM staging WHERE job_id=? AND time=?", (job["id"], first)
@@ -1211,22 +1216,23 @@ async def test_same_provider_live_tail_cannot_overwrite_staged_revision(system, 
 
 
 @pytest.mark.asyncio
-async def test_provider_switch_queues_rebuild_instead_of_appending(system):
+async def test_provider_switch_appends_without_rebuilding(system, monkeypatch):
     repo, archive, settings = system
     repo.put([candle(1)])
     repo.register("vn", "FPT", enabled=True)
-    provider = Pages(DataError("VPS unavailable"), Page([candle(2, 90, "dnse")], "dnse"))
+    provider = Pages(DataError("VPS unavailable"), Page([candle(1, 90, "dnse"), candle(2, 90, "dnse")], "dnse"))
     worker = Worker(repo, settings, provider, archive)
-    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 0
+    monkeypatch.setattr(worker, "floor", lambda *args: candle(1).time)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 2
     assert repo.read("vn", "FPT", "1D")[0].close == 100
-    assert repo.state("vn", "FPT", "1D")["status"] == "repairing"
-    job = repo.claim_job(worker.owner)
-    assert job["provider"] == "dnse"
-    assert provider.calls == ["vps", "dnse"]
+    assert repo.read("vn", "FPT", "1D")[-1].provider == "dnse"
+    assert repo.state("vn", "FPT", "1D")["status"] == "ready"
+    assert repo.status()["jobs"] == []
+    assert provider.calls[:2] == ["vps", "dnse"]
 
 
 @pytest.mark.asyncio
-async def test_provider_cannot_change_halfway_through_staging(system):
+async def test_vn_bootstrap_can_change_provider_without_discarding_staging(system):
     repo, archive, settings = system
     repo.queue("vn", "FPT", "1D", "bootstrap", candle(1).time)
     worker = Worker(
@@ -1236,10 +1242,11 @@ async def test_provider_cannot_change_halfway_through_staging(system):
         archive,
     )
     assert await worker.repair_page(repo.claim_job(worker.owner)) == 1
-    assert await worker.repair_page(repo.claim_job(worker.owner)) == 0
-    assert len(repo.read("vn", "FPT", "1D")) == 1
-    assert repo.read("vn", "FPT", "1D")[0].provider == "vps"
-    assert "mix providers" in repo.status()["jobs"][0]["error"]
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 1
+    assert [(r.time, r.provider) for r in repo.read("vn", "FPT", "1D")] == [
+        (candle(1).time, "dnse"), (candle(5).time, "vps")
+    ]
+    assert repo.status()["jobs"] == []
 
 
 def test_page_fairness_leases_and_archive_queue_isolation(system):
@@ -2147,7 +2154,7 @@ async def test_newest_candles_remain_available_during_incomplete_bootstrap(syste
 
 
 @pytest.mark.parametrize(("symbol", "preferred"), [("FPT", "vps"), ("VNINDEX", "dnse")])
-def test_bootstrap_self_heals_vndirect_daily_series(system, monkeypatch, symbol, preferred):
+def test_bootstrap_does_not_migrate_existing_vndirect_series(system, monkeypatch, symbol, preferred):
     repo, archive, settings = system
     floor = candle(1).time
     published = replace(candle(5, provider="vndirect", symbol=symbol), revision="published")
@@ -2157,16 +2164,13 @@ def test_bootstrap_self_heals_vndirect_daily_series(system, monkeypatch, symbol,
     monkeypatch.setattr(worker, "floor", lambda entry, interval: floor)
 
     jobs = worker.bootstrap()
-    assert len(jobs) == 1
+    assert jobs == []
     state = repo.state("vn", symbol, "1D")
-    assert state["provider"] == "vndirect" and state["status"] == "repairing"
+    assert state["provider"] == "vndirect" and state["status"] == "ready"
     assert repo.read("vn", symbol, "1D")[-1].provider == "vndirect"
-    job = repo.claim_job(worker.owner)
-    assert job["id"] == jobs[0]
-    assert job["provider"] == preferred and job["floor"] == floor
 
 
-def test_vndirect_daily_self_heal_resumes_same_staged_repair(system, monkeypatch):
+def test_bootstrap_retires_old_migration_and_preserves_staging(system, monkeypatch):
     repo, archive, settings = system
     floor = candle(1).time
     published = replace(candle(5, provider="vndirect"), revision="published")
@@ -2174,7 +2178,9 @@ def test_vndirect_daily_self_heal_resumes_same_staged_repair(system, monkeypatch
     worker = Worker(repo, settings, archive=archive)
     worker.configuration = [{"source": "vn", "symbol": "FPT", "intervals": ["1D"]}]
     monkeypatch.setattr(worker, "floor", lambda entry, interval: floor)
-    repair_id = worker.bootstrap()[0]
+    repair_id = repo.queue_provider_migration(
+        "vn", "FPT", "1D", repo.state("vn", "FPT", "1D"), floor, "vps", 1
+    )
     job = repo.claim_job(worker.owner)
     staged = replace(candle(5), revision=job["revision"])
     repo.stage(job, [staged], staged.time, "vps")
@@ -2182,11 +2188,11 @@ def test_vndirect_daily_self_heal_resumes_same_staged_repair(system, monkeypatch
         before_job = dict(con.execute("SELECT * FROM jobs WHERE id=?", (repair_id,)).fetchone())
         before_staging = [tuple(row) for row in con.execute("SELECT * FROM staging")]
 
-    assert worker.bootstrap() == [repair_id]
+    assert worker.bootstrap() == []
     with repo.connect() as con:
         after_job = dict(con.execute("SELECT * FROM jobs WHERE id=?", (repair_id,)).fetchone())
         after_staging = [tuple(row) for row in con.execute("SELECT * FROM staging")]
-    assert after_job == before_job
+    assert before_job["status"] == "pending" and after_job["status"] == "cancelled"
     assert after_staging == before_staging
 
 
@@ -2400,7 +2406,7 @@ def yahoo_overlap_rows(iv, count=200):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("provider", ("legacy-api", "legacy-s3", "legacy"))
-@pytest.mark.parametrize("source,symbol", (("yahoo", "AAPL"), ("vn", "VNINDEX")))
+@pytest.mark.parametrize("source,symbol", (("yahoo", "AAPL"),))
 async def test_imported_hourly_series_waits_for_handoff_without_upstream_calls(
     system, provider, source, symbol
 ):

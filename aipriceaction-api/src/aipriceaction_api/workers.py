@@ -18,7 +18,6 @@ from .providers import (
     Providers,
     adjustment_changes,
     suspected_adjustment,
-    vn_index_intraday_unverified,
     vn_provider_order,
 )
 from .quality import audit as audit  # Re-export for the existing operational CLI.
@@ -209,39 +208,19 @@ class Worker:
 
     def bootstrap(self):
         jobs = []
+        retired = self.repo.retire_vn_provider_migrations(self.settings.vn_providers)
+        if retired:
+            log.info("retired obsolete VN provider handoffs count=%s; staged evidence retained", retired)
         configuration = self.configuration
         if not configuration and self.worker_scope is None:
             configuration = self.load_watchlist()
         for entry in configuration:
             for iv in entry["intervals"]:
-                if vn_index_intraday_unverified(self.settings, entry["source"], entry["symbol"], iv):
-                    continue
                 state = self.repo.state(entry["source"], entry["symbol"], iv)
                 if state:
                     self.repo.cancel_superseded_bootstrap(
                         entry["source"], entry["symbol"], iv, self.floor(entry, iv)
                     )
-                    # With DNSE deliberately disabled, retain an explicitly
-                    # allowed VNDirect basis. Repeated preference promotion
-                    # can otherwise rebuild the same series every refresh.
-                    if (entry["source"] == "vn" and iv == "1D"
-                            and state["provider"] == "vndirect"
-                            and state["provider"] in self.settings.vn_providers
-                            and "dnse" in self.settings.vn_providers):
-                        preferred = vn_provider_order(
-                            self.settings, "1D", int(time.time()) + 1, entry["symbol"]
-                        )[0]
-                        if preferred != state["provider"]:
-                            jobs.append(
-                                self.repo.queue(
-                                    "vn",
-                                    entry["symbol"],
-                                    "1D",
-                                    "repair",
-                                    self.floor(entry, iv),
-                                    preferred,
-                                )
-                            )
                 else:
                     if entry["source"] == "sjc" and iv == "1D":
                         cancelled = self.repo.cancel_empty_bootstrap(
@@ -332,7 +311,7 @@ class Worker:
                     if job["source"] == "crypto"
                     else 500
                 ),
-                provider=job["provider"],
+                provider=None if job["source"] == "vn" and job["kind"] == "bootstrap" else job["provider"],
                 **({"start": job["floor"]} if job["source"] in ("vn", "yahoo") else {}),
             )
             if (
@@ -771,15 +750,6 @@ class Worker:
         failed = False
         try:
             state = self.repo.state(source, symbol, iv)
-            if vn_index_intraday_unverified(self.settings, source, symbol, iv):
-                if state:
-                    attempt = self.repo.start_source_check(source, symbol, iv)
-                    self.repo.fail_source_check(
-                        source, symbol, iv, attempt,
-                        "VN index intraday fallback is not verified; last published data retained",
-                        "handoff_required",
-                    )
-                return 0
             if not state:
                 if source == "sjc" and iv == "1D":
                     seeded = await self._seed_sjc(entry)
@@ -797,16 +767,11 @@ class Worker:
             ):
                 return 0
             attempt = self.repo.start_source_check(source, symbol, iv)
-            if (source == "vn" and state["provider"] in Providers.VN
-                    and state["provider"] not in self.settings.vn_providers):
-                reason = "Pinned VN provider is disabled; awaiting controlled provider migration"
-                self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
-                return 0
             imported_snapshot = (
-                (source in ("vn", "yahoo") and iv == "1m" or source == "vn" and iv == "1D")
+                source == "yahoo" and iv == "1m"
                 and state["provider"] == "legacy-api"
             ) or (
-                source in ("vn", "yahoo")
+                source == "yahoo"
                 and iv == "1h"
                 and state["provider"] in {"legacy-api", "legacy-s3", "legacy"}
             )
@@ -815,11 +780,6 @@ class Worker:
                 reason = f"Imported {label} snapshot requires verified provider handoff"
                 self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
                 self.repo.finding(source, symbol, iv, "provider_handoff_pending", reason)
-                return 0
-            if state["provider"] == "vci" and not self.repo.snapshot_adoption(state):
-                reason = "VCI minute source requires verified per-series handoff"
-                self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
-                self.repo.finding(source, symbol, iv, "vci_verification_pending", reason)
                 return 0
             latest = self.repo.read(source, symbol, iv, limit=50)
             hourly_range = self.repo.snapshot_hourly_range(state)
@@ -834,32 +794,28 @@ class Worker:
                 tail_times.update(r.time for r in latest if latest[-1].time - r.time <= step)
             if source == "crypto" and latest:
                 count = min(1000, max(count, (int(time.time()) - latest[-1].time) // step + 40))
-            # Pin incremental reads to the current upstream. A failure cannot
-            # silently stitch a different provider's adjustment basis into it.
-            try:
-                page = await self.providers.page(
-                    source, symbol, iv, count=count, provider=state["provider"], **request_policy
-                )
-            except DataError:
-                if source != "vn":
-                    raise
+            # VN reads use the configured provider order and fallbacks on each
+            # request. Existing completed candles keep their original source.
+            if source == "vn":
                 page = None
-                for alternate in vn_provider_order(
-                    self.settings, iv, int(time.time()) + 1, symbol
-                ):
-                    if alternate == state["provider"]:
-                        continue
+                errors = []
+                for selected in vn_provider_order(self.settings, iv, int(time.time()) + 1, symbol):
                     try:
                         candidate = await self.providers.page(
-                            source, symbol, iv, count=40, provider=alternate
+                            source, symbol, iv, count=count, provider=selected
                         )
                         if candidate.rows:
                             page = candidate
                             break
-                    except DataError:
-                        continue
+                        errors.append(f"{selected}: no data")
+                    except DataError as exc:
+                        errors.append(f"{selected}: {exc}")
                 if page is None:
-                    raise DataError("All configured VN providers unavailable") from None
+                    raise DataError("All configured VN providers unavailable: " + "; ".join(errors))
+            else:
+                page = await self.providers.page(
+                    source, symbol, iv, count=count, provider=state["provider"], **request_policy
+                )
             if not page.rows:
                 if source == "yahoo" and page.no_data:
                     reason = "Yahoo returned no candles in the current request window"
@@ -874,11 +830,16 @@ class Worker:
                     cooldown_until = int(time.time()) + YAHOO_NO_DATA_RETRY_SECONDS
                     return 0
                 raise DataError("No recent provider data")
+            if source == "vn" and latest and latest[-1].provider != page.provider:
+                log.info(
+                    "live provider fallback source=%s symbol=%s interval=%s previous=%s selected=%s",
+                    source, symbol, iv, latest[-1].provider, page.provider,
+                )
             if (
                 source in ("vn", "yahoo")
                 and iv in ("1D", "1h", "1m")
                 and latest
-                and page.provider == state["provider"]
+                and (source == "vn" or page.provider == state["provider"])
                 and page.rows[-1].time > latest[-1].time
                 and not any(r.time in tail_times for r in page.rows)
             ):
@@ -892,7 +853,7 @@ class Worker:
                         symbol,
                         iv,
                         count=count,
-                        provider=state["provider"],
+                        provider=page.provider,
                         start=None if hourly_range else self.floor(entry, iv),
                         **request_policy,
                     )
@@ -919,7 +880,7 @@ class Worker:
                 source in ("vn", "yahoo")
                 and iv in ("1D", "1h", "1m")
                 and latest
-                and page.provider == state["provider"]
+                and (source == "vn" or page.provider == state["provider"])
                 and page.rows[-1].time > latest[-1].time
                 and not any(r.time in tail_times for r in page.rows)
             ):
@@ -927,8 +888,13 @@ class Worker:
                 # missing candles. Require an observed overlap instead of
                 # guessing which intervening candles should have traded.
                 market = "VN" if source == "vn" else "Yahoo"
-                gap = f"Bounded {market} provider page does not overlap the published tail; recovery queued"
-            if gap:
+                gap = f"Bounded {market} provider page does not overlap the published tail"
+            if gap and source == "vn" and latest[-1].provider != page.provider:
+                # Publish the observed recent candles, but explicitly retain
+                # the coverage warning rather than claim the gap is filled.
+                self.repo.finding(source, symbol, iv, "coverage_pending", gap)
+                log.warning("live coverage pending source=%s symbol=%s interval=%s: %s", source, symbol, iv, gap)
+            elif gap:
                 # A long outage can exceed one bounded live page. Preserve the
                 # published series and resume its durable recovery rather than
                 # appending a newer tail without coverage evidence.
@@ -956,8 +922,14 @@ class Worker:
                 if iv == "1D"
                 else int(time.time()) // (3600 if iv == "1h" else 60) * (3600 if iv == "1h" else 60)
             )
+            snapshot_provider = (
+                self.repo.snapshot_provider(state) if page.provider == state["provider"] else None
+            )
             adjustment = (
-                suspected_adjustment(overlap, page.rows)
+                suspected_adjustment(
+                    [row for row in overlap if row.provider in (page.provider, snapshot_provider)],
+                    page.rows,
+                )
                 if source in ("vn", "yahoo") and iv == "1D" and symbol not in INDEXES
                 else None
             )
@@ -980,8 +952,9 @@ class Worker:
                     adjustment["worst_date"],
                     adjustment["worst_ratio"],
                 )
-            if page.provider != state["provider"] or adjustment or adjustment_changes(
-                overlap, page.rows, completed, snapshot_provider=self.repo.snapshot_provider(state)
+            if (source != "vn" and page.provider != state["provider"]) or adjustment or adjustment_changes(
+                overlap, page.rows, completed,
+                snapshot_provider=snapshot_provider,
             ):
                 self.repo.queue(source, symbol, iv, "repair", self.floor(entry, iv), page.provider)
                 self.repo.finding(
@@ -1030,6 +1003,10 @@ class Worker:
                 raise DataError("Provider has no candles inside the retained window")
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
             self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
+            if source == "vn" or state["status"] == "repairing":
+                # Use committed rows, including any older source retained by
+                # the transaction, for caches and public CSV publication.
+                rows = self.repo.read(source, symbol, iv, start=rows[0].time, end=rows[-1].time)
             if source == "yahoo":
                 self.repo.finding(
                     source,
@@ -1616,7 +1593,6 @@ class Worker:
             for entry in self.configuration
             if iv in entry["intervals"]
             and (entry["source"], entry["symbol"]) in available
-            and not vn_index_intraday_unverified(self.settings, entry["source"], entry["symbol"], iv)
         ]
         # During a restart/outage, hundreds of stale one-minute tails can need
         # two requests each to regain overlap. Reserve most of the provider
