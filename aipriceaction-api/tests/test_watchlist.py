@@ -374,6 +374,45 @@ async def test_bitcoin_keeps_priority_without_starving_other_sources(tmp_path, m
 
 
 @pytest.mark.asyncio
+async def test_recovery_retries_other_sources_despite_large_new_vn_queue(tmp_path, monkeypatch):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": "vn", "symbol": f"VN{i:03}", "intervals": ["1m"]}
+        for i in range(40)
+    ] + [
+        {"source": "crypto", "symbol": "ETHUSDT", "intervals": ["1m"]},
+        {"source": "yahoo", "symbol": "AAPL", "intervals": ["1m"]},
+    ]
+    repo.activate_watchlist(entries)
+    for entry in entries:
+        repo.queue(entry["source"], entry["symbol"], "1m", "bootstrap", 1)
+    with repo.connect() as con:
+        # Simulate previously failed jobs that otherwise sort behind every
+        # untouched VN bootstrap, even when their retry time is overdue.
+        con.execute("UPDATE jobs SET attempts=1 WHERE source IN ('crypto','yahoo')")
+    worker = Worker(repo, replace(Settings(), worker_concurrency=1))
+    worker.configuration = entries
+    recovered = []
+
+    async def no_update(*args):
+        return 0
+
+    async def finish(job):
+        recovered.append(job["source"])
+        with repo.connect() as con:
+            con.execute("UPDATE jobs SET status='complete' WHERE id=?", (job["id"],))
+        return 0
+
+    monkeypatch.setattr(worker, "sync", no_update)
+    monkeypatch.setattr(worker, "repair_page", finish)
+    monkeypatch.setattr(repo, "live_check_backlog", lambda *args: 0)
+    for _ in range(3):
+        assert await worker.cycle() == 0
+    assert recovered == ["crypto", "vn", "yahoo"]
+
+
+@pytest.mark.asyncio
 async def test_new_catalog_recovery_establishes_daily_before_intraday(tmp_path, monkeypatch):
     repo = Repository(tmp_path / "db")
     repo.initialize()

@@ -45,6 +45,7 @@ class Worker:
         self.worker_scope = None
         self.deadline = 90  # Keep network operations shorter than durable leases.
         self.recovery_turn = 0
+        self.recovery_source_turn = 0
         self.live_turn = 0
         # Rotate sources independently for overdue and first-time updates.
         # A large market must not indefinitely delay smaller, active markets.
@@ -1764,10 +1765,28 @@ class Worker:
         )
         self.recovery_turn += 1
         excluded = set(Providers.VN) - set(self.settings.vn_providers)
-        job = (
-            self.repo.claim_job(self.owner, allowed=allowed, excluded_vn_providers=excluded)
-            if run_recovery else None
-        )
+        job = None
+        if run_recovery:
+            # A catalog can contain far more VN jobs than other markets. Keep
+            # the existing priority within each source, while rotating sources
+            # so old failed jobs for a smaller market eventually get a retry.
+            source_order = ["crypto", "vn", "yahoo", "sjc"]
+            source_order.extend(sorted({item[0] for item in allowed} - set(source_order)))
+            allowed_by_source = {
+                source: [item for item in allowed if item[0] == source]
+                for source in source_order
+            }
+            for offset in range(len(source_order)):
+                index = (self.recovery_source_turn + offset) % len(source_order)
+                source = source_order[index]
+                if not allowed_by_source[source]:
+                    continue
+                job = self.repo.claim_job(
+                    self.owner, allowed=allowed_by_source[source], excluded_vn_providers=excluded
+                )
+                if job:
+                    self.recovery_source_turn = (index + 1) % len(source_order)
+                    break
         if job:
             values.append(await self.repair_page(job))
             log.info(
