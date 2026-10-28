@@ -202,7 +202,7 @@ services:
     <<: *api-service
     environment:
       <<: *api-environment
-      WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-2}
+      WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-4}
       PROVIDER_RPM: ${MINUTE_PROVIDER_RPM:-10}
       BINANCE_PROVIDER_RPM: ${MINUTE_BINANCE_PROVIDER_RPM:-30}
     command: ["aipa-api", "worker", "--interval", "1m", "--skip-catalog-publish"]
