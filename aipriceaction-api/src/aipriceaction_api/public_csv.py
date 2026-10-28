@@ -15,6 +15,8 @@ from decimal import Decimal
 
 from .domain import DataError
 
+PUBLIC_CSV_CACHE_CONTROL = "no-store, no-cache, max-age=0, must-revalidate"
+
 
 @dataclass(frozen=True)
 class PublicObject:
@@ -233,6 +235,9 @@ def publish_object(client, bucket, item):
             raise
         head = None
 
+    if item.content_type == "text/csv":
+        return _publish_csv(client, bucket, item, head)
+
     if head is not None:
         metadata = {key.lower(): value for key, value in head.get("Metadata", {}).items()}
         if (
@@ -241,24 +246,6 @@ def publish_object(client, bucket, item):
             and head.get("ContentType") == item.content_type
         ):
             return item.report() | {"uploaded": False, "verified": True}
-
-        if item.content_type == "text/csv":
-            request = {"Bucket": bucket, "Key": item.key}
-            if head.get("ETag"):
-                request["IfMatch"] = head["ETag"]
-            response = client.get_object(**request)
-            stream = response["Body"]
-            try:
-                existing = _csv_timestamps(stream.read(), item.key)
-            finally:
-                stream.close()
-            missing = existing - _csv_timestamps(item.body, item.key)
-            if missing:
-                earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
-                raise DataError(
-                    f"Refusing to replace public CSV {item.key}: "
-                    f"{len(missing)} existing timestamp(s) are missing, starting at {earliest}"
-                )
 
     client.put_object(
         Bucket=bucket,
@@ -276,6 +263,96 @@ def publish_object(client, bucket, item):
     ):
         raise DataError(f"Public CSV object failed post-upload verification: {item.key}")
     return item.report() | {"uploaded": True, "verified": True}
+
+
+def _publish_csv(client, bucket, item, head):
+    """Publish a complete CSV with an exact fingerprint and no CDN caching.
+
+    The Rust fingerprint is kept for older SDKs, but it only covers the close
+    and volume sums. It cannot establish that the other fields are unchanged.
+    Existing objects are upgraded in place when their bytes already match.
+    Conditional requests protect other writers between the read and update.
+    """
+    metadata = {k.lower(): v for k, v in head.get("Metadata", {}).items()} if head else {}
+    etag = head.get("ETag") if head else None
+    if head and not etag:
+        raise DataError(f"Cannot safely update public CSV without an ETag: {item.key}")
+
+    exact_match = bool(
+        head
+        and metadata.get("sha256") == item.sha256
+        and head.get("ContentLength") == len(item.body)
+        and head.get("ContentType") == item.content_type
+    )
+    fully_current = (
+        exact_match
+        and metadata.get("content-hash") == item.content_hash
+        and head.get("CacheControl") == PUBLIC_CSV_CACHE_CONTROL
+    )
+    if fully_current:
+        return item.report() | {"uploaded": False, "verified": True}
+
+    if head and not exact_match:
+        response = client.get_object(Bucket=bucket, Key=item.key, IfMatch=etag)
+        stream = response["Body"]
+        try:
+            existing_body = stream.read()
+        finally:
+            stream.close()
+        existing = _csv_timestamps(existing_body, item.key)
+        missing = existing - _csv_timestamps(item.body, item.key)
+        if missing:
+            earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
+            raise DataError(
+                f"Refusing to replace public CSV {item.key}: "
+                f"{len(missing)} existing timestamp(s) are missing, starting at {earliest}"
+            )
+        exact_match = existing_body == item.body and head.get("ContentType") == item.content_type
+
+    updated_metadata = metadata | {"content-hash": item.content_hash, "sha256": item.sha256}
+    if exact_match:
+        # Metadata-only replacement preserves Rust's original bytes and any
+        # unrelated object metadata. Both conditions guard against a race.
+        request = {
+            "Bucket": bucket,
+            "Key": item.key,
+            "CopySource": {"Bucket": bucket, "Key": item.key},
+            "CopySourceIfMatch": etag,
+            "IfMatch": etag,
+            "MetadataDirective": "REPLACE",
+            "Metadata": updated_metadata,
+            "ContentType": item.content_type,
+            "CacheControl": PUBLIC_CSV_CACHE_CONTROL,
+        }
+        for name in ("ContentEncoding", "ContentLanguage", "ContentDisposition", "Expires", "WebsiteRedirectLocation"):
+            if name in head:
+                request[name] = head[name]
+        client.copy_object(**request)
+        uploaded = False
+    else:
+        request = {
+            "Bucket": bucket,
+            "Key": item.key,
+            "Body": item.body,
+            "ContentType": item.content_type,
+            "Metadata": updated_metadata,
+            "CacheControl": PUBLIC_CSV_CACHE_CONTROL,
+        }
+        request["IfMatch" if head else "IfNoneMatch"] = etag if head else "*"
+        client.put_object(**request)
+        uploaded = True
+
+    verified = client.head_object(Bucket=bucket, Key=item.key)
+    verified_metadata = {k.lower(): v for k, v in verified.get("Metadata", {}).items()}
+    if (
+        verified_metadata.get("content-hash") != item.content_hash
+        or verified_metadata.get("sha256") != item.sha256
+        or verified.get("ContentLength") != len(item.body)
+        or verified.get("ContentType") != item.content_type
+        or verified.get("CacheControl") != PUBLIC_CSV_CACHE_CONTROL
+    ):
+        raise DataError(f"Public CSV object failed post-upload verification: {item.key}")
+    return item.report() | {"uploaded": uploaded, "verified": True}
 
 
 def period_bounds(*, day=None, year=None):

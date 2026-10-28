@@ -1,3 +1,4 @@
+import hashlib
 import io
 import json
 from dataclasses import replace
@@ -10,6 +11,7 @@ from aipriceaction_api.catalog import Catalog
 from aipriceaction_api.config import Settings
 from aipriceaction_api.domain import Candle, DataError, parse_time
 from aipriceaction_api.public_csv import (
+    PUBLIC_CSV_CACHE_CONTROL,
     daily_key,
     period_bounds,
     plan_candles,
@@ -223,6 +225,14 @@ class FakeS3:
     def __init__(self):
         self.objects = {}
         self.puts = []
+        self.copies = []
+
+    def etag(self, value):
+        return '"' + hashlib.sha256(value["Body"]).hexdigest() + '"'
+
+    def check(self, value, condition):
+        if condition and (value is None or self.etag(value) != condition):
+            raise ClientError({"Error": {"Code": "PreconditionFailed"}}, "S3")
 
     def head_object(self, *, Bucket, Key):
         value = self.objects.get((Bucket, Key))
@@ -232,14 +242,29 @@ class FakeS3:
             "Metadata": value["Metadata"],
             "ContentLength": len(value["Body"]),
             "ContentType": value["ContentType"],
+            "ETag": self.etag(value),
+            **{k: value[k] for k in ("CacheControl", "ContentLanguage") if k in value},
         }
 
     def put_object(self, **kwargs):
+        existing = self.objects.get((kwargs["Bucket"], kwargs["Key"]))
+        self.check(existing, kwargs.get("IfMatch"))
+        if kwargs.get("IfNoneMatch") == "*" and existing is not None:
+            raise ClientError({"Error": {"Code": "PreconditionFailed"}}, "PutObject")
         self.puts.append(kwargs)
         self.objects[(kwargs["Bucket"], kwargs["Key"])] = kwargs
 
     def get_object(self, *, Bucket, Key, **kwargs):
-        return {"Body": io.BytesIO(self.objects[(Bucket, Key)]["Body"])}
+        value = self.objects[(Bucket, Key)]
+        self.check(value, kwargs.get("IfMatch"))
+        return {"Body": io.BytesIO(value["Body"])}
+
+    def copy_object(self, **kwargs):
+        value = self.objects[(kwargs["Bucket"], kwargs["Key"])]
+        self.check(value, kwargs.get("CopySourceIfMatch"))
+        self.check(value, kwargs.get("IfMatch"))
+        self.copies.append(kwargs)
+        self.objects[(kwargs["Bucket"], kwargs["Key"])] = value | kwargs
 
 
 def test_public_publisher_sets_sdk_hash_and_skips_unchanged_objects():
@@ -255,7 +280,8 @@ def test_public_publisher_sets_sdk_hash_and_skips_unchanged_objects():
     put = s3.puts[0]
     assert put["Key"] == "ohlcv/vn/VCB/1D/VCB-1D-2026-10-21.csv"
     assert put["ContentType"] == "text/csv"
-    assert put["Metadata"] == {"content-hash": item.content_hash}
+    assert put["Metadata"] == {"content-hash": item.content_hash, "sha256": item.sha256}
+    assert put["CacheControl"] == PUBLIC_CSV_CACHE_CONTROL
     assert "ACL" not in put
 
 
@@ -286,12 +312,51 @@ def test_public_publisher_skips_unchanged_rust_published_object():
         "Body": item.body,
         "ContentType": "text/csv",
         "Metadata": {"content-hash": item.content_hash},
+        "ContentLanguage": "en",
     }
 
     result = publish_object(s3, "one-bucket", item)
 
     assert not result["uploaded"] and result["verified"]
     assert s3.puts == []
+    assert len(s3.copies) == 1
+    assert s3.objects[("one-bucket", item.key)]["Body"] == item.body
+    assert s3.objects[("one-bucket", item.key)]["ContentLanguage"] == "en"
+    assert s3.objects[("one-bucket", item.key)]["CacheControl"] == PUBLIC_CSV_CACHE_CONTROL
+
+
+def test_public_publisher_detects_change_hidden_by_rust_fingerprint():
+    s3 = FakeS3()
+    old = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))
+    new = plan_candles([replace(candle(), high=2.6)], "vn", "VCB", "1D", day=date(2026, 10, 21))
+    assert old.content_hash == new.content_hash and len(old.body) == len(new.body)
+    s3.objects[("one-bucket", old.key)] = {
+        "Body": old.body, "ContentType": "text/csv", "Metadata": {"content-hash": old.content_hash}
+    }
+
+    assert publish_object(s3, "one-bucket", new)["uploaded"]
+    assert s3.objects[("one-bucket", new.key)]["Body"] == new.body
+
+
+@pytest.mark.parametrize("same_content", [True, False])
+def test_public_publisher_does_not_overwrite_concurrent_update(same_content):
+    class RacingS3(FakeS3):
+        def get_object(self, **kwargs):
+            result = super().get_object(**kwargs)
+            self.objects[(kwargs["Bucket"], kwargs["Key"])]["Body"] = b"newer writer"
+            return result
+
+    s3 = RacingS3()
+    old = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))
+    new = old if same_content else plan_candles(
+        [replace(candle(), high=2.6)], "vn", "VCB", "1D", day=date(2026, 10, 21)
+    )
+    s3.objects[("one-bucket", old.key)] = {
+        "Body": old.body, "ContentType": "text/csv", "Metadata": {"content-hash": old.content_hash}
+    }
+    with pytest.raises(ClientError, match="PreconditionFailed"):
+        publish_object(s3, "one-bucket", new)
+    assert s3.objects[("one-bucket", old.key)]["Body"] == b"newer writer"
 
 
 def test_public_publisher_preserves_existing_timestamps_after_restore():
