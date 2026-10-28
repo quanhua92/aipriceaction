@@ -224,7 +224,7 @@ def _csv_timestamps(body, key):
         raise DataError(f"Cannot safely replace existing public CSV {key}: invalid rows") from exc
 
 
-def publish_object(client, bucket, item):
+def publish_object(client, bucket, item, *, expected_etag=None):
     """Idempotently PUT one object, then verify its SDK-visible hash metadata."""
     from botocore.exceptions import ClientError
 
@@ -234,6 +234,9 @@ def publish_object(client, bucket, item):
         if not _not_found(exc):
             raise
         head = None
+
+    if expected_etag is not None and (head is None or head.get("ETag") != expected_etag):
+        raise DataError(f"Public object changed since it was verified: {item.key}")
 
     if item.content_type == "text/csv":
         return _publish_csv(client, bucket, item, head)

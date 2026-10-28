@@ -113,6 +113,12 @@ Add `--apply` only after checking the dry-run evidence. The command requires the
 target and at least three nearby active-revision candles to match Yahoo. It
 changes only the revision label and stores the comparison in the quality log.
 
+To inspect a complete Yahoo yearly CSV repair, run
+`docker compose exec api python -m aipriceaction_api.repair_yahoo_year AVGO 2023`.
+The optional `--apply` requires Yahoo to cover every existing public date and
+match every available canonical candle. It saves the original CSV and a
+receipt under `parquet/repair-evidence/` before replacing the public file.
+
 Changed public CSV periods are queued with the SQLite update. Failed exports
 retry in the background with a delay; successful entries leave the queue. One
 failed CSV does not stop other Parquet repairs. `/health` reports the number of
