@@ -7,8 +7,20 @@ import time
 import uuid
 from dataclasses import replace
 
-from .domain import INDEXES, DataError, completed_vn_sessions, cutoff
-from .providers import Providers, adjustment_changes, suspected_adjustment, vn_provider_order
+from .domain import (
+    INDEXES,
+    DataError,
+    ProviderMigrationReviewRequired,
+    completed_vn_sessions,
+    cutoff,
+)
+from .providers import (
+    Providers,
+    adjustment_changes,
+    suspected_adjustment,
+    vn_index_intraday_unverified,
+    vn_provider_order,
+)
 from .quality import audit as audit  # Re-export for the existing operational CLI.
 from .redis_client import create_redis_client
 from .redis_publish import publish_ticker_list, publish_worker_candles, replace_worker_cache
@@ -128,6 +140,7 @@ class Worker:
             expanded = {}
             catalog = Catalog(self.settings)
             liquid_vn = self.repo.liquid_vn_symbols(catalog.vn_listed_symbols)
+            vn_indexes = {row["symbol"] for row in catalog.vn_index_rows}
             for source, groups in catalog.groups_by_source.items():
                 catalog_symbols = {symbol for values in groups.values() for symbol in values}
                 if source == "vn":
@@ -141,7 +154,8 @@ class Worker:
                 expanded[source] = []
                 for symbol in symbols:
                     entry = {"symbol": symbol} | overrides.get((source, symbol), {})
-                    if source == "vn" and symbol not in liquid_vn and "intervals" not in entry:
+                    if (source == "vn" and symbol not in vn_indexes
+                            and symbol not in liquid_vn and "intervals" not in entry):
                         # Probe and retain three years of daily data for every
                         # listed share. Minute/hourly history is promoted only
                         # after broad daily discovery ranks it in the liquid 80%.
@@ -200,12 +214,20 @@ class Worker:
             configuration = self.load_watchlist()
         for entry in configuration:
             for iv in entry["intervals"]:
+                if vn_index_intraday_unverified(self.settings, entry["source"], entry["symbol"], iv):
+                    continue
                 state = self.repo.state(entry["source"], entry["symbol"], iv)
                 if state:
                     self.repo.cancel_superseded_bootstrap(
                         entry["source"], entry["symbol"], iv, self.floor(entry, iv)
                     )
-                    if entry["source"] == "vn" and iv == "1D" and state["provider"] == "vndirect":
+                    # With DNSE deliberately disabled, retain an explicitly
+                    # allowed VNDirect basis. Repeated preference promotion
+                    # can otherwise rebuild the same series every refresh.
+                    if (entry["source"] == "vn" and iv == "1D"
+                            and state["provider"] == "vndirect"
+                            and state["provider"] in self.settings.vn_providers
+                            and "dnse" in self.settings.vn_providers):
                         preferred = vn_provider_order(
                             self.settings, "1D", int(time.time()) + 1, entry["symbol"]
                         )[0]
@@ -417,12 +439,27 @@ class Worker:
             self.repo.finding(
                 job["source"], job["symbol"], job["interval"], "incomplete_repair", reason
             )
-            self.repo.fail_job(job, reason)
+            if isinstance(exc, ProviderMigrationReviewRequired) and self.repo.review_provider_migration(
+                job, reason
+            ):
+                log.error(
+                    "provider migration requires review source=%s symbol=%s interval=%s reason=%s; published data and staged pages retained",
+                    job["source"], job["symbol"], job["interval"], reason,
+                )
+                return 0
+            exhausted = self.repo.fail_job(job, reason)
+            if exhausted:
+                log.error(
+                    "provider migration stopped source=%s symbol=%s interval=%s failures=10; staged pages retained",
+                    job["source"], job["symbol"], job["interval"],
+                )
+                return 0
             if (
                 isinstance(exc, DataError)
                 and job["source"] == "vn"
                 and job["provider"]
                 and job["attempts"] >= 2
+                and not self.repo.migration_has_staged_rows(job["id"])
             ):
                 for alternate in vn_provider_order(
                     self.settings, job["interval"], before, job["symbol"]
@@ -654,7 +691,7 @@ class Worker:
         if page.provider != provider:
             return page
         rows = list(page.rows)
-        if not rows or any(b.time - a.time != step for a, b in zip(rows, rows[1:])):
+        if not rows or any(b.time - a.time != step for a, b in zip(rows, rows[1:], strict=False)):
             return page
         for _ in range(CRYPTO_LIVE_CATCHUP_PAGES - 1):
             if rows[0].time <= last_time + step:
@@ -666,7 +703,7 @@ class Worker:
                 earlier.provider != provider
                 or not earlier.rows
                 or earlier.rows[-1].time != rows[0].time - step
-                or any(b.time - a.time != step for a, b in zip(earlier.rows, earlier.rows[1:]))
+                or any(b.time - a.time != step for a, b in zip(earlier.rows, earlier.rows[1:], strict=False))
             ):
                 return page
             rows = list(earlier.rows) + rows
@@ -734,6 +771,15 @@ class Worker:
         failed = False
         try:
             state = self.repo.state(source, symbol, iv)
+            if vn_index_intraday_unverified(self.settings, source, symbol, iv):
+                if state:
+                    attempt = self.repo.start_source_check(source, symbol, iv)
+                    self.repo.fail_source_check(
+                        source, symbol, iv, attempt,
+                        "VN index intraday fallback is not verified; last published data retained",
+                        "handoff_required",
+                    )
+                return 0
             if not state:
                 if source == "sjc" and iv == "1D":
                     seeded = await self._seed_sjc(entry)
@@ -751,6 +797,11 @@ class Worker:
             ):
                 return 0
             attempt = self.repo.start_source_check(source, symbol, iv)
+            if (source == "vn" and state["provider"] in Providers.VN
+                    and state["provider"] not in self.settings.vn_providers):
+                reason = "Pinned VN provider is disabled; awaiting controlled provider migration"
+                self.repo.fail_source_check(source, symbol, iv, attempt, reason, "handoff_required")
+                return 0
             imported_snapshot = (
                 (source in ("vn", "yahoo") and iv == "1m" or source == "vn" and iv == "1D")
                 and state["provider"] == "legacy-api"
@@ -1251,7 +1302,10 @@ class Worker:
             return 0
         if restart_failed and not all((source, symbol, interval)):
             raise DataError("Restart requires a source, symbol, and native interval", 400)
-        batch = self.repo.ensure_archive_repair_batch(source, symbol, interval)
+        batch = self.repo.ensure_archive_repair_batch(
+            source, symbol, interval,
+            excluded_vn_providers=set(Providers.VN) - set(self.settings.vn_providers),
+        )
         if not batch:
             return 0
         batch = self.repo.claim_archive_repair_batch(self.owner, force=restart_failed)
@@ -1262,6 +1316,14 @@ class Worker:
             target["old"]["row_count"] for target in payload.get("targets", [])
         )
         try:
+            if batch["status"] == "manifest_published" and self.repo.retire_superseded_archive_repair_batch(
+                batch["id"], self.owner
+            ):
+                log.warning(
+                    "superseded archive repair receipt retired batch=%s; newer repairs remain queued",
+                    batch["id"],
+                )
+                return 0
             if batch["status"] in ("indexed", "manifest_published"):
                 payload = await asyncio.to_thread(
                     self.archive.publish_repair_batch, batch["id"], self.owner
@@ -1554,6 +1616,7 @@ class Worker:
             for entry in self.configuration
             if iv in entry["intervals"]
             and (entry["source"], entry["symbol"]) in available
+            and not vn_index_intraday_unverified(self.settings, entry["source"], entry["symbol"], iv)
         ]
         # During a restart/outage, hundreds of stale one-minute tails can need
         # two requests each to regain overlap. Reserve most of the provider
@@ -1573,7 +1636,11 @@ class Worker:
             self.recovery_turn % 4
         )
         self.recovery_turn += 1
-        job = self.repo.claim_job(self.owner, allowed=allowed) if run_recovery else None
+        excluded = set(Providers.VN) - set(self.settings.vn_providers)
+        job = (
+            self.repo.claim_job(self.owner, allowed=allowed, excluded_vn_providers=excluded)
+            if run_recovery else None
+        )
         if job:
             values.append(await self.repair_page(job))
             log.info(

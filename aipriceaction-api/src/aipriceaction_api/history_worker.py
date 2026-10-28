@@ -13,7 +13,7 @@ from .archive import Archive, S3Store
 from .domain import DataError, parse_time
 from .history import History
 from .maintenance import DailyArchive
-from .providers import Providers, vn_provider_order
+from .providers import Providers, vn_index_intraday_unverified, vn_provider_order
 from .public_csv import daily_key, period_bounds, plan_candles, publish_object, yearly_key
 from .storage import HISTORY_RETRY_BASE_SECONDS as RETRY_BASE_SECONDS
 from .storage import HISTORY_RETRY_MAX_SECONDS as RETRY_MAX_SECONDS
@@ -94,6 +94,7 @@ class HistoryWorker:
         self._jobs_initialized = False
         self._lease_lost = None
         self._next_manifest_retry = 0.0
+        self._next_provider_migrations = 0.0
         self._ticker_claim_lock = asyncio.Lock()
         self._archive_publish_lock = asyncio.Lock()
         self._active_tickers = set()
@@ -140,6 +141,17 @@ class HistoryWorker:
         if selected is None:
             return False
         floor = self.policy.floor(entry, interval)
+        if source == "vn" and active in Providers.VN and active not in self.settings.vn_providers:
+            # Never abandon an in-flight cold partition. The repository checks
+            # its durable checkpoint again inside the same transaction as the
+            # bounded hot-series repair.
+            existing = self.repo.history_job(source, symbol, interval)
+            if existing and existing["status"] != "waiting_series":
+                self.repo.set_history_job_status(
+                    source, symbol, interval, "waiting_series",
+                    f"Provider {active} is disabled; existing history checkpoint retained",
+                )
+            return True
         target_start = self._target_start(floor, entry)
         self.repo.configure_history_job(
             source,
@@ -201,6 +213,22 @@ class HistoryWorker:
         )
 
     def _job_can_continue(self, job):
+        if vn_index_intraday_unverified(
+            self.settings, job["source"], job["symbol"], job["interval"]
+        ):
+            self.repo.set_history_job_status(
+                job["source"], job["symbol"], job["interval"], "waiting_series",
+                "VN index intraday fallback is not verified; checkpoint retained",
+            )
+            return False
+        if job["source"] == "vn" and not self._expected_provider(
+            job["source"], job["symbol"], job["interval"], job["provider"]
+        ):
+            self.repo.set_history_job_status(
+                job["source"], job["symbol"], job["interval"], "waiting_series",
+                "Historical provider is disabled; checkpoint retained until provider handoff",
+            )
+            return False
         if not self._job_basis_is_current(job):
             self.repo.set_history_job_status(
                 job["source"], job["symbol"], job["interval"], "waiting_series",
@@ -233,12 +261,58 @@ class HistoryWorker:
             self.repo.set_history_job_status(source, symbol, interval, "pending")
         return True
 
+    def _schedule_disabled_provider_migrations(self):
+        """Keep a small number of handoffs active, prioritizing daily data."""
+        self._next_provider_migrations = time.monotonic() + 30
+        disabled = set(Providers.VN) - set(self.settings.vn_providers)
+        slots = self.settings.vn_provider_migration_concurrency - self.repo.provider_migration_counts().get(
+            "active", 0
+        )
+        if not disabled or slots <= 0:
+            return
+        candidates = self.repo.disabled_provider_migration_candidates(disabled)
+        for interval in ("1D", "1m", "1h"):
+            for entry in self.configuration:
+                ident = (entry["source"], entry["symbol"], interval)
+                state = candidates.get(ident)
+                if not state or interval not in entry["intervals"] or ident[:2] in self._active_tickers:
+                    continue
+                if vn_index_intraday_unverified(self.settings, *ident):
+                    continue
+                floor = self.policy.floor(entry, interval)
+                providers = vn_provider_order(self.settings, interval, floor, entry["symbol"])
+                selected = next((value for value in providers if value != state["provider"]), None)
+                if selected is None:
+                    continue
+                job_id = self.repo.queue_provider_migration(
+                    *ident, state, floor, selected, self.settings.vn_provider_migration_concurrency
+                )
+                if not job_id:
+                    continue
+                log.warning(
+                    "provider migration queued source=%s symbol=%s interval=%s from=%s to=%s job_id=%s",
+                    *ident, state["provider"], selected, job_id,
+                )
+                slots -= 1
+                if slots <= 0:
+                    return
+
     def _ensure_jobs(self):
+        self._schedule_disabled_provider_migrations()
         for entry in self.configuration:
             source, symbol = entry["source"], entry["symbol"]
             for iv in entry["intervals"]:
                 state = self.repo.state(source, symbol, iv)
                 existing = self.repo.history_job(source, symbol, iv)
+                if vn_index_intraday_unverified(self.settings, source, symbol, iv):
+                    if existing and existing["status"] != "waiting_series":
+                        self.repo.set_history_job_status(
+                            source, symbol, iv, "waiting_series",
+                            "VN index intraday fallback is not verified; checkpoint retained",
+                        )
+                    continue
+                if state and state["status"] == "ready" and self._queue_provider_activation(entry, iv, state):
+                    continue
                 if existing and existing["status"] == "exhausted":
                     if (
                         not state
@@ -252,8 +326,6 @@ class HistoryWorker:
                         self.repo.set_history_job_status(
                             source, symbol, iv, "waiting_series", "Live series is not ready"
                         )
-                    continue
-                if self._queue_provider_activation(entry, iv, state):
                     continue
                 rebase = self.repo.adjustment_rebase(source, symbol)
                 if rebase and rebase["status"] not in ("complete", "failed"):
@@ -1066,6 +1138,8 @@ class HistoryWorker:
                         self._configure()
                         self._ensure_jobs()
                         self._jobs_initialized = True
+                    if time.monotonic() >= self._next_provider_migrations:
+                        self._schedule_disabled_provider_migrations()
                     progressed = await self.step()
                     await self._tick_retention_archive()
                     if progressed:
@@ -1099,6 +1173,8 @@ class HistoryWorker:
                         self._configure()
                         self._ensure_jobs()
                         self._jobs_initialized = True
+                    if time.monotonic() >= self._next_provider_migrations:
+                        self._schedule_disabled_provider_migrations()
                     await self._tick_retention_archive()
                     for task in ticker_tasks:
                         if task.done():

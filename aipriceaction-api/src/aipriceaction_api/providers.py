@@ -71,6 +71,19 @@ def vn_provider_order(settings, iv, before, symbol=None):
     return selected
 
 
+def vn_index_intraday_unverified(settings, source, symbol, interval):
+    # The available VPS and VNDirect index feeds include post-close or
+    # indicative bars that do not match the exchange-session series. Do not
+    # silently substitute them when the established DNSE feed is disabled.
+    return (
+        source == "vn"
+        and symbol in INDEXES
+        and symbol != "VN30F1M"
+        and interval in {"1m", "1h"}
+        and "dnse" not in settings.vn_providers
+    )
+
+
 class Providers:
     VN = {
         "vps": ("https://histdatafeed.vps.com.vn/tradingview/history", "https://www.vps.com.vn/"),
@@ -932,6 +945,9 @@ class Providers:
         if source == "vn":
             errors = []
             selected_providers = vn_provider_order(self.settings, iv, before, symbol)
+            # VCI is governed by its own explicit opt-in and interval checks.
+            if provider and provider != "vci" and provider not in self.settings.vn_providers:
+                raise DataError(f"VN provider {provider} is disabled for this request")
             for selected in (provider,) if provider else selected_providers:
                 try:
                     page = await self.vn_page(selected, symbol, iv, before, count, start)

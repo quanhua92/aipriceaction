@@ -45,6 +45,10 @@ class DataError(Exception):
         super().__init__(message)
 
 
+class ProviderMigrationReviewRequired(DataError):
+    """A provider replacement needs review before it can become authoritative."""
+
+
 def parse_time(value: str | int | float | datetime) -> int:
     if isinstance(value, datetime):
         dt = value

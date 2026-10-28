@@ -13,7 +13,13 @@ from dataclasses import fields
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .domain import SOURCES, Candle, DataError, completed_vn_sessions
+from .domain import (
+    SOURCES,
+    Candle,
+    DataError,
+    ProviderMigrationReviewRequired,
+    completed_vn_sessions,
+)
 
 MAJOR_VN = ("VNINDEX", "VN30", "VN30F1M")
 MAJOR_OFF_HOURS = (
@@ -94,6 +100,13 @@ CREATE TABLE IF NOT EXISTS staging(
  open REAL NOT NULL, high REAL NOT NULL, low REAL NOT NULL, close REAL NOT NULL,
  volume INTEGER NOT NULL, provider TEXT NOT NULL, revision TEXT NOT NULL, updated_at INTEGER NOT NULL,
  PRIMARY KEY(job_id,time));
+CREATE TABLE IF NOT EXISTS provider_migrations(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
+ from_provider TEXT NOT NULL, from_revision TEXT NOT NULL,
+ to_provider TEXT NOT NULL, job_id TEXT NOT NULL, status TEXT NOT NULL, failures INTEGER NOT NULL DEFAULT 0,
+ error TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+ PRIMARY KEY(source,symbol,interval));
+CREATE INDEX IF NOT EXISTS provider_migrations_status ON provider_migrations(status);
 CREATE TABLE IF NOT EXISTS quality(
  id INTEGER PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  kind TEXT NOT NULL, detail TEXT NOT NULL, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
@@ -1851,7 +1864,7 @@ class Repository:
         return value
 
     def ensure_archive_repair_batch(
-        self, source=None, symbol=None, interval=None, max_items=100
+        self, source=None, symbol=None, interval=None, max_items=100, excluded_vn_providers=()
     ):
         if not 1 <= max_items <= 100:
             raise DataError("Archive repair batch must contain one to 100 records", 400)
@@ -1870,6 +1883,12 @@ class Repository:
                 "('daily_pending','hourly_pending','minute_pending'))",
             ]
             args = []
+            if excluded_vn_providers:
+                excluded = sorted(excluded_vn_providers)
+                where.append(
+                    "(s.source<>'vn' OR s.provider NOT IN (" + ",".join("?" for _ in excluded) + "))"
+                )
+                args.extend(excluded)
             for column, value in (("a.source", source), ("a.symbol", symbol), ("a.interval", interval)):
                 if value is not None:
                     if column == "a.symbol" and isinstance(value, (list, tuple, set)):
@@ -2031,6 +2050,64 @@ class Repository:
                 "UPDATE archive_repair_batches SET error=?,retry_at=?,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND lease_owner=? AND status IN ('collecting','prepared','indexed','manifest_published')",
                 (str(error)[:500], retry_at, time.time_ns(), batch_id, owner),
             )
+
+    def retire_superseded_archive_repair_batch(self, batch_id, owner):
+        """Release a published receipt only when every replacement is already superseded.
+
+        Keep the receipt, its immutable objects, and the newly queued repairs.
+        Never claim that its outstanding public CSV work was completed.
+        """
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            batch = con.execute(
+                "SELECT * FROM archive_repair_batches WHERE id=? AND lease_owner=? AND lease_until>=? AND status='manifest_published'",
+                (batch_id, owner, now),
+            ).fetchone()
+            manifest = con.execute(
+                "SELECT generation,published_generation FROM archive_manifest_state WHERE id=1"
+            ).fetchone()
+            if not batch or not manifest or manifest["generation"] != manifest["published_generation"]:
+                return False
+            targets = json.loads(batch["payload"]).get("targets", [])
+            if not targets:
+                return False
+            for target in targets:
+                old, replacement = target.get("old"), target.get("replacement")
+                if not isinstance(old, dict) or not isinstance(replacement, dict):
+                    return False
+                ident = (old.get("source"), old.get("symbol"), old.get("interval"))
+                state = con.execute(
+                    "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
+                    ident,
+                ).fetchone()
+                obj = con.execute(
+                    "SELECT source,symbol,interval,provider,revision,status FROM archives WHERE id=?",
+                    (replacement.get("id"),),
+                ).fetchone()
+                if not state or state["status"] != "ready" or not obj:
+                    return False
+                if (state["provider"], state["revision"]) == (target.get("provider"), target.get("revision")):
+                    return False
+                if (obj["source"], obj["symbol"], obj["interval"]) != ident or (
+                    obj["provider"], obj["revision"], obj["status"]
+                ) != (target.get("provider"), target.get("revision"), "pending_repair"):
+                    return False
+                kind = f"archive_repair:{replacement['id']}:{state['revision']}"
+                job = con.execute(
+                    "SELECT provider,status FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind=?",
+                    (*ident, kind),
+                ).fetchone()
+                if not job or job["provider"] != state["provider"] or job["status"] not in ("pending", "running"):
+                    return False
+            reason = "Receipt superseded by newer series revisions; replacement repairs remain queued"
+            if batch["error"]:
+                reason += "; previous error: " + batch["error"]
+            con.execute(
+                "UPDATE archive_repair_batches SET status='failed',error=?,retry_at=0,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND lease_owner=?",
+                (reason[:500], time.time_ns(), batch_id, owner),
+            )
+            return True
 
     def fail_archive_repair_batch(self, batch_id, owner, error):
         with self.connect() as con:
@@ -2664,6 +2741,11 @@ class Repository:
                     time.time_ns(),
                 ),
             )
+            if current:
+                con.execute(
+                    "UPDATE provider_migrations SET job_id=?,to_provider=?,updated_at=? WHERE job_id=? AND status='active'",
+                    (job_id, provider, time.time_ns(), current["id"]),
+                )
             if kind == "repair":
                 stale = con.execute(
                     "SELECT id FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind='bootstrap' AND status NOT IN ('complete','cancelled')",
@@ -2681,6 +2763,153 @@ class Repository:
                 )
             self.bump(con)
             return job_id
+
+    def queue_provider_migration(self, source, symbol, interval, state, floor, provider, limit):
+        """Queue one bounded handoff without discarding any existing checkpoint."""
+        if source != "vn" or limit < 1 or provider == state["provider"]:
+            raise DataError("Invalid provider migration")
+        ident = (source, symbol, interval)
+        now = int(time.time())
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            current = con.execute(
+                "SELECT provider,revision,status FROM series WHERE source=? AND symbol=? AND interval=?",
+                ident,
+            ).fetchone()
+            if not current or (current["provider"], current["revision"]) != (
+                state["provider"], state["revision"]
+            ) or current["status"] not in ("ready", "repairing"):
+                return None
+            previous = con.execute(
+                "SELECT * FROM provider_migrations WHERE source=? AND symbol=? AND interval=?", ident
+            ).fetchone()
+            if previous and previous["from_revision"] == state["revision"] and previous["status"] in (
+                "active", "exhausted", "review"
+            ):
+                return None
+            if con.execute(
+                "SELECT COUNT(*) FROM provider_migrations WHERE status='active'"
+            ).fetchone()[0] >= limit:
+                return None
+            history = con.execute(
+                "SELECT batch_start,batch_status FROM history_jobs WHERE source=? AND symbol=? AND interval=?",
+                ident,
+            ).fetchone()
+            if (history and (history["batch_start"] is not None or history["batch_status"] is not None)) or con.execute(
+                "SELECT 1 FROM history_pending_objects WHERE source=? AND symbol=? AND interval=? LIMIT 1",
+                ident,
+            ).fetchone():
+                return None
+            if con.execute(
+                "SELECT 1 FROM archives WHERE source=? AND symbol=? AND interval=? AND status='pending_repair' LIMIT 1",
+                ident,
+            ).fetchone():
+                return None
+            if con.execute(
+                "SELECT 1 FROM adjustment_rebases WHERE source=? AND symbol=? AND status NOT IN ('complete','failed')",
+                ident[:2],
+            ).fetchone():
+                return None
+            active_batch = con.execute(
+                "SELECT payload FROM archive_repair_batches WHERE status IN ('collecting','prepared','indexed','manifest_published')"
+            ).fetchall()
+            for batch in active_batch:
+                targets = json.loads(batch["payload"]).get("targets", [])
+                if any(
+                    (target.get("old", {}).get("source"), target.get("old", {}).get("symbol"),
+                     target.get("old", {}).get("interval")) == ident
+                    for target in targets
+                ):
+                    return None
+            bootstrap = con.execute(
+                "SELECT * FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind='bootstrap' AND status NOT IN ('complete','cancelled')",
+                ident,
+            ).fetchone()
+            if bootstrap and bootstrap["lease_until"] > now:
+                return None
+            repair = con.execute(
+                "SELECT * FROM jobs WHERE source=? AND symbol=? AND interval=? AND kind='repair'", ident
+            ).fetchone()
+            suspended_disabled_repair = False
+            if repair and repair["status"] not in ("complete", "cancelled"):
+                if repair["provider"] != state["provider"] or repair["lease_until"] > now:
+                    return None
+                # Move the disabled-provider job out of the active repair slot
+                # without deleting any staged pages or its original job ID.
+                con.execute(
+                    "UPDATE jobs SET kind=?,status='cancelled',lease_owner=NULL,lease_until=0,error=?,updated_at=? WHERE id=?",
+                    (f"paused_provider_repair:{repair['id']}",
+                     "Provider disabled; staged repair pages retained", time.time_ns(), repair["id"]),
+                )
+                repair = None
+                suspended_disabled_repair = True
+            elif repair and con.execute(
+                "SELECT 1 FROM staging WHERE job_id=? LIMIT 1", (repair["id"],)
+            ).fetchone():
+                return None
+            if current["status"] == "repairing" and not suspended_disabled_repair:
+                return None
+            if bootstrap:
+                # Preserve already downloaded provider pages as evidence.
+                con.execute(
+                    "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,error=?,updated_at=? WHERE id=?",
+                    ("Provider disabled; staged bootstrap pages retained", time.time_ns(), bootstrap["id"]),
+                )
+            job_id, revision = str(uuid.uuid4()), str(uuid.uuid4())
+            con.execute(
+                "INSERT INTO jobs(id,source,symbol,interval,kind,provider,revision,floor,created_at,updated_at) VALUES (?,?,?,?,'repair',?,?,?,?,?) ON CONFLICT(source,symbol,interval,kind) DO UPDATE SET id=excluded.id,provider=excluded.provider,revision=excluded.revision,cursor=NULL,floor=excluded.floor,status='pending',attempts=0,retry_at=0,lease_owner=NULL,lease_until=0,created_at=excluded.created_at,updated_at=excluded.updated_at,error=NULL",
+                (job_id, *ident, provider, revision, floor, now, time.time_ns()),
+            )
+            con.execute(
+                "INSERT INTO provider_migrations(source,symbol,interval,from_provider,from_revision,to_provider,job_id,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'active',?,?) ON CONFLICT(source,symbol,interval) DO UPDATE SET from_provider=excluded.from_provider,from_revision=excluded.from_revision,to_provider=excluded.to_provider,job_id=excluded.job_id,status='active',failures=0,error=NULL,created_at=excluded.created_at,updated_at=excluded.updated_at",
+                (*ident, state["provider"], state["revision"], provider, job_id, now, time.time_ns()),
+            )
+            con.execute(
+                "UPDATE series SET status='repairing' WHERE source=? AND symbol=? AND interval=?", ident
+            )
+            self.bump(con)
+            return job_id
+
+    def disabled_provider_migration_candidates(self, providers):
+        if not providers:
+            return {}
+        with self.connect() as con:
+            marks = ",".join("?" for _ in providers)
+            rows = con.execute(
+                f"SELECT * FROM series WHERE source='vn' AND status IN ('ready','repairing') AND provider IN ({marks})",
+                tuple(sorted(providers)),
+            ).fetchall()
+            return {(row["source"], row["symbol"], row["interval"]): dict(row) for row in rows}
+
+    def provider_migration_counts(self):
+        with self.connect() as con:
+            return {row["status"]: row["count"] for row in con.execute(
+                "SELECT status,COUNT(*) AS count FROM provider_migrations GROUP BY status"
+            )}
+
+    def provider_migration_status(self, allowed, limit=50):
+        if not allowed or not 1 <= limit <= 1000:
+            raise DataError("Provider migration status requires providers and a limit from 1 to 1000", 400)
+        with self.connect() as con:
+            marks = ",".join("?" for _ in allowed)
+            pinned = [dict(row) for row in con.execute(
+                f"""SELECT s.provider,s.interval,s.status,COUNT(*) AS count FROM series s
+                JOIN tickers t ON t.source=s.source AND t.symbol=s.symbol
+                WHERE s.source='vn' AND t.enabled=1 AND s.provider IN ('vps','vndirect','dnse')
+                AND s.provider NOT IN ({marks}) GROUP BY s.provider,s.interval,s.status
+                ORDER BY s.provider,s.interval,s.status""", tuple(allowed)
+            )]
+            counts = {row["status"]: row["count"] for row in con.execute(
+                "SELECT status,COUNT(*) AS count FROM provider_migrations GROUP BY status"
+            )}
+            migrations = [dict(row) for row in con.execute(
+                """SELECT m.source,m.symbol,m.interval,m.from_provider,m.status,m.failures,m.error,
+                m.created_at,m.updated_at,m.to_provider AS target_provider,j.status AS job_status,
+                j.retry_at,j.attempts FROM provider_migrations m LEFT JOIN jobs j ON j.id=m.job_id
+                ORDER BY CASE m.status WHEN 'active' THEN 0 WHEN 'review' THEN 1 WHEN 'exhausted' THEN 2 ELSE 3 END,
+                m.updated_at DESC LIMIT ?""", (limit,)
+            )]
+            return {"counts": counts, "pinned_to_disabled_provider": pinned, "migrations": migrations}
 
     def cancel_superseded_bootstrap(self, source, symbol, interval, floor):
         """Retire an untouched placeholder predating a verified snapshot handoff.
@@ -2761,7 +2990,7 @@ class Repository:
                 self.bump(con)
             return bool(changed)
 
-    def claim_job(self, owner, lease=120, allowed=None):
+    def claim_job(self, owner, lease=120, allowed=None, excluded_vn_providers=()):
         now = int(time.time())
         if allowed is not None and not allowed:
             return None
@@ -2789,11 +3018,16 @@ class Repository:
                 order = " ORDER BY (cursor IS NOT NULL),(attempts<>0),(SELECT priority FROM allowed_jobs a WHERE a.source=jobs.source AND a.symbol=jobs.symbol AND a.interval=jobs.interval),updated_at,created_at LIMIT 1"
             else:
                 order = " ORDER BY updated_at,created_at LIMIT 1"
+            parameters = [now, now]
+            if excluded_vn_providers:
+                excluded = sorted(excluded_vn_providers)
+                extra += " AND (source<>'vn' OR provider IS NULL OR provider NOT IN (" + ",".join("?" for _ in excluded) + "))"
+                parameters.extend(excluded)
             row = con.execute(
                 "SELECT * FROM jobs WHERE status IN ('pending','running') AND kind NOT LIKE 'archive_repair%' AND retry_at<=? AND lease_until<=?"
                 + extra
                 + order,
-                (now, now),
+                parameters,
             ).fetchone()
             if not row:
                 return None
@@ -2928,8 +3162,45 @@ class Repository:
                 coverage_query,
                 (*ident, row["floor"], completed, job["id"]),
             ).fetchone()
+            migration = con.execute(
+                "SELECT * FROM provider_migrations WHERE job_id=? AND status='active'", (job["id"],)
+            ).fetchone()
             if missing:
+                if migration:
+                    raise ProviderMigrationReviewRequired(
+                        f"Replacement drops completed observed coverage at {missing[0]}"
+                    )
                 raise DataError(f"Replacement drops completed observed coverage at {missing[0]}")
+            if migration:
+                # A provider may use different adjustments or volume rules.
+                # Never overwrite the published basis merely because the
+                # replacement has the same dates. Allow Float32 rounding only.
+                shared = con.execute(
+                    """SELECT COUNT(*) FROM candles c JOIN staging s ON s.job_id=? AND s.time=c.time
+                    WHERE c.source=? AND c.symbol=? AND c.interval=? AND c.time>=? AND c.time<?
+                    AND NOT (c.interval='1D' AND strftime('%w',c.time,'unixepoch') IN ('0','6'))""",
+                    (job["id"], *ident, row["floor"], completed),
+                ).fetchone()[0]
+                if shared < 3:
+                    raise ProviderMigrationReviewRequired(
+                        f"Only {shared} completed overlap candles; provider basis requires review"
+                    )
+                mismatch = con.execute(
+                    """SELECT c.time FROM candles c JOIN staging s ON s.job_id=? AND s.time=c.time
+                    WHERE c.source=? AND c.symbol=? AND c.interval=? AND c.time>=? AND c.time<?
+                    AND NOT (c.interval='1D' AND strftime('%w',c.time,'unixepoch') IN ('0','6'))
+                    AND (ABS(c.open-s.open)>MAX(1,ABS(c.open))*0.000001
+                    OR ABS(c.high-s.high)>MAX(1,ABS(c.high))*0.000001
+                    OR ABS(c.low-s.low)>MAX(1,ABS(c.low))*0.000001
+                    OR ABS(c.close-s.close)>MAX(1,ABS(c.close))*0.000001
+                    OR ABS(c.volume-s.volume)>MAX(1,ABS(c.volume)*0.000001))
+                    ORDER BY c.time LIMIT 1""",
+                    (job["id"], *ident, row["floor"], completed),
+                ).fetchone()
+                if mismatch:
+                    raise ProviderMigrationReviewRequired(
+                        f"Provider OHLCV differs from published completed candle at {mismatch[0]}"
+                    )
             # floor coverage is checked by the worker against provider page progress.
             con.execute(
                 "DELETE FROM candles WHERE source=? AND symbol=? AND interval=? AND time>=?",
@@ -2966,6 +3237,10 @@ class Repository:
                 "UPDATE jobs SET status='complete',lease_owner=NULL,lease_until=0,updated_at=? WHERE id=?",
                 (time.time_ns(), job["id"]),
             )
+            con.execute(
+                "UPDATE provider_migrations SET status='complete',error=NULL,updated_at=? WHERE job_id=? AND status='active'",
+                (time.time_ns(), job["id"]),
+            )
             self.bump(con, market=True)
             con.execute(
                 "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('coverage_pending','incomplete_repair','provider_failure','historical_revision','provider_switch')",
@@ -2975,7 +3250,8 @@ class Repository:
     def fail_job(self, job, reason):
         now = int(time.time())
         with self.connect() as con:
-            con.execute(
+            con.execute("BEGIN IMMEDIATE")
+            changed = con.execute(
                 "UPDATE jobs SET status='pending',attempts=attempts+1,error=?,retry_at=?,lease_owner=NULL,lease_until=0,updated_at=? WHERE id=? AND revision=? AND status IN ('pending','running') AND (lease_owner=? OR lease_owner IS NULL)",
                 (
                     reason[:500],
@@ -2985,7 +3261,67 @@ class Repository:
                     job["revision"],
                     job["lease_owner"],
                 ),
+            ).rowcount
+            if not changed:
+                return False
+            con.execute(
+                "UPDATE provider_migrations SET failures=failures+1,error=?,updated_at=? WHERE job_id=? AND status='active'",
+                (reason[:500], time.time_ns(), job["id"]),
             )
+            migration = con.execute(
+                "SELECT * FROM provider_migrations WHERE job_id=? AND status='active'", (job["id"],)
+            ).fetchone()
+            if not migration or migration["failures"] < 10:
+                return False
+            # Keep staged pages for investigation, and keep serving the old
+            # published revision. A stopped migration must release its slot.
+            con.execute(
+                "UPDATE jobs SET status='cancelled',error=?,updated_at=? WHERE id=?",
+                ("Provider migration stopped after 10 failures; staged pages retained", time.time_ns(), job["id"]),
+            )
+            con.execute(
+                "UPDATE provider_migrations SET status='exhausted',updated_at=? WHERE job_id=? AND status='active'",
+                (time.time_ns(), job["id"]),
+            )
+            con.execute(
+                "UPDATE series SET status='ready' WHERE source=? AND symbol=? AND interval=? AND provider=? AND revision=? AND status='repairing'",
+                (migration["source"], migration["symbol"], migration["interval"], migration["from_provider"], migration["from_revision"]),
+            )
+            self.bump(con)
+            return True
+
+    def migration_has_staged_rows(self, job_id):
+        with self.connect() as con:
+            return bool(con.execute(
+                "SELECT 1 FROM provider_migrations m JOIN staging s ON s.job_id=m.job_id WHERE m.job_id=? AND m.status='active' LIMIT 1",
+                (job_id,),
+            ).fetchone())
+
+    def review_provider_migration(self, job, reason):
+        """Park a mismatching candidate without changing its published basis."""
+        with self.connect() as con:
+            con.execute("BEGIN IMMEDIATE")
+            migration = con.execute(
+                "SELECT * FROM provider_migrations WHERE job_id=? AND status='active'", (job["id"],)
+            ).fetchone()
+            if not migration:
+                return False
+            changed = con.execute(
+                "UPDATE jobs SET status='cancelled',lease_owner=NULL,lease_until=0,error=?,updated_at=? WHERE id=? AND revision=? AND status IN ('pending','running') AND (lease_owner=? OR lease_owner IS NULL)",
+                (reason[:500], time.time_ns(), job["id"], job["revision"], job["lease_owner"]),
+            ).rowcount
+            if not changed:
+                return False
+            con.execute(
+                "UPDATE provider_migrations SET status='review',error=?,updated_at=? WHERE job_id=? AND status='active'",
+                (reason[:500], time.time_ns(), job["id"]),
+            )
+            con.execute(
+                "UPDATE series SET status='ready' WHERE source=? AND symbol=? AND interval=? AND provider=? AND revision=? AND status='repairing'",
+                (migration["source"], migration["symbol"], migration["interval"], migration["from_provider"], migration["from_revision"]),
+            )
+            self.bump(con)
+            return True
 
     def cancel_leased_job(self, job, reason):
         """Cancel exactly the currently leased job after a deliberate handoff."""

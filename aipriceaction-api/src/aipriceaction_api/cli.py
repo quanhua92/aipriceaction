@@ -99,6 +99,10 @@ def parser():
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8899)
     commands.add_parser("status")
+    migration_status = commands.add_parser(
+        "provider-migration-status", help="Show bounded VN provider handoffs and disabled pins"
+    )
+    migration_status.add_argument("--limit", type=int, default=50)
     for name in ("bootstrap", "worker"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--once", action="store_true", help="Process one bounded cycle then exit")
@@ -444,6 +448,8 @@ async def execute(args, settings):
         )
     elif args.command == "status":
         emit(repo.status())
+    elif args.command == "provider-migration-status":
+        emit(repo.provider_migration_status(settings.vn_providers, args.limit))
     elif args.command == "history-status":
         if args.limit < 1:
             raise DataError("History status limit must be positive", 400)

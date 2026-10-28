@@ -11,6 +11,31 @@ from aipriceaction_api.storage import Repository
 from aipriceaction_api.workers import Worker
 
 
+def test_catalog_indexes_keep_intraday_intervals_and_explicit_overrides(tmp_path, monkeypatch):
+    from aipriceaction_api import catalog
+
+    class FakeCatalog:
+        vn_listed_symbols = ("FPT",)
+        vn_index_rows = ({"symbol": "VNINDEX"}, {"symbol": "VN30"})
+        groups_by_source = {"vn": {"STOCKS": ["FPT"]}}
+
+        def __init__(self, settings):
+            pass
+
+    monkeypatch.setattr(catalog, "Catalog", FakeCatalog)
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    monkeypatch.setattr(repo, "liquid_vn_symbols", lambda symbols: set())
+    watchlist = tmp_path / "watchlist.json"
+    watchlist.write_text(
+        '{"vn":[{"symbol":"VNINDEX","asset_type":"index"},'
+        '{"symbol":"VN30","asset_type":"index","intervals":["1D"]}]}'
+    )
+    worker = Worker(repo, replace(Settings(), watchlist=watchlist, ingest_universe="catalog"))
+    configured = {entry["symbol"]: entry["intervals"] for entry in worker.load_watchlist()}
+    assert configured == {"VNINDEX": ["1D", "1h", "1m"], "VN30": ["1D"], "FPT": ["1D"]}
+
+
 def test_starting_worker_never_exposes_partially_disabled_watchlist(tmp_path, monkeypatch):
     repo = Repository(tmp_path / "db")
     repo.initialize()

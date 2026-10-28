@@ -3290,6 +3290,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             "configuration": {
                 "ingest_universe": settings.ingest_universe,
                 "vn_providers": list(settings.vn_providers),
+                "vn_provider_migration_concurrency": settings.vn_provider_migration_concurrency,
                 "http_proxies_configured": bool(settings.proxies),
                 "allow_direct_setting": settings.allow_direct,
                 "vn_direct_access_enabled": settings.allow_direct or not settings.proxies,

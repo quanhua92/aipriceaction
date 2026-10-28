@@ -1182,7 +1182,7 @@ def test_market_wide_reads_use_one_shared_history_batch(tmp_path, monkeypatch):
     with TestClient(app) as client:
         rows = [
             Candle("vn", symbol, "1D", parse_time("2024-01-01"), 100, 101, 99, 100, 1000)
-            for symbol in ("AAA", "BBB", "CCC")
+            for symbol in ("VCB", "VIC", "HPG")
         ]
         app.state.repo.put(rows)
         active = maximum = 0
@@ -1205,7 +1205,7 @@ def test_market_wide_reads_use_one_shared_history_batch(tmp_path, monkeypatch):
         response = client.get("/tickers?mode=vn&limit=1&ma=false&cache=false")
 
     assert response.status_code == 200
-    assert set(response.json()) == {"AAA", "BBB", "CCC"}
+    assert set(response.json()) == {"VCB", "VIC", "HPG"}
     assert maximum == 1
 
 
