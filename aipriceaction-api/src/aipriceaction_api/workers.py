@@ -46,6 +46,9 @@ class Worker:
         self.deadline = 90  # Keep network operations shorter than durable leases.
         self.recovery_turn = 0
         self.live_turn = 0
+        # Rotate sources independently for overdue and first-time updates.
+        # A large market must not indefinitely delay smaller, active markets.
+        self.live_source_turn = {"scheduled": 0, "never": 0}
         self.archive_repair_turn = 0
         self.archive_repair_scope = (None, None, None)
         self._next_manifest_retry = 0.0
@@ -1680,17 +1683,54 @@ class Worker:
             key=live_priority,
         )
         capacity = self.settings.worker_concurrency
+        selected = []
+
+        def take_fair(pool, count, cohort):
+            if not count:
+                return
+            remaining = [item for item in pool if item not in selected]
+            source_order = ["crypto", "vn", "yahoo", "sjc"]
+            source_order.extend(sorted({item[1]["source"] for item in remaining} - set(source_order)))
+            # Preserve the existing BTC minute priority without letting it
+            # reset the round-robin position for all other sources.
+            bitcoin = next(
+                (item for item in remaining
+                 if item[1]["source"] == "crypto" and item[1]["symbol"] == "BTCUSDT"
+                 and item[2] == "1m"),
+                None,
+            )
+            if bitcoin is not None:
+                selected.append(bitcoin)
+                remaining.remove(bitcoin)
+                count -= 1
+            while count and remaining:
+                available_sources = {item[1]["source"] for item in remaining}
+                used_sources = {item[1]["source"] for item in selected}
+                eligible = available_sources - used_sources or available_sources
+                start = self.live_source_turn[cohort] % len(source_order)
+                source = next(
+                    source_order[(start + offset) % len(source_order)]
+                    for offset in range(len(source_order))
+                    if source_order[(start + offset) % len(source_order)] in eligible
+                )
+                item = next(item for item in remaining if item[1]["source"] == source)
+                selected.append(item)
+                remaining.remove(item)
+                self.live_source_turn[cohort] = (source_order.index(source) + 1) % len(source_order)
+                count -= 1
+
         if scheduled and never and capacity == 1:
-            selected = (scheduled if self.live_turn % 2 == 0 else never)[:1]
+            cohort = "scheduled" if self.live_turn % 2 == 0 else "never"
+            take_fair(scheduled if cohort == "scheduled" else never, 1, cohort)
             self.live_turn += 1
         elif scheduled and never:
             scheduled_count = min(len(scheduled), capacity - 1)
-            selected = scheduled[:scheduled_count]
-            selected.extend(never[: capacity - scheduled_count])
+            take_fair(scheduled, scheduled_count, "scheduled")
+            take_fair(never, capacity - len(selected), "never")
             if len(selected) < capacity:
-                selected.extend(scheduled[scheduled_count:capacity])
+                take_fair(scheduled, capacity - len(selected), "scheduled")
         else:
-            selected = (scheduled or never)[:capacity]
+            take_fair(scheduled or never, capacity, "scheduled" if scheduled else "never")
         # Ordinary updates get a turn before one bounded recovery page.
         values = await asyncio.gather(
             *(self.sync(entry, iv) for _, entry, iv in selected)

@@ -309,6 +309,71 @@ async def test_single_live_slot_alternates_overdue_and_zero_catalog_work(tmp_pat
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("include_never", [False, True])
+async def test_large_vn_backlog_does_not_starve_other_sources(tmp_path, monkeypatch, include_never):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": "vn", "symbol": f"VN{i:03}", "intervals": ["1m"]}
+        for i in range(100)
+    ] + [
+        {"source": source, "symbol": f"{source}{i}", "intervals": ["1m"]}
+        for source in ("crypto", "yahoo") for i in range(4)
+    ]
+    repo.activate_watchlist(entries)
+    with repo.connect() as con:
+        con.execute("UPDATE tickers SET next_1m=10")
+        if include_never:
+            con.execute("UPDATE tickers SET next_1m=0 WHERE source='vn' AND symbol='VN099'")
+    worker = Worker(repo, replace(Settings(), worker_concurrency=2))
+    worker.configuration = entries
+    observed = []
+
+    async def record(entry, interval):
+        observed.append((entry["source"], entry["symbol"]))
+        repo.schedule(entry["source"], entry["symbol"], interval, 1000)
+        return 0
+
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: 100)
+    monkeypatch.setattr(worker, "sync", record)
+    monkeypatch.setattr(repo, "claim_job", lambda *args, **kwargs: None)
+    for _ in range(4):
+        assert await worker.cycle() == 0
+    assert {source for source, _ in observed} == {"vn", "crypto", "yahoo"}
+    assert len(observed) == len(set(observed))
+
+
+@pytest.mark.asyncio
+async def test_bitcoin_keeps_priority_without_starving_other_sources(tmp_path, monkeypatch):
+    repo = Repository(tmp_path / "db")
+    repo.initialize()
+    entries = [
+        {"source": source, "symbol": symbol, "intervals": ["1m"]}
+        for source, symbol in (("vn", "VCB"), ("crypto", "BTCUSDT"),
+                               ("crypto", "ETHUSDT"), ("yahoo", "AAPL"))
+    ]
+    repo.activate_watchlist(entries)
+    with repo.connect() as con:
+        con.execute("UPDATE tickers SET next_1m=10")
+    worker = Worker(repo, replace(Settings(), worker_concurrency=2))
+    worker.configuration = entries
+    observed = []
+
+    async def record(entry, interval):
+        observed.append((entry["source"], entry["symbol"]))
+        repo.schedule(entry["source"], entry["symbol"], interval, 1000)
+        return 0
+
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: 100)
+    monkeypatch.setattr(worker, "sync", record)
+    monkeypatch.setattr(repo, "claim_job", lambda *args, **kwargs: None)
+    assert await worker.cycle() == 0
+    assert observed[0] == ("crypto", "BTCUSDT")
+    assert await worker.cycle() == 0
+    assert {source for source, _ in observed} == {"vn", "crypto", "yahoo"}
+
+
+@pytest.mark.asyncio
 async def test_new_catalog_recovery_establishes_daily_before_intraday(tmp_path, monkeypatch):
     repo = Repository(tmp_path / "db")
     repo.initialize()
