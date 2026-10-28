@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 YAHOO_NATIVE_INTERVALS = ["1D", "1h", "1m"]
 YAHOO_NO_DATA_FINDING = "Yahoo has no candles in the supported current window; retry probe in 24 hours"
 YAHOO_NO_DATA_RETRY_SECONDS = 24 * 60 * 60
+CRYPTO_NO_RECENT_FINDING = "Binance returned no recent candle; the market may be paused or inactive"
 CRYPTO_LIVE_CATCHUP_PAGES = 3
 
 
@@ -908,6 +909,15 @@ class Worker:
                     cooldown_until = int(time.time()) + YAHOO_NO_DATA_RETRY_SECONDS
                     return 0
                 raise DataError("No recent provider data")
+            if source == "crypto":
+                max_age = {"1m": 15 * 60, "1h": 3 * 3600, "1D": 2 * 86400}[iv]
+                if page.rows[-1].time < int(time.time()) - max_age:
+                    reason = f"{CRYPTO_NO_RECENT_FINDING}; last candle Unix time {page.rows[-1].time}"
+                    self.repo.fail_source_check(source, symbol, iv, attempt, reason, "no_data")
+                    self.repo.finding(source, symbol, iv, "provider_no_recent_data", CRYPTO_NO_RECENT_FINDING)
+                    log.warning("no recent crypto data source=%s symbol=%s interval=%s last=%s", source, symbol, iv, page.rows[-1].time)
+                    cooldown_until = int(time.time()) + 3600
+                    return 0
             if source == "vn" and latest and latest[-1].provider != page.provider:
                 log.info(
                     "live provider fallback source=%s symbol=%s interval=%s previous=%s selected=%s",

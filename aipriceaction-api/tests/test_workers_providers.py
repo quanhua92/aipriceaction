@@ -699,6 +699,36 @@ async def test_crypto_gap_catchup_rejects_missing_candles(system, monkeypatch, m
     assert repo.status()["jobs"][0]["kind"] == "repair"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("iv", "step", "old_bars"), [("1m", 60, 20), ("1h", 3600, 4), ("1D", 86400, 3)])
+async def test_stale_binance_response_is_not_reported_as_a_fresh_check(
+    system, monkeypatch, iv, step, old_bars
+):
+    repo, archive, settings = system
+    now = parse_time("2026-10-28")
+    first = now - old_bars * step
+    old = Candle("crypto", "TONUSDT", iv, first, 100, 101, 99, 100, 1000, "binance")
+    repo.put([old])
+    original = repo.read("crypto", "TONUSDT", iv)
+    restored = [replace(old, time=first + step * index) for index in range(old_bars + 1)]
+    providers = Pages(Page([old], "binance"), Page(restored, "binance"))
+    worker = Worker(repo, settings, providers, archive)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: now)
+    monkeypatch.setattr(worker, "floor", lambda *args: first)
+
+    assert await worker.sync({"source": "crypto", "symbol": "TONUSDT"}, iv) == 0
+    assert repo.read("crypto", "TONUSDT", iv) == original
+    with repo.connect() as con:
+        check = dict(con.execute("SELECT * FROM source_checks").fetchone())
+        ticker = dict(con.execute("SELECT * FROM tickers").fetchone())
+    assert check["outcome"] == "no_data" and "no recent candle" in check["error"]
+    assert ticker[{"1m": "next_1m", "1h": "next_1h", "1D": "next_1d"}[iv]] >= now + 3600
+    assert any(f["kind"] == "provider_no_recent_data" for f in repo.findings())
+
+    assert await worker.sync({"source": "crypto", "symbol": "TONUSDT"}, iv) == len(restored)
+    assert not any(f["kind"] == "provider_no_recent_data" for f in repo.findings())
+
+
 @pytest.mark.parametrize(
     "source,iv", [("vn", "1D"), ("vn", "1h"), ("vn", "1m"), ("crypto", "1m"), ("yahoo", "1m")]
 )

@@ -1681,7 +1681,9 @@ class Repository:
                     ),
                 )
                 con.execute(
-                    "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind IN ('provider_failure','provider_handoff_pending')",
+                    "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? "
+                    "AND kind IN ('provider_failure','provider_handoff_pending','provider_no_recent_data') "
+                    "AND resolved=0",
                     ident,
                 )
         return accepted
