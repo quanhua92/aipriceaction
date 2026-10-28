@@ -333,7 +333,7 @@ class Worker:
                     else 500
                 ),
                 provider=job["provider"],
-                **({"start": job["floor"]} if job["source"] == "vn" else {}),
+                **({"start": job["floor"]} if job["source"] in ("vn", "yahoo") else {}),
             )
             if (
                 job["source"] == "yahoo"
