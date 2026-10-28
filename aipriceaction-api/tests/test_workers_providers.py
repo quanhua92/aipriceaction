@@ -803,6 +803,15 @@ async def test_vn_restart_requires_observed_tail_overlap(
         ]
         assert repo.status()["jobs"] == []
         assert repo.status()["series"][0]["outcome"] == "succeeded"
+    elif iv in ("1m", "1h"):
+        assert processed > 0
+        current = repo.read("vn", "FPT", iv)
+        assert current[0] == original_rows[0]
+        assert current[-1].time == first + elapsed * step
+        jobs = repo.status()["jobs"]
+        assert len(jobs) == 1 and jobs[0]["kind"] == "repair"
+        assert repo.status()["series"][0]["outcome"] == "repair_queued"
+        assert any("does not overlap" in r["detail"] for r in repo.findings())
     else:
         assert processed == 0
         assert repo.read("vn", "FPT", iv) == original_rows
@@ -933,7 +942,11 @@ async def test_vn_expanded_page_checks_revisions_outside_normal_overlap(
         r.time < published[-50].time for r in incoming if r.time in {old[i].time for i in changed}
     )
     if ratio == 1.001:
-        assert count == 0 and repo.read("vn", "FPT", iv) == published
+        if iv in ("1m", "1h"):
+            assert count == 150
+            assert repo.read("vn", "FPT", iv)[:len(published)] == published
+        else:
+            assert count == 0 and repo.read("vn", "FPT", iv) == published
         assert repo.status()["series"][0]["outcome"] == "repair_queued"
         assert any(r["kind"] == "historical_revision" for r in repo.findings())
     else:

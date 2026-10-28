@@ -966,6 +966,7 @@ class Worker:
                     symbol, iv, page, latest[-1].time, state["provider"], step
                 )
             gap = None
+            append_only_gap = False
             if source == "crypto" and latest and page.rows[0].time > latest[-1].time + step:
                 gap = f"Continuous-market gap from {latest[-1].time} to {page.rows[0].time}; recovery queued"
             elif (
@@ -986,6 +987,17 @@ class Worker:
                 # the coverage warning rather than claim the gap is filled.
                 self.repo.finding(source, symbol, iv, "coverage_pending", gap)
                 log.warning("live coverage pending source=%s symbol=%s interval=%s: %s", source, symbol, iv, gap)
+            elif (
+                gap and source == "vn" and iv in ("1h", "1m")
+                and page.provider == state["provider"]
+            ):
+                # An older sparse intraday tail need not freeze current bars.
+                # Keep every observed older candle, append only newer ones,
+                # and keep the missing overlap visible as a durable repair.
+                self.repo.queue(source, symbol, iv, "repair", self.floor(entry, iv), page.provider)
+                self.repo.finding(source, symbol, iv, "coverage_pending", gap)
+                append_only_gap = True
+                log.warning("live coverage pending while appending new bars source=%s symbol=%s interval=%s: %s", source, symbol, iv, gap)
             elif gap:
                 # A long outage can exceed one bounded live page. Preserve the
                 # published series and resume its durable recovery rather than
@@ -1058,16 +1070,15 @@ class Worker:
                     "Corroborated historical changes; retained window staged for recovery",
                 )
                 if (
-                    source == "yahoo"
+                    source in ("vn", "yahoo")
                     and iv in ("1h", "1m")
                     and page.provider == state["provider"]
                     and latest
                     and page.rows[-1].time > latest[-1].time
                 ):
-                    # Yahoo intraday candles are unadjusted. Keep every old
-                    # completed bar unchanged while the durable repair checks
-                    # the historical revisions; the independently observed,
-                    # overlapping newer tail can continue to advance.
+                    # Keep every old completed bar unchanged while the durable
+                    # repair checks historical revisions. New native intraday
+                    # observations can continue to advance the live tail.
                     append_only_tail = True
                     log.warning(
                         "historical revision queued while publishing new intraday tail "
@@ -1108,7 +1119,7 @@ class Worker:
                     replace(r, revision=state["revision"])
                     for r in page.rows
                     if r.time >= self.floor(entry, iv)
-                    and (not append_only_tail or r.time > latest[-1].time)
+                    and (not (append_only_tail or append_only_gap) or r.time > latest[-1].time)
                 ]
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")
@@ -1119,6 +1130,9 @@ class Worker:
                 rows, verification={"attempt_ns": attempt, "completed_before": completed},
                 queue_public_csv=self._public_csv_store() is not None,
             )
+            if append_only_gap or (append_only_tail and source == "vn"):
+                reason = gap or "Historical revision requires repair; newer native bars published"
+                self.repo.fail_source_check(source, symbol, iv, attempt, reason, "repair_queued")
             # Use committed rows, including any older source retained by the
             # transaction, for caches and public CSV publication.
             rows = self.repo.read(source, symbol, iv, start=rows[0].time, end=rows[-1].time)
