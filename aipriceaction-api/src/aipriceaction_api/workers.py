@@ -51,6 +51,17 @@ class Worker:
         self._next_manifest_retry = 0.0
         self._public_csv_checked = set()
         self._redis_checked = set()
+        self._archive_threads = set()
+
+    async def _archive_thread(self, function, *args, **kwargs):
+        task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+        self._archive_threads.add(task)
+        def finished(completed):
+            self._archive_threads.discard(completed)
+            if not completed.cancelled():
+                completed.exception()
+        task.add_done_callback(finished)
+        return await asyncio.shield(task)
 
     def _pending_public_csv_periods(self, source, symbol, iv, *, include_deferred=False):
         with self.repo.connect() as con:
@@ -1324,11 +1335,11 @@ class Worker:
         for target in payload["targets"]:
             obj = target["replacement"]
             key = (obj["source"], obj["symbol"], obj["interval"])
-            groups.setdefault(key, []).extend(await asyncio.to_thread(self.archive.read, obj))
+            groups.setdefault(key, []).extend(await self._archive_thread(self.archive.read, obj))
         try:
             for (source, symbol, iv), rows in groups.items():
                 try:
-                    await asyncio.to_thread(
+                    await self._archive_thread(
                         self._publish_public_candles,
                         source,
                         symbol,
@@ -1395,7 +1406,7 @@ class Worker:
                 )
                 return 0
             if batch["status"] in ("indexed", "manifest_published"):
-                payload = await asyncio.to_thread(
+                payload = await self._archive_thread(
                     self.archive.publish_repair_batch, batch["id"], self.owner
                 )
                 if batch["status"] == "manifest_published":
@@ -1441,7 +1452,7 @@ class Worker:
                 obj = old
                 try:
                     if target["replacement"]:
-                        replacement = await asyncio.to_thread(
+                        replacement = await self._archive_thread(
                             self.archive.read, target["replacement"], refresh=True
                         )
                         staged = self._archive_repair_staging(target["job_id"])
@@ -1449,7 +1460,7 @@ class Worker:
                         if replacement != staged:
                             raise DataError("Prepared Parquet differs from its durable staged candles")
                     else:
-                        old_rows = await asyncio.to_thread(self.archive.read, obj)
+                        old_rows = await self._archive_thread(self.archive.read, obj)
                         covered = False
                         rows = []
                         pages = 0
@@ -1533,7 +1544,7 @@ class Worker:
                             "normalized_candles_sha256": hashlib.sha256(capture).hexdigest(),
                             "retained_overlap": head_evidence,
                         }
-                        new_obj = await asyncio.to_thread(self.archive.prepare, replacement)
+                        new_obj = await self._archive_thread(self.archive.prepare, replacement)
                         target["replacement"] = new_obj
                         target["evidence"] = evidence
                         self.repo.save_archive_repair_batch(
@@ -1549,7 +1560,7 @@ class Worker:
                             "normalized_candles_sha256": target["replacement"]["checksum"],
                             "resumed_prepared_object": True,
                         }
-                    target["replacement"] = target["replacement"] or await asyncio.to_thread(
+                    target["replacement"] = target["replacement"] or await self._archive_thread(
                         self.archive.prepare, replacement
                     )
                     self.repo.save_archive_repair_batch(
@@ -1587,7 +1598,7 @@ class Worker:
                     )
                     return 0
             self.repo.save_archive_repair_batch(batch["id"], self.owner, "prepared", payload)
-            payload = await asyncio.to_thread(
+            payload = await self._archive_thread(
                 self.archive.publish_repair_batch, batch["id"], self.owner
             )
             await self._publish_archive_repair_csv(batch["id"], self.owner, payload)
@@ -1914,6 +1925,8 @@ class Worker:
                     # and pruning. Drain before returning or releasing job claims.
                     if maintenance_task is not None:
                         await asyncio.shield(maintenance_task)
+                    if self._archive_threads:
+                        await asyncio.gather(*tuple(self._archive_threads), return_exceptions=True)
                 finally:
                     self.repo.release_worker_leases(self.owner)
                     log.info("worker stopped owner=%s", self.owner)

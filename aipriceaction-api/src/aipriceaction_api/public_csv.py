@@ -12,6 +12,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from types import SimpleNamespace
 
 from .domain import DataError
 
@@ -224,6 +225,25 @@ def _csv_timestamps(body, key):
         raise DataError(f"Cannot safely replace existing public CSV {key}: invalid rows") from exc
 
 
+def _csv_values(body, key):
+    _csv_timestamps(body, key)
+    values = {}
+    try:
+        for row in csv.reader(io.StringIO(body.decode("utf-8"), newline="")):
+            stamp = datetime.fromisoformat(row[0])
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=UTC)
+            stamp = stamp.astimezone(UTC)
+            prices = tuple(float(value) for value in row[1:5])
+            volume = int(row[5])
+            if not all(math.isfinite(value) for value in prices) or volume < 0:
+                raise ValueError("non-finite prices or negative volume")
+            values[stamp] = (*prices, volume)
+    except (UnicodeError, ValueError, OverflowError, csv.Error) as exc:
+        raise DataError(f"Cannot safely compare existing public CSV {key}: invalid rows") from exc
+    return values
+
+
 def publish_object(client, bucket, item, *, expected_etag=None):
     """Idempotently PUT one object, then verify its SDK-visible hash metadata."""
     from botocore.exceptions import ClientError
@@ -303,8 +323,35 @@ def _publish_csv(client, bucket, item, head):
         finally:
             stream.close()
         existing = _csv_timestamps(existing_body, item.key)
-        missing = existing - _csv_timestamps(item.body, item.key)
+        desired = _csv_timestamps(item.body, item.key)
+        missing = existing - desired
         if missing:
+            if desired <= existing:
+                old_values = _csv_values(existing_body, item.key)
+                new_values = _csv_values(item.body, item.key)
+                if all(
+                    old_values[stamp][-1] == new_values[stamp][-1]
+                    and all(math.isclose(a, b, rel_tol=1e-6, abs_tol=0.0)
+                            for a, b in zip(old_values[stamp][:-1], new_values[stamp][:-1], strict=True))
+                    for stamp in desired
+                ):
+                    # The complete public file already contains every known
+                    # canonical candle. Keep its extra dates and upgrade only
+                    # its metadata; never replace it with the smaller subset.
+                    fingerprint_rows = [
+                        SimpleNamespace(time=int(stamp.timestamp()), close=values[3], volume=values[4])
+                        for stamp, values in sorted(old_values.items())
+                    ]
+                    complete = PublicObject(
+                        item.key, existing_body, item.content_type,
+                        hashlib.sha256(existing_body).hexdigest(),
+                        rust_content_hash(fingerprint_rows), len(existing),
+                    )
+                    preserved = _publish_csv(client, bucket, complete, head)
+                    return item.report() | {
+                        "uploaded": preserved["uploaded"], "verified": True,
+                        "preserved_extra_rows": len(missing)
+                    }
             earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
             raise DataError(
                 f"Refusing to replace public CSV {item.key}: "

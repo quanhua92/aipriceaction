@@ -24,7 +24,6 @@ x-api-environment: &api-environment
   ALLOW_DIRECT: ${ALLOW_DIRECT:-true}
   HTTP_PROXIES: ${HTTP_PROXIES:-}
   VN_PROVIDERS: ${VN_PROVIDERS:-vps,vndirect,dnse}
-  VN_PROVIDER_MIGRATION_CONCURRENCY: ${VN_PROVIDER_MIGRATION_CONCURRENCY:-2}
   VCI_HISTORY_FALLBACK: ${VCI_HISTORY_FALLBACK:-false}
   PROVIDER_RPM: ${PROVIDER_RPM:-30}
   WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-6}
@@ -185,6 +184,7 @@ services:
       WORKER_CONCURRENCY: ${DAILY_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${DAILY_PROVIDER_RPM:-10}
     command: ["aipa-api", "worker", "--interval", "1D"]
+    stop_grace_period: 2m
     restart: unless-stopped
 
   worker-hourly:
@@ -195,6 +195,7 @@ services:
       WORKER_CONCURRENCY: ${HOURLY_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${HOURLY_PROVIDER_RPM:-10}
     command: ["aipa-api", "worker", "--interval", "1h", "--skip-catalog-publish"]
+    stop_grace_period: 2m
     restart: unless-stopped
 
   worker-minute:
@@ -205,6 +206,7 @@ services:
       WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${MINUTE_PROVIDER_RPM:-10}
     command: ["aipa-api", "worker", "--interval", "1m", "--skip-catalog-publish"]
+    stop_grace_period: 2m
     restart: unless-stopped
 
   worker-history:
@@ -215,6 +217,7 @@ services:
       HISTORY_WORKER_CONCURRENCY: ${HISTORY_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${HISTORY_PROVIDER_RPM:-5}
     command: ["aipa-api", "history-worker"]
+    stop_grace_period: 2m
     restart: unless-stopped
 
   # Invoked by the host's user crontab, never started by `compose up`.

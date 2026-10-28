@@ -3177,6 +3177,11 @@ class Repository:
                 "UPDATE jobs SET status='pending',lease_owner=NULL,lease_until=0 WHERE lease_owner=? AND status='running'",
                 (owner,),
             )
+            con.execute(
+                "UPDATE archive_repair_batches SET lease_owner=NULL,lease_until=0 "
+                "WHERE lease_owner=? AND status IN ('collecting','prepared','indexed','manifest_published')",
+                (owner,),
+            )
 
     def stage(self, job, candles, cursor, provider):
         candles = [c.validate() for c in candles]

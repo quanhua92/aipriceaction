@@ -3,6 +3,7 @@ import json
 import signal
 import subprocess
 import sys
+import threading
 import time
 from argparse import Namespace
 from dataclasses import replace
@@ -41,6 +42,14 @@ def test_release_preserves_other_owners_sentinels_and_job_progress(system):
     assert repo.live_claim("vn", "FPT", "1D", "exiting")
     assert repo.live_claim("vn", "VCB", "1D", "peer")
     assert repo.live_claim("vn", "FPT", "sentinel", "exiting-sentinel", lease=86400)
+    with repo.connect() as con:
+        now = int(time.time())
+        for batch_id, owner in (("one", "exiting"), ("two", "peer")):
+            con.execute(
+                "INSERT INTO archive_repair_batches(id,status,payload,lease_owner,lease_until,created_at,updated_at) "
+                "VALUES (?,'collecting','{}',?,?,?,?)",
+                (batch_id, owner, now + 120, now, now),
+            )
     repo.release_worker_leases("exiting")
     with repo.connect() as con:
         released = dict(con.execute("SELECT * FROM jobs WHERE id=?", (job["id"],)).fetchone())
@@ -51,8 +60,49 @@ def test_release_preserves_other_owners_sentinels_and_job_progress(system):
             "peer",
             "exiting-sentinel",
         }
+        assert tuple(con.execute("SELECT lease_owner,lease_until FROM archive_repair_batches WHERE id='one'").fetchone()) == (None, 0)
+        assert con.execute("SELECT lease_owner FROM archive_repair_batches WHERE id='two'").fetchone()[0] == "peer"
     assert released == job | {"status": "pending", "lease_owner": None, "lease_until": 0}
     assert repo.claim_job("replacement", allowed=[("vn", "FPT", "1D")])["id"] == job["id"]
+
+
+@pytest.mark.asyncio
+async def test_shutdown_drains_archive_thread_before_releasing_batch(system, monkeypatch):
+    repo, settings = system
+    entered, finish = threading.Event(), threading.Event()
+
+    class Provider:
+        async def close(self):
+            pass
+
+    worker = Worker(repo, settings, Provider())
+
+    def blocking_archive_work():
+        entered.set()
+        assert finish.wait(5)
+
+    async def cycle():
+        with repo.connect() as con:
+            now = int(time.time())
+            con.execute(
+                "INSERT INTO archive_repair_batches(id,status,payload,lease_owner,lease_until,created_at,updated_at) "
+                "VALUES ('batch','collecting','{}',?,?,?,?)",
+                (worker.owner, now + 120, now, now),
+            )
+        await worker._archive_thread(blocking_archive_work)
+
+    monkeypatch.setattr(worker, "cycle", cycle)
+    task = asyncio.create_task(worker.run(source="vn", skip_catalog_publish=True))
+    assert await asyncio.to_thread(entered.wait, 2)
+    task.cancel()
+    await asyncio.sleep(0.05)
+    with repo.connect() as con:
+        assert con.execute("SELECT lease_owner FROM archive_repair_batches WHERE id='batch'").fetchone()[0] == worker.owner
+    finish.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    with repo.connect() as con:
+        assert tuple(con.execute("SELECT lease_owner,lease_until FROM archive_repair_batches WHERE id='batch'").fetchone()) == (None, 0)
 
 
 def test_catalog_sized_allowed_set_does_not_exceed_sqlite_expression_depth(system):

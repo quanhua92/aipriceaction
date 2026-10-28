@@ -366,10 +366,14 @@ def test_public_publisher_preserves_existing_timestamps_after_restore():
     publish_object(s3, "one-bucket", old)
 
     incomplete = plan_candles([candle()], "vn", "VCB", "1D", year=2026)
-    with pytest.raises(DataError, match="1 existing timestamp.*2026-10-20"):
-        publish_object(s3, "one-bucket", incomplete)
+    result = publish_object(s3, "one-bucket", incomplete)
+    assert not result["uploaded"] and result["preserved_extra_rows"] == 1
     assert s3.objects[("one-bucket", old.key)]["Body"] == old.body
     assert len(s3.puts) == 1
+
+    incompatible = plan_candles([replace(candle(), close=1.5)], "vn", "VCB", "1D", year=2026)
+    with pytest.raises(DataError, match="1 existing timestamp.*2026-10-20"):
+        publish_object(s3, "one-bucket", incompatible)
 
     # A complete replacement may update prices and add new days.
     updated = plan_candles(
@@ -378,6 +382,20 @@ def test_public_publisher_preserves_existing_timestamps_after_restore():
     )
     assert publish_object(s3, "one-bucket", updated)["uploaded"]
     assert s3.objects[("one-bucket", old.key)]["Body"] == updated.body
+
+
+def test_matching_legacy_superset_keeps_all_rows_and_upgrades_cache_metadata():
+    old = plan_candles([candle(parse_time("2026-10-20")), candle()], "vn", "VCB", "1D", year=2026)
+    subset = plan_candles([candle()], "vn", "VCB", "1D", year=2026)
+    s3 = FakeS3()
+    s3.objects[("one-bucket", old.key)] = {
+        "Body": old.body, "ContentType": "text/csv", "Metadata": {"content-hash": old.content_hash},
+    }
+    result = publish_object(s3, "one-bucket", subset)
+    assert result["verified"] and result["preserved_extra_rows"] == 1 and not result["uploaded"]
+    saved = s3.objects[("one-bucket", old.key)]
+    assert saved["Body"] == old.body and saved["Metadata"]["sha256"] == old.sha256
+    assert saved["CacheControl"] == PUBLIC_CSV_CACHE_CONTROL and len(s3.copies) == 1
 
 
 def test_public_publisher_refuses_to_overwrite_unreadable_existing_csv():
@@ -389,6 +407,17 @@ def test_public_publisher_refuses_to_overwrite_unreadable_existing_csv():
     with pytest.raises(DataError, match="invalid rows"):
         publish_object(s3, "one-bucket", item)
     assert not s3.puts
+
+
+def test_superset_check_rejects_material_changes_for_tiny_prices():
+    s3 = FakeS3()
+    tiny = replace(candle(), open=1e-9, high=3e-9, low=1e-9, close=2e-9)
+    old = plan_candles([replace(tiny, time=parse_time("2026-10-20")), tiny], "vn", "VCB", "1D", year=2026)
+    publish_object(s3, "one-bucket", old)
+    changed = plan_candles([replace(tiny, close=2.5e-9)], "vn", "VCB", "1D", year=2026)
+    with pytest.raises(DataError, match="existing timestamp"):
+        publish_object(s3, "one-bucket", changed)
+    assert s3.objects[("one-bucket", old.key)]["Body"] == old.body
 
 
 def test_settings_default_to_one_parquet_prefix_and_public_export():
