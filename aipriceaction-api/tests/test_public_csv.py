@@ -434,6 +434,37 @@ def test_public_publisher_refuses_to_merge_non_overlapping_or_conflicting_rows()
         assert s3.objects[("one-bucket", old.key)]["Body"] == old.body
 
 
+@pytest.mark.parametrize("overlap", [True, False])
+def test_yahoo_hourly_year_can_append_without_overwriting_unverified_history(overlap):
+    base = replace(candle(), source="yahoo", symbol="AAPL", interval="1h", provider="yahoo")
+    old_rows = [replace(base, time=parse_time("2026-10-20T13:00:00Z")),
+                replace(base, time=parse_time("2026-10-20T14:00:00Z"))]
+    new_tail = replace(base, time=parse_time("2026-10-20T15:00:00Z"))
+    incoming = [replace(old_rows[-1], close=1.5), new_tail] if overlap else [new_tail]
+    old = plan_candles(old_rows, "yahoo", "AAPL", "1h", year=2026)
+    candidate = plan_candles(incoming, "yahoo", "AAPL", "1h", year=2026)
+    expected = plan_candles(old_rows + [new_tail], "yahoo", "AAPL", "1h", year=2026)
+    s3 = FakeS3()
+    publish_object(s3, "one-bucket", old)
+
+    result = publish_object(s3, "one-bucket", candidate)
+
+    assert result["uploaded"] and result["reconciliation_pending"]
+    saved = s3.objects[("one-bucket", old.key)]
+    assert saved["Body"] == expected.body
+    assert saved["Metadata"]["sha256"] == expected.sha256
+    assert saved["Metadata"]["content-hash"] == expected.content_hash
+    assert saved["Metadata"]["reconciliation-pending"] == "true"
+    if overlap:
+        with pytest.raises(DataError, match="existing timestamp"):
+            publish_object(s3, "one-bucket", candidate)
+    else:
+        assert publish_object(s3, "one-bucket", candidate)["reconciliation_pending"]
+    assert s3.objects[("one-bucket", old.key)]["Body"] == expected.body
+    assert not publish_object(s3, "one-bucket", expected)["reconciliation_pending"]
+    assert "reconciliation-pending" not in s3.objects[("one-bucket", old.key)]["Metadata"]
+
+
 def test_public_publisher_refuses_to_overwrite_unreadable_existing_csv():
     s3 = FakeS3()
     item = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))

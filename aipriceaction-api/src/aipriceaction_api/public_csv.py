@@ -244,6 +244,32 @@ def _csv_values(body, key):
     return values
 
 
+def _merge_csv_rows(existing_body, desired_body, desired_times):
+    """Keep existing rows and include the explicitly selected newer rows."""
+    merged = {}
+    for body, selected in ((existing_body, None), (desired_body, desired_times)):
+        for row in csv.reader(io.StringIO(body.decode("utf-8"), newline="")):
+            stamp = datetime.fromisoformat(row[0])
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=UTC)
+            stamp = stamp.astimezone(UTC)
+            if selected is None or stamp in selected:
+                merged[stamp] = row
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerows(merged[stamp] for stamp in sorted(merged))
+    return output.getvalue().encode("utf-8")
+
+
+def _is_yahoo_hourly_year(key):
+    parts = key.split("/")
+    return (
+        len(parts) == 5 and parts[0] == "ohlcv" and parts[1] == "yahoo"
+        and parts[3] == "yearly" and parts[4].startswith(f"{parts[2]}-1h-")
+        and parts[4].endswith(".csv")
+    )
+
+
 def publish_object(client, bucket, item, *, expected_etag=None):
     """Idempotently PUT one object, then verify its SDK-visible hash metadata."""
     from botocore.exceptions import ClientError
@@ -288,7 +314,7 @@ def publish_object(client, bucket, item, *, expected_etag=None):
     return item.report() | {"uploaded": True, "verified": True}
 
 
-def _publish_csv(client, bucket, item, head):
+def _publish_csv(client, bucket, item, head, *, reconciliation_pending=False):
     """Publish a complete CSV with an exact fingerprint and no CDN caching.
 
     The Rust fingerprint is kept for older SDKs, but it only covers the close
@@ -311,9 +337,12 @@ def _publish_csv(client, bucket, item, head):
         exact_match
         and metadata.get("content-hash") == item.content_hash
         and head.get("CacheControl") == PUBLIC_CSV_CACHE_CONTROL
+        and (metadata.get("reconciliation-pending") == "true") == reconciliation_pending
     )
     if fully_current:
-        return item.report() | {"uploaded": False, "verified": True}
+        return item.report() | {
+            "uploaded": False, "verified": True, "reconciliation_pending": reconciliation_pending
+        }
 
     if head and not exact_match:
         response = client.get_object(Bucket=bucket, Key=item.key, IfMatch=etag)
@@ -329,31 +358,27 @@ def _publish_csv(client, bucket, item, head):
             old_values = _csv_values(existing_body, item.key)
             new_values = _csv_values(item.body, item.key)
             overlap = existing & desired
-            if overlap and all(
+            matching = bool(overlap) and all(
                     old_values[stamp][-1] == new_values[stamp][-1]
                     and all(math.isclose(a, b, rel_tol=1e-6, abs_tol=0.0)
                             for a, b in zip(old_values[stamp][:-1], new_values[stamp][:-1], strict=True))
                     for stamp in overlap
-            ):
+            )
+            newer = {stamp for stamp in desired - existing if stamp > max(existing)} if existing else set()
+            partial_append = not matching and _is_yahoo_hourly_year(item.key) and bool(newer)
+            pending = partial_append or metadata.get("reconciliation-pending") == "true"
+            if matching or partial_append:
                 # Preserve dates present only in the old public archive. Add
-                # new canonical dates only when all overlap agrees, so files
-                # with incompatible adjustments remain queued for review.
-                if desired <= existing:
+                # matching canonical dates. For raw Yahoo hourly years with
+                # conflicting or disjoint history, append only newer observed
+                # bars and keep the historical reconciliation queued.
+                additions = newer if partial_append else desired
+                if additions <= existing:
                     merged_body = existing_body
                     merged_values = old_values
                 else:
-                    merged_rows = {}
-                    for body in (existing_body, item.body):
-                        for row in csv.reader(io.StringIO(body.decode("utf-8"), newline="")):
-                            stamp = datetime.fromisoformat(row[0])
-                            if stamp.tzinfo is None:
-                                stamp = stamp.replace(tzinfo=UTC)
-                            merged_rows[stamp.astimezone(UTC)] = row
-                    output = io.StringIO(newline="")
-                    writer = csv.writer(output, lineterminator="\n")
-                    writer.writerows(merged_rows[stamp] for stamp in sorted(merged_rows))
-                    merged_body = output.getvalue().encode("utf-8")
-                    merged_values = old_values | new_values
+                    merged_body = _merge_csv_rows(existing_body, item.body, additions)
+                    merged_values = old_values | {stamp: new_values[stamp] for stamp in additions}
                 fingerprint_rows = [
                     SimpleNamespace(time=int(stamp.timestamp()), close=values[3], volume=values[4])
                     for stamp, values in sorted(merged_values.items())
@@ -363,10 +388,13 @@ def _publish_csv(client, bucket, item, head):
                     hashlib.sha256(merged_body).hexdigest(),
                     rust_content_hash(fingerprint_rows), len(merged_values),
                 )
-                preserved = _publish_csv(client, bucket, complete, head)
+                preserved = _publish_csv(
+                    client, bucket, complete, head, reconciliation_pending=pending
+                )
                 return item.report() | {
                     "uploaded": preserved["uploaded"], "verified": True,
-                    "preserved_extra_rows": len(missing)
+                    "preserved_extra_rows": len(missing),
+                    "reconciliation_pending": pending,
                 }
             earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
             raise DataError(
@@ -376,6 +404,10 @@ def _publish_csv(client, bucket, item, head):
         exact_match = existing_body == item.body and head.get("ContentType") == item.content_type
 
     updated_metadata = metadata | {"content-hash": item.content_hash, "sha256": item.sha256}
+    if reconciliation_pending:
+        updated_metadata["reconciliation-pending"] = "true"
+    else:
+        updated_metadata.pop("reconciliation-pending", None)
     if exact_match:
         # Metadata-only replacement preserves Rust's original bytes and any
         # unrelated object metadata. Both conditions guard against a race.
@@ -416,9 +448,12 @@ def _publish_csv(client, bucket, item, head):
         or verified.get("ContentLength") != len(item.body)
         or verified.get("ContentType") != item.content_type
         or verified.get("CacheControl") != PUBLIC_CSV_CACHE_CONTROL
+        or (verified_metadata.get("reconciliation-pending") == "true") != reconciliation_pending
     ):
         raise DataError(f"Public CSV object failed post-upload verification: {item.key}")
-    return item.report() | {"uploaded": uploaded, "verified": True}
+    return item.report() | {
+        "uploaded": uploaded, "verified": True, "reconciliation_pending": reconciliation_pending
+    }
 
 
 def period_bounds(*, day=None, year=None):

@@ -140,6 +140,10 @@ class Worker:
                         continue
                     item = plan_candles(candles, source, symbol, iv, day=day, year=year)
                     result = publish(client, bucket, item)
+                    if result.get("reconciliation_pending"):
+                        raise DataError(
+                            f"Newer CSV rows published for {key}; historical differences still require reconciliation"
+                        )
                 with self.repo.connect() as con:
                     con.execute(
                         "DELETE FROM public_csv_queue WHERE source=? AND symbol=? AND interval=? "

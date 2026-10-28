@@ -1688,6 +1688,24 @@ def test_public_csv_retry_survives_a_concurrent_candle_update(system):
         assert not con.execute("SELECT 1 FROM public_csv_queue").fetchone()
 
 
+def test_partial_yahoo_csv_publication_keeps_reconciliation_queued(system):
+    repo, archive, settings = system
+    row = replace(candle(1), source="yahoo", symbol="AAPL", interval="1h", provider="yahoo")
+    repo.put([row])
+    worker = Worker(repo, settings, Pages(), archive)
+
+    def publish_csv(client, bucket, item):
+        return {"uploaded": True, "reconciliation_pending": "/yearly/" in item.key}
+
+    worker._public_csv_store = lambda: (publish_csv, object(), "public")
+    with pytest.raises(DataError, match="historical differences still require reconciliation"):
+        worker._publish_public_candles("yahoo", "AAPL", "1h", [row])
+    with repo.connect() as con:
+        pending = dict(con.execute("SELECT * FROM public_csv_queue").fetchone())
+    assert pending["period"] == "year:2024" and pending["attempts"] == 1
+    assert pending["retry_at"] > int(time.time())
+
+
 @pytest.mark.asyncio
 async def test_archive_manifest_completes_when_failed_csv_has_a_durable_retry(system):
     repo, archive, settings = system
