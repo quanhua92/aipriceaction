@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
+from urllib.parse import urlsplit
 
 import requests
 import pandas as pd
@@ -121,7 +122,8 @@ class AIPriceAction:
     Args:
         base_url: S3 archive base URL. Defaults to "https://s3.aipriceaction.com".
         cache_dir: Local disk cache directory. Defaults to a temp dir. Pass None to disable.
-        freshness_ttl: Seconds to trust disk cache before re-checking server hash (default 300).
+        freshness_ttl: Seconds to trust historical disk cache before re-checking (default 1800).
+            Current CSV partitions are checked at least every 15 seconds.
         use_live: Read coherent candle ranges and indicators from the API (default True).
             Falls back to complete S3 series when the API is unreachable or has no data.
         live_mode: ``range`` reads the requested range from the API; ``latest`` reads
@@ -146,9 +148,8 @@ class AIPriceAction:
         self.base_url = (base_url or self.DEFAULT_BASE_URL).rstrip("/")
         self._session = requests.Session()
         self._tickers_cache: list[TickerInfo] | None = None
+        self._tickers_cached_at = 0.0
         self._freshness: dict[str, dict] = {}
-        self._fresh_cache_hits: int = 0
-        self._fresh_cache_hit_threshold: int = 10
         self._freshness_ttl = freshness_ttl
         self.use_live = use_live
         if live_mode not in {"range", "latest"}:
@@ -172,13 +173,13 @@ class AIPriceAction:
     # ── Freshness helpers ──
 
     def _head_content_hash(self, url: str) -> Optional[str]:
-        """HEAD request returning x-amz-meta-content-hash. Returns None on error."""
+        """HEAD request returning the exact hash, falling back to the Rust hash."""
         try:
             resp = self._session.head(url, timeout=5)
             if resp.status_code in (404, 403):
                 return None
             resp.raise_for_status()
-            return resp.headers.get("x-amz-meta-content-hash")
+            return resp.headers.get("x-amz-meta-sha256") or resp.headers.get("x-amz-meta-content-hash")
         except Exception:
             return None
 
@@ -274,27 +275,18 @@ class AIPriceAction:
         Hash matches → update timestamp, return True.
         Hash differs → return False.
         HEAD fails + disk cache exists → return True (conservative).
-        No .hash file yet (upgrade path) → do HEAD, write .hash, trust cache.
+        No .hash file yet → download the object before trusting the cache.
         Cached 404 (empty hash, no file) → return False (skip S3, caller returns None).
         """
-        # No file on disk — 404, don't touch counter
+        # A missing file is handled separately by the 404 TTL in the caller.
         if not os.path.exists(cache_path):
-            entry = self._freshness.get(cache_path)
-            if entry and entry.get("hash") == "":
-                # Cached 404 within TTL — skip S3
-                return False
             return False
-
-        # Early stopping: after N consecutive confirmations, trust remaining files
-        if self._fresh_cache_hits >= self._fresh_cache_hit_threshold:
-            return True
 
         now = _time.monotonic()
         entry = self._freshness.get(cache_path)
 
         # TTL hit — no HEAD needed
-        if entry and (now - entry["checked_at"]) < self._freshness_ttl:
-            self._fresh_cache_hits += 1
+        if entry and (now - entry["checked_at"]) < self._cache_ttl(url):
             return True
 
         # HEAD check needed
@@ -306,27 +298,45 @@ class AIPriceAction:
             if disk_hash is not None:
                 self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
                 self._flush_freshness()
-                self._fresh_cache_hits += 1
                 return True
             return False
 
         if disk_hash is None:
-            # No .hash file yet — write it and trust existing disk cache
-            self._save_hash(cache_path, server_hash)
-            self._freshness[cache_path] = {"hash": server_hash, "checked_at": now}
-            self._flush_freshness()
-            self._fresh_cache_hits += 1
-            return True
+            # An unverified local file cannot safely be labeled with the
+            # current server hash. Download it before trusting it.
+            return False
 
         if server_hash == disk_hash:
             self._freshness[cache_path] = {"hash": disk_hash, "checked_at": now}
             self._flush_freshness()
-            self._fresh_cache_hits += 1
             return True
 
-        # Hash changed — RESET counter, need to re-download
-        self._fresh_cache_hits = 0
         return False
+
+    @staticmethod
+    def _mutable_csv(url: str) -> bool:
+        path = urlsplit(url).path
+        if not path.endswith(".csv") or "/ohlcv/" not in path:
+            return False
+        name = path.rsplit("/", 1)[-1]
+        today = datetime.now(timezone.utc).date()
+        try:
+            if "/yearly/" in path:
+                year = int(name[-8:-4])
+                return year == today.year or (year == today.year - 1 and today.timetuple().tm_yday <= 7)
+            day = date.fromisoformat(name[-14:-4])
+            return today - timedelta(days=2) <= day <= today
+        except ValueError:
+            return False
+
+    def _cache_ttl(self, url: str) -> float:
+        return min(self._freshness_ttl, 15.0) if self._mutable_csv(url) else self._freshness_ttl
+
+    def _fresh_url(self, url: str) -> str:
+        if not self._mutable_csv(url):
+            return url
+        separator = "&" if "?" in url else "?"
+        return f"{url}{separator}aipa_fresh={int(_time.time() // 15)}"
 
     # ── Source normalization ──
 
@@ -357,11 +367,13 @@ class AIPriceAction:
         Returns:
             List of TickerInfo objects.
         """
-        if use_cache and self._tickers_cache is not None:
+        if (use_cache and self._tickers_cache is not None
+                and _time.monotonic() - self._tickers_cached_at < self._freshness_ttl):
             tickers = self._tickers_cache
         else:
             tickers = self._fetch_tickers()
             self._tickers_cache = tickers
+            self._tickers_cached_at = _time.monotonic()
 
         effective = self.normalize_source(source)
         if effective:
@@ -528,6 +540,7 @@ class AIPriceAction:
         Returns a DataFrame, or None if the file doesn't exist (404/403).
         """
         _t0 = _time.monotonic()
+        url = self._fresh_url(url)
 
         # Try disk cache (with freshness check)
         if use_cache and self._is_fresh(cache_path, url):
@@ -541,7 +554,8 @@ class AIPriceAction:
         # Cached 404 — skip S3 fetch entirely
         if use_cache and not os.path.exists(cache_path):
             entry = self._freshness.get(cache_path)
-            if entry and entry.get("hash") == "":
+            if (entry and entry.get("hash") == ""
+                    and _time.monotonic() - entry["checked_at"] < self._cache_ttl(url)):
                 return None
 
         # Fetch from S3 (connect fast, but allow time for large file downloads)
@@ -566,7 +580,9 @@ class AIPriceAction:
             Path(cache_path).write_text(text)
 
             # Write hash sidecar and update freshness
-            content_hash = self._head_content_hash(url)
+            content_hash = (resp.headers.get("x-amz-meta-sha256")
+                            or resp.headers.get("x-amz-meta-content-hash")
+                            or self._head_content_hash(url))
             if content_hash:
                 self._save_hash(cache_path, content_hash)
             self._freshness[cache_path] = {
@@ -694,53 +710,14 @@ class AIPriceAction:
                 df = self._fetch_csv(source, ticker, interval, day, use_cache=use_cache)
                 return day, df
 
-            # Two-phase fetch: probe last 10 days with HEAD checks.
-            # If 5 consecutive hash matches, read remaining older days
-            # from disk without HEAD checks (historical data doesn't change).
-            probe_count = 10
-            match_threshold = 5
-            sorted_days = sorted(days, reverse=True)
-
+            # Each partition has its own TTL. A run of fresh files must not
+            # hide corrections in another partition or in another ticker.
             with ThreadPoolExecutor(max_workers=8) as pool:
-                # Phase 1: probe the latest days
-                phase1 = sorted_days[:probe_count]
-                futures = {pool.submit(_fetch_day, d): d for d in phase1}
+                futures = {pool.submit(_fetch_day, d): d for d in sorted(days, reverse=True)}
                 for future in as_completed(futures):
                     day, df = future.result()
                     if df is not None and not df.empty:
                         frames[day] = df
-
-                # Phase 2: remaining days
-                phase2 = sorted_days[probe_count:]
-                if phase2 and self._fresh_cache_hits >= match_threshold:
-                    missing_days = []
-                    for day in phase2:
-                        cache_path = self._cache_key(source, ticker, interval, day)
-                        if os.path.exists(cache_path):
-                            try:
-                                text = Path(cache_path).read_text()
-                                df = self._parse_csv(text)
-                                if df is not None and not df.empty:
-                                    frames[day] = df
-                                else:
-                                    missing_days.append(day)
-                            except (OSError, pd.errors.EmptyDataError):
-                                missing_days.append(day)
-                        else:
-                            missing_days.append(day)
-                    if missing_days:
-                        futures = {pool.submit(_fetch_day, d): d for d in missing_days}
-                        for future in as_completed(futures):
-                            day, df = future.result()
-                            if df is not None and not df.empty:
-                                frames[day] = df
-                elif phase2:
-                    # Not enough confirmations — fetch remaining normally
-                    futures = {pool.submit(_fetch_day, d): d for d in phase2}
-                    for future in as_completed(futures):
-                        day, df = future.result()
-                        if df is not None and not df.empty:
-                            frames[day] = df
             if not frames:
                 return pd.DataFrame(columns=_OHLCV_COLUMNS)
             sorted_frames = [frames[d] for d in sorted(frames)]
