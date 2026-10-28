@@ -90,6 +90,7 @@ class HistoryWorker:
         self.scope = (None, None, None)
         self._next_catalog_refresh = 0.0
         self._next_archive_tick = 0.0
+        self._next_public_csv_retry = 0.0
         self._maintenance = None
         self._jobs_initialized = False
         self._lease_lost = None
@@ -943,6 +944,44 @@ class HistoryWorker:
             )
         self._next_archive_tick = time.monotonic() + 60
 
+    async def _tick_public_csv_retry(self):
+        if time.monotonic() < self._next_public_csv_retry:
+            return
+        self._next_public_csv_retry = time.monotonic() + 10
+        if self.policy._public_csv_store() is None:
+            return
+        source, symbols, interval = self.scope
+        where = ["retry_at<=?"]
+        args = [int(time.time())]
+        if source:
+            where.append("source=?")
+            args.append(source)
+        if interval:
+            where.append("interval=?")
+            args.append(interval)
+        if symbols:
+            where.append("symbol IN (" + ",".join("?" for _ in symbols) + ")")
+            args.extend(sorted(symbols))
+        with self.repo.connect() as con:
+            row = con.execute(
+                "SELECT source,symbol,interval FROM public_csv_queue WHERE "
+                + " AND ".join(where) + " ORDER BY updated_at,retry_at LIMIT 1",
+                args,
+            ).fetchone()
+        if not row:
+            return
+        try:
+            result = await asyncio.to_thread(self.policy._publish_public_candles, *tuple(row), [])
+            log.info(
+                "public CSV retry source=%s symbol=%s interval=%s objects=%s uploaded=%s",
+                *tuple(row), result["objects"], result["uploaded"],
+            )
+        except Exception as exc:
+            log.warning(
+                "public CSV retry deferred source=%s symbol=%s interval=%s error=%s",
+                *tuple(row), str(exc) if isinstance(exc, DataError) else type(exc).__name__,
+            )
+
     async def _heartbeat_lease(self):
         while True:
             await asyncio.sleep(60)
@@ -1010,6 +1049,7 @@ class HistoryWorker:
                         self._jobs_initialized = True
                     progressed = await self.step()
                     await self._tick_retention_archive()
+                    await self._tick_public_csv_retry()
                     if progressed:
                         count += 1
                         if once or cycles and count >= cycles:
@@ -1042,6 +1082,7 @@ class HistoryWorker:
                         self._ensure_jobs()
                         self._jobs_initialized = True
                     await self._tick_retention_archive()
+                    await self._tick_public_csv_retry()
                     for task in ticker_tasks:
                         if task.done():
                             await task

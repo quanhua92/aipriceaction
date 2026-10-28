@@ -112,6 +112,11 @@ CREATE TABLE IF NOT EXISTS quality(
  id INTEGER PRIMARY KEY, source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL,
  kind TEXT NOT NULL, detail TEXT NOT NULL, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL,
  resolved INTEGER NOT NULL DEFAULT 0, UNIQUE(source,symbol,interval,kind,detail));
+CREATE TABLE IF NOT EXISTS public_csv_queue(
+ source TEXT NOT NULL, symbol TEXT NOT NULL, interval TEXT NOT NULL, period TEXT NOT NULL,
+ generation INTEGER NOT NULL DEFAULT 1, attempts INTEGER NOT NULL DEFAULT 0,
+ retry_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL,
+ PRIMARY KEY(source,symbol,interval,period));
 CREATE TABLE IF NOT EXISTS sync_kv(
  id TEXT PRIMARY KEY, secret TEXT NOT NULL, value TEXT NOT NULL,
  created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
@@ -1534,7 +1539,7 @@ class Repository:
                 (outcome, error[:500], source, symbol, interval, attempt),
             )
 
-    def put(self, candles, overwrite=True, verification=None):
+    def put(self, candles, overwrite=True, verification=None, queue_public_csv=False):
         candles = [c.validate() for c in candles]
         if not candles:
             return 0
@@ -1544,6 +1549,7 @@ class Repository:
         written = 0
         accepted = 0
         retained_staged = 0
+        public_periods = set()
         statement = (
             INSERT if overwrite else INSERT.split(" ON CONFLICT", 1)[0] + " ON CONFLICT DO NOTHING"
         )
@@ -1619,6 +1625,11 @@ class Repository:
                 ).rowcount
                 written += affected
                 accepted += 1 if overwrite else affected
+                if affected and queue_public_csv:
+                    day = datetime.fromtimestamp(c.time, UTC).date()
+                    public_periods.add((c.source, c.symbol, c.interval, f"day:{day.isoformat()}"))
+                    if c.interval in ("1D", "1h"):
+                        public_periods.add((c.source, c.symbol, c.interval, f"year:{day.year}"))
                 if repair and repair["provider"] == state["provider"]:
                     # A long same-provider backfill must not freeze the public
                     # tail. Mirror each independently verified live candle into
@@ -1639,6 +1650,14 @@ class Repository:
                 log.warning(
                     "retaining staged completed candles source=%s symbol=%s interval=%s count=%s",
                     candles[0].source, candles[0].symbol, candles[0].interval, retained_staged,
+                )
+            if public_periods:
+                now = int(time.time())
+                con.executemany(
+                    "INSERT INTO public_csv_queue(source,symbol,interval,period,updated_at) VALUES (?,?,?,?,?) "
+                    "ON CONFLICT(source,symbol,interval,period) DO UPDATE SET "
+                    "generation=public_csv_queue.generation+1,retry_at=0,updated_at=excluded.updated_at",
+                    [(*period, now) for period in public_periods],
                 )
             if written:
                 self.bump(con, market=True)
@@ -3623,6 +3642,10 @@ class Repository:
                 "active_tickers": active_tickers,
                 "records": records,
                 "last_sync": last_sync,
+                "public_csv_pending": dict(con.execute(
+                    "SELECT COUNT(*) AS total, COALESCE(SUM(retry_at>?),0) AS delayed FROM public_csv_queue",
+                    (int(now.timestamp()),),
+                ).fetchone()),
             }
 
     def status(self):
@@ -3725,6 +3748,10 @@ class Repository:
                 "pending_archives": con.execute(
                     "SELECT COUNT(*) FROM archives WHERE status='pending_repair'"
                 ).fetchone()[0],
+                "public_csv_queue": [dict(row) for row in con.execute(
+                    "SELECT source,symbol,interval,period,attempts,retry_at,updated_at "
+                    "FROM public_csv_queue ORDER BY retry_at,updated_at LIMIT 50"
+                )],
                 "jobs": [
                     dict(r)
                     for r in con.execute(

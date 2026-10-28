@@ -3287,6 +3287,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             "trading_hours_timezone": "Asia/Ho_Chi_Minh",
             "uptime_secs": int(time.monotonic() - started),
             "current_system_time": now.isoformat(),
+            "public_csv_pending": status.get("public_csv_pending"),
             "configuration": {
                 "ingest_universe": settings.ingest_universe,
                 "vn_providers": list(settings.vn_providers),

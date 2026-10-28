@@ -1,3 +1,4 @@
+import asyncio
 import time
 from dataclasses import replace
 from datetime import UTC, datetime
@@ -139,3 +140,59 @@ async def test_yahoo_trailing_quote_does_not_replace_full_candle(system, interva
         await providers.close()
     assert len(page.rows) == 1
     assert (page.rows[0].open, page.rows[0].high, page.rows[0].volume) == (110.55, 111.3, 1278)
+
+
+def test_changed_csv_period_is_queued_in_the_candle_transaction(system):
+    repo, _, _ = system
+    stamp = int(datetime(2026, 10, 28, tzinfo=UTC).timestamp())
+    row = bar(stamp, "vps")
+    attempt = repo.start_source_check("vn", "FPT", "1D")
+    repo.put([row], verification={"attempt_ns": attempt, "completed_before": stamp}, queue_public_csv=True)
+    with repo.connect() as con:
+        pending = {r[0] for r in con.execute("SELECT period FROM public_csv_queue")}
+    assert pending == {"day:2026-10-28", "year:2026"}
+
+
+@pytest.mark.asyncio
+async def test_live_refresh_exports_only_changed_days_and_skips_unchanged(system, monkeypatch):
+    repo, archive, settings = system
+    today = int(time.time()) // 86400 * 86400
+    old = [bar(today - days * 86400, "vps") for days in range(40, 0, -1)]
+    repo.put(old)
+    incoming = old[1:] + [bar(today, "vps")]
+
+    class Provider:
+        async def page(self, *args, **kwargs):
+            return Page(incoming, "vps")
+
+    worker = Worker(repo, settings, Provider(), archive)
+    monkeypatch.setattr(worker, "floor", lambda *args: old[0].time)
+    monkeypatch.setattr(worker, "sentinel", lambda *args: asyncio.sleep(0))
+    # Use a fake publisher to observe exactly which periods the live path asks for.
+    exports = []
+    monkeypatch.setattr(worker, "_publish_public_candles", lambda *args: exports.append(args[-1]) or {"objects": 1, "uploaded": 1})
+    worker.settings = replace(settings, public_export_enabled=True)
+    entry = {"source": "vn", "symbol": "FPT"}
+    assert await worker.sync(entry, "1D") == 40
+    assert [[r.time for r in rows] for rows in exports] == [[today]]
+    assert await worker.sync(entry, "1D") == 40
+    assert len(exports) == 1
+
+
+@pytest.mark.asyncio
+async def test_history_worker_retries_due_csv_period_without_new_prices(system):
+    repo, archive, settings = system
+    stamp = int(datetime(2026, 10, 28, tzinfo=UTC).timestamp())
+    row = bar(stamp, "vps")
+    repo.put([row], queue_public_csv=True)
+    worker = HistoryWorker(repo, replace(settings, public_export_enabled=True), archive=archive)
+    attempts = []
+    worker.policy._public_csv_store = lambda: (
+        lambda client, bucket, item: attempts.append(item.key) or {"uploaded": True}, object(), "public"
+    )
+    try:
+        await worker._tick_public_csv_retry()
+    finally:
+        await worker.providers.close()
+    assert len(attempts) == 2
+    assert not worker.policy._pending_public_csv_periods("vn", "FPT", "1D", include_deferred=True)

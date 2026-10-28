@@ -1648,6 +1648,97 @@ def test_public_csv_failure_does_not_block_other_periods(system):
         "ohlcv/vn/FPT/1D/FPT-1D-2024-01-01.csv",
         "ohlcv/vn/FPT/yearly/FPT-1D-2024.csv",
     ]
+    with repo.connect() as con:
+        assert [r[0] for r in con.execute("SELECT period FROM public_csv_queue")] == ["day:2024-01-01"]
+
+    attempted.clear()
+    with repo.connect() as con:
+        con.execute("UPDATE public_csv_queue SET retry_at=0")
+    worker._public_csv_store = lambda: (
+        lambda client, bucket, item: attempted.append(item.key) or {"uploaded": True}, object(), "public"
+    )
+    worker._publish_public_candles("vn", "FPT", "1D", rows[-1:])
+    assert "ohlcv/vn/FPT/1D/FPT-1D-2024-01-01.csv" in attempted
+    with repo.connect() as con:
+        assert not con.execute("SELECT 1 FROM public_csv_queue").fetchone()
+
+
+def test_public_csv_retry_survives_a_concurrent_candle_update(system):
+    repo, archive, settings = system
+    row = candle(1)
+    repo.put([row])
+    worker = Worker(repo, settings, Pages(), archive)
+    mutated = False
+
+    def publish_csv(client, bucket, item):
+        nonlocal mutated
+        if not mutated:
+            mutated = True
+            repo.put([replace(row, high=2.5 + row.high)], queue_public_csv=True)
+        return {"uploaded": True}
+
+    worker._public_csv_store = lambda: (publish_csv, object(), "public")
+    worker._publish_public_candles("vn", "FPT", "1D", [row])
+    with repo.connect() as con:
+        assert {r[0] for r in con.execute("SELECT period FROM public_csv_queue")} == {
+            "day:2024-01-01", "year:2024"
+        }
+    worker._publish_public_candles("vn", "FPT", "1D", repo.read("vn", "FPT", "1D"))
+    with repo.connect() as con:
+        assert not con.execute("SELECT 1 FROM public_csv_queue").fetchone()
+
+
+@pytest.mark.asyncio
+async def test_archive_manifest_completes_when_failed_csv_has_a_durable_retry(system):
+    repo, archive, settings = system
+    repo.put([candle(5)])
+    obj = archive.publish([candle(1)])
+    payload = {"targets": [{"old": obj, "replacement": obj}]}
+    now = int(time.time())
+    with repo.connect() as con:
+        con.execute(
+            "INSERT INTO archive_repair_batches(id,status,payload,lease_owner,lease_until,created_at,updated_at) "
+            "VALUES ('batch','manifest_published',?,'owner',?,?,?)",
+            (json.dumps(payload), now + 60, now, now),
+        )
+    worker = Worker(repo, settings, Pages(), archive)
+
+    def publish_csv(client, bucket, item):
+        if "/yearly/" in item.key:
+            raise DataError("existing dates are missing")
+        return {"uploaded": True}
+
+    worker._public_csv_store = lambda: (publish_csv, object(), "public")
+    await worker._publish_archive_repair_csv("batch", "owner", payload)
+    with repo.connect() as con:
+        assert con.execute("SELECT status FROM archive_repair_batches WHERE id='batch'").fetchone()[0] == "published"
+        pending = dict(con.execute("SELECT * FROM public_csv_queue").fetchone())
+        assert pending["period"] == "year:2024" and pending["attempts"] == 1
+        assert pending["retry_at"] > now
+        assert con.execute("SELECT 1 FROM quality WHERE kind='archive_csv_repair_pending' AND resolved=0").fetchone()
+    assert repo.health_summary()["public_csv_pending"] == {"total": 1, "delayed": 1}
+
+
+@pytest.mark.asyncio
+async def test_archive_csv_without_a_durable_retry_keeps_batch_pending(system, monkeypatch):
+    repo, archive, settings = system
+    repo.put([candle(5)])
+    obj = archive.publish([candle(1)])
+    payload = {"targets": [{"old": obj, "replacement": obj}]}
+    now = int(time.time())
+    with repo.connect() as con:
+        con.execute(
+            "INSERT INTO archive_repair_batches(id,status,payload,lease_owner,lease_until,created_at,updated_at) "
+            "VALUES ('batch','manifest_published',?,'owner',?,?,?)",
+            (json.dumps(payload), now + 60, now, now),
+        )
+    worker = Worker(repo, settings, Pages(), archive)
+    worker._public_csv_store = lambda: (object(), object(), "public")
+    monkeypatch.setattr(worker, "_publish_public_candles", lambda *args: (_ for _ in ()).throw(DataError("before queue")))
+    with pytest.raises(DataError, match="before queue"):
+        await worker._publish_archive_repair_csv("batch", "owner", payload)
+    with repo.connect() as con:
+        assert con.execute("SELECT status FROM archive_repair_batches WHERE id='batch'").fetchone()[0] == "manifest_published"
 
 
 @pytest.mark.asyncio

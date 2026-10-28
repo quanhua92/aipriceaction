@@ -113,6 +113,11 @@ Add `--apply` only after checking the dry-run evidence. The command requires the
 target and at least three nearby active-revision candles to match Yahoo. It
 changes only the revision label and stores the comparison in the quality log.
 
+Changed public CSV periods are queued with the SQLite update. Failed exports
+retry in the background with a delay; successful entries leave the queue. One
+failed CSV does not stop other Parquet repairs. `/health` reports the number of
+pending and delayed CSV periods, and `aipa-api status` lists their details.
+
 ## Refresh the Vietnamese stock directory
 
 From this directory, run `python3 scripts/refresh_vn_tickers.py`. It uses only

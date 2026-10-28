@@ -49,6 +49,16 @@ class Worker:
         self.archive_repair_turn = 0
         self.archive_repair_scope = (None, None, None)
         self._next_manifest_retry = 0.0
+        self._public_csv_checked = set()
+        self._redis_checked = set()
+
+    def _pending_public_csv_periods(self, source, symbol, iv, *, include_deferred=False):
+        with self.repo.connect() as con:
+            return [row[0] for row in con.execute(
+                "SELECT period FROM public_csv_queue WHERE source=? AND symbol=? AND interval=? "
+                "AND (? OR retry_at<=?)",
+                (source, symbol, iv, int(include_deferred), int(time.time())),
+            )]
 
     def _public_csv_store(self):
         if not self.settings.public_export_enabled or self.archive is None:
@@ -63,21 +73,50 @@ class Worker:
 
     def _publish_public_candles(self, source, symbol, iv, rows):
         store = self._public_csv_store()
-        if store is None or not rows:
+        if store is None:
             return {"objects": 0, "uploaded": 0}
-        from datetime import UTC, datetime
+        from datetime import UTC, date, datetime
 
         from .history import History
         from .public_csv import daily_key, period_bounds, plan_candles, yearly_key
 
         publish, client, bucket = store
         history = History(self.repo, self.archive, self.settings)
-        periods = sorted({datetime.fromtimestamp(row.time, UTC).date() for row in rows}, reverse=True)
-        years = sorted({day.year for day in periods}, reverse=True) if iv in ("1D", "1h") else []
+        periods = {datetime.fromtimestamp(row.time, UTC).date() for row in rows}
+        years = {day.year for day in periods} if iv in ("1D", "1h") else set()
+        for detail in self._pending_public_csv_periods(source, symbol, iv):
+            try:
+                if detail.startswith("day:"):
+                    periods.add(date.fromisoformat(detail[4:]))
+                elif detail.startswith("year:") and iv in ("1D", "1h"):
+                    years.add(int(detail[5:]))
+            except ValueError:
+                log.error("invalid pending public CSV period source=%s symbol=%s interval=%s detail=%s", source, symbol, iv, detail)
+        requested = [(day, None) for day in sorted(periods, reverse=True)] + [
+            (None, year) for year in sorted(years, reverse=True)
+        ]
+        if not requested:
+            return {"objects": 0, "uploaded": 0}
+        # Record intent before touching S3 so a crash or temporary S3 failure
+        # cannot silently lose a changed historical day or yearly file.
+        now = int(time.time())
+        with self.repo.connect() as con:
+            con.executemany(
+                "INSERT INTO public_csv_queue(source,symbol,interval,period,updated_at) VALUES (?,?,?,?,?) "
+                "ON CONFLICT(source,symbol,interval,period) DO UPDATE SET "
+                "generation=public_csv_queue.generation+1,updated_at=excluded.updated_at",
+                [(source, symbol, iv, f"day:{day.isoformat()}" if day else f"year:{year}", now)
+                 for day, year in requested],
+            )
+            generations = dict(con.execute(
+                "SELECT period,generation FROM public_csv_queue WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, iv),
+            ))
         published, uploaded = 0, 0
         errors = []
-        for day, year in [(day, None) for day in periods] + [(None, year) for year in years]:
+        for day, year in requested:
             key = daily_key(source, symbol, iv, day) if day else yearly_key(source, symbol, iv, year)
+            detail = f"day:{day.isoformat()}" if day else f"year:{year}"
             try:
                 with self.archive.public_csv_lock(key):
                     start, end = period_bounds(day=day, year=year)
@@ -86,15 +125,35 @@ class Worker:
                         continue
                     item = plan_candles(candles, source, symbol, iv, day=day, year=year)
                     result = publish(client, bucket, item)
+                with self.repo.connect() as con:
+                    con.execute(
+                        "DELETE FROM public_csv_queue WHERE source=? AND symbol=? AND interval=? "
+                        "AND period=? AND generation=?",
+                        (source, symbol, iv, detail, generations[detail]),
+                    )
                 published += 1
                 uploaded += int(result["uploaded"])
             except Exception as exc:
                 reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
                 errors.append((key, reason))
                 log.warning("public CSV period export failed key=%s error=%s", key, reason)
+                with self.repo.connect() as con:
+                    con.execute(
+                        "UPDATE public_csv_queue SET attempts=attempts+1, "
+                        "retry_at=? + MIN(3600, 30 * (1 << MIN(attempts, 7))) "
+                        "WHERE source=? AND symbol=? AND interval=? AND period=? AND generation=?",
+                        (int(time.time()), source, symbol, iv, detail, generations[detail]),
+                    )
         if errors:
             key, reason = errors[0]
             raise DataError(f"{len(errors)} public CSV period(s) failed; first: {key}: {reason}")
+        if not self._pending_public_csv_periods(source, symbol, iv, include_deferred=True):
+            with self.repo.connect() as con:
+                con.execute(
+                    "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? "
+                    "AND kind='archive_csv_repair_pending' AND resolved=0",
+                    (source, symbol, iv),
+                )
         return {"objects": published, "uploaded": uploaded}
 
     def _publish_public_catalog(self):
@@ -1001,12 +1060,22 @@ class Worker:
                 ]
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")
+            provider_rows_count = len(rows)
             self.repo.record_volume_proofs(getattr(page, "volume_proofs", ()))
-            self.repo.put(rows, verification={"attempt_ns": attempt, "completed_before": completed})
-            if source == "vn" or state["status"] == "repairing":
-                # Use committed rows, including any older source retained by
-                # the transaction, for caches and public CSV publication.
-                rows = self.repo.read(source, symbol, iv, start=rows[0].time, end=rows[-1].time)
+            previous_rows = {row.time: row for row in overlap}
+            self.repo.put(
+                rows, verification={"attempt_ns": attempt, "completed_before": completed},
+                queue_public_csv=self._public_csv_store() is not None,
+            )
+            # Use committed rows, including any older source retained by the
+            # transaction, for caches and public CSV publication.
+            rows = self.repo.read(source, symbol, iv, start=rows[0].time, end=rows[-1].time)
+            def values(row):
+                return (row.open, row.high, row.low, row.close, row.volume, row.provider, row.revision)
+            changed = [
+                row for row in rows
+                if row.time not in previous_rows or values(row) != values(previous_rows[row.time])
+            ]
             if source == "yahoo":
                 self.repo.finding(
                     source,
@@ -1016,17 +1085,24 @@ class Worker:
                     YAHOO_NO_DATA_FINDING,
                     resolved=True,
                 )
-            await asyncio.to_thread(
-                publish_worker_candles, self.redis_client, self.settings, rows
-            )
+            ident = (source, symbol, iv)
+            if changed or ident not in self._redis_checked:
+                await asyncio.to_thread(
+                    publish_worker_candles, self.redis_client, self.settings,
+                    rows if ident not in self._redis_checked else changed,
+                )
+                self._redis_checked.add(ident)
             # The recent observation and candles are committed together. A later
             # optional historical probe must not rewrite that successful result,
             # including when the worker is cancelled during the probe.
             attempt = None
-            if self.settings.public_export_enabled:
+            if self.settings.public_export_enabled and (
+                changed or ident not in self._public_csv_checked
+                or self._pending_public_csv_periods(source, symbol, iv)
+            ):
                 try:
                     public_result = await asyncio.to_thread(
-                        self._publish_public_candles, source, symbol, iv, rows
+                        self._publish_public_candles, source, symbol, iv, changed or rows[-1:]
                     )
                     if public_result and public_result["objects"]:
                         log.info(
@@ -1037,6 +1113,7 @@ class Worker:
                             public_result["objects"],
                             public_result["uploaded"],
                         )
+                    self._public_csv_checked.add(ident)
                 except Exception as exc:
                     # SQLite remains the ingestion source of truth. The next
                     # successful check re-reads canonical history and retries
@@ -1048,6 +1125,8 @@ class Worker:
                         iv,
                         str(exc) if isinstance(exc, DataError) else type(exc).__name__,
                     )
+                    if self._pending_public_csv_periods(source, symbol, iv, include_deferred=True):
+                        self._public_csv_checked.add(ident)
             if iv == "1D" and source not in ("sjc", "crypto"):
                 try:
                     # Leave time for recording a failed probe and releasing the
@@ -1061,7 +1140,7 @@ class Worker:
                 except Exception as exc:
                     reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
                     self.repo.finding(source, symbol, iv, "historical_probe_failure", reason)
-            return len(rows)
+            return provider_rows_count
         except Exception as exc:
             failed = True
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
@@ -1248,20 +1327,34 @@ class Worker:
             groups.setdefault(key, []).extend(await asyncio.to_thread(self.archive.read, obj))
         try:
             for (source, symbol, iv), rows in groups.items():
-                await asyncio.to_thread(
-                    self._publish_public_candles,
-                    source,
-                    symbol,
-                    iv,
-                    sorted(rows, key=lambda row: row.time),
-                )
-            with self.repo.connect() as con:
-                con.execute("BEGIN IMMEDIATE")
-                for source, symbol, iv in groups:
-                    con.execute(
-                        "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? AND kind='archive_csv_repair_pending'",
-                        (source, symbol, iv),
+                try:
+                    await asyncio.to_thread(
+                        self._publish_public_candles,
+                        source,
+                        symbol,
+                        iv,
+                        sorted(rows, key=lambda row: row.time),
                     )
+                except Exception as exc:
+                    # The Parquet manifest is already durable. A failed CSV
+                    # period has its own retry record and must not block other
+                    # archive batches. Never declare CSV success here.
+                    if not self._pending_public_csv_periods(source, symbol, iv, include_deferred=True):
+                        raise
+                    reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                    self.repo.finding(source, symbol, iv, "archive_csv_repair_pending", reason)
+                    log.warning(
+                        "archive CSV deferred source=%s symbol=%s interval=%s reason=%s",
+                        source, symbol, iv, reason,
+                    )
+                    continue
+                if not self._pending_public_csv_periods(source, symbol, iv, include_deferred=True):
+                    with self.repo.connect() as con:
+                        con.execute(
+                            "UPDATE quality SET resolved=1 WHERE source=? AND symbol=? AND interval=? "
+                            "AND kind='archive_csv_repair_pending'",
+                            (source, symbol, iv),
+                        )
             self.repo.complete_archive_repair_batch(batch_id, owner)
         except Exception as exc:
             reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
