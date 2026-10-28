@@ -1030,6 +1030,7 @@ class Worker:
                     adjustment["worst_date"],
                     adjustment["worst_ratio"],
                 )
+            append_only_tail = False
             if (source != "vn" and page.provider != state["provider"]) or adjustment or adjustment_changes(
                 overlap, page.rows, completed,
                 snapshot_provider=snapshot_provider,
@@ -1042,15 +1043,32 @@ class Worker:
                     "historical_revision",
                     "Corroborated historical changes; retained window staged for recovery",
                 )
-                self.repo.fail_source_check(
-                    source,
-                    symbol,
-                    iv,
-                    attempt,
-                    "Provider/revision change; recovery queued",
-                    "repair_queued",
-                )
-                return 0
+                if (
+                    source == "yahoo"
+                    and iv in ("1h", "1m")
+                    and page.provider == state["provider"]
+                    and latest
+                    and page.rows[-1].time > latest[-1].time
+                ):
+                    # Yahoo intraday candles are unadjusted. Keep every old
+                    # completed bar unchanged while the durable repair checks
+                    # the historical revisions; the independently observed,
+                    # overlapping newer tail can continue to advance.
+                    append_only_tail = True
+                    log.warning(
+                        "historical revision queued while publishing new intraday tail "
+                        "source=%s symbol=%s interval=%s", source, symbol, iv,
+                    )
+                else:
+                    self.repo.fail_source_check(
+                        source,
+                        symbol,
+                        iv,
+                        attempt,
+                        "Provider/revision change; recovery queued",
+                        "repair_queued",
+                    )
+                    return 0
             # Protect a daily historical revision from late/partial intraday
             # replies ending before the published latest candle.
             if latest and page.rows[-1].time < latest[-1].time:
@@ -1076,6 +1094,7 @@ class Worker:
                     replace(r, revision=state["revision"])
                     for r in page.rows
                     if r.time >= self.floor(entry, iv)
+                    and (not append_only_tail or r.time > latest[-1].time)
                 ]
             if not rows:
                 raise DataError("Provider has no candles inside the retained window")

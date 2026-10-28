@@ -2658,3 +2658,34 @@ async def test_yahoo_expansion_checks_older_price_revisions_before_publishing(sy
     assert repo.read("yahoo", "AAPL", "1D") == before
     assert repo.status()["jobs"][0]["kind"] == "repair"
     assert any(f["kind"] == "historical_revision" for f in repo.findings())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("iv", ["1h", "1m"])
+async def test_yahoo_intraday_revision_keeps_old_candles_and_publishes_verified_tail(
+    system, monkeypatch, iv
+):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows(iv, 15)
+    repo.put(rows[:10])
+    old = repo.read("yahoo", "AAPL", iv)
+    corrected = [
+        replace(row, open=90, high=91, low=89, close=90) if i < 3 else row
+        for i, row in enumerate(rows)
+    ]
+    providers = YahooOverlapPages(Page(corrected, "yahoo"))
+    worker = Worker(repo, settings, providers, archive)
+    monkeypatch.setattr(worker, "floor", lambda *args: rows[0].time)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 7200)
+
+    assert await worker.sync({"source": "yahoo", "symbol": "AAPL"}, iv) == 5
+    updated = repo.read("yahoo", "AAPL", iv)
+    assert updated[:10] == old
+    assert [row.time for row in updated[10:]] == [row.time for row in rows[10:]]
+    assert repo.state("yahoo", "AAPL", iv)["status"] == "repairing"
+    job = repo.status()["jobs"][0]
+    assert job["kind"] == "repair" and job["status"] == "pending"
+    assert any(f["kind"] == "historical_revision" for f in repo.findings())
+    with repo.connect() as con:
+        assert con.execute("SELECT COUNT(*) FROM staging WHERE job_id=?", (job["id"],)).fetchone()[0] == 5
+        assert con.execute("SELECT outcome FROM source_checks").fetchone()[0] == "succeeded"
