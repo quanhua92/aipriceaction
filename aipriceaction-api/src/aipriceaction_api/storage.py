@@ -1539,7 +1539,10 @@ class Repository:
                 (outcome, error[:500], source, symbol, interval, attempt),
             )
 
-    def put(self, candles, overwrite=True, verification=None, queue_public_csv=False):
+    def put(
+        self, candles, overwrite=True, verification=None, queue_public_csv=False,
+        queue_public_csv_since=None, queue_public_csv_yearly=True,
+    ):
         candles = [c.validate() for c in candles]
         if not candles:
             return 0
@@ -1625,10 +1628,12 @@ class Repository:
                 ).rowcount
                 written += affected
                 accepted += 1 if overwrite else affected
-                if affected and queue_public_csv:
+                if affected and queue_public_csv and (
+                    queue_public_csv_since is None or c.time >= queue_public_csv_since
+                ):
                     day = datetime.fromtimestamp(c.time, UTC).date()
                     public_periods.add((c.source, c.symbol, c.interval, f"day:{day.isoformat()}"))
-                    if c.interval in ("1D", "1h"):
+                    if queue_public_csv_yearly and c.interval in ("1D", "1h"):
                         public_periods.add((c.source, c.symbol, c.interval, f"year:{day.year}"))
                 if repair and repair["provider"] == state["provider"]:
                     # A long same-provider backfill must not freeze the public

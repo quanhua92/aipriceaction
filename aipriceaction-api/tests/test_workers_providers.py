@@ -2305,6 +2305,50 @@ async def test_newest_candles_remain_available_during_incomplete_bootstrap(syste
     assert any(f["kind"] == "coverage_pending" for f in repo.findings())
 
 
+@pytest.mark.asyncio
+async def test_bootstrap_queues_latest_csv_with_candles_and_keeps_it_on_export_failure(
+    system, monkeypatch
+):
+    repo, archive, settings = system
+    repo.queue("vn", "FPT", "1D", "bootstrap", candle(1).time)
+    worker = Worker(repo, settings, Pages(Page([candle(4), candle(5)], "vps")), archive)
+    monkeypatch.setattr(worker, "_public_csv_enabled", lambda: True)
+    attempts = []
+
+    def fail_export(source, symbol, interval, rows):
+        attempts.append((source, symbol, interval, [row.time for row in rows]))
+        raise DataError("temporary S3 outage")
+
+    monkeypatch.setattr(worker, "_publish_public_candles", fail_export)
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 2
+    assert [r.time for r in repo.read("vn", "FPT", "1D")] == [candle(4).time, candle(5).time]
+    assert attempts == [("vn", "FPT", "1D", [])]
+    with repo.connect() as con:
+        periods = {row[0] for row in con.execute("SELECT period FROM public_csv_queue")}
+    assert periods == {"day:2024-01-05"}
+    assert any(f["kind"] == "archive_csv_repair_pending" for f in repo.findings())
+    assert any(f["kind"] == "coverage_pending" for f in repo.findings())
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_publishes_latest_day_without_creating_partial_year(system, monkeypatch):
+    repo, archive, settings = system
+    repo.queue("vn", "FPT", "1D", "bootstrap", candle(1).time)
+    worker = Worker(repo, settings, Pages(Page([candle(4), candle(5)], "vps")), archive)
+    exported = []
+    monkeypatch.setattr(worker, "_public_csv_enabled", lambda: True)
+    monkeypatch.setattr(
+        worker, "_public_csv_store",
+        lambda: (lambda client, bucket, item: exported.append(item.key) or {"uploaded": True},
+                 object(), "bucket"),
+    )
+    assert await worker.repair_page(repo.claim_job(worker.owner)) == 2
+    assert exported == ["ohlcv/vn/FPT/1D/FPT-1D-2024-01-05.csv"]
+    with repo.connect() as con:
+        assert not con.execute("SELECT 1 FROM public_csv_queue").fetchone()
+    assert any(f["kind"] == "coverage_pending" for f in repo.findings())
+
+
 @pytest.mark.parametrize(("symbol", "preferred"), [("FPT", "vps"), ("VNINDEX", "dnse")])
 def test_bootstrap_does_not_migrate_existing_vndirect_series(system, monkeypatch, symbol, preferred):
     repo, archive, settings = system

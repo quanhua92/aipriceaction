@@ -76,12 +76,15 @@ class Worker:
                 (source, symbol, iv, int(include_deferred), int(time.time())),
             )]
 
-    def _public_csv_store(self):
+    def _public_csv_enabled(self):
         if not self.settings.public_export_enabled or self.archive is None:
-            return None
+            return False
         from .archive import S3Store
 
-        if not isinstance(self.archive.store, S3Store):
+        return isinstance(self.archive.store, S3Store)
+
+    def _public_csv_store(self):
+        if not self._public_csv_enabled():
             return None
         from .public_csv import publish_object
 
@@ -449,7 +452,14 @@ class Worker:
                 # Publish the first validated recent page promptly, without
                 # claiming that the requested history floor has been reached.
                 published = [r for r in prepared if r.time >= job["floor"]]
-                self.repo.put(published)
+                newest = max(published, key=lambda row: row.time)
+                public_export = self._public_csv_enabled()
+                self.repo.put(
+                    published,
+                    queue_public_csv=public_export,
+                    queue_public_csv_since=newest.time // 86400 * 86400,
+                    queue_public_csv_yearly=False,
+                )
                 await asyncio.to_thread(
                     publish_worker_candles, self.redis_client, self.settings, published
                 )
@@ -460,6 +470,22 @@ class Worker:
                     "coverage_pending",
                     f"Requested floor {job['floor']}; recent page published, backfill incomplete",
                 )
+                if public_export:
+                    try:
+                        await self._archive_thread(
+                            self._publish_public_candles,
+                            job["source"], job["symbol"], job["interval"], [],
+                        )
+                    except Exception as exc:
+                        reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                        log.warning(
+                            "bootstrap public CSV export failed source=%s symbol=%s interval=%s error=%s",
+                            job["source"], job["symbol"], job["interval"], reason,
+                        )
+                        self.repo.finding(
+                            job["source"], job["symbol"], job["interval"],
+                            "archive_csv_repair_pending", reason,
+                        )
             if complete:
                 # Stage releases the lease to preserve restartability/fairness.
                 # Reclaim this particular job, not whichever happens to be first.
