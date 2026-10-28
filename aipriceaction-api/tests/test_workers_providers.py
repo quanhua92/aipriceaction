@@ -2550,6 +2550,31 @@ async def test_yahoo_outage_expands_once_within_retention_and_current_provider(
 
 
 @pytest.mark.asyncio
+async def test_yahoo_minute_outage_uses_available_overlap_beyond_1000_bars(system, monkeypatch):
+    repo, archive, settings = system
+    rows = yahoo_overlap_rows("1m", 1500)
+    repo.put(rows[:1])
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: rows[-1].time + 60)
+
+    class Live:
+        def __init__(self):
+            self.requests = []
+
+        async def page(self, source, symbol, interval, count=40, provider=None, start=None):
+            self.requests.append(count)
+            return Page(rows[-count:], "yahoo")
+
+    providers = Live()
+    worker = Worker(repo, settings, providers, archive)
+    monkeypatch.setattr(worker, "floor", lambda *args: rows[0].time)
+
+    assert await worker.sync({"source": "yahoo", "symbol": "AAPL"}, "1m") == len(rows)
+    assert providers.requests == [40, 1540]
+    assert len(repo.read("yahoo", "AAPL", "1m")) == len(rows)
+    assert repo.status()["jobs"] == []
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("iv", ["1D", "1h", "1m"])
 async def test_yahoo_capped_outage_queues_recovery_without_publishing_disjoint_tail(
     system, monkeypatch, iv

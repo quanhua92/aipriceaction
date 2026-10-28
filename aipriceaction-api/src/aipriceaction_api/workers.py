@@ -920,7 +920,11 @@ class Worker:
                 # Keep ordinary/closed-market checks cheap. Expand only when
                 # newer data has outrun the small overlap page; pin the retry
                 # to the existing provider's adjustment basis.
-                count = min(1000, max(40, (int(time.time()) - latest[-1].time) // step + 40))
+                # Yahoo's minute response already contains up to six days of
+                # observations. A 1,000-row cap discarded that overlap after
+                # a longer outage and stranded otherwise recoverable series.
+                max_overlap = 10_000 if source == "yahoo" and iv == "1m" else 1000
+                count = min(max_overlap, max(40, (int(time.time()) - latest[-1].time) // step + 40))
                 if count > 40:
                     page = await self.providers.page(
                         source,
