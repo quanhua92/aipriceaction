@@ -188,7 +188,8 @@ cutover steps.
 For a rolling API update after the first Nginx deployment, run
 `./scripts/deploy-api-rolling.sh` from this directory. It rebuilds the shared
 image, replaces one API replica at a time, waits for its health check, reloads
-Nginx to resolve the replacement container address, then updates the worker.
+Nginx with the validated current configuration and replacement container
+addresses, then updates the workers. Nginx keeps serving during the reload.
 It pauses `worker-history` during the API migration so an old worker cannot
 write retry state after the database schema changes, then resumes it on the new
 image.

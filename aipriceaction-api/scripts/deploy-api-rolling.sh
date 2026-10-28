@@ -87,9 +87,9 @@ if docker inspect aipriceaction-nginx >/dev/null 2>&1 \
     && [ "$(docker inspect --format '{{.State.Running}}' aipriceaction-nginx)" = true ]; then
     # Nginx stays live while each backend is replaced and refreshed in DNS.
     deploy_replica api2 aipriceaction-api-2
-    docker compose exec -T nginx nginx -s reload
+    ./scripts/reload-nginx-config.sh
     deploy_replica api aipriceaction-api
-    docker compose exec -T nginx nginx -s reload
+    ./scripts/reload-nginx-config.sh
 else
     # First cutover: keep the old API on host port 8899 while api2 warms, then
     # start Nginx as soon as the old api container has been replaced. Api2
@@ -101,6 +101,7 @@ else
     docker compose exec -T api python -m aipriceaction_api.homepage_warmup --instant-ms 5000
     docker compose up -d --no-deps nginx
     wait_healthy nginx aipriceaction-nginx
+    ./scripts/reload-nginx-config.sh
 fi
 
 docker compose up -d --no-deps worker worker-hourly worker-minute worker-history
