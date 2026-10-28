@@ -177,8 +177,7 @@ services:
   worker:
     container_name: aipriceaction-worker-daily
     <<: *api-service
-    # Keep the previous aggregate provider budget: 2 concurrent requests and
-    # 10 requests/minute per route in each of the three interval workers.
+    # Each interval has its own bounded concurrency and provider budget.
     environment:
       <<: *api-environment
       WORKER_CONCURRENCY: ${DAILY_WORKER_CONCURRENCY:-2}
@@ -205,6 +204,7 @@ services:
       <<: *api-environment
       WORKER_CONCURRENCY: ${MINUTE_WORKER_CONCURRENCY:-2}
       PROVIDER_RPM: ${MINUTE_PROVIDER_RPM:-10}
+      BINANCE_PROVIDER_RPM: ${MINUTE_BINANCE_PROVIDER_RPM:-30}
     command: ["aipa-api", "worker", "--interval", "1m", "--skip-catalog-publish"]
     stop_grace_period: 2m
     restart: unless-stopped

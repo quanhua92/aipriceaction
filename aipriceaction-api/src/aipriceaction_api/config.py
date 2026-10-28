@@ -116,6 +116,8 @@ class Settings:
     allow_direct: bool = True
     worker_concurrency: int = 6
     requests_per_minute: int = 30
+    # Zero inherits the general provider budget.
+    binance_requests_per_minute: int = 0
     history_years: int = 10
     history_page_size: int = 500
     history_batch_rows: int = 1_000
@@ -186,6 +188,7 @@ class Settings:
             "allow_direct": "ALLOW_DIRECT",
             "worker_concurrency": "WORKER_CONCURRENCY",
             "requests_per_minute": "PROVIDER_RPM",
+            "binance_requests_per_minute": "BINANCE_PROVIDER_RPM",
             "history_years": "HISTORY_YEARS",
             "history_page_size": "HISTORY_PAGE_SIZE",
             "history_batch_rows": "HISTORY_BATCH_ROWS",
@@ -280,6 +283,8 @@ class Settings:
             raise ValueError("INGEST_UNIVERSE must be watchlist or catalog")
         if not result.vn_providers or set(result.vn_providers) - {"vps", "vndirect", "dnse"}:
             raise ValueError("VN_PROVIDERS must contain only vps, vndirect, dnse")
+        if result.binance_requests_per_minute < 0:
+            raise ValueError("BINANCE_PROVIDER_RPM must be nonnegative")
         for attr in (
             "daily_years",
             "hourly_years",

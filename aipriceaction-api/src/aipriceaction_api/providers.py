@@ -39,10 +39,22 @@ class RateLimiter:
 
     async def acquire(self):
         async with self.lock:
-            pause = max(0, self.next - time.monotonic())
-            if pause:
+            while (pause := self.next - time.monotonic()) > 0:
                 await asyncio.sleep(pause)
             self.next = time.monotonic() + self.delay
+
+    def postpone(self, delay):
+        # May be called while another coroutine is asleep in acquire(). The
+        # acquire loop rechecks this deadline before allowing a request.
+        self.next = max(self.next, time.monotonic() + delay)
+
+
+def _retry_after_seconds(exc):
+    try:
+        delay = float(exc.response.headers.get("Retry-After", "2"))
+    except (AttributeError, TypeError, ValueError):
+        return 2.0
+    return delay if math.isfinite(delay) and delay >= 0 else 2.0
 
 
 def vn_provider_order(settings, iv, before, symbol=None):
@@ -158,6 +170,12 @@ class Providers:
             (provider, route_name)
         ]
 
+    def provider_limiter(self, provider, route):
+        rpm = self.settings.requests_per_minute
+        if provider == "binance" and self.settings.binance_requests_per_minute:
+            rpm = self.settings.binance_requests_per_minute
+        return self.limits.setdefault((provider, route), RateLimiter(rpm))
+
     async def request(
         self,
         provider,
@@ -177,9 +195,7 @@ class Providers:
             route = routes[attempt % len(routes)]
             route_name = self.route_label(route)
             client_key = (provider, route)
-            limiter = self.limits.setdefault(
-                client_key, RateLimiter(self.settings.requests_per_minute)
-            )
+            limiter = self.provider_limiter(provider, route)
             await limiter.acquire()
             provider_requests, route_requests = self.record_provider_attempt(provider, route)
             try:
@@ -257,9 +273,12 @@ class Providers:
                     provider_requests,
                     route_requests,
                 )
-                if attempt + 1 < max_attempts:
-                    if status_code in {403, 429}:
-                        await asyncio.sleep(2)
+                if provider == "binance" and status_code in {418, 429}:
+                    delay = _retry_after_seconds(exc)
+                    limiter.postpone(delay)
+                    log.warning("upstream rate limited provider=binance route=%s retry_after_s=%s", route_name, delay)
+                elif attempt + 1 < max_attempts and status_code in {403, 429}:
+                    await asyncio.sleep(2)
         # Never log proxies/URLs containing credentials or raw HTTP exceptions.
         raise DataError(f"{provider} request failed ({last})")
 
@@ -271,7 +290,7 @@ class Providers:
             route = routes[attempt % len(routes)]
             route_name = self.route_label(route)
             key = ("binance", route)
-            limiter = self.limits.setdefault(key, RateLimiter(self.settings.requests_per_minute))
+            limiter = self.provider_limiter("binance", route)
             await limiter.acquire()
             provider_requests, route_requests = self.record_provider_attempt("binance", route)
             try:
@@ -329,9 +348,12 @@ class Providers:
                     provider_requests,
                     route_requests,
                 )
-                if attempt + 1 < max_attempts:
-                    if status_code in {403, 429}:
-                        await asyncio.sleep(2)
+                if status_code in {418, 429}:
+                    delay = _retry_after_seconds(exc)
+                    limiter.postpone(delay)
+                    log.warning("upstream rate limited provider=binance route=%s retry_after_s=%s", route_name, delay)
+                elif attempt + 1 < max_attempts and status_code == 403:
+                    await asyncio.sleep(2)
         raise DataError(f"Binance file request failed ({last})")
 
     @staticmethod
