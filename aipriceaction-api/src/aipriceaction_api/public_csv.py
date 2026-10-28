@@ -326,32 +326,48 @@ def _publish_csv(client, bucket, item, head):
         desired = _csv_timestamps(item.body, item.key)
         missing = existing - desired
         if missing:
-            if desired <= existing:
-                old_values = _csv_values(existing_body, item.key)
-                new_values = _csv_values(item.body, item.key)
-                if all(
+            old_values = _csv_values(existing_body, item.key)
+            new_values = _csv_values(item.body, item.key)
+            overlap = existing & desired
+            if overlap and all(
                     old_values[stamp][-1] == new_values[stamp][-1]
                     and all(math.isclose(a, b, rel_tol=1e-6, abs_tol=0.0)
                             for a, b in zip(old_values[stamp][:-1], new_values[stamp][:-1], strict=True))
-                    for stamp in desired
-                ):
-                    # The complete public file already contains every known
-                    # canonical candle. Keep its extra dates and upgrade only
-                    # its metadata; never replace it with the smaller subset.
-                    fingerprint_rows = [
-                        SimpleNamespace(time=int(stamp.timestamp()), close=values[3], volume=values[4])
-                        for stamp, values in sorted(old_values.items())
-                    ]
-                    complete = PublicObject(
-                        item.key, existing_body, item.content_type,
-                        hashlib.sha256(existing_body).hexdigest(),
-                        rust_content_hash(fingerprint_rows), len(existing),
-                    )
-                    preserved = _publish_csv(client, bucket, complete, head)
-                    return item.report() | {
-                        "uploaded": preserved["uploaded"], "verified": True,
-                        "preserved_extra_rows": len(missing)
-                    }
+                    for stamp in overlap
+            ):
+                # Preserve dates present only in the old public archive. Add
+                # new canonical dates only when all overlap agrees, so files
+                # with incompatible adjustments remain queued for review.
+                if desired <= existing:
+                    merged_body = existing_body
+                    merged_values = old_values
+                else:
+                    merged_rows = {}
+                    for body in (existing_body, item.body):
+                        for row in csv.reader(io.StringIO(body.decode("utf-8"), newline="")):
+                            stamp = datetime.fromisoformat(row[0])
+                            if stamp.tzinfo is None:
+                                stamp = stamp.replace(tzinfo=UTC)
+                            merged_rows[stamp.astimezone(UTC)] = row
+                    output = io.StringIO(newline="")
+                    writer = csv.writer(output, lineterminator="\n")
+                    writer.writerows(merged_rows[stamp] for stamp in sorted(merged_rows))
+                    merged_body = output.getvalue().encode("utf-8")
+                    merged_values = old_values | new_values
+                fingerprint_rows = [
+                    SimpleNamespace(time=int(stamp.timestamp()), close=values[3], volume=values[4])
+                    for stamp, values in sorted(merged_values.items())
+                ]
+                complete = PublicObject(
+                    item.key, merged_body, item.content_type,
+                    hashlib.sha256(merged_body).hexdigest(),
+                    rust_content_hash(fingerprint_rows), len(merged_values),
+                )
+                preserved = _publish_csv(client, bucket, complete, head)
+                return item.report() | {
+                    "uploaded": preserved["uploaded"], "verified": True,
+                    "preserved_extra_rows": len(missing)
+                }
             earliest = min(missing).strftime("%Y-%m-%d %H:%M:%S UTC")
             raise DataError(
                 f"Refusing to replace public CSV {item.key}: "

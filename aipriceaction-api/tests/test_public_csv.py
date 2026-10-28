@@ -398,6 +398,42 @@ def test_matching_legacy_superset_keeps_all_rows_and_upgrades_cache_metadata():
     assert saved["CacheControl"] == PUBLIC_CSV_CACHE_CONTROL and len(s3.copies) == 1
 
 
+def test_public_publisher_adds_new_rows_without_losing_matching_legacy_rows():
+    old_rows = [candle(parse_time("2026-10-20")), candle()]
+    new_rows = [candle(), candle(parse_time("2026-10-22"))]
+    old = plan_candles(old_rows, "vn", "VCB", "1D", year=2026)
+    new = plan_candles(new_rows, "vn", "VCB", "1D", year=2026)
+    expected = plan_candles(old_rows + new_rows[1:], "vn", "VCB", "1D", year=2026)
+    s3 = FakeS3()
+    publish_object(s3, "one-bucket", old)
+
+    result = publish_object(s3, "one-bucket", new)
+
+    assert result["uploaded"] and result["verified"] and result["preserved_extra_rows"] == 1
+    saved = s3.objects[("one-bucket", old.key)]
+    assert saved["Body"] == expected.body
+    assert saved["Metadata"]["sha256"] == expected.sha256
+    assert saved["Metadata"]["content-hash"] == expected.content_hash
+    assert not publish_object(s3, "one-bucket", new)["uploaded"]
+
+
+def test_public_publisher_refuses_to_merge_non_overlapping_or_conflicting_rows():
+    old = plan_candles(
+        [candle(parse_time("2026-10-20")), candle()], "vn", "VCB", "1D", year=2026
+    )
+    s3 = FakeS3()
+    publish_object(s3, "one-bucket", old)
+    no_overlap = plan_candles([candle(parse_time("2026-10-22"))], "vn", "VCB", "1D", year=2026)
+    conflicting = plan_candles(
+        [replace(candle(), close=1.5), candle(parse_time("2026-10-22"))],
+        "vn", "VCB", "1D", year=2026,
+    )
+    for candidate in (no_overlap, conflicting):
+        with pytest.raises(DataError, match="existing timestamp"):
+            publish_object(s3, "one-bucket", candidate)
+        assert s3.objects[("one-bucket", old.key)]["Body"] == old.body
+
+
 def test_public_publisher_refuses_to_overwrite_unreadable_existing_csv():
     s3 = FakeS3()
     item = plan_candles([candle()], "vn", "VCB", "1D", day=date(2026, 10, 21))
