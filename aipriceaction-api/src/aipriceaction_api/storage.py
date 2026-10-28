@@ -1543,6 +1543,7 @@ class Repository:
         stamp = time.time_ns()
         written = 0
         accepted = 0
+        retained_staged = 0
         statement = (
             INSERT if overwrite else INSERT.split(" ON CONFLICT", 1)[0] + " ON CONFLICT DO NOTHING"
         )
@@ -1611,10 +1612,7 @@ class Repository:
                             and c.time < verification["completed_before"]):
                         # The repair has a different completed value. Keep its
                         # staged evidence and still publish unrelated live bars.
-                        log.warning(
-                            "retaining staged completed candle source=%s symbol=%s interval=%s time=%s",
-                            c.source, c.symbol, c.interval, c.time,
-                        )
+                        retained_staged += 1
                         continue
                 affected = con.execute(
                     statement, tuple(record[k] for k in COLUMNS)
@@ -1637,6 +1635,11 @@ class Repository:
                         f"VALUES ({','.join('?' for _ in range(len(COLUMNS) + 1))})",
                         (repair["id"], *(staged[k] for k in COLUMNS)),
                     )
+            if retained_staged:
+                log.warning(
+                    "retaining staged completed candles source=%s symbol=%s interval=%s count=%s",
+                    candles[0].source, candles[0].symbol, candles[0].interval, retained_staged,
+                )
             if written:
                 self.bump(con, market=True)
             if verification:

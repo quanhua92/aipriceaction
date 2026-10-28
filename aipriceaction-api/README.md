@@ -107,6 +107,12 @@ Live and historical requests try the enabled providers, including fallbacks. DNS
 
 VN index feeds can differ: VPS has returned post-close bars and VNDirect has returned indicative quotes. Choose enabled providers with that difference in mind.
 
+If a single Yahoo daily candle is stranded on an old revision, inspect it with
+`docker compose exec api python -m aipriceaction_api.revision_relabel AVGO 2023-10-25`.
+Add `--apply` only after checking the dry-run evidence. The command requires the
+target and at least three nearby active-revision candles to match Yahoo. It
+changes only the revision label and stores the comparison in the quality log.
+
 ## Refresh the Vietnamese stock directory
 
 From this directory, run `python3 scripts/refresh_vn_tickers.py`. It uses only
