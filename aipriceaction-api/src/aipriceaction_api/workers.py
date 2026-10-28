@@ -1235,19 +1235,26 @@ class Worker:
         retained = self.repo.read(
             obj["source"], obj["symbol"], obj["interval"], end=completed - 1, limit=40
         )
+        if not retained:
+            raise DataError("Archived replacement cannot verify completed retained overlap")
+        step = {"1D": 86400, "1h": 3600, "1m": 60}[obj["interval"]]
+        # Compare the provider with the actual retained tail. The live worker
+        # may be more than 40 bars behind, in which case the current upstream
+        # window has no overlap even though the historical data is sound.
+        retained_end = min(completed, retained[-1].time + step)
         hourly_range = self.repo.snapshot_hourly_range(state)
         head = await self.providers.page(
             obj["source"],
             obj["symbol"],
             obj["interval"],
-            None if hourly_range else completed,
+            None if hourly_range else retained_end,
             count=40,
             provider=state["provider"],
             **({"yahoo_hourly_range": hourly_range} if hourly_range else {}),
         )
         latest = {r.time: r for r in retained}
         matched = [r for r in head.rows if r.time in latest]
-        if not retained or len(matched) < min(3, len(retained)):
+        if len(matched) < min(3, len(retained)):
             raise DataError("Archived replacement cannot verify completed retained overlap")
         if head.provider != state["provider"] or any(
             not math.isclose(

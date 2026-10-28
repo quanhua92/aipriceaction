@@ -196,3 +196,30 @@ async def test_history_worker_retries_due_csv_period_without_new_prices(system):
         await worker.providers.close()
     assert len(attempts) == 2
     assert not worker.policy._pending_public_csv_periods("vn", "FPT", "1D", include_deferred=True)
+
+
+@pytest.mark.asyncio
+async def test_archive_verification_targets_a_stale_retained_tail(system, monkeypatch):
+    repo, archive, settings = system
+    now = int(time.time()) // 60 * 60
+    start = now - 240 * 60
+    rows = [
+        Candle("crypto", "ALGOUSDT", "1m", start + i * 60, 100, 101, 99, 100, 10, "binance", "r1")
+        for i in range(40)
+    ]
+    repo.put(rows)
+    calls = []
+
+    class Provider:
+        async def page(self, source, symbol, interval, before=None, **kwargs):
+            calls.append(before)
+            return Page(rows, "binance")
+
+    worker = Worker(repo, settings, Provider(), archive)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: now)
+    evidence = await worker.verify_archive_head(
+        {"source": "crypto", "symbol": "ALGOUSDT", "interval": "1m"},
+        repo.state("crypto", "ALGOUSDT", "1m"),
+    )
+    assert calls == [rows[-1].time + 60]
+    assert evidence["matched_rows"] == 40 and evidence["last"] == rows[-1].time
