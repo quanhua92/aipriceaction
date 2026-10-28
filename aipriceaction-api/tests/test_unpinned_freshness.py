@@ -69,6 +69,46 @@ async def test_live_fallback_appends_without_rewriting_completed_history(system,
         assert con.execute("SELECT provider,outcome FROM source_checks").fetchone()[:] == (selected, "succeeded")
 
 
+@pytest.mark.asyncio
+async def test_different_provider_current_daily_price_is_reported_for_review(system, monkeypatch):
+    repo, archive, settings = system
+    today = int(time.time()) // 86400 * 86400
+    repo.put([bar(today)])
+    original = repo.read("vn", "FPT", "1D")[0]
+
+    class Provider:
+        async def page(self, source, symbol, interval, **kwargs):
+            return Page([replace(bar(today, "vps"), high=102)], "vps")
+
+    worker = Worker(repo, settings, Provider(), archive)
+    monkeypatch.setattr(worker, "floor", lambda *args: today)
+    monkeypatch.setattr("aipriceaction_api.workers.time.time", lambda: today + 10 * 3600)
+    monkeypatch.setattr("aipriceaction_api.workers.completed_vn_sessions", lambda: today + 86400)
+
+    async def skip_sentinel(*args):
+        pass
+
+    monkeypatch.setattr(worker, "sentinel", skip_sentinel)
+    assert await worker.sync({"source": "vn", "symbol": "FPT"}, "1D") == 1
+    assert repo.read("vn", "FPT", "1D")[0] == original
+    with repo.connect() as con:
+        check = dict(con.execute("SELECT * FROM source_checks").fetchone())
+    assert check["outcome"] == "provider_conflict" and "verification required" in check["error"]
+    assert not repo.status()["series"][0]["verification_current"]
+    assert any(item["kind"] == "live_provider_disagreement" for item in repo.findings())
+
+
+def test_latest_verification_cannot_be_current_after_a_failed_check(system):
+    repo, _, _ = system
+    today = int(time.time()) // 86400 * 86400
+    repo.put([bar(today, "vps")])
+    attempt = repo.start_source_check("vn", "FPT", "1D")
+    repo.put([bar(today, "vps")], verification={"attempt_ns": attempt, "completed_before": today + 86400})
+    assert repo.status()["series"][0]["verification_current"]
+    repo.fail_source_check("vn", "FPT", "1D", attempt, "history gap", "repair_queued")
+    assert not repo.status()["series"][0]["verification_current"]
+
+
 def test_old_migration_is_retired_but_its_staged_evidence_remains(system):
     repo, _, _ = system
     today = int(time.time()) // 86400 * 86400

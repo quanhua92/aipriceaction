@@ -1026,6 +1026,28 @@ class Worker:
                 if iv == "1D"
                 else int(time.time()) // (3600 if iv == "1h" else 60) * (3600 if iv == "1h" else 60)
             )
+            daily_provider_conflict = None
+            if (
+                source == "vn" and iv == "1D" and latest
+                and latest[-1].provider != page.provider
+                and latest[-1].time == page.rows[-1].time
+                and latest[-1].time == int(time.time()) // 86400 * 86400
+                and latest[-1].time < completed
+            ):
+                previous, observed = latest[-1], page.rows[-1]
+                different = [
+                    name for name in ("open", "high", "low", "close")
+                    if not math.isclose(getattr(previous, name), getattr(observed, name),
+                                        rel_tol=1e-6, abs_tol=1e-9)
+                ]
+                if different:
+                    daily_provider_conflict = json.dumps(
+                        {"time": previous.time, "fields": different,
+                         "stored": previous.record(), "observed": observed.record()},
+                        sort_keys=True, separators=(",", ":"),
+                    )
+                    self.repo.finding(source, symbol, iv, "live_provider_disagreement", daily_provider_conflict)
+                    log.warning("VN daily providers disagree source=%s symbol=%s fields=%s", source, symbol, different)
             snapshot_provider = (
                 self.repo.snapshot_provider(state) if page.provider == state["provider"] else None
             )
@@ -1133,6 +1155,12 @@ class Worker:
             if append_only_gap or (append_only_tail and source == "vn"):
                 reason = gap or "Historical revision requires repair; newer native bars published"
                 self.repo.fail_source_check(source, symbol, iv, attempt, reason, "repair_queued")
+            elif daily_provider_conflict:
+                self.repo.fail_source_check(
+                    source, symbol, iv, attempt,
+                    "Stored daily prices differ from the enabled provider; verification required",
+                    "provider_conflict",
+                )
             # Use committed rows, including any older source retained by the
             # transaction, for caches and public CSV publication.
             rows = self.repo.read(source, symbol, iv, start=rows[0].time, end=rows[-1].time)

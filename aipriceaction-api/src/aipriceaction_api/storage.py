@@ -3704,6 +3704,7 @@ class Repository:
             for row in series:
                 current = (
                     row["status"] == "ready"
+                    and row["outcome"] == "succeeded"
                     and row["latest_provider"] == row["checked_provider"]
                     and row["revision"] == row["checked_revision"]
                     and row["successful_at_ns"] is not None
