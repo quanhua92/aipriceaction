@@ -354,7 +354,11 @@ class History:
             if len(local) > self.settings.archive_max_rows:
                 raise DataError("Historical request exceeds resource limit", 400)
             if len({row.revision for row in local}) > 1:
-                raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
+                local = self._omit_isolated_yahoo_revision_outlier(
+                    source, symbol, iv, local, revision
+                )
+                if local is None:
+                    raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
             self.validate_basis(local, adoption=None, adoption_loaded=True)
             return list(local)
         other_local = [r for r in local if revision is not None and r.revision != revision]
@@ -545,7 +549,11 @@ class History:
         if gaps and not ignore_history_gaps:
             raise DataError(f"Historical data unavailable for {symbol} {iv}: {gaps[0]['reason']}")
         if len({r.revision for r in result}) > 1:
-            raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
+            result = self._omit_isolated_yahoo_revision_outlier(
+                source, symbol, iv, result, revision
+            )
+            if result is None:
+                raise DataError(f"Incompatible adjustment revisions for {symbol} {iv}")
         if loaded is None:
             self.validate_basis(result)
         else:
@@ -569,6 +577,46 @@ class History:
                 ),
             )
         return result
+
+    def _omit_isolated_yahoo_revision_outlier(self, source, symbol, iv, rows, revision):
+        """Omit one bracketed stale Yahoo daily bar instead of failing a chart.
+
+        Yahoo's adjusted daily history can occasionally retain a single row
+        from an older series revision. Only suppress that row when the current
+        Yahoo series revision is present on both adjacent bars and the
+        outlier is also a Yahoo row. Broader or ambiguous revision changes
+        remain errors so we never combine adjustment bases silently.
+        """
+        if source != "yahoo" or iv != "1D" or revision is not None or len(rows) < 3:
+            return None
+        state = self.repo.state(source, symbol, iv)
+        if not state or state["status"] != "ready" or state["provider"] != "yahoo":
+            return None
+        active = state["revision"]
+        outliers = [index for index, row in enumerate(rows) if row.revision != active]
+        if len(outliers) != 1:
+            return None
+        index = outliers[0]
+        if index == 0 or index == len(rows) - 1:
+            return None
+        target = rows[index]
+        before, after = rows[index - 1], rows[index + 1]
+        if not (
+            target.provider == before.provider == after.provider == "yahoo"
+            and before.revision == after.revision == active
+            and before.time < target.time < after.time
+        ):
+            return None
+        log.warning(
+            "omitting isolated stale Yahoo revision bar source=%s symbol=%s interval=%s time=%s revision=%s active_revision=%s",
+            source,
+            symbol,
+            iv,
+            target.time,
+            target.revision,
+            active,
+        )
+        return rows[:index] + rows[index + 1 :]
 
     def native_interval(self, source, symbol, iv):
         native = base_interval(iv)
