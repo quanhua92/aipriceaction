@@ -620,6 +620,25 @@ class Repository:
                 "ON CONFLICT(source,symbol) DO UPDATE SET enabled=1 WHERE tickers.enabled<>1",
                 identities,
             )
+            now = time.time_ns()
+            inactive = "NOT EXISTS (SELECT 1 FROM desired_tickers d WHERE " \
+                "d.source={table}.source AND d.symbol={table}.symbol)"
+            con.execute(
+                "UPDATE jobs SET status='cancelled',retry_at=0,lease_owner=NULL,lease_until=0,"
+                "error='Ticker removed from active ingestion universe',updated_at=? "
+                "WHERE status IN ('pending','running') AND " + inactive.format(table="jobs"),
+                (now,),
+            )
+            con.execute(
+                "UPDATE history_jobs SET status='cancelled',retry_at=0,"
+                "error='Ticker removed from active ingestion universe',updated_at=? "
+                "WHERE status IN ('pending','retry','coverage_gap','provider_limit') AND "
+                + inactive.format(table="history_jobs"),
+                (now,),
+            )
+            con.execute(
+                "DELETE FROM public_csv_queue WHERE " + inactive.format(table="public_csv_queue")
+            )
 
     def tickers(self, sources=None, enabled=False):
         where, params = [], []

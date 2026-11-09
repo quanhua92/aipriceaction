@@ -397,10 +397,15 @@ class Catalog:
 
     @cached_property
     def default_filtered_info_json(self):
-        """Cache the API's default 99%-coverage metadata response once."""
+        """Cache the legacy market-cap filtered metadata response once."""
         return RustJSONResponse(
             self.filtered_info(DEFAULT_VN_MIN_MARKET_CAP_VND)
         ).body
+
+    @cached_property
+    def default_crawl_info_json(self):
+        """Cache company metadata for the retained VN crawl catalog."""
+        return RustJSONResponse(self.filtered_info()).body
 
     def sector(self, source, symbol):
         for sector, symbols in sorted(self.groups_by_source[source].items()):

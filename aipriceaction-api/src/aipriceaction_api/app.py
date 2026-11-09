@@ -33,7 +33,7 @@ from starlette.routing import Match
 
 from .analysis import Analysis, _jdk_lookback_limit
 from .archive import Archive
-from .catalog import DEFAULT_VN_MIN_MARKET_CAP_VND, Catalog
+from .catalog import Catalog
 from .config import Settings, trim_rust_whitespace
 from .domain import SOURCES, DataError, base_interval, date_bounds, interval, mode
 from .history import History
@@ -2456,6 +2456,13 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
             # Rust returns its empty JSON map before response-cache lookup and
             # before adding x-data-source for either single-source or all mode.
             return JSONResponse({})
+        selected_vn_symbols = set(catalog.vn_listed_symbols) | {
+            row["symbol"] for row in catalog.vn_index_rows
+        }
+        if symbols is not None and source_mode == "vn":
+            symbols = [symbol for symbol in symbols if symbol in selected_vn_symbols]
+            if not symbols:
+                return JSONResponse({})
         try:
             start = date_bounds(params.start_date)
         except DataError:
@@ -2539,10 +2546,19 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                     if not tickers:
                         tickers = [(r["source"], r["symbol"]) for r in repo.tickers(sources)]
                 elif source_mode == "all":
-                    database_known = {(t["source"], t["symbol"]) for t in repo.tickers(sources)}
+                    database_known = {
+                        (t["source"], t["symbol"])
+                        for t in repo.tickers(sources)
+                        if t["source"] != "vn" or t["symbol"] in selected_vn_symbols
+                    }
                     cached_tickers = catalog.redis_ticker_list(redis_client)
                     if cached_tickers is not None:
-                        cached_known = {(row["source"], row["ticker"]) for row in cached_tickers}
+                        cached_known = {
+                            (row["source"], row["ticker"])
+                            for row in cached_tickers
+                            if row["source"] != "vn"
+                            or row["ticker"] in selected_vn_symbols
+                        }
                         cached_match_count = sum(
                             any((source, symbol) in cached_known for source in sources)
                             for symbol in set(symbols)
@@ -2562,22 +2578,13 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
                             tickers.append(min(matches, key=lambda item: priority[item[0]]))
                 else:
                     tickers = [(src, sym) for src in sources for sym in symbols]
-                # Broad VN reads use the same default market-cap universe as
-                # the VN metadata endpoints. Explicit symbol requests remain
-                # available for smaller or unlisted VN tickers.
-                if symbols is None and "vn" in sources:
-                    default_vn_symbols = {
-                        row["symbol"]
-                        for row in catalog.vn_tickers(DEFAULT_VN_MIN_MARKET_CAP_VND)
-                    }
-                    default_vn_symbols.update(
-                        row["symbol"] for row in catalog.vn_index_rows
-                    )
-                    tickers = [
-                        (src, sym)
-                        for src, sym in tickers
-                        if src != "vn" or sym in default_vn_symbols
-                    ]
+                # All VN reads, including explicitly requested symbols in
+                # mode=all, use the retained active catalog.
+                tickers = [
+                    (src, sym)
+                    for src, sym in tickers
+                    if src != "vn" or sym in selected_vn_symbols
+                ]
 
                 if symbols is None and source_mode == "all":
                     priority = {"vn": 0, "yahoo": 1, "sjc": 2, "crypto": 3}
@@ -3383,8 +3390,6 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         effective_min_market_cap_vnd = (
             min_market_cap_vnd
             if min_market_cap_vnd is not None
-            else DEFAULT_VN_MIN_MARKET_CAP_VND
-            if normalized_mode in ("vn", "all")
             else None
         )
         return sort_json_value_keys(
@@ -3417,8 +3422,6 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         effective_min_market_cap_vnd = (
             min_market_cap_vnd
             if min_market_cap_vnd is not None
-            else DEFAULT_VN_MIN_MARKET_CAP_VND
-            if normalized_mode in ("vn", "all")
             else None
         )
         return sort_json_value_keys(
@@ -3438,11 +3441,11 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         effective_min_market_cap_vnd = (
             min_market_cap_vnd
             if min_market_cap_vnd is not None
-            else DEFAULT_VN_MIN_MARKET_CAP_VND
+            else None
         )
         if ticker is None:
             if min_market_cap_vnd is None and not include_unknown_market_cap:
-                body = await background(lambda: catalog.default_filtered_info_json)
+                body = await background(lambda: catalog.default_crawl_info_json)
             else:
                 body = await background(
                     lambda: JSONResponse(
@@ -3456,7 +3459,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         if min_market_cap_vnd is None and not include_unknown_market_cap:
             row = await background(
                 lambda: catalog.filtered_info_by_ticker(
-                    ticker, effective_min_market_cap_vnd
+                    ticker
                 )
             )
         else:
@@ -3485,7 +3488,7 @@ def create_app(settings: Settings | None = None, *, redis_client=None):
         effective_min_market_cap_vnd = (
             min_market_cap_vnd
             if min_market_cap_vnd is not None
-            else DEFAULT_VN_MIN_MARKET_CAP_VND
+            else None
         )
         return sort_json_value_keys(
             catalog.stock_directory(

@@ -792,12 +792,18 @@ class HistoryWorker:
 
     def _ready_history_jobs(self, ticker=None):
         now = int(time.time())
+        configured = {
+            (entry["source"], entry["symbol"], interval)
+            for entry in self.configuration
+            for interval in entry["intervals"]
+        }
         jobs = [
             job
             for job in self.repo.history_jobs()
             if job["status"] in ("pending", "retry", "coverage_gap")
             and job["retry_at"] <= now
             and job.get("failure_count", 0) < MAX_HISTORY_FAILURES
+            and (job["source"], job["symbol"], job["interval"]) in configured
         ]
         if ticker is not None:
             jobs = [job for job in jobs if (job["source"], job["symbol"]) == ticker]
@@ -964,8 +970,10 @@ class HistoryWorker:
             args.extend(sorted(symbols))
         with self.repo.connect() as con:
             row = con.execute(
-                "SELECT source,symbol,interval FROM public_csv_queue WHERE "
-                + " AND ".join(where) + " ORDER BY updated_at,retry_at LIMIT 1",
+                "SELECT q.source,q.symbol,q.interval FROM public_csv_queue q "
+                "JOIN tickers t ON t.source=q.source AND t.symbol=q.symbol AND t.enabled=1 WHERE "
+                + " AND ".join("q." + item for item in where)
+                + " ORDER BY q.updated_at,q.retry_at LIMIT 1",
                 args,
             ).fetchone()
         if not row:

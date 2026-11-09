@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Refresh the complete Vietnamese ordinary-stock directory without extra packages.
+"""Refresh the Vietnamese stock directory without extra packages.
 
-The output keeps every Vietcap ``STOCK`` listing. Market-cap values are an
-optional daily snapshot calculated from KBS's batched quote board:
-price (VND) * total listed shares. The script never filters stocks by cap;
-the API applies that filter when clients request the directory.
+Market-cap values are an optional daily snapshot calculated from KBS's batched
+quote board: price (VND) * total listed shares. Once a screened crawl catalog
+exists, refreshes preserve its symbols unless ``--full-universe`` is explicit.
 """
 
 from __future__ import annotations
@@ -328,6 +327,11 @@ def main() -> int:
         help="abort rather than publish if fewer than this fraction of stocks have a cap",
     )
     parser.add_argument("--skip-market-cap", action="store_true")
+    parser.add_argument(
+        "--full-universe",
+        action="store_true",
+        help="replace a screened catalog with every current Vietcap STOCK listing",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -364,6 +368,32 @@ def main() -> int:
                 )
 
         rows = build_catalog(stocks, taxonomy, quotes)
+        existing_payload = None
+        if args.output.is_file():
+            try:
+                existing_payload = json.loads(args.output.read_text())
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ValueError(f"could not read existing catalog {args.output}: {exc}") from exc
+        crawl_policy = (
+            existing_payload.get("crawl_policy")
+            if isinstance(existing_payload, dict)
+            else None
+        )
+        listing_source_count = len(rows)
+        if crawl_policy and not args.full_universe:
+            retained = {
+                str(row.get("symbol") or "").strip().upper()
+                for row in existing_payload.get("stocks", [])
+                if isinstance(row, dict)
+            }
+            current = {row["symbol"] for row in rows}
+            missing = sorted(retained - current)
+            if missing:
+                raise ValueError(
+                    "Vietcap no longer lists retained symbols; review before changing "
+                    f"the crawl catalog: {', '.join(missing[:20])}"
+                )
+            rows = [row for row in rows if row["symbol"] in retained]
         missing_active_names = [
             row["symbol"]
             for row in rows
@@ -386,13 +416,18 @@ def main() -> int:
         payload = {
             "schema_version": 1,
             "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "universe": "Vietcap type=STOCK only",
+            "universe": (
+                "Vietcap type=STOCK only; retained active crawl universe"
+                if crawl_policy and not args.full_universe
+                else "Vietcap type=STOCK only"
+            ),
             "market_cap_method": (
                 "KBS quote price in VND * KBS total listed shares; CP when positive, "
                 "otherwise RE reference price"
             ),
             "market_cap_source": "KBS stock/iss; missing values remain null",
             "stock_count": len(rows),
+            "listing_source_count": listing_source_count,
             "market_cap_known_count": known_caps,
             "market_cap_unknown_count": len(rows) - known_caps,
             "icb_level2_known_count": sum(row["icb_level2_code"] is not None for row in rows),
@@ -405,6 +440,8 @@ def main() -> int:
             },
             "stocks": rows,
         }
+        if crawl_policy and not args.full_universe:
+            payload["crawl_policy"] = crawl_policy
         if not args.dry_run:
             atomic_write(args.output, payload)
 

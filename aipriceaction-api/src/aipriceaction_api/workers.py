@@ -2035,7 +2035,8 @@ class Worker:
                 self.configuration = [entry for entry in self.configuration if entry["intervals"]]
 
             configure()
-            self.archive_repair_scope = (source, symbols, interval)
+            active_symbols = sorted({entry["symbol"] for entry in self.configuration})
+            self.archive_repair_scope = (source, active_symbols, interval)
             if not self.configuration:
                 if interval and not source and not symbols:
                     if once or cycles:
