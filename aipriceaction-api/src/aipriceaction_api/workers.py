@@ -7,6 +7,8 @@ import time
 import uuid
 from dataclasses import replace
 
+from botocore.exceptions import ClientError
+
 from .domain import (
     INDEXES,
     DataError,
@@ -117,25 +119,40 @@ class Worker:
         if not requested:
             return {"objects": 0, "uploaded": 0}
         # Record intent before touching S3 so a crash or temporary S3 failure
-        # cannot silently lose a changed historical day or yearly file.
+        # cannot silently lose a changed historical day or yearly file. A
+        # period already waiting for retry keeps its backoff even when the
+        # current worker batch contains a candle from that same period.
         now = int(time.time())
         with self.repo.connect() as con:
+            retry_at = dict(con.execute(
+                "SELECT period,retry_at FROM public_csv_queue "
+                "WHERE source=? AND symbol=? AND interval=?",
+                (source, symbol, iv),
+            ))
+            eligible = []
+            for day, year in requested:
+                detail = f"day:{day.isoformat()}" if day else f"year:{year}"
+                if retry_at.get(detail, 0) > now:
+                    continue
+                eligible.append((day, year, detail))
+            if not eligible:
+                return {"objects": 0, "uploaded": 0}
             con.executemany(
                 "INSERT INTO public_csv_queue(source,symbol,interval,period,updated_at) VALUES (?,?,?,?,?) "
                 "ON CONFLICT(source,symbol,interval,period) DO UPDATE SET "
                 "generation=public_csv_queue.generation+1,updated_at=excluded.updated_at",
-                [(source, symbol, iv, f"day:{day.isoformat()}" if day else f"year:{year}", now)
-                 for day, year in requested],
+                [(source, symbol, iv, detail, now) for _, _, detail in eligible],
             )
+            placeholders = ",".join("?" for _ in eligible)
             generations = dict(con.execute(
-                "SELECT period,generation FROM public_csv_queue WHERE source=? AND symbol=? AND interval=?",
-                (source, symbol, iv),
+                "SELECT period,generation FROM public_csv_queue "
+                "WHERE source=? AND symbol=? AND interval=? AND period IN (" + placeholders + ")",
+                (source, symbol, iv, *(detail for _, _, detail in eligible)),
             ))
         published, uploaded = 0, 0
         errors = []
-        for day, year in requested:
+        for day, year, detail in eligible:
             key = daily_key(source, symbol, iv, day) if day else yearly_key(source, symbol, iv, year)
-            detail = f"day:{day.isoformat()}" if day else f"year:{year}"
             try:
                 with self.archive.public_csv_lock(key):
                     start, end = period_bounds(day=day, year=year)
@@ -157,7 +174,18 @@ class Worker:
                 published += 1
                 uploaded += int(result["uploaded"])
             except Exception as exc:
-                reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
+                if isinstance(exc, ClientError):
+                    response = exc.response
+                    error = response.get("Error", {})
+                    metadata = response.get("ResponseMetadata", {})
+                    reason = (
+                        f"S3 {exc.operation_name} code={error.get('Code')} "
+                        f"status={metadata.get('HTTPStatusCode')} "
+                        f"request_id={metadata.get('RequestId')} "
+                        f"message={error.get('Message')}"
+                    )
+                else:
+                    reason = str(exc) if isinstance(exc, DataError) else type(exc).__name__
                 errors.append((key, reason))
                 log.warning("public CSV period export failed key=%s error=%s", key, reason)
                 with self.repo.connect() as con:
