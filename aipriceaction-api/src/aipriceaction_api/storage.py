@@ -1661,7 +1661,7 @@ class Repository:
                 con.executemany(
                     "INSERT INTO public_csv_queue(source,symbol,interval,period,updated_at) VALUES (?,?,?,?,?) "
                     "ON CONFLICT(source,symbol,interval,period) DO UPDATE SET "
-                    "generation=public_csv_queue.generation+1,retry_at=0,updated_at=excluded.updated_at",
+                    "generation=public_csv_queue.generation+1,updated_at=excluded.updated_at",
                     [(*period, now) for period in public_periods],
                 )
             if written:

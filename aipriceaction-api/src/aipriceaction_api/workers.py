@@ -192,8 +192,8 @@ class Worker:
                     con.execute(
                         "UPDATE public_csv_queue SET attempts=attempts+1, "
                         "retry_at=? + MIN(3600, 30 * (1 << MIN(attempts, 7))) "
-                        "WHERE source=? AND symbol=? AND interval=? AND period=? AND generation=?",
-                        (int(time.time()), source, symbol, iv, detail, generations[detail]),
+                        "WHERE source=? AND symbol=? AND interval=? AND period=?",
+                        (int(time.time()), source, symbol, iv, detail),
                     )
         if errors:
             key, reason = errors[0]
