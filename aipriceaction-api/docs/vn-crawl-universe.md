@@ -21,3 +21,11 @@ and screen the new catalog before deploying it.
 Existing SQLite candles and Parquet archives are retained. They are not part
 of the active ticker catalog or public CSV crawl set, and keeping them avoids
 destructive database and archive rewrites.
+
+## Public CSV cleanup
+
+On 2026-11-10, production removed 407,052 objects (about 57.6 MB) from the
+869 excluded symbol prefixes in `ohlcv/vn/`. Verification found no remaining
+objects under any excluded prefix and confirmed that all 650 retained stock
+prefixes still contain data. The bucket has versioning disabled. No index,
+other market, Parquet, manifest, or backup keys were included in the deletion.
