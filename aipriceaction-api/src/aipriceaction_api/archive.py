@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import stat
 import tempfile
 import threading
@@ -103,6 +104,20 @@ class FileStore:
     def initialize(self):
         self.root.mkdir(parents=True, exist_ok=True)
 
+    def list(self, prefix):
+        """Return [(key, mtime)] for regular files under a key prefix."""
+        base = self.path(prefix.rstrip("/"))
+        if not base.is_dir():
+            return []
+        return [
+            (PurePosixPath(prefix.rstrip("/"), p.name).as_posix(), p.stat().st_mtime)
+            for p in base.iterdir()
+            if p.is_file()
+        ]
+
+    def delete(self, key):
+        self.path(key).unlink(missing_ok=True)
+
 
 class S3Store:
     def __init__(self, settings):
@@ -170,6 +185,30 @@ class S3Store:
                 return body.read()
         except Exception as exc:
             raise DataError(f"Archive manifest read failed: {key}") from exc
+
+    def list(self, prefix):
+        """Return [(key, mtime)] for every object under a key prefix (paginated)."""
+        found = []
+        try:
+            pages = self.client.get_paginator("list_objects_v2").paginate(
+                Bucket=self.settings.s3_bucket, Prefix=prefix
+            )
+            for page in pages:
+                for item in page.get("Contents", []):
+                    found.append((item["Key"], item["LastModified"].timestamp()))
+        except Exception as exc:
+            raise DataError(f"Archive listing failed: {prefix}") from exc
+        return found
+
+    def delete(self, key):
+        try:
+            self.client.delete_object(Bucket=self.settings.s3_bucket, Key=key)
+        except Exception as exc:
+            raise DataError(f"Archive delete failed: {key}") from exc
+
+
+MANIFEST_NAME = re.compile(r"^[0-9a-f]{64}\.json$")
+MIN_MANIFEST_AGE_SECONDS = 3600
 
 
 class Archive:
@@ -575,6 +614,44 @@ class Archive:
             objects, generation = self.repo.archive_manifest_snapshot()
             self._write_manifest(objects)
             self.repo.mark_archive_manifest_published(generation)
+
+    def gc_manifests(self, keep=20, min_age_seconds=86400, dry_run=True):
+        """Delete old manifest snapshots; parquet objects and LATEST.json are never touched.
+
+        Fails closed: nothing is deleted unless LATEST.json is readable and its
+        target is a listed, checksum-valid manifest. Always keeps that target,
+        the newest `keep` manifests, and anything younger than `min_age_seconds`.
+        """
+        if keep < 0 or min_age_seconds < 0:
+            raise DataError("keep and min_age_seconds must not be negative")
+        prefix = f"{self.settings.s3_prefix}/manifests/"
+        with self._cache_lock("manifest") as acquired:
+            if not acquired:
+                raise DataError("Could not lock archive manifest publication")
+            listed = [
+                (key, mtime)
+                for key, mtime in self.store.list(prefix)
+                if key.startswith(prefix) and MANIFEST_NAME.match(key[len(prefix) :])
+            ]
+            listed.sort(key=lambda item: (item[1], item[0]), reverse=True)
+            if not listed:
+                return {"kept": [], "deleted": [], "dry_run": dry_run}
+            pointer = json.loads(self.store.read(f"{self.settings.s3_prefix}/LATEST.json"))
+            current = pointer["key"]
+            if current not in {key for key, _ in listed}:
+                raise DataError("LATEST manifest is not in the listing; refusing to delete")
+            if hashlib.sha256(self.store.read(current)).hexdigest() != pointer["checksum"]:
+                raise DataError("LATEST manifest checksum mismatch; refusing to delete")
+            cutoff_time = time.time() - min_age_seconds
+            kept = {current} | {key for key, _ in listed[:keep]}
+            kept |= {key for key, mtime in listed if mtime > cutoff_time}
+            doomed = [key for key, _ in listed if key not in kept]
+            if not dry_run:
+                for key in doomed:
+                    self.store.delete(key)
+                    log.info("deleted archive manifest %s", key)
+        # In a dry run, "deleted" lists what a real run would delete.
+        return {"kept": sorted(kept), "deleted": doomed, "dry_run": dry_run}
 
     def publish_prepared(self, objects, *, require_current=True):
         """Index previously uploaded Parquet objects and publish one manifest."""

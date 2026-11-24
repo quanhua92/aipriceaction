@@ -331,6 +331,15 @@ def parser():
         help="Apply reviewed ticker/year closure exceptions, preserving original placeholders and evidence",
     )
     commands.add_parser("restore-index", help="Verify S3 objects and rebuild SQLite archive index")
+    gc = commands.add_parser(
+        "gc-manifests",
+        help="Delete old manifest snapshots (never LATEST, never parquet); dry run by default",
+    )
+    gc.add_argument("--keep", type=int, default=20, help="Always keep the newest N manifests")
+    gc.add_argument(
+        "--min-age-hours", type=float, default=24, help="Keep anything younger (minimum 1)"
+    )
+    gc.add_argument("--execute", action="store_true", help="Actually delete; default is a dry run")
     commands.add_parser(
         "publish-index",
         help="Publish current archive metadata and retry failed manifests without downloading or pruning candles",
@@ -830,6 +839,22 @@ async def execute(args, settings):
             )
         finally:
             await worker.providers.close()
+    elif args.command == "gc-manifests":
+        if args.min_age_hours < 1 or args.keep < 1:
+            raise DataError("--min-age-hours and --keep must each be at least 1", 400)
+        result = await asyncio.to_thread(
+            archive.gc_manifests,
+            args.keep,
+            int(args.min_age_hours * 3600),
+            not args.execute,
+        )
+        emit(
+            {
+                "dry_run": result["dry_run"],
+                "kept": len(result["kept"]),
+                "deleted" if args.execute else "would_delete": len(result["deleted"]),
+            }
+        )
     elif args.command == "restore-index":
         emit({"restored_objects": await asyncio.to_thread(archive.restore_index)})
     elif args.command == "publish-index":

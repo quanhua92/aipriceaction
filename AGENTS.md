@@ -26,6 +26,11 @@ Self-contained reference for using the `aipa` CLI with any AI agent. Works with 
 - Isolated RustFS rehearsal prefixes are temporary too. Clean only the exact
   prefix created by the completed test once no retained evidence depends on it.
   Never bulk-delete canonical OHLCV, manifests, or rollback references.
+  The one exception is `aipriceaction-api gc-manifests`: it prunes superseded
+  `<prefix>/manifests/<sha256>.json` snapshots only, always keeps the `LATEST.json`
+  target plus the newest `--keep` (default 20) and anything younger than
+  `--min-age-hours` (default 24), fails closed on a bad pointer, and is a dry
+  run unless `--execute` is passed. Run the dry run first and review the counts.
 - Verify temporary S3 cleanup leaves no current objects, retained versions or
   delete markers. Rehearsals that delete only current objects must require an
   unversioned local bucket before uploading; enabled or suspended versioning
